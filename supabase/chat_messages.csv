@@ -1,0 +1,4 @@
+id,created_at,session_id,sender,content,metadata
+c1d2e3f4-a5b6-7890-1234-567890abcdef,2025-05-20 11:01:00,a1b2c3d4-e5f6-7890-1234-567890abcdef,user,"Hello, how are you?",{}
+d1e2f3a4-b5c6-7890-1234-567890abcdef,2025-05-20 11:02:00,a1b2c3d4-e5f6-7890-1234-567890abcdef,agent,"I am doing well, thank you! How can I help you today?",{}
+e1f2a3b4-c5d6-7890-1234-567890abcdef,2025-05-20 11:16:00,b1c2d3e4-f5a6-7890-1234-567890abcdef,user,"What's the status on task #123?",{}

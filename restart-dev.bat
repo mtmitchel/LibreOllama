@@ -1,0 +1,13 @@
+@echo off
+echo Cleaning LibreOllama cache and restarting...
+echo.
+
+echo Removing .next folder...
+rmdir /s /q .next 2>nul
+
+echo Clearing node_modules cache...
+rmdir /s /q node_modules\.cache 2>nul
+
+echo.
+echo Starting development server...
+npm run dev

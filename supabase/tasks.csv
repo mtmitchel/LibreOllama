@@ -1,0 +1,4 @@
+id,created_at,title,description,status,priority,due_date,start_date,end_date,is_event,folder_id
+h1i2j3k4-l5m6-7890-1234-567890abcdef,2025-05-20 13:00:00,Implement User Auth,Set up Supabase authentication,in-progress,high,2025-05-25 17:00:00,,2025-05-25 17:00:00,FALSE,
+i1j2k3l4-m5n6-7890-1234-567890abcdef,2025-05-20 13:15:00,Design UI Mockups,Create wireframes for new features,todo,medium,2025-05-30 23:59:59,,2025-05-30 23:59:59,FALSE,a2b3c4d5-e6f7-8901-2345-67890abcdef0
+j1k2l3m4-n5o6-7890-1234-567890abcdef,2025-05-20 09:00:00,Team Standup Meeting,Daily sync-up,done,high,2025-05-20 09:00:00,2025-05-20 09:00:00,2025-05-20 09:30:00,TRUE,

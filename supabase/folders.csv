@@ -1,0 +1,4 @@
+id,created_at,name,parent_folder_id
+a2b3c4d5-e6f7-8901-2345-67890abcdef0,2025-05-20 09:00:00,Projects,
+b2c3d4e5-f6a7-8901-2345-67890abcdef1,2025-05-20 09:05:00,Client-Work,
+c2d3e4f5-a6b7-8901-2345-67890abcdef2,2025-05-20 09:10:00,Marketing,a2b3c4d5-e6f7-8901-2345-67890abcdef0

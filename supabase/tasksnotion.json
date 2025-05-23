@@ -1,0 +1,553 @@
+{
+  "name": "Google Tasks <> Notion Two-Way Sync",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Workflow Start Placeholder",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "workflowStartPlaceholder_1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "minutes": 15
+            }
+          ]
+        }
+      },
+      "name": "Poll Google Tasks",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "pollGoogleTasks_1",
+      "webhookId": "placeholder-google-tasks-trigger-uuid"
+    },
+    {
+      "parameters": {
+        "path": "YOUR_NOTION_WEBHOOK_PATH",
+        "options": {}
+      },
+      "name": "Notion Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        600
+      ],
+      "id": "notionWebhookTrigger_1",
+      "webhookId": "placeholder-notion-webhook-uuid",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tasklist": "YOUR_GOOGLE_TASK_LIST_ID",
+        "options": {
+          "showCompleted": false,
+          "showHidden": false
+        }
+      },
+      "name": "Get Google Tasks",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [
+        50,
+        0
+      ],
+      "id": "getGoogleTasks_1",
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": "YOUR_N8N_GOOGLE_TASKS_CREDENTIAL_ID",
+          "name": "Your Google Tasks Credential Name"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "Loop Google Tasks",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [
+        250,
+        0
+      ],
+      "id": "loopGoogleTasks_1"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "currentDataSource",
+              "value": "GoogleTasks"
+            },
+            {
+              "name": "googleTaskId",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "googleTaskTitle",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "googleTaskNotes",
+              "value": "={{ $json.notes }}"
+            },
+            {
+              "name": "googleTaskDue",
+              "value": "={{ $json.due }}"
+            },
+            {
+              "name": "googleTaskStatus",
+              "value": "={{ $json.status }}"
+            },
+            {
+              "name": "googleTaskUpdated",
+              "value": "={{ $json.updated }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Google Task Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1.2,
+      "position": [
+        450,
+        0
+      ],
+      "id": "setGoogleTaskData_1"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "currentDataSource",
+              "value": "Notion"
+            },
+            {
+              "name": "notionPageId",
+              "value": "={{ $json.body.page.id }}"
+            },
+            {
+              "name": "notionPageTitle",
+              "value": "={{ $json.body.page.properties.Name.title[0].plain_text }}"
+            },
+            {
+              "name": "notionPageNotes",
+              "value": "={{ $json.body.page.properties.Notes.rich_text[0].plain_text }}"
+            },
+            {
+              "name": "notionPageDue",
+              "value": "={{ $json.body.page.properties.DueDate.date.start }}"
+            },
+            {
+              "name": "notionPageStatus",
+              "value": "={{ $json.body.page.properties.Status.select.name }}"
+            },
+            {
+              "name": "notionPageLastEdited",
+              "value": "={{ $json.body.page.last_edited_time }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Notion Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1.2,
+      "position": [
+        50,
+        600
+      ],
+      "id": "setNotionData_1"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Placeholder for acquiring a lock for the item\n// Input: $json.googleTaskId or $json.notionPageId\n// Logic: \n// 1. Determine unique item key (e.g., googleTaskId or notionPageId).\n// 2. Check a central lock store (e.g., a 'locks' table in your Sync DB)\n//    If locked, return { locked: true } or throw error for retry.\n// 3. If not locked, acquire lock (e.g., write a lock record with expiry) and return { locked: false }.\n// This is a critical step to prevent race conditions and loops.\n\n// For this template, we'll assume lock is acquired.\n$json.lockAcquired = true;\nreturn $json;"
+      },
+      "name": "Acquire Lock",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ],
+      "id": "acquireLock_1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.lockAcquired }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "If Lock Acquired?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "id": "ifLockAcquired_1"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Placeholder for fetching or preparing a Sync Record from your Dedicated Sync Database\n// Input: $json.googleTaskId, $json.notionPageId, $json.currentDataSource\n// Logic:\n// 1. If googleTaskId is present, try to find sync record by it.\n// 2. If notionPageId is present, try to find sync record by it.\n// 3. If found, return the syncRecord (e.g., { googleTaskId, notionPageId, lastSyncTimestamp, sourceSystemLastUpdate })\n// 4. If not found, prepare a new empty syncRecord structure.\n// This function needs to interact with your actual Sync Database.\n\n// Example structure of a syncRecord:\n// $json.syncRecord = {\n//   db_id: null, // ID from your sync database\n//   googleTaskId: $json.currentDataSource === 'GoogleTasks' ? $json.googleTaskId : null,\n//   notionPageId: $json.currentDataSource === 'Notion' ? $json.notionPageId : null,\n//   lastSyncTimestamp: null, // Timestamp of the last successful sync by this workflow\n//   lastSourceSystem: null // Which system (Google/Notion) was the source of the last sync\n// };\n\n// For template, assuming we get a syncRecord (even if new/empty)\n$json.syncRecord = $json.syncRecord || {}; \nreturn $json;"
+      },
+      "name": "DB: Get/Prepare Sync Record",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        200
+      ],
+      "id": "dbGetPrepareSyncRecord_1"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Placeholder for Conflict Resolution and Data Mapping\n// Input: $json (contains current item data, syncRecord, currentDataSource)\n// Logic:\n// 1. Identify source and target system.\n//    If $json.currentDataSource === 'GoogleTasks', target is Notion. Else, target is GoogleTasks.\n// 2. Conflict Resolution (Simplified Last-Write-Wins):\n//    - Get last modification timestamp from the source item (e.g., $json.googleTaskUpdated or $json.notionPageLastEdited).\n//    - Compare with $json.syncRecord.lastSyncTimestamp.\n//    - If source item is newer OR if it's a new item (no syncRecord.db_id), then proceed with sync.\n//    - Set $json.decision = 'SYNC' or 'IGNORE'.\n// 3. Data Mapping (if decision is 'SYNC'):\n//    - Based on target system, map fields according to your report's table.\n//    - E.g., If target is Notion: $json.mappedData = { Name: { title: [{ text: { content: $json.googleTaskTitle }}]}, ... }\n//    - E.g., If target is Google: $json.mappedData = { title: $json.notionPageTitle, notes: ..., due: ... }\n//    - Handle transformations (Markdown, ISO 8601 date formatting, status mapping).\n// 4. Set $json.targetSystem = 'Notion' or 'GoogleTasks'.\n\n// Example (very simplified):\n$json.decision = 'IGNORE';\nconst sourceModifiedTimestamp = $json.currentDataSource === 'GoogleTasks' ? $json.googleTaskUpdated : $json.notionPageLastEdited;\n\nif (!sourceModifiedTimestamp) {\n  // Cannot determine modification time, maybe ignore or handle as error\n  return $json;\n}\n\nif (!$json.syncRecord.lastSyncTimestamp || new Date(sourceModifiedTimestamp) > new Date($json.syncRecord.lastSyncTimestamp)) {\n  $json.decision = 'SYNC';\n  if ($json.currentDataSource === 'GoogleTasks') {\n    $json.targetSystem = 'Notion';\n    $json.mappedData = {\n      // Basic mapping - EXPAND THIS SIGNIFICANTLY\n      Name: { title: [{ text: { content: $json.googleTaskTitle || 'Untitled Task' }}] },\n      Notes: { rich_text: [{ text: { content: $json.googleTaskNotes || '' }}] },\n      // Add DueDate, Status, etc., with correct Notion property names and types\n    };\n    // Store Notion database ID if creating a new page\n    $json.notionDatabaseId = 'YOUR_NOTION_DATABASE_ID'; \n  } else { // Source is Notion\n    $json.targetSystem = 'GoogleTasks';\n    $json.mappedData = {\n      title: $json.notionPageTitle || 'Untitled Task from Notion',\n      notes: $json.notionPageNotes || '',\n      // Add due, status, etc.\n    };\n    $json.googleTaskListId = $json.syncRecord.googleTaskListId || 'YOUR_GOOGLE_TASK_LIST_ID';\n  }\n} else {\n   console.log('Item up-to-date based on simple timestamp, skipping sync for:', $json.googleTaskId || $json.notionPageId);\n}\n\nreturn $json;"
+      },
+      "name": "Conflict Resolution & Mapping",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        200
+      ],
+      "id": "conflictResolutionMapping_1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.decision }}",
+              "operation": "equal",
+              "value2": "SYNC"
+            }
+          ]
+        }
+      },
+      "name": "If Sync Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        200
+      ],
+      "id": "ifSyncNeeded_1"
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "create",
+        "databaseId": "={{ $json.notionDatabaseId }}",
+        "properties": "={{ $json.mappedData }}"
+      },
+      "name": "Create/Update Notion Page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1650,
+        100
+      ],
+      "id": "createUpdateNotionPage_1",
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR_N8N_NOTION_CREDENTIAL_ID",
+          "name": "Your Notion Credential Name"
+        }
+      },
+      "notes": "To Update: Change operation to 'update', set 'pageId' to $json.syncRecord.notionPageId. You'll need logic to decide Create vs Update."
+    },
+    {
+      "parameters": {
+        "tasklist": "={{ $json.googleTaskListId }}",
+        "options": "={{ $json.mappedData }}"
+      },
+      "name": "Create/Update Google Task",
+      "type": "n8n-nodes-base.googleTasks",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        300
+      ],
+      "id": "createUpdateGoogleTask_1",
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": "YOUR_N8N_GOOGLE_TASKS_CREDENTIAL_ID",
+          "name": "Your Google Tasks Credential Name"
+        }
+      },
+      "notes": "To Update: Set 'taskId' to $json.syncRecord.googleTaskId. You'll need logic to decide Create vs Update."
+    },
+    {
+      "parameters": {
+        "functionCode": "// Placeholder for updating the Sync Record in your Dedicated Sync Database\n// Input: $json (contains syncRecord, results from Notion/Google update, currentDataSource)\n// Logic:\n// 1. If a new item was created in the target system, get its ID (e.g., $json.newNotionPageId or $json.newGoogleTaskId from previous node's output).\n// 2. Update $json.syncRecord with:\n//    - The new ID if it was a creation (syncRecord.notionPageId or syncRecord.googleTaskId).\n//    - Set syncRecord.lastSyncTimestamp = new Date().toISOString().\n//    - Set syncRecord.sourceSystemLastUpdate = $json.currentDataSource.\n// 3. Write this updated syncRecord back to your Sync Database (insert or update).\n\n// Example update (if Notion was target and page was created/updated):\nif ($json.targetSystem === 'Notion') {\n  $json.syncRecord.notionPageId = $json.syncRecord.notionPageId || $input.first().json.id; // Assuming Notion node output this\n}\nif ($json.targetSystem === 'GoogleTasks') {\n  $json.syncRecord.googleTaskId = $json.syncRecord.googleTaskId || $input.first().json.id; // Assuming GTasks node output this\n}\n\n$json.syncRecord.lastSyncTimestamp = new Date().toISOString();\n$json.syncRecord.sourceSystemLastUpdate = $json.currentDataSource; \n\n// Send $json.syncRecord to your DB update node/function.\nconsole.log('DB_WriteSyncRecord should save:', $json.syncRecord);\n\nreturn $json;"
+      },
+      "name": "DB: Update Sync Record",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        200
+      ],
+      "id": "dbUpdateSyncRecord_1"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Placeholder for releasing the lock\n// Input: $json.googleTaskId or $json.notionPageId\n// Logic: \n// 1. Remove the lock record from your central lock store.\n\nconsole.log('Lock released for item.');\nreturn $json;"
+      },
+      "name": "Release Lock",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2050,
+        300
+      ],
+      "id": "releaseLock_1"
+    },
+    {
+      "parameters": {},
+      "name": "NoOp End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2250,
+        300
+      ],
+      "id": "noOpEnd_1"
+    }
+  ],
+  "connections": {
+    "pollGoogleTasks_1": {
+      "main": [
+        [
+          {
+            "node": "getGoogleTasks_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getGoogleTasks_1": {
+      "main": [
+        [
+          {
+            "node": "loopGoogleTasks_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "loopGoogleTasks_1": {
+      "main": [
+        [
+          {
+            "node": "setGoogleTaskData_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "setGoogleTaskData_1": {
+      "main": [
+        [
+          {
+            "node": "acquireLock_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "notionWebhookTrigger_1": {
+      "main": [
+        [
+          {
+            "node": "setNotionData_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "setNotionData_1": {
+      "main": [
+        [
+          {
+            "node": "acquireLock_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "acquireLock_1": {
+      "main": [
+        [
+          {
+            "node": "ifLockAcquired_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ifLockAcquired_1": {
+      "main": [
+        [
+          {
+            "node": "dbGetPrepareSyncRecord_1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "releaseLock_1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "dbGetPrepareSyncRecord_1": {
+      "main": [
+        [
+          {
+            "node": "conflictResolutionMapping_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "conflictResolutionMapping_1": {
+      "main": [
+        [
+          {
+            "node": "ifSyncNeeded_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ifSyncNeeded_1": {
+      "main": [
+        [
+          // This logic needs a SWITCH node based on $json.targetSystem
+          // For simplicity, connecting directly to one, then the other as an example
+          // You'll need a Switch node here to route to createUpdateNotionPage_1 OR createUpdateGoogleTask_1
+          // For now, if target is Notion (meaning source was Google)
+          {
+            "node": "createUpdateNotionPage_1", // Assuming this path if $json.targetSystem === 'Notion'
+            "type": "main",
+            "index": 0
+          }
+          // Add another output from the IF to a Google Tasks node if target is Google
+          // Or use a Switch Node here:
+          // If $json.targetSystem === 'Notion' -> createUpdateNotionPage_1
+          // If $json.targetSystem === 'GoogleTasks' -> createUpdateGoogleTask_1
+        ],
+        [
+          { // False branch of "If Sync Needed?"
+            "node": "releaseLock_1",
+            "type": "main",
+            "index": 1 
+          }
+        ]
+      ]
+    },
+    "createUpdateNotionPage_1": {
+      "main": [
+        [
+          {
+            "node": "dbUpdateSyncRecord_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "createUpdateGoogleTask_1": {
+      "main": [
+        [
+          {
+            "node": "dbUpdateSyncRecord_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dbUpdateSyncRecord_1": {
+      "main": [
+        [
+          {
+            "node": "releaseLock_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "releaseLock_1": {
+      "main": [
+        [
+          {
+            "node": "noOpEnd_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  ],
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "errorWorkflow": "", // Consider setting an error workflow
+    "timezone": "America/New_York", // Set your timezone
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "tags": [
+    {
+      "id": "1",
+      "name": "Sync"
+    },
+    {
+      "id": "2",
+      "name": "Google Tasks"
+    },
+    {
+      "id": "3",
+      "name": "Notion"
+    }
+  ],
+  "versionId": "placeholder-version-uuid"
+}
