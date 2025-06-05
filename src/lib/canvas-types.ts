@@ -682,7 +682,7 @@ export interface RenderingBackend {
   type: 'dom' | 'canvas2d' | 'webgl' | 'webgpu';
   capabilities: RenderingCapabilities;
   initialize(): Promise<boolean>;
-  render(elements: WhiteboardElement[], viewport: WhiteboardBounds): void;
+  render(elements: CanvasElement[], viewport: CanvasBounds): void;
   dispose(): void;
 }
 
