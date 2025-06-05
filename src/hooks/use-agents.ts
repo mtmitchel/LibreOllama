@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/lib/supabase';
-import { mapAgentFromDB, mapAgentToDB } from '@/lib/dataMappers';
+import { localDb } from '@/lib/database-adapter';
 import { useAuth } from './use-auth';
 import type { AgentConfig } from '@/lib/types';
 import { useToast } from './use-toast';
@@ -24,31 +22,21 @@ export function useAgents(): UseAgentsResult {
   const [error, setError] = useState<string | null>(null);
   const { getCurrentUserId } = useAuth();
   const { toast } = useToast();
-
   const fetchAgents = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const { data, error: fetchError } = await supabase
-        .from('agents')
-        .select('*')
-        .eq('user_id', getCurrentUserId());
-      
-      if (fetchError) {
-        throw fetchError;
-      }
-      
-      const mappedAgents = data.map(mapAgentFromDB);
+      const agents = await localDb.agents.findAll(getCurrentUserId());
       
       // Sort pinned agents to the top
-      mappedAgents.sort((a, b) => {
+      agents.sort((a: AgentConfig, b: AgentConfig) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
       
-      setAgents(mappedAgents);
+      setAgents(agents);
     } catch (err: any) {
       console.error('Error fetching agents:', err.message);
       setError(err.message);
@@ -61,42 +49,21 @@ export function useAgents(): UseAgentsResult {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchAgents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  }, [getCurrentUserId]);
   const createAgent = async (newAgent: Omit<AgentConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgentConfig | null> => {
     try {
-      const now = new Date().toISOString();
-      const agentToCreate: AgentConfig = {
+      const createdAgent = await localDb.agents.create({
         ...newAgent,
-        id: uuidv4(),
-        createdAt: now,
-        updatedAt: now,
-      };
-      
-      const dbAgent = mapAgentToDB(agentToCreate);
-      dbAgent.user_id = getCurrentUserId();
-      
-      const { data, error: insertError } = await supabase
-        .from('agents')
-        .insert(dbAgent)
-        .select()
-        .single();
-      
-      if (insertError) {
-        throw insertError;
-      }
-      
-      const createdAgent = mapAgentFromDB(data);
+        userId: getCurrentUserId(),
+      });
       
       // Update local state
       setAgents(prevAgents => {
         const updatedAgents = [...prevAgents, createdAgent];
         // Keep pinned agents at the top
-        updatedAgents.sort((a, b) => {
+        updatedAgents.sort((a: AgentConfig, b: AgentConfig) => {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
@@ -121,31 +88,13 @@ export function useAgents(): UseAgentsResult {
       return null;
     }
   };
-
   const updateAgent = async (agent: AgentConfig): Promise<AgentConfig | null> => {
     try {
-      const now = new Date().toISOString();
-      const agentToUpdate = {
-        ...agent,
-        updatedAt: now,
-      };
+      const updatedAgent = await localDb.agents.update(agent.id, agent);
       
-      const dbAgent = mapAgentToDB(agentToUpdate);
-      dbAgent.user_id = getCurrentUserId();
-      
-      const { data, error: updateError } = await supabase
-        .from('agents')
-        .update(dbAgent)
-        .eq('id', agent.id)
-        .eq('user_id', getCurrentUserId())
-        .select()
-        .single();
-      
-      if (updateError) {
-        throw updateError;
+      if (!updatedAgent) {
+        throw new Error('Agent not found');
       }
-      
-      const updatedAgent = mapAgentFromDB(data);
       
       // Update local state
       setAgents(prevAgents => {
@@ -153,7 +102,7 @@ export function useAgents(): UseAgentsResult {
           a.id === updatedAgent.id ? updatedAgent : a
         );
         // Keep pinned agents at the top
-        updatedAgents.sort((a, b) => {
+        updatedAgents.sort((a: AgentConfig, b: AgentConfig) => {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
@@ -178,20 +127,15 @@ export function useAgents(): UseAgentsResult {
       return null;
     }
   };
-
   const deleteAgent = async (id: string): Promise<boolean> => {
     try {
       // Get the agent name before deleting for the toast message
       const agentToDelete = getAgentById(id);
       
-      const { error: deleteError } = await supabase
-        .from('agents')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', getCurrentUserId());
+      const success = await localDb.agents.delete(id);
       
-      if (deleteError) {
-        throw deleteError;
+      if (!success) {
+        throw new Error('Failed to delete agent');
       }
       
       // Update local state
@@ -216,7 +160,6 @@ export function useAgents(): UseAgentsResult {
       return false;
     }
   };
-
   const toggleAgentPin = async (id: string): Promise<boolean> => {
     try {
       const agent = getAgentById(id);
@@ -224,25 +167,22 @@ export function useAgents(): UseAgentsResult {
         throw new Error('Agent not found');
       }
       
-      const newPinnedStatus = !agent.pinned;
+      const updatedAgent = await localDb.agents.update(id, {
+        ...agent,
+        pinned: !agent.pinned,
+      });
       
-      const { error: updateError } = await supabase
-        .from('agents')
-        .update({ pinned: newPinnedStatus, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('user_id', getCurrentUserId());
-      
-      if (updateError) {
-        throw updateError;
+      if (!updatedAgent) {
+        throw new Error('Failed to update agent');
       }
       
       // Update local state
       setAgents(prevAgents => {
         const updatedAgents = prevAgents.map(a => 
-          a.id === id ? { ...a, pinned: newPinnedStatus, updatedAt: new Date().toISOString() } : a
+          a.id === id ? updatedAgent : a
         );
         // Keep pinned agents at the top
-        updatedAgents.sort((a, b) => {
+        updatedAgents.sort((a: AgentConfig, b: AgentConfig) => {
           if (a.pinned && !b.pinned) return -1;
           if (!a.pinned && b.pinned) return 1;
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
@@ -251,8 +191,8 @@ export function useAgents(): UseAgentsResult {
       });
       
       toast({
-        title: newPinnedStatus ? 'Agent pinned' : 'Agent unpinned',
-        description: `${agent.name} has been ${newPinnedStatus ? 'pinned' : 'unpinned'}.`,
+        title: updatedAgent.pinned ? 'Agent pinned' : 'Agent unpinned',
+        description: `${updatedAgent.name} has been ${updatedAgent.pinned ? 'pinned' : 'unpinned'}.`,
       });
       
       return true;

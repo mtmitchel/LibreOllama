@@ -1,78 +1,38 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Session, User } from '@supabase/supabase-js';
+import { useState, useEffect } from 'react';
 
+// Simple auth hook for Tauri app - can be expanded later
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for now
+  const [currentUser, setCurrentUser] = useState({
+    id: 'default-user',
+    name: 'User',
+    email: 'user@example.com'
+  });
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const getCurrentUserId = () => {
+    return currentUser.id;
+  };
 
-  useEffect(() => {
-    if (!mounted) return;
+  const login = async (credentials: { email: string; password: string }) => {
+    // Placeholder for future authentication
+    setIsAuthenticated(true);
+    return true;
+  };
 
-    // Get session from local storage initially
-    const checkSession = async () => {
-      setLoading(true);
-      
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error fetching session:', error.message);
-          setSession(null);
-          setUser(null);
-        } else {
-          setSession(session);
-          setUser(session?.user ?? null);
-        }
-      } catch (err) {
-        console.error('Unexpected error during auth check:', err);
-        setSession(null);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, updatedSession) => {
-      setSession(updatedSession);
-      setUser(updatedSession?.user ?? null);
-      setLoading(false);
+  const logout = async () => {
+    setIsAuthenticated(false);
+    setCurrentUser({
+      id: 'default-user',
+      name: 'User',
+      email: 'user@example.com'
     });
-
-    // Cleanup
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [mounted]);
-
-  // For development/testing purposes when auth is not enabled,
-  // we'll provide a mock user ID that can be used by other hooks
-  const mockUserId = '00000000-0000-0000-0000-000000000000';
-  const getCurrentUserId = () => user?.id || mockUserId;
+  };
 
   return {
-    user,
-    session,
-    loading,
-    isAuthenticated: !!user,
+    isAuthenticated,
+    currentUser,
     getCurrentUserId,
-    signIn: async (email: string, password: string) => {
-      return supabase.auth.signInWithPassword({ email, password });
-    },
-    signUp: async (email: string, password: string) => {
-      return supabase.auth.signUp({ email, password });
-    },
-    signOut: async () => {
-      return supabase.auth.signOut();
-    },
+    login,
+    logout,
   };
-} 
+}

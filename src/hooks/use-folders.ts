@@ -1,104 +1,105 @@
 import { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/lib/supabase';
-import { mapFolderFromDB } from '@/lib/dataMappers';
+import { invoke } from '@tauri-apps/api/core';
 import { useAuth } from './use-auth';
-import type { Folder, Item } from '@/lib/types';
-import { useToast } from './use-toast';
+
+export interface Folder {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  parentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+}
+
+export interface FolderCreate {
+  name: string;
+  description?: string;
+  color?: string;
+  parentId?: string;
+}
+
+// Backend request structures
+interface CreateFolderRequest extends Record<string, unknown> {
+  name: string;
+  parent_id?: string;
+  color?: string;
+  user_id: string;
+}
+
+interface UpdateFolderRequest extends Record<string, unknown> {
+  name?: string;
+  parent_id?: string;
+  color?: string;
+}
+
+// Backend response structure
+interface FolderResponse {
+  id: string;
+  name: string;
+  parent_id?: string;
+  color?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface UseFoldersResult {
   folders: Folder[];
-  rootFolders: Folder[];
   loading: boolean;
   error: string | null;
-  createFolder: (name: string, parentId?: string) => Promise<Folder | null>;
-  updateFolder: (id: string, name: string) => Promise<Folder | null>;
+  createFolder: (folder: FolderCreate) => Promise<Folder | null>;
+  updateFolder: (id: string, updates: Partial<FolderCreate>) => Promise<Folder | null>;
   deleteFolder: (id: string) => Promise<boolean>;
-  moveItem: (itemId: string, folderId: string | null) => Promise<boolean>;
   getFolderById: (id: string) => Folder | undefined;
   refreshFolders: () => Promise<void>;
 }
 
 export function useFolders(): UseFoldersResult {
-  const [allFolders, setAllFolders] = useState<Folder[]>([]);
-  const [rootFolders, setRootFolders] = useState<Folder[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getCurrentUserId } = useAuth();
-  const { toast } = useToast();
 
-  // Build folder hierarchy from flat list
-  const buildFolderHierarchy = (folders: any[], items: Item[]) => {
-    // First create a map of all folders with empty children arrays
-    const folderMap: Record<string, Folder> = {};
-    folders.forEach(folder => {
-      folderMap[folder.id] = {
-        id: folder.id,
-        name: folder.name,
-        children: [],
-        items: []
-      };
-    });
-    
-    // Then populate children and build hierarchy
-    const rootFolders: Folder[] = [];
-    
-    folders.forEach(folder => {
-      if (folder.parent_id) {
-        // This is a child folder
-        if (folderMap[folder.parent_id]) {
-          folderMap[folder.parent_id].children.push(folderMap[folder.id]);
-        } else {
-          // If parent doesn't exist, treat as root
-          rootFolders.push(folderMap[folder.id]);
-        }
-      } else {
-        // This is a root folder
-        rootFolders.push(folderMap[folder.id]);
-      }
-    });
-    
-    // Distribute items to their folders
-    items.forEach(item => {
-      // Implement this when folder_items junction table is added
-      // For now, we'll assume all items are in root (not implemented in this initial hook)
-    });
-    
-    return { allFolders: Object.values(folderMap), rootFolders };
-  };
+  // Convert backend response to frontend format
+  const convertToFrontendFolder = (backendFolder: FolderResponse): Folder => ({
+    id: backendFolder.id,
+    name: backendFolder.name,
+    color: backendFolder.color,
+    parentId: backendFolder.parent_id,
+    userId: backendFolder.user_id,
+    createdAt: backendFolder.created_at,
+    updatedAt: backendFolder.updated_at,
+  });
 
   const fetchFolders = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch all folders for the user
-      const { data: foldersData, error: foldersError } = await supabase
-        .from('folders')
-        .select('*')
-        .eq('user_id', getCurrentUserId())
-        .order('name');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Backend connection timeout')), 5000)
+      );
       
-      if (foldersError) {
-        throw foldersError;
-      }
+      const userId = getCurrentUserId();
+      const foldersPromise = invoke<FolderResponse[]>('get_folders', { user_id: userId });
       
-      // For a complete implementation, we would also fetch items and their folder associations
-      // This would require a folder_items junction table
-      // For now, we'll just build the folder hierarchy without items
-
-      const { allFolders, rootFolders } = buildFolderHierarchy(foldersData, []);
-      
-      setAllFolders(allFolders);
-      setRootFolders(rootFolders);
+      const folderData = await Promise.race([foldersPromise, timeoutPromise]) as FolderResponse[];
+      const convertedFolders = folderData.map(convertToFrontendFolder);
+      setFolders(convertedFolders);
     } catch (err: any) {
-      console.error('Error fetching folders:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error fetching folders',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error fetching folders:', err);
+      
+      // Check if it's a backend connection issue
+      if (err.message?.includes('timeout') || err.message?.includes('connection')) {
+        setError('Backend connection unavailable. Folder functionality is limited.');
+        // Set empty folders array to show empty state instead of loading spinner
+        setFolders([]);
+      } else {
+        setError(err.message || 'Failed to fetch folders');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,201 +107,97 @@ export function useFolders(): UseFoldersResult {
 
   useEffect(() => {
     fetchFolders();
-    
-    // Set up real-time subscription for folders
-    const foldersSubscription = supabase
-      .channel('public:folders')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'folders',
-        filter: `user_id=eq.${getCurrentUserId()}`
-      }, (payload) => {
-        // Just refetch all folders for simplicity
-        fetchFolders();
-      })
-      .subscribe();
-      
-    // Clean up subscription on unmount
-    return () => {
-      supabase.removeChannel(foldersSubscription);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createFolder = async (name: string, parentId?: string): Promise<Folder | null> => {
+  const createFolder = async (folderData: FolderCreate): Promise<Folder | null> => {
     try {
-      const now = new Date().toISOString();
-      const folderId = uuidv4();
+      setError(null);
+      const userId = getCurrentUserId();
       
-      const { data, error: insertError } = await supabase
-        .from('folders')
-        .insert({
-          id: folderId,
-          name,
-          parent_id: parentId || null,
-          user_id: getCurrentUserId(),
-          created_at: now,
-          updated_at: now
-        })
-        .select()
-        .single();
+      // Convert frontend format to backend format
+      const createRequest: CreateFolderRequest = {
+        name: folderData.name,
+        parent_id: folderData.parentId,
+        color: folderData.color,
+        user_id: userId,
+      };
       
-      if (insertError) {
-        throw insertError;
-      }
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Create folder timeout')), 10000)
+      );
       
-      // Refresh folders to update hierarchy
-      await fetchFolders();
+      const createPromise = invoke<FolderResponse>('create_folder', createRequest);
+      const backendFolder = await Promise.race([createPromise, timeoutPromise]) as FolderResponse;
+      const newFolder = convertToFrontendFolder(backendFolder);
       
-      // Find the created folder in the updated state
-      const createdFolder = allFolders.find(f => f.id === folderId);
-      
-      toast({
-        title: 'Folder created',
-        description: `"${name}" folder has been created successfully.`,
+      setFolders(prevFolders => {
+        const updatedFolders = [...prevFolders, newFolder];
+        return updatedFolders.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       });
       
-      return createdFolder || null;
+      return newFolder;
     } catch (err: any) {
-      console.error('Error creating folder:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error creating folder',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error creating folder:', err);
+      if (err.message?.includes('timeout')) {
+        setError('Backend connection unavailable. Cannot create folder.');
+      } else {
+        setError(err.message || 'Failed to create folder');
+      }
       return null;
     }
   };
 
-  const updateFolder = async (id: string, name: string): Promise<Folder | null> => {
+  const updateFolder = async (id: string, updates: Partial<FolderCreate>): Promise<Folder | null> => {
     try {
-      const now = new Date().toISOString();
+      setError(null);
       
-      const { error: updateError } = await supabase
-        .from('folders')
-        .update({
-          name,
-          updated_at: now
-        })
-        .eq('id', id)
-        .eq('user_id', getCurrentUserId());
+      // Convert frontend format to backend format
+      const updateRequest: UpdateFolderRequest = {
+        ...(updates.name && { name: updates.name }),
+        ...(updates.parentId !== undefined && { parent_id: updates.parentId }),
+        ...(updates.color && { color: updates.color }),
+      };
       
-      if (updateError) {
-        throw updateError;
-      }
-      
-      // Refresh folders to update hierarchy
-      await fetchFolders();
-      
-      // Find the updated folder in the updated state
-      const updatedFolder = allFolders.find(f => f.id === id);
-      
-      toast({
-        title: 'Folder updated',
-        description: `"${name}" folder has been updated successfully.`,
+      const backendFolder = await invoke<FolderResponse>('update_folder', {
+        id,
+        folder: updateRequest
       });
+      const updatedFolder = convertToFrontendFolder(backendFolder);
       
-      return updatedFolder || null;
+      setFolders(prevFolders =>
+        prevFolders.map(folder =>
+          folder.id === id ? updatedFolder : folder
+        )
+      );
+      
+      return updatedFolder;
     } catch (err: any) {
-      console.error('Error updating folder:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error updating folder',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error updating folder:', err);
+      setError(err.message || 'Failed to update folder');
       return null;
     }
   };
 
   const deleteFolder = async (id: string): Promise<boolean> => {
     try {
-      // Get the folder name before deleting for the toast message
-      const folderToDelete = getFolderById(id);
+      setError(null);
+      await invoke('delete_folder', { id });
       
-      // First ensure all child folders are reassigned to parent or made root
-      const childFolders = allFolders.filter(f => 
-        f.children.some(child => child.id === id)
-      );
-      
-      // Get parent folder of the folder being deleted
-      const parentFolder = allFolders.find(f => 
-        f.children.some(child => child.id === id)
-      );
-      
-      // Update all child folders to point to the parent of the deleted folder
-      // or make them root folders if the deleted folder was a root folder
-      for (const childFolder of childFolders) {
-        await supabase
-          .from('folders')
-          .update({
-            parent_id: parentFolder?.id || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', childFolder.id)
-          .eq('user_id', getCurrentUserId());
-      }
-      
-      // Delete the folder
-      const { error: deleteError } = await supabase
-        .from('folders')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', getCurrentUserId());
-      
-      if (deleteError) {
-        throw deleteError;
-      }
-      
-      // Refresh folders to update hierarchy
-      await fetchFolders();
-      
-      toast({
-        title: 'Folder deleted',
-        description: folderToDelete 
-          ? `"${folderToDelete.name}" folder has been deleted.` 
-          : 'Folder has been deleted.',
-      });
+      setFolders(prevFolders => prevFolders.filter(folder => folder.id !== id));
       
       return true;
     } catch (err: any) {
-      console.error('Error deleting folder:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error deleting folder',
-        description: err.message,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  };
-
-  const moveItem = async (itemId: string, folderId: string | null): Promise<boolean> => {
-    try {
-      // This would require a folder_items junction table
-      // Implementation will be needed when that table is added
-      toast({
-        title: 'Not implemented',
-        description: 'Moving items between folders is not yet implemented.',
-        variant: 'destructive',
-      });
-      return false;
-    } catch (err: any) {
-      console.error('Error moving item:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error moving item',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error deleting folder:', err);
+      setError(err.message || 'Failed to delete folder');
       return false;
     }
   };
 
   const getFolderById = (id: string): Folder | undefined => {
-    return allFolders.find(folder => folder.id === id);
+    return folders.find(folder => folder.id === id);
   };
 
   const refreshFolders = async (): Promise<void> => {
@@ -308,15 +205,13 @@ export function useFolders(): UseFoldersResult {
   };
 
   return {
-    folders: allFolders,
-    rootFolders,
+    folders,
     loading,
     error,
     createFolder,
     updateFolder,
     deleteFolder,
-    moveItem,
     getFolderById,
     refreshFolders,
   };
-} 
+}

@@ -1,54 +1,95 @@
 import { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/lib/supabase';
-import { mapNoteFromDB, mapNoteToDB } from '@/lib/dataMappers';
+import { invoke } from '@tauri-apps/api/core';
 import { useAuth } from './use-auth';
-import type { Item } from '@/lib/types';
-import { useToast } from './use-toast';
+
+export interface Note {
+  id: string;
+  title: string;
+  content?: string;
+  imageUrl?: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  folderId?: string;
+}
+
+export interface NoteCreate {
+  title: string;
+  content?: string;
+  imageUrl?: string;
+  tags?: string[];
+  folderId?: string;
+}
+
+// Backend request structures
+interface CreateNoteRequest {
+  title: string;
+  content: string;
+  tags?: string[];
+  folder_id?: string;
+  user_id: string;
+}
+
+interface UpdateNoteRequest {
+  title?: string;
+  content?: string;
+  tags?: string[];
+  folder_id?: string;
+}
+
+// Backend response structure
+interface NoteResponse {
+  id: string;
+  title: string;
+  content: string;
+  tags?: string[];
+  folder_id?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface UseNotesResult {
-  notes: Item[];
+  notes: Note[];
   loading: boolean;
   error: string | null;
-  createNote: (note: Omit<Item, 'id' | 'type' | 'createdAt' | 'updatedAt'>) => Promise<Item | null>;
-  updateNote: (note: Item) => Promise<Item | null>;
+  createNote: (note: NoteCreate) => Promise<Note | null>;
+  updateNote: (id: string, updates: Partial<NoteCreate>) => Promise<Note | null>;
   deleteNote: (id: string) => Promise<boolean>;
-  getNoteById: (id: string) => Item | undefined;
+  getNoteById: (id: string) => Note | undefined;
   refreshNotes: () => Promise<void>;
 }
 
 export function useNotes(): UseNotesResult {
-  const [notes, setNotes] = useState<Item[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getCurrentUserId } = useAuth();
-  const { toast } = useToast();
+
+  // Convert backend response to frontend format
+  const convertToFrontendNote = (backendNote: NoteResponse): Note => ({
+    id: backendNote.id,
+    title: backendNote.title,
+    content: backendNote.content,
+    tags: backendNote.tags || [],
+    folderId: backendNote.folder_id,
+    userId: backendNote.user_id,
+    createdAt: backendNote.created_at,
+    updatedAt: backendNote.updated_at,
+  });
 
   const fetchNotes = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const { data, error: fetchError } = await supabase
-        .from('notes')
-        .select('*')
-        .eq('user_id', getCurrentUserId())
-        .order('updated_at', { ascending: false });
-      
-      if (fetchError) {
-        throw fetchError;
-      }
-      
-      const mappedNotes: Item[] = data.map(mapNoteFromDB);
-      setNotes(mappedNotes);
+      const userId = getCurrentUserId();
+      const noteData = await invoke<NoteResponse[]>('get_notes', { user_id: userId });
+      const convertedNotes = noteData.map(convertToFrontendNote);
+      setNotes(convertedNotes);
     } catch (err: any) {
-      console.error('Error fetching notes:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error fetching notes',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error fetching notes:', err);
+      setError(err.message || 'Failed to fetch notes');
     } finally {
       setLoading(false);
     }
@@ -56,180 +97,88 @@ export function useNotes(): UseNotesResult {
 
   useEffect(() => {
     fetchNotes();
-    
-    // Set up real-time subscription for notes
-    const notesSubscription = supabase
-      .channel('public:notes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'notes',
-        filter: `user_id=eq.${getCurrentUserId()}`
-      }, (payload) => {
-        // Instead of handling each event type specifically,
-        // we'll just refetch all notes for simplicity
-        fetchNotes();
-      })
-      .subscribe();
-      
-    // Clean up subscription on unmount
-    return () => {
-      supabase.removeChannel(notesSubscription);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createNote = async (noteData: Omit<Item, 'id' | 'type' | 'createdAt' | 'updatedAt'>): Promise<Item | null> => {
+  const createNote = async (noteData: NoteCreate): Promise<Note | null> => {
     try {
-      const now = new Date().toISOString();
-      const noteToCreate: Item = {
-        ...noteData,
-        id: uuidv4(),
-        type: 'note',
-        createdAt: now,
-        updatedAt: now,
+      setError(null);
+      const userId = getCurrentUserId();
+      
+      // Convert frontend format to backend format
+      const createRequest: CreateNoteRequest = {
+        title: noteData.title,
+        content: noteData.content || '',
+        tags: noteData.tags,
+        folder_id: noteData.folderId,
+        user_id: userId,
       };
       
-      const dbNote = mapNoteToDB(noteToCreate);
-      dbNote.user_id = getCurrentUserId();
+      const backendNote = await invoke<NoteResponse>('create_note', { note: createRequest });
+      const newNote = convertToFrontendNote(backendNote);
       
-      const { data, error: insertError } = await supabase
-        .from('notes')
-        .insert(dbNote)
-        .select()
-        .single();
-      
-      if (insertError) {
-        throw insertError;
-      }
-      
-      const createdNote = mapNoteFromDB(data);
-      
-      // Update local state
-      setNotes(prevNotes => [createdNote, ...prevNotes]);
-      
-      toast({
-        title: 'Note created',
-        description: `"${createdNote.name}" has been created successfully.`,
+      setNotes(prevNotes => {
+        const updatedNotes = [...prevNotes, newNote];
+        return updatedNotes.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       });
       
-      return createdNote;
+      return newNote;
     } catch (err: any) {
-      console.error('Error creating note:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error creating note',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error creating note:', err);
+      setError(err.message || 'Failed to create note');
       return null;
     }
   };
 
-  const updateNote = async (note: Item): Promise<Item | null> => {
+  const updateNote = async (id: string, updates: Partial<NoteCreate>): Promise<Note | null> => {
     try {
-      if (note.type !== 'note') {
-        throw new Error('Item is not a note');
-      }
+      setError(null);
       
-      const now = new Date().toISOString();
-      const noteToUpdate = {
-        ...note,
-        updatedAt: now,
+      // Convert frontend format to backend format
+      const updateRequest: UpdateNoteRequest = {
+        ...(updates.title && { title: updates.title }),
+        ...(updates.content !== undefined && { content: updates.content }),
+        ...(updates.tags !== undefined && { tags: updates.tags }),
+        ...(updates.folderId !== undefined && { folder_id: updates.folderId }),
       };
       
-      const dbNote = mapNoteToDB(noteToUpdate);
-      dbNote.user_id = getCurrentUserId();
-      
-      const { data, error: updateError } = await supabase
-        .from('notes')
-        .update({
-          title: note.name,
-          content: note.content || null,
-          image_url: note.imageUrl || null,
-          tags: note.tags || null,
-          updated_at: now,
-        })
-        .eq('id', note.id)
-        .eq('user_id', getCurrentUserId())
-        .select()
-        .single();
-      
-      if (updateError) {
-        throw updateError;
-      }
-      
-      const updatedNote = mapNoteFromDB(data);
-      
-      // Update local state
-      setNotes(prevNotes => {
-        const updatedNotes = prevNotes.map(n => 
-          n.id === updatedNote.id ? updatedNote : n
-        );
-        // Sort by updated date
-        updatedNotes.sort((a, b) => 
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
-        return updatedNotes;
+      const backendNote = await invoke<NoteResponse>('update_note', {
+        id,
+        note: updateRequest
       });
+      const updatedNote = convertToFrontendNote(backendNote);
       
-      toast({
-        title: 'Note updated',
-        description: `"${updatedNote.name}" has been updated successfully.`,
-      });
+      setNotes(prevNotes =>
+        prevNotes.map(note =>
+          note.id === id ? updatedNote : note
+        )
+      );
       
       return updatedNote;
     } catch (err: any) {
-      console.error('Error updating note:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error updating note',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error updating note:', err);
+      setError(err.message || 'Failed to update note');
       return null;
     }
   };
 
   const deleteNote = async (id: string): Promise<boolean> => {
     try {
-      // Get the note name before deleting for the toast message
-      const noteToDelete = getNoteById(id);
+      setError(null);
+      await invoke('delete_note', { id });
       
-      const { error: deleteError } = await supabase
-        .from('notes')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', getCurrentUserId());
-      
-      if (deleteError) {
-        throw deleteError;
-      }
-      
-      // Update local state
       setNotes(prevNotes => prevNotes.filter(note => note.id !== id));
-      
-      toast({
-        title: 'Note deleted',
-        description: noteToDelete 
-          ? `"${noteToDelete.name}" has been deleted.` 
-          : 'Note has been deleted.',
-      });
       
       return true;
     } catch (err: any) {
-      console.error('Error deleting note:', err.message);
-      setError(err.message);
-      toast({
-        title: 'Error deleting note',
-        description: err.message,
-        variant: 'destructive',
-      });
+      console.error('Error deleting note:', err);
+      setError(err.message || 'Failed to delete note');
       return false;
     }
   };
 
-  const getNoteById = (id: string): Item | undefined => {
+  const getNoteById = (id: string): Note | undefined => {
     return notes.find(note => note.id === id);
   };
 
@@ -247,4 +196,4 @@ export function useNotes(): UseNotesResult {
     getNoteById,
     refreshNotes,
   };
-} 
+}

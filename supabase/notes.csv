@@ -1,3 +1,0 @@
-id,created_at,title,content,folder_id
-f1a2b3c4-d5e6-7890-1234-567890abcdef,2025-05-20 12:00:00,Meeting Minutes 2025-05-21,"{""type"": ""doc"", ""content"": [{""type"": ""paragraph"", ""content"": [{""type"": ""text"", ""text"": ""Discussed project milestones.""}]}]}",
-g1h2i3j4-k5l6-7890-1234-567890abcdef,2025-05-20 12:10:00,Ideas for Q3 Marketing,"{""type"": ""doc"", ""content"": [{""type"": ""paragraph"", ""content"": [{""type"": ""text"", ""text"": ""Brainstormed new campaigns.""}]}]}",a2b3c4d5-e6f7-8901-2345-67890abcdef0

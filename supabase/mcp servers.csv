@@ -1,3 +1,0 @@
-id,created_at,name,ip_address,port,credentials,description
-p1q2r3s4-t5u6-7890-1234-567890abcdef,2025-05-20 17:00:00,Prod_Server_1,192.168.1.100,22,"{""username"": ""admin"", ""type"": ""ssh_key""}",Main production server.
-q1r2s3t4-u5v6-7890-1234-567890abcdef,2025-05-20 17:30:00,Dev_Machine,10.0.0.5,8080,"{""username"": ""dev"", ""password"": ""devpass""}",Development environment.
