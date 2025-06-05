@@ -324,18 +324,18 @@ export interface CanvasLayer {
   order: number;
 }
 
-// Main whiteboard state
-export interface WhiteboardState {
+// Main canvas state
+export interface CanvasState {
   id: string;
   name: string;
   description?: string;
-  elements: AnyWhiteboardElement[];
-  groups: WhiteboardGroup[];
-  layers: WhiteboardLayer[];
-  viewport: WhiteboardViewport;
-  settings: WhiteboardSettings;
-  selection: WhiteboardSelection;
-  history: WhiteboardHistory;
+  elements: AnyCanvasElement[];
+  groups: CanvasGroup[];
+  layers: CanvasLayer[];
+  viewport: CanvasViewport;
+  settings: CanvasSettings;
+  selection: CanvasSelection;
+  history: CanvasHistory;
   metadata: {
     author: string;
     collaborators: string[];
@@ -350,8 +350,8 @@ export interface WhiteboardState {
 }
 
 // Tool state and options
-export interface WhiteboardToolState {
-  activeTool: WhiteboardToolType;
+export interface CanvasToolState {
+  activeTool: CanvasToolType;
   toolOptions: {
     stickyNote: {
       color: string;
@@ -359,39 +359,39 @@ export interface WhiteboardToolState {
       autoResize: boolean;
     };
     text: {
-      font: WhiteboardFont;
+      font: CanvasFont;
       color: string;
     };
     pen: {
-      stroke: WhiteboardStroke;
+      stroke: CanvasStroke;
       color: string;
       smoothing: number;
       pressureSensitive: boolean;
     };
     shape: {
-      shapeType: WhiteboardShapeType;
-      color: WhiteboardColor;
-      stroke: WhiteboardStroke;
+      shapeType: CanvasShapeType;
+      color: CanvasColor;
+      stroke: CanvasStroke;
     };
     line: {
-      lineType: WhiteboardLineType;
+      lineType: CanvasLineType;
       color: string;
-      stroke: WhiteboardStroke;
-      startArrow: WhiteboardArrowStyle;
-      endArrow: WhiteboardArrowStyle;
+      stroke: CanvasStroke;
+      startArrow: CanvasArrowStyle;
+      endArrow: CanvasArrowStyle;
     };
   };
 }
 
 // Templates and presets
-export interface WhiteboardTemplate {
+export interface CanvasTemplate {
   id: string;
   name: string;
   description: string;
   category: 'brainstorming' | 'planning' | 'analysis' | 'design' | 'education' | 'custom';
   thumbnail: string;
-  elements: AnyWhiteboardElement[];
-  settings: WhiteboardSettings;
+  elements: AnyCanvasElement[];
+  settings: CanvasSettings;
   tags: string[];
   isBuiltIn: boolean;
   usageCount: number;
@@ -401,17 +401,17 @@ export interface WhiteboardTemplate {
 }
 
 // AI integration types
-export interface WhiteboardAISuggestion {
+export interface CanvasAISuggestion {
   id: string;
   type: 'element' | 'layout' | 'content' | 'connection' | 'organization';
   title: string;
   description: string;
   confidence: number;
   targetElementIds?: string[];
-  suggestedElements?: Partial<AnyWhiteboardElement>[];
+  suggestedElements?: Partial<AnyCanvasElement>[];
   suggestedChanges?: {
     elementId: string;
-    changes: Partial<AnyWhiteboardElement>;
+    changes: Partial<AnyCanvasElement>;
   }[];
   reasoning: string;
   actions: Array<{
@@ -422,8 +422,8 @@ export interface WhiteboardAISuggestion {
   createdAt: string;
 }
 
-export interface WhiteboardAIContext {
-  elements: AnyWhiteboardElement[];
+export interface CanvasAIContext {
+  elements: AnyCanvasElement[];
   userIntent?: string;
   sessionHistory: string[];
   relatedContent: {
@@ -434,33 +434,33 @@ export interface WhiteboardAIContext {
 }
 
 // Export and import types
-export interface WhiteboardExportOptions {
+export interface CanvasExportOptions {
   format: 'json' | 'svg' | 'png' | 'pdf' | 'jpg';
   quality: 'low' | 'medium' | 'high';
   includeBackground: boolean;
   selectedOnly: boolean;
   scale: number;
-  bounds?: WhiteboardBounds;
+  bounds?: CanvasBounds;
 }
 
-export interface WhiteboardImportData {
+export interface CanvasImportData {
   type: 'json' | 'image' | 'svg';
   data: string | ArrayBuffer;
-  position?: WhiteboardPoint;
+  position?: CanvasPoint;
   preserveIds: boolean;
 }
 
 // Event types for interactions
-export interface WhiteboardEvent {
+export interface CanvasEvent {
   type: string;
   timestamp: string;
   elementId?: string;
   data: Record<string, any>;
 }
 
-export interface WhiteboardInteractionEvent extends WhiteboardEvent {
+export interface CanvasInteractionEvent extends CanvasEvent {
   type: 'element:click' | 'element:doubleclick' | 'element:hover' | 'canvas:click' | 'canvas:drag';
-  position: WhiteboardPoint;
+  position: CanvasPoint;
   modifiers: {
     shift: boolean;
     ctrl: boolean;
@@ -470,7 +470,7 @@ export interface WhiteboardInteractionEvent extends WhiteboardEvent {
 }
 
 // Performance monitoring
-export interface WhiteboardPerformanceMetrics {
+export interface CanvasPerformanceMetrics {
   renderTime: number;
   elementCount: number;
   visibleElementCount: number;
@@ -481,8 +481,8 @@ export interface WhiteboardPerformanceMetrics {
 
 // Spatial indexing interfaces
 export interface QuadTreeNode {
-  bounds: WhiteboardBounds;
-  elements: AnyWhiteboardElement[];
+  bounds: CanvasBounds;
+  elements: AnyCanvasElement[];
   children: QuadTreeNode[] | null;
   maxElements: number;
   maxDepth: number;
@@ -572,17 +572,17 @@ export interface ObjectPoolStats {
 
 // Advanced Drawing Tools - Phase 1b
 export interface BezierCurve {
-  startPoint: WhiteboardPoint;
-  controlPoint1: WhiteboardPoint;
-  controlPoint2: WhiteboardPoint;
-  endPoint: WhiteboardPoint;
+  startPoint: CanvasPoint;
+  controlPoint1: CanvasPoint;
+  controlPoint2: CanvasPoint;
+  endPoint: CanvasPoint;
   length: number;
 }
 
 export interface BezierCurveFitter {
-  fitCurve(points: WhiteboardPoint[], tolerance: number): BezierCurve[];
-  optimizePath(points: WhiteboardPoint[]): WhiteboardPoint[];
-  simplifyPath(points: WhiteboardPoint[], tolerance: number): WhiteboardPoint[];
+  fitCurve(points: CanvasPoint[], tolerance: number): BezierCurve[];
+  optimizePath(points: CanvasPoint[]): CanvasPoint[];
+  simplifyPath(points: CanvasPoint[], tolerance: number): CanvasPoint[];
 }
 
 export interface PressureSensitivityHandler {
@@ -595,14 +595,14 @@ export type RecognizedShapeType = 'line' | 'rectangle' | 'circle' | 'triangle' |
 
 export interface RecognizedShape {
   type: RecognizedShapeType;
-  bounds: WhiteboardBounds;
-  points: WhiteboardPoint[];
+  bounds: CanvasBounds;
+  points: CanvasPoint[];
   confidence: number;
-  suggestedElement: Partial<AnyWhiteboardElement>;
+  suggestedElement: Partial<AnyCanvasElement>;
 }
 
 export interface ShapeRecognizer {
-  recognizeShape(points: WhiteboardPoint[]): RecognizedShape | null;
+  recognizeShape(points: CanvasPoint[]): RecognizedShape | null;
   confidence: number;
   supportedShapes: RecognizedShapeType[];
 }
@@ -613,7 +613,7 @@ export interface OptimizedFileFormat {
     version: string;
     compression: 'brotli' | 'gzip' | 'none';
     elementCount: number;
-    canvasBounds: WhiteboardBounds;
+    canvasBounds: CanvasBounds;
     created: number;
     modified: number;
     checksum: string;
@@ -624,7 +624,7 @@ export interface OptimizedFileFormat {
 }
 
 export interface SerializedQuadTree {
-  bounds: WhiteboardBounds;
+  bounds: CanvasBounds;
   maxElements: number;
   maxDepth: number;
   nodes: SerializedQuadTreeNode[];
@@ -632,7 +632,7 @@ export interface SerializedQuadTree {
 
 export interface SerializedQuadTreeNode {
   id: string;
-  bounds: WhiteboardBounds;
+  bounds: CanvasBounds;
   elementIds: string[];
   parentId?: string;
   childIds: string[];
@@ -658,8 +658,8 @@ export interface CanvasMetadata {
 }
 
 export interface FileFormatManager {
-  compress(data: WhiteboardState): Promise<ArrayBuffer>;
-  decompress(data: ArrayBuffer): Promise<WhiteboardState>;
+  compress(data: CanvasState): Promise<ArrayBuffer>;
+  decompress(data: ArrayBuffer): Promise<CanvasState>;
   validate(data: ArrayBuffer): Promise<boolean>;
   migrate(data: ArrayBuffer, fromVersion: string): Promise<ArrayBuffer>;
   createChecksum(data: ArrayBuffer): string;
@@ -687,9 +687,9 @@ export interface RenderingBackend {
 }
 
 export interface HybridRenderer {
-  selectOptimalBackend(elements: WhiteboardElement[]): RenderingBackend;
+  selectOptimalBackend(elements: CanvasElement[]): RenderingBackend;
   fallbackToCompatibleBackend(): RenderingBackend;
-  renderWithBackend(backend: RenderingBackend, elements: WhiteboardElement[]): void;
+  renderWithBackend(backend: RenderingBackend, elements: CanvasElement[]): void;
 }
 
 // Advanced Export System - Phase 1e
@@ -697,7 +697,7 @@ export interface AdvancedExportOptions {
   format: 'svg' | 'png' | 'pdf' | 'json';
   quality: number; // 0.1 to 1.0
   dpi: number;
-  bounds?: WhiteboardBounds;
+  bounds?: CanvasBounds;
   backgroundTransparent: boolean;
   includeHiddenElements: boolean;
   compression?: 'none' | 'lossless' | 'lossy';
@@ -713,12 +713,12 @@ export interface ExportResult {
 }
 
 export interface AdvancedExportEngine {
-  exportToSVG(elements: WhiteboardElement[], options: AdvancedExportOptions): Promise<string>;
-  exportToPNG(elements: WhiteboardElement[], options: AdvancedExportOptions): Promise<Blob>;
-  exportToPDF(elements: WhiteboardElement[], options: AdvancedExportOptions): Promise<ArrayBuffer>;
-  exportToJSON(state: WhiteboardState, options: AdvancedExportOptions): Promise<string>;
+  exportToSVG(elements: CanvasElement[], options: AdvancedExportOptions): Promise<string>;
+  exportToPNG(elements: CanvasElement[], options: AdvancedExportOptions): Promise<Blob>;
+  exportToPDF(elements: CanvasElement[], options: AdvancedExportOptions): Promise<ArrayBuffer>;
+  exportToJSON(state: CanvasState, options: AdvancedExportOptions): Promise<string>;
   exportMultipleFormats(
-    elements: WhiteboardElement[],
+    elements: CanvasElement[],
     formats: AdvancedExportOptions[]
   ): Promise<Map<string, ExportResult>>;
 }
@@ -736,18 +736,18 @@ export interface PerformanceBenchmark {
 }
 
 // Enhanced Memory Pooling
-export interface PoolableWhiteboardPoint extends WhiteboardPoint, PoolableObject {}
-export interface PoolableWhiteboardBounds extends WhiteboardBounds, PoolableObject {}
-export interface PoolableWhiteboardElement extends WhiteboardElement, PoolableObject {}
-export interface PoolableWhiteboardPointArray extends Array<WhiteboardPoint>, PoolableObject {}
+export interface PoolableCanvasPoint extends CanvasPoint, PoolableObject {}
+export interface PoolableCanvasBounds extends CanvasBounds, PoolableObject {}
+export interface PoolableCanvasElement extends CanvasElement, PoolableObject {}
+export interface PoolableCanvasPointArray extends Array<CanvasPoint>, PoolableObject {}
 export interface PoolableDOMMatrix extends DOMMatrix, PoolableObject {}
 export interface PoolableEvent extends Event, PoolableObject {}
 
-export interface WhiteboardMemoryPools {
-  points: ObjectPool<PoolableWhiteboardPoint>;
-  bounds: ObjectPool<PoolableWhiteboardBounds>;
-  elements: ObjectPool<PoolableWhiteboardElement>;
-  pathPoints: ObjectPool<PoolableWhiteboardPointArray>;
+export interface CanvasMemoryPools {
+  points: ObjectPool<PoolableCanvasPoint>;
+  bounds: ObjectPool<PoolableCanvasBounds>;
+  elements: ObjectPool<PoolableCanvasElement>;
+  pathPoints: ObjectPool<PoolableCanvasPointArray>;
   transformMatrix: ObjectPool<PoolableDOMMatrix>;
   events: ObjectPool<PoolableEvent>;
 }
