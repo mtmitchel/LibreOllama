@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreOllama - Calendar</title>
+    <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { /* Dark Theme Variables */
+            --bg-primary: #0f1419; --bg-secondary: #1a2332; --bg-tertiary: #242b3d; --bg-surface: #2a3441; --bg-elevated: #323a47;
+            --text-primary: #ffffff; --text-secondary: #94a3b8; --text-tertiary: #64748b; --text-muted: #475569;
+            --accent-primary: #3b82f6; --accent-secondary: #1d4ed8; --accent-soft: rgba(59, 130, 246, 0.1);
+            --success: #10b981; --warning: #f59e0b; --error: #ef4444;
+            --border-subtle: rgba(148, 163, 184, 0.1); --border-default: rgba(148, 163, 184, 0.2);
+            --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+            --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+        }
+        html.light { /* Light Theme Variables */
+            --bg-primary: #ffffff; --bg-secondary: #f8fafc; --bg-tertiary: #f1f5f9; --bg-surface: #ffffff; --bg-elevated: #ffffff;
+            --text-primary: #0f172a; --text-secondary: #475569; --text-tertiary: #64748b; --text-muted: #94a3b8;
+            --border-subtle: rgba(0, 0, 0, 0.05); --border-default: rgba(0, 0, 0, 0.1);
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; }
+        .app-layout { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: var(--bg-secondary); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); }
+        .logo { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; font-size: 16px; color: var(--text-primary); }
+        .logo-icon { width: 28px; height: 28px; background: var(--accent-primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; }
+        .sidebar-nav { flex: 1; padding: var(--space-4); overflow-y: auto; }
+        .nav-section { margin-bottom: var(--space-6); }
+        .nav-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-3); padding: 0 var(--space-3); }
+        .nav-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--accent-soft); color: var(--accent-primary); }
+        .nav-item-icon { width: 20px; height: 20px; opacity: 0.7; flex-shrink: 0; color: inherit; }
+        .nav-item.active .nav-item-icon, .nav-item:hover .nav-item-icon { opacity: 1; }
+        .sidebar-footer { padding: var(--space-4); border-top: 1px solid var(--border-subtle); }
+        .main-content-wrapper { flex: 1; background: var(--bg-primary); display: flex; flex-direction: column; overflow: hidden; }
+        .top-bar { height: 72px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding: 0 var(--space-6); gap: var(--space-4); background: var(--bg-surface); flex-shrink: 0; }
+        .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 14px; color: var(--text-secondary); }
+        .breadcrumb-current { color: var(--text-primary); font-weight: 600; }
+        .search-bar { flex: 1; max-width: 480px; position: relative; }
+        .search-input { width: 100%; padding: var(--space-3) var(--space-4) var(--space-3) var(--space-10); background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--text-primary); font-size: 14px; outline: none; }
+        .search-icon { position: absolute; left: var(--space-3); top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--text-muted); pointer-events: none; }
+        .top-bar-actions { display: flex; align-items: center; gap: var(--space-3); }
+        .action-btn { width: 36px; height: 36px; border-radius: var(--radius-md); border: none; background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-btn.primary { background: var(--accent-primary); color: white; }
+        .action-btn .lucide { width: 20px; height: 20px; }
+        .user-avatar { width: 36px; height: 36px; background: var(--accent-primary); color:white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .content-area { flex: 1; overflow-y: auto; display: flex; /* For Calendar layout */ padding: var(--space-6); gap: var(--space-6);}
+        .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+        .btn-sm { padding: var(--space-2) var(--space-3); font-size: 12px; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-default); }
+
+        /* Calendar Module Specific Styles */
+        .calendar-main { flex: 1; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; display:flex; flex-direction: column;}
+        .calendar-header { padding:var(--space-4) var(--space-6); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); flex-shrink:0; }
+        .calendar-nav { display: flex; align-items: center; gap: var(--space-2); }
+        .calendar-nav-btn { width: 32px; height: 32px; background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .calendar-nav-btn .lucide { width:16px; height:16px;}
+        .calendar-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .calendar-views { display: flex; gap: var(--space-2); } /* This is a .view-tab-group */
+        .calendar-view-btn { padding: var(--space-2) var(--space-3); background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--text-secondary); cursor: pointer; font-size: 13px; font-weight: 500; }
+        .calendar-view-btn.active { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+        .calendar-grid-wrapper {flex-grow:1; overflow-y:auto;}
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border-subtle); }
+        .calendar-header-cell { background: var(--bg-surface); padding: var(--space-3); text-align: center; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+        .calendar-day { background: var(--bg-surface); min-height: 110px; padding: var(--space-2); position: relative; border-top: 1px solid var(--border-subtle); border-left: 1px solid var(--border-subtle); }
+        .calendar-day:nth-child(7n+1) { border-left: none; }
+        .calendar-day.other-month { background: var(--bg-tertiary); color: var(--text-muted); opacity: 0.7; }
+        .calendar-day.today .calendar-day-number { background: var(--accent-primary); color: white !important; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: var(--space-1); }
+        .calendar-day-number { font-size: 13px; font-weight: 500; margin-bottom: var(--space-2); color: var(--text-secondary);}
+        .calendar-day:not(.other-month) .calendar-day-number { color: var(--text-primary); }
+        .calendar-events { display: flex; flex-direction: column; gap: var(--space-1); }
+        .calendar-event { background: var(--accent-primary); color: white; padding: 2px var(--space-2); border-radius: var(--radius-sm); font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .calendar-event.meeting { background: var(--success); }
+        .calendar-event.task { background: var(--warning); color: var(--bg-primary); }
+        .time-blocking-panel { width: 280px; background: var(--bg-surface); border-left: 1px solid var(--border-default); padding:var(--space-4); display:flex; flex-direction:column; flex-shrink:0; border-radius: var(--radius-lg);}
+        .time-blocking-header { padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-subtle); margin-bottom:var(--space-4); }
+        .time-blocking-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .time-blocking-content { flex-grow:1; overflow-y:auto; }
+        .task-section { margin-bottom: var(--space-4); }
+        .task-section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-2); }
+        .task-item { background: var(--bg-tertiary); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-2); cursor: grab; }
+        .task-title { font-size: 13px; font-weight: 500; margin-bottom: var(--space-1); color: var(--text-primary); }
+        .task-meta { font-size: 11px; color: var(--text-tertiary); display: flex; justify-content: space-between; align-items: center; }
+        .task-priority { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .task-priority.high { background: var(--error-soft); color: var(--error); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><div class="logo-icon">LO</div><span>LibreOllama</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Workspace</div>
+                    <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-item-icon"></i> Dashboard</a>
+                    <a href="chat.html" class="nav-item"><i data-lucide="messages-square" class="nav-item-icon"></i> Chat</a>
+                    <a href="projects.html" class="nav-item"><i data-lucide="folder-kanban" class="nav-item-icon"></i> Projects</a>
+                    <a href="notes.html" class="nav-item"><i data-lucide="notebook-pen" class="nav-item-icon"></i> Notes</a>
+                    <a href="canvas.html" class="nav-item"><i data-lucide="presentation" class="nav-item-icon"></i> Canvas</a>
+                    <a href="#" class="nav-item active"><i data-lucide="calendar-days" class="nav-item-icon"></i> Calendar</a>
+                    <a href="tasks.html" class="nav-item"><i data-lucide="check-circle-2" class="nav-item-icon"></i> Tasks</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Agents</div>
+                    <a href="#" class="nav-item"><i data-lucide="cpu" class="nav-item-icon"></i> General assistant</a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item" id="theme-toggle-btn-static"><i data-lucide="sun" class="nav-item-icon"></i><span>Light mode</span></a>
+                <a href="#" class="nav-item"><i data-lucide="settings" class="nav-item-icon"></i> Settings</a>
+            </div>
+        </aside>
+
+        <div class="main-content-wrapper">
+            <header class="top-bar">
+                <div class="breadcrumb">
+                    <span>Workspace</span>
+                    <i data-lucide="chevron-right" style="width:16px; height:16px; color: var(--text-muted);"></i>
+                    <span class="breadcrumb-current">Calendar</span>
+                </div>
+                <div class="search-bar">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search events and tasks...">
+                </div>
+                <div class="top-bar-actions">
+                    <button class="action-btn primary" title="New Event"><i data-lucide="calendar-plus"></i></button>
+                    <button class="action-btn" title="Toggle Task Panel"><i data-lucide="list-checks"></i></button>
+                    <div class="user-avatar" title="Alex K.">AK</div>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <div class="calendar-main">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button class="calendar-nav-btn" title="Previous month"><i data-lucide="chevron-left"></i></button>
+                            <h2 class="calendar-title">June 2025</h2>
+                            <button class="calendar-nav-btn" title="Next month"><i data-lucide="chevron-right"></i></button>
+                            <button class="btn btn-secondary btn-sm" style="margin-left: var(--space-2);">Today</button>
+                        </div>
+                        <div class="calendar-views">
+                            <button class="calendar-view-btn active">Month</button>
+                            <button class="calendar-view-btn">Week</button>
+                            <button class="calendar-view-btn">Day</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid-wrapper">
+                        <div class="calendar-grid">
+                            <div class="calendar-header-cell">Sun</div><div class="calendar-header-cell">Mon</div><div class="calendar-header-cell">Tue</div><div class="calendar-header-cell">Wed</div><div class="calendar-header-cell">Thu</div><div class="calendar-header-cell">Fri</div><div class="calendar-header-cell">Sat</div>
+                            <!-- Example Week -->
+                            <div class="calendar-day other-month"><span class="calendar-day-number">25</span></div>
+                            <div class="calendar-day other-month"><span class="calendar-day-number">26</span></div>
+                            <div class="calendar-day other-month"><span class="calendar-day-number">27</span></div>
+                            <div class="calendar-day other-month"><span class="calendar-day-number">28</span></div>
+                            <div class="calendar-day other-month"><span class="calendar-day-number">29</span></div>
+                            <div class="calendar-day other-month"><span class="calendar-day-number">30</span></div>
+                            <div class="calendar-day today"><span class="calendar-day-number">1</span><div class="calendar-events"><div class="calendar-event">Team Sync</div></div></div>
+                            <div class="calendar-day"><span class="calendar-day-number">2</span></div>
+                            <div class="calendar-day"><span class="calendar-day-number">3</span><div class="calendar-events"><div class="calendar-event meeting">Project Review</div><div class="calendar-event task">Prep for Demo</div></div></div>
+                            <div class="calendar-day"><span class="calendar-day-number">4</span></div>
+                            <div class="calendar-day"><span class="calendar-day-number">5</span></div>
+                            <div class="calendar-day"><span class="calendar-day-number">6</span></div>
+                            <div class="calendar-day"><span class="calendar-day-number">7</span></div>
+                            <!-- Fill more days for a full month view -->
+                            <script>
+                                // Simple script to fill out calendar days for demo
+                                const grid = document.querySelector('.calendar-grid');
+                                for (let i = 8; i <= 30; i++) {
+                                    const dayCell = document.createElement('div');
+                                    dayCell.classList.add('calendar-day');
+                                    dayCell.innerHTML = `<span class="calendar-day-number">${i}</span><div class="calendar-events"></div>`;
+                                    if(grid) grid.appendChild(dayCell);
+                                }
+                                for (let i = 1; i <= 5; i++) { // Next month's days
+                                    const dayCell = document.createElement('div');
+                                    dayCell.classList.add('calendar-day', 'other-month');
+                                    dayCell.innerHTML = `<span class="calendar-day-number">${i}</span>`;
+                                    if(grid) grid.appendChild(dayCell);
+                                }
+                            </script>
+                        </div>
+                    </div>
+                </div>
+                <aside class="time-blocking-panel">
+                    <div class="time-blocking-header"><h3 class="time-blocking-title">Tasks to schedule</h3></div>
+                    <div class="time-blocking-content">
+                        <div class="task-section">
+                            <div class="task-section-title">High Priority</div>
+                            <div class="task-item"><div class="task-title">Finalize Q3 report</div><div class="task-meta"><span class="task-priority high">High</span>Project Alpha</div></div>
+                            <div class="task-item"><div class="task-title">Client demo prep</div><div class="task-meta"><span class="task-priority high">High</span>Sales</div></div>
+                        </div>
+                        <div class="task-section">
+                            <div class="task-section-title">This Week</div>
+                            <div class="task-item"><div class="task-title">Update documentation</div><div class="task-meta">LibreOllama Docs</div></div>
+                        </div>
+                    </div>
+                </aside>
+            </main>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+        const themeToggleBtnStatic = document.getElementById('theme-toggle-btn-static');
+        if (themeToggleBtnStatic) {
+            themeToggleBtnStatic.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.documentElement.classList.toggle('light');
+                document.documentElement.classList.toggle('dark');
+                 const currentThemeText = themeToggleBtnStatic.querySelector('span');
+                if(currentThemeText) {
+                    currentThemeText.textContent = document.documentElement.classList.contains('dark') ? 'Light mode' : 'Dark mode';
+                }
+                lucide.createIcons();
+            });
+        }
+    </script>
+</body>
+</html>

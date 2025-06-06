@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreOllama - Canvas</title>
+    <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { /* Dark Theme Variables */
+            --bg-primary: #0f1419; --bg-secondary: #1a2332; --bg-tertiary: #242b3d; --bg-surface: #2a3441; --bg-elevated: #323a47;
+            --text-primary: #ffffff; --text-secondary: #94a3b8; --text-tertiary: #64748b; --text-muted: #475569;
+            --accent-primary: #3b82f6; --accent-secondary: #1d4ed8; --accent-soft: rgba(59, 130, 246, 0.1);
+            --border-subtle: rgba(148, 163, 184, 0.1); --border-default: rgba(148, 163, 184, 0.2);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px;
+            --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+        }
+        html.light { /* Light Theme Variables */
+            --bg-primary: #ffffff; --bg-secondary: #f8fafc; --bg-tertiary: #f1f5f9; --bg-surface: #ffffff; --bg-elevated: #ffffff;
+            --text-primary: #0f172a; --text-secondary: #475569; --text-tertiary: #64748b; --text-muted: #94a3b8;
+            --border-subtle: rgba(0, 0, 0, 0.05); --border-default: rgba(0, 0, 0, 0.1);
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; }
+        .app-layout { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: var(--bg-secondary); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); }
+        .logo { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; font-size: 16px; color: var(--text-primary); }
+        .logo-icon { width: 28px; height: 28px; background: var(--accent-primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; }
+        .sidebar-nav { flex: 1; padding: var(--space-4); overflow-y: auto; }
+        .nav-section { margin-bottom: var(--space-6); }
+        .nav-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-3); padding: 0 var(--space-3); }
+        .nav-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--accent-soft); color: var(--accent-primary); }
+        .nav-item-icon { width: 20px; height: 20px; opacity: 0.7; flex-shrink: 0; color: inherit; }
+        .nav-item.active .nav-item-icon, .nav-item:hover .nav-item-icon { opacity: 1; }
+        .sidebar-footer { padding: var(--space-4); border-top: 1px solid var(--border-subtle); }
+        .main-content-wrapper { flex: 1; background: var(--bg-primary); display: flex; flex-direction: column; overflow: hidden; }
+        .top-bar { height: 72px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding: 0 var(--space-6); gap: var(--space-4); background: var(--bg-surface); flex-shrink: 0; }
+        .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 14px; color: var(--text-secondary); }
+        .breadcrumb-current { color: var(--text-primary); font-weight: 600; }
+        .search-bar { flex: 1; max-width: 480px; position: relative; }
+        .search-input { width: 100%; padding: var(--space-3) var(--space-4) var(--space-3) var(--space-10); background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--text-primary); font-size: 14px; outline: none; }
+        .search-icon { position: absolute; left: var(--space-3); top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--text-muted); pointer-events: none; }
+        .top-bar-actions { display: flex; align-items: center; gap: var(--space-3); }
+        .action-btn { width: 36px; height: 36px; border-radius: var(--radius-md); border: none; background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-btn.primary { background: var(--accent-primary); color: white; }
+        .action-btn .lucide { width: 20px; height: 20px; }
+        .user-avatar { width: 36px; height: 36px; background: var(--accent-primary); color:white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .content-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; /* For canvas elements */ }
+        
+        /* Canvas/Whiteboard Module Styles */
+        .canvas-layout { position: relative; height: 100%; flex-grow: 1; display: flex; flex-direction: column; }
+        .canvas-toolbar-wrapper { padding: var(--space-4); display: flex; justify-content: center; flex-shrink: 0; position: absolute; top: var(--space-4); left: 50%; transform: translateX(-50%); z-index: 20;}
+        .canvas-toolbar { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-3); display: flex; gap: var(--space-2); box-shadow: var(--shadow-md); }
+        .canvas-tool { width: 40px; height: 40px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-md); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
+        .canvas-tool.active { background: var(--accent-primary); color: white; border-color: var(--accent-primary); }
+        .canvas-tool:hover:not(.active) { background: var(--bg-tertiary); color: var(--text-primary); }
+        .canvas-tool .lucide { width: 20px; height: 20px; }
+        .canvas-area { width: 100%; flex-grow:1; background: var(--bg-primary); position: relative; overflow: hidden; cursor: default; }
+        .canvas-grid { position: absolute; top: 0; left: 0; width: 200%; height: 200%; /* Make grid larger for panning */ opacity: 0.1; background-image: linear-gradient(var(--border-default) 1px, transparent 1px), linear-gradient(90deg, var(--border-default) 1px, transparent 1px); background-size: 20px 20px; }
+        .canvas-element { position: absolute; cursor: move; user-select: none; }
+        .sticky-note { width: 180px; height: 180px; background: #facc15; /* yellow-400 */ border-radius: var(--radius-md); padding: var(--space-3); box-shadow: var(--shadow-md); display: flex; flex-direction: column;}
+        .sticky-note textarea { flex-grow:1; background: transparent; border: none; outline: none; font-family: 'Inter', sans-serif; font-size: 14px; color: #1f2937; resize: none; }
+        .canvas-shape { border: 2px solid var(--accent-primary); background: var(--accent-soft); }
+        .canvas-shape.rectangle { width: 120px; height: 80px; border-radius: var(--radius-md); }
+        .canvas-shape.circle { width: 100px; height: 100px; border-radius: 50%; }
+        .minimap { position: absolute; bottom: var(--space-4); right: var(--space-4); width: 180px; height: 100px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-md); opacity: 0.9; z-index: 10; overflow: hidden; }
+        .properties-panel { position: absolute; top: var(--space-4); right: var(--space-4); width: 250px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-md); z-index: 10; display:none; /* Hidden by default */ }
+        .properties-title { font-size: 14px; font-weight: 600; margin-bottom: var(--space-4); color: var(--text-primary); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><div class="logo-icon">LO</div><span>LibreOllama</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Workspace</div>
+                    <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-item-icon"></i> Dashboard</a>
+                    <a href="chat.html" class="nav-item"><i data-lucide="messages-square" class="nav-item-icon"></i> Chat</a>
+                    <a href="projects.html" class="nav-item"><i data-lucide="folder-kanban" class="nav-item-icon"></i> Projects</a>
+                    <a href="notes.html" class="nav-item"><i data-lucide="notebook-pen" class="nav-item-icon"></i> Notes</a>
+                    <a href="#" class="nav-item active"><i data-lucide="presentation" class="nav-item-icon"></i> Canvas</a>
+                    <a href="calendar.html" class="nav-item"><i data-lucide="calendar-days" class="nav-item-icon"></i> Calendar</a>
+                    <a href="tasks.html" class="nav-item"><i data-lucide="check-circle-2" class="nav-item-icon"></i> Tasks</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Agents</div>
+                    <a href="#" class="nav-item"><i data-lucide="cpu" class="nav-item-icon"></i> General assistant</a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item" id="theme-toggle-btn-static"><i data-lucide="sun" class="nav-item-icon"></i><span>Light mode</span></a>
+                <a href="#" class="nav-item"><i data-lucide="settings" class="nav-item-icon"></i> Settings</a>
+            </div>
+        </aside>
+
+        <div class="main-content-wrapper">
+            <header class="top-bar">
+                <div class="breadcrumb">
+                    <span>Workspace</span>
+                    <i data-lucide="chevron-right" style="width:16px; height:16px; color: var(--text-muted);"></i>
+                    <span class="breadcrumb-current">Brainstorm Canvas</span>
+                </div>
+                <div class="search-bar">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search this canvas...">
+                </div>
+                <div class="top-bar-actions">
+                    <button class="action-btn primary" title="New Element"><i data-lucide="plus"></i></button>
+                    <button class="action-btn" title="Share"><i data-lucide="share-2"></i></button>
+                    <div class="user-avatar" title="Alex K.">AK</div>
+                </div>
+            </header>
+
+            <main class="content-area canvas-layout">
+                <div class="canvas-toolbar-wrapper">
+                    <div class="canvas-toolbar">
+                        <button class="canvas-tool active" title="Select"><i data-lucide="mouse-pointer-2"></i></button>
+                        <button class="canvas-tool" title="Text"><i data-lucide="type"></i></button>
+                        <button class="canvas-tool" title="Sticky Note"><i data-lucide="sticky-note"></i></button>
+                        <button class="canvas-tool" title="Rectangle"><i data-lucide="rectangle-horizontal"></i></button>
+                        <button class="canvas-tool" title="Circle"><i data-lucide="circle"></i></button>
+                        <button class="canvas-tool" title="Line/Connector"><i data-lucide="share"></i></button>
+                        <button class="canvas-tool" title="Pen"><i data-lucide="pencil"></i></button>
+                    </div>
+                </div>
+                <div class="canvas-area">
+                    <div class="canvas-grid"></div>
+                    <!-- Example elements from user mockup -->
+                    <div class="canvas-element sticky-note" style="left: 50px; top: 120px;"><textarea placeholder="Type something..."></textarea></div>
+                    <div class="canvas-element canvas-shape rectangle" style="left: 300px; top: 150px;"></div>
+                    <div class="canvas-element canvas-shape circle" style="left: 100px; top: 300px;"></div>
+
+                     <!-- Placeholder text in center if canvas is empty -->
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-muted); text-align: center;">
+                        <i data-lucide="mouse-pointer-click" style="width: 48px; height: 48px; margin-bottom: var(--space-3);"></i>
+                        <p>Use the toolbar to add elements to your canvas.</p>
+                    </div>
+                </div>
+                <div class="minimap">
+                    <!-- Minimap content would be a scaled down version of canvas-area -->
+                </div>
+                <div class="properties-panel" id="propertiesPanel">
+                    <h3 class="properties-title">Element Properties</h3>
+                    {/* Content changes based on selected element */}
+                    <p style="color: var(--text-tertiary); font-size: 12px;">Select an element to see its properties.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+        const themeToggleBtnStatic = document.getElementById('theme-toggle-btn-static');
+        if (themeToggleBtnStatic) {
+            themeToggleBtnStatic.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.documentElement.classList.toggle('light');
+                document.documentElement.classList.toggle('dark');
+                const currentThemeText = themeToggleBtnStatic.querySelector('span');
+                if(currentThemeText) {
+                    currentThemeText.textContent = document.documentElement.classList.contains('dark') ? 'Light mode' : 'Dark mode';
+                }
+                lucide.createIcons();
+            });
+        }
+    </script>
+</body>
+</html>

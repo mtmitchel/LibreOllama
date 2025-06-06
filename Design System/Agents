@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreOllama - Agents</title>
+    <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { /* Dark Theme Variables */
+            --bg-primary: #0f1419; --bg-secondary: #1a2332; --bg-tertiary: #242b3d; --bg-surface: #2a3441; --bg-elevated: #323a47;
+            --text-primary: #ffffff; --text-secondary: #94a3b8; --text-tertiary: #64748b; --text-muted: #475569;
+            --accent-primary: #3b82f6; --accent-secondary: #1d4ed8; --accent-soft: rgba(59, 130, 246, 0.1);
+            --success: #10b981; --warning: #f59e0b; --error: #ef4444;
+            --border-subtle: rgba(148, 163, 184, 0.1); --border-default: rgba(148, 163, 184, 0.2);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+            --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+        }
+        html.light { /* Light Theme Variables */
+            --bg-primary: #ffffff; --bg-secondary: #f8fafc; --bg-tertiary: #f1f5f9; --bg-surface: #ffffff; --bg-elevated: #ffffff;
+            --text-primary: #0f172a; --text-secondary: #475569; --text-tertiary: #64748b; --text-muted: #94a3b8;
+            --border-subtle: rgba(0, 0, 0, 0.05); --border-default: rgba(0, 0, 0, 0.1);
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; }
+        .app-layout { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: var(--bg-secondary); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); }
+        .logo { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; font-size: 16px; color: var(--text-primary); }
+        .logo-icon { width: 28px; height: 28px; background: var(--accent-primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; }
+        .sidebar-nav { flex: 1; padding: var(--space-4); overflow-y: auto; }
+        .nav-section { margin-bottom: var(--space-6); }
+        .nav-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-3); padding: 0 var(--space-3); }
+        .nav-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--accent-soft); color: var(--accent-primary); }
+        .nav-item-icon { width: 20px; height: 20px; opacity: 0.7; flex-shrink: 0; color: inherit; }
+        .nav-item.active .nav-item-icon, .nav-item:hover .nav-item-icon { opacity: 1; }
+        .sidebar-footer { padding: var(--space-4); border-top: 1px solid var(--border-subtle); }
+        .main-content-wrapper { flex: 1; background: var(--bg-primary); display: flex; flex-direction: column; overflow: hidden; }
+        .top-bar { height: 72px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding: 0 var(--space-6); gap: var(--space-4); background: var(--bg-surface); flex-shrink: 0; }
+        .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 14px; color: var(--text-secondary); }
+        .breadcrumb-current { color: var(--text-primary); font-weight: 600; }
+        .search-bar { flex: 1; max-width: 480px; position: relative; }
+        .search-input { width: 100%; padding: var(--space-3) var(--space-4) var(--space-3) var(--space-10); background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--text-primary); font-size: 14px; outline: none; }
+        .search-icon { position: absolute; left: var(--space-3); top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--text-muted); pointer-events: none; }
+        .top-bar-actions { display: flex; align-items: center; gap: var(--space-3); }
+        .action-btn { width: 36px; height: 36px; border-radius: var(--radius-md); border: none; background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-btn.primary { background: var(--accent-primary); color: white; }
+        .action-btn .lucide { width: 20px; height: 20px; }
+        .user-avatar { width: 36px; height: 36px; background: var(--accent-primary); color:white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .content-area { flex: 1; padding: var(--space-8); overflow-y: auto; }
+        .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+        .btn-sm { padding: var(--space-2) var(--space-3); font-size: 12px; }
+        .btn-primary { background: var(--accent-primary); color: white; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-default); }
+        .btn .lucide { width: 16px; height: 16px; }
+
+        /* Agents Module Specific Styles */
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6); }
+        .page-title { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+        .agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-6); }
+        .agent-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
+        .agent-card-header { display: flex; align-items: center; gap: var(--space-3); }
+        .agent-icon-wrapper { width: 40px; height: 40px; background-color: var(--bg-tertiary); border-radius: var(--radius-md); display:flex; align-items:center; justify-content:center;}
+        .agent-icon-wrapper .lucide { width: 22px; height: 22px; color: var(--accent-primary); }
+        .agent-info { flex-grow: 1; }
+        .agent-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .agent-model { font-size: 12px; color: var(--text-tertiary); }
+        .agent-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .agent-status-dot.online { background: var(--success); }
+        .agent-status-dot.offline { background: var(--text-muted); }
+        .agent-description { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: auto; /* Pushes actions to bottom */ }
+        .agent-capabilities { margin-top: var(--space-3); }
+        .capabilities-title { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-2); }
+        .capabilities-list { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+        .capability-tag { background: var(--bg-tertiary); color: var(--text-secondary); font-size: 11px; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
+        .agent-actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); border-top: 1px solid var(--border-subtle); padding-top: var(--space-4); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><div class="logo-icon">LO</div><span>LibreOllama</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Workspace</div>
+                    <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-item-icon"></i> Dashboard</a>
+                    <a href="chat.html" class="nav-item"><i data-lucide="messages-square" class="nav-item-icon"></i> Chat</a>
+                    <a href="projects.html" class="nav-item"><i data-lucide="folder-kanban" class="nav-item-icon"></i> Projects</a>
+                    <a href="notes.html" class="nav-item"><i data-lucide="notebook-pen" class="nav-item-icon"></i> Notes</a>
+                    <a href="canvas.html" class="nav-item"><i data-lucide="presentation" class="nav-item-icon"></i> Canvas</a>
+                    <a href="calendar.html" class="nav-item"><i data-lucide="calendar-days" class="nav-item-icon"></i> Calendar</a>
+                    <a href="tasks.html" class="nav-item"><i data-lucide="check-circle-2" class="nav-item-icon"></i> Tasks</a>
+                </div>
+                 <div class="nav-section">
+                    <div class="nav-section-title">Agents</div>
+                    <a href="#" class="nav-item active"><i data-lucide="cpu" class="nav-item-icon"></i> Manage Agents</a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item" id="theme-toggle-btn-static"><i data-lucide="sun" class="nav-item-icon"></i><span>Light mode</span></a>
+                <a href="#" class="nav-item"><i data-lucide="settings" class="nav-item-icon"></i> Settings</a>
+            </div>
+        </aside>
+
+        <div class="main-content-wrapper">
+            <header class="top-bar">
+                <div class="breadcrumb">
+                    <span>Workspace</span>
+                    <i data-lucide="chevron-right" style="width:16px; height:16px; color: var(--text-muted);"></i>
+                    <span class="breadcrumb-current">Agents</span>
+                </div>
+                <div class="search-bar">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search agents...">
+                </div>
+                <div class="top-bar-actions">
+                    <button class="action-btn primary" title="New Agent"><i data-lucide="plus-circle"></i></button>
+                    <div class="user-avatar" title="Alex K.">AK</div>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <div class="page-header">
+                    <h1 class="page-title">Manage your AI agents</h1>
+                    <button class="btn btn-primary"><i data-lucide="plus" class="lucide"></i> Create new agent</button>
+                </div>
+
+                <div class="agents-grid">
+                    <div class="agent-card">
+                        <div class="agent-card-header">
+                            <div class="agent-icon-wrapper"><i data-lucide="brain-cog"></i></div>
+                            <div class="agent-info">
+                                <div class="agent-name">General Assistant</div>
+                                <div class="agent-model">Llama 3.1 70B Instruct</div>
+                            </div>
+                            <div class="agent-status-dot online" title="Online"></div>
+                        </div>
+                        <p class="agent-description">Your primary AI assistant for a wide range of tasks including summarization, brainstorming, and general Q&A.</p>
+                        <div class="agent-capabilities">
+                            <div class="capabilities-title">Capabilities</div>
+                            <div class="capabilities-list">
+                                <span class="capability-tag">Text Generation</span>
+                                <span class="capability-tag">Summarization</span>
+                                <span class="capability-tag">Translation</span>
+                            </div>
+                        </div>
+                        <div class="agent-actions">
+                            <button class="btn btn-secondary btn-sm"><i data-lucide="settings-2" class="lucide"></i> Configure</button>
+                            <button class="btn btn-ghost btn-sm" style="color: var(--text-tertiary); margin-left:auto;"><i data-lucide="trash-2" class="lucide"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="agent-card">
+                        <div class="agent-card-header">
+                            <div class="agent-icon-wrapper"><i data-lucide="code-xml"></i></div>
+                            <div class="agent-info">
+                                <div class="agent-name">Code Reviewer Pro</div>
+                                <div class="agent-model">CodeLlama 34B Fine-tuned</div>
+                            </div>
+                            <div class="agent-status-dot online" title="Online"></div>
+                        </div>
+                        <p class="agent-description">Specialized in analyzing code, suggesting improvements, finding bugs, and explaining complex code snippets.</p>
+                         <div class="agent-capabilities">
+                            <div class="capabilities-title">Capabilities</div>
+                            <div class="capabilities-list">
+                                <span class="capability-tag">Code Analysis</span>
+                                <span class="capability-tag">Bug Detection</span>
+                                <span class="capability-tag">Refactoring</span>
+                            </div>
+                        </div>
+                        <div class="agent-actions">
+                            <button class="btn btn-secondary btn-sm"><i data-lucide="settings-2" class="lucide"></i> Configure</button>
+                            <button class="btn btn-ghost btn-sm" style="color: var(--text-tertiary); margin-left:auto;"><i data-lucide="trash-2" class="lucide"></i></button>
+                        </div>
+                    </div>
+                     <div class="agent-card">
+                        <div class="agent-card-header">
+                            <div class="agent-icon-wrapper"><i data-lucide="library"></i></div>
+                            <div class="agent-info">
+                                <div class="agent-name">Research Assistant</div>
+                                <div class="agent-model">Mixtral 8x7B Q5_K_M</div>
+                            </div>
+                            <div class="agent-status-dot offline" title="Offline"></div>
+                        </div>
+                        <p class="agent-description">Helps with academic research, finding papers, extracting key information, and generating citations.</p>
+                         <div class="agent-capabilities">
+                            <div class="capabilities-title">Capabilities</div>
+                            <div class="capabilities-list">
+                                <span class="capability-tag">Literature Search</span>
+                                <span class="capability-tag">Citation Generation</span>
+                            </div>
+                        </div>
+                        <div class="agent-actions">
+                            <button class="btn btn-secondary btn-sm"><i data-lucide="settings-2" class="lucide"></i> Configure</button>
+                            <button class="btn btn-ghost btn-sm" style="color: var(--text-tertiary); margin-left:auto;"><i data-lucide="trash-2" class="lucide"></i></button>
+                        </div>
+                    </div>
+                     <div class="agent-card" style="border-style:dashed; background: var(--bg-secondary); align-items:center; justify-content:center; text-align:center;">
+                        <i data-lucide="plus-circle" style="width:32px; height:32px; color:var(--text-tertiary); margin-bottom: var(--space-3);"></i>
+                        <h3 style="font-weight:500; color:var(--text-secondary);">Create a new agent</h3>
+                        <p style="font-size:12px; color:var(--text-muted);">Define capabilities and select a model.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+        const themeToggleBtnStatic = document.getElementById('theme-toggle-btn-static');
+        if (themeToggleBtnStatic) {
+            themeToggleBtnStatic.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.documentElement.classList.toggle('light');
+                document.documentElement.classList.toggle('dark');
+                const currentThemeText = themeToggleBtnStatic.querySelector('span');
+                if(currentThemeText) {
+                    currentThemeText.textContent = document.documentElement.classList.contains('dark') ? 'Light mode' : 'Dark mode';
+                }
+                lucide.createIcons();
+            });
+        }
+    </script>
+</body>
+</html>

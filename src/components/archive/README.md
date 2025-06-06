@@ -1,42 +1,50 @@
-# Archived Components
+# Archived Components & Files
 
-This directory contains React components that are no longer used in the current LibreOllama implementation but are preserved for reference.
+This directory contains components, hooks, utilities, and other files that were created during development but are no longer actively used in the current consolidated application structure.
 
-## Contents
+## Archived on: June 5, 2025
 
-### `AIChatDemo.tsx`
-Demo component for AI chat functionality from earlier development phases. This was likely used for testing and prototyping before the current chat interface was implemented.
+### Reason for Archiving
+The main App.tsx component now contains all UI elements inline for better consolidation and maintainability. User requested to "conflate as much as possible" and avoid multiple separate files. These files were redundant and unused.
 
-### `ChatInterface.tsx`
-Previous implementation of the chat interface. The current chat functionality has been redesigned and is now located in the main components directory with improved ADHD-optimized features.
+### Archived Items:
 
-### `DashboardDemo.tsx`
-Demo component for dashboard functionality. The current dashboard implementation provides a more comprehensive unified workspace experience.
+#### Components:
+- **widgets/**: Individual widget components (ProjectProgressWidget, AgentStatusWidget, TodaysFocusWidget, QuickActionsWidget)
+- **layout/**: Layout components (AppLayout, Sidebar, MainContent, TopBar, ContentArea)
+- **navigation/**: Navigation components (NavSection, NavItem, Logo, Breadcrumb)
+- **ui/**: UI components (Button, Input, Card, Badge)
+- **CommandPalette.tsx**: Command palette component with keyboard shortcuts
+- **DashboardWidget.tsx**: Generic dashboard widget component
+- **ThemeToggle.tsx**: Theme toggle component
+- **StatusIndicator.tsx**: Status indicator component
 
-### `demo/` Directory
-Contains additional demo components and prototypes from various development phases.
+#### Hooks:
+- **useCommandPalette.ts**: Command palette state management
 
-## Why These Are Archived
+#### Pages:
+- **pages/**: Separate page components (Dashboard.tsx, Chat.tsx, Notes.tsx, Tasks.tsx)
 
-These components were replaced during the project's evolution from:
-- **Early prototypes** → **Production-ready components**
-- **Basic functionality** → **ADHD-optimized interfaces**
-- **Separate demo components** → **Integrated unified workspace**
-- **Next.js architecture** → **Tauri desktop application**
+#### Utilities:
+- **lib/**: Utility functions and types (utils.ts, types.ts, design-tokens.ts)
 
-## Current Implementation
+#### Styles:
+- **index.css**: Old Tailwind-based CSS file (replaced by design-system.css)
 
-For current components, see:
-- `../chat/` - Current chat interface components
-- `../dashboard/` - Current dashboard components  
-- `../UnifiedWorkspace.tsx` - Main workspace component
-- `../` - Other active components
+### Active Files (Remaining in src/):
+- **App.tsx**: Main consolidated component with all UI inline
+- **main.tsx**: React entry point
+- **components/ThemeProvider.tsx**: Theme context provider (still in use)
+- **hooks/useTheme.ts**: Theme management hook (still in use)
+- **styles/design-system.css**: Complete CSS custom properties system
+- **styles/App.css**: Additional app-specific styles
 
-## Usage
+### Project State:
+✅ **Fully Functional**: All dashboard widgets, navigation, layout working inline in App.tsx
+✅ **Design System**: Complete CSS custom properties implementation
+✅ **Theme System**: Working dark/light mode toggle
+✅ **No Dependencies**: Removed Tailwind dependency, pure CSS variables
+✅ **Consolidated**: Single App.tsx file contains entire UI
 
-These archived components should **not** be imported or used in the current application. They are kept for:
-1. **Reference** - Understanding previous implementation approaches
-2. **Code archaeology** - Tracking feature evolution
-3. **Learning** - Studying different design patterns used
-
-If you need to reference old functionality, consult these files but implement new solutions using the current architecture and design patterns.
+### Recovery
+If any of these components are needed in the future, they can be moved back from this archive directory. The project structure is now much cleaner and follows the user's request for consolidation.

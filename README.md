@@ -70,7 +70,7 @@ LibreOllama Desktop features a **Miro/FigJam-class digital canvas** with profess
 - **Model Flexibility**: Automatic detection of all locally available Ollama models
 - **Conversation Forking**: Branch discussions at any point for exploration
 
-### 🤖 **Intelligent AI Agents**
+### 🤖 **Intelligent Agents**
 - **Visual Flow Editor**: Drag-and-drop agent creation with professional tools
 - **Tiered Builder**: Beginner wizard mode and advanced configuration
 - **Testing Sandbox**: Built-in agent testing and validation environment

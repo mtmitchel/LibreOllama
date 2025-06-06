@@ -1,0 +1,30 @@
+/* LibreOllama App Styles */
+
+.App {
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Custom scrollbar for dark theme */
+.dark *::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Focus ring styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+}

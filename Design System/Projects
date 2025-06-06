@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibreOllama - Projects</title>
+    <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { /* Dark Theme Variables from User Mockup */
+            --bg-primary: #0f1419; --bg-secondary: #1a2332; --bg-tertiary: #242b3d; --bg-surface: #2a3441; --bg-elevated: #323a47;
+            --text-primary: #ffffff; --text-secondary: #94a3b8; --text-tertiary: #64748b; --text-muted: #475569;
+            --accent-primary: #3b82f6; --accent-secondary: #1d4ed8; --accent-soft: rgba(59, 130, 246, 0.1);
+            --success: #10b981; --warning: #f59e0b; --error: #ef4444; --success-soft: rgba(16, 185, 129, 0.1);
+            --border-subtle: rgba(148, 163, 184, 0.1); --border-default: rgba(148, 163, 184, 0.2);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+            --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px;
+        }
+        html.light { /* Light Theme Variables */
+            --bg-primary: #ffffff; --bg-secondary: #f8fafc; --bg-tertiary: #f1f5f9; --bg-surface: #ffffff; --bg-elevated: #ffffff;
+            --text-primary: #0f172a; --text-secondary: #475569; --text-tertiary: #64748b; --text-muted: #94a3b8;
+            --border-subtle: rgba(0, 0, 0, 0.05); --border-default: rgba(0, 0, 0, 0.1);
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; }
+        .app-layout { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: var(--bg-secondary); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: var(--space-6); border-bottom: 1px solid var(--border-subtle); }
+        .logo { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; font-size: 16px; color: var(--text-primary); }
+        .logo-icon { width: 28px; height: 28px; background: var(--accent-primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; }
+        .sidebar-nav { flex: 1; padding: var(--space-4); overflow-y: auto; }
+        .nav-section { margin-bottom: var(--space-6); }
+        .nav-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-3); padding: 0 var(--space-3); }
+        .nav-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--accent-soft); color: var(--accent-primary); }
+        .nav-item-icon { width: 20px; height: 20px; opacity: 0.7; flex-shrink: 0; color: inherit; }
+        .nav-item.active .nav-item-icon, .nav-item:hover .nav-item-icon { opacity: 1; }
+        .nav-badge { background: var(--accent-primary); color: white; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 10px; margin-left: auto; }
+        .sidebar-footer { padding: var(--space-4); border-top: 1px solid var(--border-subtle); }
+        .main-content-wrapper { flex: 1; background: var(--bg-primary); display: flex; flex-direction: column; overflow: hidden; }
+        .top-bar { height: 72px; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding: 0 var(--space-6); gap: var(--space-4); background: var(--bg-surface); flex-shrink: 0; }
+        .breadcrumb { display: flex; align-items: center; gap: var(--space-2); font-size: 14px; color: var(--text-secondary); }
+        .breadcrumb-current { color: var(--text-primary); font-weight: 600; }
+        .search-bar { flex: 1; max-width: 480px; position: relative; }
+        .search-input { width: 100%; padding: var(--space-3) var(--space-4) var(--space-3) var(--space-10); background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--text-primary); font-size: 14px; outline: none; }
+        .search-icon { position: absolute; left: var(--space-3); top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--text-muted); pointer-events: none; }
+        .top-bar-actions { display: flex; align-items: center; gap: var(--space-3); }
+        .action-btn { width: 36px; height: 36px; border-radius: var(--radius-md); border: none; background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-btn.primary { background: var(--accent-primary); color: white; }
+        .action-btn .lucide { width: 20px; height: 20px; }
+        .user-avatar { width: 36px; height: 36px; background: var(--accent-primary); color:white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .content-area { flex: 1; padding: var(--space-8); overflow-y: auto; display: flex; /* For project layout */ }
+        .btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+        .btn-sm { padding: var(--space-2) var(--space-3); font-size: 12px; }
+        .btn-primary { background: var(--accent-primary); color: white; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-default); }
+        .btn .lucide { width: 16px; height: 16px; }
+
+        /* Project Workspace Specific Styles from user mockup */
+        .project-sidebar { width: 280px; background: var(--bg-surface); border-right: 1px solid var(--border-default); display: flex; flex-direction: column; flex-shrink: 0; padding: var(--space-6); }
+        .project-sidebar-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--space-6); }
+        .project-sidebar-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .project-list { flex-grow: 1; overflow-y: auto; display:flex; flex-direction:column; gap: var(--space-2); }
+        .project-list-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .project-list-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .project-list-item.active { background: var(--accent-soft); color: var(--accent-primary); }
+        .project-list-item-icon { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+        .project-sidebar-footer { margin-top: auto; padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); }
+        
+        .project-main-content { flex: 1; padding: var(--space-8); overflow-y: auto; }
+        .project-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-6); }
+        .project-title-section { flex: 1; }
+        .project-title { font-size: 28px; font-weight: 700; margin-bottom: var(--space-1); color: var(--text-primary); }
+        .project-subtitle { color: var(--text-secondary); font-size: 14px; }
+        .project-tabs { display: flex; gap: var(--space-4); margin-bottom: var(--space-6); border-bottom: 1px solid var(--border-subtle); }
+        .project-tab { padding: var(--space-3) 0; color: var(--text-secondary); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; margin-right: var(--space-4); font-size: 14px;}
+        .project-tab.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
+        .project-overview { display: grid; grid-template-columns: 1fr 320px; gap: var(--space-6); }
+        .project-content-blocks { display: flex; flex-direction: column; gap: var(--space-6); }
+        .block-editor { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface); }
+        .block { padding: var(--space-4); border-bottom: 1px solid var(--border-subtle); position: relative; }
+        .block:last-child { border-bottom: none; }
+        .block-handle { position: absolute; left: var(--space-2); top: 50%; transform: translateY(-50%); opacity: 0.6; cursor: move; color: var(--text-muted); }
+        .block-handle .lucide { width: 16px; height: 16px; }
+        .block-content { margin-left: var(--space-6); }
+        .block-title { font-size: 18px; font-weight: 600; margin-bottom: var(--space-3); color: var(--text-primary); }
+        .block-content p, .block-content ul { font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+        .block-content ul { margin-left: var(--space-4); list-style: disc; }
+        .roadmap-block { padding: var(--space-6); }
+        .roadmap-timeline { display: flex; flex-direction: column; gap: var(--space-4); }
+        .roadmap-item { display: flex; gap: var(--space-4); align-items: flex-start; }
+        .roadmap-date { width: 80px; font-size: 12px; color: var(--text-tertiary); font-weight: 600; text-align: right; margin-top: var(--space-1); flex-shrink: 0; }
+        .roadmap-content { flex: 1; background: var(--bg-tertiary); padding: var(--space-4); border-radius: var(--radius-md); border-left: 3px solid var(--accent-primary); }
+        .roadmap-title { font-weight: 600; margin-bottom: var(--space-2); color: var(--text-primary); font-size: 14px;}
+        .roadmap-description { font-size: 13px; color: var(--text-secondary); line-height: 1.5;}
+        .project-sidebar-widgets { display: flex; flex-direction: column; gap: var(--space-6); }
+        .sidebar-widget { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-5); }
+        .sidebar-widget-title { font-size: 16px; font-weight: 600; margin-bottom: var(--space-4); color: var(--text-primary); }
+        .project-assets-grid {display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);}
+        .project-asset-item { display:flex; flex-direction:column; align-items:center; justify-content:center; background: var(--bg-tertiary); padding: var(--space-4); border-radius: var(--radius-md); text-decoration:none; color: var(--text-primary); }
+        .project-asset-item .lucide { width: 24px; height: 24px; margin-bottom: var(--space-2); color: var(--accent-primary);}
+        .project-asset-item-label { font-size: 12px; font-weight: 500;}
+        .project-asset-item-count { font-size: 11px; color: var(--text-muted);}
+        .card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-5); } /* Generic card for project overview */
+        .card h3 { font-size: 16px; font-weight: 600; margin-bottom: var(--space-2); color: var(--text-primary); }
+        .card p { font-size: 14px; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><div class="logo-icon">LO</div><span>LibreOllama</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Workspace</div>
+                    <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard" class="nav-item-icon"></i> Dashboard</a>
+                    <a href="chat.html" class="nav-item"><i data-lucide="messages-square" class="nav-item-icon"></i> Chat</a>
+                    <a href="#" class="nav-item active"><i data-lucide="folder-kanban" class="nav-item-icon"></i> Projects</a>
+                    <a href="notes.html" class="nav-item"><i data-lucide="notebook-pen" class="nav-item-icon"></i> Notes</a>
+                    <a href="canvas.html" class="nav-item"><i data-lucide="presentation" class="nav-item-icon"></i> Canvas</a>
+                    <a href="calendar.html" class="nav-item"><i data-lucide="calendar-days" class="nav-item-icon"></i> Calendar</a>
+                    <a href="tasks.html" class="nav-item"><i data-lucide="check-circle-2" class="nav-item-icon"></i> Tasks</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Agents</div>
+                    <a href="#" class="nav-item"><i data-lucide="cpu" class="nav-item-icon"></i> General assistant</a>
+                </div>
+                 <div class="nav-section">
+                    <div class="nav-section-title">Projects</div>
+                    <a href="#" class="nav-item active">
+                        <span class="project-list-item-icon" style="background-color: var(--accent-primary);"></span> UI Migration
+                    </a>
+                     <a href="#" class="nav-item">
+                        <span class="project-list-item-icon" style="background-color: var(--success);"></span> Q3 Marketing
+                    </a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item" id="theme-toggle-btn-static"><i data-lucide="sun" class="nav-item-icon"></i><span>Light mode</span></a>
+                <a href="#" class="nav-item"><i data-lucide="settings" class="nav-item-icon"></i> Settings</a>
+            </div>
+        </aside>
+
+        <div class="main-content-wrapper">
+            <header class="top-bar">
+                <div class="breadcrumb">
+                    <span>Workspace</span>
+                    <i data-lucide="chevron-right" style="width:16px; height:16px; color: var(--text-muted);"></i>
+                    <span class="breadcrumb-current">Projects</span>
+                    <i data-lucide="chevron-right" style="width:16px; height:16px; color: var(--text-muted);"></i>
+                    <span class="breadcrumb-current">UI Migration Sprint</span>
+                </div>
+                <div class="search-bar">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search project assets...">
+                </div>
+                <div class="top-bar-actions">
+                    <button class="action-btn primary" title="New"><i data-lucide="plus"></i></button>
+                    <button class="action-btn" title="Notifications"><i data-lucide="bell"></i></button>
+                    <div class="user-avatar" title="Alex K.">AK</div>
+                </div>
+            </header>
+
+            <main class="content-area">
+                 <!-- Project specific sidebar -->
+                <aside class="project-sidebar">
+                    <div class="project-sidebar-header">
+                        <h2 class="project-sidebar-title">All projects</h2>
+                        <button class="btn btn-sm btn-primary"><i data-lucide="plus" class="lucide" style="width:14px; height:14px;"></i> New project</button>
+                    </div>
+                    <div class="project-list">
+                        <a href="#" class="project-list-item active">
+                            <span class="project-list-item-icon" style="background-color: var(--accent-primary);"></span> UI Migration Sprint
+                        </a>
+                        <a href="#" class="project-list-item">
+                            <span class="project-list-item-icon" style="background-color: var(--success);"></span> Q3 Marketing Campaign
+                        </a>
+                        <a href="#" class="project-list-item">
+                            <span class="project-list-item-icon" style="background-color: var(--warning);"></span> Research Paper
+                        </a>
+                    </div>
+                    <div class="project-sidebar-footer">
+                        {/* Can add filters or sorting here */}
+                    </div>
+                </aside>
+
+                <!-- Main project content -->
+                <section class="project-main-content">
+                    <div class="project-header">
+                        <div class="project-title-section">
+                            <h1 class="project-title">UI Migration Sprint</h1>
+                            <p class="project-subtitle">Modernizing the interface and migrating to new component architecture.</p>
+                        </div>
+                        <div style="display: flex; gap: var(--space-3);">
+                            <button class="btn btn-secondary"><i data-lucide="star" class="lucide"></i> Favorite</button>
+                            <button class="btn btn-ghost"><i data-lucide="settings-2" class="lucide"></i> Project settings</button>
+                        </div>
+                    </div>
+
+                    <div class="project-tabs">
+                        <a href="#" class="project-tab active">Overview</a>
+                        <a href="#" class="project-tab">Tasks (8)</a>
+                        <a href="#" class="project-tab">Notes (12)</a>
+                        <a href="#" class="project-tab">Canvas (3)</a>
+                        <a href="#" class="project-tab">Files (24)</a>
+                        <a href="#" class="project-tab">Chats (5)</a>
+                    </div>
+
+                    <div class="project-overview">
+                        <div class="project-content-blocks">
+                            <div class="card">
+                                <h3>Project goals</h3>
+                                <p>Modernize the user interface with a cohesive design system, improve accessibility compliance, and enhance overall user experience through improved information architecture.</p>
+                            </div>
+                            <div class="card">
+                                <h3>Timeline / Roadmap</h3>
+                                <div class="roadmap-timeline">
+                                    <div class="roadmap-item">
+                                        <div class="roadmap-date">Dec 15</div>
+                                        <div class="roadmap-content"><div class="roadmap-title">Design system foundation</div><div class="roadmap-description">Establish color palette, typography, spacing.</div></div>
+                                    </div>
+                                    <div class="roadmap-item">
+                                        <div class="roadmap-date">Jan 05</div>
+                                        <div class="roadmap-content"><div class="roadmap-title">Dashboard migration</div><div class="roadmap-description">Apply new design system to dashboard.</div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <aside class="project-sidebar-widgets">
+                            <div class="sidebar-widget">
+                                <h3 class="sidebar-widget-title">Task Summary</h3>
+                                <p>Overdue: <span style="color: var(--error); font-weight: 600;">2</span></p>
+                                <p>Due this week: <span style="color: var(--warning); font-weight: 600;">5</span></p>
+                                <button class="btn btn-secondary btn-sm" style="margin-top: var(--space-3); width: 100%;">View all tasks</button>
+                            </div>
+                            <div class="sidebar-widget">
+                                <h3 class="sidebar-widget-title">Project Assets</h3>
+                                <div class="project-assets-grid">
+                                    <a href="#" class="project-asset-item"><i data-lucide="notebook-pen"></i><span class="project-asset-item-label">Notes</span><span class="project-asset-item-count">(12)</span></a>
+                                    <a href="#" class="project-asset-item"><i data-lucide="check-circle-2"></i><span class="project-asset-item-label">Tasks</span><span class="project-asset-item-count">(8)</span></a>
+                                    <a href="#" class="project-asset-item"><i data-lucide="presentation"></i><span class="project-asset-item-label">Canvas</span><span class="project-asset-item-count">(3)</span></a>
+                                    <a href="#" class="project-asset-item"><i data-lucide="folder-open"></i><span class="project-asset-item-label">Files</span><span class="project-asset-item-count">(24)</span></a>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+        const themeToggleBtnStatic = document.getElementById('theme-toggle-btn-static');
+        if (themeToggleBtnStatic) {
+            themeToggleBtnStatic.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.documentElement.classList.toggle('light');
+                document.documentElement.classList.toggle('dark');
+                const currentThemeText = themeToggleBtnStatic.querySelector('span');
+                if(currentThemeText) {
+                    currentThemeText.textContent = document.documentElement.classList.contains('dark') ? 'Light mode' : 'Dark mode';
+                }
+                lucide.createIcons();
+            });
+        }
+    </script>
+</body>
+</html>

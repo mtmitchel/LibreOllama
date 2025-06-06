@@ -1,33 +1,45 @@
-# LibreOllama Documentation Index
+# LibreOllama Documentation
 
-## 📚 Main Guides
+Welcome to the LibreOllama documentation. This directory contains comprehensive documentation for the LibreOllama Tauri desktop application.
 
-- [Canvas/Whiteboard Redesign](./CANVAS_WHITEBOARD_REDESIGN.md): Professional-grade whiteboard features, architecture, and usage.
-- [CPU Spike Debug Guide](./CPU_SPIKE_DEBUG_GUIDE.md): Debugging and optimizing CPU usage in the app.
-- [Dashboard Integration Guide](./DASHBOARD_INTEGRATION_GUIDE.md): Integrating the new dashboard and search system.
-- [Comprehensive Next Steps Guide](./COMPREHENSIVE_NEXT_STEPS_GUIDE.md): Detailed roadmap and implementation priorities for LibreOllama.
-- [UI/UX Transformation Roadmap](./LIBREOLLAMA_UI_UX_TRANSFORMATION_ROADMAP.md): Complete UI/UX redesign strategy and implementation plan.
+## 📚 Consolidated Documentation
 
-## 🛠️ Development Guides
+The documentation has been consolidated into three comprehensive guides for easier navigation and maintenance:
 
-- [Development Startup Guide](./development/DEV-STARTUP-GUIDE.md): Setting up the development environment.
-- [Rust Development](./development/RUST_DEVELOPMENT_SETUP.md): Rust backend and Tauri commands.
-- [Database Setup](./development/DATABASE_SETUP.md): Local database configuration.
-- [Dev Server Guide](./development/DEV-SERVER-GUIDE.md): Running and configuring the dev server.
+### 🎯 **[Master Guide](MASTER_GUIDE.md)**
+*Complete project overview, development setup, and current status*
+- Project overview and architecture
+- Current phase status and roadmap  
+- Quick reference and key commands
+- Development workflow and guidelines
+- Contributing standards
 
-## 🗂️ Archive (Historical/Completed Phases)
+### 🛠️ **[Setup & Troubleshooting](SETUP_TROUBLESHOOTING.md)**
+*Environment setup, debugging, and performance optimization*
+- Quick start setup instructions
+- Rust development environment
+- Development server configuration
+- Database setup and management
+- Performance optimization and CPU debugging
+- Common troubleshooting solutions
 
-See [`archive/`](./archive/) for:
+### 🎨 **[Feature Documentation](FEATURE_DOCUMENTATION.md)**
+*Specific features, implementations, and design guidelines*
+- Canvas/Whiteboard system (Miro-style)
+- Dashboard integration (ADHD-optimized)
+- Design system guidelines
+- AI integration with Ollama
+- Knowledge management system
+- Third-party integrations (Google APIs)
+
+## 🗂️ Archive
+
+Historical and completed documentation is preserved in the [`archive/`](./archive/) directory:
 - Phase completion reports
-- Outdated Next.js/LibreChat docs
-- Legacy implementation and validation reports
-- Theme audit and UI/UX migration plans
-
-## 📝 How to Use This Folder
-- **Start with the main guides above for current features and integration.**
-- **Consult the development guides for setup and backend work.**
-- **Reference the archive for historical context or migration details.**
+- Legacy implementation guides
+- Outdated technical documentation
+- Migration and validation reports
 
 ---
 
-*This index is maintained as the single source of truth for LibreOllama documentation. For the most up-to-date project status and next steps, see the main [README.md](../README.md) in the project root.*
+*This consolidated documentation structure replaces the previous scattered files. For the most current project status, start with the [Master Guide](MASTER_GUIDE.md).*
