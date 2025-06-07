@@ -1,11 +1,8 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
+import {
   LayoutDashboard, MessagesSquare, FolderKanban, NotebookPen, Presentation,
-  CalendarDays, CheckCircle2, Cpu, Code2, Plus, Settings, PanelLeftClose, PanelRightClose
+  CalendarDays, CheckCircle2, Cpu, Settings, PanelLeftClose, PanelRightClose
 } from 'lucide-react';
-import { ThemeToggle } from '../ThemeToggle';
-import { useTheme } from '../../hooks/useTheme';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,15 +11,6 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const location = useLocation();
-  const { theme } = useTheme();
-
-  const getThemeLabel = () => {
-    switch (theme) {
-      case 'light': return 'Light';
-      case 'dark': return 'Dark';
-      default: return 'System';
-    }
-  };
 
   const workspaceItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -33,15 +21,6 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     { name: 'Calendar', path: '/calendar', icon: CalendarDays },
     { name: 'Tasks', path: '/tasks', icon: CheckCircle2 },
     { name: 'Agents', path: '/agents', icon: Cpu },
-  ];
-
-  const agentItems = [
-    { name: 'General assistant', path: '/agents/general', icon: Cpu, status: 'online' },
-    { name: 'Code reviewer', path: '/agents/code', icon: Code2, status: 'offline' },
-  ];
-
-  const footerItems = [
-    { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   return (

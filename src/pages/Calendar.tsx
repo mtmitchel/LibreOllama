@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, ListChecks, Clock, User, Tag, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, CalendarDays, ListChecks, User, Tag, Plus } from 'lucide-react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 

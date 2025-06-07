@@ -4,7 +4,7 @@ import React from 'react';
 // Button Component - Uses Tailwind utilities with design system variables
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
-  size?: 'sm' | 'default';
+  size?: 'sm' | 'default' | 'icon';
   children: React.ReactNode;
 }
 
@@ -26,7 +26,8 @@ export function Button({
   
   const sizeClasses = {
     sm: 'py-2 px-3 text-xs',
-    default: 'py-3 px-4 text-sm'
+    default: 'py-3 px-4 text-sm',
+    icon: 'p-2 w-8 h-8'
   };
   
   return (
@@ -176,6 +177,161 @@ export function Badge({
     >
       {children}
     </span>
+  );
+}
+
+// Progress Component
+interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
+  value: number;
+  max?: number;
+}
+
+export function Progress({ value, max = 100, className = '', ...props }: ProgressProps) {
+  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+  
+  return (
+    <div
+      className={`w-full bg-bg-tertiary rounded-full h-2 ${className}`.trim()}
+      {...props}
+    >
+      <div
+        className="bg-accent-primary h-2 rounded-full transition-all duration-300"
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
+  );
+}
+
+// Textarea Component
+interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  error?: string;
+}
+
+export function Textarea({ className = '', error, style, ...props }: TextareaProps) {
+  const baseClasses = 'w-full bg-input-bg border border-border-default rounded-md font-sans text-sm text-text-primary transition-all duration-150 placeholder:text-input-placeholder focus:outline-none resize-vertical min-h-[80px]';
+  
+  const stateClasses = error 
+    ? 'border-error focus:border-error focus:shadow-[0_0_0_2px_rgba(239,68,68,0.1)]'
+    : 'focus:border-input-focus-ring focus:shadow-[0_0_0_2px_var(--accent-soft)]';
+
+  return (
+    <div className="w-full">
+      <textarea
+        className={`${baseClasses} ${stateClasses} py-3 px-4 ${className}`.trim()}
+        style={style}
+        {...props}
+      />
+      {error && (
+        <p style={{
+          marginTop: 'var(--space-1)',
+          fontSize: '12px',
+          color: 'var(--error)'
+        }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Tabs Components
+interface TabsProps {
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  children: React.ReactNode;
+  className?: string;
+}
+
+interface TabsListProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+interface TabsTriggerProps {
+  value: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+interface TabsContentProps {
+  value: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const TabsContext = React.createContext<{
+  value: string;
+  onValueChange: (value: string) => void;
+}>({ value: '', onValueChange: () => {} });
+
+export function Tabs({ defaultValue = '', value, onValueChange, children, className = '' }: TabsProps) {
+  const [internalValue, setInternalValue] = React.useState(defaultValue);
+  const currentValue = value !== undefined ? value : internalValue;
+  const handleValueChange = onValueChange || setInternalValue;
+
+  return (
+    <TabsContext.Provider value={{ value: currentValue, onValueChange: handleValueChange }}>
+      <div className={className}>
+        {children}
+      </div>
+    </TabsContext.Provider>
+  );
+}
+
+export function TabsList({ children, className = '' }: TabsListProps) {
+  return (
+    <div className={`flex bg-bg-tertiary rounded-md p-1 ${className}`.trim()}>
+      {children}
+    </div>
+  );
+}
+
+export function TabsTrigger({ value, children, className = '' }: TabsTriggerProps) {
+  const { value: currentValue, onValueChange } = React.useContext(TabsContext);
+  const isActive = currentValue === value;
+
+  return (
+    <button
+      className={`px-3 py-2 text-sm font-medium rounded transition-colors ${
+        isActive 
+          ? 'bg-bg-primary text-text-primary shadow-sm' 
+          : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+      } ${className}`.trim()}
+      onClick={() => onValueChange(value)}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function TabsContent({ value, children, className = '' }: TabsContentProps) {
+  const { value: currentValue } = React.useContext(TabsContext);
+  
+  if (currentValue !== value) return null;
+
+  return (
+    <div className={className}>
+      {children}
+    </div>
+  );
+}
+
+// Checkbox Component
+interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  label?: string;
+}
+
+export function Checkbox({ label, className = '', ...props }: CheckboxProps) {
+  return (
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        className={`w-4 h-4 text-accent-primary bg-bg-primary border-border-default rounded focus:ring-accent-primary focus:ring-2 ${className}`.trim()}
+        {...props}
+      />
+      {label && <span className="text-text-primary text-sm">{label}</span>}
+    </label>
   );
 }
 

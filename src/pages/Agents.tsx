@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card } from '../components/ui/Card';
 import { useHeader } from '../contexts/HeaderContext';
-import { Search, Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle, ChevronRight } from 'lucide-react';
+import { Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle } from 'lucide-react';
 
 interface Agent {
   id: string;
@@ -15,7 +15,7 @@ interface Agent {
 
 const Agents: React.FC = () => {
   const { setHeaderProps, clearHeaderProps } = useHeader();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery] = useState('');
   const [agents, setAgents] = useState<Agent[]>([
     {
       id: '1',
