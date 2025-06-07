@@ -194,52 +194,83 @@ const Tasks: React.FC = () => {
       {view === 'kanban' && (
         <div className="flex overflow-x-auto gap-6 pb-4">
           {columns.map(column => (
-            <Card as="li" key={column.id} className="kanban-column w-80 flex-shrink-0">
-              <div className="kanban-column-header">
-                <div className="kanban-column-title" style={{ color: column.iconColor }}>
+            <Card as="li" key={column.id} className="w-80 flex-shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-sm font-medium" style={{ color: column.iconColor }}>
                   {React.cloneElement(column.icon as React.ReactElement, { style: { color: column.iconColor } })}
-                  {column.title}
+                  <span>{column.title}</span>
+                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full ml-1">{column.tasks.length}</span>
                 </div>
-                <span className="kanban-column-count">{column.tasks.length}</span>
-                <button className="btn btn-ghost btn-sm">
-                  <MoreHorizontal />
+                <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                  <MoreHorizontal className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
               <div className="kanban-column-content">
                 {column.tasks.map(task => (
-                  <div 
+                  <Card
                     key={task.id} 
-                    className={`kanban-task ${task.status === 'done' ? 'opacity-70' : 'opacity-100'}`}
+                    className={`mb-3 hover:shadow-sm transition-all duration-200 cursor-pointer group ${task.status === 'done' ? 'opacity-70' : 'opacity-100'}`}
+                    padding="none"
                   >
-                    <div className="kanban-task-header">
-                      <div className="kanban-task-title">{task.title}</div>
-                      {task.id && <div className="kanban-task-id">{task.id}</div>}
-                    </div>
-                    {task.description && (
-                      <div className="kanban-task-description">{task.description}</div>
-                    )}
-                    <div className="kanban-task-footer">
-                      <div className="kanban-task-meta">
-                        <span className={getPriorityClass(task.priority)}>
-                          {task.priority}
-                        </span>
-                        {task.dueDate && (
-                          <span className={`kanban-task-due ${task.overdue ? 'overdue' : ''}`}>
-                            Due: {task.dueDate}
-                          </span>
-                        )}
+                    {/* Task content with proper padding */}
+                    <div className="p-4">
+                      {/* Header section with improved layout */}
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white leading-tight flex-1 pr-2">{task.title}</h3>
+                        {task.id && <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 font-mono">{task.id}</span>}
                       </div>
-                      <div className="kanban-task-assignee">{task.assignee}</div>
+                      
+                      {/* Description with better spacing */}
+                      {task.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">{task.description}</p>
+                      )}
+                      
+                      {/* Footer section with improved layout */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-1">
+                          {/* Priority badge with better styling */}
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            task.priority === 'high' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                            task.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' :
+                            'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                          }`}>
+                            {task.priority}
+                          </span>
+                          
+                          {/* Due date with better styling */}
+                          {task.dueDate && (
+                            <span className={`text-xs font-medium ${
+                              task.overdue ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded' : 'text-gray-500 dark:text-gray-400'
+                            }`}>
+                              Due: {task.dueDate}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Assignee avatar with better styling */}
+                        <div className="w-7 h-7 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 flex-shrink-0 ml-2">
+                          {task.assignee}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                    
+                    {/* Project tag at bottom if exists */}
+                    {task.project && (
+                      <div className="px-4 pb-3">
+                        <span className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                          {task.project}
+                        </span>
+                      </div>
+                    )}
+                  </Card>
                 ))}
               </div>
-              <div className="add-task-btn-wrapper">
+              <div className="mt-4">
                 <button 
-                  className="btn add-task-btn btn-sm"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-dashed border-gray-300 hover:border-gray-400 transition-colors"
                   onClick={() => addNewTask(column.id)}
                 >
-                  <Plus />
+                  <Plus className="w-4 h-4" />
                   Add task
                 </button>
               </div>

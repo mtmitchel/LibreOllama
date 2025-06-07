@@ -11,11 +11,6 @@ import {
   Code2,
   Sun,
   Settings,
-  ChevronRight,
-  Search,
-  Plus,
-  Bell,
-  HelpCircle,
   PlusCircle,
   MoreHorizontal,
   GripVertical,
@@ -24,8 +19,6 @@ import {
   FolderPlus,
   LayoutTemplate,
   Settings2,
-  Eye, 
-  EyeOff,
   PanelLeftClose, // Icon for sidebar toggle
   PanelRightClose // Icon for sidebar toggle
 } from 'lucide-react';
@@ -41,99 +34,36 @@ import Projects from './pages/Projects';
 import Canvas from './pages/Canvas';
 import Calendar from './pages/Calendar';
 import SettingsPage from './pages/Settings'; 
-import { useFocusMode } from './hooks/useFocusMode'; 
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
+import React, { useState } from 'react'; // Import useState
 
-// Helper component to get breadcrumb name
-const Breadcrumb = () => {
-  const location = useLocation();
-  const path = location.pathname.replace('/', '');
-  const name = path.charAt(0).toUpperCase() + path.slice(1) || 'Dashboard';
-  return (
-    <>
-      <span className="breadcrumb-base">Workspace</span>
-      <ChevronRight className="breadcrumb-separator" size={16} />
-      <span className="breadcrumb-current">{name}</span>
-    </>
-  );
-};
+
 
 export default function App() {
-  const { isFocusMode, toggleFocusMode } = useFocusMode();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Close sidebar when focus mode is activated
-  useEffect(() => {
-    if (isFocusMode && isSidebarOpen) {
-      setIsSidebarOpen(false);
-    }
-  }, [isFocusMode, isSidebarOpen]);
-
   return (
     <Router>
-      <div className={`flex app-container ${isFocusMode ? 'focus-mode-active' : ''} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        {!isFocusMode && <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />} 
-        <div className="page-column">
-          <div className="main-content-wrapper">
-            <div className="top-bar">
-              <div className="top-bar-left">
-                {!isFocusMode && (
-                  <div className="breadcrumb">
-                    <Breadcrumb />
-                  </div>
-                )}
-              </div>
-
-              {!isFocusMode && (
-                <div className="search-bar">
-                  <Search className="search-icon" />
-                  <input 
-                    type="text" 
-                    placeholder="Search..." 
-                    className="search-input"
-                  />
-                  <span className="search-kbd">⌘K</span>
-                </div>
-              )}
-
-              <div className="top-bar-actions">
-                <button className="action-btn focus-mode-toggle-btn" onClick={toggleFocusMode}> 
-                  {isFocusMode ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
-                </button>
-                {!isFocusMode && (
-                  <>
-                    <button className="action-btn">
-                      <Bell style={{ width: '20px', height: '20px' }} />
-                    </button>
-                    <button className="action-btn">
-                      <HelpCircle style={{ width: '20px', height: '20px' }} />
-                    </button>
-                    <button className="action-btn primary">
-                      <Plus style={{ width: '20px', height: '20px' }} />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="content-area">
-              <Routes>
-                <Route path="/chat" element={<ChatHub />} />
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/notes" element={<Notes />} />
-                <Route path="/tasks" element={<Tasks />} />
-                <Route path="/canvas" element={<Canvas />} />
-                <Route path="/calendar" element={<Calendar />} />
-                <Route path="/agents" element={<Agents />} />
-                <Route path="/settings" element={<SettingsPage />} />
-              </Routes>
-            </div>
+      <div className={`flex app-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} /> 
+        <main className="flex-1 flex flex-col">
+          <div className="content-area flex-1">
+            <Routes>
+              <Route path="/chat" element={<ChatHub />} />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/notes" element={<Notes />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/canvas" element={<Canvas />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/agents" element={<Agents />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
           </div>
-        </div>
+        </main>
       </div>
     </Router>
   );

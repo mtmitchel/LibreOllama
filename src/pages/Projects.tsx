@@ -10,6 +10,7 @@ import {
   GripVertical
 } from 'lucide-react';
 import { PageLayout } from '../components/ui/PageLayout';
+import { Card } from '../components/ui/Card';
 
 interface Project {
   id: string;
@@ -207,90 +208,98 @@ export default function Projects() {
             {activeTab === 'overview' && (
               <div className="projects-overview">
                 {/* Project Header */}
-                <div className="projects-overview-header">
-                  <div className="projects-overview-title">
-                    <div 
-                      className="projects-overview-indicator"
-                      style={{ backgroundColor: selectedProject.color }}
-                    />
-                    <div>
-                      <h2 className="projects-overview-name">{selectedProject.name}</h2>
-                      <p className="projects-overview-description">{selectedProject.description}</p>
+                <Card className="mb-6">
+                  <div className="projects-overview-header">
+                    <div className="projects-overview-title">
+                      <div 
+                        className="projects-overview-indicator"
+                        style={{ backgroundColor: selectedProject.color }}
+                      />
+                      <div>
+                        <h2 className="projects-overview-name">{selectedProject.name}</h2>
+                        <p className="projects-overview-description">{selectedProject.description}</p>
+                      </div>
                     </div>
+                    {selectedProject.active && (
+                      <div className="projects-overview-badge">
+                        Active
+                      </div>
+                    )}
                   </div>
-                  {selectedProject.active && (
-                    <div className="projects-overview-badge">
-                      Active
-                    </div>
-                  )}
-                </div>
+                </Card>
 
                 {/* Progress Section */}
                 {selectedProject.progress !== undefined && (
-                  <div className="projects-overview-section">
-                    <h3 className="projects-section-title">Progress</h3>
-                    <div className="projects-overview-progress">
-                      <div className="projects-progress-bar-large">
-                        <div 
-                          className="projects-progress-fill-large"
-                          style={{ 
-                            width: `${selectedProject.progress}%`,
-                            backgroundColor: selectedProject.color 
-                          }}
-                        />
+                  <Card className="mb-6">
+                    <div className="projects-overview-section">
+                      <h3 className="projects-section-title">Progress</h3>
+                      <div className="projects-overview-progress">
+                        <div className="projects-progress-bar-large">
+                          <div 
+                            className="projects-progress-fill-large"
+                            style={{ 
+                              width: `${selectedProject.progress}%`,
+                              backgroundColor: selectedProject.color 
+                            }}
+                          />
+                        </div>
+                        <span className="projects-progress-text-large">
+                          {selectedProject.progress}% Complete
+                        </span>
                       </div>
-                      <span className="projects-progress-text-large">
-                        {selectedProject.progress}% Complete
-                      </span>
                     </div>
-                  </div>
+                  </Card>
                 )}
 
                 {/* Goals Section */}
-                <div className="projects-overview-section">
-                  <h3 className="projects-section-title">Goals</h3>
-                  <div className="projects-goals">
-                    <div className="projects-goal">
-                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-completed" />
-                      <span className="projects-goal-text">Complete UI component migration</span>
-                    </div>
-                    <div className="projects-goal">
-                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-completed" />
-                      <span className="projects-goal-text">Implement design system</span>
-                    </div>
-                    <div className="projects-goal">
-                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-pending" />
-                      <span className="projects-goal-text">Performance optimization</span>
-                    </div>
-                    <div className="projects-goal">
-                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-pending" />
-                      <span className="projects-goal-text">User testing and feedback</span>
+                <Card className="mb-6">
+                  <div className="projects-overview-section">
+                    <h3 className="projects-section-title">Goals</h3>
+                    <div className="projects-goals">
+                      <div className="projects-goal">
+                        <CheckCircle2 className="projects-goal-icon projects-goal-icon-completed" />
+                        <span className="projects-goal-text">Complete UI component migration</span>
+                      </div>
+                      <div className="projects-goal">
+                        <CheckCircle2 className="projects-goal-icon projects-goal-icon-completed" />
+                        <span className="projects-goal-text">Implement design system</span>
+                      </div>
+                      <div className="projects-goal">
+                        <CheckCircle2 className="projects-goal-icon projects-goal-icon-pending" />
+                        <span className="projects-goal-text">Performance optimization</span>
+                      </div>
+                      <div className="projects-goal">
+                        <CheckCircle2 className="projects-goal-icon projects-goal-icon-pending" />
+                        <span className="projects-goal-text">User testing and feedback</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Card>
 
                 {/* Task Summary */}
-                <div className="projects-overview-section">
-                  <h3 className="projects-section-title">Task Summary</h3>
-                  <div className="projects-task-summary">
-                    <div className="projects-task-stat">
-                      <span className="projects-task-stat-number">24</span>
-                      <span className="projects-task-stat-label">Total Tasks</span>
-                    </div>
-                    <div className="projects-task-stat">
-                      <span className="projects-task-stat-number">18</span>
-                      <span className="projects-task-stat-label">Completed</span>
-                    </div>
-                    <div className="projects-task-stat">
-                      <span className="projects-task-stat-number">4</span>
-                      <span className="projects-task-stat-label">In Progress</span>
-                    </div>
-                    <div className="projects-task-stat">
-                      <span className="projects-task-stat-number">2</span>
-                      <span className="projects-task-stat-label">Pending</span>
+                <Card className="mb-6">
+                  <div className="projects-overview-section">
+                    <h3 className="projects-section-title">Task Summary</h3>
+                    <div className="projects-task-summary">
+                      <div className="projects-task-stat">
+                        <span className="projects-task-stat-number">24</span>
+                        <span className="projects-task-stat-label">Total Tasks</span>
+                      </div>
+                      <div className="projects-task-stat">
+                        <span className="projects-task-stat-number">18</span>
+                        <span className="projects-task-stat-label">Completed</span>
+                      </div>
+                      <div className="projects-task-stat">
+                        <span className="projects-task-stat-number">4</span>
+                        <span className="projects-task-stat-label">In Progress</span>
+                      </div>
+                      <div className="projects-task-stat">
+                        <span className="projects-task-stat-number">2</span>
+                        <span className="projects-task-stat-label">Pending</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Card>
               </div>
             )}
 

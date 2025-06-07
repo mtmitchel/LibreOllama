@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PageLayout } from '../components/ui/PageLayout';
 import { 
   Plus, 
   ChevronRight, 
@@ -48,6 +49,17 @@ interface Block {
 }
 
 export function Notes() {
+  const headerProps = {
+    title: 'Notes',
+    primaryAction: {
+      label: 'New Note',
+      onClick: () => {
+        // Handle new note creation
+      },
+      icon: <Plus className="w-4 h-4" />
+    }
+  };
+
   const [folders, setFolders] = useState<Folder[]>([
     {
       id: '1',
@@ -183,7 +195,8 @@ export function Notes() {
   };
 
   return (
-    <div className="notes-layout">
+    <PageLayout headerProps={headerProps}>
+      <div className="notes-layout">
       {/* Sidebar */}
       <div className="notes-sidebar">
         <div className="notes-sidebar-header">
@@ -331,7 +344,8 @@ export function Notes() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </PageLayout>
   );
 }
 

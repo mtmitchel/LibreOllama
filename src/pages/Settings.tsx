@@ -17,9 +17,13 @@ import {
   Download,
   RefreshCw,
   Trash2,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Globe,
+  Database,
+  Key
 } from 'lucide-react'; // Added more icons
 import { PageLayout } from '../components/ui/PageLayout';
+import { Card } from '../components/ui/Card';
 
 const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState('general');
@@ -245,7 +249,7 @@ const Settings: React.FC = () => {
   return (
     <PageLayout headerProps={headerProps}>
       <div className="settings-layout">
-        <nav className="settings-nav">
+        <Card as="nav" className="settings-nav">
           <h3 className="settings-nav-title">Categories</h3>
           {navItems.map(item => {
             const IconComponent = item.icon;
@@ -263,10 +267,10 @@ const Settings: React.FC = () => {
               </a>
             );
           })}
-        </nav>
-        <main className="settings-content">
+        </Card>
+        <Card as="main" className="settings-content">
           {renderSection()}
-        </main>
+        </Card>
       </div>
     </PageLayout>
   );

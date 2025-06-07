@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { PageLayout } from '../components/ui/PageLayout';
+import { Card } from '../components/ui/Card';
 
 interface ChatMessage {
   id: string;
@@ -237,7 +238,7 @@ export function Chat() {
       </aside>
 
       {/* Main Chat Area */}
-      <div className="chat-main">
+      <Card className="chat-main">
         <header className="chat-header">
           <div className="chat-header-left">
             <div className="breadcrumb">
@@ -276,19 +277,20 @@ export function Chat() {
 
         <div className="chat-messages">
           {messages.map(message => (
-            <div key={message.id} className={`message ${message.sender}`}>
-              <div className="message-avatar">
-                {message.sender === 'user' ? (
-                  <User className="w-4 h-4" />
-                ) : (
-                  <Bot className="w-4 h-4" />
-                )}
-              </div>
-              <div className="message-content-wrapper">
-                <div className="message-sender">
-                  {message.sender === 'user' ? 'You' : 'LibreOllama Assistant'}
+            <Card key={message.id} className={`message ${message.sender} mb-4`}>
+              <div className="flex gap-3">
+                <div className="message-avatar">
+                  {message.sender === 'user' ? (
+                    <User className="w-4 h-4" />
+                  ) : (
+                    <Bot className="w-4 h-4" />
+                  )}
                 </div>
-                <div className="message-content">
+                <div className="message-content-wrapper flex-1">
+                  <div className="message-sender">
+                    {message.sender === 'user' ? 'You' : 'LibreOllama Assistant'}
+                  </div>
+                  <div className="message-content">
                   {message.content.includes('```') ? (
                     <div>
                       {message.content.split('```').map((part, index) => {
@@ -326,44 +328,45 @@ export function Chat() {
                         {/* Add file size/actions here later */}
                       </div>
                     ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
-
-        <div className="chat-input-area">
-          <div className="chat-input-wrapper">
-            <div className="chat-input-tools">
-              <button className="chat-input-tool" title="Attach files">
-                <Paperclip className="w-4 h-4" />
-              </button>
-              <button className="chat-input-tool" title="Add images">
-                <Image className="w-4 h-4" />
-              </button>
-            </div>
-            <textarea 
-              className="chat-input"
-              placeholder="Ask about design, code, or anything else... (Ctrl+Enter to send)"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                  handleSendMessage();
-                }
-              }}
-            />
-            <button 
-              className="chat-send-button"
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim()}
-              title="Send message (Ctrl+Enter)"
-            >
-              <Send className="w-4 h-4" />
+      </Card>
+      <Card className="chat-input-area">
+        <div className="chat-input-wrapper">
+          <div className="chat-input-tools">
+            <button className="chat-input-tool" title="Attach files">
+              <Paperclip className="w-4 h-4" />
+            </button>
+            <button className="chat-input-tool" title="Add images">
+              <Image className="w-4 h-4" />
             </button>
           </div>
+          <textarea 
+            className="chat-input"
+            placeholder="Ask about design, code, or anything else... (Ctrl+Enter to send)"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.ctrlKey) {
+                handleSendMessage();
+              }
+            }}
+          />
+          <button 
+            className="chat-send-button"
+            onClick={handleSendMessage}
+            disabled={!inputMessage.trim()}
+            title="Send message (Ctrl+Enter)"
+          >
+            <Send className="w-4 h-4" />
+          </button>
         </div>
-      </div>
-    </div>
+      </Card>
+
     </PageLayout>
   );
 }

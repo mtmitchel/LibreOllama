@@ -1,19 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
-import {
-  MousePointer2,
-  Type,
-  StickyNote,
-  RectangleHorizontal,
-  Circle,
-  Share,
-  Pencil,
-  MousePointerClick,
-  ChevronRight,
-  Search,
-  Plus,
-  Share2
-} from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Brush, Eraser, Square, Circle, Type, Download, Upload, Trash2, Undo, Redo, Palette, Settings } from 'lucide-react';
 import { PageLayout } from '../components/ui/PageLayout';
+import { Card } from '../components/ui/Card';
 
 interface CanvasElement {
   id: string;
@@ -262,7 +250,7 @@ const Canvas: React.FC = () => {
     <PageLayout headerProps={headerProps}>
       <div className="canvas-layout">
         {/* Canvas Toolbar */}
-        <div className="canvas-toolbar-wrapper">
+        <Card className="canvas-toolbar-wrapper">
           <div className="canvas-toolbar">
             {tools.map((tool) => {
               const Icon = tool.icon;
@@ -278,10 +266,10 @@ const Canvas: React.FC = () => {
               );
             })}
           </div>
-        </div>
+        </Card>
 
       {/* Canvas Area */}
-      <div 
+      <Card as="div" 
         className="canvas-area"
         ref={canvasRef}
         onClick={handleCanvasClick}
@@ -300,8 +288,7 @@ const Canvas: React.FC = () => {
             <MousePointerClick size={48} className="mb-3" />
             <p>Use the toolbar to add elements to your canvas.</p>
           </div>
-        )}
-      </div>
+        )}      </Card>
 
       {/* Minimap */}
       <div className="minimap">
@@ -309,7 +296,7 @@ const Canvas: React.FC = () => {
       </div>
 
       {/* Properties Panel */}
-      <div className={`properties-panel ${selectedElement ? 'block' : 'hidden'}`}>
+      <Card className={`properties-panel ${selectedElement ? 'block' : 'hidden'}`}>
         <h3 className="properties-title">Element Properties</h3>
         {selectedElement ? (
           <div>
@@ -331,7 +318,7 @@ const Canvas: React.FC = () => {
             Select an element to see its properties.
           </p>
         )}
-      </div>
+      </Card>
       </div>
     </PageLayout>
   );
