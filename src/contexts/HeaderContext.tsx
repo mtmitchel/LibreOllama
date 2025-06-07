@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
 // Type definitions for header props (matching UnifiedHeader interface)
 export interface BreadcrumbItem {
@@ -38,9 +38,9 @@ const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
 export const HeaderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [headerProps, setHeaderProps] = useState<HeaderProps>({});
 
-  const clearHeaderProps = () => {
+  const clearHeaderProps = useCallback(() => {
     setHeaderProps({});
-  };
+  }, []);
 
   return (
     <HeaderContext.Provider value={{ headerProps, setHeaderProps, clearHeaderProps }}>

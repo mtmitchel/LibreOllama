@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Card } from '../components/ui/Card';
 import { useHeader } from '../contexts/HeaderContext';
 import {
@@ -17,10 +17,10 @@ import {
 export function Dashboard() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
 
-  const handleAddWidget = () => {
+  const handleAddWidget = useCallback(() => {
     // TODO: Implement add widget functionality
     console.log('Add widget');
-  };
+  }, []);
 
   // Set page-specific header props when component mounts
   useEffect(() => {
@@ -42,7 +42,7 @@ export function Dashboard() {
 
     // Clean up header props when component unmounts
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [setHeaderProps, clearHeaderProps, handleAddWidget]);
 
   return (
     <div className="w-full">

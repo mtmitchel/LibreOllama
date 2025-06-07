@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Send,
   Paperclip,
@@ -37,7 +37,7 @@ interface ChatConversation {
 }
 
 export function Chat() {
-  const { setHeaderProps, clearHeaderProps } = useHeader();
+  const { setHeaderProps, clearHeaderProps, headerProps } = useHeader();
   const [selectedChat, setSelectedChat] = useState<string | null>('1');
   const [inputMessage, setInputMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,14 +91,14 @@ export function Chat() {
     }
   ];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (inputMessage.trim()) {
       // Handle sending message
       setInputMessage('');
     }
-  };
+  }, [inputMessage]);
 
-  const formatTimestamp = (date: Date) => {
+  const formatTimestamp = useCallback((date: Date) => {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -108,27 +108,51 @@ export function Chat() {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
-  };
+  }, []);
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     // TODO: Implement new chat functionality
     console.log('New chat');
-  };
+  }, []);
+
+  // Stabilize secondaryActions for the header
+  const secondaryActions = useMemo(() => [
+    {
+      label: 'Add to project',
+      onClick: () => console.log('Add to project'),
+      variant: 'secondary' as const
+    },
+    {
+      label: 'Export',
+      onClick: () => console.log('Export'),
+      variant: 'secondary' as const
+    }
+  ], []); // Empty dependency array means this will be created once
 
   // Set page-specific header props when component mounts
   useEffect(() => {
-    setHeaderProps({
+    const newHeaderProps = {
       title: "Chat",
       primaryAction: {
         label: 'New chat',
         onClick: handleNewChat,
         icon: <Plus size={16} />
-      }
-    });
+      },
+      secondaryActions: secondaryActions // Use the memoized actions
+    };
+    // Only call setHeaderProps if the props have actually changed
+    if (JSON.stringify(headerProps) !== JSON.stringify(newHeaderProps)) {
+        setHeaderProps(newHeaderProps);
+    }
 
     // Clean up header props when component unmounts
-    return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps, handleNewChat]);
+    return () => {
+        // Reset to a minimal state or specific default if needed
+        if (JSON.stringify(headerProps) !== JSON.stringify({})) {
+             clearHeaderProps();
+        }
+    };
+  }, [setHeaderProps, clearHeaderProps, handleNewChat, secondaryActions, headerProps]); // Added secondaryActions and headerProps
 
   return (
     <div className="w-full h-full flex gap-6">
