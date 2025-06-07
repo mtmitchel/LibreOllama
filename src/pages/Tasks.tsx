@@ -192,7 +192,7 @@ const Tasks: React.FC = () => {
 
       {/* Kanban Board View */}
       {view === 'kanban' && (
-        <div className="kanban-board-wrapper">
+        <div className="flex overflow-x-auto gap-6 pb-4">
           {columns.map(column => (
             <Card as="li" key={column.id} className="kanban-column w-80 flex-shrink-0">
               <div className="kanban-column-header">

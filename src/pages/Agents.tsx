@@ -85,9 +85,9 @@ const Agents: React.FC = () => {
           <h1 className="agents-page-title">Manage your AI agents</h1>
         </div>
 
-        <div className="agents-grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredAgents.map((agent) => (
-            <Card key={agent.id} className="agent-card-styles"> // Added a placeholder class for existing styles if needed, or remove if Card handles all styling.
+            <Card key={agent.id} className="bg-surface border border-border-subtle rounded-lg p-5 flex flex-col gap-4">
               <div className="agent-card-header">
                 <div className="agent-icon-wrapper">
                   {getAgentIcon(agent.icon)}

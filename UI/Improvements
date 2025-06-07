@@ -1,180 +1,83 @@
+Of course. After reviewing the new screenshots and re-examining your codebase, I can pinpoint the exact cause of the layout issue and provide detailed, actionable feedback.
 
-AI Agent Prompt: LibreOllama UI/UX Refactoring
-Objective: Execute a comprehensive UI/UX refactoring of the LibreOllama application. The primary goal is to resolve architectural inconsistencies that make the UI feel "sloppy and unorganized." This will be achieved by unifying the styling system, creating a consistent page layout structure, and refactoring components to be self-contained and maintainable. The target is a polished, professional, and consistent user interface.
+You are correct to point it out—the layout is fundamentally broken. The main content area is displaying *below* the sidebar instead of *next to it*.
 
-Guiding Principles:
+### **Root Cause Analysis: The Missing Flex Container**
 
-Single Source of Truth: src/styles/design-system.css will contain only root CSS variables. All component styling will be handled by Tailwind CSS utility classes.
-Component-Driven Architecture: Replace large, monolithic page structures with smaller, reusable components.
-Consistency: Ensure all pages and components share the same layout rules, spacing, and typographic scales.
-Phase 1: Architectural Refactoring - Establish a Consistent Page Layout
-Goal: Create a single, reusable PageLayout component to enforce a consistent structure for all main application pages.
+The core problem is that the main container in your application, which holds both the sidebar and the main content, is not configured to lay out its children horizontally. In standard HTML/CSS, `div` elements are block-level, meaning they stack vertically by default.
 
-Step 1.1: Create the Master PageLayout Component
+To achieve the classic sidebar-main content layout, their parent container **must** have `display: flex;` applied to it.
 
-Action: Create a new file at src/components/ui/PageLayout.tsx.
+While you correctly have a class `.app-container` in `src/styles/design-system.css` that includes `display: flex;`, it appears this style is not being correctly applied or is being overridden. This can happen due to CSS load order, specificity conflicts, or build process issues.
 
-Content: This component will encapsulate the UnifiedHeader and provide a standardized <main> content area with consistent padding.
+The most robust and modern solution is to apply this critical layout style directly in your component using Tailwind's utility classes, making the layout explicit and removing any dependency on the external CSS file working perfectly.
 
-TypeScript
+### **Actionable Fix: Modifying `App.tsx`**
 
-// src/components/ui/PageLayout.tsx
-import React from 'react';
-import { UnifiedHeader } from './UnifiedHeader';
+The fix is a simple but crucial one-line change in your main application component.
 
-// Define a clear interface for the header's props
-interface PageHeaderProps {
-  title: string;
-  primaryAction?: {
-    label: string;
-    onClick: () => void;
-    icon?: React.ReactNode;
-  };
-  viewSwitcher?: React.ReactNode;
-  secondaryActions?: {
-    label: string;
-    onClick: () => void;
-    variant?: 'ghost' | 'secondary';
-  }[];
-   breadcrumb?: { path: string; label: string; }[];
-}
+1.  **Open the file:** `src/App.tsx`
 
-interface PageLayoutProps {
-  headerProps: PageHeaderProps;
-  children: React.ReactNode;
-}
+2.  **Locate the main container `div`:** Find the top-level `div` inside your `<Router>`. It will have a `className` that includes `app-container`.
 
-export const PageLayout: React.FC<PageLayoutProps> = ({ headerProps, children }) => {
-  return (
-    <div className="flex flex-col h-full w-full bg-background">
-      <UnifiedHeader {...headerProps} />
-      {/* This <main> tag now enforces consistent padding for all pages */}
-      <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-        {children}
-      </main>
-    </div>
-  );
-};
-Step 1.2: Integrate PageLayout into All Main Page Components
+    **Current Code in `App.tsx`:**
+    ```tsx
+    // src/App.tsx
 
-Action: Refactor each page component in the src/pages/ directory (Dashboard.tsx, Projects.tsx, Tasks.tsx, etc.) to use the new PageLayout component. Remove any redundant layout containers and header renderings from the individual pages.
+    return (
+      <Router>
+        <div className={`app-container ${isFocusMode ? 'focus-mode-active' : ''} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+          {!isFocusMode && <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />} 
+          <div className="page-column">
+            {/* ... rest of the app */}
+    ```
 
-Example Refactoring for Dashboard.tsx:
+3.  **Add the `flex` utility class:** To force this container to act as a flexbox container, simply add the `flex` class to its `className` string.
 
-Analyze Dashboard.tsx: Identify the existing UnifiedHeader call and the main content divs (.content-area, .dashboard-grid).
-Modify Dashboard.tsx:
-Import PageLayout.
-Create a headerProps object containing all the props that were previously passed to UnifiedHeader.
-Wrap the page's content in <PageLayout headerProps={headerProps}>.
-Remove the original <UnifiedHeader> and any container divs that added padding or layout.
-TypeScript
+    **Corrected Code:**
+    ```tsx
+    // src/App.tsx
 
-// src/pages/Dashboard.tsx
-import { PageLayout } from '../components/ui/PageLayout';
-import { PlusCircle } from 'lucide-react';
-// Other imports...
+    return (
+      <Router>
+        {/* Add the `flex` class here */}
+        <div className={`flex app-container ${isFocusMode ? 'focus-mode-active' : ''} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+          {!isFocusMode && <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />} 
+          <div className="page-column">
+            {/* ... rest of the app */}
+    ```
 
-export function Dashboard() {
-  const handleAddWidget = () => console.log('Add widget');
+### **Why This Fixes the Problem**
 
-  const headerProps = {
-    title: "Good morning, Alex",
-    primaryAction: { 
-      label: 'Add widget', 
-      onClick: handleAddWidget, 
-      icon: <PlusCircle size={16} /> 
+* By adding the `flex` utility class, you are explicitly telling the browser to arrange the direct children of this `div` (which are the `<Sidebar>` component and the `<div className="page-column">`) in a horizontal row.
+* The `<div className="page-column">` will now correctly take up the remaining space to the right of the sidebar, instead of being pushed below it.
+
+### **Recommended Cleanup (Optional but Strongly Advised)**
+
+To prevent future conflicts and simplify your styling, you should now remove the competing layout styles from your global CSS files. Since Tailwind is now handling the layout directly on the component, these global classes are redundant and confusing.
+
+1.  **Edit `src/styles/design-system.css`:**
+    * **Find** the `.app-container` class definition.
+    * **Remove** the `display: flex;` rule from it. You can keep the `min-height` and `gap` rules if you wish, though `gap` is also better handled by Tailwind (`gap-6`, `gap-8`, etc.).
+
+    **Before:**
+    ```css
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+      gap: var(--space-layout-gutter);
     }
-  };
+    ```
+    **After:**
+    ```css
+    .app-container {
+      /* display: flex;  <-- REMOVED */
+      min-height: 100vh;
+      gap: var(--space-layout-gutter);
+    }
+    ```
 
-  return (
-    <PageLayout headerProps={headerProps}>
-      <p className="text-text-secondary -mt-4 mb-6">
-        Here's what's happening today.
-      </p>
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {/* ...Your dashboard widgets... */}
-      </div>
-    </PageLayout>
-  );
-}
-Instruction: Apply this exact refactoring pattern to Projects.tsx, Tasks.tsx, Chat.tsx, Canvas.tsx, Calendar.tsx, Agents.tsx, and Settings.tsx.
+2.  **Edit `src/styles/App.css`:**
+    * **Review** this file for any other `display: flex` or `display: grid` rules that apply to your main layout containers. It's best practice to define these directly on the components in your `.tsx` files with Tailwind utilities for clarity and co-location of logic and layout.
 
-Phase 2: CSS Simplification & Unification with Tailwind
-Goal: Eliminate the conflict between global CSS classes and Tailwind by making Tailwind the primary styling engine, configured to use your design tokens.
-
-Step 2.1: Prune Global CSS Files
-
-Action: Edit src/styles/design-system.css and src/styles/App.css.
-Instructions:
-In design-system.css, DELETE ALL CSS RULES except for the :root block, the html.light block, the base body styles, and the scrollbar styles. All specific component classes like .widget, .kanban-column, etc., must be removed.
-In App.css, DELETE ALL CSS RULES except for the top-level .app-container and the .focus-mode-active styles. All component-specific styles must be removed.
-Step 2.2: Fully Configure tailwind.config.ts
-
-Action: Modify tailwind.config.ts to consume the CSS variables from your design system.
-
-Instructions: Update the theme.extend object to map Tailwind's keys to your CSS variables. This ensures that when you use a class like bg-primary, it uses var(--accent-primary).
-
-TypeScript
-
-// tailwind.config.ts
-// ...
-theme: {
-  extend: {
-    colors: {
-      'primary': 'var(--accent-primary)',
-      'background': 'var(--bg-primary)',
-      'surface': 'var(--bg-surface)',
-      'text-primary': 'var(--text-primary)',
-      'text-secondary': 'var(--text-secondary)',
-      'border-subtle': 'var(--border-subtle)',
-      // ...map all your important colors
-    },
-    spacing: {
-      '1': 'var(--space-1)', '2': 'var(--space-2)', /* ...map all spaces */
-    },
-    borderRadius: {
-      sm: 'var(--radius-sm)', md: 'var(--radius-md)', /* ...map all radii */
-    },
-  },
-},
-// ...
-Phase 3: Component Refactoring with Tailwind CSS
-Goal: Rebuild components to be self-contained and styled with Tailwind utility classes, removing reliance on the now-deleted global CSS classes.
-
-Step 3.1: Create a Reusable Card Component
-
-Action: The elements .widget, .agent-card, and .kanban-column are all conceptually cards. Create a single, flexible Card component to replace them.
-
-File: Create src/components/ui/Card.tsx.
-
-Content:
-
-TypeScript
-
-// src/components/ui/Card.tsx
-import React from 'react';
-
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
-  as?: React.ElementType;
-}
-
-export const Card: React.FC<CardProps> = ({ children, className = '', as: Component = 'div' }) => {
-  // These Tailwind classes define the "Card" component style once.
-  const baseClasses = "bg-surface border border-border-subtle rounded-lg p-5 transition-all duration-200 hover:shadow-md hover:border-border-default";
-  return (
-    <Component className={`${baseClasses} ${className}`}>
-      {children}
-    </Component>
-  );
-};
-Step 3.2: Refactor Pages to Use the New Card Component
-
-Action: Go through the pages that used card-like structures and replace the old divs with the new Card component.
-Instructions:
-In Dashboard.tsx, replace all instances of <div className="widget"> with <Card>.
-In Agents.tsx, replace <div className="agent-card"> with <Card>.
-In Tasks.tsx, the Kanban column is a list item. Use the as prop: replace <div className="kanban-column"> with <Card as="li" className="w-80 flex-shrink-0">.
-Final Check: After these changes, the UI will likely appear unstyled in places. Proceed to apply Tailwind classes for typography, layout (flex/grid), and spacing to restore and unify the appearance of the content within each card.
-Final Instruction: Upon completing these three phases, the application's UI architecture will be unified and robust. All styling will be driven by a single, maintainable system. Please execute this plan sequentially and confirm completion of each phase.
+By making this change, your code becomes more declarative and easier to understand. A developer looking at `App.tsx` will immediately see `className="flex..."` and understand how the layout works without having to hunt through multiple CSS files. This is the core strength of the utility-first CSS approach.

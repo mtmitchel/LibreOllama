@@ -75,7 +75,7 @@ export default function App() {
 
   return (
     <Router>
-      <div className={`app-container ${isFocusMode ? 'focus-mode-active' : ''} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      <div className={`flex app-container ${isFocusMode ? 'focus-mode-active' : ''} ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         {!isFocusMode && <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />} 
         <div className="page-column">
           <div className="main-content-wrapper">

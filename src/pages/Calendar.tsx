@@ -229,9 +229,9 @@ const Calendar: React.FC = () => {
         
         <div className="calendar-grid-wrapper">
           {view === 'month' && (
-            <div className="calendar-grid">
+            <div className="grid grid-cols-7 border-l border-t border-border-subtle">
               {dayNames.map(day => (
-                <div key={day} className="calendar-header-cell">
+                <div key={day} className="p-3 text-center text-xs font-semibold text-text-secondary border-r border-b border-border-subtle bg-surface">
                   {day}
                 </div>
               ))}
@@ -240,18 +240,24 @@ const Calendar: React.FC = () => {
                 return (
                   <div 
                     key={index} 
-                    className={`calendar-day ${
-                      !day.isCurrentMonth ? 'other-month' : ''
-                    } ${isToday(day.date) ? 'today' : ''}`}
+                    className={`
+                      relative p-2 h-32 border-r border-b border-border-subtle
+                      ${!day.isCurrentMonth ? 'bg-bg-secondary opacity-50' : 'bg-bg-primary'}
+                      ${isToday(day.date) ? 'bg-accent-soft' : ''}
+                    `}
                   >
-                    <span className="calendar-day-number">
+                    <span className={`text-sm ${isToday(day.date) ? 'text-primary font-bold' : 'text-text-secondary'}`}>
                       {day.date.getDate()}
                     </span>
-                    <div className="calendar-events">
+                    <div className="mt-1 space-y-1">
                       {dayEvents.map(event => (
                         <div 
                           key={event.id} 
-                          className={`calendar-event ${event.type}`}
+                          className={`text-xs px-1 py-0.5 rounded truncate ${
+                            event.type === 'event' ? 'bg-blue-100 text-blue-800' :
+                            event.type === 'meeting' ? 'bg-green-100 text-green-800' :
+                            'bg-orange-100 text-orange-800'
+                          }`}
                           title={event.title}
                         >
                           {event.title}
