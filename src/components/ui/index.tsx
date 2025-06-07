@@ -1,7 +1,7 @@
 // UI Components using LibreOllama Design System CSS Variables
 import React from 'react';
 
-// Button Component - Implements .btn classes from design system
+// Button Component - Uses Tailwind utilities with design system variables
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
   size?: 'sm' | 'default';
@@ -15,17 +15,23 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseClass = 'btn';
-  const variantClass = variant === 'primary' ? 'btn-primary' : 
-                     variant === 'secondary' ? 'btn-secondary' :
-                     variant === 'ghost' ? 'btn-ghost' :
-                     variant === 'outline' ? 'btn-secondary' : // outline maps to secondary
-                     '';
-  const sizeClass = size === 'sm' ? 'btn-sm' : '';
+  const baseClasses = 'inline-flex items-center justify-center gap-2 border-none rounded-md font-sans font-medium leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed';
+  
+  const variantClasses = {
+    primary: 'bg-primary text-white hover:bg-secondary',
+    secondary: 'bg-bg-tertiary text-text-primary border border-border-default hover:bg-bg-elevated',
+    ghost: 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-text-primary',
+    outline: 'bg-bg-tertiary text-text-primary border border-border-default hover:bg-bg-elevated'
+  };
+  
+  const sizeClasses = {
+    sm: 'py-2 px-3 text-xs',
+    default: 'py-3 px-4 text-sm'
+  };
   
   return (
     <button
-      className={`${baseClass} ${variantClass} ${sizeClass} ${className}`.trim()}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`.trim()}
       {...props}
     >
       {children}
@@ -33,7 +39,7 @@ export function Button({
   );
 }
 
-// Input Component - Uses design system variables
+// Input Component - Uses Tailwind utilities with design system variables
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   hasIcon?: boolean;
@@ -46,37 +52,23 @@ export function Input({
   style,
   ...props 
 }: InputProps) {
-  const inputStyle = {
-    background: 'var(--input-bg)',
-    border: '1px solid var(--border-default)',
-    borderRadius: 'var(--radius-md)',
-    padding: hasIcon ? 'var(--space-3) var(--space-10) var(--space-3) var(--space-4)' : 'var(--space-3) var(--space-4)',
-    fontSize: '14px',
-    color: 'var(--text-primary)',
-    transition: 'all 0.15s ease',
-    ...style
-  };
-
-  const focusStyle = error ? {
-    borderColor: 'var(--error)',
-    boxShadow: '0 0 0 2px rgba(239, 68, 68, 0.1)'
-  } : {
-    borderColor: 'var(--input-focus-ring)',
-    boxShadow: '0 0 0 2px var(--accent-soft)'
-  };
+  const baseClasses = 'w-full bg-input-bg border border-border-default rounded-md font-sans text-sm text-text-primary transition-all duration-150 placeholder:text-input-placeholder focus:outline-none';
+  
+  const paddingClasses = hasIcon ? 'py-3 pr-10 pl-4' : 'py-3 px-4';
+  
+  const stateClasses = error 
+    ? 'border-error focus:border-error focus:shadow-[0_0_0_2px_rgba(239,68,68,0.1)]'
+    : 'focus:border-input-focus-ring focus:shadow-[0_0_0_2px_var(--accent-soft)]';
 
   return (
     <div className="w-full">
       <input
-        className={className}
-        style={inputStyle}
+        className={`${baseClasses} ${paddingClasses} ${stateClasses} ${className}`.trim()}
+        style={style}
         onFocus={(e) => {
-          Object.assign(e.target.style, focusStyle);
           props.onFocus?.(e);
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = 'var(--border-default)';
-          e.target.style.boxShadow = 'none';
           props.onBlur?.(e);
         }}
         {...props}
@@ -94,7 +86,7 @@ export function Input({
   );
 }
 
-// Card Component - Implements .widget/.card classes
+// Card Component - Uses Tailwind utilities with design system variables
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   variant?: 'widget' | 'card';
@@ -107,19 +99,12 @@ export function Card({
   style,
   ...props 
 }: CardProps) {
-  const cardStyle = {
-    background: 'var(--bg-surface)',
-    border: '1px solid var(--border-subtle)',
-    borderRadius: 'var(--radius-lg)',
-    padding: 'var(--space-6)',
-    position: 'relative' as const,
-    ...style
-  };
-
+  const baseClasses = 'bg-bg-surface border border-border-subtle rounded-lg p-6 relative';
+  
   return (
     <div
-      className={`${variant} ${className}`.trim()}
-      style={cardStyle}
+      className={`${baseClasses} ${className}`.trim()}
+      style={style}
       {...props}
     >
       {children}

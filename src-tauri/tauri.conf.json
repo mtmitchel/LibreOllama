@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.libreollama.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1422",
+    "beforeDevCommand": "npm run dev -- --port 1423",
+    "devUrl": "http://localhost:1423",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },

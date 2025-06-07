@@ -10,7 +10,8 @@ import {
   MoreHorizontal,
   Search
 } from 'lucide-react';
-import { UnifiedHeader } from '../components/ui';
+import { PageLayout } from '../components/ui/PageLayout';
+import { Card } from '../components/ui/Card';
 
 interface Task {
   id: string;
@@ -151,41 +152,49 @@ const Tasks: React.FC = () => {
     addNewTask('todo');
   };
 
+  const headerProps = {
+    title: "My tasks",
+    primaryAction: {
+      label: 'New task',
+      onClick: handleNewTask,
+      icon: <Plus size={16} />
+    },
+    viewSwitcher: (
+      <div className="flex gap-2">
+        <button
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            view === 'kanban' 
+              ? 'bg-primary text-white' 
+              : 'bg-bg-tertiary text-text-secondary hover:bg-bg-surface'
+          }`}
+          onClick={() => setView('kanban')}
+        >
+          <LayoutGrid className="w-4 h-4 mr-2 inline" />
+          Kanban
+        </button>
+        <button
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            view === 'list' 
+              ? 'bg-primary text-white' 
+              : 'bg-bg-tertiary text-text-secondary hover:bg-bg-surface'
+          }`}
+          onClick={() => setView('list')}
+        >
+          <List className="w-4 h-4 mr-2 inline" />
+          List
+        </button>
+      </div>
+    )
+  };
+
   return (
-    <div className="content-area">
-      {/* Unified Header */}
-      <UnifiedHeader
-        title="My tasks"
-        primaryAction={{
-          label: 'New task',
-          onClick: handleNewTask,
-          icon: <Plus size={16} />
-        }}
-        viewSwitcher={
-          <div className="tasks-views">
-            <button
-                          className={`btn ${view === 'kanban' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-                          onClick={() => setView('kanban')}
-            >
-              <LayoutGrid className="lucide" />
-              Kanban
-            </button>
-            <button
-                          className={`btn ${view === 'list' ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-                          onClick={() => setView('list')}
-            >
-              <List className="lucide" />
-              List
-            </button>
-          </div>
-        }
-      />
+    <PageLayout headerProps={headerProps}>
 
       {/* Kanban Board View */}
       {view === 'kanban' && (
         <div className="kanban-board-wrapper">
           {columns.map(column => (
-            <div key={column.id} className="kanban-column">
+            <Card as="li" key={column.id} className="kanban-column w-80 flex-shrink-0">
               <div className="kanban-column-header">
                 <div className="kanban-column-title" style={{ color: column.iconColor }}>
                   {React.cloneElement(column.icon as React.ReactElement, { style: { color: column.iconColor } })}
@@ -200,8 +209,7 @@ const Tasks: React.FC = () => {
                 {column.tasks.map(task => (
                   <div 
                     key={task.id} 
-                    className="kanban-task"
-                    className={task.status === 'done' ? 'opacity-70' : 'opacity-100'}
+                    className={`kanban-task ${task.status === 'done' ? 'opacity-70' : 'opacity-100'}`}
                   >
                     <div className="kanban-task-header">
                       <div className="kanban-task-title">{task.title}</div>
@@ -235,7 +243,7 @@ const Tasks: React.FC = () => {
                   Add task
                 </button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
@@ -266,8 +274,7 @@ const Tasks: React.FC = () => {
                   </td>
                   <td>
                     <span 
-                      className="priority-dot" 
-                      className="w-2 h-2 rounded-full inline-block mr-2"
+                      className="priority-dot w-2 h-2 rounded-full inline-block mr-2"
                       style={{ backgroundColor: getPriorityColor(task.priority) }}
                     ></span>
                     {task.priority}
@@ -288,7 +295,7 @@ const Tasks: React.FC = () => {
           </table>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 };
 

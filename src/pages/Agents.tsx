@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Card } from '../components/ui/Card';
 import { Search, Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle, ChevronRight } from 'lucide-react';
 
 interface Agent {
@@ -86,7 +87,7 @@ const Agents: React.FC = () => {
 
         <div className="agents-grid">
           {filteredAgents.map((agent) => (
-            <div key={agent.id} className="agent-card">
+            <Card key={agent.id} className="agent-card-styles"> // Added a placeholder class for existing styles if needed, or remove if Card handles all styling.
               <div className="agent-card-header">
                 <div className="agent-icon-wrapper">
                   {getAgentIcon(agent.icon)}
@@ -126,15 +127,15 @@ const Agents: React.FC = () => {
                   <Trash2 className="lucide" />
                 </button>
               </div>
-            </div>
+            </Card>
           ))}
           
           {/* Create New Agent Card */}
-          <div className="agent-card agent-create-card" onClick={handleCreateAgent}>
+          <Card className="agent-create-card-styles flex flex-col items-center justify-center text-center cursor-pointer" onClick={handleCreateAgent}> // Added placeholder & basic Tailwind for layout
             <PlusCircle className="create-agent-icon" />
             <h3 className="create-agent-title">Create a new agent</h3>
             <p className="create-agent-subtitle">Define capabilities and select a model.</p>
-          </div>
+          </Card>
         </div>
       </main>
     </div>

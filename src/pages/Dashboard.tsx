@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../components/ui';
-import { UnifiedHeader } from '../components/ui';
+import { PageLayout } from '../components/ui/PageLayout';
+import { Card } from '../components/ui/Card';
 import {
   MessageSquare,
   FileText,
@@ -20,35 +21,31 @@ export function Dashboard() {
     console.log('Add widget');
   };
 
+  const headerProps = {
+    title: "Good morning, Alex",
+    primaryAction: {
+      label: 'Add widget',
+      onClick: handleAddWidget,
+      icon: <PlusCircle size={16} />
+    },
+    secondaryActions: [
+      {
+        label: 'More options',
+        onClick: () => console.log('More options'),
+        variant: 'ghost' as const
+      }
+    ]
+  };
+
   return (
-    <div className="content-area">
-      {/* Unified Header */}
-      <UnifiedHeader
-        title="Good morning, Alex"
-        primaryAction={{
-          label: 'Add widget',
-          onClick: handleAddWidget,
-          icon: <PlusCircle size={16} />
-        }}
-        secondaryActions={[
-          {
-            label: 'More options',
-            onClick: () => console.log('More options'),
-            variant: 'ghost'
-          }
-        ]}
-      />
+    <PageLayout headerProps={headerProps}>
+      <p className="text-text-secondary -mt-4 mb-6">
+        Here's what's happening today.
+      </p>
 
-      {/* Subtitle */}
-      <div className="px-5 mb-6 border-b border-border-subtle pb-4">
-        <p className="text-text-secondary text-sm m-0">
-          Here's what's happening today.
-        </p>
-      </div>
-
-      <div className="dashboard-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* UI Migration Sprint Widget */}
-        <div className="widget">
+        <Card>
           <div className="widget-drag-handle">
             <GripVertical className="w-4 h-4" />
           </div>
@@ -88,10 +85,10 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Today's Focus Widget */}
-        <div className="widget">
+        <Card>
           <div className="widget-drag-handle">
             <GripVertical className="w-4 h-4" />
           </div>
@@ -135,10 +132,10 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Agent Status Widget */}
-        <div className="widget">
+        <Card>
           <div className="widget-drag-handle">
             <GripVertical className="w-4 h-4" />
           </div>
@@ -168,10 +165,10 @@ export function Dashboard() {
               <div className="ai-agent-usage">Offline</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Quick Actions Widget */}
-        <div className="widget">
+        <Card>
           <div className="widget-drag-handle">
             <GripVertical className="w-4 h-4" />
           </div>
@@ -200,9 +197,9 @@ export function Dashboard() {
               </button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
-    </div>
+    </PageLayout>
   );
 }
 

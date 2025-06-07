@@ -1,209 +1,180 @@
-Of course. Here is a more detailed, step-by-step guide to help you refactor your codebase and resolve the design inconsistencies. This plan will walk you through consolidating your styles and applying them consistently across your components.
 
-### Phase 1: Consolidate Your CSS and Create a Single Source of Truth (2-3 hours)
+AI Agent Prompt: LibreOllama UI/UX Refactoring
+Objective: Execute a comprehensive UI/UX refactoring of the LibreOllama application. The primary goal is to resolve architectural inconsistencies that make the UI feel "sloppy and unorganized." This will be achieved by unifying the styling system, creating a consistent page layout structure, and refactoring components to be self-contained and maintainable. The target is a polished, professional, and consistent user interface.
 
-The goal of this phase is to make **`src/styles/design-system.css`** the definitive source for all design tokens and to properly integrate it with Tailwind CSS.
+Guiding Principles:
 
-**Step 1.1: Finalize Your Design Tokens**
+Single Source of Truth: src/styles/design-system.css will contain only root CSS variables. All component styling will be handled by Tailwind CSS utility classes.
+Component-Driven Architecture: Replace large, monolithic page structures with smaller, reusable components.
+Consistency: Ensure all pages and components share the same layout rules, spacing, and typographic scales.
+Phase 1: Architectural Refactoring - Establish a Consistent Page Layout
+Goal: Create a single, reusable PageLayout component to enforce a consistent structure for all main application pages.
 
-Ensure your core design system file, `src/styles/design-system.css`, contains all the CSS variables you need. You have a great start, but you should also consolidate variables for typography and shadows here.
+Step 1.1: Create the Master PageLayout Component
 
-* **Action:** Add font sizes, font weights, and box shadows to the `:root` selector in `src/styles/design-system.css`.
+Action: Create a new file at src/components/ui/PageLayout.tsx.
 
-    ```css
-    /* In src/styles/design-system.css */
-    :root {
-      /* ... existing color, spacing, radius variables */
+Content: This component will encapsulate the UnifiedHeader and provide a standardized <main> content area with consistent padding.
 
-      /* Typography */
-      --font-sans: 'Inter', 'system-ui', sans-serif;
-      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+TypeScript
 
-      --font-size-xs: 11px;
-      --font-size-sm: 12px;
-      --font-size-base: 14px;
-      --font-size-lg: 16px;
-      --font-size-xl: 18px;
-      --font-size-2xl: 20px;
+// src/components/ui/PageLayout.tsx
+import React from 'react';
+import { UnifiedHeader } from './UnifiedHeader';
 
-      --font-weight-normal: 400;
-      --font-weight-medium: 500;
-      --font-weight-semibold: 600;
-      --font-weight-bold: 700;
+// Define a clear interface for the header's props
+interface PageHeaderProps {
+  title: string;
+  primaryAction?: {
+    label: string;
+    onClick: () => void;
+    icon?: React.ReactNode;
+  };
+  viewSwitcher?: React.ReactNode;
+  secondaryActions?: {
+    label: string;
+    onClick: () => void;
+    variant?: 'ghost' | 'secondary';
+  }[];
+   breadcrumb?: { path: string; label: string; }[];
+}
 
-      /* Shadows */
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+interface PageLayoutProps {
+  headerProps: PageHeaderProps;
+  children: React.ReactNode;
+}
+
+export const PageLayout: React.FC<PageLayoutProps> = ({ headerProps, children }) => {
+  return (
+    <div className="flex flex-col h-full w-full bg-background">
+      <UnifiedHeader {...headerProps} />
+      {/* This <main> tag now enforces consistent padding for all pages */}
+      <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+        {children}
+      </main>
+    </div>
+  );
+};
+Step 1.2: Integrate PageLayout into All Main Page Components
+
+Action: Refactor each page component in the src/pages/ directory (Dashboard.tsx, Projects.tsx, Tasks.tsx, etc.) to use the new PageLayout component. Remove any redundant layout containers and header renderings from the individual pages.
+
+Example Refactoring for Dashboard.tsx:
+
+Analyze Dashboard.tsx: Identify the existing UnifiedHeader call and the main content divs (.content-area, .dashboard-grid).
+Modify Dashboard.tsx:
+Import PageLayout.
+Create a headerProps object containing all the props that were previously passed to UnifiedHeader.
+Wrap the page's content in <PageLayout headerProps={headerProps}>.
+Remove the original <UnifiedHeader> and any container divs that added padding or layout.
+TypeScript
+
+// src/pages/Dashboard.tsx
+import { PageLayout } from '../components/ui/PageLayout';
+import { PlusCircle } from 'lucide-react';
+// Other imports...
+
+export function Dashboard() {
+  const handleAddWidget = () => console.log('Add widget');
+
+  const headerProps = {
+    title: "Good morning, Alex",
+    primaryAction: { 
+      label: 'Add widget', 
+      onClick: handleAddWidget, 
+      icon: <PlusCircle size={16} /> 
     }
-    ```
+  };
 
-**Step 1.2: Configure Tailwind to Use Your Design Tokens**
+  return (
+    <PageLayout headerProps={headerProps}>
+      <p className="text-text-secondary -mt-4 mb-6">
+        Here's what's happening today.
+      </p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* ...Your dashboard widgets... */}
+      </div>
+    </PageLayout>
+  );
+}
+Instruction: Apply this exact refactoring pattern to Projects.tsx, Tasks.tsx, Chat.tsx, Canvas.tsx, Calendar.tsx, Agents.tsx, and Settings.tsx.
 
-Modify `tailwind.config.ts` to use your CSS variables. This is the most critical step to bridge the gap between your design system and Tailwind's utility classes.
+Phase 2: CSS Simplification & Unification with Tailwind
+Goal: Eliminate the conflict between global CSS classes and Tailwind by making Tailwind the primary styling engine, configured to use your design tokens.
 
-* **Action:** Update your `tailwind.config.ts` to extend the theme, mapping Tailwind keys to your CSS variables.
+Step 2.1: Prune Global CSS Files
 
-    ```typescript
-    // In tailwind.config.ts
-    import type { Config } from "tailwindcss";
+Action: Edit src/styles/design-system.css and src/styles/App.css.
+Instructions:
+In design-system.css, DELETE ALL CSS RULES except for the :root block, the html.light block, the base body styles, and the scrollbar styles. All specific component classes like .widget, .kanban-column, etc., must be removed.
+In App.css, DELETE ALL CSS RULES except for the top-level .app-container and the .focus-mode-active styles. All component-specific styles must be removed.
+Step 2.2: Fully Configure tailwind.config.ts
 
-    const config: Config = {
-      darkMode: ["class"],
-      content: [
-        "./index.html",
-        "./src/**/*.{js,ts,jsx,tsx}",
-      ],
-      theme: {
-        extend: {
-          colors: {
-            primary: 'var(--accent-primary)',
-            secondary: 'var(--accent-secondary)',
-            success: 'var(--success)',
-            warning: 'var(--warning)',
-            error: 'var(--error)',
-            // Define text and background colors
-            'text-primary': 'var(--text-primary)',
-            'text-secondary': 'var(--text-secondary)',
-            'text-tertiary': 'var(--text-tertiary)',
-            'bg-primary': 'var(--bg-primary)',
-            'bg-secondary': 'var(--bg-secondary)',
-            'bg-surface': 'var(--bg-surface)',
-          },
-          spacing: {
-            '1': 'var(--space-1)',
-            '2': 'var(--space-2)',
-            '3': 'var(--space-3)',
-            '4': 'var(--space-4)',
-            '5': 'var(--space-5)',
-            '6': 'var(--space-6)',
-            '8': 'var(--space-8)',
-          },
-          borderRadius: {
-            sm: 'var(--radius-sm)',
-            md: 'var(--radius-md)',
-            lg: 'var(--radius-lg)',
-            xl: 'var(--radius-xl)',
-          },
-          fontFamily: {
-            sans: ['var(--font-sans)'],
-            mono: ['var(--font-mono)'],
-          },
-          fontSize: {
-             xs: 'var(--font-size-xs)',
-             sm: 'var(--font-size-sm)',
-             base: 'var(--font-size-base)',
-             lg: 'var(--font-size-lg)',
-             xl: 'var(--font-size-xl)',
-             '2xl': 'var(--font-size-2xl)',
-          },
-          boxShadow: {
-            sm: 'var(--shadow-sm)',
-            md: 'var(--shadow-md)',
-            lg: 'var(--shadow-lg)',
-          }
-        },
-      },
-      plugins: [],
-    };
+Action: Modify tailwind.config.ts to consume the CSS variables from your design system.
 
-    export default config;
-    ```
+Instructions: Update the theme.extend object to map Tailwind's keys to your CSS variables. This ensures that when you use a class like bg-primary, it uses var(--accent-primary).
 
-**Step 1.3: Clean Up and Consolidate CSS Files**
+TypeScript
 
-* **Action:**
-    1.  Move any reusable, non-utility styles from `src/styles/App.css`, `src/pages/Chat.css`, and `src/pages/Settings.css` into `src/styles/design-system.css`.
-    2.  Delete `src/styles/index.css`. Its only purpose was loading Tailwind, which should be handled by your main entry point.
-    3.  Ensure CSS files are imported in the correct order in `src/main.tsx`.
+// tailwind.config.ts
+// ...
+theme: {
+  extend: {
+    colors: {
+      'primary': 'var(--accent-primary)',
+      'background': 'var(--bg-primary)',
+      'surface': 'var(--bg-surface)',
+      'text-primary': 'var(--text-primary)',
+      'text-secondary': 'var(--text-secondary)',
+      'border-subtle': 'var(--border-subtle)',
+      // ...map all your important colors
+    },
+    spacing: {
+      '1': 'var(--space-1)', '2': 'var(--space-2)', /* ...map all spaces */
+    },
+    borderRadius: {
+      sm: 'var(--radius-sm)', md: 'var(--radius-md)', /* ...map all radii */
+    },
+  },
+},
+// ...
+Phase 3: Component Refactoring with Tailwind CSS
+Goal: Rebuild components to be self-contained and styled with Tailwind utility classes, removing reliance on the now-deleted global CSS classes.
 
-    ```typescript
-    // In src/main.tsx
-    import React from "react";
-    import ReactDOM from "react-dom/client";
-    import App from "./App.tsx";
-    import { ThemeProvider } from "./components/ThemeProvider";
+Step 3.1: Create a Reusable Card Component
 
-    // 1. Import the design system with all variables and base styles first.
-    import "./styles/design-system.css";
-    // 2. Import App.css for any remaining layout-specific styles.
-    import "./styles/App.css";
+Action: The elements .widget, .agent-card, and .kanban-column are all conceptually cards. Create a single, flexible Card component to replace them.
 
-    ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-      <React.StrictMode>
-        <ThemeProvider>
-          <App />
-        </ThemeProvider>
-      </React.StrictMode>,
-    );
-    ```
+File: Create src/components/ui/Card.tsx.
 
-### Phase 2: Refactor Components to Use the Unified System (4-6 hours)
+Content:
 
-Now, apply the consolidated system to your React components.
+TypeScript
 
-**Step 2.1: Systematically Remove Inline Styles**
+// src/components/ui/Card.tsx
+import React from 'react';
 
-* **Action:** Go through each component file (`.tsx`) and replace all `style={{...}}` props with the equivalent Tailwind utility classes. This will make your components cleaner and ensure they adhere to the design system.
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+  as?: React.ElementType;
+}
 
-* **Example from `src/pages/Projects.tsx`:**
+export const Card: React.FC<CardProps> = ({ children, className = '', as: Component = 'div' }) => {
+  // These Tailwind classes define the "Card" component style once.
+  const baseClasses = "bg-surface border border-border-subtle rounded-lg p-5 transition-all duration-200 hover:shadow-md hover:border-border-default";
+  return (
+    <Component className={`${baseClasses} ${className}`}>
+      {children}
+    </Component>
+  );
+};
+Step 3.2: Refactor Pages to Use the New Card Component
 
-    **Before:**
-    ```tsx
-    <a
-      key={project.id}
-      href="#"
-      className={`project-list-item-compact ${selectedProject.id === project.id ? 'active' : ''}`}
-      onClick={(e) => {
-        e.preventDefault();
-        setSelectedProject(project);
-      }}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-2)',
-        padding: 'var(--space-2) var(--space-3)',
-        // ... more inline styles
-      }}
-    >
-      {/* ... */}
-    </a>
-    ```
-
-    **After (using Tailwind utilities that now map to your variables):**
-    ```tsx
-    <a
-      key={project.id}
-      href="#"
-      className={`
-        flex items-center gap-2 p-2 rounded-md no-underline text-text-secondary
-        hover:bg-bg-elevated hover:text-text-primary transition-all
-        ${selectedProject.id === project.id ? 'bg-accent-soft text-primary' : ''}
-      `}
-      onClick={(e) => {
-        e.preventDefault();
-        setSelectedProject(project);
-      }}
-    >
-      {/* ... */}
-    </a>
-    ```
-
-**Step 2.2: Delete Component-Specific Stylesheets**
-
-* **Action:** Once you have refactored a component (like `Chat.tsx` or `Settings.tsx`) to use only utility classes or global classes from `design-system.css`, you can safely delete its corresponding CSS file (`Chat.css`, `Settings.css`).
-
-### Phase 3: Enforce Guidelines and Maintain Consistency
-
-**Step 3.1: Enforce Content and UI Guidelines**
-
-* **Action:** Review your application's text against the rules in `docs/design-system/capitalization-guidelines.md`. For example, button labels like "Add Widget" or section titles like "UI Migration Sprint" should be changed to "Add widget" and "UI migration sprint" respectively.
-
-**Step 3.2: Document the New Standard**
-
-* **Action:** Update your project's `README.md` or `CONTRIBUTING.md` to clearly state the new styling policy:
-    1.  All styling should primarily use Tailwind utility classes.
-    2.  For complex, reusable styles that cannot be achieved with utilities, add a global class to `design-system.css`.
-    3.  Inline styles (`style` prop) should be avoided entirely except for dynamic properties that cannot be handled by classes (e.g., `transform: 'translateX(...)'`).
-
-By following these detailed steps, you will centralize your design language, eliminate conflicting styles, and make your application's UI much more consistent and easier to maintain.
+Action: Go through the pages that used card-like structures and replace the old divs with the new Card component.
+Instructions:
+In Dashboard.tsx, replace all instances of <div className="widget"> with <Card>.
+In Agents.tsx, replace <div className="agent-card"> with <Card>.
+In Tasks.tsx, the Kanban column is a list item. Use the as prop: replace <div className="kanban-column"> with <Card as="li" className="w-80 flex-shrink-0">.
+Final Check: After these changes, the UI will likely appear unstyled in places. Proceed to apply Tailwind classes for typography, layout (flex/grid), and spacing to restore and unify the appearance of the content within each card.
+Final Instruction: Upon completing these three phases, the application's UI architecture will be unified and robust. All styling will be driven by a single, maintainable system. Please execute this plan sequentially and confirm completion of each phase.

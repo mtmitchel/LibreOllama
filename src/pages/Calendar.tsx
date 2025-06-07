@@ -7,7 +7,7 @@ import {
   CalendarDays,
   Plus
 } from 'lucide-react';
-import { UnifiedHeader } from '../components/ui';
+import { PageLayout } from '../components/ui/PageLayout';
 
 interface CalendarEvent {
   id: string;
@@ -153,40 +153,51 @@ const Calendar: React.FC = () => {
     console.log('Create new event');
   };
 
-  return (
-    <div className="content-area">
-      {/* Unified Header */}
-      <UnifiedHeader
-        title="Calendar"
-        primaryAction={{
-          label: 'New event',
-          onClick: handleNewEvent,
-          icon: <Plus size={16} />
-        }}
-        viewSwitcher={
-          <div className="calendar-views">
-            <button
-                          className={`btn ${view === 'month' ? 'btn-primary' : 'btn-ghost'} calendar-view-btn`}
-                          onClick={() => setView('month')}
-            >
-              Month
-            </button>
-            <button
-                          className={`btn ${view === 'week' ? 'btn-primary' : 'btn-ghost'} calendar-view-btn`}
-                          onClick={() => setView('week')}
-            >
-              Week
-            </button>
-            <button
-                          className={`btn ${view === 'day' ? 'btn-primary' : 'btn-ghost'} calendar-view-btn`}
-                          onClick={() => setView('day')}
-            >
-              Day
-            </button>
-          </div>
-        }
-      />
+  const headerProps = {
+    title: "Calendar",
+    primaryAction: {
+      label: 'New event',
+      onClick: handleNewEvent,
+      icon: <Plus size={16} />
+    },
+    viewSwitcher: (
+      <div className="flex gap-1">
+        <button
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            view === 'month' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-transparent text-text-secondary hover:bg-bg-elevated'
+          }`}
+          onClick={() => setView('month')}
+        >
+          Month
+        </button>
+        <button
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            view === 'week' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-transparent text-text-secondary hover:bg-bg-elevated'
+          }`}
+          onClick={() => setView('week')}
+        >
+          Week
+        </button>
+        <button
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            view === 'day' 
+              ? 'bg-primary text-primary-foreground' 
+              : 'bg-transparent text-text-secondary hover:bg-bg-elevated'
+          }`}
+          onClick={() => setView('day')}
+        >
+          Day
+        </button>
+      </div>
+    )
+  };
 
+  return (
+    <PageLayout headerProps={headerProps}>
       <div className="calendar-layout">
         <div className="calendar-main">
           {/* Calendar Navigation - moved below header */}
@@ -327,7 +338,7 @@ const Calendar: React.FC = () => {
           <ListChecks size={20} />
         </button>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 

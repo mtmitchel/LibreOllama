@@ -1,7 +1,4 @@
 /* Design System CSS Variables and Global Styles */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 * { 
   margin: 0; 
@@ -104,6 +101,11 @@ html.light {
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
+/* Tailwind directives moved after variable definitions */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body { 
   font-family: 'Inter', sans-serif; 
   background: var(--bg-primary); 
@@ -114,157 +116,6 @@ body {
   /* margin, padding, box-sizing are handled by the restored '*' rule */
 }
 
-/* Layout Components */
-/* .app-layout { 
-  display: flex; 
-  height: 100vh; 
-} */
-
-.app-container {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* Component Styles */
-
-/* Button Components */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--accent-primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--accent-secondary);
-}
-
-.btn-secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-default);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--bg-elevated);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.btn-sm {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-xs);
-}
-
-/* Input Components */
-.input {
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background: var(--input-bg);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  color: var(--text-primary);
-  transition: all 0.15s ease;
-}
-
-.input::placeholder {
-  color: var(--input-placeholder);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--input-focus-ring);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.input.error {
-  border-color: var(--error);
-}
-
-/* Card Components */
-.card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-sm);
-}
-
-.card-header {
-  margin-bottom: var(--space-4);
-}
-
-.card-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin: 0 0 var(--space-2) 0;
-}
-
-.card-description {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-/* Badge Components */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-2);
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-sm);
-}
-
-.badge-success {
-  background: rgba(var(--success-rgb), 0.1);
-  color: var(--success);
-}
-
-.badge-warning {
-  background: rgba(251, 146, 60, 0.1);
-  color: var(--warning);
-}
-
-.badge-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error);
-}
 
 /* Layout Components */
 .dashboard-grid {

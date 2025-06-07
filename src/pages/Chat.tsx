@@ -24,6 +24,7 @@ import {
   Image
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { PageLayout } from '../components/ui/PageLayout';
 
 interface ChatMessage {
   id: string;
@@ -125,7 +126,8 @@ export function Chat() {
   };
 
   return (
-    <div className="chat-layout">
+    <PageLayout>
+      <div className="chat-layout">
       {/* Chat Sidebar */}
       <aside className="chat-sidebar">
         <div className="chat-sidebar-header">
@@ -362,6 +364,7 @@ export function Chat() {
         </div>
       </div>
     </div>
+    </PageLayout>
   );
 }
 

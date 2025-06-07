@@ -9,7 +9,7 @@ import {
   FolderOpen,
   GripVertical
 } from 'lucide-react';
-import { UnifiedHeader } from '../components/ui';
+import { PageLayout } from '../components/ui/PageLayout';
 
 interface Project {
   id: string;
@@ -104,24 +104,24 @@ export default function Projects() {
   const [selectedProject, setSelectedProject] = useState<Project>(mockProjects[0]);
   const [sidebarCompact, setSidebarCompact] = useState(false);
 
+  const headerProps = {
+    title: "Projects",
+    primaryAction: {
+      label: 'New Project',
+      onClick: () => console.log('New Project'),
+      icon: <Plus size={16} />
+    },
+    secondaryActions: [
+      {
+        label: 'Settings',
+        onClick: () => console.log('Settings'),
+        variant: 'secondary' as const
+      }
+    ]
+  };
+
   return (
-    <div className="projects-page">
-      <UnifiedHeader 
-        title="Projects" 
-        subtitle="Manage and track your project progress"
-        actions={[
-          {
-            icon: Plus,
-            label: 'New Project',
-            variant: 'primary'
-          },
-          {
-            icon: Settings2,
-            label: 'Settings',
-            variant: 'secondary'
-          }
-        ]}
-      />
+    <PageLayout headerProps={headerProps}>
       
       <div className="projects-layout">
         {/* Sidebar */}
@@ -348,6 +348,6 @@ export default function Projects() {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }

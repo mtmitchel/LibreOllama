@@ -5,6 +5,8 @@ const config: Config = {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.css", // Ensure CSS files are scanned
+    "./src/styles/App.css", // Explicitly include App.css
   ],
   theme: {
     extend: {
@@ -23,10 +25,12 @@ const config: Config = {
         'text-muted': 'var(--text-muted)',
         
         // Background colors
-        'bg-primary': 'var(--bg-primary)',
+        'background': 'var(--bg-primary)', // Renamed from bg-primary to background
+        'bg-primary': 'var(--bg-primary)', // Kept for compatibility if used elsewhere
         'bg-secondary': 'var(--bg-secondary)',
         'bg-tertiary': 'var(--bg-tertiary)',
-        'bg-surface': 'var(--bg-surface)',
+        'surface': 'var(--bg-surface)', // Renamed from bg-surface to surface
+        'bg-surface': 'var(--bg-surface)', // Kept for compatibility
         'bg-elevated': 'var(--bg-elevated)',
         
         // Border colors
@@ -49,6 +53,8 @@ const config: Config = {
         '5': 'var(--space-5)',
         '6': 'var(--space-6)',
         '8': 'var(--space-8)',
+        'layout-gutter': 'var(--space-layout-gutter)',
+        'content-internal': 'var(--space-content-internal)',
       },
       borderRadius: {
         sm: 'var(--radius-sm)',
@@ -68,10 +74,28 @@ const config: Config = {
         xl: 'var(--font-size-xl)',
         '2xl': 'var(--font-size-2xl)',
       },
+      fontWeight: {
+        normal: 'var(--font-weight-normal)',
+        medium: 'var(--font-weight-medium)',
+        semibold: 'var(--font-weight-semibold)',
+        bold: 'var(--font-weight-bold)',
+      },
       boxShadow: {
         sm: 'var(--shadow-sm)',
         md: 'var(--shadow-md)',
         lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+      },
+      ringColor: {
+        primary: 'var(--accent-primary)',
+        secondary: 'var(--accent-secondary)',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        error: 'var(--error)',
+      },
+      ringOffsetColor: {
+        'bg-primary': 'var(--bg-primary)',
+        'bg-secondary': 'var(--bg-secondary)',
       }
     },
   },

@@ -110,30 +110,20 @@ interface BreadcrumbProps {
 
 export function Breadcrumb({ items, className = '' }: BreadcrumbProps) {
   return (
-    <nav className={`breadcrumb ${className}`.trim()}>
+    <nav className={`flex items-center text-sm font-medium text-text-primary ${className}`.trim()}>
       {items.map((item, index) => (
         <React.Fragment key={index}>
           {index > 0 && (
-            <span>/</span>
+            <span className="mx-2 text-text-muted">/</span>
           )}
           {item.current ? (
-            <span className="breadcrumb-current">
+            <span className="text-text-primary font-semibold">
               {item.label}
             </span>
           ) : (
             <a 
               href={item.href} 
-              style={{ 
-                textDecoration: 'none', 
-                color: 'var(--text-secondary)',
-                transition: 'color 0.15s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }}
+              className="no-underline text-text-secondary hover:text-text-primary transition-colors duration-150 ease-in-out"
             >
               {item.label}
             </a>

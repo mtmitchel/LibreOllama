@@ -15,17 +15,27 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseClass = 'btn';
-  const variantClass = variant === 'primary' ? 'btn-primary' : 
-                     variant === 'secondary' ? 'btn-secondary' :
-                     variant === 'ghost' ? 'btn-ghost' :
-                     variant === 'outline' ? 'btn-secondary' : // outline maps to secondary
-                     '';
-  const sizeClass = size === 'sm' ? 'btn-sm' : '';
-  
+  const baseStyles = 'inline-flex items-center justify-center gap-2 px-4 py-3 border-none rounded-md font-sans text-sm font-medium leading-none cursor-pointer transition-all duration-150 ease-in-out no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed';
+
+  let variantStyles = '';
+  switch (variant) {
+    case 'primary':
+      variantStyles = 'bg-accent-primary text-white hover:not(:disabled):bg-accent-secondary';
+      break;
+    case 'secondary':
+    case 'outline': // outline maps to secondary
+      variantStyles = 'bg-bg-tertiary text-text-primary border border-border-default hover:not(:disabled):bg-bg-elevated';
+      break;
+    case 'ghost':
+      variantStyles = 'bg-transparent text-text-secondary hover:not(:disabled):bg-bg-tertiary hover:not(:disabled):text-text-primary';
+      break;
+  }
+
+  const sizeStyles = size === 'sm' ? 'px-3 py-2 text-xs' : '';
+
   return (
     <button
-      className={`${baseClass} ${variantClass} ${sizeClass} ${className}`.trim()}
+      className={`${baseStyles} ${variantStyles} ${sizeStyles} ${className}`.trim().replace(/\s+/g, ' ')}
       {...props}
     >
       {children}

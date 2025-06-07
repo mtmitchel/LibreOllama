@@ -19,7 +19,7 @@ import {
   Trash2,
   Settings as SettingsIcon
 } from 'lucide-react'; // Added more icons
-import { UnifiedHeader } from '../components/ui';
+import { PageLayout } from '../components/ui/PageLayout';
 
 const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState('general');
@@ -234,17 +234,16 @@ const Settings: React.FC = () => {
     }
   };
 
-  return (
-    <div className="settings-page">
-      {/* Unified Header */}
-      <UnifiedHeader
-        title="Settings"
-        breadcrumb={[
-          { path: '/settings', label: 'Settings' },
-          { path: `/settings/${activeSection}`, label: navItems.find(item => item.id === activeSection)?.label || 'General' }
-        ]}
-      />
+  const headerProps = {
+    title: "Settings",
+    breadcrumb: [
+      { path: '/settings', label: 'Settings' },
+      { path: `/settings/${activeSection}`, label: navItems.find(item => item.id === activeSection)?.label || 'General' }
+    ]
+  };
 
+  return (
+    <PageLayout headerProps={headerProps}>
       <div className="settings-layout">
         <nav className="settings-nav">
           <h3 className="settings-nav-title">Categories</h3>
@@ -269,7 +268,7 @@ const Settings: React.FC = () => {
           {renderSection()}
         </main>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 

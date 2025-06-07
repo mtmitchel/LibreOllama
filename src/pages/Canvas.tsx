@@ -13,7 +13,7 @@ import {
   Plus,
   Share2
 } from 'lucide-react';
-import { UnifiedHeader } from '../components/ui';
+import { PageLayout } from '../components/ui/PageLayout';
 
 interface CanvasElement {
   id: string;
@@ -192,12 +192,11 @@ const Canvas: React.FC = () => {
         return (
           <div
             key={element.id}
-            className="canvas-element canvas-shape rectangle"
+            className="canvas-element canvas-shape rectangle rounded-md border-2 border-white/20"
             style={{
               ...style,
               background: element.color || 'var(--accent-primary)'
             }}
-            className="rounded-md border-2 border-white/20"
             onMouseDown={handleMouseDown}
           />
         );
@@ -205,12 +204,11 @@ const Canvas: React.FC = () => {
         return (
           <div
             key={element.id}
-            className="canvas-element canvas-shape circle"
+            className="canvas-element canvas-shape circle rounded-full border-2 border-white/20"
             style={{
               ...style,
               background: element.color || 'var(--success)'
             }}
-            className="rounded-full border-2 border-white/20"
             onMouseDown={handleMouseDown}
           />
         );
@@ -218,13 +216,12 @@ const Canvas: React.FC = () => {
         return (
           <div
             key={element.id}
-            className="canvas-element canvas-text"
+            className="canvas-element canvas-text text-lg font-semibold whitespace-nowrap"
             style={{
               left: element.x,
               top: element.y,
               color: element.color || 'var(--text-primary)'
             }}
-            className="text-lg font-semibold whitespace-nowrap"
             onMouseDown={handleMouseDown}
           >
             {element.content}
@@ -245,25 +242,24 @@ const Canvas: React.FC = () => {
     console.log('Share canvas');
   };
 
-  return (
-    <div className="content-area">
-      {/* Unified Header */}
-      <UnifiedHeader
-        title="Canvas"
-        primaryAction={{
-          label: 'New canvas',
-          onClick: handleNewCanvas,
-          icon: <Plus size={16} />
-        }}
-        secondaryActions={[
-          {
-            label: 'Share',
-            onClick: handleShareCanvas,
-            variant: 'ghost'
-          }
-        ]}
-      />
+  const headerProps = {
+    title: "Canvas",
+    primaryAction: {
+      label: 'New canvas',
+      onClick: handleNewCanvas,
+      icon: <Plus size={16} />
+    },
+    secondaryActions: [
+      {
+        label: 'Share',
+        onClick: handleShareCanvas,
+        variant: 'ghost'
+      }
+    ]
+  };
 
+  return (
+    <PageLayout headerProps={headerProps}>
       <div className="canvas-layout">
         {/* Canvas Toolbar */}
         <div className="canvas-toolbar-wrapper">
@@ -337,7 +333,7 @@ const Canvas: React.FC = () => {
         )}
       </div>
       </div>
-    </div>
+    </PageLayout>
   );
 };
 
