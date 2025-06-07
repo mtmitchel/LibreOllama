@@ -1,3 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* filepath: c:\Projects\LibreOllama\src\styles\design-system.css */
 /* Design System CSS Variables and Global Styles */
 
 * { 
@@ -5,8 +10,6 @@
   padding: 0; 
   box-sizing: border-box; 
 }
-
-/* Removed the previously added 'body, html' and '*, *::before, *::after' reset rules */
 
 :root {
   /* Dark Theme Variables (Default) */
@@ -71,7 +74,6 @@
 
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   
   /* Input specific variables */
@@ -95,16 +97,10 @@ html.light {
   
   --border-subtle: rgba(0, 0, 0, 0.05); 
   --border-default: rgba(0, 0, 0, 0.1);
-  
-  /* Light theme specific shadows */
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 /* Tailwind directives moved after variable definitions */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* body { ... } was here, now handled by @tailwind base and body styles below */
 
 body { 
   font-family: 'Inter', sans-serif; 
@@ -112,8 +108,6 @@ body {
   color: var(--text-primary); 
   line-height: 1.5; 
   -webkit-font-smoothing: antialiased; 
-  /* overflow: hidden; */ 
-  /* margin, padding, box-sizing are handled by the restored '*' rule */
 }
 
 /* Scrollbar styles */

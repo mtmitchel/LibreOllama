@@ -1,24 +1,25 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 // Type definitions for header props (matching UnifiedHeader interface)
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
   path: string;
   label: string;
 }
 
-interface PrimaryAction {
+export interface PrimaryAction {
   label: string;
   onClick: () => void;
   icon?: React.ReactNode;
 }
 
-interface SecondaryAction {
+export interface SecondaryAction {
   label: string;
   onClick: () => void;
+  icon?: React.ReactNode; // Added icon property
   variant?: 'ghost' | 'secondary';
 }
 
-interface HeaderProps {
+export interface HeaderProps {
   title?: string;
   breadcrumb?: BreadcrumbItem[];
   primaryAction?: PrimaryAction;

@@ -5,45 +5,45 @@ const config: Config = {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "./src/**/*.css", // Ensure CSS files are scanned
-    "./src/styles/App.css", // Explicitly include App.css
+    // No need to explicitly include css files here if they don't use Tailwind classes directly
+    // "./src/**/*.css", 
+    // "./src/styles/App.css",
   ],
   theme: {
     extend: {
       colors: {
-        // Semantic colors
-        primary: 'var(--accent-primary)',
-        secondary: 'var(--accent-secondary)',
-        success: 'var(--success)',
-        warning: 'var(--warning)',
-        error: 'var(--error)',
+        'bg-primary': 'var(--bg-primary)',
+        'bg-secondary': 'var(--bg-secondary)',
+        'bg-tertiary': 'var(--bg-tertiary)',
+        'bg-surface': 'var(--bg-surface)',
+        'bg-elevated': 'var(--bg-elevated)',
         
-        // Text colors
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
         'text-tertiary': 'var(--text-tertiary)',
         'text-muted': 'var(--text-muted)',
         
-        // Background colors
-        'background': 'var(--bg-primary)', // Renamed from bg-primary to background
-        'bg-primary': 'var(--bg-primary)', // Kept for compatibility if used elsewhere
-        'bg-secondary': 'var(--bg-secondary)',
-        'bg-tertiary': 'var(--bg-tertiary)',
-        'surface': 'var(--bg-surface)', // Renamed from bg-surface to surface
-        'bg-surface': 'var(--bg-surface)', // Kept for compatibility
-        'bg-elevated': 'var(--bg-elevated)',
+        'accent-primary': 'var(--accent-primary)',
+        'accent-secondary': 'var(--accent-secondary)',
+        'accent-soft': 'var(--accent-soft)',
         
-        // Border colors
+        'success': 'var(--success)',
+        'warning': 'var(--warning)',
+        'error': 'var(--error)',
+        
         'border-subtle': 'var(--border-subtle)',
         'border-default': 'var(--border-default)',
-        
-        // Input colors
+
+        // Added for completeness from design-system.css, though not all might be used directly in Tailwind classes
         'input-bg': 'var(--input-bg)',
         'input-placeholder': 'var(--input-placeholder)',
         'input-focus-ring': 'var(--input-focus-ring)',
-        
-        // Accent variations
-        'accent-soft': 'var(--accent-soft)',
+
+        // Semantic aliases (optional, but can be useful)
+        primary: 'var(--accent-primary)',
+        secondary: 'var(--accent-secondary)',
+        background: 'var(--bg-primary)', 
+        surface: 'var(--bg-surface)',
       },
       spacing: {
         '1': 'var(--space-1)',
@@ -63,8 +63,8 @@ const config: Config = {
         xl: 'var(--radius-xl)',
       },
       fontFamily: {
-        sans: ['var(--font-sans)'],
-        mono: ['var(--font-mono)'],
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'], // Added fallback fonts
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'Fira Code', 'monospace'], // Added fallback fonts
       },
       fontSize: {
         xs: 'var(--font-size-xs)',
@@ -86,16 +86,19 @@ const config: Config = {
         lg: 'var(--shadow-lg)',
         xl: 'var(--shadow-xl)',
       },
-      ringColor: {
+      ringColor: { // Ensure ring colors also use CSS variables
+        DEFAULT: 'var(--accent-primary)', // Default ring color
         primary: 'var(--accent-primary)',
         secondary: 'var(--accent-secondary)',
         success: 'var(--success)',
         warning: 'var(--warning)',
         error: 'var(--error)',
+        'input-focus-ring': 'var(--input-focus-ring)',
       },
-      ringOffsetColor: {
+      ringOffsetColor: { // Ensure ring offset colors also use CSS variables
         'bg-primary': 'var(--bg-primary)',
         'bg-secondary': 'var(--bg-secondary)',
+        'surface': 'var(--bg-surface)',
       }
     },
   },

@@ -36,5 +36,7 @@
 }
 
 .focus-mode-active .content-area {
-  @apply p-5 h-screen overflow-y-auto;
+  padding: 1.25rem; /* Replaced with equivalent of p-5 */
+  height: 100vh;    /* Replaced with equivalent of h-screen */
+  overflow-y: auto; /* Replaced with equivalent of overflow-y-auto */
 }

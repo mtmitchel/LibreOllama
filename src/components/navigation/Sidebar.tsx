@@ -1,19 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard,
-  MessagesSquare,
-  FolderKanban,
-  NotebookPen,
-  Presentation,
-  CalendarDays,
-  CheckCircle2,
-  Cpu,
-  Code2,
-  Plus,
-  Settings,
-  PanelLeftClose,
-  PanelRightClose
+  LayoutDashboard, MessagesSquare, FolderKanban, NotebookPen, Presentation,
+  CalendarDays, CheckCircle2, Cpu, Code2, Plus, Settings, PanelLeftClose, PanelRightClose
 } from 'lucide-react';
 import { ThemeToggle } from '../ThemeToggle';
 import { useTheme } from '../../hooks/useTheme';
@@ -23,22 +12,15 @@ interface SidebarProps {
   toggleSidebar: () => void;
 }
 
-// Remove the exported SidebarToggle component
-
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const location = useLocation();
   const { theme } = useTheme();
 
   const getThemeLabel = () => {
     switch (theme) {
-      case 'light':
-        return 'Light';
-      case 'dark':
-        return 'Dark';
-      case 'system':
-        return 'System';
-      default:
-        return 'Theme';
+      case 'light': return 'Light';
+      case 'dark': return 'Dark';
+      default: return 'System';
     }
   };
 
@@ -57,101 +39,93 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     { name: 'Code reviewer', path: '/agents/code', icon: Code2, status: 'offline' },
   ];
 
+  const footerItems = [
+    { name: 'Settings', path: '/settings', icon: Settings },
+  ];
+
   return (
-    <aside className={`sidebar ${isOpen ? 'expanded' : 'collapsed'}`}>
-      <div className="sidebar-header">
-        <div className="logo">
-          <div className="logo-icon">LO</div>
-          {isOpen && <span>LibreOllama</span>}
-        </div>
-        {/* Ensure this button is the one used for toggling */}
-        <button className="action-btn sidebar-toggle-btn-internal" onClick={toggleSidebar} title={isOpen ? "Collapse sidebar" : "Expand sidebar"}>
-          {isOpen ? <PanelLeftClose style={{ width: '20px', height: '20px' }} /> : <PanelRightClose style={{ width: '20px', height: '20px' }} />}
+    <aside className={`flex flex-col bg-surface border-r border-border-subtle transition-all duration-300 ${isOpen ? 'w-64' : 'w-20'}`}>
+      <div className="flex items-center justify-between p-4 border-b border-border-subtle h-[73px]">
+        {isOpen && <span className="font-bold text-lg">LibreOllama</span>}
+        <button onClick={toggleSidebar} className="p-2 rounded-md hover:bg-bg-secondary">
+          {isOpen ? <PanelLeftClose size={20} /> : <PanelRightClose size={20} />}
         </button>
       </div>
-      <nav className="sidebar-nav">
-        <div className="nav-section">
-          {isOpen && <div className="nav-section-title">Workspace</div>}
-          {workspaceItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                title={!isOpen ? item.name : undefined}
-              >
-                <Icon className="nav-item-icon" />
-                {isOpen && (
-                  <>
-                    {item.name}
-                    {item.badge && <span className="nav-badge">{item.badge}</span>}
-                  </>
-                )}
-              </Link>
-            );
-          })}
+
+      <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+        {/* Workspace Section */}
+        <div>
+          {isOpen && <h3 className="px-2 mb-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Workspace</h3>}
+          <ul className="space-y-1">
+            {workspaceItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <li key={item.name}>
+                  {/* USE <Link>, NOT <a> */}
+                  <Link to={item.path} className={`flex items-center gap-3 p-2 rounded-md transition-colors ${isActive ? 'bg-primary text-white' : 'hover:bg-bg-secondary'}`} title={isOpen ? '' : item.name}>
+                    <Icon size={20} />
+                    {isOpen && <span className="flex-1">{item.name}</span>}
+                    {isOpen && item.badge && <span className="text-xs font-bold bg-bg-primary text-text-primary rounded-full px-2 py-0.5">{item.badge}</span>}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-        <div className="nav-section">
-          {isOpen && <div className="nav-section-title">Agents</div>}
-          {agentItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                title={!isOpen ? item.name : undefined}
-              >
-                <Icon className="nav-item-icon" />
-                {isOpen && (
-                  <>
-                    {item.name}
-                    <div 
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        background: item.status === 'online' ? 'var(--success)' : 'var(--text-muted)',
-                        borderRadius: '50%',
-                        marginLeft: 'auto',
-                        flexShrink: 0
-                      }}
-                    />
-                  </>
-                )}
-              </Link>
-            );
-          })}
-          {isOpen && (
-            <Link
-              to="/agents"
-              className="nav-item nav-item-create"
-              title={!isOpen ? 'New agent' : undefined}
-            >
-              <Plus className="nav-item-icon" />
-              New agent
-            </Link>
-          )}
+        {/* Agents Section */}
+        <div>
+          {isOpen && <h3 className="px-2 mb-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Agents</h3>}
+          <ul className="space-y-1">
+            {agentItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <li key={item.name}>
+                  <Link to={item.path} className={`flex items-center gap-3 p-2 rounded-md transition-colors ${isActive ? 'bg-primary text-white' : 'hover:bg-bg-secondary'}`} title={isOpen ? '' : item.name}>
+                    <Icon size={20} />
+                    {isOpen && <span className="flex-1">{item.name}</span>}
+                    {isOpen && item.status && (
+                      <span className={`w-2 h-2 rounded-full ${item.status === 'online' ? 'bg-success' : 'bg-text-muted'}`}></span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </nav>
-      <div className="sidebar-footer">
-        <div className="nav-item" style={{ cursor: 'pointer' }} onClick={() => {
-          const themeToggle = document.querySelector('[data-theme-toggle]') as HTMLButtonElement;
-          if (themeToggle) themeToggle.click();
-        }}>
-          <ThemeToggle />
-          {isOpen && <span>{getThemeLabel()}</span>}
-        </div>
-        <Link 
-          to="/settings" 
-          className={`nav-item ${location.pathname === '/settings' ? 'active' : ''}`}
-          title={!isOpen ? 'Settings' : undefined}
-        >
-          <Settings className="nav-item-icon" />
-          {isOpen && <span>Settings</span>}
-        </Link>
+
+      <div className="p-4 border-t border-border-subtle space-y-1">
+        {/* Theme Toggle */}
+        {isOpen && (
+          <div className="p-2 rounded-md hover:bg-bg-secondary flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm">Theme</span>
+            </div>
+            <ThemeToggle /> 
+          </div>
+        )}
+        {!isOpen && (
+            <div className="flex justify-center">
+                <ThemeToggle />
+            </div>
+        )}
+        {/* Footer Items */}
+        <ul className="space-y-1">
+            {footerItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                    <li key={item.name}>
+                        <Link to={item.path} className={`flex items-center gap-3 p-2 rounded-md transition-colors ${isActive ? 'bg-primary text-white' : 'hover:bg-bg-secondary'}`} title={isOpen ? '' : item.name}>
+                            <Icon size={20} />
+                            {isOpen && <span className="flex-1">{item.name}</span>}
+                        </Link>
+                    </li>
+                );
+            })}
+        </ul>
       </div>
     </aside>
   );
