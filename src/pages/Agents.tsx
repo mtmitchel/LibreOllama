@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card } from '../components/ui/Card';
 import { useHeader } from '../contexts/HeaderContext';
 import { Search, Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle, ChevronRight } from 'lucide-react';
@@ -46,7 +46,7 @@ const Agents: React.FC = () => {
     }
   ]);
 
-  const getAgentIcon = (iconName: string) => {
+  const getAgentIcon = useCallback((iconName: string) => {
     switch (iconName) {
       case 'brain-cog':
         return <BrainCog />;
@@ -57,42 +57,49 @@ const Agents: React.FC = () => {
       default:
         return <BrainCog />;
     }
-  };
+  }, []);
 
-  const filteredAgents = agents.filter(agent =>
+  const filteredAgents = useMemo(() => agents.filter(agent =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.capabilities.some(cap => cap.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  ), [agents, searchQuery]);
 
-  const handleCreateAgent = () => {
+  const handleCreateAgent = useCallback(() => {
     // TODO: Implement agent creation modal/form
     console.log('Create new agent');
-  };
+  }, []);
 
-  const handleConfigureAgent = (agentId: string) => {
+  const handleConfigureAgent = useCallback((agentId: string) => {
     // TODO: Implement agent configuration
     console.log('Configure agent:', agentId);
-  };
+  }, []);
 
-  const handleDeleteAgent = (agentId: string) => {
-    setAgents(agents.filter(agent => agent.id !== agentId));
-  };
+  const handleDeleteAgent = useCallback((agentId: string) => {
+    setAgents(prevAgents => prevAgents.filter(agent => agent.id !== agentId));
+  }, []);
 
-  // Set page-specific header props when component mounts
+  const primaryAction = useMemo(() => ({
+    label: 'Create new agent',
+    onClick: handleCreateAgent,
+    icon: <PlusCircle size={16} />
+  }), [handleCreateAgent]);
+
+  const newHeaderProps = useMemo(() => ({
+    title: "Manage your AI agents",
+    primaryAction: primaryAction,
+    secondaryActions: undefined,
+    breadcrumb: undefined,
+    viewSwitcher: undefined,
+  }), [primaryAction]);
+
   useEffect(() => {
-    setHeaderProps({
-      title: "Manage your AI agents",
-      primaryAction: {
-        label: 'Create agent',
-        onClick: handleCreateAgent,
-        icon: <PlusCircle size={16} />
-      }
-    });
+    setHeaderProps(newHeaderProps);
 
-    // Clean up header props when component unmounts
-    return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps, handleCreateAgent]);
+    return () => {
+      clearHeaderProps();
+    };
+  }, [newHeaderProps, setHeaderProps, clearHeaderProps]);
 
   return (
     <div className="w-full">
