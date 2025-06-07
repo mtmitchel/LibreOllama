@@ -1,7 +1,6 @@
-import React from 'react';
-import { Button } from '../components/ui';
-import { PageLayout } from '../components/ui/PageLayout';
+import React, { useEffect } from 'react';
 import { Card } from '../components/ui/Card';
+import { useHeader } from '../contexts/HeaderContext';
 import {
   MessageSquare,
   FileText,
@@ -16,29 +15,37 @@ import {
 } from 'lucide-react';
 
 export function Dashboard() {
+  const { setHeaderProps, clearHeaderProps } = useHeader();
+
   const handleAddWidget = () => {
     // TODO: Implement add widget functionality
     console.log('Add widget');
   };
 
-  const headerProps = {
-    title: "Good morning, Alex",
-    primaryAction: {
-      label: 'Add widget',
-      onClick: handleAddWidget,
-      icon: <PlusCircle size={16} />
-    },
-    secondaryActions: [
-      {
-        label: 'More options',
-        onClick: () => console.log('More options'),
-        variant: 'ghost' as const
-      }
-    ]
-  };
+  // Set page-specific header props when component mounts
+  useEffect(() => {
+    setHeaderProps({
+      title: "Good morning, Alex",
+      primaryAction: {
+        label: 'Add widget',
+        onClick: handleAddWidget,
+        icon: <PlusCircle size={16} />
+      },
+      secondaryActions: [
+        {
+          label: 'More options',
+          onClick: () => console.log('More options'),
+          variant: 'ghost' as const
+        }
+      ]
+    });
+
+    // Clean up header props when component unmounts
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <PageLayout headerProps={headerProps}>
+    <div className="w-full">
       <p className="text-gray-600 dark:text-gray-400 -mt-4 mb-6">
         Here's what's happening today.
       </p>
@@ -215,7 +222,7 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
-    </PageLayout>
+    </div>
   );
 }
 

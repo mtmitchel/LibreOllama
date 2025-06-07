@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Filter,
@@ -10,8 +10,8 @@ import {
   MoreHorizontal,
   Search
 } from 'lucide-react';
-import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
+import { useHeader } from '../contexts/HeaderContext';
 
 interface Task {
   id: string;
@@ -34,6 +34,7 @@ interface Column {
 }
 
 const Tasks: React.FC = () => {
+  const { setHeaderProps, clearHeaderProps } = useHeader();
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -152,77 +153,66 @@ const Tasks: React.FC = () => {
     addNewTask('todo');
   };
 
-  const headerProps = {
-    title: "My tasks",
-    primaryAction: {
-      label: 'New task',
-      onClick: handleNewTask,
-      icon: <Plus size={16} />
-    },
-    viewSwitcher: (
-      <div className="flex gap-2">
-        <button
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            view === 'kanban' 
-              ? 'bg-primary text-white' 
-              : 'bg-bg-tertiary text-text-secondary hover:bg-bg-surface'
-          }`}
-          onClick={() => setView('kanban')}
-        >
-          <LayoutGrid className="w-4 h-4 mr-2 inline" />
-          Kanban
-        </button>
-        <button
-          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-            view === 'list' 
-              ? 'bg-primary text-white' 
-              : 'bg-bg-tertiary text-text-secondary hover:bg-bg-surface'
-          }`}
-          onClick={() => setView('list')}
-        >
-          <List className="w-4 h-4 mr-2 inline" />
-          List
-        </button>
-      </div>
-    )
-  };
+  // Set page-specific header props when component mounts
+  useEffect(() => {
+    setHeaderProps({
+      title: "My tasks",
+      primaryAction: {
+        label: 'New task',
+        onClick: handleNewTask,
+        icon: <Plus size={16} />
+      },
+      secondaryActions: [
+        {
+          label: view === 'kanban' ? 'Switch to List' : 'Switch to Kanban',
+          onClick: () => setView(view === 'kanban' ? 'list' : 'kanban'),
+          variant: 'ghost' as const
+        }
+      ]
+    });
+
+    // Clean up header props when component unmounts
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps, view, handleNewTask]);
 
   return (
-    <PageLayout headerProps={headerProps}>
-
+    <div className="w-full">
       {/* Kanban Board View */}
       {view === 'kanban' && (
         <div className="flex overflow-x-auto gap-6 pb-4">
           {columns.map(column => (
-            <Card as="li" key={column.id} className="w-80 flex-shrink-0">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-sm font-medium" style={{ color: column.iconColor }}>
-                  {React.cloneElement(column.icon as React.ReactElement, { style: { color: column.iconColor } })}
-                  <span>{column.title}</span>
-                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full ml-1">{column.tasks.length}</span>
+            <Card key={column.id} className="w-80 flex-shrink-0" padding="none">
+              <div className="p-6 pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-sm font-medium" style={{ color: column.iconColor }}>
+                    {React.cloneElement(column.icon as React.ReactElement, { style: { color: column.iconColor } })}
+                    <span>{column.title}</span>
+                    <span className="bg-bg-surface text-text-secondary text-xs px-2 py-1 rounded-full ml-1">{column.tasks.length}</span>
+                  </div>
+                  <button className="p-1 hover:bg-bg-surface rounded transition-colors">
+                    <MoreHorizontal className="w-4 h-4 text-text-secondary" />
+                  </button>
                 </div>
-                <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                  <MoreHorizontal className="w-4 h-4 text-gray-500" />
-                </button>
               </div>
-              <div className="kanban-column-content">
+              
+              <div className="px-6 space-y-3">
                 {column.tasks.map(task => (
                   <Card
-                    key={task.id} 
-                    className={`mb-3 hover:shadow-sm transition-all duration-200 cursor-pointer group ${task.status === 'done' ? 'opacity-70' : 'opacity-100'}`}
+                    key={task.id}
+                    className={`hover:shadow-sm transition-all duration-200 cursor-pointer group ${task.status === 'done' ? 'opacity-70' : 'opacity-100'} bg-surface`}
                     padding="none"
                   >
                     {/* Task content with proper padding */}
                     <div className="p-4">
                       {/* Header section with improved layout */}
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white leading-tight flex-1 pr-2">{task.title}</h3>
-                        {task.id && <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 font-mono">{task.id}</span>}
+                        <h3 className="text-sm font-medium text-text-primary leading-tight flex-1 pr-2">{task.title}</h3>
+                        {task.id && <span className="text-xs text-text-secondary flex-shrink-0 font-mono">{task.id}</span>}
                       </div>
                       
                       {/* Description with better spacing */}
                       {task.description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">{task.description}</p>
+                        <p className="text-sm text-text-secondary mb-4 leading-relaxed">{task.description}</p>
                       )}
                       
                       {/* Footer section with improved layout */}
@@ -230,9 +220,9 @@ const Tasks: React.FC = () => {
                         <div className="flex items-center gap-2 flex-1">
                           {/* Priority badge with better styling */}
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            task.priority === 'high' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
-                            task.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' :
-                            'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                            task.priority === 'high' ? 'bg-red-100 text-red-800' :
+                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
                           }`}>
                             {task.priority}
                           </span>
@@ -240,7 +230,7 @@ const Tasks: React.FC = () => {
                           {/* Due date with better styling */}
                           {task.dueDate && (
                             <span className={`text-xs font-medium ${
-                              task.overdue ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded' : 'text-gray-500 dark:text-gray-400'
+                              task.overdue ? 'text-red-600 bg-red-50 px-2 py-1 rounded' : 'text-text-secondary'
                             }`}>
                               Due: {task.dueDate}
                             </span>
@@ -248,7 +238,7 @@ const Tasks: React.FC = () => {
                         </div>
                         
                         {/* Assignee avatar with better styling */}
-                        <div className="w-7 h-7 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300 flex-shrink-0 ml-2">
+                        <div className="w-7 h-7 bg-bg-surface rounded-full flex items-center justify-center text-xs font-medium text-text-primary flex-shrink-0 ml-2">
                           {task.assignee}
                         </div>
                       </div>
@@ -257,7 +247,7 @@ const Tasks: React.FC = () => {
                     {/* Project tag at bottom if exists */}
                     {task.project && (
                       <div className="px-4 pb-3">
-                        <span className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                        <span className="inline-flex items-center text-xs text-text-secondary bg-bg-surface px-2 py-1 rounded">
                           {task.project}
                         </span>
                       </div>
@@ -265,9 +255,10 @@ const Tasks: React.FC = () => {
                   </Card>
                 ))}
               </div>
-              <div className="mt-4">
-                <button 
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-dashed border-gray-300 hover:border-gray-400 transition-colors"
+              
+              <div className="p-6 pt-4">
+                <button
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-surface rounded-lg border border-dashed border-border-subtle hover:border-border-primary transition-colors"
                   onClick={() => addNewTask(column.id)}
                 >
                   <Plus className="w-4 h-4" />
@@ -281,52 +272,64 @@ const Tasks: React.FC = () => {
 
       {/* List View */}
       {view === 'list' && (
-        <div className="task-list-view block">
-          <table className="task-list-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" className="rounded-sm" /></th>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Due Date</th>
-                <th>Assignee</th>
-                <th>Project</th>
-                <th><MoreHorizontal /></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map(task => (
-                <tr key={task.id}>
-                  <td><input type="checkbox" className="rounded-sm" /></td>
-                  <td>{task.title}</td>
-                  <td className="capitalize">
-                    {task.status === 'in-progress' ? 'In Progress' : task.status === 'todo' ? 'To Do' : 'Done'}
-                  </td>
-                  <td>
-                    <span 
-                      className="priority-dot w-2 h-2 rounded-full inline-block mr-2"
-                      style={{ backgroundColor: getPriorityColor(task.priority) }}
-                    ></span>
-                    {task.priority}
-                  </td>
-                  <td>{task.dueDate || '-'}</td>
-                  <td>
-                    <span className="assignee-avatar-sm">{task.assignee}</span>
-                  </td>
-                  <td>{task.project || '-'}</td>
-                  <td>
-                    <button className="btn btn-ghost btn-sm">
-                      <MoreHorizontal />
-                    </button>
-                  </td>
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border-subtle">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
+                    <input type="checkbox" className="rounded-sm" />
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Title</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Priority</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Due Date</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Assignee</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">Project</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-text-secondary">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredTasks.map(task => (
+                  <tr key={task.id} className="border-b border-border-subtle hover:bg-bg-surface transition-colors">
+                    <td className="py-3 px-4">
+                      <input type="checkbox" className="rounded-sm" />
+                    </td>
+                    <td className="py-3 px-4 text-sm font-medium text-text-primary">{task.title}</td>
+                    <td className="py-3 px-4 text-sm text-text-secondary capitalize">
+                      {task.status === 'in-progress' ? 'In Progress' : task.status === 'todo' ? 'To Do' : 'Done'}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: getPriorityColor(task.priority) }}
+                        ></span>
+                        {task.priority}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">{task.dueDate || '-'}</td>
+                    <td className="py-3 px-4">
+                      <div className="w-7 h-7 bg-bg-surface rounded-full flex items-center justify-center text-xs font-medium text-text-primary">
+                        {task.assignee}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-text-secondary">{task.project || '-'}</td>
+                    <td className="py-3 px-4">
+                      <button className="p-1 hover:bg-bg-surface rounded transition-colors">
+                        <MoreHorizontal className="w-4 h-4 text-text-secondary" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
-    </PageLayout>
+    </div>
   );
 };
 

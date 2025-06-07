@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Cog,
   User,
@@ -22,10 +22,11 @@ import {
   Database,
   Key
 } from 'lucide-react'; // Added more icons
-import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
+import { useHeader } from '../contexts/HeaderContext';
 
 const Settings: React.FC = () => {
+  const { setHeaderProps, clearHeaderProps } = useHeader();
   const [activeSection, setActiveSection] = useState('general');
 
   const navItems = [
@@ -44,60 +45,68 @@ const Settings: React.FC = () => {
     switch (activeSection) {
       case 'general':
         return (
-          <>
-            <div className="settings-page-header">
-              <h1 className="settings-page-title">General</h1>
-              <p className="settings-page-subtitle">Configure general application preferences and behavior.</p>
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-text-primary mb-2">General</h1>
+              <p className="text-text-secondary">Configure general application preferences and behavior.</p>
             </div>
-            <section className="settings-section">
-              <h2 className="settings-section-title">Application startup</h2>
-              <div className="settings-item">
-                <div className="settings-item-info">
-                  <div className="settings-item-title">Startup view</div>
-                  <div className="settings-item-description">Choose which module to open when you start the application.</div>
+            
+            <div className="space-y-6">
+              <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-text-primary">Application startup</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between py-4 border-b border-border-subtle">
+                    <div className="flex-1">
+                      <div className="font-medium text-text-primary mb-1">Startup view</div>
+                      <div className="text-sm text-text-secondary">Choose which module to open when you start the application.</div>
+                    </div>
+                    <select className="ml-4 px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option>Dashboard</option>
+                      <option>Last visited page</option>
+                      <option>Chat</option>
+                      <option>Notes</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between py-4 border-b border-border-subtle">
+                    <div className="flex-1">
+                      <div className="font-medium text-text-primary mb-1">Check for updates on startup</div>
+                      <div className="text-sm text-text-secondary">Automatically check for new versions when the application launches.</div>
+                    </div>
+                    <div className="ml-4 w-12 h-6 bg-blue-600 rounded-full relative cursor-pointer">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+                    </div>
+                  </div>
                 </div>
-                <select className="settings-select">
-                  <option>Dashboard</option>
-                  <option>Last visited page</option>
-                  <option>Chat</option>
-                  <option>Notes</option>
-                </select>
-              </div>
-              <div className="settings-item">
-                <div className="settings-item-info">
-                  <div className="settings-item-title">Check for updates on startup</div>
-                  <div className="settings-item-description">Automatically check for new versions when the application launches.</div>
+              </section>
+              
+              <section className="space-y-4">
+                <h2 className="text-lg font-semibold text-text-primary">Regional settings</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between py-4 border-b border-border-subtle">
+                    <div className="flex-1">
+                      <div className="font-medium text-text-primary mb-1">Language</div>
+                      <div className="text-sm text-text-secondary">Set the display language for the entire application.</div>
+                    </div>
+                    <select className="ml-4 px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option>English (United States)</option>
+                      <option>Deutsch</option>
+                      <option>Español</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between py-4 border-b border-border-subtle">
+                    <div className="flex-1">
+                      <div className="font-medium text-text-primary mb-1">First day of the week</div>
+                      <div className="text-sm text-text-secondary">Set the first day for calendars and date pickers.</div>
+                    </div>
+                    <select className="ml-4 px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option>Sunday</option>
+                      <option>Monday</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="settings-toggle settings-toggle-active">
-                  <div className="settings-toggle-thumb"></div>
-                </div>
-              </div>
-            </section>
-            <section className="settings-section">
-              <h2 className="settings-section-title">Regional settings</h2>
-              <div className="settings-item">
-                <div className="settings-item-info">
-                  <div className="settings-item-title">Language</div>
-                  <div className="settings-item-description">Set the display language for the entire application.</div>
-                </div>
-                <select className="settings-select">
-                  <option>English (United States)</option>
-                  <option>Deutsch</option>
-                  <option>Español</option>
-                </select>
-              </div>
-              <div className="settings-item">
-                <div className="settings-item-info">
-                  <div className="settings-item-title">First day of the week</div>
-                  <div className="settings-item-description">Set the first day for calendars and date pickers.</div>
-                </div>
-                <select className="settings-select">
-                  <option>Sunday</option>
-                  <option>Monday</option>
-                </select>
-              </div>
-            </section>
-          </>
+              </section>
+            </div>
+          </div>
         );
       case 'agents-and-models':
         return (
@@ -238,41 +247,49 @@ const Settings: React.FC = () => {
     }
   };
 
-  const headerProps = {
-    title: "Settings",
-    breadcrumb: [
-      { path: '/settings', label: 'Settings' },
-      { path: `/settings/${activeSection}`, label: navItems.find(item => item.id === activeSection)?.label || 'General' }
-    ]
-  };
+  // Set page-specific header props when component mounts
+  useEffect(() => {
+    setHeaderProps({
+      title: "Settings"
+    });
+
+    // Clean up header props when component unmounts
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <PageLayout headerProps={headerProps}>
-      <div className="settings-layout">
-        <Card as="nav" className="settings-nav">
-          <h3 className="settings-nav-title">Categories</h3>
-          {navItems.map(item => {
-            const IconComponent = item.icon;
-            return (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className={`settings-nav-item ${activeSection === item.id ? 'settings-nav-item-active' : ''}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveSection(item.id);
-                }}
-              >
-                <IconComponent className="settings-nav-icon" /> {item.label}
-              </a>
-            );
-          })}
-        </Card>
-        <Card as="main" className="settings-content">
-          {renderSection()}
+    <div className="w-full flex gap-6">
+      {/* Left Navigation */}
+      <div className="w-64 flex-shrink-0">
+        <Card>
+          <h3 className="text-lg font-semibold text-text-primary mb-4">Categories</h3>
+          <nav className="space-y-1">
+            {navItems.map(item => {
+              const IconComponent = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left ${
+                    activeSection === item.id
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface'
+                  }`}
+                  onClick={() => setActiveSection(item.id)}
+                >
+                  <IconComponent className="w-4 h-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
         </Card>
       </div>
-    </PageLayout>
+
+      {/* Main Content */}
+      <Card className="flex-1">
+        {renderSection()}
+      </Card>
+    </div>
   );
 };
 

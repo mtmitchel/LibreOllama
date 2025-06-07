@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Send,
   Paperclip,
@@ -15,8 +15,8 @@ import {
   Image,
   MoreHorizontal
 } from 'lucide-react';
-import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
+import { useHeader } from '../contexts/HeaderContext';
 
 interface ChatMessage {
   id: string;
@@ -37,6 +37,7 @@ interface ChatConversation {
 }
 
 export function Chat() {
+  const { setHeaderProps, clearHeaderProps } = useHeader();
   const [selectedChat, setSelectedChat] = useState<string | null>('1');
   const [inputMessage, setInputMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,246 +110,257 @@ export function Chat() {
     return `${diffDays}d ago`;
   };
 
-  const headerProps = {
-    title: 'Chat',
-    // Add more props as needed for UnifiedHeader
+  const handleNewChat = () => {
+    // TODO: Implement new chat functionality
+    console.log('New chat');
   };
 
-  return (
-    <PageLayout headerProps={headerProps}>
-      <div className="chat-layout">
-        {/* Chat Sidebar */}
-        <aside className="chat-sidebar">
-          <div className="chat-sidebar-header">
-            <button className="btn btn-primary w-full mb-4">
-              <Plus className="w-4 h-4 mr-2" />
-              New chat
-            </button>
-          </div>
+  // Set page-specific header props when component mounts
+  useEffect(() => {
+    setHeaderProps({
+      title: "Chat",
+      primaryAction: {
+        label: 'New chat',
+        onClick: handleNewChat,
+        icon: <Plus size={16} />
+      }
+    });
 
-          <div className="chat-search-filter-wrapper">
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-              <input 
-                type="text" 
+    // Clean up header props when component unmounts
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps, handleNewChat]);
+
+  return (
+    <div className="w-full h-full flex gap-6">
+      {/* Left Panel - Conversations List */}
+      <div className="w-1/3 flex flex-col space-y-4">
+        <Card>
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+              <input
+                type="text"
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 py-2 pr-3 pl-10 bg-bg-elevated border border-border-default rounded-md text-text-primary text-sm"
+                className="w-full h-10 py-2 pr-3 pl-10 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button className="btn-filter btn btn-ghost h-10 px-3 py-2 text-xs">
-              <Filter className="w-3.5 h-3.5 mr-1" />
+            <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-surface rounded-md transition-colors">
+              <Filter className="w-4 h-4" />
               Filter
             </button>
           </div>
+        </Card>
 
-          <div className="chat-list">
-            {/* Pinned Section */}
-            <div className="chat-list-section">
-              <div className="chat-list-section-title">
-                <Star className="w-3.5 h-3.5" />
-                Pinned
-              </div>
-              <Card className="p-2 space-y-1">
-                {conversations.filter(conv => conv.isPinned).map(conversation => (
-                  <div 
-                    key={conversation.id}
-                    className={`chat-list-item ${selectedChat === conversation.id ? 'active' : ''}`}
-                    onClick={() => setSelectedChat(conversation.id)}
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="text-sm font-medium text-text-primary m-0">
-                        {conversation.title}
-                      </h4>
-                      <Pin className="w-3 h-3 text-text-muted" />
-                    </div>
-                    {conversation.lastMessage && (
-                      <p className="text-xs text-text-secondary m-0 mb-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                        {conversation.lastMessage}
-                      </p>
-                    )}
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-1">
-                        {conversation.tags?.map(tag => (
-                          <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-bg-tertiary text-text-secondary rounded-sm">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px] text-text-muted">
-                        <span>{formatTimestamp(conversation.timestamp)}</span>
-                        <div className="flex items-center gap-0.5">
-                          <Users className="w-2.5 h-2.5" />
-                          {conversation.participants}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </Card>
-            </div>
-
-            {/* Recent Section */}
-            <div className="chat-list-section">
-              <div className="chat-list-section-title">
-                <Clock className="w-3.5 h-3.5" />
-                Recent
-              </div>
-              <Card className="p-2 space-y-1">
-                {conversations.filter(conv => !conv.isPinned).map(conversation => (
-                  <div 
-                    key={conversation.id}
-                    className={`chat-list-item ${selectedChat === conversation.id ? 'active' : ''}`}
-                    onClick={() => setSelectedChat(conversation.id)}
-                  >
-                    <div className="mb-1">
-                      <div className="flex justify-between items-center mb-0.5">
-                        <h4 className="text-sm font-semibold text-text-primary m-0">{conversation.title}</h4>
-                        <span className="text-xs text-text-tertiary">{formatTimestamp(conversation.timestamp)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {conversation.tags && conversation.tags.map(tag => (
-                          <span key={tag} className="chat-item-tag">{tag}</span>
-                        ))}
-                        {conversation.participants && (
-                          <span className="text-[11px] text-text-tertiary flex items-center">
-                            <Users className="w-3 h-3 mr-1" />
-                            {conversation.participants}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-[13px] text-text-secondary m-0 whitespace-nowrap overflow-hidden text-ellipsis">
-                      {conversation.lastMessage}
-                    </p>
-                  </div>
-                ))}
-              </Card>
-            </div>
+        {/* Pinned Section */}
+        <Card>
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary mb-4">
+            <Star className="w-4 h-4" />
+            Pinned
           </div>
-        </aside>
-
-        {/* Main Chat Area */}
-        <Card className="chat-main">
-          <header className="chat-header">
-            <div className="chat-header-left">
-              <div className="breadcrumb">
-                <span>Workspace</span>
-                <span className="breadcrumb-separator">&gt;</span>
-                <span>Chat</span>
-                <span className="breadcrumb-separator">&gt;</span>
-                <span className="breadcrumb-current">Design system strategy</span>
-              </div>
-            </div>
-            <div className="chat-header-controls">
-              <div className="model-selector-main-header flex items-center gap-3 mr-4">
-                <select className="bg-bg-elevated border border-border-default rounded-md py-2 px-3 text-text-primary text-[13px] min-w-[140px]">
-                  <option>Claude 3.5 Sonnet</option>
-                  <option>GPT-4</option>
-                  <option>Llama 2</option>
-                </select>
-                <div className="flex items-center gap-1 text-[11px] text-success">
-                  <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
-                  Ready
+          <div className="space-y-2">
+            {conversations.filter(conv => conv.isPinned).map(conversation => (
+              <div
+                key={conversation.id}
+                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                  selectedChat === conversation.id
+                    ? 'bg-blue-50 border border-blue-200'
+                    : 'hover:bg-bg-surface'
+                }`}
+                onClick={() => setSelectedChat(conversation.id)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="text-sm font-medium text-text-primary">
+                    {conversation.title}
+                  </h4>
+                  <Pin className="w-3 h-3 text-text-secondary" />
                 </div>
-              </div>
-              <div className="chat-actions flex gap-2">
-                <button className="btn btn-ghost p-2 text-xs">
-                  Add to project
-                </button>
-                <button className="btn btn-ghost p-2 text-xs">
-                  Export
-                </button>
-                <button className="btn btn-ghost p-2">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </header>
-
-          <div className="chat-messages">
-            {messages.map(message => (
-              <Card key={message.id} className={`message ${message.sender} mb-4`}>
-                <div className="flex gap-3">
-                  <div className="message-avatar">
-                    {message.sender === 'user' ? (
-                      <User className="w-4 h-4" />
-                    ) : (
-                      <Bot className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div className="message-content-wrapper flex-1">
-                    <div className="message-sender">
-                      {message.sender === 'user' ? 'You' : 'LibreOllama Assistant'}
-                    </div>
-                    <div className="message-content">
-                    {message.content.includes('```') ? (
-                      <div>
-                        {message.content.split('```').map((part, index) => {
-                          if (index % 2 === 1) {
-                            const lines = part.split('\n');
-                            const language = lines[0];
-                            const code = lines.slice(1).join('\n');
-                            return (
-                              <pre key={index} className={`${message.sender === 'user' ? 'bg-white/10' : 'bg-bg-tertiary'} border border-border-default rounded-md p-3 my-3 overflow-x-auto relative text-[13px] leading-6`}>
-                                <div className="code-header flex justify-between items-center mb-2 text-xs text-text-tertiary">
-                                  <span>{language}</span>
-<button className="code-block-copy-button">
-                      <Copy className="w-3.5 h-3.5 mr-1" />
-                      Copy
-                    </button>
-                                </div>
-                                <code>{code}</code>
-                              </pre>
-                            );
-                          }
-                          return <span key={index}>{part}</span>;
-                        })}
-                      </div>
-                    ) : (
-                      message.content
-                    )}
-                  </div>
-{message.attachments && message.attachments.map(att => (
-                      <div key={att.name} className="chat-message-attachment bg-bg-elevated p-2 px-3 rounded-md mt-2 flex items-center border border-border-subtle">
-                        <Paperclip className="w-4 h-4 mr-2 text-text-secondary" /> 
-                        <div>
-                          <span className="font-medium text-text-primary">{att.name}</span>
-                          <span className="text-xs text-text-tertiary ml-2">{att.type.toUpperCase()}</span>
-                        </div>
-                        {/* Add file size/actions here later */}
-                      </div>
+                {conversation.lastMessage && (
+                  <p className="text-xs text-text-secondary mb-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {conversation.lastMessage}
+                  </p>
+                )}
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-1">
+                    {conversation.tags?.map(tag => (
+                      <span key={tag} className="text-xs px-2 py-1 bg-bg-surface text-text-secondary rounded">
+                        {tag}
+                      </span>
                     ))}
                   </div>
+                  <div className="flex items-center gap-2 text-xs text-text-secondary">
+                    <span>{formatTimestamp(conversation.timestamp)}</span>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {conversation.participants}
+                    </div>
+                  </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </Card>
-        <Card className="chat-input-area">
-          <div className="chat-input-wrapper">
-            <div className="chat-input-tools">
-              <button className="chat-input-tool" title="Attach files">
-                <Paperclip className="w-4 h-4" />
-              </button>
-              <button className="chat-input-tool" title="Add images">
-                <Image className="w-4 h-4" />
+
+        {/* Recent Section */}
+        <Card>
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary mb-4">
+            <Clock className="w-4 h-4" />
+            Recent
+          </div>
+          <div className="space-y-2">
+            {conversations.filter(conv => !conv.isPinned).map(conversation => (
+              <div
+                key={conversation.id}
+                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                  selectedChat === conversation.id
+                    ? 'bg-blue-50 border border-blue-200'
+                    : 'hover:bg-bg-surface'
+                }`}
+                onClick={() => setSelectedChat(conversation.id)}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-sm font-semibold text-text-primary">{conversation.title}</h4>
+                  <span className="text-xs text-text-secondary">{formatTimestamp(conversation.timestamp)}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  {conversation.tags && conversation.tags.map(tag => (
+                    <span key={tag} className="text-xs px-2 py-1 bg-bg-surface text-text-secondary rounded">{tag}</span>
+                  ))}
+                  {conversation.participants && (
+                    <span className="text-xs text-text-secondary flex items-center">
+                      <Users className="w-3 h-3 mr-1" />
+                      {conversation.participants}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-text-secondary whitespace-nowrap overflow-hidden text-ellipsis">
+                  {conversation.lastMessage}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Main Chat Area */}
+      <Card className="flex-1 flex flex-col" padding="none">
+        {/* Chat Header */}
+        <div className="p-4 border-b border-border-subtle">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span>Workspace</span>
+              <span>&gt;</span>
+              <span>Chat</span>
+              <span>&gt;</span>
+              <span className="text-text-primary font-medium">Design system strategy</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <select className="bg-bg-surface border border-border-subtle rounded-md py-2 px-3 text-text-primary text-sm">
+                <option>Claude 3.5 Sonnet</option>
+                <option>GPT-4</option>
+                <option>Llama 2</option>
+              </select>
+              <div className="flex items-center gap-1 text-sm text-green-600">
+                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                Ready
+              </div>
+              <button className="p-2 hover:bg-bg-surface rounded-md transition-colors">
+                <MoreHorizontal className="w-4 h-4 text-text-secondary" />
               </button>
             </div>
-            <textarea 
-              className="chat-input"
-              placeholder="Ask about design, code, or anything else... (Ctrl+Enter to send)"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                  handleSendMessage();
-                }
-              }}
-            />
-            <button 
-              className="chat-send-button"
+          </div>
+        </div>
+
+        {/* Messages Area */}
+        <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+          {messages.map(message => (
+            <div key={message.id} className="flex gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                message.sender === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {message.sender === 'user' ? (
+                  <User className="w-4 h-4" />
+                ) : (
+                  <Bot className="w-4 h-4" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-text-primary mb-1">
+                  {message.sender === 'user' ? 'You' : 'LibreOllama Assistant'}
+                </div>
+                <div className="text-text-primary">
+                  {message.content.includes('```') ? (
+                    <div>
+                      {message.content.split('```').map((part, index) => {
+                        if (index % 2 === 1) {
+                          const lines = part.split('\n');
+                          const language = lines[0];
+                          const code = lines.slice(1).join('\n');
+                          return (
+                            <pre key={index} className="bg-bg-surface border border-border-subtle rounded-md p-3 my-3 overflow-x-auto text-sm">
+                              <div className="flex justify-between items-center mb-2 text-xs text-text-secondary">
+                                <span>{language}</span>
+                                <button className="flex items-center gap-1 px-2 py-1 hover:bg-bg-tertiary rounded transition-colors">
+                                  <Copy className="w-3 h-3" />
+                                  Copy
+                                </button>
+                              </div>
+                              <code>{code}</code>
+                            </pre>
+                          );
+                        }
+                        return <span key={index}>{part}</span>;
+                      })}
+                    </div>
+                  ) : (
+                    message.content
+                  )}
+                </div>
+                {message.attachments && message.attachments.map(att => (
+                  <div key={att.name} className="bg-bg-surface p-3 rounded-md mt-2 flex items-center border border-border-subtle">
+                    <Paperclip className="w-4 h-4 mr-2 text-text-secondary" />
+                    <div>
+                      <span className="font-medium text-text-primary">{att.name}</span>
+                      <span className="text-xs text-text-secondary ml-2">{att.type.toUpperCase()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Input Area */}
+        <div className="p-4 border-t border-border-subtle">
+          <div className="flex items-end gap-3">
+            <div className="flex gap-2">
+              <button className="p-2 hover:bg-bg-surface rounded-md transition-colors" title="Attach files">
+                <Paperclip className="w-4 h-4 text-text-secondary" />
+              </button>
+              <button className="p-2 hover:bg-bg-surface rounded-md transition-colors" title="Add images">
+                <Image className="w-4 h-4 text-text-secondary" />
+              </button>
+            </div>
+            <div className="flex-1 relative">
+              <textarea
+                className="w-full min-h-[44px] max-h-32 py-3 px-4 bg-bg-surface border border-border-subtle rounded-lg text-text-primary placeholder-text-secondary resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Ask about design, code, or anything else... (Ctrl+Enter to send)"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.ctrlKey) {
+                    handleSendMessage();
+                  }
+                }}
+              />
+            </div>
+            <button
+              className={`p-3 rounded-lg transition-colors ${
+                inputMessage.trim()
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-bg-surface text-text-secondary cursor-not-allowed'
+              }`}
               onClick={handleSendMessage}
               disabled={!inputMessage.trim()}
               title="Send message (Ctrl+Enter)"
@@ -356,10 +368,9 @@ export function Chat() {
               <Send className="w-4 h-4" />
             </button>
           </div>
-        </Card>
-
-      </div>
-    </PageLayout>
+        </div>
+      </Card>
+    </div>
   );
 }
 
