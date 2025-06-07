@@ -99,6 +99,23 @@ LibreOllama Desktop features a **Miro/FigJam-class digital canvas** with profess
 ### 📅 **Intelligent Calendar & Time Management**
 - **Energy-Aware Scheduling**: AI recommendations based on energy patterns
 
+### ⚙️ **Settings & Configuration**
+- **Modular Settings Interface**: Clean, organized settings management with a dedicated navigation sidebar.
+- **Section-Based Navigation**: Easy access to various settings categories:
+    - **General**: Configure application startup behavior (e.g., startup view, update checks) and regional settings (e.g., language, first day of the week).
+    - **Appearance**: Customize themes, fonts, and UI density (placeholder for future implementation).
+    - **Agents and models**: Manage Ollama server endpoint, view, pull, update, and remove local AI models.
+    - **Integrations**: Connect to external services like Google (Calendar, Tasks) and GitHub (repositories, issues), and manage API keys for cloud models (e.g., Google Gemini, Anthropic Claude).
+    - **Notes and editor**: Configure preferences for the note-taking and text editing experience (placeholder).
+    - **Notifications**: Manage application notifications and alerts (placeholder).
+    - **Security and privacy**: Control data handling, encryption, and privacy-related settings (placeholder).
+    - **Account**: Manage user account details and preferences (placeholder).
+    - **About**: View application version, licenses, and acknowledgments (placeholder).
+- **Ollama Server Management**: Configure the Ollama server endpoint and view connection status.
+- **Local Model Management**: View a table of installed local models with details like size and last modified date. Actions to pull new models, update existing ones, or remove them.
+- **External Service Integration**: UI for connecting/disconnecting Google and GitHub accounts.
+- **Cloud Model API Key Management**: Securely input and save API keys for services like Google Gemini and Anthropic Claude.
+
 ## 📂 Project Structure
 
 LibreOllama follows a clean, modular architecture:

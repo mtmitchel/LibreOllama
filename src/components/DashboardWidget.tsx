@@ -33,7 +33,7 @@ export function DashboardWidget({
   return (
     <div className={`widget ${className}`.trim()}>
       <div className="widget-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
           <div style={{
             width: '40px',
             height: '40px',

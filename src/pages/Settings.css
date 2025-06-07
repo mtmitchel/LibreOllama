@@ -1,0 +1,278 @@
+/* Settings Page Specific Styles */
+.settings-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.settings-nav {
+  width: 180px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  padding: var(--space-6) var(--space-4);
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+}
+
+.settings-nav-title {
+  font-size: 16px; /* Adjusted from page-title for nav */
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-6);
+  padding: 0 var(--space-2); /* Consistent with nav-item padding */
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2); /* Adjusted padding */
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+}
+
+.settings-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.settings-nav-item.active {
+  background: var(--bg-tertiary); /* Softer background for inner navigation */
+  color: var(--text-primary);
+  font-weight: 600;
+  border-left: 3px solid var(--accent-primary); /* Left accent border */
+  padding-left: calc(var(--space-4) - 3px); /* Adjust padding to account for border */
+}
+
+.settings-nav-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.8;
+}
+
+.settings-nav-item.active .settings-nav-icon,
+.settings-nav-item:hover .settings-nav-icon {
+  opacity: 1;
+}
+
+.settings-content {
+  flex-grow: 1;
+  padding: var(--space-8);
+  overflow-y: auto;
+  max-width: 900px; /* Increased max-width slightly */
+  margin: 0 auto; /* Center content */
+}
+
+.settings-page-header {
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.settings-page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.settings-page-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.settings-section {
+  margin-bottom: var(--space-8);
+}
+
+.settings-section-title {
+  font-size: 20px; /* Slightly larger for section titles */
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle); /* Softer border for section title */
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-5) 0;
+}
+
+.settings-item:not(:last-child) {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-item-info {
+  flex: 1;
+  margin-right: var(--space-4);
+}
+
+.settings-item-title {
+  font-size: 16px; /* Slightly larger for item titles */
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.settings-item-description {
+  font-size: 13px; /* Slightly larger for item descriptions */
+  color: var(--text-tertiary);
+}
+
+/* Basic styles for placeholders - replace with actual components */
+.settings-item div:last-child:not(.toggle-switch):not(.settings-item-info) {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Input and Select Styles */
+.settings-input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  min-width: 200px; /* Ensure a decent default width */
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-translucent);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  width: 52px;
+  height: 32px;
+  background-color: var(--bg-tertiary);
+  border-radius: 16px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.toggle-switch.active {
+  background-color: var(--accent-primary);
+}
+
+.toggle-switch-thumb {
+  width: 28px;
+  height: 28px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm); /* Using design system shadow variable */
+}
+
+.toggle-switch:hover .toggle-switch-thumb {
+  box-shadow: var(--shadow-md); /* Enhanced shadow on hover */
+}
+
+.toggle-switch.active .toggle-switch-thumb {
+  transform: translateX(20px);
+}
+
+/* Table Styles */
+.settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-4);
+}
+
+.settings-table th,
+.settings-table td {
+  padding: var(--space-3) var(--space-2);
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
+}
+
+.settings-table th {
+  color: var(--text-secondary);
+  font-weight: 500;
+  background-color: var(--bg-secondary);
+}
+
+.settings-table td {
+  color: var(--text-primary);
+}
+
+.settings-table .model-name {
+  font-weight: 500;
+}
+
+.settings-table .lucide {
+  margin-right: var(--space-1);
+  vertical-align: middle;
+}
+
+/* Status Indicator */
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: var(--space-2);
+}
+
+.status-indicator.connected {
+  background-color: var(--success-default);
+}
+
+.status-indicator.disconnected {
+  background-color: var(--danger-default);
+}
+
+.status-indicator.pending {
+  background-color: var(--warning-default);
+}
+
+/* Settings Section Header (for title + button alignment) */
+.settings-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-section-header .settings-section-title {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Icon alignment in item titles */
+.settings-item-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-item-title .lucide {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+
+/* Button styling within settings items */
+.settings-item .btn {
+  margin-left: var(--space-2);
+}
+
+.settings-item .btn-sm .lucide {
+  margin-right: var(--space-1);
+}

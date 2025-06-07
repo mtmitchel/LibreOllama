@@ -6,6 +6,8 @@
   box-sizing: border-box; 
 }
 
+/* Removed the previously added 'body, html' and '*, *::before, *::after' reset rules */
+
 :root {
   /* Dark Theme Variables (Default) */
   --bg-primary: #0f1419; 
@@ -18,12 +20,14 @@
   --text-secondary: #94a3b8; 
   --text-tertiary: #64748b; 
   --text-muted: #475569;
+  --text-muted-rgb: 71, 85, 105;
   
   --accent-primary: #3b82f6; 
   --accent-secondary: #1d4ed8; 
   --accent-soft: rgba(59, 130, 246, 0.1);
   
   --success: #10b981; 
+  --success-rgb: 16, 185, 129;
   --warning: #f59e0b; 
   --error: #ef4444;
   
@@ -39,8 +43,10 @@
   --space-4: 16px; 
   --space-5: 20px; 
   --space-6: 24px; 
-  --space-8: 32px;
-  --space-10: 40px;
+  --space-8: 32px; 
+  --space-layout-gutter: 24px; /* Standardized gutter */
+  --space-content-internal: 16px; /* Internal padding for content blocks */
+
   
   --radius-sm: 6px; 
   --radius-md: 8px; 
@@ -68,6 +74,10 @@ html.light {
   
   --border-subtle: rgba(0, 0, 0, 0.05); 
   --border-default: rgba(0, 0, 0, 0.1);
+  
+  /* Light theme specific shadows */
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 body { 
@@ -77,250 +87,193 @@ body {
   line-height: 1.5; 
   -webkit-font-smoothing: antialiased; 
   /* overflow: hidden; */ 
+  /* margin, padding, box-sizing are handled by the restored '*' rule */
 }
 
 /* Layout Components */
-.app-layout { 
+/* .app-layout { 
   display: flex; 
   height: 100vh; 
+} */
+
+.app-container {
+  display: flex;
+  min-height: 100vh; /* Ensure layout takes full viewport height */
+  gap: var(--space-layout-gutter); /* This creates the gutter between sidebar and page-column */
+  /* If you need padding around the entire application, you can add it here: */
+  /* padding: var(--space-layout-gutter); */
 }
 
-.sidebar { 
-  width: 280px; 
-  background: var(--bg-secondary); 
-  border-right: 1px solid var(--border-subtle); 
-  display: flex; 
-  flex-direction: column; 
-  flex-shrink: 0; 
+/* Restoring original .sidebar and adapting it for the new flex gap layout */
+.sidebar { /* Changed from .main-sidebar back to .sidebar to match original */
+  width: 280px; /* Original width */
+  background: var(--bg-secondary); /* Original background */
+  border-right: 1px solid var(--border-subtle); /* Original border */
+  display: flex; /* Crucial for flex layout */
+  flex-direction: column; /* Crucial for vertical stacking */
+  flex-shrink: 0; /* Prevent sidebar from shrinking, was also original */
+  margin-right: 0; /* Ensure no margin interferes with parent's gap */
+  padding-right: 0; /* Ensure no padding interferes with parent's gap */
 }
 
 .sidebar-header { 
   padding: var(--space-6); 
   border-bottom: 1px solid var(--border-subtle); 
+  flex-shrink: 0; /* Prevent header from shrinking */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  box-sizing: border-box;
 }
 
 .logo { 
-  display: flex; 
-  align-items: center; 
-  gap: var(--space-3); 
-  font-weight: 600; 
-  font-size: 16px; 
-  color: var(--text-primary); 
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
 }
 
 .logo-icon { 
-  width: 28px; 
-  height: 28px; 
-  background: var(--accent-primary); 
-  border-radius: var(--radius-md); 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  color: white; 
-  font-weight: 700; 
-  font-size: 14px; 
+  width: 28px;
+  height: 28px;
+  background: var(--accent-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .sidebar-nav { 
-  flex: 1; 
+  flex: 1; /* Allow nav to take available vertical space */
   padding: var(--space-4); 
-  overflow-y: auto; 
+  overflow-y: auto; /* Enable scrolling for nav items */
+  display: flex; /* Added to ensure its children also follow flex if needed */
+  flex-direction: column; /* Ensure nav items stack vertically */
+  gap: var(--space-2); /* Optional: adds space between nav sections/items if direct children */
 }
 
 .nav-section { 
-  margin-bottom: var(--space-6); 
+  /* Existing nav section styles */
 }
 
 .nav-section-title { 
-  font-size: 11px; 
-  font-weight: 600; 
-  color: var(--text-muted); 
-  text-transform: uppercase; 
-  letter-spacing: 0.05em; 
-  margin-bottom: var(--space-3); 
-  padding: 0 var(--space-3); 
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .nav-item { 
-  display: flex; 
+  display: flex; /* Ensures icon and text align nicely */
   align-items: center; 
   gap: var(--space-3); 
   padding: var(--space-3); 
+  margin-bottom: var(--space-1); /* Task 3.2: Add visual separation between navigation items */
   border-radius: var(--radius-md); 
   color: var(--text-secondary); 
   text-decoration: none; 
   font-size: 14px; 
   font-weight: 500; 
   transition: all 0.15s ease; 
-  position: relative; 
+  position: relative; /* Keep for pseudo-elements like .active indicator if any */
   cursor: pointer;
   border: none;
   background: none;
   width: 100%;
+  flex-shrink: 0; /* Prevent nav items from shrinking undesirably */
 }
 
-.nav-item:hover { 
-  background: var(--bg-tertiary); 
-  color: var(--text-primary); 
+.nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
-.nav-item.active { 
-  background: var(--accent-soft); 
-  color: var(--accent-primary); 
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-primary);
 }
 
-.nav-item-icon { 
-  width: 20px; 
-  height: 20px; 
-  opacity: 0.7; 
-  flex-shrink: 0; 
-  color: inherit; 
+.nav-item-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+  flex-shrink: 0;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.nav-item.active .nav-item-icon, 
-.nav-item:hover .nav-item-icon { 
-  opacity: 1; 
+.nav-item.active .nav-item-icon,
+.nav-item:hover .nav-item-icon {
+  opacity: 1;
 }
 
-.nav-badge { 
-  background: var(--accent-primary); 
-  color: white; 
-  font-size: 11px; 
-  font-weight: 600; 
-  padding: 2px 6px; 
-  border-radius: 10px; 
-  margin-left: auto; 
-  min-width: 18px; 
-  text-align: center; 
+.nav-badge {
+  background: var(--accent-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  line-height: 1;
 }
 
-.sidebar-footer { 
+.sidebar-footer {
   padding: var(--space-4); 
   border-top: 1px solid var(--border-subtle); 
+  flex-shrink: 0; /* Prevent footer from shrinking */
+}
+
+.sidebar-footer .nav-item .btn {
+  padding: 0; /* Remove button padding inside nav-items for proper alignment */
+  background: transparent;
+  border: none;
+}
+
+.page-column {
+  display: flex;
+  flex-grow: 1; 
+  min-height: 100vh;
+  gap: var(--space-layout-gutter); /* This creates the gutter between a secondary-sidebar and main-content-wrapper */
 }
 
 .main-content-wrapper { 
-  flex: 1; 
-  background: var(--bg-primary); 
-  display: flex; 
-  flex-direction: column; 
-  overflow: hidden; 
+  display: flex; /* Retain from existing for internal structure */
+  flex-direction: column; /* Retain from existing for internal structure */
+  overflow: hidden; /* Retain from existing */
+  height: calc(100vh - 60px); /* Fixed height for proper chat layout */
+
+  /* New styles based on user's example: */
+  background: var(--bg-primary); /* Use design system background */
+  flex-grow: 1; /* Ensures main content takes available space within page-column */
+  
+  /* Internal padding, replacing the old gutter padding-left */
+  padding: var(--space-8);
 }
 
-.top-bar { 
-  height: 72px; 
-  border-bottom: 1px solid var(--border-subtle); 
-  display: flex; 
-  align-items: center; 
-  padding: 0 var(--space-6); 
-  gap: var(--space-4); 
-  background: var(--bg-surface); 
-  flex-shrink: 0; 
-}
-
-.breadcrumb { 
-  display: flex; 
-  align-items: center; 
-  gap: var(--space-2); 
-  font-size: 14px; 
-  color: var(--text-secondary); 
-}
-
-.breadcrumb-current { 
-  color: var(--text-primary); 
-  font-weight: 600; 
-}
-
-.search-bar { 
-  flex: 1; 
-  max-width: 480px; 
-  position: relative; 
-}
-
-.search-input { 
-  width: 100%; 
-  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-10); 
-  background: var(--input-bg); 
-  border: 1px solid var(--border-default); 
-  border-radius: var(--radius-md); 
-  color: var(--text-primary); 
-  font-size: 14px; 
-  outline: none; 
-}
-
-.search-input:focus {
-  border-color: var(--input-focus-ring);
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.search-input::placeholder {
-  color: var(--input-placeholder);
-}
-
-.search-icon { 
-  position: absolute; 
-  left: var(--space-3); 
-  top: 50%; 
-  transform: translateY(-50%); 
-  width: 20px; 
-  height: 20px; 
-  color: var(--text-muted); 
-  pointer-events: none; 
-}
-
-.search-kbd { 
-  position: absolute; 
-  right: var(--space-3); 
-  top: 50%; 
-  transform: translateY(-50%); 
-  font-size: 12px; 
-  color: var(--text-muted); 
-  background: var(--bg-surface); 
-  padding: 2px 6px; 
-  border-radius: 4px; 
-  border: 1px solid var(--border-subtle); 
-  font-family: monospace; 
-}
-
-.top-bar-actions { 
-  display: flex; 
-  align-items: center; 
-  gap: var(--space-3); 
-}
-
-.action-btn { 
-  width: 36px; 
-  height: 36px; 
-  border-radius: var(--radius-md); 
-  border: none; 
-  background: var(--bg-tertiary); 
-  color: var(--text-secondary); 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  transition: all 0.15s ease; 
-  position: relative; 
-}
-
-.action-btn:hover { 
-  background: var(--bg-elevated); 
-  color: var(--text-primary); 
-}
-
-.action-btn.primary { 
-  background: var(--accent-primary); 
-  color: white; 
-}
-
-.content-area { 
-  flex: 1; 
-  padding: var(--space-8); 
-  overflow-y: auto; 
-}
-
-/* Remove padding and overflow for chat layout */
-.content-area:has(.chat-layout) {
+/* Remove padding and overflow for special layouts */
+.main-content-wrapper:has(.chat-layout),
+.main-content-wrapper:has(.settings-layout),
+.main-content-wrapper:has(.canvas-layout) {
   padding: 0;
   overflow: hidden;
 }
@@ -352,7 +305,6 @@ body {
 .btn-secondary { 
   background: var(--bg-tertiary); 
   color: var(--text-primary); 
-  border: 1px solid var(--border-default); 
 }
 
 .btn-secondary:hover {
@@ -385,7 +337,7 @@ body {
 
 .widget-header { 
   display: flex; 
-  align-items: center; 
+  align-items: center; /* Task 3.3: Vertically center kebab menu with widget title */
   justify-content: space-between; 
   margin-bottom: var(--space-5); 
 }
@@ -396,18 +348,54 @@ body {
   color: var(--text-primary); 
 }
 
+/* Widget Actions (e.g., '...' icon) */
+.widget-actions {
+  display: flex;
+  align-items: center;
+}
+
+.widget-action {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: var(--space-2); /* Increased padding for larger click target */
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.widget-action:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.widget-action svg {
+  width: 18px; /* Slightly larger icon */
+  height: 18px; /* Slightly larger icon */
+}
+
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
+  transition: all 0.2s ease-in-out; /* Add transition for hover effects */
+}
+
+.card:hover {
+  transform: translateY(-2px); /* Subtle lift effect */
+  box-shadow: var(--shadow-md); /* Add shadow on hover */
+  border-color: var(--border-default);
 }
 
 /* Dashboard specific styles */
 .dashboard-grid { 
   display: grid; 
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); 
-  gap: var(--space-6); 
+  gap: var(--space-8); 
 }
 
 .dashboard-header { 
@@ -435,16 +423,547 @@ body {
 }
 
 /* Chat Sidebar Styles */
-.chat-sidebar { 
-  width: 320px; 
-  background: var(--bg-surface); 
-  border-right: 1px solid var(--border-subtle); 
+/* Removing previous individual .chat-sidebar rule */
+
+/* Notes Module Layout */
+.notes-layout {
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
 }
 
 /* Notes Sidebar Styles */
-.notes-sidebar { 
-  width: 280px; 
-  background: var(--bg-secondary); 
+/* Removing previous individual .notes-sidebar rule */
+
+/* Combined rule for all secondary sidebars */
+.chat-sidebar,
+.notes-sidebar,
+.projects-sidebar { 
+  width: 200px; 
+  background: #e8e8e8; 
+  flex-shrink: 0; 
+  margin-right: 0; 
+}
+
+/* Re-apply specific styles for .notes-sidebar if they were distinct and necessary */
+.notes-sidebar {
+  display: flex; 
+  flex-direction: column; 
+  /* Other properties like width, background, flex-shrink, margin-right are covered by the combined rule above */
+}
+
+.notes-sidebar-header {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.notes-sidebar-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+.btn-new-notebook {
+  width: 100%;
+  justify-content: flex-start;
+  padding: var(--space-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.notebook-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+}
+
+.notebook-folder {
+  margin-bottom: var(--space-1);
+  padding-left: var(--space-3);
+}
+
+.notebook-folder-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-weight: 600; /* Increased font weight */
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.notebook-folder-title:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+}
+
+.notebook-folder-title.active-folder {
+  background: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.folder-chevron {
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.folder-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.notebook-folder-title.active-folder .folder-chevron {
+  color: var(--text-primary);
+}
+
+.notebook-notes {
+  margin-left: var(--space-3); /* Adjusted for overall alignment */
+  padding-left: var(--space-4); /* Increased padding for notes under folder */
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-left: 1px solid var(--border-subtle); /* Add a subtle left border for visual grouping */
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.note-list-item {
+  padding: var(--space-2) var(--space-2); /* Adjusted padding */
+  padding-left: var(--space-8);
+  color: var(--text-secondary);
+  font-size: 13px; /* Decreased font size */
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  text-decoration: none;
+  margin-left: var(--space-2); /* Indent note items further */
+}
+
+.note-list-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.note-list-item.active {
+  background: var(--accent-primary);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Note Editor Area */
+
+.editor-block {
+  position: relative;
+  display: flex; /* Use flex to align handle and content */
+  align-items: flex-start; /* Align items to the top */
+  padding-left: var(--space-6); /* Space for the drag handle */
+  margin-bottom: var(--space-1); /* Consistent spacing between blocks */
+}
+
+.block-drag-handle {
+  border-right: 1px solid var(--border-subtle); 
+  position: absolute;
+  left: 0;
+  top: 2px; /* Adjust for vertical alignment with text */
+  width: var(--space-5);
+  height: var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.editor-block:hover .block-drag-handle,
+.block-drag-handle.visible { /* Keep visible if explicitly set */
+  opacity: 1;
+}
+
+.block-content {
+  flex-grow: 1; /* Allow content to take remaining space */
+  min-width: 0; /* Prevent overflow issues with flex children */
+}
+
+/* Adjustments for specific block types if needed */
+.block-content.heading1,
+.block-content.heading2 {
+  margin-top: var(--space-3); 
+  margin-bottom: var(--space-2);
+}
+
+.block-content.code-block,
+.block-content.image-placeholder,
+.block-content.table-block {
+  padding: var(--space-3);
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+.block-content.code-block {
+  position: relative; /* For copy button positioning */
+}
+
+.copy-code-btn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  font-size: 10px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.copy-code-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.block-content.checklist .task-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.block-content.checklist .task-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+}
+
+.block-content.checklist .task-item label.completed {
+  text-decoration: line-through;
+  color: var(--text-secondary); /* Changed from --text-muted for better visibility */
+}
+
+.block-content.text-block .placeholder-text {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0; /* Add some padding to placeholder */
+}
+
+.block-content.text-block .placeholder-text .inline-format-hint {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-2);
+  opacity: 0.6;
+}
+
+.wiki-link {
+  color: var(--accent-primary);
+  background-color: var(--accent-soft);
+  padding: 0px 3px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.wiki-link:hover {
+  text-decoration: underline;
+}
+
+.notes-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+.notes-editor-header {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  margin-bottom: 0;
+}
+
+.note-title-display {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.note-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.btn-ghost {
+  padding: var(--space-1);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.block-type-toolbar {
+  padding: var(--space-2) var(--space-8);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-secondary);
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.block-type-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.block-type-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.notes-editor-content {
+  flex: 1;
+  overflow-y: auto;
+  /* padding: var(--space-4) var(--space-8) var(--space-16); */
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.editor-block {
+  margin-bottom: var(--space-4);
+  position: relative;
+  padding: 0;
+}
+
+.block-content {
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.block-content.placeholder-text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.inline-format-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+  font-size: 12px;
+}
+
+.block-content.heading1 {
+  font-size: 24px; /* Decreased font size to differentiate from note title */
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.block-content.heading2 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: var(--space-5);
+  margin-bottom: var(--space-2);
+  color: var(--text-primary);
+}
+
+.block-content ol,
+.block-content ul {
+  margin-left: var(--space-5);
+  padding-left: var(--space-3);
+  color: var(--text-primary);
+}
+
+.block-content li {
+  margin-bottom: var(--space-2);
+}
+
+.block-content.checklist .task-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.block-content.checklist input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.block-content.checklist input[type="checkbox"]:checked {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  position: relative;
+}
+
+.block-content.checklist input[type="checkbox"]:checked::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  position: absolute;
+  left: 6px;
+  top: 2px;
+}
+
+.block-content.checklist label {
+  color: var(--text-primary);
+}
+
+.block-content.checklist label.completed {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.block-content.code-block {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin: var(--space-3) 0;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  position: relative;
+}
+
+.copy-code-btn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-default);
+  font-size: 10px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.copy-code-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.block-content.placeholder,
+.block-content.empty-block {
+  padding: var(--space-4) var(--space-8) var(--space-16);
+  border: 2px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: var(--space-3) 0;
+}
+
+.block-content.table-block table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-3) 0;
+}
+
+.block-content.table-block th,
+.block-content.table-block td {
+  border: 1px solid var(--border-default);
+  padding: var(--space-3);
+  text-align: left;
+}
+
+.block-content.table-block th {
+  background-color: var(--bg-surface);
+  font-weight: 600;
+}
+
+.wiki-link {
+  color: var(--accent-primary);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent-primary);
+  font-weight: 500;
+}
+
+.wiki-link:hover {
+  border-bottom-style: solid;
+}
+
+.fab {
+  position: absolute;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  width: 48px;
+  height: 48px;
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg); /* Using a variable for consistency */
+  cursor: pointer;
+  border: 1px solid var(--border-default);
+}
+
+.fab:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 /* Command Palette Styles */
@@ -480,23 +999,575 @@ body {
   background: var(--text-muted);
 }
 
+/* Tasks Module Styles */
+/* Agents Module Styles */
+.agents-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-primary);
+}
+
+.agents-top-bar {
+  height: 72px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.agents-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.breadcrumb-separator {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+
+.breadcrumb-current {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.agents-search-bar {
+  flex: 1;
+  max-width: 480px;
+  position: relative;
+}
+
+.agents-search-bar .search-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-10);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.agents-search-bar .search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.agents-top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.agents-content {
+  flex: 1;
+  /* padding: var(--space-8); */
+  overflow-y: auto;
+}
+
+.agents-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.agents-page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.agents-controls {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-6);
+}
+
+.agent-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.agent-card:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.agent-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.agent-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-icon-wrapper svg {
+  width: 22px;
+  height: 22px;
+  color: var(--accent-primary);
+}
+
+.agent-info {
+  flex-grow: 1;
+}
+
+.agent-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.agent-model {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.agent-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agent-status-dot.online {
+  background: var(--success);
+}
+
+.agent-status-dot.offline {
+  background: var(--text-muted);
+}
+
+.agent-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: auto;
+}
+
+.agent-capabilities {
+  margin-top: var(--space-3);
+}
+
+.capabilities-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+}
+
+.capabilities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.capability-tag {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: var(--space-2) var(--space-3);
+  margin: 0 var(--space-1) var(--space-1) 0;
+  border-radius: var(--radius-sm);
+}
+
+/* Tag component with interactive hover states */
+.tag, .chat-item-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.tag:hover, .chat-item-tag:hover {
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.agent-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-4);
+  align-items: center;
+}
+
+.agent-delete-btn {
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.agent-delete-btn:hover {
+  color: var(--error);
+}
+  padding: var(--space-8);
+.agent-create-card {
+  border-style: dashed;
+  background: var(--bg-secondary);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.agent-create-card:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+}
+
+.create-agent-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
+}
+
+.create-agent-title {
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.create-agent-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Tasks Module Styles */
+.tasks-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: var(--space-6); 
+}
+
+.tasks-title { 
+  font-size: 28px; 
+  font-weight: 700; 
+  color: var(--text-primary); 
+}
+
+.tasks-controls { 
+  display: flex; 
+  gap: var(--space-3); 
+  align-items: center; 
+}
+
+.tasks-views { 
+  display: flex; 
+  gap: var(--space-2); 
+}
+
+.tasks-view-btn { 
+  padding: var(--space-2) var(--space-4); 
+  background: var(--bg-tertiary); 
+  border: 1px solid var(--border-default); 
+  border-radius: var(--radius-md); 
+  color: var(--text-secondary); 
+  cursor: pointer; 
+  font-size: 14px; 
+  display: flex; 
+  align-items: center; 
+  gap: var(--space-2); 
+}
+
+.tasks-view-btn.active { 
+  background: var(--accent-primary); 
+  color: white; 
+  border-color: var(--accent-primary); 
+}
+
+.tasks-view-btn:hover:not(.active) { 
+  background: var(--bg-elevated); 
+  color: var(--text-primary); 
+}
+
 /* Kanban Board Styles */
 .kanban-board-wrapper { 
   display: flex; 
   overflow-x: auto; 
+  padding-bottom: var(--space-4); 
+  gap: var(--space-6); 
+  min-height: calc(100vh - 280px); 
 }
 
 .kanban-column { 
-  width: 320px; 
   background: var(--bg-surface); 
+  border: 1px solid var(--border-subtle); 
   border-radius: var(--radius-lg); 
-  margin-right: var(--space-4);
+  display: flex; 
+  flex-direction: column; 
+  width: 320px; 
+  flex-shrink: 0; 
+}
+
+.kanban-column-header { 
+  padding: var(--space-4); 
+  border-bottom: 1px solid var(--border-subtle); 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  background: var(--bg-secondary); /* Added subtle background */
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+}
+
+.kanban-column-title { 
+  font-size: 16px; 
+  font-weight: 600; 
+  display: flex; 
+  align-items: center; 
+  gap: var(--space-2); 
+  color: var(--text-primary); 
+  padding: var(--space-1) var(--space-2); /* Added padding */
+  border-radius: var(--radius-md); /* Added border radius */
+  transition: background-color 0.2s ease; /* Smooth hover transition */
+}
+
+.kanban-column-title:hover {
+  background-color: var(--bg-tertiary); /* Subtle hover effect */
+}
+
+.kanban-column-count { 
+  background: var(--bg-tertiary); 
+  color: var(--text-secondary); 
+  padding: 2px 8px; 
+  border-radius: 12px; 
+  font-size: 12px; 
+  font-weight: 600; 
+}
+
+.kanban-column-content { 
+  flex: 1; 
+  padding: var(--space-4); 
+  overflow-y: auto; 
+  display: flex; 
+  flex-direction: column; 
+  gap: var(--space-3); 
 }
 
 .kanban-task { 
   background: var(--bg-elevated); 
-  border-radius: var(--radius-md); 
   border: 1px solid var(--border-default); 
+  border-radius: var(--radius-md); 
+  padding: var(--space-4); 
+  cursor: pointer; 
+}
+
+.kanban-task-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: flex-start; 
+  margin-bottom: var(--space-2); 
+}
+
+.kanban-task-title { 
+  font-size: 14px; 
+  font-weight: 600; 
+  color: var(--text-primary); 
+  flex: 1; 
+  margin-right: var(--space-2); 
+}
+
+.kanban-task-id { 
+  font-size: 11px; 
+  color: var(--text-muted); 
+  background: var(--bg-tertiary); 
+  padding: 2px 6px; 
+  border-radius: 4px; 
+  font-family: monospace; 
+}
+
+.kanban-task-description { 
+  font-size: 13px; 
+  color: var(--text-secondary); 
+  margin-bottom: var(--space-3); 
+  line-height: 1.4; 
+}
+
+.kanban-task-footer { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+}
+
+.kanban-task-meta { 
+  display: flex; 
+  gap: var(--space-3); 
+  align-items: center; 
+}
+
+.kanban-task-priority { 
+  padding: 2px 8px; 
+  border-radius: var(--radius-md); 
+  font-size: 10px; 
+  font-weight: 600; 
+  text-transform: uppercase; 
+}
+
+.kanban-task-priority.high { 
+  background: var(--error-soft); 
+  color: var(--error); 
+}
+
+.kanban-task-priority.medium { 
+  background: var(--warning-soft); 
+  color: var(--warning); 
+}
+
+.kanban-task-priority.low { 
+  background: var(--success-soft); 
+  color: var(--success); 
+}
+
+.kanban-task-assignee { 
+  width: 24px; 
+  height: 24px; 
+  background: var(--accent-primary); 
+  border-radius: 50%; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  color: white; 
+  font-size: 10px; 
+  font-weight: 600; 
+}
+
+.kanban-task-due { 
+  font-size: 11px; 
+  color: var(--text-tertiary); 
+  background: var(--bg-tertiary); 
+  padding: 2px 6px; 
+  border-radius: 4px; 
+}
+
+.kanban-task-due.overdue { 
+  background: var(--error-soft); 
+  color: var(--error);
+  font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.add-task-btn-wrapper { 
+  padding: var(--space-2) var(--space-4) var(--space-4); 
+}
+
+.add-task-btn { 
+  width: 100%; 
+  background: transparent; 
+  color: var(--text-primary); /* Increased contrast */ 
+  border: 2px dashed var(--border-default); 
+  font-weight: 600; /* Bolder text */ 
+  min-height: 40px;
+}
+
+.add-task-btn:hover { 
+  background: var(--bg-tertiary); 
+  border-style: solid; 
+  color: var(--accent-primary); /* Using accent color on hover for more emphasis */ 
+}
+
+/* Task List View Styles */
+.task-list-view { 
+  margin-top: var(--space-6); 
+}
+
+.task-list-table { 
+  width: 100%; 
+  border-collapse: collapse; 
+}
+
+.task-list-table th, 
+.task-list-table td { 
+  padding: var(--space-3) var(--space-4); 
+  text-align: left; 
+  border-bottom: 1px solid var(--border-subtle); 
+  font-size: 14px; 
+}
+
+.task-list-table th { 
+  color: var(--text-secondary); 
+  font-weight: 600; 
+  text-transform: uppercase; 
+  font-size: 11px; 
+  letter-spacing: 0.05em; 
+}
+
+.task-list-table td { 
+  color: var(--text-primary); 
+}
+
+.assignee-avatar-sm { 
+  width: 20px; 
+  height: 20px; 
+  border-radius: 50%; 
+  background-color: var(--accent-primary); 
+  color: white; 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 0.625rem; 
+  vertical-align: middle; 
+}
+
+.priority-dot { 
+  width: 8px; 
+  height: 8px; 
+  border-radius: 50%; 
+  display: inline-block; 
+  margin-right: 8px; 
 }
 
 /* Calendar Styles */
@@ -577,15 +1648,27 @@ body {
   color: var(--text-secondary);
 }
 
-/* Quick Actions Grid */
+/* Quick Actions Grid - Task 2.1: Primary "Start chat" + 3 secondary buttons layout */
 .quick-actions-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
+.quick-actions-primary {
+  width: 100%;
+}
+
+.quick-actions-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
 .quick-actions-grid .btn {
+  min-width: 120px;
   justify-content: flex-start;
+  gap: var(--space-2);
 }
 
 .quick-actions-grid .btn .lucide {
@@ -618,11 +1701,6 @@ body {
   background: none;
 }
 
-.widget-action .lucide {
-  width: 16px;
-  height: 16px;
-}
-
 /* Project Progress Styles */
 .project-progress {
   margin-bottom: var(--space-4);
@@ -645,6 +1723,24 @@ body {
   font-size: 14px;
   color: var(--text-secondary);
   font-weight: 500;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.progress-header .progress-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.progress-header .progress-percentage {
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .progress-bar {
@@ -675,20 +1771,6 @@ body {
   border-radius: var(--radius-md);
 }
 
-.milestone-status {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.milestone-status.completed {
-  background: var(--success);
-}
-
-.milestone-status.pending {
-  background: var(--text-muted);
-}
 
 .milestone-content {
   flex: 1;
@@ -708,6 +1790,275 @@ body {
   border-radius: 4px;
   font-weight: 500;
   margin-left: auto;
+}
+
+/* Widget Header More Options Icon */
+.widget-header-more-options {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1); /* Increase click target */
+}
+
+.widget-header-more-options svg {
+  width: 20px; /* Slightly larger icon */
+  height: 20px;
+}
+
+/* Project Sidebar Widget Distinction */
+.project-sidebar-widget {
+  background-color: var(--bg-secondary); /* Subtle background change */
+  /* border: 1px solid var(--border-default); */ /* Alternative: use a border */
+}
+
+/* Project Specific Styles */
+
+.progress-bar-container {
+  width: 100%;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden; /* Ensures the fill stays within bounds */
+  height: 12px; /* Match the fill height */
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm); /* Match container's radius */
+  transition: width 0.5s ease-in-out;
+  /* background-color is set dynamically inline */
+}
+
+.project-sidebar {
+  width: 280px;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: var(--space-6);
+  margin-right: var(--space-layout-gutter);
+}
+
+.project-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.project-sidebar-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.project-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.project-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative; /* For potential future pseudo-elements or indicators */
+  transition: all 0.15s ease-out; /* Ensure smooth transitions for hover */
+}
+
+.project-list-item:hover {
+  background: var(--bg-elevated); /* Use a slightly more elevated background */
+  color: var(--text-primary);
+  transform: translateX(2px); /* Subtle shift to the right */
+  transition: all 0.15s ease-out;
+}
+
+.project-list-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+}
+
+.project-list-item-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.project-sidebar-footer {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.project-main-content {
+  flex: 1;
+  /* padding: var(--space-8); */
+  overflow-y: auto;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-6);
+}
+
+.project-title-section {
+  flex: 1;
+}
+
+.project-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+  color: var(--text-primary);
+}
+
+.project-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.project-tabs {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.project-tab {
+  padding: var(--space-3) 0;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-right: var(--space-4);
+  font-size: 14px;
+}
+
+.project-tab.active {
+  color: var(--accent-primary);
+  border-bottom: 2px solid var(--accent-primary); /* Ensure underline is 2px */
+  font-weight: 600; /* Make font slightly bolder */
+}
+
+.project-overview {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--space-6);
+}
+
+.project-content-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.project-sidebar-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.sidebar-widget {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.sidebar-widget-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+.project-assets-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.project-asset-item {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.project-asset-item .lucide {
+  width: 24px;
+  height: 24px;
+  margin-bottom: var(--space-2);
+  color: var(--accent-primary);
+}
+
+.project-asset-item-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.project-asset-item-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.roadmap-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.roadmap-item {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.roadmap-date {
+  width: 80px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  text-align: right;
+  margin-top: var(--space-1);
+  flex-shrink: 0;
+}
+
+.roadmap-content {
+  flex: 1;
+  background: var(--bg-tertiary);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.roadmap-title {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.roadmap-description {
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 /* Event List Styles */
@@ -803,6 +2154,27 @@ body {
   background: var(--text-muted);
 }
 
+.ai-agent-usage {
+  font-size: 12px;
+  /* color: var(--text-secondary); Default color will be overridden by specific status */
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.ai-agent-item:has(.ai-agent-status.online) .ai-agent-usage {
+  background-color: rgba(var(--success-rgb), 0.15); /* Adjusted opacity slightly */
+  color: var(--success);
+  padding: var(--space-0-5) var(--space-1-5); /* Adjusted padding */
+}
+
+.ai-agent-item:has(.ai-agent-status.offline) .ai-agent-usage {
+  background-color: rgba(var(--text-muted-rgb), 0.2); /* Adjusted opacity slightly */
+  color: var(--text-muted);
+  padding: var(--space-0-5) var(--space-1-5); /* Adjusted padding */
+}
+
 .ai-agent-info {
   flex: 1;
 }
@@ -830,7 +2202,8 @@ body {
 /* Chat Interface Styles */
 .chat-layout {
   display: flex;
-  height: 100vh;
+  width: 100%;
+  height: 100%; /* Fit within container instead of full viewport */
   background: var(--bg-primary);
   overflow: hidden;
   box-sizing: border-box;
@@ -843,6 +2216,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
 }
 
 .chat-sidebar-header {
@@ -857,6 +2231,69 @@ body {
   flex-shrink: 0;
 }
 
+.chat-list-section {
+  margin-bottom: var(--space-4);
+}
+
+.chat-list-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 var(--space-2) 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+
+.chat-list-item {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-bottom: var(--space-2);
+  background: transparent;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.chat-list-item:hover {
+  background: var(--bg-elevated);
+}
+
+.chat-list-item.active {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.chat-item-metadata {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+
+.chat-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.chat-item-timestamp {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.chat-item-tag {
+  display: inline-block;
+  padding: var(--space-0-5) var(--space-2);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .chat-list {
   flex: 1;
   overflow-y: auto;
@@ -864,14 +2301,16 @@ body {
 }
 
 .chat-main {
-  flex: 1;
+  flex: 1; /* Allow to grow and fill available space */
   display: flex;
   flex-direction: column;
+  justify-content: space-between; /* Push input area to bottom */
   background: var(--bg-primary);
   min-width: 0;
   overflow: hidden;
   box-sizing: border-box;
   min-height: 0;
+  height: 100%; /* Ensure full height */
 }
 
 .chat-header {
@@ -895,8 +2334,8 @@ body {
 }
 
 .chat-messages {
-  flex: 1 1 0;
-  overflow-y: auto;
+  flex-grow: 1; /* Allow messages area to expand and fill available space */
+  overflow-y: auto; /* Make scrollable when content overflows */
   padding: var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
@@ -995,15 +2434,13 @@ body {
 }
 
 .chat-input-area {
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--border-subtle);
   background: var(--bg-secondary);
-  flex-shrink: 0;
-  min-height: 120px;
+  flex-shrink: 0; /* Prevent input area from shrinking */
   position: relative;
   z-index: 10;
   box-sizing: border-box;
-  flex-basis: auto;
 }
 
 .chat-input-wrapper {
@@ -1011,7 +2448,6 @@ body {
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
 }
 
 .chat-input {
@@ -1065,6 +2501,7 @@ body {
   align-items: center;
   font-size: 12px;
   color: var(--text-tertiary);
+  padding: var(--space-2) var(--space-4); /* Balanced horizontal padding */
 }
 
 .attachment-area {
@@ -1100,4 +2537,721 @@ body {
 .context-indicator {
   color: var(--text-muted);
   font-size: 11px;
+}
+
+/* Canvas/Whiteboard Module Styles */
+.canvas-layout {
+  position: relative;
+  height: 100%;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas-toolbar-wrapper {
+  padding: var(--space-4);
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  position: absolute;
+  top: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+
+.canvas-toolbar {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-md);
+}
+
+.canvas-tool {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.canvas-tool.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.canvas-tool:hover:not(.active) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.canvas-area {
+  width: 100%;
+  flex-grow: 1;
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  background-image: radial-gradient(var(--border-default) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -12px -12px;
+}
+
+.canvas-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 200%;
+  opacity: 0.08;
+  background-image: 
+    linear-gradient(var(--border-default) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-default) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.canvas-element {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+}
+
+.sticky-note {
+  width: 180px;
+  height: 180px;
+  background: #facc15;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.sticky-note textarea {
+  flex-grow: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #1f2937;
+  resize: none;
+}
+
+.canvas-shape {
+  border: 2px solid var(--accent-primary);
+  background: var(--accent-soft);
+}
+
+.canvas-shape.rectangle {
+  width: 120px;
+  height: 80px;
+  border-radius: var(--radius-md);
+}
+
+.canvas-shape.circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+}
+
+.minimap {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  width: 180px;
+  height: 100px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  opacity: 0.9;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.properties-panel {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 250px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  display: none;
+}
+
+.properties-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+/* Calendar Module Specific Styles */
+.calendar-layout {
+  position: relative;
+  height: 100%;
+  flex-grow: 1;
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-6);
+}
+
+.calendar-main {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-header {
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  margin-bottom: var(--space-6);
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.calendar-nav-btn {
+  width: 32px;
+  height: 32px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.calendar-today-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-elevated);
+  color: var(--accent-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-today-btn:hover {
+  background: var(--bg-surface);
+  border-color: var(--accent-primary);
+}
+
+.calendar-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 var(--space-4);
+}
+
+.calendar-views {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.calendar-view-btn {
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-view-btn:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.calendar-view-btn.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.calendar-view-btn {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.calendar-view-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.calendar-view-btn.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.calendar-grid-wrapper {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+}
+
+.calendar-header-cell {
+  background: var(--bg-surface);
+  padding: var(--space-3);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calendar-day {
+  background: var(--bg-surface);
+  min-height: 120px;
+  padding: var(--space-3);
+  position: relative;
+  border-top: 1px solid var(--border-subtle);
+  border-left: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.calendar-day:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+}
+
+.calendar-day:nth-child(7n+1) {
+  border-left: none;
+}
+
+.calendar-day.other-month {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.calendar-day.today .calendar-day-number {
+  background: var(--accent-primary);
+  color: white !important;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-1);
+}
+
+.calendar-day-number {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  color: var(--text-secondary);
+}
+
+/* Calendar events */
+.calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.calendar-event {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.calendar-event.meeting {
+  background: var(--accent-primary);
+}
+
+.calendar-event.task {
+  background: var(--success);
+}
+
+.calendar-event.reminder {
+  background: var(--warning);
+}
+
+.calendar-event.event {
+  background: var(--info);
+}
+
+.calendar-event:hover {
+  opacity: 0.8;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--bg-secondary);
+}
+
+/* Firefox scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) var(--bg-secondary);
+}
+
+.calendar-day:not(.other-month) .calendar-day-number {
+  color: var(--text-primary);
+}
+
+.calendar-events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.calendar-event {
+  background: var(--accent-primary);
+  color: white;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.calendar-event:hover {
+  opacity: 0.8;
+}
+
+.calendar-event.meeting {
+  background: var(--success);
+}
+
+.calendar-event.task {
+  background: var(--warning);
+  color: var(--bg-primary);
+}
+
+.time-blocking-panel {
+  width: 280px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.time-blocking-header {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-4);
+}
+
+.time-blocking-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.time-blocking-content {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.task-section {
+  margin-bottom: var(--space-4);
+}
+
+.task-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.task-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.task-item:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-default);
+}
+
+.task-item:active {
+  cursor: grabbing;
+}
+
+.task-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+  color: var(--text-primary);
+}
+
+.task-meta {
+  font-size: 11px;
+  color: var(--text-secondary); /* Slightly increased contrast */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2); /* Added gap for consistent spacing between meta items */
+}
+
+.task-priority {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.task-priority.high {
+  background-color: var(--error-soft);
+  color: var(--error-strong);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.task-priority.medium {
+  background-color: var(--warning-soft);
+  color: var(--warning-strong);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.task-priority.low {
+  background-color: var(--success-soft);
+  color: var(--success-strong);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.week-view,
+.day-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  flex-direction: column;
+}
+
+/* Calendar Module Styles */
+.calendar-today-btn {
+  background-color: var(--accent-primary);
+  color: var(--text-on-accent);
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.calendar-today-btn:hover {
+  background-color: var(--accent-primary-hover);
+}
+
+.task-schedule-panel-header .count {
+  font-weight: bold;
+  color: var(--accent-primary);
+}
+
+/* Agent Card Styles */
+.agent-card.agent-create-card {
+  border-style: dashed;
+  background-color: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+}
+
+.agent-card.agent-create-card:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+}
+
+.agent-card.agent-create-card .create-agent-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--accent-primary);
+  margin-bottom: var(--space-3);
+}
+
+.agent-card.agent-create-card .create-agent-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.agent-card.agent-create-card .create-agent-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.agent-delete-btn:hover .lucide {
+  color: var(--error);
+}
+
+/* Chat Module Styles */
+.chat-list-item.active {
+  border-left: 3px solid var(--accent-primary);
+  background-color: var(--accent-soft);
+}
+
+.code-block-copy-button {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.code-block-copy-button:hover {
+  background: var(--bg-hover);
+}
+
+.code-block-copy-button svg {
+  margin-right: var(--space-1);
+}
+
+.chat-message-attachment {
+  background: var(--bg-elevated);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-2);
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-subtle);
+  gap: var(--space-2);
+}
+
+.chat-message-attachment .attachment-icon {
+  color: var(--text-secondary);
+}
+
+.chat-message-attachment .attachment-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.chat-message-attachment .attachment-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-left: var(--space-2);
+}
+
+.week-placeholder,
+.day-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.calendar-actions {
+  position: relative;
 }

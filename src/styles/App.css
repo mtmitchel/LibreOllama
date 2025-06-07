@@ -1,4 +1,4 @@
-/* LibreOllama App Styles */
+/* LibreOllaama App Styles */
 
 .App {
   height: 100vh;
@@ -27,4 +27,218 @@
 /* Focus ring styles */
 .focus-ring {
   @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900;
+}
+
+/* Focus Mode Styles */
+.focus-mode-active .sidebar,
+.focus-mode-active .top-bar-left,
+.focus-mode-active .search-bar,
+.focus-mode-active .top-bar-actions .action-btn:not(.focus-mode-toggle-btn) {
+  display: none;
+}
+
+.focus-mode-active .top-bar {
+  justify-content: flex-end; /* Align focus toggle to the right */
+}
+
+.focus-mode-active .main-content-wrapper {
+  margin-left: 0;
+  padding-top: 0; 
+}
+
+.focus-mode-active .content-area {
+  padding: 20px; 
+  height: 100vh; 
+  overflow-y: auto; 
+}
+
+/* Sidebar Toggle and Layout */
+.app-container.sidebar-closed .sidebar {
+  width: 60px; /* Set a fixed width for the collapsed sidebar to show the toggle */
+  overflow: hidden; /* Hide overflowing content */
+}
+
+.app-container.sidebar-closed .sidebar .logo,
+.app-container.sidebar-closed .sidebar .nav-section,
+.app-container.sidebar-closed .sidebar .sidebar-footer {
+  display: none; /* Hide everything except the toggle button */
+}
+
+.app-container.sidebar-closed .sidebar .sidebar-header {
+  height: 60px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-container.sidebar-closed .sidebar .sidebar-toggle-btn-internal {
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-container.sidebar-open .sidebar {
+  width: 250px; /* Expanded width */
+}
+
+.sidebar.collapsed .nav-section-title,
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .nav-badge,
+.sidebar.collapsed .sidebar-footer span,
+.sidebar.collapsed .logo span,
+.sidebar.collapsed .nav-section,
+.sidebar.collapsed .sidebar-footer .nav-item:not(.sidebar-toggle-btn-internal) { /* Hide all nav items except the toggle in the footer if it were there */
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+  /* Ensure header is still visible and toggle is usable */
+  padding: 16px; /* Maintain padding for the header */
+}
+
+.sidebar.collapsed .nav-item,
+.sidebar.collapsed .sidebar-footer .nav-item {
+  justify-content: center;
+}
+
+.sidebar.collapsed .logo {
+  justify-content: center;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Align logo and toggle */
+  padding: 16px; /* Adjust as needed */
+  height: 60px; /* Match top-bar height */
+  box-sizing: border-box;
+}
+
+.sidebar-toggle-btn-internal {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  padding: 4px; /* Smaller padding for internal button */
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Ensure it's always visible */
+  visibility: visible !important; 
+  opacity: 1 !important;
+}
+
+.sidebar.collapsed .sidebar-toggle-btn-internal {
+  /* Styles for when sidebar is collapsed, if different */
+  margin: 0 auto; /* Center the button if needed when sidebar is collapsed */
+}
+
+.sidebar.expanded .logo {
+  /* Ensure logo takes space and toggle is to the right */
+  flex-grow: 1;
+}
+
+.sidebar.collapsed .nav-item-icon {
+  margin-right: 0;
+}
+
+.top-bar {
+  height: 72px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+}
+
+/* .sidebar-toggle-btn { 
+  margin-right: 16px; 
+} */ /* Commented out as it's moved */
+
+.focus-mode-toggle-btn {
+  /* Styles for focus mode toggle if needed, already an action-btn */
+}
+
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  background-color: var(--bg-elevated);
+}
+
+.action-btn.primary {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background-color: var(--accent-secondary);
+}
+
+.search-bar {
+  flex-grow: 1; /* Allow search bar to take available space */
+  max-width: 400px; /* Optional: constrain max width */
+  display: flex;
+  align-items: center;
+  background-color: var(--background-tertiary);
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.search-icon {
+  color: var(--text-muted);
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+}
+
+.search-input {
+  flex-grow: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+}
+
+.search-kbd {
+  background-color: var(--background-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.breadcrumb {
+  color: var(--text-primary);
+  font-weight: 500;
 }

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { Button } from './ui';
@@ -28,18 +29,18 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       case 'system':
         return <Monitor className="w-4 h-4" />;
       default:
-        return <Sun className="w-4 h-4" />;
+        return <Moon className="w-4 h-4" />;
     }
   };
 
   const getLabel = () => {
     switch (theme) {
       case 'light':
-        return 'Light theme';
+        return 'Switch to dark';
       case 'dark':
-        return 'Dark theme';
+        return 'Switch to system';
       case 'system':
-        return 'System theme';
+        return 'Switch to light';
       default:
         return 'Toggle theme';
     }
@@ -53,6 +54,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       className={className}
       title={getLabel()}
       aria-label={getLabel()}
+      data-theme-toggle
     >
       {getIcon()}
     </Button>

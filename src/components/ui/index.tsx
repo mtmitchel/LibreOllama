@@ -193,3 +193,6 @@ export function Badge({
     </span>
   );
 }
+
+// Export UnifiedHeader component
+export { UnifiedHeader } from './UnifiedHeader';

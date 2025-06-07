@@ -1,33 +1,58 @@
 import React from 'react';
 import { Button } from '../components/ui';
-import { 
-  MessageSquare, 
-  FileText, 
-  FolderPlus, 
+import { UnifiedHeader } from '../components/ui';
+import {
+  MessageSquare,
+  FileText,
+  FolderPlus,
   LayoutTemplate,
   MoreHorizontal,
   Settings2,
   GripVertical,
-  PlusCircle
+  PlusCircle,
+  CheckCircle2, // Added for completed status
+  Circle // Added for pending status (or CircleDot / CircleHelp for outline)
 } from 'lucide-react';
 
 export function Dashboard() {
+  const handleAddWidget = () => {
+    // TODO: Implement add widget functionality
+    console.log('Add widget');
+  };
+
   return (
-    <div>
-      <div className="dashboard-header">
-        <div>
-          <h1 className="dashboard-title">Good morning, Alex</h1>
-          <p className="dashboard-subtitle">Here's what's happening today.</p>
-        </div>
-        <div className="dashboard-controls">
-          <button className="btn btn-secondary">
-            <PlusCircle style={{ width: '16px', height: '16px' }} />
-            Add widget
-          </button>
-          <button className="btn btn-ghost">
-            <MoreHorizontal style={{ width: '16px', height: '16px' }} />
-          </button>
-        </div>
+    <div className="content-area">
+      {/* Unified Header */}
+      <UnifiedHeader
+        title="Good morning, Alex"
+        primaryAction={{
+          label: 'Add widget',
+          onClick: handleAddWidget,
+          icon: <PlusCircle size={16} />
+        }}
+        secondaryActions={[
+          {
+            label: 'More options',
+            onClick: () => console.log('More options'),
+            variant: 'ghost'
+          }
+        ]}
+      />
+
+      {/* Subtitle */}
+      <div style={{
+        padding: '0 var(--space-5)',
+        marginBottom: 'var(--space-6)',
+        borderBottom: '1px solid var(--border-subtle)',
+        paddingBottom: 'var(--space-4)'
+      }}>
+        <p style={{
+          color: 'var(--text-secondary)',
+          fontSize: '14px',
+          margin: 0
+        }}>
+          Here's what's happening today.
+        </p>
       </div>
 
       <div className="dashboard-grid">
@@ -46,21 +71,25 @@ export function Dashboard() {
             </div>
             <div className="milestone-list">
               <div className="milestone">
-                <div className="milestone-status completed"></div>
+                {/* <div className="milestone-status completed"></div> */}
+                <CheckCircle2 style={{ width: '16px', height: '16px', color: 'var(--success)' }} />
                 <div className="milestone-content">
                   <div className="milestone-title">Component library setup</div>
                 </div>
                 <div className="milestone-date">Dec 18</div>
               </div>
               <div className="milestone">
-                <div className="milestone-status completed"></div>
+                {/* <div className="milestone-status completed"></div> */}
+                <CheckCircle2 style={{ width: '16px', height: '16px', color: 'var(--success)' }} />
                 <div className="milestone-content">
                   <div className="milestone-title">Dashboard redesign</div>
                 </div>
                 <div className="milestone-date">Dec 20</div>
               </div>
               <div className="milestone">
-                <div className="milestone-status pending"></div>
+                {/* <div className="milestone-status pending"></div> */}
+                <Circle style={{ width: '16px', height: '16px', color: 'var(--text-muted)', strokeWidth: 2 }} />
+                {/* Using Circle with increased strokeWidth for better visual weight */}
                 <div className="milestone-content">
                   <div className="milestone-title">Chat interface migration</div>
                 </div>
@@ -159,22 +188,26 @@ export function Dashboard() {
             <h3 className="widget-title">Quick actions</h3>
           </div>
           <div className="quick-actions-grid">
-            <button className="btn btn-primary">
-              <MessageSquare style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Start chat
-            </button>
-            <button className="btn btn-secondary">
-              <FileText style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              New note
-            </button>
-            <button className="btn btn-secondary">
-              <FolderPlus style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Create project
-            </button>
-            <button className="btn btn-secondary">
-              <LayoutTemplate style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Open canvas
-            </button>
+            <div className="quick-actions-primary">
+              <button className="btn btn-primary">
+                <MessageSquare style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                Start chat
+              </button>
+            </div>
+            <div className="quick-actions-secondary">
+              <button className="btn btn-secondary">
+                <FileText style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                New note
+              </button>
+              <button className="btn btn-secondary">
+                <FolderPlus style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                Create project
+              </button>
+              <button className="btn btn-secondary">
+                <LayoutTemplate style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                Open canvas
+              </button>
+            </div>
           </div>
         </div>
       </div>

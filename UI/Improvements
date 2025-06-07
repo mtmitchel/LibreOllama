@@ -1,0 +1,191 @@
+Here is a comprehensive and deeply detailed review of the current LibreOllama implementation across all uploaded UI screenshots, measured against the intended design system and mockup fidelity.
+
+---
+
+## 🔍 **GAP ANALYSIS: Visual, Structural & Functional Consistency**
+
+---
+
+### ✅ GLOBAL STRUCTURE & THEMING
+
+**Strengths:**
+
+* Sidebar and top-level layout consistently follow `.app-container` and `.main-content-wrapper` patterns.
+* Use of `--space-6`, `--radius-lg`, and `--bg-primary`/`--bg-secondary` is consistent across modules.
+* Typography aligns with Inter font family and appropriate weights (`font-weight: 600` or `700` for headers).
+
+**Minor Issues:**
+
+* Some modules (e.g. **Calendar**, **Canvas**) do not appear to have responsive padding on smaller screens (likely no `@media` responsiveness yet).
+* Contrast in the **Agents** and **Calendar** module hover states is a bit subtle—improve accessibility contrast especially in low-light conditions.
+
+---
+
+### 🧠 MODULE-BY-MODULE ANALYSIS
+
+---
+
+### 1. **Chat Module**
+
+* ✅ **Chat layout** and split-panel logic (`chat-sidebar`, `chat-main`) match design system precisely.
+* ✅ Message bubbles and avatars follow `.message.user` and `.message.ai` styles.
+* ⚠️ **Gap**: No visual indicator of input state focus. Style should include:
+
+  ```css
+  .chat-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  ```
+* ⚠️ **Functional Gap**: No emoji/attachment/voice button visible in UI (though padding suggests room for them).
+* ✅ Chat tag ("design", "strategy") matches `.chat-item-tag` hover behavior and visual treatment.
+
+---
+
+### 2. **Projects Module**
+
+* ✅ Tabs (`Tasks`, `Notes`, etc.) and sidebar use correct spacing and typography.
+* ✅ `project-progress` bar styling is consistent with `progress-bar-fill` and `--accent-primary` gradient.
+* ⚠️ **Gap**: `progress-percentage` text lacks vertical alignment (it's not baseline-centered with the bar; likely needs `display: flex` + `align-items: center`).
+* ✅ Sidebar goals and roadmap follow widget conventions.
+
+---
+
+### 3. **Notes Module**
+
+* ✅ 3-column layout follows `.notes-layout`: left nav, note list, rich editor.
+* ✅ All `block-content` styles (e.g., code blocks, headings, checklists) are correctly implemented.
+* ✅ Proper use of `.editor-block:hover .block-drag-handle` for editing UX.
+* ⚠️ **Minor gap**: Hover state for notebook folder could benefit from slightly stronger contrast on hover (`bg-tertiary` is very close to background).
+* ✅ Wiki links styled as `color: var(--accent-primary); background-color: var(--accent-soft);`.
+
+---
+
+### 4. **Canvas Module**
+
+* ✅ Floating toolbar follows `.canvas-toolbar-wrapper` pattern.
+* ✅ Icons styled using `.canvas-tool`, including proper hover state.
+* ⚠️ **Missing features**:
+
+  * Canvas background grid not visible (`background-image: radial-gradient(...)` not rendered in current screenshot).
+  * No visible elements or canvas items—should include `.canvas-element`, `.sticky-note`, `.canvas-shape` as baseline.
+* ✅ Good adherence to spacing and placement.
+
+---
+
+### 5. **Calendar Module**
+
+* ✅ `calendar-grid` uses proper 7-column layout.
+* ✅ Tasks to schedule (`task-item`, `task-meta`) follow design token spacing and hover behaviors.
+* ⚠️ **Bug**: The “Today” button styling (`calendar-today-btn`) appears correct visually but is slightly vertically misaligned—check padding and line-height.
+* ⚠️ **Accessibility Gap**: Event tags (e.g., “Client demo prep”) might have insufficient contrast depending on text length and priority—suggest using `color: var(--text-primary)` for High Priority items.
+* ✅ All filters and views styled correctly (`calendar-view-btn`, `.active` state).
+
+---
+
+### 6. **Tasks Module**
+
+* ✅ Kanban layout correctly uses `.kanban-column` and `.kanban-task`.
+* ✅ Color coding for priorities (High/Medium/Low) matches `--error`, `--warning`, `--success`.
+* ⚠️ **Minor bug**: Due date "Yesterday" is red, but it doesn’t have `.overdue` class or matching visual treatment—should apply:
+
+  ```css
+  .kanban-task-due.overdue {
+    background: var(--error-soft);
+    color: var(--error);
+  }
+  ```
+* ✅ Avatar circles match `.kanban-task-assignee` specs.
+
+---
+
+### 7. **Agents Module**
+
+* ✅ Grid follows `.agents-grid` layout.
+* ✅ Online/offline dot colors match `--success` / `--text-muted`.
+* ⚠️ **Visual detail**: “Create a new agent” card is slightly less contrasty than others—consider increasing border visibility on hover (`border-color: var(--accent-primary)` already in design).
+* ✅ Capabilities badges and `.agent-capabilities` work correctly.
+
+---
+
+### 8. **Settings Module**
+
+* ✅ Category sidebar matches `.sidebar-nav` conventions.
+* ✅ Main settings panel follows `.main-content-wrapper` with correct gutter spacing.
+* ⚠️ **Inconsistent padding** under “Startup View” and “Regional Settings” — some sections are more compressed. Check vertical spacing consistency:
+
+  ```css
+  margin-bottom: var(--space-6);
+  ```
+
+---
+
+## ⚠️ GLOBAL IMPLEMENTATION GAPS & RECOMMENDATIONS
+
+### 📏 Spacing and Alignment
+
+* Use `gap`, `padding`, `margin` tokens strictly (`--space-4`, `--space-6`, etc.).
+* Some inconsistent vertical spacing under form inputs, headers, and section dividers.
+* Ensure gutters and padding are handled at the `app-container` and `main-content-wrapper` level consistently.
+
+### 🎨 Color and Contrast
+
+* Improve hover and active state contrast especially for muted items (`text-secondary`, `bg-tertiary`).
+* Confirm all interactive elements meet WCAG AA contrast thresholds.
+
+### 📦 Component Reuse
+
+* Some patterns (like `project-list-item`, `sidebar-widget`) are well implemented in isolation but may diverge slightly across modules.
+* Refactor shared widgets (progress bar, calendar cell, card, tab) into components with class consistency.
+
+### 🧩 Missing Functionality
+
+* Canvas is structurally sound but functionally incomplete (no shapes, sticky notes, or drag interactions yet).
+* Chat input is implemented, but lacks attachment tools or context indicators in current view.
+
+---
+
+## 🛠️ ACTIONABLE TASKS FOR AI CODING AGENT
+
+Here are the implementation-ready steps to bring the current UI into full design system compliance:
+
+1. **Chat Module**
+
+   * Add missing emoji/attachment/input tools below `.chat-input-wrapper`.
+   * Ensure `.chat-input:focus` includes `border-color` and `box-shadow`.
+
+2. **Project Module**
+
+   * Vertically center `.progress-percentage` inside `.progress-header`.
+
+3. **Calendar Module**
+
+   * Add `.calendar-day.today .calendar-day-number` visual style.
+   * Add `.calendar-event.task` and `.calendar-event.reminder` classes with proper colors.
+   * Confirm `.calendar-today-btn` is vertically centered and padded consistently.
+
+4. **Tasks Module**
+
+   * Mark past-due items with `.kanban-task-due.overdue`.
+   * Ensure task assignee avatars use correct initials and contrast.
+
+5. **Canvas Module**
+
+   * Render `canvas-grid` background.
+   * Populate canvas with test `.sticky-note` and `.canvas-shape.rectangle`.
+
+6. **Settings**
+
+   * Add `margin-bottom: var(--space-6)` between setting sections.
+
+7. **General UI Consistency**
+
+   * Apply consistent padding between cards and widgets (`--space-6` or `--space-8`).
+   * Consolidate button usage to follow `.btn-primary`, `.btn-secondary`, `.btn-ghost`.
+
+8. **Accessibility Improvements**
+
+   * Audit color contrast for tags, event labels, and ghost buttons.
+   * Add keyboard focus states to all interactive controls.
+
+---
