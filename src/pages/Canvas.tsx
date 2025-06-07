@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Brush, Eraser, Square, Circle, Type, Download, Upload, Trash2, Undo, Redo, Palette, Settings } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Brush, Eraser, Square, Circle, Type, Download, Upload, Trash2, Undo, Redo, Palette, Settings, MousePointer2, StickyNote, RectangleHorizontal, Share, Pencil, MousePointerClick, ChevronRight, Search, Plus, Share2 } from 'lucide-react';
 import { PageLayout } from '../components/ui/PageLayout';
 import { Card } from '../components/ui/Card';
 
