@@ -152,12 +152,59 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   if (!isOpen) return null;
 
+  const overlayStyle = {
+    position: 'fixed' as const,
+    inset: '0',
+    zIndex: 50,
+    background: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingTop: '20vh'
+  };
+
+  const paletteStyle = {
+    background: 'var(--bg-surface)',
+    borderRadius: 'var(--radius-lg)',
+    boxShadow: 'var(--shadow-lg)',
+    border: '1px solid var(--border-subtle)',
+    width: '100%',
+    maxWidth: '512px',
+    margin: '0 var(--space-4)'
+  };
+
+  const searchContainerStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
+    padding: 'var(--space-4)',
+    borderBottom: '1px solid var(--border-subtle)'
+  };
+
+  const inputStyle = {
+    flex: '1',
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+    color: 'var(--text-primary)',
+    fontSize: 'var(--font-size-base)'
+  };
+
+  const kbdStyle = {
+    padding: '2px var(--space-2)',
+    fontSize: 'var(--font-size-xs)',
+    background: 'var(--bg-tertiary)',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--border-subtle)',
+    color: 'var(--text-muted)'
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center pt-[20vh]">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg mx-4">
+    <div style={overlayStyle}>
+      <div style={paletteStyle}>
         {/* Search Input */}
-        <div className="flex items-center gap-3 p-4 border-b border-slate-200 dark:border-slate-700">
-          <Search className="w-5 h-5 text-slate-400" />
+        <div style={searchContainerStyle}>
+          <Search className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
           <input
             id="command-input"
             type="text"
@@ -165,27 +212,47 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder-slate-500"
+            style={inputStyle}
           />
-          <kbd className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 rounded border">
+          <kbd style={kbdStyle}>
             ESC
           </kbd>
         </div>
 
         {/* Commands List */}
-        <div className="max-h-96 overflow-y-auto p-2">
+        <div style={{
+          maxHeight: '384px',
+          overflowY: 'auto',
+          padding: 'var(--space-2)'
+        }}>
           {Object.keys(groupedCommands).length === 0 ? (
-            <div className="py-8 text-center text-slate-500">
+            <div style={{
+              padding: 'var(--space-8) 0',
+              textAlign: 'center',
+              color: 'var(--text-muted)',
+              fontSize: 'var(--font-size-sm)'
+            }}>
               No commands found for "{query}"
             </div>
           ) : (
             Object.entries(groupedCommands).map(([category, categoryCommands]) => (
-              <div key={category} className="mb-4 last:mb-0">
-                <div className="px-2 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <div key={category} style={{
+                marginBottom: 'var(--space-4)'
+              }}>
+                <div style={{
+                  padding: 'var(--space-1) var(--space-2)',
+                  fontSize: 'var(--font-size-xs)',
+                  fontWeight: 'var(--font-weight-semibold)',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
                   {category}
-                </div>                <div className="space-y-1">
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                   {categoryCommands.map((command) => {
                     const globalIndex = filteredCommands.indexOf(command);
+                    const isSelected = globalIndex === selectedIndex;
                     return (
                       <button
                         key={command.id}
@@ -193,20 +260,56 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                           command.action();
                           onClose();
                         }}
-                        className={cn(
-                          'w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors',
-                          globalIndex === selectedIndex
-                            ? 'bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400'
-                            : 'hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white'
-                        )}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--space-3)',
+                          padding: 'var(--space-3)',
+                          textAlign: 'left',
+                          borderRadius: 'var(--radius-md)',
+                          transition: 'all 0.15s ease',
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: isSelected ? 'var(--accent-soft)' : 'transparent',
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.background = 'var(--bg-tertiary)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }}
                       >
-                        <span className="flex-shrink-0 text-slate-400">
+                        <span style={{
+                          flexShrink: 0,
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)'
+                        }}>
                           {command.icon}
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{command.title}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontWeight: 'var(--font-weight-medium)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: 'var(--font-size-sm)'
+                          }}>
+                            {command.title}
+                          </div>
                           {command.subtitle && (
-                            <div className="text-sm text-slate-500 truncate">
+                            <div style={{
+                              fontSize: 'var(--font-size-xs)',
+                              color: 'var(--text-secondary)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              marginTop: '2px'
+                            }}>
                               {command.subtitle}
                             </div>
                           )}
@@ -221,15 +324,53 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">↑</kbd>
-              <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">↓</kbd>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 'var(--space-3) var(--space-4)',
+          borderTop: '1px solid var(--border-subtle)',
+          fontSize: 'var(--font-size-xs)',
+          color: 'var(--text-muted)'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-4)'
+          }}>
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-1)'
+            }}>
+              <kbd style={{
+                padding: '1px var(--space-1)',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 'var(--font-size-xs)'
+              }}>↑</kbd>
+              <kbd style={{
+                padding: '1px var(--space-1)',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 'var(--font-size-xs)'
+              }}>↓</kbd>
               to navigate
             </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">↵</kbd>
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-1)'
+            }}>
+              <kbd style={{
+                padding: '1px var(--space-1)',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-subtle)',
+                fontSize: 'var(--font-size-xs)'
+              }}>↵</kbd>
               to select
             </span>
           </div>

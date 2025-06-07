@@ -37,7 +37,7 @@ import ChatHub from './pages/Chat';
 import Dashboard from './pages/Dashboard';
 import Notes from './pages/Notes';
 import Tasks from './pages/Tasks';
-import { Projects } from './pages/Projects';
+import Projects from './pages/Projects';
 import Canvas from './pages/Canvas';
 import Calendar from './pages/Calendar';
 import SettingsPage from './pages/Settings'; 

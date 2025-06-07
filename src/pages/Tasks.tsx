@@ -201,7 +201,7 @@ const Tasks: React.FC = () => {
                   <div 
                     key={task.id} 
                     className="kanban-task"
-                    style={{ opacity: task.status === 'done' ? 0.7 : 1 }}
+                    className={task.status === 'done' ? 'opacity-70' : 'opacity-100'}
                   >
                     <div className="kanban-task-header">
                       <div className="kanban-task-title">{task.title}</div>
@@ -242,11 +242,11 @@ const Tasks: React.FC = () => {
 
       {/* List View */}
       {view === 'list' && (
-        <div className="task-list-view" style={{ display: 'block' }}>
+        <div className="task-list-view block">
           <table className="task-list-table">
             <thead>
               <tr>
-                <th><input type="checkbox" style={{ borderRadius: 'var(--radius-sm)' }} /></th>
+                <th><input type="checkbox" className="rounded-sm" /></th>
                 <th>Title</th>
                 <th>Status</th>
                 <th>Priority</th>
@@ -259,22 +259,16 @@ const Tasks: React.FC = () => {
             <tbody>
               {filteredTasks.map(task => (
                 <tr key={task.id}>
-                  <td><input type="checkbox" style={{ borderRadius: 'var(--radius-sm)' }} /></td>
+                  <td><input type="checkbox" className="rounded-sm" /></td>
                   <td>{task.title}</td>
-                  <td style={{ textTransform: 'capitalize' }}>
+                  <td className="capitalize">
                     {task.status === 'in-progress' ? 'In Progress' : task.status === 'todo' ? 'To Do' : 'Done'}
                   </td>
                   <td>
                     <span 
                       className="priority-dot" 
-                      style={{ 
-                        backgroundColor: getPriorityColor(task.priority),
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        display: 'inline-block',
-                        marginRight: '8px'
-                      }}
+                      className="w-2 h-2 rounded-full inline-block mr-2"
+                      style={{ backgroundColor: getPriorityColor(task.priority) }}
                     ></span>
                     {task.priority}
                   </td>

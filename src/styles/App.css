@@ -52,100 +52,159 @@
   overflow-y: auto; 
 }
 
-/* Sidebar Toggle and Layout */
-.app-container.sidebar-closed .sidebar {
-  width: 60px; /* Set a fixed width for the collapsed sidebar to show the toggle */
-  overflow: hidden; /* Hide overflowing content */
+/* Sidebar Styles */
+.sidebar {
+  width: 250px;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-.app-container.sidebar-closed .sidebar .logo,
-.app-container.sidebar-closed .sidebar .nav-section,
-.app-container.sidebar-closed .sidebar .sidebar-footer {
-  display: none; /* Hide everything except the toggle button */
+.sidebar.collapsed {
+  width: 60px;
 }
 
-.app-container.sidebar-closed .sidebar .sidebar-header {
-  height: 60px;
-  padding: 0;
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  height: 72px;
+  border-bottom: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-primary);
+  color: white;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
 }
 
-.app-container.sidebar-closed .sidebar .sidebar-toggle-btn-internal {
-  width: 40px;
-  height: 40px;
-  padding: 8px;
-  margin: 0;
+.sidebar-nav {
+  flex: 1;
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.nav-section {
+  margin-bottom: var(--space-6);
+}
+
+.nav-section-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-2);
+}
+
+.nav-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: all 0.15s ease;
+  margin-bottom: var(--space-1);
 }
 
-.app-container.sidebar-open .sidebar {
-  width: 250px; /* Expanded width */
+.nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+}
+
+.nav-item-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.nav-badge {
+  background: var(--accent-primary);
+  color: white;
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+}
+
+.sidebar-footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Collapsed sidebar styles */
+.sidebar.collapsed .logo span,
 .sidebar.collapsed .nav-section-title,
 .sidebar.collapsed .nav-item span,
-.sidebar.collapsed .nav-badge,
-.sidebar.collapsed .sidebar-footer span,
-.sidebar.collapsed .logo span,
-.sidebar.collapsed .nav-section,
-.sidebar.collapsed .sidebar-footer .nav-item:not(.sidebar-toggle-btn-internal) { /* Hide all nav items except the toggle in the footer if it were there */
+.sidebar.collapsed .nav-badge {
   display: none;
 }
 
-.sidebar.collapsed .sidebar-header {
-  /* Ensure header is still visible and toggle is usable */
-  padding: 16px; /* Maintain padding for the header */
-}
-
-.sidebar.collapsed .nav-item,
-.sidebar.collapsed .sidebar-footer .nav-item {
+.sidebar.collapsed .nav-item {
   justify-content: center;
+  padding: var(--space-3);
 }
 
 .sidebar.collapsed .logo {
   justify-content: center;
 }
 
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Align logo and toggle */
-  padding: 16px; /* Adjust as needed */
-  height: 60px; /* Match top-bar height */
-  box-sizing: border-box;
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  padding: var(--space-4) var(--space-2);
 }
 
+.sidebar.collapsed .sidebar-toggle-btn-internal {
+  margin: 0;
+}
+
+/* Sidebar toggle button */
 .sidebar-toggle-btn-internal {
   background: none;
   border: none;
-  color: var(--text-primary);
-  padding: 4px; /* Smaller padding for internal button */
-  border-radius: 4px;
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Ensure it's always visible */
-  visibility: visible !important; 
-  opacity: 1 !important;
+  transition: all 0.15s ease;
 }
 
-.sidebar.collapsed .sidebar-toggle-btn-internal {
-  /* Styles for when sidebar is collapsed, if different */
-  margin: 0 auto; /* Center the button if needed when sidebar is collapsed */
-}
-
-.sidebar.expanded .logo {
-  /* Ensure logo takes space and toggle is to the right */
-  flex-grow: 1;
-}
-
-.sidebar.collapsed .nav-item-icon {
-  margin-right: 0;
+.sidebar-toggle-btn-internal:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .top-bar {
@@ -154,7 +213,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-6);
+  padding: 0 var(--space-5);
   gap: var(--space-4);
   background: var(--bg-surface);
   flex-shrink: 0;
@@ -163,62 +222,67 @@
 .top-bar-left {
   display: flex;
   align-items: center;
-}
-
-/* .sidebar-toggle-btn { 
-  margin-right: 16px; 
-} */ /* Commented out as it's moved */
-
-.focus-mode-toggle-btn {
-  /* Styles for focus mode toggle if needed, already an action-btn */
+  gap: var(--space-4);
 }
 
 .top-bar-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .action-btn {
   background: none;
   border: none;
-  color: var(--text-primary);
-  padding: 8px;
-  border-radius: 4px;
+  color: var(--text-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s ease;
+  width: 36px;
+  height: 36px;
 }
 
 .action-btn:hover {
-  background-color: var(--bg-elevated);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .action-btn.primary {
-  background-color: var(--accent-primary);
+  background: var(--accent-primary);
   color: white;
 }
 
 .action-btn.primary:hover {
-  background-color: var(--accent-secondary);
+  background: var(--accent-secondary);
 }
 
 .search-bar {
-  flex-grow: 1; /* Allow search bar to take available space */
-  max-width: 400px; /* Optional: constrain max width */
+  flex-grow: 1;
+  max-width: 400px;
   display: flex;
   align-items: center;
-  background-color: var(--background-tertiary);
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: var(--bg-tertiary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.15s ease;
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .search-icon {
   color: var(--text-muted);
-  margin-right: 8px;
-  width: 18px;
-  height: 18px;
+  margin-right: var(--space-2);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .search-input {
@@ -227,18 +291,25 @@
   border: none;
   outline: none;
   color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
 }
 
 .search-kbd {
-  background-color: var(--background-secondary);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  background: var(--bg-secondary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-subtle);
+  margin-left: var(--space-2);
 }
 
 .breadcrumb {
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
 }

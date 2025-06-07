@@ -40,17 +40,8 @@ export function Dashboard() {
       />
 
       {/* Subtitle */}
-      <div style={{
-        padding: '0 var(--space-5)',
-        marginBottom: 'var(--space-6)',
-        borderBottom: '1px solid var(--border-subtle)',
-        paddingBottom: 'var(--space-4)'
-      }}>
-        <p style={{
-          color: 'var(--text-secondary)',
-          fontSize: '14px',
-          margin: 0
-        }}>
+      <div className="px-5 mb-6 border-b border-border-subtle pb-4">
+        <p className="text-text-secondary text-sm m-0">
           Here's what's happening today.
         </p>
       </div>
@@ -59,7 +50,7 @@ export function Dashboard() {
         {/* UI Migration Sprint Widget */}
         <div className="widget">
           <div className="widget-drag-handle">
-            <GripVertical style={{ width: '16px', height: '16px' }} />
+            <GripVertical className="w-4 h-4" />
           </div>
           <div className="project-progress">
             <div className="progress-header">
@@ -67,12 +58,12 @@ export function Dashboard() {
               <span className="progress-percentage">67% complete</span>
             </div>
             <div className="progress-bar">
-              <div className="progress-fill" style={{ width: '67%' }}></div>
+              <div className="progress-fill w-[67%]"></div>
             </div>
             <div className="milestone-list">
               <div className="milestone">
                 {/* <div className="milestone-status completed"></div> */}
-                <CheckCircle2 style={{ width: '16px', height: '16px', color: 'var(--success)' }} />
+                <CheckCircle2 className="w-4 h-4 text-success" />
                 <div className="milestone-content">
                   <div className="milestone-title">Component library setup</div>
                 </div>
@@ -80,7 +71,7 @@ export function Dashboard() {
               </div>
               <div className="milestone">
                 {/* <div className="milestone-status completed"></div> */}
-                <CheckCircle2 style={{ width: '16px', height: '16px', color: 'var(--success)' }} />
+                <CheckCircle2 className="w-4 h-4 text-success" />
                 <div className="milestone-content">
                   <div className="milestone-title">Dashboard redesign</div>
                 </div>
@@ -88,7 +79,7 @@ export function Dashboard() {
               </div>
               <div className="milestone">
                 {/* <div className="milestone-status pending"></div> */}
-                <Circle style={{ width: '16px', height: '16px', color: 'var(--text-muted)', strokeWidth: 2 }} />
+                <Circle className="w-4 h-4 text-text-muted stroke-2" />
                 {/* Using Circle with increased strokeWidth for better visual weight */}
                 <div className="milestone-content">
                   <div className="milestone-title">Chat interface migration</div>
@@ -102,13 +93,13 @@ export function Dashboard() {
         {/* Today's Focus Widget */}
         <div className="widget">
           <div className="widget-drag-handle">
-            <GripVertical style={{ width: '16px', height: '16px' }} />
+            <GripVertical className="w-4 h-4" />
           </div>
           <div className="widget-header">
             <h3 className="widget-title">Today's focus</h3>
             <div className="widget-actions">
               <button className="widget-action">
-                <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+                <MoreHorizontal className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -121,8 +112,8 @@ export function Dashboard() {
               <div className="event-details">
                 <div className="event-title">Design review</div>
                 <div className="event-meta">
-                  <span style={{ display: 'flex', alignItems: 'center' }}>
-                    <div className="event-indicator" style={{ background: 'var(--accent-primary)' }}></div>
+                  <span className="flex items-center">
+                    <div className="event-indicator bg-accent-primary"></div>
                     UI migration team
                   </span>
                 </div>
@@ -136,8 +127,8 @@ export function Dashboard() {
               <div className="event-details">
                 <div className="event-title">Code review session</div>
                 <div className="event-meta">
-                  <span style={{ display: 'flex', alignItems: 'center' }}>
-                    <div className="event-indicator" style={{ background: 'var(--success)' }}></div>
+                  <span className="flex items-center">
+                    <div className="event-indicator bg-success"></div>
                     Development team
                   </span>
                 </div>
@@ -149,13 +140,13 @@ export function Dashboard() {
         {/* Agent Status Widget */}
         <div className="widget">
           <div className="widget-drag-handle">
-            <GripVertical style={{ width: '16px', height: '16px' }} />
+            <GripVertical className="w-4 h-4" />
           </div>
           <div className="widget-header">
             <h3 className="widget-title">Agent status</h3>
             <div className="widget-actions">
               <button className="widget-action">
-                <Settings2 style={{ width: '16px', height: '16px' }} />
+                <Settings2 className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -182,7 +173,7 @@ export function Dashboard() {
         {/* Quick Actions Widget */}
         <div className="widget">
           <div className="widget-drag-handle">
-            <GripVertical style={{ width: '16px', height: '16px' }} />
+            <GripVertical className="w-4 h-4" />
           </div>
           <div className="widget-header">
             <h3 className="widget-title">Quick actions</h3>
@@ -190,21 +181,21 @@ export function Dashboard() {
           <div className="quick-actions-grid">
             <div className="quick-actions-primary">
               <button className="btn btn-primary">
-                <MessageSquare style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                <MessageSquare className="w-4 h-4 mr-2" />
                 Start chat
               </button>
             </div>
             <div className="quick-actions-secondary">
               <button className="btn btn-secondary">
-                <FileText style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                <FileText className="w-4 h-4 mr-2" />
                 New note
               </button>
               <button className="btn btn-secondary">
-                <FolderPlus style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                <FolderPlus className="w-4 h-4 mr-2" />
                 Create project
               </button>
               <button className="btn btn-secondary">
-                <LayoutTemplate style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                <LayoutTemplate className="w-4 h-4 mr-2" />
                 Open canvas
               </button>
             </div>

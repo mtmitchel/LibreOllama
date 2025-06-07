@@ -48,250 +48,306 @@ const mockProjects: Project[] = [
     name: 'Q3 Marketing Campaign',
     description: 'Strategic marketing initiatives for Q3 growth.',
     color: 'var(--success)',
-    progress: 40
+    progress: 45
   },
   {
     id: '3',
-    name: 'Research Paper',
-    description: 'Academic research on AI-assisted development.',
+    name: 'Backend Optimization',
+    description: 'Performance improvements and database optimization.',
     color: 'var(--warning)',
-    progress: 15
+    progress: 30
   }
 ];
 
 const mockAssets: ProjectAsset[] = [
-  { type: 'notes', count: 12, icon: NotebookPen, label: 'Notes' },
-  { type: 'tasks', count: 8, icon: CheckCircle2, label: 'Tasks' },
-  { type: 'canvas', count: 3, icon: Presentation, label: 'Canvas' },
-  { type: 'files', count: 24, icon: FolderOpen, label: 'Files' }
+  { type: 'notes', count: 24, icon: NotebookPen, label: 'Notes' },
+  { type: 'tasks', count: 18, icon: CheckCircle2, label: 'Tasks' },
+  { type: 'canvas', count: 6, icon: Presentation, label: 'Canvas' },
+  { type: 'files', count: 42, icon: FolderOpen, label: 'Files' }
 ];
 
 const mockRoadmap: RoadmapItem[] = [
   {
     id: '1',
-    date: 'Dec 15',
-    title: 'Design system foundation',
-    description: 'Establish color palette, typography, spacing.'
+    date: '2024-01-15',
+    title: 'Project Kickoff',
+    description: 'Initial planning and team alignment'
   },
   {
     id: '2',
-    date: 'Jan 05',
-    title: 'Dashboard migration',
-    description: 'Apply new design system to dashboard.'
+    date: '2024-02-01',
+    title: 'Design Phase Complete',
+    description: 'UI/UX designs finalized and approved'
+  },
+  {
+    id: '3',
+    date: '2024-02-15',
+    title: 'Development Milestone',
+    description: 'Core features implementation'
+  },
+  {
+    id: '4',
+    date: '2024-03-01',
+    title: 'Testing & QA',
+    description: 'Comprehensive testing phase'
+  },
+  {
+    id: '5',
+    date: '2024-03-15',
+    title: 'Launch',
+    description: 'Production deployment and go-live'
   }
 ];
 
-export function Projects() {
+export default function Projects() {
+  const [activeTab, setActiveTab] = useState<'overview' | 'roadmap' | 'assets'>('overview');
   const [selectedProject, setSelectedProject] = useState<Project>(mockProjects[0]);
-  const [activeTab, setActiveTab] = useState('overview');
-
-  const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'tasks', label: 'Tasks', count: 8 },
-    { id: 'notes', label: 'Notes', count: 12 },
-    { id: 'canvas', label: 'Canvas', count: 3 },
-    { id: 'files', label: 'Files', count: 24 },
-    { id: 'chats', label: 'Chats', count: 5 }
-  ];
-
-  const handleNewProject = () => {
-    // TODO: Implement new project creation
-    console.log('Create new project');
-  };
-
-  const handleFavoriteProject = () => {
-    // TODO: Implement favorite toggle functionality
-    console.log('Toggle favorite for project:', selectedProject.id);
-  };
-
-  const handleProjectSettings = () => {
-    // TODO: Implement project settings
-    console.log('Open settings for project:', selectedProject.id);
-  };
+  const [sidebarCompact, setSidebarCompact] = useState(false);
 
   return (
     <div className="projects-page">
-      {/* Unified Header */}
-      <UnifiedHeader
-        title="Projects"
-        primaryAction={{
-          label: 'New project',
-          onClick: handleNewProject,
-          icon: <Plus size={16} />
-        }}
+      <UnifiedHeader 
+        title="Projects" 
+        subtitle="Manage and track your project progress"
+        actions={[
+          {
+            icon: Plus,
+            label: 'New Project',
+            variant: 'primary'
+          },
+          {
+            icon: Settings2,
+            label: 'Settings',
+            variant: 'secondary'
+          }
+        ]}
       />
-
-      {/* Project Tabs - Secondary Navigation */}
-      <div className="project-tabs" style={{
-        borderBottom: '1px solid var(--border-subtle)',
-        background: 'var(--bg-surface)',
-        padding: '0 var(--space-5)'
-      }}>
-        {tabs.map((tab) => (
-          <a
-            key={tab.id}
-            href="#"
-            className={`project-tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab(tab.id);
-            }}
-          >
-            {tab.label}
-            {tab.count && ` (${tab.count})`}
-          </a>
-        ))}
-      </div>
-
-      {/* Project Sidebar - Compact project selector */}
-      <div className="project-layout" style={{ display: 'flex' }}>
-        <aside className="project-sidebar-compact" style={{
-          width: '250px',
-          background: 'var(--bg-secondary)',
-          borderRight: '1px solid var(--border-subtle)',
-          padding: 'var(--space-4)'
-        }}>
-          <div className="project-list-compact">
-            <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: 'var(--space-3)', color: 'var(--text-secondary)' }}>
-              All Projects
-            </h3>
-            {mockProjects.map((project) => (
-              <a
+      
+      <div className="projects-layout">
+        {/* Sidebar */}
+        <div className={`projects-sidebar ${sidebarCompact ? 'projects-sidebar-compact' : ''}`}>
+          <div className="projects-sidebar-header">
+            <h3 className="projects-sidebar-title">Projects</h3>
+            <button 
+              className="projects-sidebar-toggle"
+              onClick={() => setSidebarCompact(!sidebarCompact)}
+            >
+              <GripVertical className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="projects-list">
+            {mockProjects.map(project => (
+              <div 
                 key={project.id}
-                href="#"
-                className={`project-list-item-compact ${selectedProject.id === project.id ? 'active' : ''}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedProject(project);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-md)',
-                  textDecoration: 'none',
-                  color: selectedProject.id === project.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  background: selectedProject.id === project.id ? 'var(--bg-primary-subtle)' : 'transparent',
-                  marginBottom: 'var(--space-1)',
-                  fontSize: '14px'
-                }}
+                className={`projects-list-item ${
+                  selectedProject.id === project.id ? 'projects-list-item-active' : ''
+                }`}
+                onClick={() => setSelectedProject(project)}
               >
-                <span
-                  style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: project.color,
-                    flexShrink: 0
-                  }}
-                />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.name}</span>
-              </a>
+                <div className="projects-list-item-content">
+                  <div 
+                    className="projects-list-item-indicator"
+                    style={{ backgroundColor: project.color }}
+                  />
+                  <div className="projects-list-item-info">
+                    <div className="projects-list-item-name">{project.name}</div>
+                    {!sidebarCompact && (
+                      <div className="projects-list-item-description">
+                        {project.description}
+                      </div>
+                    )}
+                  </div>
+                  {project.active && (
+                    <Star className="projects-list-item-star" />
+                  )}
+                </div>
+                {project.progress !== undefined && !sidebarCompact && (
+                  <div className="projects-list-item-progress">
+                    <div className="projects-progress-bar">
+                      <div 
+                        className="projects-progress-fill"
+                        style={{ 
+                          width: `${project.progress}%`,
+                          backgroundColor: project.color 
+                        }}
+                      />
+                    </div>
+                    <span className="projects-progress-text">{project.progress}%</span>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-        </aside>
+        </div>
 
-        {/* Main Project Content - Now takes full width */}
-        <section className="project-main-content" style={{ flex: 1, padding: 'var(--space-5)' }}>
-          {activeTab === 'overview' && (
-            <div className="project-overview">
-              {selectedProject.progress !== undefined && (
-                <div className="project-progress-section card" style={{ marginBottom: 'var(--space-6)' }}>
-                  <div className="progress-header">
-                    <h3 className="progress-title">Project Progress</h3>
-                    <span className="progress-percentage" style={{color: selectedProject.color || 'var(--accent-primary)'}}>{selectedProject.progress}%</span>
-                  </div>
-                  <div className="progress-bar-container" style={{ backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                    <div
-                      className="progress-bar-fill"
-                      style={{
-                        width: `${selectedProject.progress}%`,
-                        backgroundColor: selectedProject.color || 'var(--accent-primary)',
-                        height: '12px',
-                        borderRadius: 'var(--radius-sm)',
-                        transition: 'width 0.5s ease-in-out'
-                      }}
+        {/* Main Content */}
+        <div className="projects-main">
+          {/* Tabs */}
+          <div className="projects-tabs">
+            {[
+              { id: 'overview', label: 'Overview' },
+              { id: 'roadmap', label: 'Roadmap' },
+              { id: 'assets', label: 'Assets' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                className={`projects-tab ${
+                  activeTab === tab.id ? 'projects-tab-active' : ''
+                }`}
+                onClick={() => setActiveTab(tab.id as any)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="projects-content">
+            {activeTab === 'overview' && (
+              <div className="projects-overview">
+                {/* Project Header */}
+                <div className="projects-overview-header">
+                  <div className="projects-overview-title">
+                    <div 
+                      className="projects-overview-indicator"
+                      style={{ backgroundColor: selectedProject.color }}
                     />
+                    <div>
+                      <h2 className="projects-overview-name">{selectedProject.name}</h2>
+                      <p className="projects-overview-description">{selectedProject.description}</p>
+                    </div>
+                  </div>
+                  {selectedProject.active && (
+                    <div className="projects-overview-badge">
+                      Active
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress Section */}
+                {selectedProject.progress !== undefined && (
+                  <div className="projects-overview-section">
+                    <h3 className="projects-section-title">Progress</h3>
+                    <div className="projects-overview-progress">
+                      <div className="projects-progress-bar-large">
+                        <div 
+                          className="projects-progress-fill-large"
+                          style={{ 
+                            width: `${selectedProject.progress}%`,
+                            backgroundColor: selectedProject.color 
+                          }}
+                        />
+                      </div>
+                      <span className="projects-progress-text-large">
+                        {selectedProject.progress}% Complete
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Goals Section */}
+                <div className="projects-overview-section">
+                  <h3 className="projects-section-title">Goals</h3>
+                  <div className="projects-goals">
+                    <div className="projects-goal">
+                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-completed" />
+                      <span className="projects-goal-text">Complete UI component migration</span>
+                    </div>
+                    <div className="projects-goal">
+                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-completed" />
+                      <span className="projects-goal-text">Implement design system</span>
+                    </div>
+                    <div className="projects-goal">
+                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-pending" />
+                      <span className="projects-goal-text">Performance optimization</span>
+                    </div>
+                    <div className="projects-goal">
+                      <CheckCircle2 className="projects-goal-icon projects-goal-icon-pending" />
+                      <span className="projects-goal-text">User testing and feedback</span>
+                    </div>
                   </div>
                 </div>
-              )}
-              <div className="project-content-blocks">
-                <div className="card project-sidebar-widget">
-                  <h3>Project goals</h3>
-                  <p>
-                    Modernize the user interface with a cohesive design system,
-                    improve accessibility compliance, and enhance overall user
-                    experience through improved information architecture.
-                  </p>
-                </div>
-                
-                <div className="card project-sidebar-widget">
-                  <h3>Timeline / Roadmap</h3>
-                  <div className="roadmap-timeline">
-                    {mockRoadmap.map((item, index) => (
-                      <div key={item.id} className="roadmap-item">
-                        <div className="roadmap-date">{item.date}</div>
-                        <div className="roadmap-connector">
-                          <div className="roadmap-diamond"></div>
-                          {index < mockRoadmap.length - 1 && <div className="roadmap-line"></div>}
-                        </div>
-                        <div className="roadmap-content">
-                          <div className="roadmap-title">{item.title}</div>
-                          <div className="roadmap-description">{item.description}</div>
-                        </div>
-                      </div>
-                    ))}
+
+                {/* Task Summary */}
+                <div className="projects-overview-section">
+                  <h3 className="projects-section-title">Task Summary</h3>
+                  <div className="projects-task-summary">
+                    <div className="projects-task-stat">
+                      <span className="projects-task-stat-number">24</span>
+                      <span className="projects-task-stat-label">Total Tasks</span>
+                    </div>
+                    <div className="projects-task-stat">
+                      <span className="projects-task-stat-number">18</span>
+                      <span className="projects-task-stat-label">Completed</span>
+                    </div>
+                    <div className="projects-task-stat">
+                      <span className="projects-task-stat-number">4</span>
+                      <span className="projects-task-stat-label">In Progress</span>
+                    </div>
+                    <div className="projects-task-stat">
+                      <span className="projects-task-stat-number">2</span>
+                      <span className="projects-task-stat-label">Pending</span>
+                    </div>
                   </div>
                 </div>
               </div>
-              
-              <aside className="project-sidebar-widgets">
-                <div className="sidebar-widget card project-sidebar-widget">
-                  <h3 className="sidebar-widget-title">Task Summary</h3>
-                  <p>
-                    Overdue: <span style={{ color: 'var(--error)', fontWeight: 600 }}>2</span>
-                  </p>
-                  <p>
-                    Due this week: <span style={{ color: 'var(--warning)', fontWeight: 600 }}>5</span>
-                  </p>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ marginTop: 'var(--space-3)', width: '100%' }}
-                  >
-                    View all tasks
-                  </button>
+            )}
+
+            {activeTab === 'roadmap' && (
+              <div className="projects-roadmap">
+                <h3 className="projects-section-title">Project Roadmap</h3>
+                <div className="projects-roadmap-timeline">
+                  {mockRoadmap.map((item, index) => (
+                    <div key={item.id} className="projects-roadmap-item">
+                      <div className="projects-roadmap-date">
+                        {new Date(item.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </div>
+                      <div className="projects-roadmap-connector">
+                        <div className={`projects-roadmap-dot ${
+                          index <= 1 ? 'projects-roadmap-dot-completed' : 'projects-roadmap-dot-pending'
+                        }`} />
+                        {index < mockRoadmap.length - 1 && (
+                          <div className="projects-roadmap-line" />
+                        )}
+                      </div>
+                      <div className="projects-roadmap-content">
+                        <h4 className="projects-roadmap-title">{item.title}</h4>
+                        <p className="projects-roadmap-description">{item.description}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="sidebar-widget card project-sidebar-widget">
-                  <h3 className="sidebar-widget-title">Project Assets</h3>
-                  <div className="project-assets-grid">
-                    {mockAssets.map((asset) => {
-                      const IconComponent = asset.icon;
-                      return (
-                        <a key={asset.type} href="#" className="project-asset-item">
-                          <IconComponent />
-                          <span className="project-asset-item-label">{asset.label}</span>
-                          <span className="project-asset-item-count">({asset.count})</span>
-                        </a>
-                      );
-                    })}
-                  </div>
+              </div>
+            )}
+
+            {activeTab === 'assets' && (
+              <div className="projects-assets">
+                <h3 className="projects-section-title">Project Assets</h3>
+                <div className="projects-assets-grid">
+                  {mockAssets.map(asset => {
+                    const IconComponent = asset.icon;
+                    return (
+                      <div key={asset.type} className="projects-asset-card">
+                        <div className="projects-asset-icon">
+                          <IconComponent className="w-6 h-6" />
+                        </div>
+                        <div className="projects-asset-info">
+                          <span className="projects-asset-count">{asset.count}</span>
+                          <span className="projects-asset-label">{asset.label}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </aside>
-            </div>
-          )}
-          
-          {activeTab !== 'overview' && (
-            <div className="card project-sidebar-widget">
-              <h3>{tabs.find(t => t.id === activeTab)?.label} Content</h3>
-              <p>Content for {activeTab} tab will be implemented here.</p>
-            </div>
-          )}
-        </section>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-export default Projects;

@@ -51,31 +51,28 @@ export function Notes() {
   const [folders, setFolders] = useState<Folder[]>([
     {
       id: '1',
-      name: 'Research',
-      isExpanded: false,
+      name: 'Personal',
+      isExpanded: true,
       notes: [
-        { id: '1', title: 'Market Analysis Q3', content: '', folderId: '1' }
+        { id: '1', title: 'Daily Journal', content: 'Today was a productive day...', folderId: '1' },
+        { id: '2', title: 'Book Notes', content: 'Key insights from the book...', folderId: '1' }
       ]
     },
     {
       id: '2',
-      name: 'Meeting Minutes',
-      isExpanded: true,
+      name: 'Work',
+      isExpanded: false,
       notes: [
-        { id: '2', title: 'Project Alpha Kickoff', content: '', folderId: '2' },
-        { id: '3', title: 'Weekly Sync - June 3rd', content: '', folderId: '2' }
+        { id: '3', title: 'Meeting Notes', content: 'Discussed project timeline...', folderId: '2' },
+        { id: '4', title: 'Ideas', content: 'New feature concepts...', folderId: '2' }
       ]
     }
   ]);
 
-  const [activeNoteId, setActiveNoteId] = useState('2');
+  const [activeNote, setActiveNote] = useState<Note | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([
-    { id: '1', type: 'text', content: 'Attendees: Alex, Sarah, Mike' },
-    { id: '2', type: 'heading1', content: 'Meeting Agenda' },
-    { id: '3', type: 'list', content: 'Project goals and scope\nKey deliverables\nTimeline and milestones for [[Project Alpha Dashboard]] release.' },
-    { id: '4', type: 'heading2', content: 'Action Items' },
-    { id: '5', type: 'checklist', content: 'Finalize user stories|false\nSetup project repository|true' },
-    { id: '6', type: 'code', content: 'function greet(name) {\n  console.log("Hello, " + name + "!");\n}' }
+    { id: '1', type: 'heading1', content: 'Welcome to Notes' },
+    { id: '2', type: 'text', content: 'Start writing your thoughts here...' }
   ]);
 
   const toggleFolder = (folderId: string) => {
@@ -86,265 +83,254 @@ export function Notes() {
     ));
   };
 
-  const getActiveNote = () => {
-    for (const folder of folders) {
-      const note = folder.notes.find(n => n.id === activeNoteId);
-      if (note) return note;
-    }
-    return null;
+  const addBlock = (type: Block['type']) => {
+    const newBlock: Block = {
+      id: Date.now().toString(),
+      type,
+      content: ''
+    };
+    setBlocks([...blocks, newBlock]);
   };
 
-  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
-
-  const getBlockIcon = (type: Block['type']) => {
-    switch (type) {
-      case 'text': return <Pilcrow size={16} />;
-      case 'heading1': return <Heading1 size={16} />;
-      case 'heading2': return <Heading2 size={16} />;
-      case 'list': return <List size={16} />;
-      case 'checklist': return <CheckSquare size={16} />;
-      case 'code': return <Code2 size={16} />;
-      case 'image': return <Image size={16} />;
-      case 'table': return <Table2 size={16} />;
-      default: return <Pilcrow size={16} />;
-    }
+  const updateBlock = (blockId: string, content: string) => {
+    setBlocks(blocks.map(block => 
+      block.id === blockId ? { ...block, content } : block
+    ));
   };
 
   const renderBlock = (block: Block) => {
+    const baseClasses = "notes-block";
+    
     switch (block.type) {
       case 'heading1':
-        return <h1 className="block-content heading1">{block.content}</h1>;
+        return (
+          <input
+            key={block.id}
+            type="text"
+            value={block.content}
+            onChange={(e) => updateBlock(block.id, e.target.value)}
+            className={`${baseClasses} notes-heading-1`}
+            placeholder="Heading 1"
+          />
+        );
       case 'heading2':
-        return <h2 className="block-content heading2">{block.content}</h2>;
+        return (
+          <input
+            key={block.id}
+            type="text"
+            value={block.content}
+            onChange={(e) => updateBlock(block.id, e.target.value)}
+            className={`${baseClasses} notes-heading-2`}
+            placeholder="Heading 2"
+          />
+        );
+      case 'text':
+        return (
+          <textarea
+            key={block.id}
+            value={block.content}
+            onChange={(e) => updateBlock(block.id, e.target.value)}
+            className={`${baseClasses} notes-text`}
+            placeholder="Start typing..."
+            rows={3}
+          />
+        );
       case 'list':
         return (
-          <div className="block-content">
-            <ol>
-              {block.content.split('\n').map((item, idx) => (
-                <li key={idx}>{item.replace(/\[\[(.+?)\]\]/g, '<span class="wiki-link">$1</span>')}</li>
-              ))}
-            </ol>
-          </div>
+          <textarea
+            key={block.id}
+            value={block.content}
+            onChange={(e) => updateBlock(block.id, e.target.value)}
+            className={`${baseClasses} notes-list`}
+            placeholder="• List item"
+            rows={3}
+          />
         );
       case 'checklist':
         return (
-          <div className="block-content checklist">
-            {block.content.split('\n').map((item, idx) => {
-              const [text, checked] = item.split('|');
-              return (
-                <div key={idx} className="task-item">
-                  <input 
-                    type="checkbox" 
-                    id={`task-${block.id}-${idx}`} 
-                    checked={checked === 'true'} 
-                    disabled 
-                  />
-                  <label 
-                    htmlFor={`task-${block.id}-${idx}`} 
-                    className={checked === 'true' ? 'completed' : ''}
-                  >
-                    {text}
-                  </label>
-                </div>
-              );
-            })}
-          </div>
+          <textarea
+            key={block.id}
+            value={block.content}
+            onChange={(e) => updateBlock(block.id, e.target.value)}
+            className={`${baseClasses} notes-checklist`}
+            placeholder="☐ Task item"
+            rows={3}
+          />
         );
       case 'code':
         return (
-          <div className="block-content code-block">
-            <button className="copy-code-btn">
-              <Copy size={12} />
-              Copy
-            </button>
-            <code>{block.content}</code>
-          </div>
-        );
-      case 'image':
-        return (
-          <div className="block-content image-placeholder">
-            <ImageOff size={48} style={{ marginBottom: 'var(--space-2)' }} />
-            Image Placeholder
-          </div>
-        );
-      case 'table':
-        return (
-          <div className="block-content table-block">
-            <table>
-              <thead>
-                <tr>
-                  <th>Column 1</th>
-                  <th>Column 2</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Cell A1</td>
-                  <td>Cell B1</td>
-                </tr>
-                <tr>
-                  <td>Cell A2</td>
-                  <td>Cell B2</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <textarea
+            key={block.id}
+            value={block.content}
+            onChange={(e) => updateBlock(block.id, e.target.value)}
+            className={`${baseClasses} notes-code`}
+            placeholder="Code block"
+            rows={5}
+          />
         );
       default:
         return (
-          <div className="block-content text-block">
-            {block.content || (
-              <div className="placeholder-text">
-                <MousePointer size={18} />
-                Type '/' for commands, or just start writing...
-                <div className="inline-format-hint">
-                  <Bold size={14} title="Bold" />
-                  <Italic size={14} title="Italic" />
-                  <Underline size={14} title="Underline" />
-                </div>
-              </div>
-            )}
-          </div>
+          <textarea
+            key={block.id}
+            value={block.content}
+            onChange={(e) => updateBlock(block.id, e.target.value)}
+            className={`${baseClasses} notes-text`}
+            placeholder="Start typing..."
+            rows={3}
+          />
         );
     }
-  };  const activeNote = getActiveNote();
+  };
 
   return (
     <div className="notes-layout">
-      <aside className="notes-sidebar">
+      {/* Sidebar */}
+      <div className="notes-sidebar">
         <div className="notes-sidebar-header">
-          <h2 className="notes-sidebar-title">My notebooks</h2>
-          <button className="btn btn-new-notebook">
-            <Plus size={16} />
-            New notebook
+          <h2 className="notes-sidebar-title">Notes</h2>
+          <button className="btn btn-sm btn-primary">
+            <Plus className="icon-sm" />
           </button>
         </div>
-        <div className="notebook-tree">
+
+        {/* Quick Access */}
+        <div className="notes-quick-access">
+          <div className="notes-quick-item notes-quick-item-active">
+            <Star className="icon-sm" />
+            <span>Starred</span>
+          </div>
+          <div className="notes-quick-item">
+            <Users className="icon-sm" />
+            <span>Shared</span>
+          </div>
+          <div className="notes-quick-item">
+            <History className="icon-sm" />
+            <span>Recent</span>
+          </div>
+        </div>
+
+        {/* Folders */}
+        <div className="notes-folders">
+          <div className="notes-section-title">Folders</div>
           {folders.map(folder => (
-            <div key={folder.id} className="notebook-folder">
+            <div key={folder.id} className="notes-folder">
               <div 
-                className={`notebook-folder-title ${folder.isExpanded ? 'active-folder' : ''}`}
+                className="notes-folder-header"
                 onClick={() => toggleFolder(folder.id)}
               >
-                <ChevronRight 
-                  size={16} 
-                  className={`folder-chevron ${folder.isExpanded ? 'expanded' : ''}`} 
-                />
-                {folder.isExpanded ? <FolderOpen size={18} /> : <Folder size={18} />}
-                {folder.name}
+                <div className="notes-folder-icon">
+                  {folder.isExpanded ? <FolderOpen className="icon-sm" /> : <Folder className="icon-sm" />}
+                </div>
+                <span className="notes-folder-name">{folder.name}</span>
+                <ChevronRight className={`icon-sm notes-folder-chevron ${folder.isExpanded ? 'notes-folder-chevron-expanded' : ''}`} />
               </div>
+              
               {folder.isExpanded && (
-                <div className="notebook-notes">
+                <div className="notes-folder-content">
                   {folder.notes.map(note => (
-                    <a 
-                      key={note.id}
-                      href="#" 
-                      className={`note-list-item ${note.id === activeNoteId ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setActiveNoteId(note.id);
-                      }}
+                    <div 
+                      key={note.id} 
+                      className={`notes-note-item ${activeNote?.id === note.id ? 'notes-note-item-active' : ''}`}
+                      onClick={() => setActiveNote(note)}
                     >
-                      <FileText size={16} />
-                      {note.title}
-                    </a>
+                      <FileText className="icon-sm" />
+                      <span className="notes-note-title">{note.title}</span>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
           ))}
         </div>
-      </aside>
+      </div>
 
-      <main className="notes-main">
-        <div className="notes-editor-header">
-          <div className="note-title-display">
-            {activeNote?.title || 'Select a note'}
+      {/* Main Content */}
+      <div className="notes-main">
+        {/* Toolbar */}
+        <div className="notes-toolbar">
+          <div className="notes-toolbar-section">
+            <button 
+              className="notes-tool-btn"
+              onClick={() => addBlock('text')}
+              title="Text"
+            >
+              <Pilcrow className="icon-sm" />
+            </button>
+            <button 
+              className="notes-tool-btn"
+              onClick={() => addBlock('heading1')}
+              title="Heading 1"
+            >
+              <Heading1 className="icon-sm" />
+            </button>
+            <button 
+              className="notes-tool-btn"
+              onClick={() => addBlock('heading2')}
+              title="Heading 2"
+            >
+              <Heading2 className="icon-sm" />
+            </button>
           </div>
-          <div className="note-actions">
-            <button className="btn btn-ghost" title="Favorite">
-              <Star size={18} />
+
+          <div className="notes-toolbar-divider"></div>
+
+          <div className="notes-toolbar-section">
+            <button 
+              className="notes-tool-btn"
+              onClick={() => addBlock('list')}
+              title="Bullet List"
+            >
+              <List className="icon-sm" />
             </button>
-            <button className="btn btn-ghost" title="Share">
-              <Users size={18} />
+            <button 
+              className="notes-tool-btn"
+              onClick={() => addBlock('checklist')}
+              title="Checklist"
+            >
+              <CheckSquare className="icon-sm" />
             </button>
-            <button className="btn btn-ghost" title="History">
-              <History size={18} />
+          </div>
+
+          <div className="notes-toolbar-divider"></div>
+
+          <div className="notes-toolbar-section">
+            <button 
+              className="notes-tool-btn"
+              onClick={() => addBlock('code')}
+              title="Code Block"
+            >
+              <Code2 className="icon-sm" />
             </button>
-            <button className="btn btn-ghost" title="More options">
-              <MoreHorizontal size={18} />
+            <button className="notes-tool-btn" title="Image">
+              <Image className="icon-sm" />
+            </button>
+            <button className="notes-tool-btn" title="Table">
+              <Table2 className="icon-sm" />
+            </button>
+          </div>
+
+          <div className="notes-toolbar-divider"></div>
+
+          <div className="notes-toolbar-section">
+            <button className="notes-tool-btn" title="Bold">
+              <Bold className="icon-sm" />
+            </button>
+            <button className="notes-tool-btn" title="Italic">
+              <Italic className="icon-sm" />
+            </button>
+            <button className="notes-tool-btn" title="Underline">
+              <Underline className="icon-sm" />
             </button>
           </div>
         </div>
 
-        <div className="block-type-toolbar">
-          <button className="block-type-btn">
-            <Pilcrow size={14} />
-            Text
-          </button>
-          <button className="block-type-btn">
-            <Heading1 size={14} />
-            H1
-          </button>
-          <button className="block-type-btn">
-            <Heading2 size={14} />
-            H2
-          </button>
-          <button className="block-type-btn">
-            <List size={14} />
-            List
-          </button>
-          <button className="block-type-btn">
-            <CheckSquare size={14} />
-            Checklist
-          </button>
-          <button className="block-type-btn">
-            <Code2 size={14} />
-            Code
-          </button>
-          <button className="block-type-btn">
-            <Image size={14} />
-            Image
-          </button>
-          <button className="block-type-btn">
-            <Table2 size={14} />
-            Table
-          </button>
-          <button className="block-type-btn">
-            <PencilRuler size={14} />
-            Sketch
-          </button>
+        {/* Editor */}
+        <div className="notes-editor">
+          <div className="notes-editor-content">
+            {blocks.map(block => renderBlock(block))}
+          </div>
         </div>
-
-        <div className="notes-editor-content">
-          {activeNote ? (
-            blocks.map(block => (
-              <div 
-                key={block.id} 
-                className="editor-block"
-                onMouseEnter={() => setHoveredBlockId(block.id)}
-                onMouseLeave={() => setHoveredBlockId(null)}
-              >
-                <div className={`block-drag-handle ${hoveredBlockId === block.id ? 'visible' : ''}`}>
-                  {getBlockIcon(block.type)}
-                </div>
-                {renderBlock(block)}
-              </div>
-            ))
-          ) : (
-            <div className="editor-block">
-               <div className="block-content placeholder-text">
-                 <MousePointer size={18} />
-                 Select a note to start editing...
-              </div>
-            </div>
-          )}
-        </div>
-
-        <button className="fab" title="Add new block">
-          <Plus size={22} />
-        </button>
-      </main>
+      </div>
     </div>
   );
 }

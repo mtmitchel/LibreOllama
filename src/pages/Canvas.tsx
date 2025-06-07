@@ -184,17 +184,7 @@ const Canvas: React.FC = () => {
               defaultValue={element.content}
               placeholder="Type your note..."
               onMouseDown={(e) => e.stopPropagation()}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                width: '100%',
-                height: '100%',
-                resize: 'none',
-                fontFamily: 'inherit',
-                fontSize: '14px',
-                color: '#1f2937'
-              }}
+              className="bg-transparent border-none outline-none w-full h-full resize-none font-inherit text-sm text-gray-800"
             />
           </div>
         );
@@ -205,10 +195,9 @@ const Canvas: React.FC = () => {
             className="canvas-element canvas-shape rectangle"
             style={{
               ...style,
-              background: element.color || 'var(--accent-primary)',
-              borderRadius: 'var(--radius-md)',
-              border: '2px solid rgba(255, 255, 255, 0.2)'
+              background: element.color || 'var(--accent-primary)'
             }}
+            className="rounded-md border-2 border-white/20"
             onMouseDown={handleMouseDown}
           />
         );
@@ -219,10 +208,9 @@ const Canvas: React.FC = () => {
             className="canvas-element canvas-shape circle"
             style={{
               ...style,
-              background: element.color || 'var(--success)',
-              borderRadius: '50%',
-              border: '2px solid rgba(255, 255, 255, 0.2)'
+              background: element.color || 'var(--success)'
             }}
+            className="rounded-full border-2 border-white/20"
             onMouseDown={handleMouseDown}
           />
         );
@@ -234,11 +222,9 @@ const Canvas: React.FC = () => {
             style={{
               left: element.x,
               top: element.y,
-              color: element.color || 'var(--text-primary)',
-              fontSize: '18px',
-              fontWeight: 600,
-              whiteSpace: 'nowrap'
+              color: element.color || 'var(--text-primary)'
             }}
+            className="text-lg font-semibold whitespace-nowrap"
             onMouseDown={handleMouseDown}
           >
             {element.content}
@@ -314,15 +300,8 @@ const Canvas: React.FC = () => {
 
         {/* Empty State */}
         {elements.length === 0 && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: 'var(--text-muted)',
-            textAlign: 'center'
-          }}>
-            <MousePointerClick size={48} style={{ marginBottom: 'var(--space-3)' }} />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-text-muted text-center">
+            <MousePointerClick size={48} className="mb-3" />
             <p>Use the toolbar to add elements to your canvas.</p>
           </div>
         )}
@@ -334,11 +313,11 @@ const Canvas: React.FC = () => {
       </div>
 
       {/* Properties Panel */}
-      <div className="properties-panel" style={{ display: selectedElement ? 'block' : 'none' }}>
+      <div className={`properties-panel ${selectedElement ? 'block' : 'hidden'}`}>
         <h3 className="properties-title">Element Properties</h3>
         {selectedElement ? (
           <div>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
+            <p className="text-text-tertiary text-xs">
               Selected: {elements.find(el => el.id === selectedElement)?.type}
             </p>
             <button 
@@ -346,22 +325,13 @@ const Canvas: React.FC = () => {
                 setElements(prev => prev.filter(el => el.id !== selectedElement));
                 setSelectedElement(null);
               }}
-              style={{
-                marginTop: 'var(--space-3)',
-                padding: 'var(--space-2) var(--space-3)',
-                background: 'var(--accent-primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
+              className="mt-3 px-3 py-2 bg-accent-primary text-white border-none rounded-md cursor-pointer text-xs"
             >
               Delete Element
             </button>
           </div>
         ) : (
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
+          <p className="text-text-tertiary text-xs">
             Select an element to see its properties.
           </p>
         )}

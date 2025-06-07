@@ -20,7 +20,6 @@ import {
   Settings as SettingsIcon
 } from 'lucide-react'; // Added more icons
 import { UnifiedHeader } from '../components/ui';
-import './Settings.css';
 
 const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState('general');
@@ -53,7 +52,7 @@ const Settings: React.FC = () => {
                   <div className="settings-item-title">Startup view</div>
                   <div className="settings-item-description">Choose which module to open when you start the application.</div>
                 </div>
-                <select className="select">
+                <select className="settings-select">
                   <option>Dashboard</option>
                   <option>Last visited page</option>
                   <option>Chat</option>
@@ -65,8 +64,8 @@ const Settings: React.FC = () => {
                   <div className="settings-item-title">Check for updates on startup</div>
                   <div className="settings-item-description">Automatically check for new versions when the application launches.</div>
                 </div>
-                <div className="toggle-switch active"> {/* Add 'active' class for ON state */}
-                  <div className="toggle-switch-thumb"></div>
+                <div className="settings-toggle settings-toggle-active">
+                  <div className="settings-toggle-thumb"></div>
                 </div>
               </div>
             </section>
@@ -77,7 +76,7 @@ const Settings: React.FC = () => {
                   <div className="settings-item-title">Language</div>
                   <div className="settings-item-description">Set the display language for the entire application.</div>
                 </div>
-                <select className="select">
+                <select className="settings-select">
                   <option>English (United States)</option>
                   <option>Deutsch</option>
                   <option>Español</option>
@@ -88,7 +87,7 @@ const Settings: React.FC = () => {
                   <div className="settings-item-title">First day of the week</div>
                   <div className="settings-item-description">Set the first day for calendars and date pickers.</div>
                 </div>
-                <select className="select">
+                <select className="settings-select">
                   <option>Sunday</option>
                   <option>Monday</option>
                 </select>
@@ -112,17 +111,17 @@ const Settings: React.FC = () => {
                   <div className="settings-item-title">Server endpoint</div>
                   <div className="settings-item-description">The local URL where your Ollama instance is running.</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <span className="status-indicator connected" title="Connected"></span>
-                  <input type="text" className="input" defaultValue="http://localhost:11434" />
+                <div className="settings-item-controls">
+                  <span className="settings-status-indicator settings-status-connected" title="Connected"></span>
+                  <input type="text" className="settings-input" defaultValue="http://localhost:11434" />
                 </div>
               </div>
             </section>
             <section className="settings-section">
               <div className="settings-section-header">
                 <h2 className="settings-section-title">Local models</h2>
-                <button className="btn btn-primary btn-sm">
-                  <Download size={16} className="lucide" /> Pull a new model
+                <button className="settings-btn settings-btn-primary settings-btn-sm">
+                  <Download size={16} /> Pull a new model
                 </button>
               </div>
               <table className="settings-table">
@@ -131,30 +130,30 @@ const Settings: React.FC = () => {
                 </thead>
                 <tbody>
                   <tr>
-                    <td><span className="model-name">llama3:8b</span></td>
+                    <td><span className="settings-model-name">llama3:8b</span></td>
                     <td>4.7 GB</td>
                     <td>2 weeks ago</td>
-                    <td style={{display:'flex', gap:'var(--space-2)'}}>
-                      <button className="btn btn-secondary btn-sm"><RefreshCw size={16} className="lucide" /> Update</button>
-                      <button className="btn btn-danger btn-sm"><Trash2 size={16} className="lucide" /> Remove</button>
+                    <td className="settings-table-actions">
+                      <button className="settings-btn settings-btn-secondary settings-btn-sm"><RefreshCw size={16} /> Update</button>
+                      <button className="settings-btn settings-btn-danger settings-btn-sm"><Trash2 size={16} /> Remove</button>
                     </td>
                   </tr>
                   <tr>
-                    <td><span className="model-name">codellama:7b</span></td>
+                    <td><span className="settings-model-name">codellama:7b</span></td>
                     <td>3.8 GB</td>
                     <td>1 month ago</td>
-                    <td style={{display:'flex', gap:'var(--space-2)'}}>
-                      <button className="btn btn-secondary btn-sm"><RefreshCw size={16} className="lucide" /> Update</button>
-                      <button className="btn btn-danger btn-sm"><Trash2 size={16} className="lucide" /> Remove</button>
+                    <td className="settings-table-actions">
+                      <button className="settings-btn settings-btn-secondary settings-btn-sm"><RefreshCw size={16} /> Update</button>
+                      <button className="settings-btn settings-btn-danger settings-btn-sm"><Trash2 size={16} /> Remove</button>
                     </td>
                   </tr>
                   <tr>
-                    <td><span className="model-name">mixtral:latest</span></td>
+                    <td><span className="settings-model-name">mixtral:latest</span></td>
                     <td>26 GB</td>
                     <td>3 days ago</td>
-                    <td style={{display:'flex', gap:'var(--space-2)'}}>
-                      <button className="btn btn-secondary btn-sm"><RefreshCw size={16} className="lucide" /> Update</button>
-                      <button className="btn btn-danger btn-sm"><Trash2 size={16} className="lucide" /> Remove</button>
+                    <td className="settings-table-actions">
+                      <button className="settings-btn settings-btn-secondary settings-btn-sm"><RefreshCw size={16} /> Update</button>
+                      <button className="settings-btn settings-btn-danger settings-btn-sm"><Trash2 size={16} /> Remove</button>
                     </td>
                   </tr>
                 </tbody>
@@ -174,14 +173,14 @@ const Settings: React.FC = () => {
               <div className="settings-item">
                 <div className="settings-item-info">
                   <div className="settings-item-title">
-                    <Gem size={16} style={{ color: 'var(--accent-primary)' }} />
+                    <Gem size={16} className="settings-item-icon" />
                     Google
                   </div>
                   <div className="settings-item-description">Connect your Google account to sync Calendar and Tasks.</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <span className="status-indicator disconnected" title="Disconnected"></span>
-                  <button className="btn btn-secondary"><LinkIcon size={16} className="lucide" />Connect account</button>
+                <div className="settings-item-controls">
+                  <span className="settings-status-indicator settings-status-disconnected" title="Disconnected"></span>
+                  <button className="settings-btn settings-btn-secondary"><LinkIcon size={16} />Connect account</button>
                 </div>
               </div>
               <div className="settings-item">
@@ -192,9 +191,9 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="settings-item-description">Connect your GitHub account to sync repositories and issues.</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <span className="status-indicator disconnected" title="Disconnected"></span>
-                  <button className="btn btn-secondary"><LinkIcon size={16} className="lucide" />Connect account</button>
+                <div className="settings-item-controls">
+                  <span className="settings-status-indicator settings-status-disconnected" title="Disconnected"></span>
+                  <button className="settings-btn settings-btn-secondary"><LinkIcon size={16} />Connect account</button>
                 </div>
               </div>
             </section>
@@ -205,9 +204,9 @@ const Settings: React.FC = () => {
                   <div className="settings-item-title">Google Gemini</div>
                   <div className="settings-item-description">Required for accessing Google's cloud-based AI models.</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <input type="password" className="input" defaultValue="abcdef123456" placeholder="Enter your Gemini API key..." />
-                  <button className="btn btn-secondary">Save</button>
+                <div className="settings-item-controls">
+                  <input type="password" className="settings-input" defaultValue="abcdef123456" placeholder="Enter your Gemini API key..." />
+                  <button className="settings-btn settings-btn-secondary">Save</button>
                 </div>
               </div>
               <div className="settings-item">
@@ -215,9 +214,9 @@ const Settings: React.FC = () => {
                   <div className="settings-item-title">Anthropic Claude</div>
                   <div className="settings-item-description">Required for accessing Claude models via API.</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <input type="password" className="input" placeholder="Enter your Anthropic API key..." />
-                  <button className="btn btn-secondary">Save</button>
+                <div className="settings-item-controls">
+                  <input type="password" className="settings-input" placeholder="Enter your Anthropic API key..." />
+                  <button className="settings-btn settings-btn-secondary">Save</button>
                 </div>
               </div>
             </section>
@@ -236,7 +235,7 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="content-area">
+    <div className="settings-page">
       {/* Unified Header */}
       <UnifiedHeader
         title="Settings"
@@ -255,7 +254,7 @@ const Settings: React.FC = () => {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className={`settings-nav-item ${activeSection === item.id ? 'active' : ''}`}
+                className={`settings-nav-item ${activeSection === item.id ? 'settings-nav-item-active' : ''}`}
                 onClick={(e) => {
                   e.preventDefault();
                   setActiveSection(item.id);

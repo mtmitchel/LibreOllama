@@ -190,15 +190,7 @@ const Calendar: React.FC = () => {
       <div className="calendar-layout">
         <div className="calendar-main">
           {/* Calendar Navigation - moved below header */}
-          <div className="calendar-nav" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'var(--space-4)',
-            padding: 'var(--space-4) var(--space-5)',
-            borderBottom: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)'
-          }}>
+          <div className="calendar-nav flex items-center justify-center gap-4 p-4 px-5 border-b border-border-subtle bg-bg-surface">
             <button
               className="calendar-nav-btn"
               onClick={() => navigateMonth('prev')}
@@ -206,14 +198,7 @@ const Calendar: React.FC = () => {
             >
               <ChevronLeft size={16} />
             </button>
-            <h2 className="calendar-title" style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: 'var(--text-primary)',
-              margin: '0',
-              minWidth: '200px',
-              textAlign: 'center'
-            }}>
+            <h2 className="calendar-title text-lg font-semibold text-text-primary m-0 min-w-[200px] text-center">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
             <button
@@ -271,8 +256,8 @@ const Calendar: React.FC = () => {
           {view === 'week' && (
             <div className="week-view">
               <div className="week-placeholder">
-                <CalendarDays size={48} style={{ color: 'var(--text-muted)' }} />
-                <p style={{ color: 'var(--text-secondary)', marginTop: 'var(--space-4)' }}>
+                <CalendarDays size={48} className="text-text-muted" />
+                <p className="text-text-secondary mt-4">
                   Week view coming soon
                 </p>
               </div>
@@ -282,8 +267,8 @@ const Calendar: React.FC = () => {
           {view === 'day' && (
             <div className="day-view">
               <div className="day-placeholder">
-                <CalendarDays size={48} style={{ color: 'var(--text-muted)' }} />
-                <p style={{ color: 'var(--text-secondary)', marginTop: 'var(--space-4)' }}>
+                <CalendarDays size={48} className="text-text-muted" />
+                <p className="text-text-secondary mt-4">
                   Day view coming soon
                 </p>
               </div>

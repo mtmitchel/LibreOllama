@@ -1,28 +1,29 @@
-import React, { useState } from 'react';
-import { 
-  MessageSquare, 
-  Plus, 
-  Search, 
-  Filter, 
-  Star, 
-  Folder, 
-  Clock, 
-  ChevronDown,
+import React, { useState, useRef, useEffect } from 'react';
+import {
   Send,
   Paperclip,
-  Image,
-  Copy,
+  Mic,
+  Search,
+  Filter,
   MoreHorizontal,
-  Pin,
-  Tag,
+  Plus,
+  MessageSquare,
+  Bot,
+  User,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  RefreshCw,
+  Settings,
   Archive,
   Trash2,
+  Star,
+  Pin,
   Users,
-  Bot,
-  User
+  Clock,
+  Image
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
-import { Message } from '../lib/types';
 
 interface ChatMessage {
   id: string;
@@ -128,42 +129,25 @@ export function Chat() {
       {/* Chat Sidebar */}
       <aside className="chat-sidebar">
         <div className="chat-sidebar-header">
-          <button className="btn btn-primary" style={{ width: '100%', marginBottom: 'var(--space-4)' }}>
-            <Plus style={{ width: '16px', height: '16px', marginRight: 'var(--space-2)' }} />
+          <button className="btn btn-primary w-full mb-4">
+            <Plus className="w-4 h-4 mr-2" />
             New chat
           </button>
         </div>
 
         <div className="chat-search-filter-wrapper">
-          <div style={{ position: 'relative', marginBottom: 'var(--space-3)' }}>
-            <Search style={{ 
-              position: 'absolute', 
-              left: 'var(--space-3)', 
-              top: '50%', 
-              transform: 'translateY(-50%)',
-              width: '16px', 
-              height: '16px', 
-              color: 'var(--text-muted)' 
-            }} />
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input 
               type="text" 
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                height: '40px',
-                padding: 'var(--space-2) var(--space-3) var(--space-2) var(--space-10)',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--text-primary)',
-                fontSize: '14px'
-              }}
+              className="w-full h-10 py-2 pr-3 pl-10 bg-bg-elevated border border-border-default rounded-md text-text-primary text-sm"
             />
           </div>
-          <button className="btn-filter btn btn-ghost" style={{ height: '40px', padding: 'var(--space-2) var(--space-3)', fontSize: '12px' }}>
-            <Filter style={{ width: '14px', height: '14px', marginRight: 'var(--space-1)' }} />
+          <button className="btn-filter btn btn-ghost h-10 px-3 py-2 text-xs">
+            <Filter className="w-3.5 h-3.5 mr-1" />
             Filter
           </button>
         </div>
@@ -172,7 +156,7 @@ export function Chat() {
           {/* Pinned Section */}
           <div className="chat-list-section">
             <div className="chat-list-section-title">
-              <Star style={{ width: '14px', height: '14px' }} />
+              <Star className="w-3.5 h-3.5" />
               Pinned
             </div>
             {conversations.filter(conv => conv.isPinned).map(conversation => (
@@ -181,42 +165,29 @@ export function Chat() {
                 className={`chat-list-item ${selectedChat === conversation.id ? 'active' : ''}`}
                 onClick={() => setSelectedChat(conversation.id)}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-1)' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)', margin: 0 }}>
+                <div className="flex justify-between items-start mb-1">
+                  <h4 className="text-sm font-medium text-text-primary m-0">
                     {conversation.title}
                   </h4>
-                  <Pin style={{ width: '12px', height: '12px', color: 'var(--text-muted)' }} />
+                  <Pin className="w-3 h-3 text-text-muted" />
                 </div>
                 {conversation.lastMessage && (
-                  <p style={{ 
-                    fontSize: '12px', 
-                    color: 'var(--text-secondary)', 
-                    margin: '0 0 var(--space-2) 0',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <p className="text-xs text-text-secondary m-0 mb-2 overflow-hidden text-ellipsis whitespace-nowrap">
                     {conversation.lastMessage}
                   </p>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-1">
                     {conversation.tags?.map(tag => (
-                      <span key={tag} style={{
-                        fontSize: '10px',
-                        padding: '2px 6px',
-                        background: 'var(--bg-tertiary)',
-                        color: 'var(--text-secondary)',
-                        borderRadius: 'var(--radius-sm)'
-                      }}>
+                      <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-bg-tertiary text-text-secondary rounded-sm">
                         {tag}
                       </span>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div className="flex items-center gap-2 text-[11px] text-text-muted">
                     <span>{formatTimestamp(conversation.timestamp)}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      <Users style={{ width: '10px', height: '10px' }} />
+                    <div className="flex items-center gap-0.5">
+                      <Users className="w-2.5 h-2.5" />
                       {conversation.participants}
                     </div>
                   </div>
@@ -228,7 +199,7 @@ export function Chat() {
           {/* Recent Section */}
           <div className="chat-list-section">
             <div className="chat-list-section-title">
-              <Clock style={{ width: '14px', height: '14px' }} />
+              <Clock className="w-3.5 h-3.5" />
               Recent
             </div>
             {conversations.filter(conv => !conv.isPinned).map(conversation => (
@@ -237,24 +208,24 @@ export function Chat() {
                 className={`chat-list-item ${selectedChat === conversation.id ? 'active' : ''}`}
                 onClick={() => setSelectedChat(conversation.id)}
               >
-<div style={{ marginBottom: 'var(--space-1)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-0-5)' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>{conversation.title}</h4>
-                    <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{formatTimestamp(conversation.timestamp)}</span>
+<div className="mb-1">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <h4 className="text-sm font-semibold text-text-primary m-0">{conversation.title}</h4>
+                    <span className="text-xs text-text-tertiary">{formatTimestamp(conversation.timestamp)}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                  <div className="flex items-center gap-2 flex-wrap">
                     {conversation.tags && conversation.tags.map(tag => (
                       <span key={tag} className="chat-item-tag">{tag}</span>
                     ))}
                     {conversation.participants && (
-                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}>
-                        <Users style={{ width: '12px', height: '12px', marginRight: 'var(--space-1)' }} />
+                      <span className="text-[11px] text-text-tertiary flex items-center">
+                        <Users className="w-3 h-3 mr-1" />
                         {conversation.participants}
                       </span>
                     )}
                   </div>
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p className="text-[13px] text-text-secondary m-0 whitespace-nowrap overflow-hidden text-ellipsis">
                   {conversation.lastMessage}
                 </p>
               </div>
@@ -276,34 +247,26 @@ export function Chat() {
             </div>
           </div>
           <div className="chat-header-controls">
-            <div className="model-selector-main-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginRight: 'var(--space-4)' }}>
-              <select style={{
-                padding: 'var(--space-2) var(--space-3)',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                minWidth: '160px'
-              }}>
+            <div className="model-selector-main-header flex items-center gap-3 mr-4">
+              <select className="bg-bg-elevated border border-border-default rounded-md py-2 px-3 text-text-primary text-[13px] min-w-[140px]">
                 <option>Claude 3.5 Sonnet</option>
                 <option>GPT-4</option>
                 <option>Llama 2</option>
               </select>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: '11px', color: 'var(--success)' }}>
-                <div style={{ width: '6px', height: '6px', background: 'var(--success)', borderRadius: '50%' }}></div>
+              <div className="flex items-center gap-1 text-[11px] text-success">
+                <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
                 Ready
               </div>
             </div>
-            <div className="chat-actions" style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <button className="btn btn-ghost" style={{ padding: 'var(--space-2)', fontSize: '12px' }}>
+            <div className="chat-actions flex gap-2">
+              <button className="btn btn-ghost p-2 text-xs">
                 Add to project
               </button>
-              <button className="btn btn-ghost" style={{ padding: 'var(--space-2)', fontSize: '12px' }}>
+              <button className="btn btn-ghost p-2 text-xs">
                 Export
               </button>
-              <button className="btn btn-ghost" style={{ padding: 'var(--space-2)' }}>
-                <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+              <button className="btn btn-ghost p-2">
+                <MoreHorizontal className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -314,9 +277,9 @@ export function Chat() {
             <div key={message.id} className={`message ${message.sender}`}>
               <div className="message-avatar">
                 {message.sender === 'user' ? (
-                  <User style={{ width: '16px', height: '16px' }} />
+                  <User className="w-4 h-4" />
                 ) : (
-                  <Bot style={{ width: '16px', height: '16px' }} />
+                  <Bot className="w-4 h-4" />
                 )}
               </div>
               <div className="message-content-wrapper">
@@ -332,28 +295,11 @@ export function Chat() {
                           const language = lines[0];
                           const code = lines.slice(1).join('\n');
                           return (
-                            <pre key={index} style={{ 
-                              background: message.sender === 'user' ? 'rgba(255,255,255,0.1)' : 'var(--bg-tertiary)',
-                              border: '1px solid var(--border-default)',
-                              borderRadius: 'var(--radius-md)',
-                              padding: 'var(--space-3)',
-                              margin: 'var(--space-3) 0',
-                              overflowX: 'auto',
-                              position: 'relative',
-                              fontSize: '13px',
-                              lineHeight: '1.6'
-                            }}>
-                              <div className="code-header" style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center', 
-                                marginBottom: 'var(--space-2)',
-                                fontSize: '12px',
-                                color: 'var(--text-tertiary)'
-                              }}>
+                            <pre key={index} className={`${message.sender === 'user' ? 'bg-white/10' : 'bg-bg-tertiary'} border border-border-default rounded-md p-3 my-3 overflow-x-auto relative text-[13px] leading-6`}>
+                              <div className="code-header flex justify-between items-center mb-2 text-xs text-text-tertiary">
                                 <span>{language}</span>
 <button className="code-block-copy-button">
-                      <Copy style={{ width: '14px', height: '14px', marginRight: 'var(--space-1)' }} />
+                      <Copy className="w-3.5 h-3.5 mr-1" />
                       Copy
                     </button>
                               </div>
@@ -369,19 +315,11 @@ export function Chat() {
                   )}
                 </div>
 {message.attachments && message.attachments.map(att => (
-                      <div key={att.name} className="chat-message-attachment" style={{ /* Basic styles, to be enhanced in CSS */
-                        background: 'var(--bg-elevated)', 
-                        padding: 'var(--space-2) var(--space-3)', 
-                        borderRadius: 'var(--radius-md)', 
-                        marginTop: 'var(--space-2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        border: '1px solid var(--border-subtle)'
-                      }}>
-                        <Paperclip style={{ width: '16px', height: '16px', marginRight: 'var(--space-2)', color: 'var(--text-secondary)' }} /> 
+                      <div key={att.name} className="chat-message-attachment bg-bg-elevated p-2 px-3 rounded-md mt-2 flex items-center border border-border-subtle">
+                        <Paperclip className="w-4 h-4 mr-2 text-text-secondary" /> 
                         <div>
-                          <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{att.name}</span>
-                          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginLeft: 'var(--space-2)' }}>{att.type.toUpperCase()}</span>
+                          <span className="font-medium text-text-primary">{att.name}</span>
+                          <span className="text-xs text-text-tertiary ml-2">{att.type.toUpperCase()}</span>
                         </div>
                         {/* Add file size/actions here later */}
                       </div>
@@ -395,7 +333,10 @@ export function Chat() {
           <div className="chat-input-wrapper">
             <div className="chat-input-tools">
               <button className="chat-input-tool" title="Attach files">
-                <Paperclip style={{ width: '16px', height: '16px' }} />
+                <Paperclip className="w-4 h-4" />
+              </button>
+              <button className="chat-input-tool" title="Add images">
+                <Image className="w-4 h-4" />
               </button>
             </div>
             <textarea 
@@ -415,7 +356,7 @@ export function Chat() {
               disabled={!inputMessage.trim()}
               title="Send message (Ctrl+Enter)"
             >
-              <Send style={{ width: '16px', height: '16px' }} />
+              <Send className="w-4 h-4" />
             </button>
           </div>
         </div>
