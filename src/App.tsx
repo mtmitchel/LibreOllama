@@ -1,4 +1,3 @@
-import { ThemeProvider } from './components/ThemeProvider';
 import { 
   LayoutDashboard,
   MessagesSquare,
@@ -23,7 +22,7 @@ import {
   PanelRightClose // Icon for sidebar toggle
 } from 'lucide-react';
 import './styles/App.css';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Sidebar from './components/navigation/Sidebar';
 import Agents from './pages/Agents';
 import ChatHub from './pages/Chat';
@@ -34,23 +33,26 @@ import Projects from './pages/Projects';
 import Canvas from './pages/Canvas';
 import Calendar from './pages/Calendar';
 import SettingsPage from './pages/Settings'; 
-import React, { useState } from 'react'; // Import useState
+import { useState } from 'react'; // Import useState
 
 
 
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
   return (
     <Router>
-      <div className={`flex app-container ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} /> 
-        <main className="flex-1 flex flex-col">
-          <div className="content-area flex-1">
+      <div className="flex h-screen bg-bg-primary text-text-primary font-sans">
+        {/* Sidebar as the first flex item */}
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+
+        {/* Main content area as the second flex item, taking up remaining space */}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* UnifiedHeader can be dynamic per route, but for now use a static title */}
+          {/* If you want dynamic titles, use a context or pass props from each page */}
+          {/* <UnifiedHeader title="Workspace" /> */}
+          {/* Main content area with padding and scroll */}
+          <main className="flex-1 overflow-y-auto p-6 bg-background">
             <Routes>
               <Route path="/chat" element={<ChatHub />} />
               <Route path="/" element={<Dashboard />} />
@@ -62,8 +64,8 @@ export default function App() {
               <Route path="/agents" element={<Agents />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </Router>
   );
