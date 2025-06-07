@@ -42,13 +42,15 @@ interface ChatConversation {
 
 export function Chat() {
   const { setHeaderProps, headerProps } = useHeader();
-  const [selectedChat, setSelectedChat] = useState<string | null>('1');
+  // Assuming you have state like this
+  const [isConvoColumnOpen, setConvoColumnOpen] = useState(true);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>('1'); // Renamed from selectedChat to selectedChatId for clarity
   const [inputMessage, setInputMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<{ pinnedStatus: 'all' | 'pinned' | 'unpinned' }>({ pinnedStatus: 'all' });
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false); // State for chat options dropdown
-  const [isConversationSidebarCollapsed, setIsConversationSidebarCollapsed] = useState(false); // State for conversation sidebar
+  // const [isConversationSidebarCollapsed, setIsConversationSidebarCollapsed] = useState(false); // Replaced by isConvoColumnOpen
 
   const initialConversations: ChatConversation[] = [
     {
@@ -79,6 +81,19 @@ export function Chat() {
 
   const [conversations, setConversations] = useState<ChatConversation[]>(initialConversations);
 
+  const handleToggleColumn = () => {
+    const isClosing = isConvoColumnOpen;
+    setConvoColumnOpen(!isClosing);
+
+    // FIX: If the column is being closed, reset the selected chat ID.
+    // This prevents the main panel from trying to render a now-hidden item.
+    if (isClosing) {
+      setSelectedChatId(null);
+    }
+  };
+
+  // Find the full chat object from the ID
+  const selectedChat = conversations.find(c => c.id === selectedChatId);
 
   const initialMessages: ChatMessage[] = [
     {
@@ -105,7 +120,7 @@ export function Chat() {
   const [messagesState, setMessagesState] = useState<ChatMessage[]>(initialMessages); 
 
   const handleSendMessage = useCallback(() => {
-    if (inputMessage.trim() && selectedChat) { // Ensure a chat is selected
+    if (inputMessage.trim() && selectedChatId) { // Ensure a chat is selected
       const newMessage: ChatMessage = {
         id: String(Date.now()), 
         sender: 'user',
@@ -116,12 +131,12 @@ export function Chat() {
       setInputMessage('');
       // Update conversation's last message and timestamp
       setConversations(prevConvos => prevConvos.map(convo => 
-        convo.id === selectedChat 
+        convo.id === selectedChatId 
           ? { ...convo, lastMessage: inputMessage, timestamp: new Date() } 
           : convo
       ));
     }
-  }, [inputMessage, selectedChat, setMessagesState, setInputMessage, setConversations]);
+  }, [inputMessage, selectedChatId, setMessagesState, setInputMessage, setConversations]);
 
   const formatTimestamp = useCallback((date: Date) => {
     const now = new Date();
@@ -145,10 +160,10 @@ export function Chat() {
       lastMessage: ""
     };
     setConversations(prevConvos => [newConversation, ...prevConvos]);
-    setSelectedChat(newConversationId);
+    setSelectedChatId(newConversationId);
     setMessagesState([]); // Clear messages for new chat
     console.log('New chat created:', newConversationId);
-  }, [setConversations, setSelectedChat, setMessagesState]);
+  }, [setConversations, setSelectedChatId, setMessagesState]);
 
   const togglePinConversation = useCallback((conversationId: string) => {
     setConversations(prevConvos =>
@@ -160,11 +175,11 @@ export function Chat() {
 
   const deleteConversation = useCallback((conversationId: string) => {
     setConversations(prevConvos => prevConvos.filter(convo => convo.id !== conversationId));
-    if (selectedChat === conversationId) {
-      setSelectedChat(null); 
+    if (selectedChatId === conversationId) {
+      setSelectedChatId(null); 
       setMessagesState([]); // Clear messages if active chat is deleted
     }
-  }, [selectedChat, setConversations, setSelectedChat, setMessagesState]);
+  }, [selectedChatId, setConversations, setSelectedChatId, setMessagesState]);
 
   const exportConversation = useCallback((conversation: ChatConversation) => {
     const messagesToExport = messagesState; // Assuming messagesState holds messages for the selectedChat

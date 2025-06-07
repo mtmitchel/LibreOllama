@@ -196,6 +196,9 @@ export default function Projects() {
 
   const [currentGoals, setCurrentGoals] = useState(selectedProject.keyGoals || []);
 
+  // FIX: Determine the wizard title string here, BEFORE the return statement.
+  const wizardTitle = projectStepTitles[newProjectStep] || "New Project Wizard";
+
   useEffect(() => {
     setCurrentGoals(selectedProject.keyGoals || []);
   }, [selectedProject]);
@@ -329,8 +332,8 @@ export default function Projects() {
             >
               {sidebarCompact ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
             </button>
-          </div>
-          
+            </div>
+
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {projects.map(project => (
               <div
@@ -357,7 +360,7 @@ export default function Projects() {
                             {project.icon && <span className="mr-2 align-middle">{React.cloneElement(project.icon as React.ReactElement, { size: 16, className: 'inline' })}</span>}
                             {project.name}
                         </h4>
-                      </div>
+                        </div>
                       <p className="text-xs text-text-secondary truncate mb-2">
                         {project.description}
                       </p>
@@ -368,12 +371,12 @@ export default function Projects() {
                               className="h-1.5 rounded-full"
                               style={{ width: `${project.progress}%`, backgroundColor: project.color }}
                             />
+                            </div>
                           </div>
-                        </div>
                       )}
-                    </div>
+                      </div>
                   )}
-                </div>
+                  </div>
                 {!sidebarCompact && selectedProject && selectedProject.id === project.id && ( // Show context menu only for selected and non-compact
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                     {/* Dropdown Menu for Project Actions - Basic Example */}
@@ -405,12 +408,12 @@ export default function Projects() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       */}
+                      </div>
                     </div>
-                  </div>
                 )}
-              </div>
+                </div>
             ))}
-          </div>
+            </div>
         </Card>
       </div>
 
@@ -435,9 +438,9 @@ export default function Projects() {
                   ))}
                 </TabsList>
               </Tabs>
-            </div>
+              </div>
 
-            {/* Tab Content */}
+            {/* Tab Content */}        
             <div className="flex-1 overflow-y-auto p-6">
               {activeTab === 'overview' && (
                 <div className="space-y-6">
@@ -451,8 +454,8 @@ export default function Projects() {
                       <div>
                         <h2 className="text-2xl font-bold text-text-primary mb-1">{selectedProject.name}</h2>
                         <p className="text-text-secondary max-w-prose">{selectedProject.description}</p>
+                        </div>
                       </div>
-                    </div>
                     {selectedProject.statusTag && (
                       <div className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 
                         ${selectedProject.statusTag === 'Active' ? 'bg-success/10 text-success' : 
@@ -461,9 +464,9 @@ export default function Projects() {
                           'bg-gray-500/10 text-gray-500'}`} // Default
                       >
                          {selectedProject.active && <Star size={12} />} {selectedProject.statusTag}
-                      </div>
+                        </div>
                     )}
-                  </div>
+                    </div>
 
                   {/* Progress Section */}
                   {selectedProject.progress !== undefined && (
@@ -475,7 +478,7 @@ export default function Projects() {
                           <span className="text-sm font-semibold" style={{ color: selectedProject.color }}>
                             {selectedProject.progress}%
                           </span>
-                        </div>
+                          </div>
                         <div className="w-full bg-bg-tertiary rounded-full h-2.5">
                           <div
                             className="h-2.5 rounded-full transition-all duration-500 ease-out"
@@ -484,8 +487,8 @@ export default function Projects() {
                               backgroundColor: selectedProject.color
                             }}
                           />
+                          </div>
                         </div>
-                      </div>
                     </Card>
                   )}
 
@@ -497,12 +500,12 @@ export default function Projects() {
                         <div key={goal.id} className="flex items-center gap-3 cursor-pointer hover:bg-bg-surface p-2 rounded-md transition-colors" onClick={() => handleGoalToggle(goal.id)}>
                           {goal.completed ? <CheckCircle2 size={18} className="text-success flex-shrink-0" /> : <Circle size={18} className="text-text-muted flex-shrink-0 stroke-[2.5px]" />}
                           <span className={`flex-1 ${goal.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>{goal.text}</span>
-                        </div>
+                          </div>
                       ))}
                       {(!currentGoals || currentGoals.length === 0) && (
                         <p className="text-text-secondary text-sm">No key goals defined for this project yet.</p>
                       )}
-                    </div>
+                      </div>
                   </Card>
 
                   {/* Project Assets at a Glance */}
@@ -528,7 +531,7 @@ export default function Projects() {
                           >
                             <Plus size={16} className="text-accent-primary" />
                           </Button>
-                        </div>
+                          </div>
                       ))}
                        {/* Generic Add Asset Button for types not listed or for flexibility */}
                        <div 
@@ -538,10 +541,10 @@ export default function Projects() {
                         >
                             <Plus size={24} className="text-text-secondary mb-2 group-hover:text-accent-primary transition-colors" />
                             <h5 className="text-sm font-medium text-text-secondary group-hover:text-accent-primary transition-colors">Add Asset</h5>
-                        </div>
-                    </div>
+                          </div>
+                      </div>
                   </Card>
-                </div>
+                  </div>
               )}
 
               {activeTab === 'roadmap' && (
@@ -556,19 +559,19 @@ export default function Projects() {
                           <div className={`w-4 h-4 rounded-full border-2 border-bg-primary flex-shrink-0
                             ${index <= 1 ? 'bg-success' : 'bg-text-muted'}`} // Example status coloring
                           />
-                        </div>
+                          </div>
                         <div className="flex-1 sm:pl-4 bg-bg-surface p-4 rounded-lg shadow-sm">
                            <p className="text-xs text-text-secondary mb-0.5">{item.date}</p>
                            <h4 className="font-semibold text-text-primary mb-1">{item.title}</h4>
                            <p className="text-sm text-text-secondary">{item.description}</p>
+                          </div>
                         </div>
-                      </div>
                     ))}
                     {mockRoadmap.length === 0 && (
                          <p className="text-text-secondary text-center py-4">No roadmap defined for this project yet.</p>
                     )}
+                    </div>
                   </div>
-                </div>
               )}
 
               {activeTab === 'assets' && (
@@ -580,7 +583,7 @@ export default function Projects() {
                       <Card key={asset.type} className="flex flex-col items-center text-center p-6 hover:scale-105 transition-transform duration-200 cursor-pointer" onClick={() => handleCreateAsset(asset.type)}>
                         <div className="w-16 h-16 bg-accent-soft rounded-xl flex items-center justify-center mx-auto mb-4">
                           <asset.icon className="w-8 h-8 text-accent-primary" />
-                        </div>
+                          </div>
                         <div className="text-2xl font-bold text-text-primary mb-1">{asset.count}</div>
                         <div className="text-sm text-text-secondary">{asset.type}</div>
                       </Card>
@@ -588,8 +591,8 @@ export default function Projects() {
                      {(!(selectedProject.assets && selectedProject.assets.length > 0) && mockAssets.length === 0) && (
                          <p className="text-text-secondary text-center py-4 col-span-full">No assets found for this project.</p>
                      )}
+                    </div>
                   </div>
-                </div>
               )}
               {activeTab === 'files' && (
                 <div className="space-y-6">
@@ -599,7 +602,7 @@ export default function Projects() {
                       <UploadCloud size={16} className="mr-2" />
                       Upload Files
                     </Button>
-                  </div>
+                          </div>
 
                   {/* Drag and Drop Zone */}
                   <div className="border-2 border-dashed border-border-div rounded-lg p-10 text-center bg-bg-secondary hover:border-accent-primary transition-colors cursor-pointer">
@@ -608,7 +611,7 @@ export default function Projects() {
                     <p className="text-text-secondary text-sm">or click to select files to upload</p>
                     <p className="text-xs text-text-tertiary mt-2">Supports PDF, TXT, DOCX, PNG, JPG, etc.</p>
                     {/* TODO: Add actual file input: <input type="file" className="hidden" /> */}
-                  </div>
+                    </div>
 
                   {/* File List / Grid Toggle - Placeholder */}
                   {/* <div className="flex justify-end"> <Button variant="ghost">List</Button> <Button variant="ghost">Grid</Button> </div> */}
@@ -622,30 +625,32 @@ export default function Projects() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-text-primary truncate">{file.name}</p>
                             <p className="text-xs text-text-secondary">Size: {file.size} · Uploaded: {file.uploadedAt}</p>
-                          </div>
+                            </div>
                           <Button variant="ghost" size="icon" className="w-7 h-7">
                             <MoreVertical size={16} />
                             {/* TODO: Implement file actions dropdown */}
                           </Button>
                         </Card>
                       ))}
-                    </div>
+                      </div>
                   ) : (
                     <div className="text-center py-10">
                       <FolderOpen size={48} className="mx-auto text-text-secondary mb-3" />
                       <p className="text-text-primary font-medium">No files in this project yet.</p>
                       <p className="text-text-secondary text-sm">Upload documents to build your project&apos;s knowledge base.</p>
-                    </div>
+                      </div>
                   )}
                   {/* RAG Integration Note - For developer reference */}
                   <p className="text-xs text-text-tertiary italic text-center mt-6">
                     Note: Uploaded text-based documents will be processed for RAG (Retrieval Augmented Generation) and tagged with Project ID: {selectedProject.id}.
                   </p>
-                </div>
+                  </div>
               )}
-            </div>
+              </div>
+        </>
           </Card>
-        </div>
+          </div>
+        </>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center h-full p-6 text-center">
             <FolderOpen size={64} className="text-text-secondary mb-4" />
@@ -657,22 +662,32 @@ export default function Projects() {
               <Plus size={16} className="mr-2" />
               Create New Project
             </Button>
-          </div>
+            </div>
+        </>
       }
 
 
       {/* New Project Wizard Modal */}
       {isNewProjectModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300">
-          <Card className="bg-bg-primary p-6 rounded-lg shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100 opacity-100">
+        <>
+          {/* Your commented-out code and notes are fine inside a fragment */}
+          {/* If Modal is a custom component that takes a 'title' prop: */}
+          {/* <Modal isOpen={isNewProjectModalOpen} onClose={() => setIsNewProjectModalOpen(false)} title={wizardTitle}> */}
+          {/* For now, I will apply the title to the existing h2, assuming the Modal structure is as shown */} 
+          
+          {/* This div is the actual modal container, it should be inside the fragment */}
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300">
+            <Card className="bg-bg-primary p-6 rounded-lg shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100 opacity-100">
+
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-text-primary">
-                {projectStepTitles[newProjectStep] || "New Project Wizard"}
+                {wizardTitle}
               </h2>
               <Button variant="ghost" size="icon" onClick={() => setIsNewProjectModalOpen(false)} className="text-text-secondary hover:text-text-primary">
                 <Plus size={20} className="rotate-45" /> {/* Close icon */}
               </Button>
-            </div>
+              </div>
+        </>
 
             {/* Step 1: Core Details */}
             {newProjectStep === 1 && (
@@ -680,20 +695,21 @@ export default function Projects() {
                 <div>
                   <label htmlFor="projectName" className="block text-sm font-medium text-text-secondary mb-1">Project Name</label>
                   <input type="text" id="projectName" value={projectForm.name} onChange={(e) => setProjectForm({...projectForm, name: e.target.value})} className="w-full p-2 border border-border-div rounded-md bg-bg-secondary focus:ring-accent-primary focus:border-accent-primary" placeholder="E.g., Q4 Product Launch" />
-                </div>
+                  </div>
                 <div>
                   <label htmlFor="projectDescription" className="block text-sm font-medium text-text-secondary mb-1">Project Description</label>
                   <textarea id="projectDescription" value={projectForm.description} onChange={(e) => setProjectForm({...projectForm, description: e.target.value})} rows={3} className="w-full p-2 border border-border-div rounded-md bg-bg-secondary focus:ring-accent-primary focus:border-accent-primary" placeholder="Briefly describe your project..."></textarea>
-                </div>
+                  </div>
                 <div>
                   <label htmlFor="projectColor" className="block text-sm font-medium text-text-secondary mb-1">Project Color</label>
                   {/* Basic color picker, can be enhanced */}
                   <input type="color" id="projectColor" value={projectForm.color} onChange={(e) => setProjectForm({...projectForm, color: e.target.value})} className="w-full h-10 p-1 border border-border-div rounded-md bg-bg-secondary" />
-                </div>
+                  </div>
                 <div className="flex justify-end pt-2">
                   <Button onClick={() => setNewProjectStep(2)} disabled={!projectForm.name}>Next</Button>
+                  </div>
                 </div>
-              </div>
+        </>
             )}
 
             {/* Step 2: AI Assistance Opt-In */}
@@ -705,9 +721,10 @@ export default function Projects() {
                 <div className="flex gap-4 justify-center pt-4">
                   <Button variant="outline" onClick={() => { setAiAssist(false); handleNewProjectSubmit(); /* Or setNewProjectStep(5) for a final review even w/o AI */ }}>Create Simple Project</Button>
                   <Button onClick={() => { setAiAssist(true); setNewProjectStep(3); }}>Yes, help me plan!</Button>
-                </div>
+                  </div>
                  <Button variant="link" onClick={() => setNewProjectStep(1)}>Back</Button>
-              </div>
+                </div>
+        </>
             )}
             
             {/* Step 3: AI-Driven Planning Questionnaire (Placeholder) */}
@@ -722,8 +739,9 @@ export default function Projects() {
                 <div className="flex justify-between pt-2">
                   <Button variant="outline" onClick={() => setNewProjectStep(2)}>Back</Button>
                   <Button onClick={() => setNewProjectStep(4)}>Generate Plan</Button>
+                  </div>
                 </div>
-              </div>
+        </>
             )}
 
             {/* Step 4: AI-Generated Starter Pack & Review (Placeholder) */}
@@ -735,16 +753,18 @@ export default function Projects() {
                   <h4 className="font-semibold mt-2 mb-1">Preliminary Tasks:</h4><ul className="list-disc list-inside text-sm"><li>AI Task A</li><li>AI Task B</li></ul>
                   <h4 className="font-semibold mt-2 mb-1">Draft Roadmap:</h4><p className="text-sm">Phase 1 (AI)...</p>
                   <h4 className="font-semibold mt-2 mb-1">Project Brief Note:</h4><p className="text-sm">Summary by AI...</p>
-                </div>
+                  </div>
                 {/* TODO: Add editing capabilities here */}
                 <div className="flex justify-between pt-2">
                   <Button variant="outline" onClick={() => setNewProjectStep(3)}>Back</Button>
                   <Button onClick={handleNewProjectSubmit}>Create Project with this Plan</Button>
+                  </div>
                 </div>
-              </div>
+        </>
             )}
-          </Card>
-        </div>
+            </Card>
+          </div>
+        </>
       )}
     </div>
   );
