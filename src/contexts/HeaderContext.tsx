@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, ReactNode, useCallback } fr
 
 // Type definitions for header props (matching UnifiedHeader interface)
 export interface BreadcrumbItem {
-  path: string;
   label: string;
+  path?: string; // Made path optional
+  onClick?: () => void; // Added optional onClick handler
 }
 
 export interface PrimaryAction {
