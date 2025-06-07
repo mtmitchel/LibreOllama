@@ -1,4 +1,3 @@
-import React from 'react';
 import { MoreHorizontal, GripVertical } from 'lucide-react';
 
 interface Milestone {

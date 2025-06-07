@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { PanelLeftOpen, PanelLeftClose, MoreVertical } from 'lucide-react';
 
 interface Project {

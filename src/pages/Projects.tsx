@@ -20,9 +20,9 @@ import {
   Link
 } from 'lucide-react';
 import { useHeaderProps } from '../hooks/useHeaderProps';
-import ProjectSidebar from '../components/projects/ProjectSidebar';
-import ProjectDetails from '../components/projects/ProjectDetails';
-import NoProjectSelected from '../components/projects/NoProjectSelected';
+import { ProjectSidebar } from '../components/projects/ProjectSidebar';
+import { ProjectDetails } from '../components/projects/ProjectDetails';
+import { NoProjectSelected } from '../components/projects/NoProjectSelected';
 import NewProjectModal from '../components/projects/NewProjectModal';
 
 interface Project {

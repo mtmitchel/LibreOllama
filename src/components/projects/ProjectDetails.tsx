@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { Badge, Progress, Checkbox } from '../ui';
 import { MoreVertical, Upload, ImageIcon, File, Link, Plus, Users, Calendar, Target } from 'lucide-react';
 

@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Hash, FileText, MessageSquare, CheckSquare, Settings, PenTool, Bot } from 'lucide-react';
-import { cn } from '../lib/utils';
 
 interface CommandItem {
   id: string;
