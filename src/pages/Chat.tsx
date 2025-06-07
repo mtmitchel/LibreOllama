@@ -50,7 +50,9 @@ export function Chat() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<{ pinnedStatus: 'all' | 'pinned' | 'unpinned' }>({ pinnedStatus: 'all' });
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false); // State for chat options dropdown
-  // const [isConversationSidebarCollapsed, setIsConversationSidebarCollapsed] = useState(false); // Replaced by isConvoColumnOpen
+  
+  // FIX: Add the missing variable that was causing the crash
+  const isConversationSidebarCollapsed = !isConvoColumnOpen;
 
   const initialConversations: ChatConversation[] = [
     {
@@ -79,7 +81,8 @@ export function Chat() {
     }
   ];
 
-  const [conversations, setConversations] = useState<ChatConversation[]>(initialConversations);
+  // FIX: Initialize conversations state as empty array to prevent crashes
+  const [conversations, setConversations] = useState<ChatConversation[]>(initialConversations || []);
 
   const handleToggleColumn = () => {
     const isClosing = isConvoColumnOpen;
@@ -217,21 +220,21 @@ export function Chat() {
     {
       label: 'Export Current Chat',
       onClick: () => {
-        const currentConvo = conversations.find(c => c.id === selectedChat);
+        const currentConvo = conversations.find(c => c.id === selectedChatId);
         if (currentConvo) {
           exportConversation(currentConvo);
         }
       },
       variant: 'secondary' as const,
-      disabled: !selectedChat // Disable if no chat is selected
+      disabled: !selectedChatId // Disable if no chat is selected
     }
-  ], [selectedChat, conversations, exportConversation]); 
+  ], [selectedChatId, conversations, exportConversation]); 
 
   useEffect(() => {
-    const currentConversation = conversations.find(c => c.id === selectedChat);
+    const currentConversation = conversations.find(c => c.id === selectedChatId);
     const newHeaderProps = {
       title: currentConversation ? currentConversation.title : "Chat",
-      breadcrumb: currentConversation ? [{label: "Chat", onClick: () => setSelectedChat(null)}, {label: currentConversation.title}] : [{label: "Chat"}],
+      breadcrumb: currentConversation ? [{label: "Chat", onClick: () => setSelectedChatId(null)}, {label: currentConversation.title}] : [{label: "Chat"}],
       primaryAction: {
         label: 'New chat',
         onClick: handleNewChat,
@@ -265,7 +268,7 @@ export function Chat() {
     <div className="w-full h-full flex gap-6">
       {/* Left Panel - Conversations List */}
       <div className={`h-full transition-all duration-300 ease-in-out ${
-        isConversationSidebarCollapsed ? 'w-16' : 'w-1/3'
+        !isConvoColumnOpen ? 'w-16' : 'w-1/3'
       }`}>
         <Card className="h-full flex flex-col" padding="none">
           {/* Card Header: Title, New Chat, Toggle */}
@@ -283,7 +286,7 @@ export function Chat() {
                   <Plus size={18} />
                 </button>
                 <button
-                  onClick={() => setIsConversationSidebarCollapsed(true)}
+                  onClick={handleToggleColumn}
                   className="p-2 hover:bg-bg-hover rounded-md transition-colors text-text-secondary hover:text-text-primary"
                   title="Collapse conversations"
                 >
@@ -291,9 +294,9 @@ export function Chat() {
                 </button>
               </div>
             )}
-            {isConversationSidebarCollapsed && (
+            {isConvoColumnOpen && (
               <button
-                onClick={() => setIsConversationSidebarCollapsed(false)}
+                onClick={handleToggleColumn}
                 className="p-2 hover:bg-bg-hover rounded-md transition-colors text-text-secondary hover:text-text-primary"
                 title="Expand conversations"
               >
@@ -360,7 +363,7 @@ export function Chat() {
                   )}
                   {filteredConversations && filteredConversations.length > 0 && filteredConversations.map(conversation => {
                     const [isHovered, setIsHovered] = useState(false);
-                    const isCurrentlySelected = selectedChat === conversation.id;
+                    const isCurrentlySelected = selectedChatId === conversation.id;
                     return (
                       <div
                         key={conversation.id}
@@ -369,7 +372,7 @@ export function Chat() {
                             ? 'bg-primary text-primary-foreground'
                             : 'hover:bg-bg-hover active:bg-bg-active'
                         }`}
-                        onClick={() => setSelectedChat(conversation.id)}
+                        onClick={() => setSelectedChatId(conversation.id)}
                         onMouseEnter={() => setIsHovered(true)}
                         onMouseLeave={() => setIsHovered(false)}
                       >
@@ -485,7 +488,7 @@ export function Chat() {
                         { label: 'Clear messages', action: () => console.log('Clear messages') },
                         { label: 'Manage context/prompt', action: () => console.log('Manage context') },
                         { label: 'Export chat', action: () => {
-                            const currentConvo = conversations.find(c => c.id === selectedChat);
+                            const currentConvo = conversations.find(c => c.id === selectedChatId);
                             if (currentConvo) exportConversation(currentConvo);
                             setIsMoreOptionsOpen(false); // Close dropdown
                           }
