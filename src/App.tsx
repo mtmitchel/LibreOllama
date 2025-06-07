@@ -9,7 +9,7 @@ import { UnifiedHeader } from './components/ui/UnifiedHeader';
 // ALL PAGE COMPONENTS
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
-import Projects from './pages/Projects';
+import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
 import Canvas from './pages/Canvas';
 import Calendar from './pages/Calendar';

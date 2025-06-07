@@ -358,7 +358,7 @@ export function Chat() {
                       No conversations found.
                     </div>
                   )}
-                  {filteredConversations.map(conversation => {
+                  {filteredConversations && filteredConversations.length > 0 && filteredConversations.map(conversation => {
                     const [isHovered, setIsHovered] = useState(false);
                     const isCurrentlySelected = selectedChat === conversation.id;
                     return (
