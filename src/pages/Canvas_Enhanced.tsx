@@ -1,4 +1,4 @@
-// src/pages/Canvas.tsx
+// src/pages/Canvas.tsx - Enhanced viewport culling fix
 
 import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useCanvasState, CanvasElement as CanvasElementType } from '../hooks/canvas/useCanvasState';
@@ -53,6 +53,62 @@ const Canvas: React.FC = () => {
     saveToHistory,
     getTextStyles
   } = useCanvasEvents({ canvasState });
+
+  // --- PERFORMANCE OPTIMIZATION ---
+  // Use resize observer to track canvas dimensions
+  const canvasSize = useResizeObserver(canvasRef);
+  
+  // Force re-check of canvas size on mount and window resize
+  const [forceCanvasSize, setForceCanvasSize] = useState({ width: 0, height: 0 });
+  
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        setForceCanvasSize({ width: rect.width, height: rect.height });
+        console.log('[Canvas] Force update size:', rect.width, rect.height);
+      }
+    };
+
+    // Initial size check
+    updateCanvasSize();
+    
+    // Check again after a short delay to handle any layout shifts
+    const timeoutId = setTimeout(updateCanvasSize, 100);
+    
+    // Also update on window resize
+    window.addEventListener('resize', updateCanvasSize);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateCanvasSize);
+    };
+  }, []);
+  
+  // Use the resize observer size if available, otherwise use forced size
+  const effectiveCanvasSize = canvasSize || forceCanvasSize;
+  
+  // Add debug info
+  useEffect(() => {
+    console.log('[Canvas] Effective canvas size:', effectiveCanvasSize);
+  }, [effectiveCanvasSize]);
+  
+  const { visibleElements, culledElements } = useViewportCulling({
+    elements,
+    zoomLevel,
+    panOffset,
+    canvasSize: effectiveCanvasSize,
+  });
+
+  // Log culling info when window is resized
+  useEffect(() => {
+    const logCullingInfo = () => {
+      console.log(`[Canvas] Window resized - Visible: ${visibleElements.length}, Culled: ${culledElements.length}`);
+    };
+    
+    window.addEventListener('resize', logCullingInfo);
+    return () => window.removeEventListener('resize', logCullingInfo);
+  }, [visibleElements.length, culledElements.length]);
 
   // Center the canvas on initial load
   useEffect(() => {
@@ -127,17 +183,6 @@ const Canvas: React.FC = () => {
       };
     }
   }, [isToolbarDragging, handleToolbarMouseMove, handleToolbarMouseUp]);
-
-  // --- PERFORMANCE OPTIMIZATION ---
-  // Use resize observer to track canvas dimensions
-  const canvasSize = useResizeObserver(canvasRef);
-  
-  const { visibleElements } = useViewportCulling({
-    elements,
-    zoomLevel,
-    panOffset,
-    canvasSize: canvasSize || { width: 0, height: 0 },
-  });
 
   // Helper function to create new elements
   const createNewElement = useCallback((type: string, shapeType?: string) => {
@@ -223,9 +268,43 @@ const Canvas: React.FC = () => {
       ];
   }, [selectedElementData]);
 
+  // Add visual debugging for viewport bounds
+  const renderDebugInfo = () => {
+    if (!effectiveCanvasSize || effectiveCanvasSize.width === 0) return null;
+    
+    const viewportBounds = {
+      left: (-panOffset.x) / zoomLevel,
+      top: (-panOffset.y) / zoomLevel,
+      right: (effectiveCanvasSize.width - panOffset.x) / zoomLevel,
+      bottom: (effectiveCanvasSize.height - panOffset.y) / zoomLevel,
+    };
+
+    return (
+      <>
+        {/* Viewport bounds indicator */}
+        <div
+          className="absolute border-2 border-red-500 opacity-20 pointer-events-none"
+          style={{
+            left: viewportBounds.left,
+            top: viewportBounds.top,
+            width: viewportBounds.right - viewportBounds.left,
+            height: viewportBounds.bottom - viewportBounds.top,
+          }}
+        />
+        {/* Debug info overlay */}
+        <div className="fixed bottom-4 left-4 bg-black/80 text-white p-2 rounded text-xs font-mono z-50">
+          <div>Canvas: {effectiveCanvasSize.width.toFixed(0)} x {effectiveCanvasSize.height.toFixed(0)}</div>
+          <div>Zoom: {zoomLevel.toFixed(2)}</div>
+          <div>Pan: ({panOffset.x.toFixed(0)}, {panOffset.y.toFixed(0)})</div>
+          <div>Visible: {visibleElements.length} / Culled: {culledElements.length}</div>
+          <div>Window: {window.innerWidth} x {window.innerHeight}</div>
+        </div>
+      </>
+    );
+  };
 
   return (
-    <div className="w-full h-full flex flex-col bg-bg-secondary overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-bg-secondary overflow-hidden relative">
       {/* Draggable Toolbar */}
       <div 
         ref={toolbarRef}
@@ -253,7 +332,7 @@ const Canvas: React.FC = () => {
       {/* Main Canvas Area */}
       <div
         ref={canvasRef}
-        className="flex-1 w-full h-full cursor-grab active:cursor-grabbing"
+        className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative overflow-hidden"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleMouseUp}
@@ -264,8 +343,11 @@ const Canvas: React.FC = () => {
         style={{ background: 'var(--bg-primary)' }}
       >
         <div
-          className="absolute top-0 left-0"
-          style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})` }}
+          className="absolute top-0 left-0 origin-top-left"
+          style={{ 
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+            transformOrigin: '0 0'
+          }}
         >
           {/* Render visible elements */}
           {visibleElements.map(el => (
@@ -293,6 +375,9 @@ const Canvas: React.FC = () => {
               onMouseDown={(e) => handleResizeStart(e, handle.position, selectedElementData)}
             />
           ))}
+          
+          {/* Debug visualization */}
+          {process.env.NODE_ENV === 'development' && renderDebugInfo()}
         </div>
       </div>
     </div>

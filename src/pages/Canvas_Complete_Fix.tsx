@@ -1,4 +1,4 @@
-// src/pages/Canvas.tsx
+// src/pages/Canvas.tsx - Complete viewport culling fix
 
 import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useCanvasState, CanvasElement as CanvasElementType } from '../hooks/canvas/useCanvasState';
@@ -54,6 +54,62 @@ const Canvas: React.FC = () => {
     getTextStyles
   } = useCanvasEvents({ canvasState });
 
+  // --- VIEWPORT SIZE TRACKING ---
+  // Track canvas viewport size with multiple methods for reliability
+  const canvasSize = useResizeObserver(canvasRef);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+
+  // Update viewport size whenever canvas size changes or window resizes
+  useEffect(() => {
+    const updateViewportSize = () => {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const newSize = { width: rect.width, height: rect.height };
+        setViewportSize(newSize);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Canvas] Viewport size updated:', newSize);
+        }
+      }
+    };
+
+    // Initial update
+    updateViewportSize();
+    
+    // Update on window resize
+    window.addEventListener('resize', updateViewportSize);
+    
+    // Update when canvas size changes
+    if (canvasSize) {
+      setViewportSize(canvasSize);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateViewportSize);
+    };
+  }, [canvasSize]);
+
+  // --- VIEWPORT CULLING ---
+  const { visibleElements, culledElements } = useViewportCulling({
+    elements,
+    zoomLevel,
+    panOffset,
+    canvasSize: viewportSize,
+  });
+
+  // Debug: Log when elements are culled/shown
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Canvas] Viewport culling active:`, {
+        viewportSize,
+        totalElements: elements.length,
+        visibleElements: visibleElements.length,
+        culledElements: culledElements.length,
+        culledIds: culledElements.map(e => e.id)
+      });
+    }
+  }, [viewportSize, elements.length, visibleElements.length, culledElements.length]);
+
   // Center the canvas on initial load
   useEffect(() => {
     if (canvasRef.current && panOffset.x === 0 && panOffset.y === 0) {
@@ -63,32 +119,21 @@ const Canvas: React.FC = () => {
         y: rect.height / 2 - 200
       });
     }
-  }, [canvasRef.current, panOffset, setPanOffset]);
+  }, []);
 
   // Position toolbar at bottom center initially
   useEffect(() => {
     const positionToolbar = () => {
-      // Position relative to the entire page viewport, not canvas container
       setToolbarPosition({
         x: window.innerWidth / 2,
-        y: window.innerHeight - 100 // 100px from bottom of viewport
+        y: window.innerHeight - 100
       });
     };
 
-    // Position immediately on mount
     positionToolbar();
-
-    // Also position on window resize
-    const handleResize = () => {
-      positionToolbar();
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []); // Empty dependency array - only run on mount and cleanup
+    window.addEventListener('resize', positionToolbar);
+    return () => window.removeEventListener('resize', positionToolbar);
+  }, []);
 
   // Toolbar dragging handlers
   const handleToolbarMouseDown = useCallback((e: React.MouseEvent) => {
@@ -116,7 +161,6 @@ const Canvas: React.FC = () => {
     setIsToolbarDragging(false);
   }, []);
 
-  // Add global event listeners for toolbar dragging
   useEffect(() => {
     if (isToolbarDragging) {
       document.addEventListener('mousemove', handleToolbarMouseMove);
@@ -128,24 +172,11 @@ const Canvas: React.FC = () => {
     }
   }, [isToolbarDragging, handleToolbarMouseMove, handleToolbarMouseUp]);
 
-  // --- PERFORMANCE OPTIMIZATION ---
-  // Use resize observer to track canvas dimensions
-  const canvasSize = useResizeObserver(canvasRef);
-  
-  const { visibleElements } = useViewportCulling({
-    elements,
-    zoomLevel,
-    panOffset,
-    canvasSize: canvasSize || { width: 0, height: 0 },
-  });
-
   // Helper function to create new elements
   const createNewElement = useCallback((type: string, shapeType?: string) => {
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
 
-    // Calculate center position in canvas coordinates (accounting for pan and zoom)
-    // Use a safe default position if pan/zoom aren't properly initialized
     const safeZoom = zoomLevel || 1;
     const safePanX = panOffset?.x || 0;
     const safePanY = panOffset?.y || 0;
@@ -156,8 +187,8 @@ const Canvas: React.FC = () => {
     const newElement: CanvasElementType = {
       id: `${type}-${Date.now()}`,
       type: (shapeType || type) as any,
-      x: Math.max(50, centerX - 50), // Ensure minimum distance from edge
-      y: Math.max(50, centerY - 25), // Ensure minimum distance from edge
+      x: Math.max(50, centerX - 50),
+      y: Math.max(50, centerY - 25),
       width: type === 'text' ? undefined : 100,
       height: type === 'text' ? undefined : 50,
       content: type === 'sticky-note' ? 'New note' : type === 'text' ? 'Click to edit' : undefined,
@@ -169,7 +200,7 @@ const Canvas: React.FC = () => {
     saveToHistory();
   }, [canvasRef, panOffset, zoomLevel, setElements, saveToHistory]);
 
-  // --- UI & TOOL LOGIC ---
+  // Tool selection handler
   const handleToolSelect = useCallback((tool: string, event?: React.MouseEvent) => {
     if (tool === 'shapes' && event) {
       const rect = (event.target as HTMLElement).getBoundingClientRect();
@@ -181,7 +212,6 @@ const Canvas: React.FC = () => {
       return;
     }
     
-    // Auto-create elements for certain tools
     if (tool === 'sticky-note') {
       createNewElement('sticky-note');
       setActiveTool('select');
@@ -223,6 +253,41 @@ const Canvas: React.FC = () => {
       ];
   }, [selectedElementData]);
 
+  // Debug overlay for development
+  const renderDebugOverlay = () => {
+    if (process.env.NODE_ENV !== 'development' || !viewportSize.width) return null;
+    
+    const viewportBounds = {
+      left: (-panOffset.x) / zoomLevel,
+      top: (-panOffset.y) / zoomLevel,
+      right: (viewportSize.width - panOffset.x) / zoomLevel,
+      bottom: (viewportSize.height - panOffset.y) / zoomLevel,
+    };
+
+    return (
+      <>
+        {/* Viewport bounds visualization */}
+        <div
+          className="absolute border-2 border-red-500 opacity-30 pointer-events-none"
+          style={{
+            left: viewportBounds.left,
+            top: viewportBounds.top,
+            width: viewportBounds.right - viewportBounds.left,
+            height: viewportBounds.bottom - viewportBounds.top,
+          }}
+        />
+        {/* Debug info panel */}
+        <div className="fixed bottom-4 left-4 bg-black/80 text-white p-2 rounded text-xs font-mono z-50">
+          <div>Canvas: {viewportSize.width.toFixed(0)} x {viewportSize.height.toFixed(0)}</div>
+          <div>Zoom: {zoomLevel.toFixed(2)}</div>
+          <div>Pan: ({panOffset.x.toFixed(0)}, {panOffset.y.toFixed(0)})</div>
+          <div className="text-green-400">Visible: {visibleElements.length}</div>
+          <div className="text-red-400">Culled: {culledElements.length}</div>
+          <div>Total: {elements.length}</div>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-bg-secondary overflow-hidden">
@@ -250,24 +315,36 @@ const Canvas: React.FC = () => {
         />
       </div>
 
-      {/* Main Canvas Area */}
+      {/* Main Canvas Area - with proper clipping */}
       <div
         ref={canvasRef}
-        className="flex-1 w-full h-full cursor-grab active:cursor-grabbing"
+        className="flex-1 w-full h-full cursor-grab active:cursor-grabbing relative"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={(e) => {
-             const delta = e.deltaY > 0 ? -0.1 : 0.1;
-             canvasState.setZoomLevel(prev => Math.max(0.1, Math.min(prev + delta, 5)));
+          const delta = e.deltaY > 0 ? -0.1 : 0.1;
+          canvasState.setZoomLevel(prev => Math.max(0.1, Math.min(prev + delta, 5)));
         }}
-        style={{ background: 'var(--bg-primary)' }}
+        style={{ 
+          background: 'var(--bg-primary)',
+          overflow: 'hidden', // Critical for viewport clipping
+          position: 'relative' // Establish positioning context
+        }}
       >
+        {/* Canvas content container */}
         <div
-          className="absolute top-0 left-0"
-          style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})` }}
+          className="absolute"
+          style={{ 
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+            transformOrigin: '0 0',
+            // Ensure the container is large enough to hold all elements
+            // but doesn't affect viewport calculations
+            width: '1px',
+            height: '1px'
+          }}
         >
-          {/* Render visible elements */}
+          {/* Only render visible elements - this is the key optimization */}
           {visibleElements.map(el => (
             <CanvasElement
               key={el.id}
@@ -278,14 +355,13 @@ const Canvas: React.FC = () => {
                 setElements(prev => prev.map(elem => elem.id === id ? { ...elem, content } : elem));
               }}
               getTextStyles={getTextStyles}
-               // Dummy props, will be implemented
               onTextFormatting={() => {}}
               onTextFormatPropertyChange={() => {}}
             />
           ))}
 
           {/* Render resize handles for the selected element */}
-          {selectedElementData && resizeHandles.map(handle => (
+          {selectedElementData && visibleElements.includes(selectedElementData) && resizeHandles.map(handle => (
             <div
               key={handle.position}
               className="absolute w-3 h-3 bg-blue-500 border-2 border-white rounded-full cursor-nwse-resize"
@@ -294,6 +370,9 @@ const Canvas: React.FC = () => {
             />
           ))}
         </div>
+        
+        {/* Debug visualization */}
+        {renderDebugOverlay()}
       </div>
     </div>
   );

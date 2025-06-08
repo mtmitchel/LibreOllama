@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Viewport Culling Test Instructions</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        .test-step { background: #f5f5f5; padding: 10px; margin: 10px 0; border-left: 4px solid #007acc; }
+        .expected { background: #e8f5e8; border-left-color: #28a745; }
+        .warning { background: #fff3cd; border-left-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>Viewport Culling Test Plan</h1>
+    
+    <div class="test-step">
+        <h3>Step 1: Open Canvas Page</h3>
+        <p>Navigate to <a href="http://127.0.0.1:1422/" target="_blank">http://127.0.0.1:1422/</a> and go to the Canvas page.</p>
+    </div>
+    
+    <div class="test-step">
+        <h3>Step 2: Open Developer Tools</h3>
+        <p>Press F12 to open DevTools and go to the Console tab.</p>
+    </div>
+    
+    <div class="expected">
+        <h3>Expected Initial Behavior:</h3>
+        <p>You should see logs like:</p>
+        <pre>[useResizeObserver] New dimensions: 880 663
+[ViewportCulling] Canvas: 880x663, Zoom: 1, Pan: (140, 131.5) => Visible: 5, Culled: 0
+[Canvas] Viewport culling: 5 visible, 0 culled</pre>
+    </div>
+    
+    <div class="test-step">
+        <h3>Step 3: Resize Window Smaller</h3>
+        <p>Make your browser window significantly smaller (e.g., drag from corner to make it ~400x300px).</p>
+    </div>
+    
+    <div class="expected">
+        <h3>Expected After Resize:</h3>
+        <p>You should see:</p>
+        <ul>
+            <li>New resize observer logs with smaller dimensions</li>
+            <li>Increased "Culled" count in the viewport culling logs</li>
+            <li>Fewer elements visible on the canvas</li>
+        </ul>
+        <pre>[useResizeObserver] New dimensions: 400 300
+[ViewportCulling] Canvas: 400x300, Zoom: 1, Pan: (140, 131.5) => Visible: 2, Culled: 3
+[Canvas] Viewport culling: 2 visible, 3 culled</pre>
+    </div>
+    
+    <div class="test-step">
+        <h3>Step 4: Pan Around</h3>
+        <p>Click and drag to pan the canvas. Different elements should appear/disappear as they enter/exit the viewport.</p>
+    </div>
+    
+    <div class="test-step">
+        <h3>Step 5: Zoom In/Out</h3>
+        <p>Use mouse wheel to zoom. The culling should adjust based on the new zoom level.</p>
+    </div>
+    
+    <div class="warning">
+        <h3>If Issues Persist:</h3>
+        <p>Check that:</p>
+        <ul>
+            <li>Canvas elements are being rendered using <code>visibleElements.map()</code> not <code>elements.map()</code></li>
+            <li>The canvas container has proper overflow handling</li>
+            <li>Console shows both visible and culled element counts changing</li>
+        </ul>
+    </div>
+    
+    <div class="expected">
+        <h3>Success Indicators:</h3>
+        <ul>
+            <li>✅ No more repetitive/excessive console logs</li>
+            <li>✅ Culled count increases when window is smaller</li>
+            <li>✅ Elements outside viewport are not rendered in DOM</li>
+            <li>✅ Smooth performance when panning/zooming</li>
+        </ul>
+    </div>
+</body>
+</html>

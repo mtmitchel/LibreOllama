@@ -42,6 +42,11 @@ interface CanvasToolbarProps {
   dropdownRef: React.RefObject<HTMLDivElement>;
   onToolSelect: (toolId: string, event?: React.MouseEvent) => void;
   onShapeSelect: (shapeId: string) => void;
+  onUndo?: () => void; // Added
+  onRedo?: () => void; // Added
+  onDelete?: () => void; // Added
+  onZoomIn?: () => void; // Added
+  onZoomOut?: () => void; // Added
 }
 
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
@@ -53,7 +58,12 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   canRedo,
   dropdownRef,
   onToolSelect,
-  onShapeSelect
+  onShapeSelect,
+  onUndo, // Added
+  onRedo, // Added
+  onDelete, // Added
+  onZoomIn, // Added
+  onZoomOut, // Added
 }) => {
   const shapes: ShapeType[] = [
     { id: 'rectangle', name: 'Rectangle', icon: RectangleHorizontal, element: 'rectangle' },
@@ -65,15 +75,15 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   ];
 
   const tools = [
-    { id: 'select', icon: MousePointer2, title: 'Select' },
-    { id: 'undo', icon: Undo, title: 'Undo' },
-    { id: 'redo', icon: Redo, title: 'Redo' },
-    { id: 'zoom-in', icon: ZoomIn, title: 'Zoom In' },
-    { id: 'zoom-out', icon: ZoomOut, title: 'Zoom Out' },
-    { id: 'image', icon: Image, title: 'Add Image' },
-    { id: 'text', icon: Type, title: 'Text' },
-    { id: 'highlighter', icon: Highlighter, title: 'Text Highlighter' },
-    { id: 'sticky-note', icon: StickyNote, title: 'Sticky Note' },
+    { id: 'select', icon: MousePointer2, title: 'Select', onClick: () => onToolSelect('select') },
+    { id: 'undo', icon: Undo, title: 'Undo', onClick: onUndo, disabled: !canUndo },
+    { id: 'redo', icon: Redo, title: 'Redo', onClick: onRedo, disabled: !canRedo },
+    { id: 'zoom-in', icon: ZoomIn, title: 'Zoom In', onClick: onZoomIn },
+    { id: 'zoom-out', icon: ZoomOut, title: 'Zoom Out', onClick: onZoomOut },
+    { id: 'image', icon: Image, title: 'Add Image', onClick: () => onToolSelect('image') },
+    { id: 'text', icon: Type, title: 'Text', onClick: () => onToolSelect('text') },
+    { id: 'highlighter', icon: Highlighter, title: 'Text Highlighter', onClick: () => onToolSelect('highlighter') },
+    { id: 'sticky-note', icon: StickyNote, title: 'Sticky Note', onClick: () => onToolSelect('sticky-note') },
     { 
       id: 'shapes', 
       icon: () => {
@@ -85,13 +95,14 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
           </div>
         );
       }, 
-      title: 'Shapes' 
+      title: 'Shapes',
+      onClick: (event: React.MouseEvent) => onToolSelect('shapes', event) 
     },
-    { id: 'line', icon: Minus, title: 'Line' },
-    { id: 'arrow', icon: ArrowRight, title: 'Arrow' },
-    { id: 'pen', icon: Pencil, title: 'Pen' },
-    { id: 'eraser', icon: Eraser, title: 'Eraser' },
-    { id: 'delete', icon: Trash2, title: 'Delete Selected' }
+    { id: 'line', icon: Minus, title: 'Line', onClick: () => onToolSelect('line') },
+    { id: 'arrow', icon: ArrowRight, title: 'Arrow', onClick: () => onToolSelect('arrow') },
+    { id: 'pen', icon: Pencil, title: 'Pen', onClick: () => onToolSelect('pen') },
+    { id: 'eraser', icon: Eraser, title: 'Eraser', onClick: () => onToolSelect('eraser') },
+    { id: 'delete', icon: Trash2, title: 'Delete Selected', onClick: onDelete }
   ];
 
   return (
@@ -100,18 +111,14 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
         {tools.map(tool => (
           <div key={tool.id} className="relative">
             <Button
-              title={tool.title}
-              variant={activeTool === tool.id ? 'primary' : 'ghost'}
+              variant={activeTool === tool.id ? "secondary" : "ghost"}
               size="icon"
-              data-tool={tool.id}
-              onClick={(e) => onToolSelect(tool.id, e)}
-              disabled={
-                (tool.id === 'delete' && !canUndo) || 
-                (tool.id === 'undo' && !canUndo) || 
-                (tool.id === 'redo' && !canRedo)
-              }
+              onClick={tool.onClick as React.MouseEventHandler<HTMLButtonElement>} // Added onClick handler
+              title={tool.title} // Added title for accessibility
+              disabled={(tool as any).disabled} // Added disabled state
+              className={`p-2 ${activeTool === tool.id ? 'bg-action-hover' : ''}`}
             >
-              <tool.icon size={16} />
+              {React.createElement(tool.icon, { size: 18 })}
             </Button>
             
             {/* Shape Dropdown */}

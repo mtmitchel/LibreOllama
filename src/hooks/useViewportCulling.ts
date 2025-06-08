@@ -1,94 +1,72 @@
 import { useMemo } from 'react';
+import { PanZoom, Size, ViewportBounds } from '@/types';
+// Correctly import the CanvasElement interface, not the component
+import type { CanvasElement } from '@/components/canvas/CanvasElement'; 
 
-interface CanvasElement {
-  id: string;
-  type: 'sticky-note' | 'rectangle' | 'circle' | 'text' | 'triangle' | 'square' | 'hexagon' | 'star' | 'drawing' | 'line' | 'arrow' | 'image';
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  content?: string;
-  color?: string;
-  backgroundColor?: string;
-  url?: string;
-  path?: string;
-  x2?: number;
-  y2?: number;
-  imageUrl?: string;
-  imageName?: string;
-  fontSize?: 'small' | 'medium' | 'large';
-  isBold?: boolean;
-  isItalic?: boolean;
-  isBulletList?: boolean;
-  textAlignment?: 'left' | 'center' | 'right';
-}
-
-interface ViewportBounds {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-interface UseViewportCullingProps {
+export interface UseViewportCullingProps {
   elements: CanvasElement[];
   zoomLevel: number;
-  panOffset: { x: number; y: number };
-  canvasSize: { width: number; height: number };
+  panOffset: PanZoom;
+  canvasSize: Size | null; 
 }
 
-/**
- * Custom hook for viewport culling - only renders elements visible in the current viewport
- * This improves performance by reducing the number of DOM elements rendered
- */
-export function useViewportCulling({
-  elements,
-  zoomLevel,
-  panOffset,
-  canvasSize
-}: UseViewportCullingProps) {
-  const visibleElements = useMemo(() => {
-    // Calculate viewport bounds in canvas coordinates
+export const useViewportCulling = ({ elements, zoomLevel, panOffset, canvasSize }: UseViewportCullingProps) => {
+  return useMemo(() => {
+    // Early return for invalid parameters OR very small canvas sizes during initialization
+    // Very small canvas likely means the window is minimized during page load
+    const isInitializing = !canvasSize || canvasSize.width === 0 || canvasSize.height === 0 || zoomLevel === 0;
+    const isVerySmallCanvas = canvasSize && (canvasSize.width < 200 || canvasSize.height < 200);
+    
+    if (isInitializing || isVerySmallCanvas) {
+      if (import.meta.env.DEV) {
+        console.log(`[ViewportCulling] ${isInitializing ? 'Initializing' : 'Very small canvas'} - showing all elements. CanvasSize: ${canvasSize?.width}x${canvasSize?.height}, ZoomLevel: ${zoomLevel}, Elements: ${elements.length}`);
+      }
+      // During initialization or very small windows, show all elements
+      return { visibleElements: elements, culledElements: [] };
+    }
+
+    const buffer = 0; // Screen pixel buffer for strict culling
+
     const viewportBounds: ViewportBounds = {
-      left: -panOffset.x - 100, // Add 100px buffer for smooth scrolling
-      top: -panOffset.y - 100,
-      right: (canvasSize.width / zoomLevel) - panOffset.x + 100,
-      bottom: (canvasSize.height / zoomLevel) - panOffset.y + 100
+      left: (-panOffset.x - buffer) / zoomLevel,
+      top: (-panOffset.y - buffer) / zoomLevel,
+      right: (canvasSize.width - panOffset.x + buffer) / zoomLevel,
+      bottom: (canvasSize.height - panOffset.y + buffer) / zoomLevel,
     };
 
-    return elements.filter(element => {
-      // Get element bounds
-      let elementLeft = element.x;
-      let elementTop = element.y;
-      let elementRight = element.x + (element.width || 100);
-      let elementBottom = element.y + (element.height || 100);
+    const visibleElements: CanvasElement[] = [];
+    const culledElements: CanvasElement[] = [];
 
-      // Handle line and arrow elements that use x2, y2
-      if (element.type === 'line' || element.type === 'arrow') {
-        elementLeft = Math.min(element.x, element.x2 || element.x);
-        elementTop = Math.min(element.y, element.y2 || element.y);
-        elementRight = Math.max(element.x, element.x2 || element.x);
-        elementBottom = Math.max(element.y, element.y2 || element.y);
+    elements.forEach(element => {
+      // Ensure width and height are not undefined before using them
+      const elementWidth = element.width || 0;
+      const elementHeight = element.height || 0;
+
+      const elementBounds = {
+        left: element.x,
+        top: element.y,
+        right: element.x + elementWidth,
+        bottom: element.y + elementHeight,
+      };
+
+      const isIntersecting = 
+        elementBounds.left < viewportBounds.right &&
+        elementBounds.right > viewportBounds.left &&
+        elementBounds.top < viewportBounds.bottom &&
+        elementBounds.bottom > viewportBounds.top;
+
+      if (isIntersecting) {
+        visibleElements.push(element);
+      } else {
+        culledElements.push(element);
       }
-
-      // Handle drawing elements that span the entire canvas
-      if (element.type === 'drawing') {
-        return true; // Always render drawings as they can span large areas
-      }
-
-      // Check if element intersects with viewport
-      return !(
-        elementRight < viewportBounds.left ||
-        elementLeft > viewportBounds.right ||
-        elementBottom < viewportBounds.top ||
-        elementTop > viewportBounds.bottom
-      );
     });
-  }, [elements, zoomLevel, panOffset, canvasSize]);
 
-  return {
-    visibleElements,
-    totalElements: elements.length,
-    culledElements: elements.length - visibleElements.length
-  };
-}
+    // Reduced logging - only log summary in development
+    if (import.meta.env.DEV) {
+      console.log(`[ViewportCulling] Canvas: ${canvasSize.width}x${canvasSize.height}, Zoom: ${zoomLevel}, Pan: (${panOffset.x}, ${panOffset.y}) => Visible: ${visibleElements.length}, Culled: ${culledElements.length}`);
+    }
+
+    return { visibleElements, culledElements };
+  }, [elements, zoomLevel, panOffset.x, panOffset.y, canvasSize?.width, canvasSize?.height]);
+};

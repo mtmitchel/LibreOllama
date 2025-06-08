@@ -28,17 +28,17 @@ export default function App() {
           <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <TopBar />
-            <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-background">
+            <main className="flex-1 overflow-y-auto bg-background">
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/notes" element={<Notes />} />
+                <Route path="/" element={<div className="p-6 lg:p-8"><Dashboard /></div>} />
+                <Route path="/chat" element={<div className="p-6 lg:p-8"><Chat /></div>} />
+                <Route path="/projects" element={<div className="p-6 lg:p-8"><Projects /></div>} />
+                <Route path="/notes" element={<div className="p-6 lg:p-8"><Notes /></div>} />
                 <Route path="/canvas" element={<Canvas />} />
-                <Route path="/calendar" element={<Calendar />} />
-                <Route path="/tasks" element={<Tasks />} />
-                <Route path="/agents" element={<Agents />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/calendar" element={<div className="p-6 lg:p-8"><Calendar /></div>} />
+                <Route path="/tasks" element={<div className="p-6 lg:p-8"><Tasks /></div>} />
+                <Route path="/agents" element={<div className="p-6 lg:p-8"><Agents /></div>} />
+                <Route path="/settings" element={<div className="p-6 lg:p-8"><Settings /></div>} />
               </Routes>
             </main>
           </div>

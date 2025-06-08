@@ -94,6 +94,14 @@ export interface UseCanvasStateReturn {
   historyIndex: number;
   setHistoryIndex: React.Dispatch<React.SetStateAction<number>>;
   
+  // Drag state
+  isDragging: boolean;
+  setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
+  dragStartPos: { x: number; y: number };
+  setDragStartPos: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
+  dragStartElementPos: { x: number; y: number };
+  setDragStartElementPos: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
+  
   // Dropdown positioning
   dropdownPosition: { left: number; top: number } | null;
   setDropdownPosition: React.Dispatch<React.SetStateAction<{ left: number; top: number } | null>>;
@@ -107,59 +115,69 @@ export interface UseCanvasStateReturn {
 }
 
 export const useCanvasState = (): UseCanvasStateReturn => {
-  // Initial demo elements
-  const initialElements: CanvasElement[] = [
-    {
-      id: '1',
-      type: 'sticky-note',
-      x: 50,
-      y: 120,
-      width: 180,
-      height: 180,
-      content: 'Brainstorm ideas for the new feature',
-      color: '#facc15'
-    },
-    {
-      id: '2',
-      type: 'sticky-note',
-      x: 280,
-      y: 120,
-      width: 180,
-      height: 180,
-      content: 'User research findings',
-      color: '#fb7185'
-    },
-    {
-      id: '3',
-      type: 'rectangle',
-      x: 500,
-      y: 150,
-      width: 120,
-      height: 80,
-      color: 'var(--accent-primary)'
-    },
-    {
-      id: '4',
-      type: 'circle',
-      x: 100,
-      y: 350,
-      width: 100,
-      height: 100,
-      color: '#10b981'
-    },
-    {
-      id: '5',
-      type: 'text',
-      x: 50,
-      y: 50,
-      width: 300,
-      height: 40,
-      content: 'Project Brainstorming Session',
-      fontSize: 'large',
-      isBold: true,
-      textAlignment: 'center'
-    }
-  ];
+  // Function to generate initial demo elements based on available viewport
+  const generateInitialElements = (): CanvasElement[] => {
+    // Use a very conservative estimate to ensure visibility even in tiny windows
+    // Elements will be clustered in the top-left corner for maximum compatibility
+    const baseSize = 80; // Small base size for elements
+    const spacing = 90; // Tight spacing between elements
+    
+    return [
+      {
+        id: '1',
+        type: 'sticky-note',
+        x: 10,
+        y: 40,
+        width: baseSize,
+        height: baseSize,
+        content: 'Ideas',
+        color: '#facc15'
+      },
+      {
+        id: '2',
+        type: 'sticky-note',
+        x: 10 + spacing,
+        y: 40,
+        width: baseSize,
+        height: baseSize,
+        content: 'Research',
+        color: '#fb7185'
+      },
+      {
+        id: '3',
+        type: 'rectangle',
+        x: 10,
+        y: 40 + spacing,
+        width: 60,
+        height: 40,
+        color: 'var(--accent-primary)'
+      },
+      {
+        id: '4',
+        type: 'circle',
+        x: 80,
+        y: 40 + spacing,
+        width: 50,
+        height: 50,
+        color: '#10b981'
+      },
+      {
+        id: '5',
+        type: 'text',
+        x: 10,
+        y: 10,
+        width: 180,
+        height: 25,
+        content: 'Project Brainstorming',
+        fontSize: 'medium',
+        isBold: true,
+        textAlignment: 'left'
+      }
+    ];
+  };
+
+  // Initial demo elements - positioned to be visible even in small viewports
+  const initialElements: CanvasElement[] = generateInitialElements();
 
   // Core state
   const [elements, setElements] = useState<CanvasElement[]>(initialElements);
@@ -190,9 +208,9 @@ export const useCanvasState = (): UseCanvasStateReturn => {
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
   const [dragStartElementPos, setDragStartElementPos] = useState({ x: 0, y: 0 });
   
-  // Zoom and pan
+  // Zoom and pan - Initialize with elements visible in center of screen
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [panOffset, setPanOffset] = useState({ x: 100, y: 100 }); // Start with small positive offset
   
   // Text formatting
   const [isEditingText, setIsEditingText] = useState<string | null>(null);

@@ -1,4 +1,4 @@
-// src/pages/Canvas.tsx
+// src/pages/Canvas.tsx - FIXED VERSION
 
 import React, { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useCanvasState, CanvasElement as CanvasElementType } from '../hooks/canvas/useCanvasState';
@@ -53,6 +53,31 @@ const Canvas: React.FC = () => {
     saveToHistory,
     getTextStyles
   } = useCanvasEvents({ canvasState });
+
+  // --- PERFORMANCE OPTIMIZATION ---
+  // Use resize observer to track canvas dimensions
+  const canvasSize = useResizeObserver(canvasRef);
+  
+  // Add debug info in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && canvasSize) {
+      console.log('[Canvas] Canvas size updated:', canvasSize);
+    }
+  }, [canvasSize]);
+  
+  const { visibleElements, culledElements } = useViewportCulling({
+    elements,
+    zoomLevel,
+    panOffset,
+    canvasSize: canvasSize || { width: 0, height: 0 },
+  });
+
+  // Debug: Log culling stats when they change
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Canvas] Rendering ${visibleElements.length} elements, culling ${culledElements.length} elements`);
+    }
+  }, [visibleElements.length, culledElements.length]);
 
   // Center the canvas on initial load
   useEffect(() => {
@@ -127,17 +152,6 @@ const Canvas: React.FC = () => {
       };
     }
   }, [isToolbarDragging, handleToolbarMouseMove, handleToolbarMouseUp]);
-
-  // --- PERFORMANCE OPTIMIZATION ---
-  // Use resize observer to track canvas dimensions
-  const canvasSize = useResizeObserver(canvasRef);
-  
-  const { visibleElements } = useViewportCulling({
-    elements,
-    zoomLevel,
-    panOffset,
-    canvasSize: canvasSize || { width: 0, height: 0 },
-  });
 
   // Helper function to create new elements
   const createNewElement = useCallback((type: string, shapeType?: string) => {
@@ -223,6 +237,29 @@ const Canvas: React.FC = () => {
       ];
   }, [selectedElementData]);
 
+  // Add visual debugging overlay in development
+  const renderDebugOverlay = () => {
+    if (process.env.NODE_ENV !== 'development' || !canvasSize) return null;
+    
+    const viewportBounds = {
+      left: (-panOffset.x) / zoomLevel,
+      top: (-panOffset.y) / zoomLevel,
+      right: (canvasSize.width - panOffset.x) / zoomLevel,
+      bottom: (canvasSize.height - panOffset.y) / zoomLevel,
+    };
+
+    return (
+      <div
+        className="absolute border-2 border-red-500 opacity-30 pointer-events-none"
+        style={{
+          left: viewportBounds.left,
+          top: viewportBounds.top,
+          width: viewportBounds.right - viewportBounds.left,
+          height: viewportBounds.bottom - viewportBounds.top,
+        }}
+      />
+    );
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-bg-secondary overflow-hidden">
@@ -267,6 +304,9 @@ const Canvas: React.FC = () => {
           className="absolute top-0 left-0"
           style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})` }}
         >
+          {/* Debug overlay */}
+          {renderDebugOverlay()}
+          
           {/* Render visible elements */}
           {visibleElements.map(el => (
             <CanvasElement
@@ -295,6 +335,16 @@ const Canvas: React.FC = () => {
           ))}
         </div>
       </div>
+      
+      {/* Debug info panel */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 left-4 bg-black/80 text-white p-2 rounded text-xs font-mono">
+          <div>Canvas: {canvasSize?.width || 0} x {canvasSize?.height || 0}</div>
+          <div>Zoom: {zoomLevel.toFixed(2)}</div>
+          <div>Pan: ({panOffset.x.toFixed(0)}, {panOffset.y.toFixed(0)})</div>
+          <div>Visible: {visibleElements.length} / {elements.length}</div>
+        </div>
+      )}
     </div>
   );
 };

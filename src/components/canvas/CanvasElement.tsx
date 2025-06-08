@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../ui';
 
-interface CanvasElement {
+export interface CanvasElement { // Added export
   id: string;
   type: 'sticky-note' | 'rectangle' | 'circle' | 'text' | 'triangle' | 'square' | 'hexagon' | 'star' | 'drawing' | 'line' | 'arrow' | 'image';
   x: number;
