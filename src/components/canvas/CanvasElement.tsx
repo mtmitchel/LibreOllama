@@ -2,7 +2,7 @@ import React, { memo, useCallback } from 'react';
 import { 
   Link
 } from 'lucide-react';
-import { Card } from './ui';
+import { Card } from '../ui';
 
 interface CanvasElement {
   id: string;
