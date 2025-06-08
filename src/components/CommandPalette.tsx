@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Hash, FileText, MessageSquare, CheckSquare, Settings, PenTool, Bot } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Hash, FileText, MessageSquare, CheckSquare, Settings, PenTool, Bot, Calendar, FolderKanban } from 'lucide-react';
 
 interface CommandItem {
   id: string;
@@ -19,8 +20,9 @@ interface CommandPaletteProps {
 export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const navigate = useNavigate();
 
-  // Sample commands - in a real app these would come from your app's state/routing
+  // Commands with proper navigation
   const commands: CommandItem[] = [
     {
       id: 'dashboard',
@@ -28,62 +30,80 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       subtitle: 'View overview and recent activity',
       icon: <Hash className="w-4 h-4" />,
       category: 'Navigation',
-      action: () => console.log('Navigate to dashboard'),
+      action: () => navigate('/'),
       keywords: ['home', 'overview']
     },
     {
-      id: 'new-chat',
-      title: 'New Chat',
-      subtitle: 'Start a conversation with AI',
+      id: 'chat',
+      title: 'Go to Chat',
+      subtitle: 'Start or continue conversations with AI',
       icon: <MessageSquare className="w-4 h-4" />,
-      category: 'Actions',
-      action: () => console.log('Start new chat'),
-      keywords: ['ai', 'conversation', 'llm']
+      category: 'Navigation',
+      action: () => navigate('/chat'),
+      keywords: ['ai', 'conversation', 'llm', 'messages']
     },
     {
-      id: 'new-note',
-      title: 'New Note',
-      subtitle: 'Create a new note document',
+      id: 'projects',
+      title: 'Go to Projects',
+      subtitle: 'Manage and organize your projects',
+      icon: <FolderKanban className="w-4 h-4" />,
+      category: 'Navigation',
+      action: () => navigate('/projects'),
+      keywords: ['project', 'manage', 'organize']
+    },
+    {
+      id: 'notes',
+      title: 'Go to Notes',
+      subtitle: 'Create and edit notes with block editor',
       icon: <FileText className="w-4 h-4" />,
-      category: 'Actions',
-      action: () => console.log('Create new note'),
-      keywords: ['document', 'write', 'markdown']
-    },
-    {
-      id: 'new-task',
-      title: 'New Task',
-      subtitle: 'Add a task to your todo list',
-      icon: <CheckSquare className="w-4 h-4" />,
-      category: 'Actions',
-      action: () => console.log('Create new task'),
-      keywords: ['todo', 'reminder', 'productivity']
+      category: 'Navigation',
+      action: () => navigate('/notes'),
+      keywords: ['document', 'write', 'markdown', 'editor']
     },
     {
       id: 'canvas',
-      title: 'Open Canvas',
+      title: 'Go to Canvas',
       subtitle: 'Launch the whiteboard workspace',
       icon: <PenTool className="w-4 h-4" />,
       category: 'Navigation',
-      action: () => console.log('Open canvas'),
-      keywords: ['whiteboard', 'draw', 'design']
+      action: () => navigate('/canvas'),
+      keywords: ['whiteboard', 'draw', 'design', 'sketch']
+    },
+    {
+      id: 'calendar',
+      title: 'Go to Calendar',
+      subtitle: 'View and manage your schedule',
+      icon: <Calendar className="w-4 h-4" />,
+      category: 'Navigation',
+      action: () => navigate('/calendar'),
+      keywords: ['schedule', 'events', 'meetings', 'dates']
+    },
+    {
+      id: 'tasks',
+      title: 'Go to Tasks',
+      subtitle: 'ADHD-optimized task management',
+      icon: <CheckSquare className="w-4 h-4" />,
+      category: 'Navigation',
+      action: () => navigate('/tasks'),
+      keywords: ['todo', 'kanban', 'productivity', 'adhd']
     },
     {
       id: 'agents',
-      title: 'Manage Agents',
+      title: 'Go to Agents',
       subtitle: 'Configure AI agents and automations',
       icon: <Bot className="w-4 h-4" />,
       category: 'Navigation',
-      action: () => console.log('Open agents'),
-      keywords: ['automation', 'ai', 'workflow']
+      action: () => navigate('/agents'),
+      keywords: ['automation', 'ai', 'workflow', 'bots']
     },
     {
       id: 'settings',
-      title: 'Settings',
+      title: 'Go to Settings',
       subtitle: 'Configure app preferences',
       icon: <Settings className="w-4 h-4" />,
       category: 'Navigation',
-      action: () => console.log('Open settings'),
-      keywords: ['preferences', 'config', 'options']
+      action: () => navigate('/settings'),
+      keywords: ['preferences', 'config', 'options', 'configuration']
     }
   ];
 

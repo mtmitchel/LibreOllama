@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HeaderProvider } from './contexts/HeaderContext';
 import Sidebar from './components/navigation/Sidebar';
 import { TopBar } from './components/layout/TopBar';
+import { CommandPalette } from './components/CommandPalette';
+import { useCommandPalette } from './hooks/useCommandPalette';
 
 // ALL PAGE COMPONENTS
 import Dashboard from './pages/Dashboard';
@@ -17,6 +19,7 @@ import Settings from './pages/Settings';
 
 export default function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const { isOpen, close } = useCommandPalette();
 
   return (
     <Router>
@@ -39,6 +42,7 @@ export default function App() {
               </Routes>
             </main>
           </div>
+          <CommandPalette isOpen={isOpen} onClose={close} />
         </div>
       </HeaderProvider>
     </Router>

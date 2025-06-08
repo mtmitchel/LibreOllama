@@ -3,7 +3,7 @@ import React from 'react';
 
 // Button Component - Uses Tailwind utilities with design system variables
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'default';
   size?: 'sm' | 'default' | 'icon';
   children: React.ReactNode;
 }
@@ -16,18 +16,17 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseClasses = 'inline-flex items-center justify-center gap-2 border-none rounded-md font-sans font-medium leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed';
-  
-  const variantClasses = {
+    const variantClasses = {
     primary: 'bg-primary text-white hover:bg-secondary',
     secondary: 'bg-bg-tertiary text-text-primary border border-border-default hover:bg-bg-elevated',
     ghost: 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-text-primary',
-    outline: 'bg-bg-tertiary text-text-primary border border-border-default hover:bg-bg-elevated'
+    outline: 'bg-bg-tertiary text-text-primary border border-border-default hover:bg-bg-elevated',
+    default: 'bg-bg-tertiary text-text-primary border border-border-default hover:bg-bg-elevated'
   };
-  
-  const sizeClasses = {
+    const sizeClasses = {
     sm: 'py-2 px-3 text-xs',
     default: 'py-3 px-4 text-sm',
-    icon: 'p-2 w-8 h-8'
+    icon: 'p-2 w-9 h-9 flex items-center justify-center'
   };
   
   return (
@@ -91,20 +90,29 @@ export function Input({
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   variant?: 'widget' | 'card';
+  padding?: 'none' | 'sm' | 'default' | 'lg';
 }
 
 export function Card({ 
   className = '', 
   children, 
   variant = 'card',
+  padding = 'default',
   style,
   ...props 
 }: CardProps) {
-  const baseClasses = 'bg-bg-surface border border-border-subtle rounded-lg p-6 relative';
+  const baseClasses = 'bg-bg-surface border border-border-subtle rounded-lg relative';
+  
+  const paddingClasses = {
+    none: '',
+    sm: 'p-3',
+    default: 'p-6',
+    lg: 'p-8'
+  };
   
   return (
     <div
-      className={`${baseClasses} ${className}`.trim()}
+      className={`${baseClasses} ${paddingClasses[padding]} ${className}`.trim()}
       style={style}
       {...props}
     >
@@ -115,7 +123,7 @@ export function Card({
 
 // Badge Component - Uses design system variables
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'accent';
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'accent' | 'secondary' | 'outline';
   children: React.ReactNode;
 }
 
@@ -125,8 +133,7 @@ export function Badge({
   children, 
   style,
   ...props 
-}: BadgeProps) {
-  const getVariantStyle = () => {
+}: BadgeProps) {  const getVariantStyle = () => {
     switch (variant) {
       case 'success':
         return {
@@ -147,6 +154,17 @@ export function Badge({
         return {
           background: 'var(--accent-primary)',
           color: 'white'
+        };
+      case 'secondary':
+        return {
+          background: 'var(--bg-elevated)',
+          color: 'var(--text-primary)'
+        };
+      case 'outline':
+        return {
+          background: 'transparent',
+          color: 'var(--text-secondary)',
+          border: '1px solid var(--border-default)'
         };
       default:
         return {
@@ -207,32 +225,37 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   error?: string;
 }
 
-export function Textarea({ className = '', error, style, ...props }: TextareaProps) {
-  const baseClasses = 'w-full bg-input-bg border border-border-default rounded-md font-sans text-sm text-text-primary transition-all duration-150 placeholder:text-input-placeholder focus:outline-none resize-vertical min-h-[80px]';
-  
-  const stateClasses = error 
-    ? 'border-error focus:border-error focus:shadow-[0_0_0_2px_rgba(239,68,68,0.1)]'
-    : 'focus:border-input-focus-ring focus:shadow-[0_0_0_2px_var(--accent-soft)]';
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className = '', error, style, ...props }, ref) => {
+    const baseClasses = 'w-full bg-input-bg border border-border-default rounded-md font-sans text-sm text-text-primary transition-all duration-150 placeholder:text-input-placeholder focus:outline-none resize-vertical min-h-[80px]';
+    
+    const stateClasses = error 
+      ? 'border-error focus:border-error focus:shadow-[0_0_0_2px_rgba(239,68,68,0.1)]'
+      : 'focus:border-input-focus-ring focus:shadow-[0_0_0_2px_var(--accent-soft)]';
 
-  return (
-    <div className="w-full">
-      <textarea
-        className={`${baseClasses} ${stateClasses} py-3 px-4 ${className}`.trim()}
-        style={style}
-        {...props}
-      />
-      {error && (
-        <p style={{
-          marginTop: 'var(--space-1)',
-          fontSize: '12px',
-          color: 'var(--error)'
-        }}>
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
+    return (
+      <div className="w-full">
+        <textarea
+          ref={ref}
+          className={`${baseClasses} ${stateClasses} py-3 px-4 ${className}`.trim()}
+          style={style}
+          {...props}
+        />
+        {error && (
+          <p style={{
+            marginTop: 'var(--space-1)',
+            fontSize: '12px',
+            color: 'var(--error)'
+          }}>
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+);
+
+Textarea.displayName = 'Textarea';
 
 // Tabs Components
 interface TabsProps {

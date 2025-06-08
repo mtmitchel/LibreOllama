@@ -1,7 +1,7 @@
 // src/pages/Chat.tsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, Button, Input } from '../components/ui';
+import { Card, Button, Textarea } from '../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { 
   Plus, Search, Bot, User, Paperclip, Send, MoreHorizontal, ChevronDown, Pin, Users, MessagesSquare, PanelLeft, PanelLeftOpen, Copy, Trash2, Download
@@ -196,12 +196,13 @@ export function Chat() {
                 </div>
                 <div className="space-y-1">
                   {filteredConversations.filter(c => c.isPinned).map(conv => (
-                    <div 
-                      key={conv.id} 
+                    <Card
+                      key={conv.id}
+                      padding="sm"
                       onClick={() => handleSelectChat(conv.id)} 
                       onMouseEnter={() => setHoveredConversationId(conv.id)}
                       onMouseLeave={() => setHoveredConversationId(null)}
-                      className={`relative group p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                      className={`relative group cursor-pointer transition-all duration-200 ${
                         selectedChatId === conv.id 
                           ? 'bg-accent text-accent-foreground shadow-accent/25 border border-accent/20' 
                           : 'hover:bg-muted/60 border border-transparent hover:border-border/50'
@@ -249,7 +250,7 @@ export function Chat() {
                           </button>
                         </div>
                       )}
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>
@@ -263,12 +264,13 @@ export function Chat() {
               </div>
               <div className="space-y-1">
                 {filteredConversations.filter(c => !c.isPinned).map(conv => (
-                  <div 
-                    key={conv.id} 
+                  <Card
+                    key={conv.id}
+                    padding="sm"
                     onClick={() => handleSelectChat(conv.id)} 
                     onMouseEnter={() => setHoveredConversationId(conv.id)}
                     onMouseLeave={() => setHoveredConversationId(null)}
-                    className={`relative group p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                    className={`relative group cursor-pointer transition-all duration-200 ${
                       selectedChatId === conv.id 
                         ? 'bg-accent text-accent-foreground shadow-accent/25 border border-accent/20' 
                         : 'hover:bg-muted/60 border border-transparent hover:border-border/50'
@@ -316,7 +318,7 @@ export function Chat() {
                         </button>
                       </div>
                     )}
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -425,11 +427,10 @@ export function Chat() {
                  
                  {/* Text Input */}
                  <div className="flex-1 relative">
-                   <Input 
-                    as="textarea"
+                   <Textarea 
                     ref={textareaRef}
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewMessage(e.target.value)}
                     placeholder={`Message ${selectedChat?.title || 'AI'}...`}
                     className="w-full min-h-[52px] max-h-32 py-4 px-4 rounded-xl resize-none focus:ring-2 focus:ring-accent disabled:opacity-50 h-auto"
                     onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
