@@ -1,14 +1,10 @@
 // src/pages/Notes.tsx
-import React, { useState, useEffect, useRef } from 'react'; // Removed forwardRef
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Button, Input } from '../components/ui';
 import {
   Plus, Folder, Search, Heading1, Heading2, List, CheckSquare, Code2,
-  PencilRuler, ChevronRight, ChevronDown, GripVertical, MoreHorizontal, Type, Image as ImageIcon, Quote, Link as LinkIcon, Trash2,
-  Bold, Italic, Strikethrough // Ensured Underline is not imported
+  PencilRuler, ChevronRight, ChevronDown, GripVertical, MoreHorizontal, Type, Image as ImageIcon, Quote, Trash2
 } from 'lucide-react';
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import LinkExtension from '@tiptap/extension-link';
 
 // --- Data Structures & Mock Data (Enhanced) ---
 
@@ -131,60 +127,25 @@ const renderFolderTree = (folderList: Folder[], level: number, selectedNoteId: s
   });
 };
 
-// --- Block Components ---
-
-interface TipTapEditorProps {
+// Simple text editor replacement for TipTap
+interface SimpleEditorProps {
   content: string;
   onChange: (blockId: string, newContent: string) => void;
   blockId: string;
   className?: string;
 }
 
-const TipTapEditor: React.FC<TipTapEditorProps> = ({ content, onChange, blockId, className }) => {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        // Disable heading extension from StarterKit if we want to handle H1/H2 blocks separately
-        // Or configure it to match our needs
-        heading: false, // Assuming H1/H2 are separate block types, not inline styles within a text block
-      }),
-      LinkExtension.configure({
-        openOnClick: true, // Set to true for user convenience
-        autolink: true,
-      }),
-    ],
-    content: content,
-    onUpdate: ({ editor: currentEditor }) => {
-      onChange(blockId, currentEditor.getHTML());
-    },
-    editorProps: {
-      attributes: {
-        class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none p-1 -m-1 rounded focus:ring-1 focus:ring-accent-primary ${className || ''}`,
-      },
-    },
-  });
-
+const SimpleEditor: React.FC<SimpleEditorProps> = ({ content, onChange, blockId, className }) => {
   return (
-    <>
-      {editor && (
-        <BubbleMenu editor={editor} tippyOptions={{ duration: 100, placement: 'top-start' }} className="bg-bg-tertiary shadow-lg rounded-md p-1 flex gap-0.5 border border-border-default">
-          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('bold') ? 'bg-accent-primary text-white' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()} disabled={!editor.can().chain().focus().toggleBold().run()}> <Bold size={16} /> </Button>
-          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('italic') ? 'bg-accent-primary text-white' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()} disabled={!editor.can().chain().focus().toggleItalic().run()}> <Italic size={16} /> </Button>
-          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('strike') ? 'bg-accent-primary text-white' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()} disabled={!editor.can().chain().focus().toggleStrike().run()}> <Strikethrough size={16} /> </Button>
-          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('link') ? 'bg-accent-primary text-white' : ''}`} onClick={() => {
-            const previousUrl = editor.getAttributes('link').href;
-            const url = window.prompt('URL', previousUrl);
-            if (url === null) return;
-            if (url === '') {
-              editor.chain().focus().extendMarkRange('link').unsetLink().run();
-              return;
-            }
-            editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
-          }}> <LinkIcon size={16} /> </Button>
-        </BubbleMenu>
-      )}
-      <EditorContent editor={editor} />
-    </>
+    <div
+      contentEditable
+      suppressContentEditableWarning
+      className={`outline-none focus:ring-1 focus:ring-accent rounded p-1 -m-1 ${className || ''}`}
+      dangerouslySetInnerHTML={{ __html: content }}
+      onBlur={(e) => {
+        onChange(blockId, e.currentTarget.innerHTML);
+      }}
+    />
   );
 };
 
@@ -194,18 +155,18 @@ interface BlockComponentProps {
 }
 
 const TextBlock: React.FC<BlockComponentProps> = ({ block, onContentChange }) => (
-  <TipTapEditor content={block.content} onChange={onContentChange} blockId={block.id} />
+  <SimpleEditor content={block.content} onChange={onContentChange} blockId={block.id} />
 );
 
 const Heading1Block: React.FC<BlockComponentProps> = ({ block, onContentChange }) => (
   <h1 className="text-3xl font-bold mb-4 mt-6 outline-none">
-    <TipTapEditor content={block.content} onChange={onContentChange} blockId={block.id} className="font-bold" />
+    <SimpleEditor content={block.content} onChange={onContentChange} blockId={block.id} className="font-bold" />
   </h1>
 );
 
 const Heading2Block: React.FC<BlockComponentProps> = ({ block, onContentChange }) => (
   <h2 className="text-2xl font-bold mb-3 mt-4 outline-none">
-    <TipTapEditor content={block.content} onChange={onContentChange} blockId={block.id} className="font-bold" />
+    <SimpleEditor content={block.content} onChange={onContentChange} blockId={block.id} className="font-bold" />
   </h2>
 );
 
@@ -257,7 +218,14 @@ interface SlashCommandMenuProps {
 
 const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ onSelect, position }) => {
     const commands = [
-        { id: 'text', label: 'Text', icon: Type }, { id: 'heading1', label: 'Heading 1', icon: Heading1 }, { id: 'heading2', label: 'Heading 2', icon: Heading2 }, { id: 'checklist', label: 'Checklist', icon: CheckSquare }, { id: 'list', label: 'Bulleted List', icon: List }, { id: 'quote', label: 'Quote', icon: Quote }, { id: 'canvas', label: 'Canvas', icon: PencilRuler }, { id: 'image', label: 'Image', icon: ImageIcon },
+        { id: 'text' as const, label: 'Text', icon: Type }, 
+        { id: 'heading1' as const, label: 'Heading 1', icon: Heading1 }, 
+        { id: 'heading2' as const, label: 'Heading 2', icon: Heading2 }, 
+        { id: 'checklist' as const, label: 'Checklist', icon: CheckSquare }, 
+        { id: 'list' as const, label: 'Bulleted List', icon: List }, 
+        { id: 'quote' as const, label: 'Quote', icon: Quote }, 
+        { id: 'canvas' as const, label: 'Canvas', icon: PencilRuler }, 
+        { id: 'image' as const, label: 'Image', icon: ImageIcon },
     ];
     if (!position) return null;
     return (
@@ -325,7 +293,18 @@ interface BlockRendererProps {
   isDraggingOver: boolean;
 }
 
-const BlockRenderer: React.FC<BlockRendererProps> = ({ block, onContentChange, onDragStart, onDragOver, onDrop, onDragEnd, isDraggingOver, onDelete, onTransform, onAddBlock }) => {
+const BlockRenderer: React.FC<BlockRendererProps> = ({ 
+    block, 
+    onContentChange, 
+    onDragStart, 
+    onDragOver, 
+    onDrop, 
+    onDragEnd, 
+    isDraggingOver, 
+    onDelete, 
+    onTransform, 
+    onAddBlock: _onAddBlock // Prefix with underscore to indicate intentionally unused
+}) => {
     const [isHovered, setIsHovered] = useState(false);
     const [optionsMenu, setOptionsMenu] = useState<{ x: number, y: number } | null>(null);
     const blockRef = useRef<HTMLDivElement>(null);
