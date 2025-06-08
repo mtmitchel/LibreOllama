@@ -1,207 +1,114 @@
-# 🧠 LibreOllama: ADHD-Optimized AI Productivity Platform
+# 🧠 LibreOllama: The Privacy-First, ADHD-Optimized AI Workspace
 
-> **Privacy-First • Local AI • Professional Workspace**  
-> Comprehensive productivity suite designed specifically for neurodivergent professionals, combining local LLMs, intelligent task management, professional whiteboard, and focus-optimized workflows.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/mtmitchel/libreollama/main/src-tauri/icons/icon.png?raw=true" alt="LibreOllama Logo" width="128">
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
-[![Tauri](https://img.shields.io/badge/Tauri-2.5-blue.svg)](https://tauri.app/)
-[![React](https://img.shields.io/badge/React-18.3-blue.svg)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://typescriptlang.org/)
-[![ADHD Optimized](https://img.shields.io/badge/ADHD-Optimized-green.svg)](#adhd-features)
-[![Privacy First](https://img.shields.io/badge/Privacy-First-red.svg)](#privacy)
+<h1 align="center">LibreOllama</h1>
 
-## 🎯 What is LibreOllama?
+<p align="center">
+  <strong>Your private, local-first, all-in-one productivity suite, built for focus and clarity.</strong>
+</p>
 
-LibreOllama is a **comprehensive ADHD-optimized AI productivity platform** that transforms how neurodivergent professionals work with AI. Built as a secure Tauri desktop application, it integrates local Large Language Models with professional-grade productivity tools, creating a unified workspace that adapts to your cognitive patterns and energy levels.
+<p align="center">
+  [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/mtmitchel/libreollama/blob/main/LICENSE)
+  [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-blueviolet)](https://tauri.app/)
+  [![UI: React](https://img.shields.io/badge/UI-React-61DAFB)](https://reactjs.org/)
+  [![Backend: Rust](https://img.shields.io/badge/Backend-Rust-dea584)](https://www.rust-lang.org/)
+  [![ADHD-Optimized](https://img.shields.io/badge/ADHD-Optimized-brightgreen)](#)
+</p>
 
-**🧠 ADHD-First Design**: Every interface element reduces cognitive load, minimizes distractions, and supports executive function challenges while maintaining professional capabilities.
+---
 
-## 🔒 Core Principles
+**LibreOllama** is more than just a collection of tools; it's an integrated, privacy-first desktop application designed to be your single workspace for thinking, creating, and organizing. By harnessing the power of local AI through Ollama and a user experience crafted for neurodivergent minds, LibreOllama provides a calm, focused, and powerful environment to get work done without compromising your data.
 
-### **Privacy-First Architecture**
-- **🏠 100% Local-First**: All data stays on your machine, zero cloud dependencies
-- **🔐 Encrypted Storage**: SQLCipher database with secure local encryption
-- **📡 Offline-Capable**: Works completely without internet connection
-- **🚫 Zero Telemetry**: No tracking, analytics, or data collection
-- **👁️ Full Transparency**: Open source with complete control over your data
+Built with **Tauri**, **React**, and **Rust**, it's a cross-platform application that runs securely on your machine.
 
-### **ADHD-Optimized Design** {#adhd-features}
-- **🧠 Cognitive Load Management**: Simplified interfaces that reduce mental overhead
-- **⚡ Energy-Aware Workflows**: Task management that adapts to your energy levels
-- **🎯 Focus Mode**: Distraction-free environments with typewriter scrolling
-- **🏷️ Visual Organization**: Color-coded systems and clear information hierarchy
-- **⌨️ Keyboard-First**: Command palette and shortcuts for efficient navigation
-- **📱 Sensory Considerations**: Motion reduction and customizable density levels
+## ✨ Core Philosophy
 
-## 🎨 **Professional Whiteboard Platform**
+* **🔒 Privacy First**: Your data is yours. Period. Everything is stored locally on your machine in an encrypted database. The application is designed to be fully functional offline. There is **zero telemetry** or data collection.
+* **🧠 ADHD-Optimized UX**: We believe software should adapt to the user, not the other way around. Every feature is designed to reduce cognitive load, minimize distractions, and support executive function, without sacrificing power or professional capabilities.
+* **🤖 Local AI Empowerment**: Unleash the power of large language models without sending your data to the cloud. LibreOllama integrates seamlessly with your local Ollama instance, giving you a powerful AI assistant that respects your privacy.
+* **🛠️ All-in-One Workspace**: Stop the context-switching. Chat, Projects, Tasks, Notes, and a professional-grade Canvas (Whiteboard) are all included in a single, cohesive interface.
 
-LibreOllama Desktop features a **Miro/FigJam-class digital canvas** with professional tools and interactions:
+## 🚀 Features
 
-### **Professional Toolset**
-- **🖱️ Select Tool**: Multi-element selection, drag-and-drop manipulation
-- **📝 Sticky Notes**: Color-coded notes with rich text editing
-- **📄 Text Blocks**: Formatted text with typography controls
-- **✏️ Drawing Tools**: Freehand pen with pressure sensitivity
-- **🔷 Shape Library**: Rectangles, circles, arrows, frames, and more
-- **📏 Connectors**: Smart lines and arrows with auto-routing
-- **🖼️ Media Support**: Image embedding and file attachments
-- **🗑️ Advanced Editing**: Undo/redo, copy/paste, delete operations
+LibreOllama provides a suite of deeply integrated tools designed to work together seamlessly.
 
-### **Canvas Operations**
-- **🔍 Zoom & Pan**: 25%-400% zoom with smooth navigation
-- **📐 Grid System**: Alignment guides and snapping
-- **🗺️ Minimap**: Overview navigation for large canvases
-- **⌨️ Keyboard Shortcuts**: 20+ shortcuts for power users
-- **📱 Touch Support**: Optimized for tablets and touch devices
+| Feature          | Description                                                                                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **📊 Dashboard** | Your "command center." Get a clear overview of your day with widgets for active projects, today's focus, and agent statuses.                                            |
+| **💬 AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
+| **🗂️ Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
+| **📝 Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
+| **🎨 Canvas** | A professional-grade, infinite whiteboard. Perfect for brainstorming, user flows, mind-mapping, and visual thinking. Supports sticky notes, shapes, text, and drawing. |
+| **✅ Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
+| **🗓️ Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
+| **🤖 Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
+| **⚙️ Settings** | Granular control over the application, including theme, integrations, and model management.                                                                             |
+| **⌨️ Command Palette** | The power-user's best friend. Press `Ctrl+K` (`Cmd+K` on Mac) to instantly navigate anywhere, create new items, or perform actions.                                     |
 
-### **Quality Assurance**
-- **🧪 Comprehensive Testing**: Built-in test suite with 40+ test cases
-- **📊 Performance Monitoring**: Real-time metrics and optimization
-- **♿ Accessibility**: WCAG 2.1 AA compliance with screen reader support
-- **🎯 Quality Analysis**: Integrated code quality assessment tools
+## 🛠️ Tech Stack
 
-## 🎯 **Core Features**
+LibreOllama is built on a modern, robust, and privacy-focused technology stack.
 
-### 💬 **Enhanced AI Chat Interface**
-- **Split-Screen Comparison**: Side-by-side model testing and evaluation
-- **Context Visualization**: Real-time token usage with visual progress meters
-- **Memory Management**: Color-coded conversation segments and context windows
-- **Template System**: Collapsible prompt library with variable substitution
-- **Model Flexibility**: Automatic detection of all locally available Ollama models
-- **Conversation Forking**: Branch discussions at any point for exploration
+* **Framework**: [**Tauri**](https://tauri.app/) - A framework for building lightweight, secure, and cross-platform desktop applications using web technologies.
+* **Frontend**: [**React**](https://reactjs.org/) & [**TypeScript**](https://www.typescriptlang.org/) - For a type-safe, component-based user interface.
+* **Backend & Core Logic**: [**Rust**](https://www.rust-lang.org/) - Powers the secure, high-performance backend, managing everything from database connections to system-level commands.
+* **Styling**: [**Tailwind CSS**](https://tailwindcss.com/) - A utility-first CSS framework for rapid, consistent styling, configured to use our internal design token system.
+* **Database**: [**SQLCipher**](https://www.zetetic.net/sqlcipher/) (via `rusqlite`) - An encrypted SQLite database to keep all your data secure at rest.
+* **State Management**: React Hooks & Context API - For simple, predictable state management.
 
-### 🤖 **Intelligent Agents**
-- **Visual Flow Editor**: Drag-and-drop agent creation with professional tools
-- **Tiered Builder**: Beginner wizard mode and advanced configuration
-- **Testing Sandbox**: Built-in agent testing and validation environment
-- **Tool Integration**: Custom and built-in tools for enhanced capabilities
-- **Knowledge Integration**: RAG support with document and data sources
+## ⚙️ Getting Started: Development Setup
 
-### 📝 **Block-Based Notes Editor**
-- **Modern Block System**: Slash commands (/) for instant block creation
-- **Rich Content Types**: Text, headings, lists, code, images, embeds
-- **Drag-and-Drop**: Visual block reordering and organization
-- **Bidirectional Linking**: [[wiki-style]] links with auto-completion
-- **AI Integration**: Contextual actions (summarize, expand, generate tasks)
-- **Markdown Compatibility**: Full import/export with existing workflows
+Ready to contribute? Follow these steps to get your development environment up and running.
 
-### ✅ **ADHD-Optimized Task Management**
-- **Visual Kanban Board**: Drag-and-drop task organization with collapsible columns
-- **Smart Task Lenses**:
-  - **"Now" Lens**: Overdue and high-priority tasks
-  - **"Today's Energy" Lens**: Tasks matched to current energy level
-  - **"Quick Wins" Lens**: Sub-15-minute tasks for motivation
-  - **"Focus Session" Lens**: Deep work tasks (25+ minutes)
-- **Energy-Level System**: ⚡ High, 🕒 Medium, 😴 Low energy indicators
-- **AI Task Breakdown**: Automatic sub-task generation with time estimates
-- **Progress Tracking**: Visual indicators and completion feedback
+### Prerequisites
 
-### 📅 **Intelligent Calendar & Time Management**
-- **Energy-Aware Scheduling**: AI recommendations based on energy patterns
+1.  **Rust & Cargo**: Required for the Tauri backend. [Install via rustup](https://www.rust-lang.org/tools/install).
+2.  **Node.js & npm**: Required for the React frontend. We recommend using `nvm` to manage Node versions.
+3.  **Tauri CLI**: Install the command-line interface for Tauri development.
+    ```bash
+    cargo install tauri-cli
+    ```
+4.  **Ollama**: You'll need a local instance of [Ollama](https://ollama.com/) running to use the AI features.
 
-### ⚙️ **Settings & Configuration**
-- **Modular Settings Interface**: Clean, organized settings management with a dedicated navigation sidebar.
-- **Section-Based Navigation**: Easy access to various settings categories:
-    - **General**: Configure application startup behavior (e.g., startup view, update checks) and regional settings (e.g., language, first day of the week).
-    - **Appearance**: Customize themes, fonts, and UI density (placeholder for future implementation).
-    - **Agents and models**: Manage Ollama server endpoint, view, pull, update, and remove local AI models.
-    - **Integrations**: Connect to external services like Google (Calendar, Tasks) and GitHub (repositories, issues), and manage API keys for cloud models (e.g., Google Gemini, Anthropic Claude).
-    - **Notes and editor**: Configure preferences for the note-taking and text editing experience (placeholder).
-    - **Notifications**: Manage application notifications and alerts (placeholder).
-    - **Security and privacy**: Control data handling, encryption, and privacy-related settings (placeholder).
-    - **Account**: Manage user account details and preferences (placeholder).
-    - **About**: View application version, licenses, and acknowledgments (placeholder).
-- **Ollama Server Management**: Configure the Ollama server endpoint and view connection status.
-- **Local Model Management**: View a table of installed local models with details like size and last modified date. Actions to pull new models, update existing ones, or remove them.
-- **External Service Integration**: UI for connecting/disconnecting Google and GitHub accounts.
-- **Cloud Model API Key Management**: Securely input and save API keys for services like Google Gemini and Anthropic Claude.
+### Installation & Launch
 
-## 📂 Project Structure
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/mtmitchel/libreollama.git](https://github.com/mtmitchel/libreollama.git)
+    cd libreollama
+    ```
 
-LibreOllama follows a clean, modular architecture:
+2.  **Install frontend dependencies:**
+    ```bash
+    npm install
+    ```
 
-```
-LibreOllama/
-├── LICENSE
-├── README.md
-├── docs/                     # 📚 COMPREHENSIVE DOCUMENTATION
-│   ├── README.md            # Documentation index and guide
-│   ├── development/         # Development setup guides
-│   ├── archive/             # Historical documentation
-│   ├── CANVAS_WHITEBOARD_REDESIGN.md
-│   ├── COMPREHENSIVE_NEXT_STEPS_GUIDE.md
-│   ├── CPU_SPIKE_DEBUG_GUIDE.md
-│   ├── DASHBOARD_INTEGRATION_GUIDE.md
-│   └── LIBREOLLAMA_UI_UX_TRANSFORMATION_ROADMAP.md
-├── src/                     # Frontend source code
-│   ├── components/          # React components
-│   │   ├── ui/             # Base UI components
-│   │   ├── chat/           # Chat interface
-│   │   ├── archive/        # Archived components
-│   │   └── */              # Feature-specific components
-│   ├── hooks/              # React hooks
-│   │   └── archive/        # Archived hooks
-│   └── lib/                # Utilities and helpers
-└── src-tauri/              # Rust backend code
-    └── src/
-        ├── commands/       # Tauri commands
-        └── database/       # Database functionality
-```
+3.  **Run the development server:**
+    This command starts both the Rust backend and the React frontend in a single, hot-reloading development environment.
+    ```bash
+    npm run tauri:dev
+    ```
 
-### 📚 Documentation Overview
+    > **Note for Windows users**: The `tauri:dev` script in `package.json` is pre-configured to find your Cargo installation. If you encounter issues, ensure `~/.cargo/bin` is in your system's `PATH`.
 
-The **`docs/` folder** contains comprehensive documentation for LibreOllama:
+Your LibreOllama desktop application will launch, and any changes you make to the Rust or React code will trigger a rebuild and refresh.
 
-- **[`docs/README.md`](./docs/README.md)** - Complete documentation index and navigation guide
-- **Main Guides** - Feature documentation, debugging guides, and integration instructions
-- **Development Guides** - Setup instructions, Rust backend development, and database configuration
-- **Archive** - Historical documentation from all development phases
+## 📁 Project Structure
 
-**💡 Start with [`docs/README.md`](./docs/README.md) for a complete overview of all available documentation.**
+The repository is organized to maintain a clear separation between the frontend and backend code.
 
-### Archive Directories
+libreollama/├── docs/                      # 📚 Comprehensive project documentation├── src/                       # ⚛️ React Frontend│   ├── components/            #   Shared UI components & page-specific components│   ├── contexts/              #   React Context providers for global state│   ├── hooks/                 #   Custom React hooks│   ├── pages/                 #   Top-level page components for each module│   ├── styles/                #   Global CSS and the design system foundation│   ├── lib/                   #   Utility functions and type definitions│   └── main.tsx               #   Application entry point├── src-tauri/                 # 🦀 Rust Backend (Tauri Core)│   ├── capabilities/          #   Tauri permission manifests│   ├── src/                   #   Rust source code│   │   ├── commands/          #     Tauri commands exposed to the frontend│   │   ├── database/          #     All database logic (schema, models, operations)│   │   └── lib.rs             #     Main Rust library, command registration│   ├── build.rs               #   Tauri build script│   └── tauri.conf.json        #   Core Tauri application configuration├── tailwind.config.ts         # Tailwind CSS configuration file└── README.md                  # This file
+## ❤️ Contributing
 
-The project maintains several archive directories to preserve historical code and documentation:
+We welcome contributions of all kinds! Whether you're fixing a bug, adding a new feature, or improving documentation, your help is appreciated.
 
-- **`docs/archive/`**: Historical documentation from previous phases
-- **`src/components/archive/`**: Outdated React components
-- **`src/hooks/archive/`**: Outdated React hooks
+Please read our **[Contributing Guidelines](./.github/CONTRIBUTING.md)** for a detailed overview of our development process and standards.
 
-These archives provide valuable context about the project's evolution and are documented with README.md files explaining their contents.
+All contributors are expected to adhere to our **[Code of Conduct](./.github/CODE_OF_CONDUCT.md)**.
 
-## 📚 Project History
+## 📄 License
 
-LibreOllama has evolved through several major phases:
-
-### Phase 1: Foundation
-- Initial design system implementation
-- Core architecture setup
-- Basic UI components
-
-### Phase 2: Core Features
-- Chat interface implementation
-- Template system
-- AI integration with Ollama
-
-### Phase 3: Advanced Features
-- Memory management
-- Bidirectional linking system
-- Performance optimizations
-
-### Phase 4: Unified Workspace
-- Contextual sidebar
-- Smart action bar
-- Cross-feature connections
-
-### Phase 5: External Integrations
-- Google APIs integration
-- Calendar functionality
-- Email integration
-
-### Architecture Evolution
-
-The project began with a Next.js architecture but later transitioned to a Tauri desktop application with a Rust backend for improved performance, security, and offline capabilities. This transition is documented in the archive directories.
-
-## 🚀 Getting Started
-
-[... rest of the README continues as before ...]
+This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.

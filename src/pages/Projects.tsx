@@ -371,6 +371,26 @@ export function Projects() {
     }
   };
 
+  const handleToggleGoal = (goalId: string) => {
+    if (selectedProject && selectedProject.keyGoals) {
+      const updatedGoals = selectedProject.keyGoals.map(goal =>
+        goal.id === goalId ? { ...goal, completed: !goal.completed } : goal
+      );
+      
+      const updatedProject: Project = {
+        ...selectedProject,
+        keyGoals: updatedGoals
+      };
+      
+      // Update the project in the mock data (in real app, this would be an API call)
+      const projectIndex = mockProjects.findIndex(p => p.id === selectedProject.id);
+      if (projectIndex !== -1) {
+        mockProjects[projectIndex] = updatedProject;
+        setSelectedProject(updatedProject);
+      }
+    }
+  };
+
   // AI Suggestions Management Functions
   const addCustomSuggestion = () => {
     if (customSuggestion.trim() && !availableSuggestions.includes(customSuggestion.trim())) {
@@ -384,6 +404,16 @@ export function Projects() {
     setAiGoals(aiGoals.filter(g => g !== suggestionToRemove));
   };
 
+  // Helper function to group projects by status
+  const groupedProjects = mockProjects.reduce((acc, project) => {
+    const status = project.statusTag || 'Other';
+    if (!acc[status]) {
+      acc[status] = [];
+    }
+    acc[status].push(project);
+    return acc;
+  }, {} as Record<string, Project[]>);
+
   return (
     <div className="flex h-full gap-8">
       {/* === Left Panel: Project List === */}
@@ -395,34 +425,41 @@ export function Projects() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-          {mockProjects.map(project => (
-            <Card
-              key={project.id}
-              padding="none"
-              className={`cursor-pointer group relative ${selectedProject?.id === project.id ? 'bg-accent-soft border-primary' : 'hover:bg-surface'}`}
-            >
-              <div className="p-3" onClick={() => setSelectedProject(project)}>
-                <div className="flex items-center gap-3">
-                  <span style={{ backgroundColor: project.color }} className="w-2.5 h-2.5 rounded-full flex-shrink-0" />
-                  <h3 className="font-semibold text-text-primary truncate">{project.name}</h3>
-                </div>
-                <p className="text-sm text-text-secondary mt-1 ml-[22px] truncate">{project.description}</p>
-                {project.progress !== undefined && (
-                  <div className="mt-2 ml-[22px]">
-                    <div className="flex justify-between text-xs text-text-secondary mb-1">
-                      <span>Progress</span>
-                      <span>{project.progress}%</span>
+          {Object.entries(groupedProjects).map(([status, projects]) => (
+            <div key={status}>
+              <h3 className="px-3 pt-4 pb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                {status}
+              </h3>
+              {projects.map(project => (
+                <Card
+                  key={project.id}
+                  padding="none"
+                  className={`cursor-pointer group relative ${selectedProject?.id === project.id ? 'bg-accent-soft border-primary' : 'hover:bg-surface'}`}
+                >
+                  <div className="p-3" onClick={() => setSelectedProject(project)}>
+                    <div className="flex items-center gap-3">
+                      <span style={{ backgroundColor: project.color }} className="w-2.5 h-2.5 rounded-full flex-shrink-0" />
+                      <h3 className="font-semibold text-text-primary truncate">{project.name}</h3>
                     </div>
-                    <div className="w-full bg-bg-secondary rounded-full h-1.5">
-                      <div 
-                        className="bg-primary h-1.5 rounded-full transition-all"
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
+                    <p className="text-sm text-text-secondary mt-1 ml-[22px] truncate">{project.description}</p>
+                    {project.progress !== undefined && (
+                      <div className="mt-2 ml-[22px]">
+                        <div className="flex justify-between text-xs text-text-secondary mb-1">
+                          <span>Progress</span>
+                          <span>{project.progress}%</span>
+                        </div>
+                        <div className="w-full bg-bg-secondary rounded-full h-1.5">
+                          <div 
+                            className="bg-primary h-1.5 rounded-full transition-all"
+                            style={{ width: `${project.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </Card>
+                </Card>
+              ))}
+            </div>
           ))}
         </div>
       </aside>
@@ -559,7 +596,11 @@ export function Projects() {
                 </h3>
                 <div className="space-y-2">
                   {selectedProject?.keyGoals?.map(goal => (
-                    <div key={goal.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-secondary transition-colors">
+                    <button
+                      key={goal.id}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-secondary transition-colors w-full text-left"
+                      onClick={() => handleToggleGoal(goal.id)}
+                    >
                       {goal.completed ? (
                         <CheckCircle2 className="w-4 h-4 text-success" />
                       ) : (
@@ -568,7 +609,7 @@ export function Projects() {
                       <span className={goal.completed ? 'line-through text-text-secondary' : 'text-text-primary'}>
                         {goal.text}
                       </span>
-                    </div>
+                    </button>
                   )) || <p className="text-text-secondary">No goals defined yet.</p>}
                 </div>
               </Card>
@@ -631,31 +672,31 @@ export function Projects() {
                       };
 
                       return (
-                        <div key={task.id} className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
-                          <div className="flex items-center gap-3">
-                            {getStatusIcon(task.status)}
-                            <div>
-                              <p className="font-medium text-sm">{task.name}</p>
-                              <div className="flex items-center gap-4 text-xs text-text-secondary">
-                                <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  {task.assignee}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  {new Date(task.startDate).toLocaleDateString()} - {new Date(task.endDate).toLocaleDateString()}
-                                </span>
+                        <div key={task.id} className="p-3 bg-bg-secondary rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              {getStatusIcon(task.status)}
+                              <div>
+                                <p className="font-medium text-sm">{task.name}</p>
+                                <div className="flex items-center gap-4 text-xs text-text-secondary">
+                                  <span className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    {task.assignee}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    {new Date(task.startDate).toLocaleDateString()} - {new Date(task.endDate).toLocaleDateString()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
+                            <span className="text-xs text-text-secondary">{task.progress}%</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 bg-bg-primary rounded-full h-2">
-                              <div 
-                                className={`h-2 rounded-full ${getStatusColor(task.status)}`}
-                                style={{ width: `${task.progress}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-text-secondary w-8 text-right">{task.progress}%</span>
+                          <div className="w-full bg-bg-primary rounded-full h-1.5">
+                            <div 
+                              className={`h-1.5 rounded-full ${getStatusColor(task.status)}`}
+                              style={{ width: `${task.progress}%` }}
+                            />
                           </div>
                         </div>
                       );
