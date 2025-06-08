@@ -58,7 +58,9 @@ export interface UseCanvasStateReturn {
   pinnedCanvases: Set<string>;
   setPinnedCanvases: React.Dispatch<React.SetStateAction<Set<string>>>;
   
-  // Preview state for drawing tools
+  // Drawing and preview state for drawing tools
+  isDrawing: boolean;
+  setIsDrawing: React.Dispatch<React.SetStateAction<boolean>>;
   isPreviewing: boolean;
   setIsPreviewing: React.Dispatch<React.SetStateAction<boolean>>;
   previewElement: CanvasElement | null;
@@ -193,7 +195,8 @@ export const useCanvasState = (): UseCanvasStateReturn => {
   const [hoveredCanvas, setHoveredCanvas] = useState<string | null>(null);
   const [pinnedCanvases, setPinnedCanvases] = useState<Set<string>>(new Set());
   
-  // Preview state for drawing tools
+  // Drawing and preview state for drawing tools
+  const [isDrawing, setIsDrawing] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [previewElement, setPreviewElement] = useState<CanvasElement | null>(null);
   
@@ -252,7 +255,9 @@ export const useCanvasState = (): UseCanvasStateReturn => {
     pinnedCanvases,
     setPinnedCanvases,
     
-    // Preview state
+    // Drawing and preview state
+    isDrawing,
+    setIsDrawing,
     isPreviewing,
     setIsPreviewing,
     previewElement,

@@ -1,678 +1,680 @@
-import { useCallback, useRef, useMemo, useEffect } from 'react';
-import { CanvasElement, UseCanvasStateReturn } from './useCanvasState';
+// src/hooks/canvas/useCanvasEvents.ts
 
-// Throttle utility for performance optimization
-const throttle = <T extends (...args: any[]) => any>(func: T, delay: number): T => {
-  let timeoutId: number | null = null;
-  let lastExecTime = 0;
-  return ((...args: Parameters<T>) => {
-    const currentTime = Date.now();
-    
-    if (currentTime - lastExecTime > delay) {
-      func(...args);
-      lastExecTime = currentTime;
-    } else {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(() => {
-        func(...args);
-        lastExecTime = Date.now();
-      }, delay - (currentTime - lastExecTime));
-    }
-  }) as T;
-};
+import { useCallback, useRef } from 'react';
+import { UseCanvasStateReturn, CanvasElement, CanvasTool } from './useCanvasState';
 
-interface UseCanvasEventsProps {
-  canvasState: UseCanvasStateReturn;
-}
-
-export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  
+export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateReturn }) => {
   const {
-    elements, setElements,
-    selectedElement, setSelectedElement,
-    activeTool, setActiveTool,
-    selectedShape, setSelectedShape,
-    zoomLevel, setZoomLevel,
-    panOffset, setPanOffset,
-
-    showShapeDropdown, setShowShapeDropdown,
-    dropdownPosition, setDropdownPosition,
-    isEditingText, setIsEditingText,
-    showTextFormatting, setShowTextFormatting,
-    textFormattingPosition, setTextFormattingPosition,
-    history, setHistory,
-    historyIndex, setHistoryIndex,
-    mousePos, setMousePos,
-    isPreviewing, setIsPreviewing, // New state for drawing preview
-    previewElement, setPreviewElement, // New state for drawing preview
-    isResizing, setIsResizing,
-    resizeHandle, setResizeHandle,
-    resizeStartPos, setResizeStartPos,
-    resizeStartSize, setResizeStartSize,
-    
-    // Drag state
-    isDragging, setIsDragging,
-    dragStartPos, setDragStartPos,
-    dragStartElementPos, setDragStartElementPos
-    // saveToHistory // Removed: Not provided by useCanvasState, use local definition
+    elements,
+    setElements,
+    activeTool,
+    setActiveTool,
+    selectedShape,
+    panOffset,
+    setPanOffset,
+    zoomLevel,
+    setZoomLevel,
+    isDragging,
+    setIsDragging,
+    dragStartPos,
+    setDragStartPos,
+    dragStartElementPos,
+    setDragStartElementPos,
+    selectedElement,
+    setSelectedElement,
+    isDrawing,
+    setIsDrawing,
+    previewElement,
+    setPreviewElement,
+    isPreviewing,
+    setIsPreviewing,
+    isResizing,
+    setIsResizing,
+    resizeHandle,
+    setResizeHandle,
+    resizeStartPos,
+    setResizeStartPos,
+    resizeStartSize,
+    setResizeStartSize,
+    history,
+    setHistory,
+    historyIndex,
+    setHistoryIndex,
+    mousePos,
+    setMousePos,
+    isEditingText,
+    setIsEditingText,
+    showTextFormatting,
+    setShowTextFormatting,
+    textFormattingPosition,
+    setTextFormattingPosition
   } = canvasState;
 
-  // History management
-  const saveToHistoryImmediate = useCallback((newElements: CanvasElement[]) => {
-    setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push([...newElements]);
-      return newHistory.slice(-50); // Limit history to last 50 states
-    });
-    setHistoryIndex(prev => Math.min(prev + 1, 49));
-  }, [historyIndex, setHistory, setHistoryIndex]);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const isPanning = useRef(false);
+  const currentPath = useRef<string>('');
+  const drawStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const saveToHistory = useCallback(
-    (() => {
-      let timeoutId: number;
-      return (newElements: CanvasElement[]) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          saveToHistoryImmediate(newElements);
-        }, 300);
+  // --- UTILITY FUNCTIONS ---
+
+  /**
+   * Convert screen coordinates to canvas coordinates accounting for pan and zoom
+   */
+  const getCanvasCoordinates = useCallback((e: React.MouseEvent): { x: number; y: number } => {
+    if (!canvasRef.current) return { x: 0, y: 0 };
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+    const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+    return { x, y };
+  }, [panOffset, zoomLevel]);
+
+  /**
+   * Add elements to history for undo/redo functionality
+   */
+  const commitToHistory = useCallback((newElements: CanvasElement[]) => {
+    // Remove any future history if we're not at the end
+    if (historyIndex < history.length - 1) {
+      setHistory(history.slice(0, historyIndex + 1));
+    }
+    setHistory(prev => [...prev, [...newElements]]);
+    setHistoryIndex(prev => prev + 1);
+  }, [history, historyIndex, setHistory, setHistoryIndex]);
+
+  /**
+   * Generate unique ID for new elements
+   */
+  const generateId = useCallback(() => {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
+
+  /**
+   * Create preview element for shape tools
+   */
+  const createPreviewElement = useCallback((
+    startPos: { x: number; y: number },
+    currentPos: { x: number; y: number }
+  ): CanvasElement | null => {
+    if (activeTool === 'rectangle') {
+      const width = Math.abs(currentPos.x - startPos.x);
+      const height = Math.abs(currentPos.y - startPos.y);
+      
+      // Prevent zero-size elements
+      if (width < 5 && height < 5) return null;
+
+      return {
+        id: 'preview',
+        type: 'rectangle',
+        x: Math.min(startPos.x, currentPos.x),
+        y: Math.min(startPos.y, currentPos.y),
+        width,
+        height,
+        color: '#3b82f6'
       };
-    })(),
-    [saveToHistoryImmediate]
-  );
+    }
 
-  // Undo/Redo functions
+    if (activeTool === 'line') {
+      return {
+        id: 'preview',
+        type: 'line',
+        x: startPos.x,
+        y: startPos.y,
+        x2: currentPos.x,
+        y2: currentPos.y,
+        color: '#3b82f6'
+      };
+    }
+
+    return null;
+  }, [activeTool]);
+
+  // --- CORE EVENT HANDLERS ---
+
+  /**
+   * Handle mouse down events on the canvas
+   */
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const startPos = getCanvasCoordinates(e);
+    setMousePos(startPos);
+
+    // Clear any existing selections and previews when clicking on empty canvas
+    if (activeTool === 'select') {
+      setSelectedElement(null);
+      setIsEditingText(null);
+      setShowTextFormatting(false);
+    }
+
+    // Handle different tools
+    switch (activeTool) {
+      case 'select':
+        // Start panning
+        isPanning.current = true;
+        setDragStartPos({ x: e.clientX, y: e.clientY });
+        break;
+
+      case 'pen':
+        // Start drawing path
+        setIsDrawing(true);
+        drawStartPos.current = startPos;
+        currentPath.current = `M ${startPos.x} ${startPos.y}`;
+        
+        // Create initial preview element
+        const drawingElement: CanvasElement = {
+          id: 'preview',
+          type: 'drawing',
+          x: startPos.x,
+          y: startPos.y,
+          path: currentPath.current,
+          color: '#000000'
+        };
+        setPreviewElement(drawingElement);
+        break;
+
+      case 'rectangle':
+      case 'line':
+        // Start shape creation
+        setIsDrawing(true);
+        setIsPreviewing(true);
+        drawStartPos.current = startPos;
+        break;
+
+      case 'text':
+        // Create text element immediately
+        const textElement: CanvasElement = {
+          id: generateId(),
+          type: 'text',
+          x: startPos.x,
+          y: startPos.y,
+          width: 200,
+          height: 40,
+          content: 'New Text',
+          fontSize: 'medium',
+          color: '#000000'
+        };
+        const newTextElements = [...elements, textElement];
+        setElements(newTextElements);
+        commitToHistory(newTextElements);
+        setSelectedElement(textElement.id);
+        setIsEditingText(textElement.id);
+        setActiveTool('select');
+        break;
+
+      case 'sticky-note':
+        // Create sticky note element immediately
+        const stickyElement: CanvasElement = {
+          id: generateId(),
+          type: 'sticky-note',
+          x: startPos.x,
+          y: startPos.y,
+          width: 180,
+          height: 180,
+          content: '',
+          color: '#facc15'
+        };
+        const newStickyElements = [...elements, stickyElement];
+        setElements(newStickyElements);
+        commitToHistory(newStickyElements);
+        setSelectedElement(stickyElement.id);
+        setActiveTool('select');
+        break;
+
+      default:
+        break;
+    }
+  }, [
+    activeTool,
+    elements,
+    getCanvasCoordinates,
+    generateId,
+    commitToHistory,
+    setElements,
+    setSelectedElement,
+    setIsDrawing,
+    setIsPreviewing,
+    setPreviewElement,
+    setIsEditingText,
+    setShowTextFormatting,
+    setActiveTool,
+    setMousePos,
+    setDragStartPos
+  ]);
+
+  /**
+   * Handle mouse move events on the canvas
+   */
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    const currentPos = getCanvasCoordinates(e);
+    setMousePos(currentPos);
+
+    // Handle panning
+    if (isPanning.current && dragStartPos && activeTool === 'select') {
+      const deltaX = e.clientX - dragStartPos.x;
+      const deltaY = e.clientY - dragStartPos.y;
+      setPanOffset(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }));
+      setDragStartPos({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    // Handle element dragging
+    if (isDragging && selectedElement && dragStartPos && dragStartElementPos) {
+      const deltaX = currentPos.x - dragStartPos.x;
+      const deltaY = currentPos.y - dragStartPos.y;
+      
+      setElements(prev => prev.map(el =>
+        el.id === selectedElement
+          ? {
+              ...el,
+              x: dragStartElementPos.x + deltaX,
+              y: dragStartElementPos.y + deltaY
+            }
+          : el
+      ));
+      return;
+    }
+
+    // Handle element resizing
+    if (isResizing && selectedElement && resizeHandle) {
+      const element = elements.find(el => el.id === selectedElement);
+      if (!element) return;
+
+      const deltaX = currentPos.x - resizeStartPos.x;
+      const deltaY = currentPos.y - resizeStartPos.y;
+
+      let newWidth = resizeStartSize.width;
+      let newHeight = resizeStartSize.height;
+      let newX = element.x;
+      let newY = element.y;
+
+      // Handle different resize handles
+      switch (resizeHandle) {
+        case 'se': // Southeast
+          newWidth = Math.max(10, resizeStartSize.width + deltaX);
+          newHeight = Math.max(10, resizeStartSize.height + deltaY);
+          break;
+        case 'sw': // Southwest
+          newWidth = Math.max(10, resizeStartSize.width - deltaX);
+          newHeight = Math.max(10, resizeStartSize.height + deltaY);
+          newX = element.x + (resizeStartSize.width - newWidth);
+          break;
+        case 'ne': // Northeast
+          newWidth = Math.max(10, resizeStartSize.width + deltaX);
+          newHeight = Math.max(10, resizeStartSize.height - deltaY);
+          newY = element.y + (resizeStartSize.height - newHeight);
+          break;
+        case 'nw': // Northwest
+          newWidth = Math.max(10, resizeStartSize.width - deltaX);
+          newHeight = Math.max(10, resizeStartSize.height - deltaY);
+          newX = element.x + (resizeStartSize.width - newWidth);
+          newY = element.y + (resizeStartSize.height - newHeight);
+          break;
+      }
+
+      setElements(prev => prev.map(el =>
+        el.id === selectedElement
+          ? { ...el, x: newX, y: newY, width: newWidth, height: newHeight }
+          : el
+      ));
+      return;
+    }
+
+    // Handle drawing tools
+    if (isDrawing) {
+      if (activeTool === 'pen' && previewElement) {
+        // Continue path drawing
+        currentPath.current += ` L ${currentPos.x} ${currentPos.y}`;
+        setPreviewElement({
+          ...previewElement,
+          path: currentPath.current
+        });
+      } else if (isPreviewing && (activeTool === 'rectangle' || activeTool === 'line')) {
+        // Update shape preview
+        const preview = createPreviewElement(drawStartPos.current, currentPos);
+        setPreviewElement(preview);
+      }
+    }
+  }, [
+    activeTool,
+    isDragging,
+    isDrawing,
+    isPreviewing,
+    isResizing,
+    selectedElement,
+    dragStartPos,
+    dragStartElementPos,
+    resizeHandle,
+    resizeStartPos,
+    resizeStartSize,
+    previewElement,
+    elements,
+    getCanvasCoordinates,
+    createPreviewElement,
+    setMousePos,
+    setPanOffset,
+    setDragStartPos,
+    setElements,
+    setPreviewElement
+  ]);
+
+  /**
+   * Handle mouse up events
+   */
+  const handleMouseUp = useCallback(() => {
+    // Stop panning
+    isPanning.current = false;
+
+    // Finalize dragging
+    if (isDragging) {
+      commitToHistory(elements);
+      setIsDragging(false);
+    }
+
+    // Finalize resizing
+    if (isResizing) {
+      commitToHistory(elements);
+      setIsResizing(false);
+      setResizeHandle(null);
+    }
+
+    // Finalize drawing
+    if (isDrawing) {
+      if (previewElement && previewElement.id === 'preview') {
+        // Convert preview to actual element
+        const finalElement: CanvasElement = {
+          ...previewElement,
+          id: generateId()
+        };
+
+        // Only add if element has meaningful size
+        let shouldAdd = true;
+        if (finalElement.type === 'rectangle') {
+          shouldAdd = (finalElement.width || 0) >= 5 && (finalElement.height || 0) >= 5;
+        } else if (finalElement.type === 'drawing') {
+          shouldAdd = currentPath.current.length > 20; // Minimum path length
+        }
+
+        if (shouldAdd) {
+          const newElements = [...elements, finalElement];
+          setElements(newElements);
+          commitToHistory(newElements);
+          setSelectedElement(finalElement.id);
+        }
+      }
+
+      // Reset drawing state
+      setIsDrawing(false);
+      setIsPreviewing(false);
+      setPreviewElement(null);
+      currentPath.current = '';
+    }
+
+    // Reset drag positions
+    setDragStartPos({ x: 0, y: 0 });
+    setDragStartElementPos({ x: 0, y: 0 });
+  }, [
+    isDragging,
+    isDrawing,
+    isResizing,
+    previewElement,
+    elements,
+    commitToHistory,
+    generateId,
+    setIsDragging,
+    setIsDrawing,
+    setIsPreviewing,
+    setIsResizing,
+    setResizeHandle,
+    setPreviewElement,
+    setElements,
+    setSelectedElement,
+    setDragStartPos,
+    setDragStartElementPos
+  ]);
+
+  /**
+   * Handle mouse down on canvas elements
+   */
+  const handleElementMouseDown = useCallback((e: React.MouseEvent, elementId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (activeTool !== 'select') return;
+
+    const element = elements.find(el => el.id === elementId);
+    if (!element) return;
+
+    const currentPos = getCanvasCoordinates(e);
+    
+    // Check if clicking on resize handle
+    const handleSize = 8;
+    const elementRight = element.x + (element.width || 0);
+    const elementBottom = element.y + (element.height || 0);
+    
+    // Define resize handle positions
+    const handles = {
+      se: { x: elementRight, y: elementBottom },
+      sw: { x: element.x, y: elementBottom },
+      ne: { x: elementRight, y: element.y },
+      nw: { x: element.x, y: element.y }
+    };
+
+    // Check if clicking on any resize handle
+    for (const [handleName, handlePos] of Object.entries(handles)) {
+      if (Math.abs(currentPos.x - handlePos.x) <= handleSize &&
+          Math.abs(currentPos.y - handlePos.y) <= handleSize) {
+        setIsResizing(true);
+        setResizeHandle(handleName);
+        setResizeStartPos(currentPos);
+        setResizeStartSize({
+          width: element.width || 0,
+          height: element.height || 0
+        });
+        setSelectedElement(elementId);
+        return;
+      }
+    }
+
+    // Start dragging element
+    setSelectedElement(elementId);
+    setIsDragging(true);
+    setDragStartPos(currentPos);
+    setDragStartElementPos({ x: element.x, y: element.y });
+
+    // Handle text editing
+    if (element.type === 'text' || element.type === 'sticky-note') {
+      if (e.detail === 2) { // Double click
+        setIsEditingText(elementId);
+        setShowTextFormatting(true);
+        
+        // Position text formatting toolbar
+        if (canvasRef.current) {
+          const rect = canvasRef.current.getBoundingClientRect();
+          const screenX = element.x * zoomLevel + panOffset.x + rect.left;
+          const screenY = (element.y - 50) * zoomLevel + panOffset.y + rect.top;
+          setTextFormattingPosition({ left: screenX, top: screenY });
+        }
+      }
+    }
+  }, [
+    activeTool,
+    elements,
+    getCanvasCoordinates,
+    zoomLevel,
+    panOffset,
+    setSelectedElement,
+    setIsDragging,
+    setIsResizing,
+    setResizeHandle,
+    setDragStartPos,
+    setDragStartElementPos,
+    setResizeStartPos,
+    setResizeStartSize,
+    setIsEditingText,
+    setShowTextFormatting,
+    setTextFormattingPosition
+  ]);
+
+  // --- TOOL AND HISTORY HANDLERS ---
+
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
-      const previousState = history[historyIndex - 1];
-      setElements(previousState);
-      setHistoryIndex(prev => prev - 1);
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setElements(history[newIndex]);
       setSelectedElement(null);
     }
   }, [history, historyIndex, setElements, setHistoryIndex, setSelectedElement]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      const nextState = history[historyIndex + 1];
-      setElements(nextState);
-      setHistoryIndex(prev => prev + 1);
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setElements(history[newIndex]);
       setSelectedElement(null);
     }
   }, [history, historyIndex, setElements, setHistoryIndex, setSelectedElement]);
 
-  // Zoom functions
+  const handleToolSelect = useCallback((tool: CanvasTool) => {
+    if (tool === 'undo') {
+      handleUndo();
+      return;
+    }
+    
+    if (tool === 'redo') {
+      handleRedo();
+      return;
+    }
+
+    if (tool === 'zoom-in') {
+      setZoomLevel(prev => Math.min(prev * 1.2, 5));
+      return;
+    }
+
+    if (tool === 'zoom-out') {
+      setZoomLevel(prev => Math.max(prev / 1.2, 0.1));
+      return;
+    }
+
+    // Clear selections when switching tools
+    if (tool !== 'select') {
+      setSelectedElement(null);
+      setIsEditingText(null);
+      setShowTextFormatting(false);
+    }
+
+    setActiveTool(tool);
+  }, [handleUndo, handleRedo, setZoomLevel, setActiveTool, setSelectedElement, setIsEditingText, setShowTextFormatting]);
+
+  // --- TEXT HANDLING ---
+
+  const handleTextChange = useCallback((id: string, content: string) => {
+    setElements(prev => prev.map(elem => 
+      elem.id === id ? { ...elem, content } : elem
+    ));
+  }, [setElements]);
+
+  const handleTextFormatting = useCallback((property: string, value: any) => {
+    if (!selectedElement) return;
+    
+    setElements(prev => prev.map(elem => 
+      elem.id === selectedElement 
+        ? { ...elem, [property]: value }
+        : elem
+    ));
+  }, [selectedElement, setElements]);
+
+  const handleTextFormatPropertyChange = useCallback((property: string, value: any) => {
+    handleTextFormatting(property, value);
+  }, [handleTextFormatting]);
+
+  // --- OTHER HANDLERS ---
+
+  const handleDeleteElement = useCallback(() => {
+    if (!selectedElement) return;
+    
+    const newElements = elements.filter(el => el.id !== selectedElement);
+    setElements(newElements);
+    commitToHistory(newElements);
+    setSelectedElement(null);
+  }, [selectedElement, elements, setElements, commitToHistory, setSelectedElement]);
+
   const handleZoomIn = useCallback(() => {
-    setZoomLevel(prev => Math.min(prev * 1.2, 5)); // Max zoom 5x
+    setZoomLevel(prev => Math.min(prev * 1.2, 5));
   }, [setZoomLevel]);
 
   const handleZoomOut = useCallback(() => {
-    setZoomLevel(prev => Math.max(prev / 1.2, 0.25)); // Min zoom 0.25x
+    setZoomLevel(prev => Math.max(prev / 1.2, 0.1));
   }, [setZoomLevel]);
 
-  const handleZoomReset = useCallback(() => {
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
-  }, [setZoomLevel, setPanOffset]);
-
-  // Element deletion
-  const handleDeleteElement = useCallback(() => {
-    if (selectedElement) {
-      const newElements = elements.filter(el => el.id !== selectedElement);
-      setElements(newElements);
-      saveToHistory(newElements);
-      setSelectedElement(null);
-    }
-  }, [selectedElement, elements, setElements, saveToHistory, setSelectedElement]);
-
-  // Tool selection handler
-  const handleToolSelect = useCallback((toolId: string, event?: React.MouseEvent) => {
-    if (toolId === 'shapes' && event) {
-      const rect = (event.target as HTMLElement).getBoundingClientRect();
-      setDropdownPosition({
-        left: rect.left,
-        top: rect.top - 200
-      });
-      setShowShapeDropdown(true);
-      return;
-    }
-    
-    setActiveTool(toolId as any);
-    setShowShapeDropdown(false);
-    setDropdownPosition(null);
-  }, [setActiveTool, setShowShapeDropdown, setDropdownPosition]);
-
-  // Shape selection handler
-  const handleShapeSelect = useCallback((shapeId: string) => {
-    setSelectedShape(shapeId);
-    setActiveTool(shapeId as any);
-    setShowShapeDropdown(false);
-    setDropdownPosition(null);
-  }, [setSelectedShape, setActiveTool, setShowShapeDropdown, setDropdownPosition]);
-
-  // Image upload
-  const handleImageUpload = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target?.result as string;
-      const newElement: CanvasElement = {
-        id: Date.now().toString(),
-        type: 'image',
-        x: 50,
-        y: 50,
-        width: 200,
-        height: 200,
-        imageUrl,
-        imageName: file.name
-      };
-
-      const newElements = [...elements, newElement];
-      setElements(newElements);
-      saveToHistory(newElements);
-      setActiveTool('select');
+  const getTextStyles = useCallback((element: CanvasElement) => {
+    return {
+      fontSize: element.fontSize === 'small' ? '12px' :
+                element.fontSize === 'large' ? '24px' : '16px',
+      fontWeight: element.isBold ? 'bold' : 'normal',
+      fontStyle: element.isItalic ? 'italic' : 'normal',
+      textAlign: element.textAlignment || 'left',
+      color: element.color || '#000000'
     };
-    reader.readAsDataURL(file);
-  }, [elements, setElements, saveToHistory, setActiveTool]);
+  }, []);
 
-  // Resize functionality
-  const handleResizeStart = useCallback((e: React.MouseEvent, handle: string, element: CanvasElement) => {
-    e.stopPropagation();
-    setIsResizing(true);
-    setResizeHandle(handle);
-    setSelectedElement(element.id);
-    
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+  // --- RESIZE HANDLERS ---
 
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    setResizeStartPos({
-      x: rawX / zoomLevel - panOffset.x,
-      y: rawY / zoomLevel - panOffset.y
-    });
-    setResizeStartSize({
-      width: element.width || 100,
-      height: element.height || 100
-    });
-  }, [setIsResizing, setResizeHandle, setSelectedElement, setResizeStartPos, setResizeStartSize, zoomLevel, panOffset]);
-
-  const handleResizeMove = useCallback((e: React.MouseEvent) => {
-    if (!isResizing || !resizeHandle || !selectedElement || !resizeStartPos || !resizeStartSize) return;
-
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const currentX = rawX / zoomLevel - panOffset.x;
-    const currentY = rawY / zoomLevel - panOffset.y;
-
-    const deltaX = currentX - resizeStartPos.x;
-    const deltaY = currentY - resizeStartPos.y;
-
-    setElements((prevElements: CanvasElement[]) => prevElements.map(el => {
-      if (el.id !== selectedElement) return el;
-
-      let newWidth = resizeStartSize.width;
-      let newHeight = resizeStartSize.height;
-      let newX = el.x;
-      let newY = el.y;
-
-      switch (resizeHandle) {
-        case 'top-left':
-          newWidth = Math.max(20, resizeStartSize.width - deltaX);
-          newHeight = Math.max(20, resizeStartSize.height - deltaY);
-          newX = (el.x ?? 0) + (resizeStartSize.width - newWidth);
-          newY = (el.y ?? 0) + (resizeStartSize.height - newHeight);
-          break;
-        case 'top-right':
-          newWidth = Math.max(20, resizeStartSize.width + deltaX);
-          newHeight = Math.max(20, resizeStartSize.height - deltaY);
-          newY = (el.y ?? 0) + (resizeStartSize.height - newHeight);
-          break;
-        case 'bottom-left':
-          newWidth = Math.max(20, resizeStartSize.width - deltaX);
-          newHeight = Math.max(20, resizeStartSize.height + deltaY);
-          newX = (el.x ?? 0) + (resizeStartSize.width - newWidth);
-          break;
-        case 'bottom-right':
-          newWidth = Math.max(20, resizeStartSize.width + deltaX);
-          newHeight = Math.max(20, resizeStartSize.height + deltaY);
-          break;
-        case 'top':
-          newHeight = Math.max(20, resizeStartSize.height - deltaY);
-          newY = (el.y ?? 0) + (resizeStartSize.height - newHeight);
-          break;
-        case 'bottom':
-          newHeight = Math.max(20, resizeStartSize.height + deltaY);
-          break;
-        case 'left':
-          newWidth = Math.max(20, resizeStartSize.width - deltaX);
-          newX = (el.x ?? 0) + (resizeStartSize.width - newWidth);
-          break;
-        case 'right':
-          newWidth = Math.max(20, resizeStartSize.width + deltaX);
-          break;
-      }
-      return { ...el, x: newX, y: newY, width: newWidth, height: newHeight }; 
-    }));
-  }, [isResizing, resizeHandle, selectedElement, resizeStartPos, resizeStartSize, zoomLevel, panOffset, setElements, canvasRef]);
-
-  // Mouse event handlers
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isResizing && resizeHandle && selectedElement) {
-      handleResizeMove(e);
-      return;
-    }
-
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const currentX = rawX / zoomLevel - panOffset.x;
-    const currentY = rawY / zoomLevel - panOffset.y;
-    setMousePos({ x: currentX, y: currentY });
-
-    // Handle element dragging
-    if (isDragging && selectedElement) {
-      const deltaX = currentX - dragStartPos.x;
-      const deltaY = currentY - dragStartPos.y;
-      
-      setElements(prevElements => 
-        prevElements.map(el => 
-          el.id === selectedElement 
-            ? { 
-                ...el, 
-                x: dragStartElementPos.x + deltaX, 
-                y: dragStartElementPos.y + deltaY 
-              }
-            : el
-        )
-      );
-      return;
-    }
-
-    if (isPreviewing && previewElement) {
-      let updatedPreview = { ...previewElement };
-      switch (previewElement.type) {
-        case 'line':
-        case 'arrow':
-          updatedPreview.x2 = currentX;
-          updatedPreview.y2 = currentY;
-          break;
-        case 'drawing': 
-          updatedPreview.path = `${previewElement.path || ''} L ${currentX.toFixed(2)} ${currentY.toFixed(2)}`;
-          break;
-        case 'rectangle':
-        case 'circle':
-        case 'triangle':
-        case 'square':
-        case 'hexagon':
-        case 'star':
-          updatedPreview.width = Math.abs(currentX - (previewElement.x || 0));
-          updatedPreview.height = Math.abs(currentY - (previewElement.y || 0));
-          if (currentX < (previewElement.x || 0)) updatedPreview.x = currentX;
-          if (currentY < (previewElement.y || 0)) updatedPreview.y = currentY;
-          break;
-      }
-      setPreviewElement(updatedPreview);
-      return;
-    }
-  }, [isDragging, selectedElement, dragStartPos, dragStartElementPos, setElements, isResizing, resizeHandle, selectedElement, handleResizeMove, zoomLevel, panOffset, setMousePos, isPreviewing, previewElement, setPreviewElement, activeTool]);
-
-  // Throttled mouse move for better performance
-  const throttledCanvasMouseMove = useMemo(
-    () => throttle(handleCanvasMouseMove, 16), // ~60fps
-    [handleCanvasMouseMove]
-  );
-
-  // Mouse up handler
-  const handleMouseUp = useCallback(() => {
-    // Handle end of dragging
-    if (isDragging) {
-      setIsDragging(false);
-      saveToHistory(elements);
-      if (canvasRef.current) {
-        canvasRef.current.style.cursor = 'default';
-      }
-      return;
-    }
-
-    if (isPreviewing && previewElement) { 
-      let isValidElement = true;
-      if ((previewElement.type === 'rectangle' || previewElement.type === 'circle' || previewElement.type === 'triangle' || previewElement.type === 'square' || previewElement.type === 'hexagon' || previewElement.type === 'star') && (!previewElement.width || !previewElement.height || previewElement.width < 5 || previewElement.height < 5)) {
-        isValidElement = false;
-      }
-      if ((previewElement.type === 'line' || previewElement.type === 'arrow') && previewElement.x === previewElement.x2 && previewElement.y === previewElement.y2) {
-        isValidElement = false;
-      }
-      if (previewElement.type === 'drawing' && previewElement.path && previewElement.path.split('L').length < 2) { 
-        isValidElement = false;
-      }
-
-      if (isValidElement) {
-        const finalElementToAdd: CanvasElement = { ...previewElement, id: `el-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
-        setElements((prevElements: CanvasElement[]) => {
-          const updatedElements = [...prevElements, finalElementToAdd];
-          saveToHistory(updatedElements);
-          return updatedElements;
-        });
-      } else {
-      }
-      
-      setIsPreviewing(false);
-      setPreviewElement(null);
-      setIsResizing(false);
-      setResizeHandle(null);
-      if (canvasRef.current) canvasRef.current.style.cursor = 'default';
-    }
-  }, [isDragging, setIsDragging, saveToHistory, elements, canvasRef, isPreviewing, previewElement, setElements, setIsPreviewing, setPreviewElement, activeTool, setIsResizing, setResizeHandle]);
-
-  // Element mouse down handler
-  const handleElementMouseDown = useCallback((e: React.MouseEvent, elementId: string) => {
-    e.stopPropagation();
-    
+  const handleResizeStart = useCallback((elementId: string, handle: string, startPos: { x: number; y: number }) => {
     const element = elements.find(el => el.id === elementId);
     if (!element) return;
 
-    if (activeTool === 'eraser') {
-      const newElements = elements.filter(el => el.id !== elementId);
-      setElements(newElements);
-      saveToHistory(newElements);
-      setSelectedElement(null);
-      return;
-    }
+    setIsResizing(true);
+    setResizeHandle(handle);
+    setSelectedElement(elementId);
+    setResizeStartPos(startPos);
+    setResizeStartSize({
+      width: element.width || 0,
+      height: element.height || 0
+    });
+  }, [elements, setIsResizing, setResizeHandle, setSelectedElement, setResizeStartPos, setResizeStartSize]);
 
-    if (activeTool === 'highlighter' && element.type === 'text') {
-      setElements((prevElements: CanvasElement[]) => prevElements.map(el => 
-        el.id === elementId 
-          ? { ...el, backgroundColor: el.backgroundColor ? undefined : '#ffeb3b' }
-          : el
-      ));
-      saveToHistory(elements.map(el => 
-        el.id === elementId 
-          ? { ...el, backgroundColor: el.backgroundColor ? undefined : '#ffeb3b' }
-          : el
-      ));
-      return;
-    }
+  // --- COMPUTED VALUES ---
 
-    if (activeTool === 'select') {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      
-      // Set as selected
-      setSelectedElement(elementId);
-      
-      // Start dragging
-      setIsDragging(true);
-      const mouseX = (e.clientX - rect.left) / zoomLevel - panOffset.x;
-      const mouseY = (e.clientY - rect.top) / zoomLevel - panOffset.y;
-      setDragStartPos({ x: mouseX, y: mouseY });
-      setDragStartElementPos({ x: element.x, y: element.y });
-      
-      if (canvasRef.current) {
-        canvasRef.current.style.cursor = 'grabbing';
-      }
-    }
-  }, [activeTool, elements, setElements, saveToHistory, setSelectedElement, setIsDragging, setDragStartPos, setDragStartElementPos, canvasRef, panOffset, zoomLevel]);
-
-  // Canvas click handler
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const mousePos = {
-      x: (e.clientX - rect.left) / zoomLevel - panOffset.x,
-      y: (e.clientY - rect.top) / zoomLevel - panOffset.y
-    };
-
-    // Text tool: create new text element
-    if (activeTool === 'text') {
-      const newElement: CanvasElement = {
-        id: `el-${Date.now()}`,
-        type: 'text',
-        x: mousePos.x,
-        y: mousePos.y,
-        width: 200, 
-        height: 30, 
-        content: 'Text',
-        fontSize: 'medium',
-        color: '#000000'
-      };
-      const newElements = [...elements, newElement];
-      setElements(newElements);
-      saveToHistory(newElements);
-      setSelectedElement(newElement.id);
-      setIsEditingText(newElement.id);
-      setActiveTool('select'); 
-      return;
-    }
-
-    // Sticky note tool: create new sticky note
-    if (activeTool === 'sticky-note') {
-      const newElement: CanvasElement = {
-        id: `el-${Date.now()}`,
-        type: 'sticky-note',
-        x: mousePos.x,
-        y: mousePos.y,
-        width: 150,
-        height: 150,
-        content: '',
-        backgroundColor: '#FFFF00' 
-      };
-      const newElements = [...elements, newElement];
-      setElements(newElements);
-      saveToHistory(newElements);
-      setSelectedElement(newElement.id);
-      setIsEditingText(newElement.id); 
-      setActiveTool('select');
-      return;
-    }
-
-    // Drawing tools: start preview
-    if (['rectangle', 'circle', 'triangle', 'square', 'hexagon', 'star', 'line', 'arrow', 'pen'].includes(activeTool)) {
-      const newPreviewElement: CanvasElement = {
-        id: `preview-${Date.now()}`,
-        type: activeTool as any,
-        x: mousePos.x,
-        y: mousePos.y,
-        width: 0,
-        height: 0,
-        x2: mousePos.x, // For line/arrow
-        y2: mousePos.y, // For line/arrow
-        path: activeTool === 'pen' ? `M ${mousePos.x.toFixed(2)} ${mousePos.y.toFixed(2)}` : undefined, // For pen
-        strokeColor: '#000000',
-        strokeWidth: 2,
-        fillColor: activeTool === 'pen' ? 'transparent' : '#ffffff'
-      };
-      
-      setPreviewElement(newPreviewElement);
-      setIsPreviewing(true);
-      return;
-    }
-
-    // Pan tool (select tool used for panning when clicking empty canvas)
-    if (activeTool === 'select') {
-      setSelectedElement(null); // Deselect
-      return;
-    }
-  }, [activeTool, elements, setElements, saveToHistory, setSelectedElement, setIsEditingText, setActiveTool, setPreviewElement, setIsPreviewing, canvasRef, panOffset, zoomLevel]);
-
-  // Keyboard shortcuts
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (isEditingText) return; 
-
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (selectedElement) handleDeleteElement();
-    }
-    if (e.key === 'Escape') {
-      setSelectedElement(null);
-      setActiveTool('select');
-      setIsPreviewing(false); 
-      setPreviewElement(null);
-      if (showShapeDropdown) setShowShapeDropdown(false);
-      if (showTextFormatting) setShowTextFormatting(false);
-    }
-    if (!e.ctrlKey && !e.metaKey && !e.altKey) { 
-      switch (e.key.toLowerCase()) {
-        case 'v': setActiveTool('select'); break;
-        case 't': setActiveTool('text'); break;
-        case 's': setActiveTool('sticky-note'); break; 
-        case 'r': setActiveTool('rectangle'); break; 
-        case 'c': setActiveTool('circle'); break;
-        case 'p': setActiveTool('pen'); break;
-        case 'l': setActiveTool('line'); break;
-        case 'a': setActiveTool('arrow'); break;
-      }
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-      if (e.shiftKey) {
-        handleRedo();
-      } else {
-        handleUndo();
-      }
-    }
-  }, [
-    isEditingText, selectedElement, setSelectedElement, setActiveTool, 
-    handleDeleteElement, handleUndo, handleRedo,
-    setIsPreviewing, setPreviewElement, 
-    showShapeDropdown, setShowShapeDropdown, 
-    showTextFormatting, setShowTextFormatting
-  ]);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleKeyDown]);
-
-  // Click outside handler
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showShapeDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        const shapesButton = document.querySelector('[data-tool="shapes"]');
-        if (shapesButton && !shapesButton.contains(event.target as Node)) {
-          setShowShapeDropdown(false);
-          setDropdownPosition(null);
-          setActiveTool('select');
-        }
-      }
-      
-      if (showTextFormatting && event.target) {
-        const target = event.target as Element;
-        const isClickOnToolbar = target.closest('.text-formatting-toolbar');
-        const isClickOnTextInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
-        
-        if (!isClickOnToolbar && !isClickOnTextInput) {
-          setShowTextFormatting(false);
-          setIsEditingText(null);
-          setTextFormattingPosition(null);
-        }
-      }
-    };
-
-    if (showShapeDropdown || showTextFormatting) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [showShapeDropdown, showTextFormatting, setShowShapeDropdown, setDropdownPosition, setActiveTool, setShowTextFormatting, setIsEditingText, setTextFormattingPosition]);
-
-  // Text formatting functions
-  const updateTextFormatting = useCallback((elementId: string, property: keyof CanvasElement, value: any) => {
-    setElements(prev => prev.map(el => 
-      el.id === elementId ? { ...el, [property]: value } : el
-    ));
-  }, [setElements]);
-
-  // Text handling functions
-  const handleTextFormatting = useCallback((elementId: string, rect: DOMRect) => {
-    // Handle text formatting UI positioning
-  }, []);
-
-  const handleTextChange = useCallback((elementId: string, content: string) => {
-    setElements(prev => prev.map(el => 
-      el.id === elementId ? { ...el, content } : el
-    ));
-  }, [setElements]);
-
-  const handleTextFormatPropertyChange = useCallback((elementId: string, property: keyof CanvasElement, value: any) => {
-    setElements(prev => prev.map(el => 
-      el.id === elementId ? { ...el, [property]: value } : el
-    ));
-  }, [setElements]);
-
-  const getTextStyles = useCallback((element: CanvasElement) => {
-    const styles: React.CSSProperties = {};
-    
-    if (element.fontSize === 'small') styles.fontSize = '14px';
-    else if (element.fontSize === 'large') styles.fontSize = '24px';
-    else styles.fontSize = '18px';
-    
-    if (element.isBold) styles.fontWeight = 'bold';
-    if (element.isItalic) styles.fontStyle = 'italic';
-    if (element.textAlignment) styles.textAlign = element.textAlignment;
-    
-    return styles;
-  }, []);
-
-  // Can undo/redo checks
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
+
   return {
+    // Canvas reference
     canvasRef,
-    dropdownRef,
     
-    // Event handlers
-    handleCanvasClick,
-    handleCanvasMouseDown: handleCanvasClick, 
-    handleCanvasMouseMove: throttledCanvasMouseMove, 
+    // Core event handlers
+    handleCanvasMouseDown,
+    handleCanvasMouseMove,
     handleMouseUp,
     handleElementMouseDown,
-    handleResizeStart,
+    
+    // Tool and history handlers
+    handleToolSelect,
     handleUndo,
     handleRedo,
+    
+    // Text handlers
+    handleTextChange,
+    handleTextFormatting,
+    handleTextFormatPropertyChange,
+    getTextStyles,
+    
+    // Other handlers
     handleDeleteElement,
     handleZoomIn,
     handleZoomOut,
-    handleZoomReset,
-    handleImageUpload,
-    handleToolSelect,
-    handleShapeSelect,
+    handleResizeStart,
     
-    // Resize handles function
-    getResizeHandles: (element: CanvasElement) => {
-      if (!element.width || !element.height) return [];
-      
-      return [
-        { position: 'top-left', x: element.x - 4, y: element.y - 4 },
-        { position: 'top-right', x: element.x + element.width - 4, y: element.y - 4 },
-        { position: 'bottom-left', x: element.x - 4, y: element.y + element.height - 4 },
-        { position: 'bottom-right', x: element.x + element.width - 4, y: element.y + element.height - 4 },
-        { position: 'top', x: element.x + (element.width / 2) - 4, y: element.y - 4 },
-        { position: 'bottom', x: element.x + (element.width / 2) - 4, y: element.y + element.height - 4 },
-        { position: 'left', x: element.x - 4, y: element.y + (element.height / 2) - 4 },
-        { position: 'right', x: element.x + element.width - 4, y: element.y + (element.height / 2) - 4 }
-      ];
-    },
-    
-    // Text formatting
-    updateTextFormatting,
-    getTextStyles,
-    handleTextFormatting,
-    handleTextChange,
-    handleTextFormatPropertyChange,
-    
-    // History checks
+    // Computed values
     canUndo,
     canRedo,
     
-    // Save functions
-    saveToHistory,
-    saveToHistoryImmediate
+    // Utility functions
+    getCanvasCoordinates,
+    commitToHistory
   };
 };
