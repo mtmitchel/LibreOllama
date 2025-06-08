@@ -116,7 +116,6 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
             <textarea
               defaultValue={element.content}
               placeholder="Type your note..."
-              onMouseDown={(e) => e.stopPropagation()}
               className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-gray-800 placeholder-gray-500"
               style={{
                 ...getTextStyles(element),

@@ -33,6 +33,7 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     elements, setElements,
     selectedElement, setSelectedElement,
     activeTool, setActiveTool,
+    selectedShape, setSelectedShape,
     zoomLevel, setZoomLevel,
     panOffset, setPanOffset,
 
@@ -124,6 +125,31 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     }
   }, [selectedElement, elements, setElements, saveToHistory, setSelectedElement]);
 
+  // Tool selection handler
+  const handleToolSelect = useCallback((toolId: string, event?: React.MouseEvent) => {
+    if (toolId === 'shapes' && event) {
+      const rect = (event.target as HTMLElement).getBoundingClientRect();
+      setDropdownPosition({
+        left: rect.left,
+        top: rect.top - 200
+      });
+      setShowShapeDropdown(true);
+      return;
+    }
+    
+    setActiveTool(toolId as any);
+    setShowShapeDropdown(false);
+    setDropdownPosition(null);
+  }, [setActiveTool, setShowShapeDropdown, setDropdownPosition]);
+
+  // Shape selection handler
+  const handleShapeSelect = useCallback((shapeId: string) => {
+    setSelectedShape(shapeId);
+    setActiveTool(shapeId as any);
+    setShowShapeDropdown(false);
+    setDropdownPosition(null);
+  }, [setSelectedShape, setActiveTool, setShowShapeDropdown, setDropdownPosition]);
+
   // Image upload
   const handleImageUpload = useCallback((file: File) => {
     const reader = new FileReader();
@@ -161,8 +187,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
     setResizeStartPos({
-      x: (rawX / zoomLevel) - panOffset.x,
-      y: (rawY / zoomLevel) - panOffset.y
+      x: rawX / zoomLevel - panOffset.x,
+      y: rawY / zoomLevel - panOffset.y
     });
     setResizeStartSize({
       width: element.width || 100,
@@ -178,8 +204,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
 
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
-    const currentX = (rawX / zoomLevel) - panOffset.x;
-    const currentY = (rawY / zoomLevel) - panOffset.y;
+    const currentX = rawX / zoomLevel - panOffset.x;
+    const currentY = rawY / zoomLevel - panOffset.y;
 
     const deltaX = currentX - resizeStartPos.x;
     const deltaY = currentY - resizeStartPos.y;
@@ -244,8 +270,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
 
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
-    const currentX = (rawX / zoomLevel) - panOffset.x;
-    const currentY = (rawY / zoomLevel) - panOffset.y;
+    const currentX = rawX / zoomLevel - panOffset.x;
+    const currentY = rawY / zoomLevel - panOffset.y;
     setMousePos({ x: currentX, y: currentY });
 
     // Handle element dragging
@@ -381,8 +407,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
       
       // Start dragging
       setIsDragging(true);
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+      const mouseX = (e.clientX - rect.left) / zoomLevel - panOffset.x;
+      const mouseY = (e.clientY - rect.top) / zoomLevel - panOffset.y;
       setDragStartPos({ x: mouseX, y: mouseY });
       setDragStartElementPos({ x: element.x, y: element.y });
       
@@ -398,8 +424,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     if (!rect) return;
 
     const mousePos = {
-      x: (e.clientX - rect.left - panOffset.x) / zoomLevel,
-      y: (e.clientY - rect.top - panOffset.y) / zoomLevel
+      x: (e.clientX - rect.left) / zoomLevel - panOffset.x,
+      y: (e.clientY - rect.top) / zoomLevel - panOffset.y
     };
 
     // Text tool: create new text element
@@ -445,12 +471,34 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
       return;
     }
 
+    // Drawing tools: start preview
+    if (['rectangle', 'circle', 'triangle', 'square', 'hexagon', 'star', 'line', 'arrow', 'pen'].includes(activeTool)) {
+      const newPreviewElement: CanvasElement = {
+        id: `preview-${Date.now()}`,
+        type: activeTool as any,
+        x: mousePos.x,
+        y: mousePos.y,
+        width: 0,
+        height: 0,
+        x2: mousePos.x, // For line/arrow
+        y2: mousePos.y, // For line/arrow
+        path: activeTool === 'pen' ? `M ${mousePos.x.toFixed(2)} ${mousePos.y.toFixed(2)}` : undefined, // For pen
+        strokeColor: '#000000',
+        strokeWidth: 2,
+        fillColor: activeTool === 'pen' ? 'transparent' : '#ffffff'
+      };
+      
+      setPreviewElement(newPreviewElement);
+      setIsPreviewing(true);
+      return;
+    }
+
     // Pan tool (select tool used for panning when clicking empty canvas)
     if (activeTool === 'select') {
       setSelectedElement(null); // Deselect
       return;
     }
-  }, [activeTool, elements, setElements, saveToHistory, setSelectedElement, setIsEditingText, setActiveTool, canvasRef, panOffset, zoomLevel]);
+  }, [activeTool, elements, setElements, saveToHistory, setSelectedElement, setIsEditingText, setActiveTool, setPreviewElement, setIsPreviewing, canvasRef, panOffset, zoomLevel]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -535,19 +583,28 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
   }, [showShapeDropdown, showTextFormatting, setShowShapeDropdown, setDropdownPosition, setActiveTool, setShowTextFormatting, setIsEditingText, setTextFormattingPosition]);
 
   // Text formatting functions
-  const updateTextFormatting = useCallback((elementId: string, formatProperty: keyof CanvasElement, value: any) => {
-    setElements(prevElements => {
-      const newElements = prevElements.map(el => 
-        el.id === elementId 
-          ? { ...el, [formatProperty]: value }
-          : el
-      );
-      if (formatProperty !== 'content') {
-        saveToHistory(newElements);
-      }
-      return newElements;
-    });
-  }, [setElements, saveToHistory]);
+  const updateTextFormatting = useCallback((elementId: string, property: keyof CanvasElement, value: any) => {
+    setElements(prev => prev.map(el => 
+      el.id === elementId ? { ...el, [property]: value } : el
+    ));
+  }, [setElements]);
+
+  // Text handling functions
+  const handleTextFormatting = useCallback((elementId: string, rect: DOMRect) => {
+    // Handle text formatting UI positioning
+  }, []);
+
+  const handleTextChange = useCallback((elementId: string, content: string) => {
+    setElements(prev => prev.map(el => 
+      el.id === elementId ? { ...el, content } : el
+    ));
+  }, [setElements]);
+
+  const handleTextFormatPropertyChange = useCallback((elementId: string, property: keyof CanvasElement, value: any) => {
+    setElements(prev => prev.map(el => 
+      el.id === elementId ? { ...el, [property]: value } : el
+    ));
+  }, [setElements]);
 
   const getTextStyles = useCallback((element: CanvasElement) => {
     const styles: React.CSSProperties = {};
@@ -584,6 +641,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     handleZoomOut,
     handleZoomReset,
     handleImageUpload,
+    handleToolSelect,
+    handleShapeSelect,
     
     // Resize handles function
     getResizeHandles: (element: CanvasElement) => {
@@ -604,6 +663,9 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     // Text formatting
     updateTextFormatting,
     getTextStyles,
+    handleTextFormatting,
+    handleTextChange,
+    handleTextFormatPropertyChange,
     
     // History checks
     canUndo,
