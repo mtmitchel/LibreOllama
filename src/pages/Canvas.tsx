@@ -33,12 +33,14 @@ import {
   Bold,
   Italic,
   List,
-  AlignLeft,
+    AlignLeft,
   AlignCenter,
   AlignRight
 } from 'lucide-react';
 import { Card, Button } from '../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
+import { useViewportCulling } from '../hooks/useViewportCulling';
+import CanvasElementComponent from '../components/CanvasElement';
 
 // Throttle utility for performance optimization
 const throttle = <T extends (...args: any[]) => any>(func: T, delay: number): T => {
@@ -113,14 +115,14 @@ const Canvas: React.FC = () => {
   const [selectedShape, setSelectedShape] = useState<string>('rectangle');
   const [showShapeDropdown, setShowShapeDropdown] = useState(false);
   const [showPastCanvases, setShowPastCanvases] = useState(true);
-  const [hoveredCanvas, setHoveredCanvas] = useState<string | null>(null);
-  const [pinnedCanvases, setPinnedCanvases] = useState<Set<string>>(new Set());const [isDrawing, setIsDrawing] = useState(false);
+  const [hoveredCanvas, setHoveredCanvas] = useState<string | null>(null);  const [pinnedCanvases, setPinnedCanvases] = useState<Set<string>>(new Set());
+
+  const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
-  const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
-    // Zoom state
+  const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });  // Zoom state
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   // Line/Arrow creation state
@@ -133,10 +135,8 @@ const Canvas: React.FC = () => {
   const [textFormattingPosition, setTextFormattingPosition] = useState<{ left: number; top: number } | null>(null);
   // Undo/Redo functionality
   const [history, setHistory] = useState<CanvasElement[][]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-
-  // Save current state to history
-  const saveToHistory = useCallback((newElements: CanvasElement[]) => {
+  const [historyIndex, setHistoryIndex] = useState(-1);  // Save current state to history (immediate version for specific operations)
+  const saveToHistoryImmediate = useCallback((newElements: CanvasElement[]) => {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push([...newElements]);
@@ -145,6 +145,19 @@ const Canvas: React.FC = () => {
     });
     setHistoryIndex(prev => Math.min(prev + 1, 49));
   }, [historyIndex]);
+  // Debounced version for frequent operations (like dragging, typing)
+  const saveToHistory = useCallback(
+    (() => {
+      let timeoutId: number;
+      return (newElements: CanvasElement[]) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          saveToHistoryImmediate(newElements);
+        }, 300);
+      };
+    })(),
+    [saveToHistoryImmediate]
+  );
 
   // Undo function
   const handleUndo = useCallback(() => {
@@ -191,7 +204,6 @@ const Canvas: React.FC = () => {
       updatedAt: '2024-01-13T11:00:00Z'
     }
   ];
-  
   const [elements, setElements] = useState<CanvasElement[]>([
     {
       id: '1',
@@ -241,10 +253,10 @@ const Canvas: React.FC = () => {
       fontSize: 'large',
       isBold: true,
       textAlignment: 'center'
-    }
-  ]);
+    }  ]);
   
-  const [selectedElement, setSelectedElement] = useState<string | null>(null);  const [isDragging, setIsDragging] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -723,10 +735,17 @@ const Canvas: React.FC = () => {
     () => throttle(handleMouseMove, 8), // ~120fps for smoother dragging
     [handleMouseMove]
   );
-
   // Add mouse move handler for line/arrow preview
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-    const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+
+  // Viewport culling for performance optimization
+  const { visibleElements } = useViewportCulling({
+    elements,
+    zoomLevel,
+    panOffset,
+    canvasSize: { width: 1200, height: 800 } // Default canvas size, could be made dynamic
+  });
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
     if (isCreatingLine && lineStartPoint) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -741,7 +760,13 @@ const Canvas: React.FC = () => {
     }
     
     throttledMouseMove(e);
-  }, [isCreatingLine, lineStartPoint, throttledMouseMove, zoomLevel, panOffset]);const handleMouseUp = useCallback(() => {
+  }, [isCreatingLine, lineStartPoint, throttledMouseMove, zoomLevel, panOffset]);
+
+  // Throttled version of handleCanvasMouseMove for better performance
+  const throttledCanvasMouseMove = useMemo(
+    () => throttle(handleCanvasMouseMove, 16), // ~60fps for smoother canvas interactions
+    [handleCanvasMouseMove]
+  );const handleMouseUp = useCallback(() => {
     if (isDrawing && currentPath) {
       const newDrawing: CanvasElement = {
         id: Date.now().toString(),
@@ -1325,8 +1350,7 @@ const Canvas: React.FC = () => {
             e.target.value = '';
           }}
           style={{ display: 'none' }}
-        />        {/* Enhanced Canvas Area */}
-        <div 
+        />        {/* Enhanced Canvas Area */}        <div 
           ref={canvasRef}          className={`flex-1 bg-bg-surface border border-border-subtle rounded-lg shadow-sm relative overflow-hidden transition-all duration-200 ${
             activeTool === 'pen' ? 'cursor-crosshair' : 
             activeTool === 'eraser' ? 'cursor-pointer' :
@@ -1334,7 +1358,7 @@ const Canvas: React.FC = () => {
             activeTool !== 'select' ? 'cursor-copy' : 'cursor-default'
           }`}
           onClick={handleCanvasClick}
-          onMouseMove={handleCanvasMouseMove}
+          onMouseMove={throttledCanvasMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
@@ -1346,402 +1370,34 @@ const Canvas: React.FC = () => {
               width: '100%',
               height: '100%',
               transition: 'transform 0.1s ease-out'
-            }}
-          >            {elements.map(element => {
+            }}          >            {visibleElements.map(element => {
               const isSelected = selectedElement === element.id;
-              
-              // Define render functions for each element type
-              const renderElement = () => {
-                switch (element.type) {                  case 'sticky-note':
-                    return (
-                      <Card
-                        key={element.id}
-                        className={`absolute cursor-move p-3 transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-                        }`}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          width: element.width,
-                          height: element.height,
-                          backgroundColor: element.color || '#facc15'
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      >
-                        {element.url ? (
-                          <a
-                            href={element.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <textarea
-                              defaultValue={element.content}
-                              placeholder="Type your note..."
-                              onMouseDown={(e) => e.stopPropagation()}
-                              className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-gray-800 placeholder-gray-500 pointer-events-none"
-                              style={{
-                                ...getTextStyles(element),
-                                whiteSpace: 'pre-wrap'
-                              }}
-                              readOnly
-                            />
-                            <Link size={12} className="absolute bottom-1 right-1" />
-                          </a>
-                        ) : (
-                          <textarea
-                            defaultValue={element.content}                            placeholder="Type your note..."
-                            onMouseDown={(e) => e.stopPropagation()}
-                            className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-gray-800 placeholder-gray-500"
-                            style={{
-                              ...getTextStyles(element),
-                              whiteSpace: 'pre-wrap'
-                            }}
-                            onFocus={(e) => {
-                              setIsEditingText(element.id);
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setTextFormattingPosition({
-                                left: rect.left,
-                                top: rect.bottom + 8
-                              });
-                              setShowTextFormatting(true);
-                            }}
-                            onBlur={() => {
-                              setIsEditingText(null);
-                              setShowTextFormatting(false);
-                            }}
-                            onChange={(e) => {
-                              updateTextFormatting(element.id, 'content', e.target.value);
-                            }}                            onInput={(e) => {
-                              // Save content immediately on input for sticky notes
-                              setElements(prevElements => prevElements.map(el => 
-                                el.id === element.id 
-                                  ? { ...el, content: (e.target as HTMLTextAreaElement).value }
-                                  : el
-                              ));
-                            }}
-                          />
-                        )}
-                      </Card>
-                    );
-                  case 'rectangle':
-                  case 'square':
-                    return (
-                      <div
-                        key={element.id}
-                        className={`absolute cursor-move rounded-md transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-                        }`}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          width: element.width,
-                          height: element.height,
-                          backgroundColor: element.color || '#3b82f6'
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      />
-                    );
-                  case 'circle':
-                    return (
-                      <div
-                        key={element.id}
-                        className={`absolute cursor-move rounded-full transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-                        }`}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          width: element.width,
-                          height: element.height,
-                          backgroundColor: element.color || '#10b981'
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      />
-                    );
-                  case 'triangle':
-                    return (
-                      <div
-                        key={element.id}
-                        className={`absolute cursor-move transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-                        }`}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          width: 0,
-                          height: 0,
-                          borderLeft: `${(element.width || 60) / 2}px solid transparent`,
-                          borderRight: `${(element.width || 60) / 2}px solid transparent`,
-                          borderBottom: `${element.height || 60}px solid ${element.color || '#8b5cf6'}`,
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      />
-                    );
-                  case 'star':
-                    return (
-                      <div
-                        key={element.id}
-                        className={`absolute cursor-move transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-                        }`}
-                        style={{ left: element.x, top: element.y }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      >
-                        <svg width={element.width || 60} height={element.height || 60}>
-                          <polygon
-                            points="30,2 37,20 57,20 42,32 48,52 30,40 12,52 18,32 3,20 23,20"
-                            fill={element.color || '#f59e0b'}
-                          />
-                        </svg>
-                      </div>
-                    );
-                  case 'hexagon':
-                    return (
-                      <div
-                        key={element.id}
-                        className={`absolute cursor-move transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-                        }`}
-                        style={{ left: element.x, top: element.y }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      >
-                        <svg width={element.width || 60} height={element.height || 60}>
-                          <polygon
-                            points="30,2 52,15 52,45 30,58 8,45 8,15"
-                            fill={element.color || '#06b6d4'}
-                          />
-                        </svg>
-                      </div>
-                    );
-                  case 'drawing':
-                    return (
-                      <svg
-                        key={element.id}
-                        className={`absolute cursor-move transition-all duration-200 pointer-events-none ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
-                        }`}
-                        style={{ left: 0, top: 0, width: '100%', height: '100%' }}
-                      >                        <path
-                          d={element.path}
-                          stroke={element.color || '#000000'}
-                          strokeWidth="2"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      </svg>
-                    );                  case 'text':
-                    return (
-                      <div
-                        key={element.id}
-                        className={`absolute cursor-move p-1 transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 rounded px-2 py-1 bg-white/80' : ''
-                        }`}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          width: element.width,
-                          height: element.height,
-                          backgroundColor: element.backgroundColor || 'transparent',
-                          borderRadius: element.backgroundColor ? '4px' : '0',
-                          padding: element.backgroundColor ? '4px 8px' : '4px',
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      >
-                        {element.url ? (
-                          <a
-                            href={element.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >                            {element.isBulletList ? (
-                              <textarea
-                                defaultValue={element.content}
-                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded pointer-events-none resize-none"
-                                style={{
-                                  ...getTextStyles(element),
-                                  whiteSpace: 'pre-wrap',
-                                  overflow: 'hidden'
-                                }}
-                                readOnly
-                              />
-                            ) : (
-                              <input 
-                                type="text"
-                                defaultValue={element.content}
-                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded pointer-events-none"
-                                style={{
-                                  ...getTextStyles(element),
-                                  minHeight: '100%'
-                                }}
-                                readOnly
-                              />
-                            )}
-                            <Link size={12} className="inline ml-1" />
-                          </a>
-                        ) : (
-                          <>                            {element.isBulletList ? (
-                              <textarea
-                                defaultValue={element.content}
-                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded text-text-primary resize-none"
-                                style={{
-                                  ...getTextStyles(element),
-                                  whiteSpace: 'pre-wrap',
-                                  overflow: 'hidden'
-                                }}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onFocus={(e) => {
-                                  setIsEditingText(element.id);
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  setTextFormattingPosition({
-                                    left: rect.left,
-                                    top: rect.bottom + 8
-                                  });
-                                  setShowTextFormatting(true);
-                                }}
-                                onBlur={() => {
-                                  setIsEditingText(null);
-                                  setShowTextFormatting(false);
-                                }}                                onChange={(e) => {
-                                  updateTextFormatting(element.id, 'content', e.target.value);
-                                }}
-                              />
-                            ) : (
-                              <input 
-                                type="text"
-                                defaultValue={element.content}
-                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded text-text-primary"
-                                style={{
-                                  ...getTextStyles(element),
-                                  minHeight: '100%'
-                                }}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onFocus={(e) => {
-                                  setIsEditingText(element.id);
-                                  const rect = e.currentTarget.getBoundingClientRect();
-                                  setTextFormattingPosition({
-                                    left: rect.left,
-                                    top: rect.bottom + 8
-                                  });
-                                  setShowTextFormatting(true);
-                                }}
-                                onBlur={() => {
-                                  setIsEditingText(null);
-                                  setShowTextFormatting(false);
-                                }}                                onChange={(e) => {
-                                  updateTextFormatting(element.id, 'content', e.target.value);
-                                }}
-                              />
-                            )}
-                          </>
-                        )}
-                      </div>
-                    );
-                  case 'line':
-                    return (
-                      <svg
-                        key={element.id}
-                        className={`absolute cursor-move transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
-                        }`}
-                        style={{
-                          left: Math.min(element.x, element.x2 || element.x) - 2,
-                          top: Math.min(element.y, element.y2 || element.y) - 2,
-                          width: Math.abs((element.x2 || element.x) - element.x) + 4,
-                          height: Math.abs((element.y2 || element.y) - element.y) + 4,
-                          pointerEvents: 'auto'
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      >                        <line
-                          x1={element.x - Math.min(element.x, element.x2 || element.x) + 2}
-                          y1={element.y - Math.min(element.y, element.y2 || element.y) + 2}
-                          x2={(element.x2 || element.x) - Math.min(element.x, element.x2 || element.x) + 2}
-                          y2={(element.y2 || element.y) - Math.min(element.y, element.y2 || element.y) + 2}
-                          stroke={element.color || '#000000'}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      </svg>
-                    );
-                  case 'arrow':
-                    return (
-                      <svg
-                        key={element.id}
-                        className={`absolute cursor-move transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
-                        }`}
-                        style={{
-                          left: Math.min(element.x, element.x2 || element.x) - 10,
-                          top: Math.min(element.y, element.y2 || element.y) - 10,
-                          width: Math.abs((element.x2 || element.x) - element.x) + 20,
-                          height: Math.abs((element.y2 || element.y) - element.y) + 20,
-                          pointerEvents: 'auto'
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      >
-                        <defs>
-                          <marker
-                            id={`arrowhead-${element.id}`}
-                            markerWidth="10"
-                            markerHeight="7"
-                            refX="10"
-                            refY="3.5"
-                            orient="auto"
-                          >
-                            <polygon
-                              points="0 0, 10 3.5, 0 7"
-                              fill={element.color || '#000000'}
-                            />
-                          </marker>
-                        </defs>                        <line
-                          x1={element.x - Math.min(element.x, element.x2 || element.x) + 10}
-                          y1={element.y - Math.min(element.y, element.y2 || element.y) + 10}
-                          x2={(element.x2 || element.x) - Math.min(element.x, element.x2 || element.x) + 10}
-                          y2={(element.y2 || element.y) - Math.min(element.y, element.y2 || element.y) + 10}
-                          stroke={element.color || '#000000'}
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          vectorEffect="non-scaling-stroke"
-                          markerEnd={`url(#arrowhead-${element.id})`}
-                        />
-                      </svg>
-                    );
-                  case 'image':
-                    return (
-                      <div
-                        key={element.id}
-                        className={`absolute cursor-move transition-all duration-200 ${
-                          isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-                        }`}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          width: element.width,
-                          height: element.height,
-                        }}
-                        onMouseDown={(e) => handleElementMouseDown(e, element.id)}
-                      >
-                        <img
-                          src={element.imageUrl}
-                          alt={element.imageName || 'Canvas image'}
-                          className="w-full h-full object-cover rounded"
-                          draggable={false}
-                        />
-                      </div>
-                    );
-                  default:
-                    return null;
-                }
-              };
 
               return (
                 <div key={element.id}>
-                  {renderElement()}
+                  <CanvasElementComponent
+                    element={element}
+                    isSelected={isSelected}
+                    onMouseDown={handleElementMouseDown}
+                    onTextFormatting={(elementId, rect) => {
+                      setIsEditingText(elementId);
+                      setTextFormattingPosition({
+                        left: rect.left,
+                        top: rect.bottom + 8
+                      });
+                      setShowTextFormatting(true);
+                    }}
+                    onTextChange={(elementId, content) => {
+                      updateTextFormatting(elementId, 'content', content);
+                    }}
+                    onTextFormatPropertyChange={(elementId, property, value) => {
+                      setElements(prevElements => prevElements.map(el => 
+                        el.id === elementId 
+                          ? { ...el, [property]: value }
+                          : el
+                      ));                    }}
+                    getTextStyles={getTextStyles}
+                  />
                   
                   {/* Resize handles for selected elements */}
                   {isSelected && element.width && element.height && (
@@ -1769,7 +1425,7 @@ const Canvas: React.FC = () => {
                 </div>
               );
             })}
-          </div>          
+          </div>
           {/* Current drawing path preview */}
           {isDrawing && currentPath && (
             <div
