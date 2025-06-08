@@ -1,34 +1,22 @@
 // src/pages/Notes.tsx
-
-import { useState, useRef, useCallback } from 'react';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui';
-import { Input } from '../components/ui';
-import { 
-  Plus, Folder, Search,
-  Heading1, Heading2, List, CheckSquare, Code2,
-  PencilRuler,
-  ChevronRight, ChevronDown, // Added for collapsibility
-  Bold, Italic, Underline, Strikethrough,
-  Image, Upload, X,
-  MoreHorizontal
+import React, { useState, useEffect, useRef } from 'react'; // Removed forwardRef
+import { Card, Button, Input } from '../components/ui';
+import {
+  Plus, Folder, Search, Heading1, Heading2, List, CheckSquare, Code2,
+  PencilRuler, ChevronRight, ChevronDown, GripVertical, MoreHorizontal, Type, Image as ImageIcon, Quote, Link as LinkIcon, Trash2,
+  Bold, Italic, Strikethrough // Ensured Underline is not imported
 } from 'lucide-react';
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import LinkExtension from '@tiptap/extension-link';
 
-// --- Data Structures for a Block Editor ---
+// --- Data Structures & Mock Data (Enhanced) ---
+
 interface Block {
   id: string;
-  type: 'heading1' | 'heading2' | 'text' | 'list' | 'checklist' | 'code' | 'canvas' | 'image';
-  content: string; // For text-based blocks
-  metadata?: any; // For complex data like checklist status or canvas data
-  formatting?: {
-    bold?: boolean;
-    italic?: boolean;
-    underline?: boolean;
-    strikethrough?: boolean;
-    indentLevel?: number;
-  };
-  imageUrl?: string; // For image blocks
-  imageName?: string; // For image blocks
+  type: 'heading1' | 'heading2' | 'text' | 'list' | 'checklist' | 'code' | 'canvas' | 'image' | 'quote';
+  content: string; // This will store HTML content for Tiptap blocks
+  metadata?: any;
 }
 
 interface Note {
@@ -41,36 +29,36 @@ interface Note {
 interface Folder {
   id: string;
   name: string;
-  parentId?: string; // Added for nesting
+  parentId?: string;
   notes: Note[];
-  children?: Folder[]; // Optional: for easier rendering of nested structure
+  children?: Folder[];
 }
 
-// --- Mock Data (Replace with API calls later) ---
+// --- FOLDER/NOTE MOCK DATA (Keep as is) ---
 const mockFoldersData: Omit<Folder, 'children'>[] = [
   {
     id: 'personal',
     name: 'Personal',
     notes: [
-      { 
-        id: 'note1', 
-        title: 'Daily journal', 
+      {
+        id: 'note1',
+        title: 'Daily journal',
         folderId: 'personal',
         blocks: [
-          { id: 'b1', type: 'heading1', content: 'June 7th, 2025' },
-          { id: 'b2', type: 'text', content: 'Today was a productive day. I managed to finalize the architecture for the LibreOllama notes page.' },
-          { id: 'b3', type: 'checklist', content: 'Finalize 2-column layout|true\nImplement block editor|true\nAdd canvas block|false' },
+          { id: 'b1', type: 'heading1', content: 'June 8th, 2025' },
+          { id: 'b2', type: 'text', content: 'Today was a productive day. I focused on implementing the core features for the block editor in LibreOllama.' },
+          { id: 'b3', type: 'checklist', content: 'Implement Block Action Menu|true\nImplement Slash Command|true\nRefine Block Rendering|false' },
         ]
       },
-      { 
-        id: 'note2', 
-        title: 'Feature brainstorm', 
+      {
+        id: 'note2',
+        title: 'Feature brainstorm',
         folderId: 'personal',
         blocks: [
           { id: 'b4', type: 'heading2', content: 'New ideas for projects page' },
           { id: 'b5', type: 'text', content: 'Here is a quick sketch of the new project creation flow.' },
-          { id: 'b6', type: 'canvas', content: 'Initial sketch of the wizard flow', metadata: { /* Canvas JSON data would go here */ } },
-          { id: 'b7', type: 'text', content: 'We should also consider adding AI-generated summaries.' },
+          { id: 'b6', type: 'canvas', content: 'Initial sketch of the wizard flow', metadata: {} },
+          { id: 'b7', type: 'quote', content: 'The best way to predict the future is to invent it.' },
         ]
       },
     ],
@@ -79,44 +67,24 @@ const mockFoldersData: Omit<Folder, 'children'>[] = [
     id: 'work',
     name: 'Work',
     notes: [
-      {
-        id: 'note3',
-        title: 'Project alpha meeting notes',
-        folderId: 'work',
-        blocks: [{ id: 'b8', type: 'text', content: 'Discussed milestones for Q3.' }]
-      }
+      { id: 'note3', title: 'Project alpha meeting notes', folderId: 'work', blocks: [{ id: 'b8', type: 'text', content: 'Discussed milestones for Q3.' }] }
     ]
   },
   {
     id: 'work-projects',
-    name: 'Client Projects',
-    parentId: 'work', // Nested under 'Work'
+    name: 'Client Projects', parentId: 'work',
     notes: [
-      {
-        id: 'note4',
-        title: 'Project beta - design specs',
-        folderId: 'work-projects',
-        blocks: [{ id: 'b9', type: 'text', content: 'Finalized UI mockups.' }]
-      }
+      { id: 'note4', title: 'Project beta - design specs', folderId: 'work-projects', blocks: [{ id: 'b9', type: 'text', content: 'Finalized UI mockups.' }] }
     ]
   },
-  {
-    id: 'recipes',
-    name: 'Recipes',
-    notes: []
-  }
+  { id: 'recipes', name: 'Recipes', notes: [] }
 ];
 
-// Helper to build the nested structure for rendering
+// ... (Keep existing buildFolderTree and renderFolderTree functions as is) ...
 const buildFolderTree = (folders: Omit<Folder, 'children'>[]): Folder[] => {
   const folderMap = new Map<string, Folder>();
   const rootFolders: Folder[] = [];
-
-  // Initialize map and add children array
-  folders.forEach(f => {
-    folderMap.set(f.id, { ...f, children: [], notes: [...f.notes] });
-  });
-
+  folders.forEach(f => { folderMap.set(f.id, { ...f, children: [], notes: [...f.notes] }); });
   folderMap.forEach(folder => {
     if (folder.parentId && folderMap.has(folder.parentId)) {
       folderMap.get(folder.parentId)!.children!.push(folder);
@@ -124,633 +92,613 @@ const buildFolderTree = (folders: Omit<Folder, 'children'>[]): Folder[] => {
       rootFolders.push(folder);
     }
   });
-
   return rootFolders;
 };
 
-// --- End Mock Data ---
-
-// Recursive function to render folder tree
-const renderFolderTree = (
-  folderList: Folder[], 
-  level: number, 
-  selectedNoteId: string | null,
-  setSelectedNoteId: (id: string) => void,
-  expandedFolders: Record<string, boolean>,
-  toggleFolder: (folderId: string) => void
-) => {
+const renderFolderTree = (folderList: Folder[], level: number, selectedNoteId: string | null, setSelectedNoteId: (id: string) => void, expandedFolders: Record<string, boolean>, toggleFolder: (folderId: string) => void) => {
   return folderList.map(folder => {
-    const isExpanded = expandedFolders[folder.id] ?? true; // Default to expanded
+    const isExpanded = expandedFolders[folder.id] ?? true;
     return (
-    <div key={folder.id} className="mb-3">
-      <h3 
-        className="flex items-center gap-3 px-3 py-2 mb-1 text-sm font-semibold text-text-secondary uppercase tracking-wider cursor-pointer hover:bg-bg-secondary rounded-md transition-colors"
-        style={{ marginLeft: `${level * 20}px` }}
-        onClick={() => toggleFolder(folder.id)}
-      >
-        {isExpanded ? <ChevronDown size={16} className="text-text-muted" /> : <ChevronRight size={16} className="text-text-muted" />}
-        <Folder size={16} className="text-text-muted" /> 
-        <span className="flex-1">{folder.name}</span>
-        {/* Placeholder for folder actions (e.g., add note/folder here) */}
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); alert(`Add to ${folder.name}`); }}>
-          <Plus size={14} className="text-text-muted" />
-        </Button>
-      </h3>
-      {isExpanded && (
-        <>
-          <ul className="space-y-1">
-        {folder.notes.map(note => (
-          <li key={note.id}>
-            <a
-              href="#" 
-              onClick={(e) => { e.preventDefault(); setSelectedNoteId(note.id); }}
-              className={`block py-2 px-4 rounded-md truncate text-base font-medium transition-colors
-                ${selectedNoteId === note.id 
-                  ? 'bg-accent-soft text-primary'
-                  : 'text-text-primary hover:bg-bg-secondary hover:text-text-primary'}`}
-              style={{ marginLeft: `${(level + 1) * 20}px` }}
-            >
-              {note.title}
-            </a>
-          </li>
-        ))}
-      </ul>
-          {folder.children && folder.children.length > 0 && (
-            <div className="mt-2">
-              {renderFolderTree(folder.children, level + 1, selectedNoteId, setSelectedNoteId, expandedFolders, toggleFolder)}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );});
-};
-
-
-// A helper component to render different block types with rich text editing
-const BlockRenderer = ({ 
-  block, 
-  isEditing, 
-  onEdit, 
-  onSave, 
-  onFormat, 
-  onImageUpload,
-  onCreateBlock 
-}: { 
-  block: Block;
-  isEditing: boolean;
-  onEdit: (blockId: string) => void;
-  onSave: (blockId: string, content: string, formatting?: Block['formatting']) => void;
-  onFormat: (blockId: string, formatType: 'bold' | 'italic' | 'underline' | 'strikethrough') => void;
-  onImageUpload: (blockId: string, file: File) => void;
-  onCreateBlock?: (afterBlockId: string, type: Block['type']) => void;
-}) => {
-  const textRef = useRef<HTMLDivElement>(null);
-  // Handle keyboard shortcuts for formatting
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key) {
-        case 'b':
-          e.preventDefault();
-          onFormat(block.id, 'bold');
-          break;
-        case 'i':
-          e.preventDefault();
-          onFormat(block.id, 'italic');
-          break;
-        case 'u':
-          e.preventDefault();
-          onFormat(block.id, 'underline');
-          break;        case 'Enter':
-          e.preventDefault();
-          if (e.shiftKey) {
-            // Shift+Enter: Add a line break
-            const selection = window.getSelection();
-            if (selection?.rangeCount) {
-              const range = selection.getRangeAt(0);
-              const br = document.createElement('br');
-              range.insertNode(br);
-              range.setStartAfter(br);
-              range.setEndAfter(br);
-              selection.removeAllRanges();
-              selection.addRange(range);
-            }
-          } else {
-            // Regular Enter: Exit editing mode and potentially create new block
-            onEdit('');
-            if (onCreateBlock) {
-              onCreateBlock(block.id, 'text');
-            }
-          }
-          break;
-      }
-    }
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      if (e.shiftKey) {
-        // Decrease indent
-        const currentIndent = block.formatting?.indentLevel || 0;
-        if (currentIndent > 0) {
-          onSave(block.id, block.content, { 
-            ...block.formatting, 
-            indentLevel: currentIndent - 1 
-          });
-        }
-      } else {
-        // Increase indent
-        const currentIndent = block.formatting?.indentLevel || 0;
-        onSave(block.id, block.content, { 
-          ...block.formatting, 
-          indentLevel: currentIndent + 1 
-        });
-      }
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onEdit(''); // Exit editing mode
-    }
-  }, [block, onFormat, onSave, onEdit]);
-
-  // Apply text formatting styles
-  const getTextStyles = () => {
-    const styles: React.CSSProperties = {};
-    if (block.formatting?.bold) styles.fontWeight = 'bold';
-    if (block.formatting?.italic) styles.fontStyle = 'italic';
-    if (block.formatting?.underline) styles.textDecoration = 'underline';
-    if (block.formatting?.strikethrough) {
-      styles.textDecoration = styles.textDecoration 
-        ? `${styles.textDecoration} line-through` 
-        : 'line-through';
-    }
-    const indentLevel = block.formatting?.indentLevel || 0;
-    styles.marginLeft = `${indentLevel * 2}rem`;
-    return styles;
-  };  // Handle text selection for formatting
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0 && isEditing) {
-      const range = selection.getRangeAt(0);
-      if (range.startOffset !== range.endOffset) {
-        // Text is selected, show formatting toolbar
-        // TODO: Implement floating toolbar functionality
-        console.log('Text selected for formatting:', {
-          blockId: block.id,
-          start: range.startOffset,
-          end: range.endOffset
-        });
-      }
-    }
-  };
-
-  switch (block.type) {
-    case 'heading1':
-      return isEditing ? (
-        <div className="relative group">
-          <input
-            type="text"
-            defaultValue={block.content}
-            className="text-4xl font-bold mb-6 mt-8 text-text-primary w-full bg-transparent border-none outline-none focus:ring-2 focus:ring-primary/50 rounded px-2"
-            onKeyDown={handleKeyDown}
-            onBlur={(e) => onSave(block.id, e.target.value)}
-            autoFocus
-          />
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" onClick={() => onEdit('')}>
-              <X size={16} />
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <h1 
-          className="text-4xl font-bold mb-6 mt-8 text-text-primary cursor-pointer hover:bg-accent-soft/20 rounded px-2 transition-colors"
-          onClick={() => onEdit(block.id)}
-          style={getTextStyles()}
-        >
-          {block.content}
-        </h1>
-      );
-
-    case 'heading2':
-      return isEditing ? (
-        <div className="relative group">
-          <input
-            type="text"
-            defaultValue={block.content}
-            className="text-3xl font-bold mb-4 mt-6 text-text-primary w-full bg-transparent border-none outline-none focus:ring-2 focus:ring-primary/50 rounded px-2"
-            onKeyDown={handleKeyDown}
-            onBlur={(e) => onSave(block.id, e.target.value)}
-            autoFocus
-          />
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" onClick={() => onEdit('')}>
-              <X size={16} />
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <h2 
-          className="text-3xl font-bold mb-4 mt-6 text-text-primary cursor-pointer hover:bg-accent-soft/20 rounded px-2 transition-colors"
-          onClick={() => onEdit(block.id)}
-          style={getTextStyles()}
-        >
-          {block.content}
-        </h2>
-      );
-
-    case 'text':
-      return isEditing ? (
-        <div className="relative group">
-          <div
-            ref={textRef}
-            contentEditable
-            className="text-lg leading-relaxed my-5 text-text-primary outline-none focus:ring-2 focus:ring-primary/50 rounded px-2 py-1 min-h-[2rem]"
-            style={getTextStyles()}
-            onKeyDown={handleKeyDown}
-            onMouseUp={handleTextSelection}
-            onBlur={(e) => onSave(block.id, e.currentTarget.textContent || '')}
-            suppressContentEditableWarning={true}
-            dangerouslySetInnerHTML={{ __html: block.content }}
-          />          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white/90 backdrop-blur-sm rounded-md p-1 shadow-lg border border-border-subtle">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onFormat(block.id, 'bold')} 
-              title="Bold (Ctrl+B)" 
-              className={`h-8 w-8 ${block.formatting?.bold ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'}`}
-            >
-              <Bold size={14} />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onFormat(block.id, 'italic')} 
-              title="Italic (Ctrl+I)" 
-              className={`h-8 w-8 ${block.formatting?.italic ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'}`}
-            >
-              <Italic size={14} />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onFormat(block.id, 'underline')} 
-              title="Underline (Ctrl+U)" 
-              className={`h-8 w-8 ${block.formatting?.underline ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'}`}
-            >
-              <Underline size={14} />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onFormat(block.id, 'strikethrough')} 
-              title="Strikethrough" 
-              className={`h-8 w-8 ${block.formatting?.strikethrough ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'}`}
-            >
-              <Strikethrough size={14} />
-            </Button>
-            <div className="w-px bg-border-subtle mx-1"></div>
-            <Button variant="ghost" size="icon" onClick={() => onEdit('')} title="Done editing (Ctrl+Enter)" className="h-8 w-8 hover:bg-red-500/10 hover:text-red-600">
-              <X size={14} />
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <p 
-          className="text-lg leading-relaxed my-5 text-text-primary cursor-pointer hover:bg-accent-soft/20 rounded px-2 py-1 transition-colors"
-          onClick={() => onEdit(block.id)}
-          style={getTextStyles()}
-        >
-          {block.content}
-        </p>
-      );
-
-    case 'image':
-      return (
-        <div className="my-8 group relative">
-          <div 
-            className="border-2 border-dashed border-border hover:border-primary hover:bg-accent-soft/50 transition-colors duration-200 rounded-lg"
-            onDrop={(e) => {
-              e.preventDefault();
-              const files = Array.from(e.dataTransfer.files);
-              const imageFile = files.find(file => file.type.startsWith('image/'));
-              if (imageFile) {
-                onImageUpload(block.id, imageFile);
-              }
-            }}
-            onDragOver={(e) => e.preventDefault()}
-          >
-            {block.imageUrl ? (
-              <div className="relative">
-                <img 
-                  src={block.imageUrl} 
-                  alt={block.imageName || 'Note image'} 
-                  className="w-full max-w-2xl mx-auto rounded-lg"
-                />
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="bg-black/50 text-white">
-                    <MoreHorizontal size={16} />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-10 text-center">
-                <Image size={48} className="text-text-tertiary mb-5" />
-                <h4 className="text-xl font-semibold text-text-primary mb-2">Add Image</h4>
-                <p className="text-base text-text-secondary mb-6">Drag and drop an image or click to upload</p>
-                <Button 
-                  variant="secondary" 
-                  size="default"
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e) => {
-                      const file = (e.target as HTMLInputElement).files?.[0];
-                      if (file) {
-                        onImageUpload(block.id, file);
-                      }
-                    };
-                    input.click();
-                  }}
-                >
-                  <Upload size={16} className="mr-2" />
-                  Choose Image
-                </Button>
+      <div key={folder.id} style={{ marginLeft: `${level * 16}px` }} className="mb-2">
+        <h3 className="flex items-center gap-2 px-2 py-1 mb-0.5 text-sm font-semibold text-text-secondary uppercase tracking-wider cursor-pointer hover:bg-bg-secondary rounded-md" onClick={() => toggleFolder(folder.id)}> {/* Changed text-xs to text-sm */}
+          {isExpanded ? <ChevronDown size={14} className="text-text-muted" /> : <ChevronRight size={14} className="text-text-muted" />}
+          <Folder size={14} className="text-text-muted" />
+          {folder.name}
+          <Button variant="ghost" size="icon" className="ml-auto h-6 w-6" onClick={(e) => { e.stopPropagation(); alert(`Add to ${folder.name}`); }}>
+            <Plus size={12} className="text-text-muted" />
+          </Button>
+        </h3>
+        {isExpanded && (
+          <>
+            <ul className="space-y-0.5">
+              {folder.notes.map(note => (
+                <li key={note.id}>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setSelectedNoteId(note.id); }} className={`block p-2 rounded-md truncate text-sm font-medium transition-colors ${selectedNoteId === note.id ? 'bg-accent-soft text-primary' : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'} pl-14`}> {/* Removed style, added pl-14. Kept text-sm for notes */}
+                    {note.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            {folder.children && folder.children.length > 0 && (
+              <div className="mt-1">
+                {renderFolderTree(folder.children, level + 1, selectedNoteId, setSelectedNoteId, expandedFolders, toggleFolder)}
               </div>
             )}
-          </div>
-        </div>
-      );
+          </>
+        )}
+      </div>
+    );
+  });
+};
 
-    case 'checklist':
-      return (
-        <div className="space-y-3 my-5">
-          {block.content.split('\n').map((item, index) => {
-            const [text, checked] = item.split('|');
-            return (
-              <div key={index} className="flex items-center gap-4">
-                <input type="checkbox" defaultChecked={checked === 'true'} className="w-5 h-5 rounded text-primary focus:ring-primary" />
-                <label className={`text-lg ${checked === 'true' ? 'line-through text-text-secondary' : 'text-text-primary'}`}>{text}</label>
-              </div>
-            );
-          })}
-        </div>
-      );
+// --- Block Components ---
 
-    case 'canvas':
-      return (
-        <Card className="my-8 border-2 border-dashed border-border hover:border-primary hover:bg-accent-soft/50 transition-colors duration-200">
-          <div className="flex flex-col items-center justify-center p-10 text-center">
-            <PencilRuler size={48} className="text-text-tertiary mb-5" />
-            <h4 className="text-xl font-semibold text-text-primary mb-2">Embedded sketch</h4>
-            <p className="text-base text-text-secondary mb-6">{block.content}</p>
-            <Button variant="secondary" size="default">Edit sketch</Button>
-          </div>
+interface TipTapEditorProps {
+  content: string;
+  onChange: (blockId: string, newContent: string) => void;
+  blockId: string;
+  className?: string;
+}
+
+const TipTapEditor: React.FC<TipTapEditorProps> = ({ content, onChange, blockId, className }) => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        // Disable heading extension from StarterKit if we want to handle H1/H2 blocks separately
+        // Or configure it to match our needs
+        heading: false, // Assuming H1/H2 are separate block types, not inline styles within a text block
+      }),
+      LinkExtension.configure({
+        openOnClick: true, // Set to true for user convenience
+        autolink: true,
+      }),
+    ],
+    content: content,
+    onUpdate: ({ editor: currentEditor }) => {
+      onChange(blockId, currentEditor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: `prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none p-1 -m-1 rounded focus:ring-1 focus:ring-accent-primary ${className || ''}`,
+      },
+    },
+  });
+
+  return (
+    <>
+      {editor && (
+        <BubbleMenu editor={editor} tippyOptions={{ duration: 100, placement: 'top-start' }} className="bg-bg-tertiary shadow-lg rounded-md p-1 flex gap-0.5 border border-border-default">
+          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('bold') ? 'bg-accent-primary text-white' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()} disabled={!editor.can().chain().focus().toggleBold().run()}> <Bold size={16} /> </Button>
+          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('italic') ? 'bg-accent-primary text-white' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()} disabled={!editor.can().chain().focus().toggleItalic().run()}> <Italic size={16} /> </Button>
+          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('strike') ? 'bg-accent-primary text-white' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()} disabled={!editor.can().chain().focus().toggleStrike().run()}> <Strikethrough size={16} /> </Button>
+          <Button variant="ghost" size="icon" className={`h-7 w-7 ${editor.isActive('link') ? 'bg-accent-primary text-white' : ''}`} onClick={() => {
+            const previousUrl = editor.getAttributes('link').href;
+            const url = window.prompt('URL', previousUrl);
+            if (url === null) return;
+            if (url === '') {
+              editor.chain().focus().extendMarkRange('link').unsetLink().run();
+              return;
+            }
+            editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
+          }}> <LinkIcon size={16} /> </Button>
+        </BubbleMenu>
+      )}
+      <EditorContent editor={editor} />
+    </>
+  );
+};
+
+interface BlockComponentProps {
+  block: Block;
+  onContentChange: (blockId: string, newContent: string) => void;
+}
+
+const TextBlock: React.FC<BlockComponentProps> = ({ block, onContentChange }) => (
+  <TipTapEditor content={block.content} onChange={onContentChange} blockId={block.id} />
+);
+
+const Heading1Block: React.FC<BlockComponentProps> = ({ block, onContentChange }) => (
+  <h1 className="text-3xl font-bold mb-4 mt-6 outline-none">
+    <TipTapEditor content={block.content} onChange={onContentChange} blockId={block.id} className="font-bold" />
+  </h1>
+);
+
+const Heading2Block: React.FC<BlockComponentProps> = ({ block, onContentChange }) => (
+  <h2 className="text-2xl font-bold mb-3 mt-4 outline-none">
+    <TipTapEditor content={block.content} onChange={onContentChange} blockId={block.id} className="font-bold" />
+  </h2>
+);
+
+const QuoteBlock: React.FC<{block: Block}> = ({ block }) => (<blockquote className="my-4 border-l-4 border-accent-primary pl-4 italic text-text-secondary"><p>{block.content}</p></blockquote>);
+
+interface ChecklistBlockProps extends BlockComponentProps {}
+
+const ChecklistBlock: React.FC<ChecklistBlockProps> = ({ block, onContentChange }) => {
+    const handleCheckChange = (index: number, checked: boolean) => {
+        const lines = block.content.split('\n');
+        const [text] = lines[index].split('|');
+        lines[index] = `${text}|${checked}`;
+        onContentChange(block.id, lines.join('\n'));
+    };
+
+    return (
+        <div className="space-y-2 my-4">
+            {block.content.split('\n').map((item: string, index: number) => {
+                const [text, checkedStr] = item.split('|');
+                const isChecked = checkedStr === 'true';
+                return (
+                    <div key={index} className="flex items-center gap-3">
+                        <input type="checkbox" checked={isChecked} onChange={(e) => handleCheckChange(index, e.target.checked)} className="w-4 h-4 rounded text-primary focus:ring-primary bg-bg-tertiary border-border-default" />
+                        <label className={`${isChecked ? 'line-through text-text-tertiary' : 'text-text-primary'}`}>{text}</label>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const CanvasBlock: React.FC<{block: Block}> = ({ block }) => (
+  <Card className="my-6 border-2 border-dashed border-border-default hover:border-primary hover:bg-accent-soft/50 transition-colors duration-200">
+    <div className="flex flex-col items-center justify-center p-8 text-center">
+      <PencilRuler size={36} className="text-text-tertiary mb-4" />
+      <h4 className="font-semibold text-text-primary">Embedded sketch</h4>
+      <p className="text-sm text-text-secondary mb-4">{block.content}</p>
+      <Button variant="secondary" size="sm">Edit sketch</Button>
+    </div>
+  </Card>
+);
+
+// --- Editor Feature Components ---
+
+interface SlashCommandMenuProps {
+  onSelect: (type: Block['type']) => void;
+  position: { x: number; y: number } | null;
+}
+
+const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ onSelect, position }) => {
+    const commands = [
+        { id: 'text', label: 'Text', icon: Type }, { id: 'heading1', label: 'Heading 1', icon: Heading1 }, { id: 'heading2', label: 'Heading 2', icon: Heading2 }, { id: 'checklist', label: 'Checklist', icon: CheckSquare }, { id: 'list', label: 'Bulleted List', icon: List }, { id: 'quote', label: 'Quote', icon: Quote }, { id: 'canvas', label: 'Canvas', icon: PencilRuler }, { id: 'image', label: 'Image', icon: ImageIcon },
+    ];
+    if (!position) return null;
+    return (
+        <Card className="absolute z-50 w-64 shadow-xl border border-border-default" style={{ top: position.y, left: position.x }} padding="sm">
+            <p className="text-xs font-semibold text-text-tertiary px-2 pb-2">BLOCKS</p>
+            <ul>
+                {commands.map(cmd => (
+                    <li key={cmd.id}><button onClick={() => onSelect(cmd.id)} className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-bg-tertiary"><cmd.icon size={18} className="text-text-secondary" /> <span className="text-sm font-medium text-text-primary">{cmd.label}</span></button></li>
+                ))}
+            </ul>
         </Card>
-      );
+    );
+};
 
-    default:
-      return <p className="text-lg text-text-primary">{block.content}</p>;
-  }
+interface BlockOptionsMenuProps {
+  onSelect: (optionId: string) => void;
+  position: { x: number; y: number } | null;
+  closeMenu: () => void;
+}
+
+const BlockOptionsMenu: React.FC<BlockOptionsMenuProps> = ({ onSelect, position, closeMenu }) => {
+    const menuRef = useRef<HTMLDivElement>(null);
+    const options = [
+      { id: 'delete', label: 'Delete', icon: Trash2 },
+      { id: 'turn-into-text', label: 'Turn into Text', icon: Type },
+      { id: 'turn-into-h1', label: 'Turn into H1', icon: Heading1 },
+    ];
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                closeMenu();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [closeMenu]);
+
+    if (!position) return null;
+    return (
+        <div ref={menuRef} style={{ top: position.y, left: position.x }} className="absolute z-50">
+            <Card className="w-56 shadow-xl border border-border-default" padding="sm">
+                <ul>
+                    {options.map(opt => (
+                        <li key={opt.id}><button onClick={() => { onSelect(opt.id); closeMenu(); }} className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-bg-tertiary"><opt.icon size={16} className={`text-text-secondary ${opt.id === 'delete' ? 'text-error' : ''}`} /> <span className={`text-sm font-medium ${opt.id === 'delete' ? 'text-error' : 'text-text-primary'}`}>{opt.label}</span></button></li>
+                    ))}
+                </ul>
+            </Card>
+        </div>
+    );
+};
+
+// Main Block Renderer Component (Refactored & Enhanced)
+
+interface BlockRendererProps {
+  block: Block;
+  onContentChange: (blockId: string, newContent: string) => void;
+  onTransform: (blockId: string, newType: Block['type']) => void;
+  onDelete: (blockId: string) => void;
+  onAddBlock: (blockId: string, type: Block['type']) => void;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, blockId: string) => void;
+  onDragOver: (e: React.DragEvent<HTMLDivElement>, blockId: string) => void;
+  onDrop: (e: React.DragEvent<HTMLDivElement>, blockId: string) => void;
+  onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
+  isDraggingOver: boolean;
+}
+
+const BlockRenderer: React.FC<BlockRendererProps> = ({ block, onContentChange, onDragStart, onDragOver, onDrop, onDragEnd, isDraggingOver, onDelete, onTransform, onAddBlock }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [optionsMenu, setOptionsMenu] = useState<{ x: number, y: number } | null>(null);
+    const blockRef = useRef<HTMLDivElement>(null);
+
+    const handleMenuOptionSelect = (optionId: string) => {
+        if (optionId === 'delete') {
+            onDelete(block.id);
+        } else if (optionId.startsWith('turn-into-')) {
+            const newType = optionId.replace('turn-into-', '');
+            onTransform(block.id, newType as Block['type']);
+        }
+    };
+    
+    const renderBlock = () => {
+        switch (block.type) {
+            case 'text': return <TextBlock block={block} onContentChange={onContentChange} />;
+            case 'heading1': return <Heading1Block block={block} onContentChange={onContentChange} />;
+            case 'heading2': return <Heading2Block block={block} onContentChange={onContentChange} />;
+            case 'checklist': return <ChecklistBlock block={block} onContentChange={onContentChange} />;
+            case 'quote': return <QuoteBlock block={block} />;
+            case 'canvas': return <CanvasBlock block={block} />;
+            default: return <p dangerouslySetInnerHTML={{ __html: block.content }}></p>; // Render HTML for unknown or future types
+        }
+    }
+
+    return (
+        <div
+            ref={blockRef}
+            className="relative group py-1"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onFocus={() => setIsHovered(true)} // Simplified hover/focus for block controls
+            onBlur={() => setIsHovered(false)} // Simplified hover/focus for block controls
+            draggable
+            onDragStart={(e) => onDragStart(e, block.id)}
+            onDragOver={(e) => onDragOver(e, block.id)}
+            onDrop={(e) => onDrop(e, block.id)}
+            onDragEnd={onDragEnd}
+        >
+            {isDraggingOver && <div className="absolute top-0 left-0 w-full h-0.5 bg-accent-primary rounded-full transition-all" />}
+            <div className={`absolute -left-12 top-1/2 -translate-y-1/2 flex items-center gap-1 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0 group-focus-within:opacity-100'}`}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { /* Implement Add Block Logic */ }}>
+                    <Plus size={16} className="text-text-tertiary" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 cursor-grab active:cursor-grabbing">
+                    <GripVertical size={16} className="text-text-tertiary" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setOptionsMenu({ x: rect.right, y: rect.top });
+                }}>
+                    <MoreHorizontal size={16} className="text-text-tertiary" />
+                </Button>
+            </div>
+            {renderBlock()}
+            {optionsMenu && <BlockOptionsMenu position={optionsMenu} onSelect={handleMenuOptionSelect} closeMenu={() => setOptionsMenu(null)} />}
+             {isDraggingOver && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent-primary rounded-full transition-all" />}
+        </div>
+    );
 };
 
 
 export function Notes() {
-  // const { setHeaderProps } = useHeader(); // useHeader is not used
-  const [folders, setFolders] = useState<Folder[]>(buildFolderTree(mockFoldersData));
-  const [selectedNoteId, setSelectedNoteId] = useState<string>('note2');
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
-  
-  // Rich text editing state
-  const [isEditingBlock, setIsEditingBlock] = useState<string | null>(null);
-  
-  // File upload refs
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Rich text editing handlers
-  const handleBlockEdit = useCallback((blockId: string) => {
-    setIsEditingBlock(blockId || null);
-  }, []);
-
-  const handleBlockSave = useCallback((blockId: string, content: string, formatting?: Block['formatting']) => {
-    setFolders(prevFolders => {
-      const updateBlockInFolders = (folders: Folder[]): Folder[] => {
-        return folders.map(folder => ({
-          ...folder,
-          notes: folder.notes.map(note => ({
-            ...note,
-            blocks: note.blocks.map(block => 
-              block.id === blockId 
-                ? { ...block, content, formatting: formatting || block.formatting }
-                : block
-            )
-          })),
-          children: folder.children ? updateBlockInFolders(folder.children) : undefined
-        }));
-      };
-      return updateBlockInFolders(prevFolders);
+    // ... (keep state for folders, expandedFolders)
+    const [folders, _setFolders] = useState<Folder[]>(buildFolderTree(mockFoldersData)); // _setFolders to avoid unused var warning for now
+    const [selectedNote, setSelectedNote] = useState<Note | null>(() => {
+        const initialNote = mockFoldersData[0]?.notes[1];
+        if (initialNote) return JSON.parse(JSON.stringify(initialNote)); // Deep copy
+        return null;
     });
-    setIsEditingBlock(null);
-  }, []);
+    const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
 
-  const handleBlockFormat = useCallback((blockId: string, formatType: 'bold' | 'italic' | 'underline' | 'strikethrough') => {
-    setFolders(prevFolders => {
-      const updateBlockInFolders = (folders: Folder[]): Folder[] => {
-        return folders.map(folder => ({
-          ...folder,
-          notes: folder.notes.map(note => ({
-            ...note,
-            blocks: note.blocks.map(block => {
-              if (block.id === blockId) {
-                const currentFormatting = block.formatting || {};
-                return {
-                  ...block,
-                  formatting: {
-                    ...currentFormatting,
-                    [formatType]: !currentFormatting[formatType]
-                  }
-                };
-              }
-              return block;
-            })
-          })),
-          children: folder.children ? updateBlockInFolders(folder.children) : undefined
-        }));
-      };
-      return updateBlockInFolders(prevFolders);
-    });
-  }, []);
+    // Drag and Drop State
+    const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+    const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
 
-  const handleImageUpload = useCallback((blockId: string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target?.result as string;
-      setFolders(prevFolders => {
-        const updateBlockInFolders = (folders: Folder[]): Folder[] => {
-          return folders.map(folder => ({
-            ...folder,
-            notes: folder.notes.map(note => ({
-              ...note,
-              blocks: note.blocks.map(block => 
-                block.id === blockId 
-                  ? { ...block, imageUrl, imageName: file.name }
-                  : block
-              )
-            })),
-            children: folder.children ? updateBlockInFolders(folder.children) : undefined
-          }));
-        };
-        return updateBlockInFolders(prevFolders);
-      });
+    // Slash Command State
+    const [showSlashCommand, setShowSlashCommand] = useState(false);
+    const [slashCommandPosition, setSlashCommandPosition] = useState<{ x: number, y: number } | null>(null);
+    const editorRef = useRef<HTMLDivElement>(null);
+
+    // --- State Update Handlers ---
+    const setSelectedNoteId = (id: string) => {
+        const allNotes = getNotesFromFolders(folders);
+        const noteToSelect = allNotes.find(n => n.id === id);
+        setSelectedNote(noteToSelect ? JSON.parse(JSON.stringify(noteToSelect)) : null); // Deep copy
     };
-    reader.readAsDataURL(file);
-  }, []);
 
-  const handleCreateBlock = useCallback((afterBlockId: string, type: Block['type']) => {
-    const newBlockId = `b${Date.now()}`;
-    setFolders(prevFolders => {
-      const updateBlockInFolders = (folders: Folder[]): Folder[] => {
-        return folders.map(folder => ({
-          ...folder,
-          notes: folder.notes.map(note => ({
-            ...note,
-            blocks: note.blocks.reduce((acc: Block[], block) => {
-              acc.push(block);
-              if (block.id === afterBlockId) {
-                acc.push({
-                  id: newBlockId,
-                  type,
-                  content: '',
-                  formatting: {}
-                });
-              }
-              return acc;
-            }, [])
-          })),
-          children: folder.children ? updateBlockInFolders(folder.children) : undefined
-        }));
-      };
-      return updateBlockInFolders(prevFolders);
-    });
-    // Auto-focus the new block
-    setTimeout(() => setIsEditingBlock(newBlockId), 10);
-  }, []);
+    const getNotesFromFolders = (folderList: Folder[]): Note[] => {
+        let notes: Note[] = [];
+        folderList.forEach(folder => {
+            notes = notes.concat(folder.notes);
+            if (folder.children && folder.children.length > 0) {
+                notes = notes.concat(getNotesFromFolders(folder.children));
+            }
+        });
+        return notes;
+    };
+    
+    const toggleFolder = (folderId: string) => {
+        setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
+    };
 
-  const getNotesFromFolders = (folderList: Folder[]): Note[] => {
-    let notes: Note[] = [];
-    folderList.forEach(folder => {
-      notes = notes.concat(folder.notes);
-      if (folder.children && folder.children.length > 0) {
-        notes = notes.concat(getNotesFromFolders(folder.children));
-      }
-    });
-    return notes;
-  };
+    const updateNoteBlocks = (newBlocks: Block[]) => {
+        if (selectedNote) {
+            setSelectedNote({ ...selectedNote, blocks: newBlocks });
+            // Persist changes (e.g., to mockData or a backend)
+            const folderContainingNote = folders.find(f => f.id === selectedNote.folderId) || 
+                                     folders.flatMap(f => f.children || []).find(sf => sf.id === selectedNote.folderId);
+            if (folderContainingNote) {
+                const noteIndex = folderContainingNote.notes.findIndex(n => n.id === selectedNote.id);
+                if (noteIndex !== -1) {
+                    folderContainingNote.notes[noteIndex].blocks = newBlocks;
+                }
+            }
+        }
+    };
+    
+    const handleAddBlock = (currentBlockId: string, type: Block['type']) => {
+        if (!selectedNote) return;
+        const newBlock: Block = { id: `block-${Date.now()}`, type: type, content: '', metadata: {} };
+        let currentIndex = selectedNote.blocks.findIndex(b => b.id === currentBlockId);
+        if (currentBlockId === 'ADD_TO_END') { 
+            currentIndex = selectedNote.blocks.length -1;
+        }
 
-  const allNotes = getNotesFromFolders(folders);
-  const selectedNote = allNotes.find(n => n.id === selectedNoteId);
+        const newBlocks = [...selectedNote.blocks];
+        if (currentIndex === -1 && currentBlockId !== 'ADD_TO_END') { 
+            newBlocks.push(newBlock);
+        } else {
+            newBlocks.splice(currentIndex + 1, 0, newBlock);
+        }
+        
+        updateNoteBlocks(newBlocks);
+    };
 
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => ({
-      ...prev,
-      [folderId]: !prev[folderId]
-    }));
-  };
+    const handleBlockContentChange = (blockId: string, newContent: string) => {
+        if (!selectedNote) return;
+        const newBlocks = selectedNote.blocks.map(b => b.id === blockId ? { ...b, content: newContent } : b);
+        updateNoteBlocks(newBlocks);
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newContent;
+        const textContent = tempDiv.textContent || tempDiv.innerText || "";
 
-  const blockTypeToolbar = [
-    { icon: Heading1, label: "H1" }, { icon: Heading2, label: "H2" }, { icon: List, label: "List" },
-    { icon: CheckSquare, label: "Checklist" }, { icon: Code2, label: "Code" }, 
-    { icon: PencilRuler, label: "Sketch" } // FEATURE: Add Sketch button
-  ];
-  return (
-    <div className="flex h-full bg-background gap-4 p-4"> {/* Root element with gap and padding */}
-      {/* PANE 1: Navigation Sidebar */}
-      <aside className="w-[380px] flex-shrink-0 border border-border-subtle rounded-xl p-6 flex flex-col bg-surface shadow-sm"> {/* Added border, rounded corners, and shadow */}
-        <div className="flex justify-between items-center mb-6 flex-shrink-0">
-          <h1 className="text-2xl font-semibold text-text-primary">Notes</h1>
-          {/* Placeholder for New Item buttons - to be improved with modals/dropdowns */}
-          <div className="flex gap-3">
-            <Button variant="secondary" size="default" onClick={() => alert('New Folder clicked - implement functionality')}>
-              <Folder size={18} className="mr-2" /> New folder
-            </Button>
-            <Button variant="primary" size="default" onClick={() => alert('New Note clicked - implement functionality')}>
-              <Plus size={18} className="mr-2" /> New note
-            </Button>
-          </div>
+        if (textContent.endsWith('/')) {
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                if (range && editorRef.current) {
+                    const caretRect = range.getBoundingClientRect();
+                    const editorRect = editorRef.current.getBoundingClientRect();
+                    
+                    // Get the element containing the caret
+                    let currentNode = range.startContainer;
+                    let currentElement = currentNode.nodeType === Node.ELEMENT_NODE ? currentNode as HTMLElement : currentNode.parentElement;
+                    let blockWrapper = currentElement?.closest('.group') as HTMLElement | null;
+                    let blockTop = 0;
+                    if (blockWrapper && editorRef.current) {
+                        blockTop = blockWrapper.offsetTop - editorRef.current.scrollTop;
+                    }
+
+                    setSlashCommandPosition({ 
+                        x: caretRect.left - editorRect.left, 
+                        y: blockTop + caretRect.height + 5 // Position below current line in the block
+                    }); 
+                    setShowSlashCommand(true);
+                }
+            }
+        } else {
+            setShowSlashCommand(false);
+        }
+    };
+
+    const handleSlashCommandSelect = (type: Block['type']) => {
+        if (!selectedNote || !editorRef.current) return;
+
+        let currentBlockId: string | null = null;
+        const selection = window.getSelection();
+        if (selection && selection.focusNode) {
+            let node = selection.focusNode;
+            let parentElement = node.nodeType === Node.ELEMENT_NODE ? node as HTMLElement : node.parentElement;
+            while (parentElement && !parentElement.classList.contains('group')) {
+                parentElement = parentElement.parentElement;
+            }
+            if (parentElement) {
+                // Assuming the block ID is on the .group element or can be found from it.
+                // This part needs to be robust. For now, let's find the block by its contenteditable child.
+                const renderedBlocks = Array.from(editorRef.current.querySelectorAll('.group [contenteditable="true"]'));
+                const focusedEditorElement = selection.focusNode.parentElement?.closest('[contenteditable="true"]');
+                const focusedBlockIndex = renderedBlocks.findIndex(el => el === focusedEditorElement);
+                if (focusedBlockIndex !== -1 && selectedNote.blocks[focusedBlockIndex]) {
+                    currentBlockId = selectedNote.blocks[focusedBlockIndex].id;
+                    // Clean the content of the block that triggered the slash command
+                    const blockToClean = selectedNote.blocks.find(b => b.id === currentBlockId);
+                    if (blockToClean) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = blockToClean.content;
+                        let textContent = tempDiv.textContent || tempDiv.innerText || "";
+                        if (textContent.endsWith('/')) {
+                            textContent = textContent.slice(0, -1);
+                            // This is a simplification. Ideally, Tiptap should handle this replacement.
+                            blockToClean.content = textContent; 
+                        }
+                    }
+                }
+            }
+        }
+        
+        const newBlock: Block = { id: `block-${Date.now()}`, type: type, content: '', metadata: {} };
+        const currentIndex = currentBlockId ? selectedNote.blocks.findIndex(b => b.id === currentBlockId) : selectedNote.blocks.length -1 ;
+        
+        const newBlocks = [...selectedNote.blocks];
+        newBlocks.splice(currentIndex + 1, 0, newBlock);
+        
+        updateNoteBlocks(newBlocks);
+        setShowSlashCommand(false);
+
+        // Focus the new block - This is a bit tricky with Tiptap async rendering
+        // setTimeout(() => {
+        //     const newBlockElement = document.querySelector(`[data-block-id="${newBlock.id}"] [contenteditable="true"]`);
+        //     if (newBlockElement) {
+        //         (newBlockElement as HTMLElement).focus();
+        //     }
+        // }, 50);
+    };
+
+    const handleDeleteBlock = (blockId: string) => {
+        if (!selectedNote) return;
+        const newBlocks = selectedNote.blocks.filter(b => b.id !== blockId);
+        updateNoteBlocks(newBlocks);
+    };
+
+    const handleTransformBlock = (blockId: string, newType: Block['type']) => {
+        if (!selectedNote) return;
+        const newBlocks = selectedNote.blocks.map(b => b.id === blockId ? { ...b, type: newType, content: b.content } : b); // Ensure content is preserved
+        updateNoteBlocks(newBlocks);
+    };
+
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, blockId: string) => {
+        setDraggingBlockId(blockId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>, blockId: string) => {
+        e.preventDefault();
+        if (blockId !== draggingBlockId) {
+            setDragOverBlockId(blockId);
+        }
+    };
+    
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropTargetId: string) => {
+        e.preventDefault();
+        if (!draggingBlockId || draggingBlockId === dropTargetId || !selectedNote) return;
+        
+        const dragIndex = selectedNote.blocks.findIndex(b => b.id === draggingBlockId);
+        const dropIndex = selectedNote.blocks.findIndex(b => b.id === dropTargetId);
+
+        if (dragIndex === -1 || dropIndex === -1) return; // Should not happen
+
+        const newBlocks = [...selectedNote.blocks];
+        const [draggedBlock] = newBlocks.splice(dragIndex, 1);
+        newBlocks.splice(dropIndex, 0, draggedBlock);
+
+        updateNoteBlocks(newBlocks);
+        setDraggingBlockId(null);
+        setDragOverBlockId(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggingBlockId(null);
+        setDragOverBlockId(null);
+    };
+
+    const blockTypeToolbar = [ { icon: Heading1, label: "H1" }, { icon: Heading2, label: "H2" }, { icon: List, label: "List" }, { icon: CheckSquare, label: "Checklist" }, { icon: Code2, label: "Code" }, { icon: PencilRuler, label: "Sketch" } ];
+
+    // Effect to update mock data when selectedNote changes (simulating save)
+    useEffect(() => {
+        if (selectedNote) {
+            const folderIndex = mockFoldersData.findIndex(f => f.id === selectedNote.folderId || f.notes.some(n => n.folderId === selectedNote.folderId) );
+            if (folderIndex !== -1) {
+                const noteIndex = mockFoldersData[folderIndex].notes.findIndex(n => n.id === selectedNote.id);
+                if (noteIndex !== -1) {
+                    mockFoldersData[folderIndex].notes[noteIndex] = JSON.parse(JSON.stringify(selectedNote));
+                }
+            }
+            // This is a simplified update for nested folders. A more robust solution would be needed for deeper nesting.
+            mockFoldersData.forEach(folder => {
+                if(folder.parentId){
+                    const parentFolder = mockFoldersData.find(pf => pf.id === folder.parentId);
+                    if(parentFolder){
+                        const childFolder = (parentFolder.notes.find(n => n.folderId === folder.id) as any)?.children?.find((cf: Folder) => cf.id === selectedNote.folderId);
+                        if(childFolder){
+                             const noteIndex = childFolder.notes.findIndex((n:Note) => n.id === selectedNote.id);
+                             if(noteIndex !== -1){
+                                childFolder.notes[noteIndex] = JSON.parse(JSON.stringify(selectedNote));
+                             }
+                        }
+                    }
+                }
+            });
+        }
+    }, [selectedNote]);
+
+    return (
+        <div className="flex h-full bg-bg-primary p-2 gap-2"> 
+            <aside className={`w-[340px] flex-shrink-0 border border-border-subtle p-4 flex flex-col bg-bg-surface rounded-lg`}>
+                <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                    <h1 className="text-xl font-semibold text-text-primary">Notes</h1>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => alert('New Folder clicked - implement functionality')}>
+                            <Folder size={16} className="mr-1.5" /> New folder
+                        </Button>
+                        <Button variant="primary" size="sm" onClick={() => alert('New Note clicked - implement functionality')}>
+                            <Plus size={16} className="mr-1.5" /> New note
+                        </Button>
+                    </div>
+                </div>
+                <div className="relative mb-4 flex-shrink-0">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                    <Input type="search" placeholder="Search all notes..." className="pl-9" />
+                </div>
+                <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
+                    {renderFolderTree(folders, 0, selectedNote?.id || null, setSelectedNoteId, expandedFolders, toggleFolder)}
+                </nav>
+            </aside>
+
+            <main className="flex-1 flex flex-col overflow-hidden bg-bg-surface rounded-lg border border-border-subtle">
+                {selectedNote ? (
+                    <>
+                        <header className="p-4 border-b border-border-subtle flex items-center justify-between flex-shrink-0">
+                            <Input 
+                                type="text" 
+                                value={selectedNote.title} 
+                                onChange={(e) => setSelectedNote(prev => prev ? {...prev, title: e.target.value} : null)} 
+                                className="text-lg font-semibold bg-transparent focus:ring-0 border-0 text-text-primary w-full p-0 h-auto focus-visible:ring-offset-0 focus-visible:ring-0"
+                                placeholder="Untitled Note"
+                            />
+                            <div className="flex items-center gap-1 bg-bg-tertiary p-1 rounded-md">
+                                {blockTypeToolbar.map(({ icon: Icon, label }, index) => (
+                                    <Button key={index} variant="ghost" size="icon" title={label} className="h-8 w-8 text-text-muted hover:text-text-primary transition-all duration-150 hover:scale-105"><Icon size={18} /></Button>
+                                ))}
+                            </div>
+                        </header>
+                        <div ref={editorRef} className="flex-1 p-6 md:p-8 lg:px-24 overflow-y-auto bg-bg-primary relative" onDragOver={(e) => e.preventDefault()} >
+                            <div className="max-w-3xl mx-auto">
+                                {selectedNote.blocks.map(block => (
+                                    <BlockRenderer
+                                        key={block.id}
+                                        block={block}
+                                        onContentChange={handleBlockContentChange}
+                                        onDragStart={handleDragStart}
+                                        onDragOver={(e) => handleDragOver(e, block.id)}
+                                        onDrop={(e) => handleDrop(e, block.id)}
+                                        onDragEnd={handleDragEnd}
+                                        isDraggingOver={dragOverBlockId === block.id}
+                                        onDelete={handleDeleteBlock}
+                                        onTransform={handleTransformBlock}
+                                        onAddBlock={handleAddBlock}
+                                    />
+                                ))}
+                            </div>
+                            {showSlashCommand && <SlashCommandMenu onSelect={handleSlashCommandSelect} position={slashCommandPosition} />} 
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex items-center justify-center h-full text-center text-text-muted bg-bg-surface">
+                        <p>Select a note to begin or create a new one.</p>
+                    </div>
+                )}
+            </main>
         </div>
-        <div className="relative mb-6 flex-shrink-0">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <Input type="search" placeholder="Search all notes..." className="pl-10 text-base" />
-        </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
-          {renderFolderTree(folders, 0, selectedNoteId, setSelectedNoteId, expandedFolders, toggleFolder)}
-        </nav>
-      </aside>
-
-      {/* PANE 2: The Block Editor */}
-      <main className="flex-1 flex flex-col overflow-hidden border border-border-subtle rounded-xl shadow-sm"> {/* Added border, rounded corners, and shadow */}
-        {selectedNote ? (
-          <>
-            <header className="p-6 border-b border-border-subtle flex items-center justify-between flex-shrink-0 bg-surface rounded-t-xl"> {/* Added rounded top corners */}
-              <Input 
-                type="text" 
-                defaultValue={selectedNote.title} 
-                className="text-xl font-semibold bg-transparent focus:ring-0 border-0 text-text-primary w-full p-0 h-auto focus-visible:ring-offset-0 focus-visible:ring-0"
-              />
-              <div className="flex items-center gap-2 bg-bg-secondary p-2 rounded-lg">
-                {blockTypeToolbar.map(({ icon: Icon, label }, index) => (
-                  <Button 
-                    key={index} 
-                    variant="ghost"
-                    size="icon"
-                    title={label} 
-                    className="h-10 w-10 text-text-muted hover:text-text-primary transition-all duration-150 hover:scale-105"
-                  >
-                    <Icon size={20} />
-                  </Button>
-                ))}
-              </div>
-            </header>
-            <div className="flex-1 p-8 md:p-10 lg:px-28 overflow-y-auto bg-bg-primary gap-6 rounded-b-xl"> {/* Changed background for visual separation and added gap + rounded bottom corners */}
-              <div className="max-w-4xl mx-auto space-y-4">
-                {selectedNote.blocks.map(block => (
-                  <BlockRenderer 
-                    key={block.id} 
-                    block={block}
-                    isEditing={isEditingBlock === block.id}
-                    onEdit={handleBlockEdit}
-                    onSave={handleBlockSave}
-                    onFormat={handleBlockFormat}
-                    onImageUpload={handleImageUpload}
-                    onCreateBlock={handleCreateBlock}
-                  />
-                ))}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center h-full text-center text-text-muted bg-background rounded-xl"> {/* Added rounded corners */}
-            <div>
-              <p className="text-lg">Select a note to begin or create a new one.</p>
-            </div>
-          </div>
-        )}
-      </main>
-      
-      {/* Hidden file input for image uploads */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file && isEditingBlock) {
-            handleImageUpload(isEditingBlock, file);
-          }
-        }}
-      />
-    </div>
-  );
+    );
 }
 
 export default Notes;
