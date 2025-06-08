@@ -1,7 +1,17 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Brush, Eraser, Square, Circle, Type, Download, Upload, Trash2, Undo, Redo, Palette, Settings, MousePointer2, StickyNote, RectangleHorizontal, Share, Pencil, MousePointerClick, ChevronRight, Search, Plus, Share2 } from 'lucide-react';
-import { PageLayout } from '../components/ui/PageLayout';
-import { Card } from '../components/ui/Card';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { 
+  MousePointer2, 
+  Type, 
+  StickyNote, 
+  RectangleHorizontal, 
+  Circle, 
+  Share, 
+  Pencil, 
+  Plus,
+  MousePointerClick
+} from 'lucide-react';
+import { Card, Button } from '../components/ui'; // Updated to use Button from ui/index.tsx
+import { useHeader } from '../contexts/HeaderContext';
 
 interface CanvasElement {
   id: string;
@@ -17,6 +27,7 @@ interface CanvasElement {
 type CanvasTool = 'select' | 'text' | 'sticky-note' | 'rectangle' | 'circle' | 'line' | 'pen';
 
 const Canvas: React.FC = () => {
+  const { setHeaderProps } = useHeader();
   const [activeTool, setActiveTool] = useState<CanvasTool>('select');
   const [elements, setElements] = useState<CanvasElement[]>([
     {
@@ -76,9 +87,39 @@ const Canvas: React.FC = () => {
     { id: 'sticky-note', icon: StickyNote, title: 'Sticky Note' },
     { id: 'rectangle', icon: RectangleHorizontal, title: 'Rectangle' },
     { id: 'circle', icon: Circle, title: 'Circle' },
-    { id: 'line', icon: Share, title: 'Line/Connector' },
+    { id: 'line', icon: Share, title: 'Line/Connector' }, // Share icon seems to be a placeholder, consider using a more appropriate icon for 'Line/Connector'
     { id: 'pen', icon: Pencil, title: 'Pen' }
   ];
+
+  const handleNewCanvas = useCallback(() => {
+    // TODO: Implement new canvas functionality
+    console.log('New canvas clicked');
+  }, []);
+
+  const handleShareCanvas = useCallback(() => {
+    // TODO: Implement share canvas functionality
+    console.log('Share canvas clicked');
+  }, []);
+
+  useEffect(() => {
+    setHeaderProps({
+      title: "Canvas",
+      primaryAction: {
+        label: 'New canvas',
+        onClick: handleNewCanvas,
+        icon: <Plus size={16} />,
+        variant: 'primary' // Added variant for consistency
+      },
+      secondaryActions: [
+        {
+          label: 'Share',
+          onClick: handleShareCanvas,
+          icon: <Share size={16} />,
+          variant: 'secondary' // Added variant for consistency
+        }
+      ]
+    });
+  }, [setHeaderProps, handleNewCanvas, handleShareCanvas]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTool === 'select' || isDragging) return;
@@ -136,14 +177,6 @@ const Canvas: React.FC = () => {
     setDragOffset({ x: 0, y: 0 });
   }, []);
 
-  const handleElementContentChange = useCallback((elementId: string, content: string) => {
-    setElements(prev => prev.map(el => 
-      el.id === elementId 
-        ? { ...el, content }
-        : el
-    ));
-  }, []);
-
   const renderElement = (element: CanvasElement) => {
     const style = {
       left: element.x,
@@ -156,15 +189,20 @@ const Canvas: React.FC = () => {
       handleElementMouseDown(e, element.id);
     };
 
+    const isSelected = selectedElement === element.id;
+
     switch (element.type) {
       case 'sticky-note':
         return (
-          <div
+          // Using Card for sticky notes for consistent styling and shadow.
+          <Card
             key={element.id}
-            className="canvas-element sticky-note"
+            className={`absolute cursor-move p-3 ${
+              isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
+            }`}
             style={{
               ...style,
-              background: element.color || '#facc15'
+              backgroundColor: element.color || '#facc15'
             }}
             onMouseDown={handleMouseDown}
           >
@@ -172,47 +210,64 @@ const Canvas: React.FC = () => {
               defaultValue={element.content}
               placeholder="Type your note..."
               onMouseDown={(e) => e.stopPropagation()}
-              className="bg-transparent border-none outline-none w-full h-full resize-none font-inherit text-sm text-gray-800"
+              className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-sm text-gray-800 placeholder-gray-500"
+            // style={{ color: 'rgba(0, 0, 0, 0.8)' }} // Removed direct style, rely on Tailwind or Card defaults
             />
-          </div>
+          </Card>
         );
       case 'rectangle':
         return (
+          // Rectangles and Circles are not Cards by default. Removed shadow-lg for a flatter design, consistent with less prominent elements.
           <div
             key={element.id}
-            className="canvas-element canvas-shape rectangle rounded-md border-2 border-white/20"
+            className={`absolute cursor-move rounded-md ${ // Removed border-2 border-white/20 and shadow-lg
+              isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
+            }`}
             style={{
               ...style,
-              background: element.color || 'var(--accent-primary)'
+              backgroundColor: element.color || '#3b82f6'
             }}
             onMouseDown={handleMouseDown}
           />
         );
       case 'circle':
         return (
+          // Similar to rectangle, removed shadow-lg and border for flatter design.
           <div
             key={element.id}
-            className="canvas-element canvas-shape circle rounded-full border-2 border-white/20"
+            className={`absolute cursor-move rounded-full ${ // Removed border-2 border-white/20 and shadow-lg
+              isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
+            }`}
             style={{
               ...style,
-              background: element.color || 'var(--success)'
+              backgroundColor: element.color || '#10b981'
             }}
             onMouseDown={handleMouseDown}
           />
         );
       case 'text':
         return (
+          // Minimal styling for text elements, ensuring they are selectable and fit with the overall design.
           <div
             key={element.id}
-            className="canvas-element canvas-text text-lg font-semibold whitespace-nowrap"
+            className={`absolute cursor-move p-1 ${ // Added minimal padding for easier selection with ring.
+              isSelected ? 'ring-2 ring-accent ring-offset-2 rounded px-2 py-1' : ''
+            }`}
             style={{
               left: element.x,
               top: element.y,
-              color: element.color || 'var(--text-primary)'
+              // color: element.color || 'currentColor' // Rely on className for text color if possible
             }}
             onMouseDown={handleMouseDown}
           >
-            {element.content}
+            {/* Using an input for editable text, styled to be unobtrusive */}
+            <input 
+              type="text"
+              defaultValue={element.content}
+              className="bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded text-text-primary text-lg"
+              onMouseDown={(e) => e.stopPropagation()} // Prevent canvas click when clicking text input
+              // onBlur={(e) => updateElementContent(element.id, e.target.value)} // Example: update on blur
+            />
           </div>
         );
       default:
@@ -220,107 +275,48 @@ const Canvas: React.FC = () => {
     }
   };
 
-  const handleNewCanvas = () => {
-    // TODO: Implement new canvas creation
-    console.log('Create new canvas');
-  };
+  // The header is now set up within the useEffect hook above.
 
-  const handleShareCanvas = () => {
-    // TODO: Implement canvas sharing
-    console.log('Share canvas');
-  };
-
-  const headerProps = {
-    title: "Canvas",
-    primaryAction: {
-      label: 'New canvas',
-      onClick: handleNewCanvas,
-      icon: <Plus size={16} />
-    },
-    secondaryActions: [
-      {
-        label: 'Share',
-        onClick: handleShareCanvas,
-        variant: 'ghost'
-      }
-    ]
-  };
+  // The header is now set up within the useEffect hook above, so the explicit Page Header div is removed.
 
   return (
-    <PageLayout headerProps={headerProps}>
-      <div className="canvas-layout">
-        {/* Canvas Toolbar */}
-        <Card className="canvas-toolbar-wrapper">
-          <div className="canvas-toolbar">
-            {tools.map((tool) => {
-              const Icon = tool.icon;
-              return (
-                <button
-                  key={tool.id}
-                  className={`canvas-tool ${activeTool === tool.id ? 'active' : ''}`}
-                  title={tool.title}
-                  onClick={() => setActiveTool(tool.id as CanvasTool)}
-                >
-                  <Icon size={20} />
-                </button>
-              );
-            })}
-          </div>
-        </Card>
+    // Added p-4 and gap-4 for consistent padding and spacing around the page content.
+    // Changed bg-bg-secondary to bg-bg-app for consistency with other pages.
+    <div className="relative w-full h-full bg-bg-app overflow-hidden flex flex-col p-4 gap-4">
+      {/* Toolbar */}
+      {/* Standardized Card usage for the toolbar. 
+          Positioned it at the top, centered, using self-start to prevent stretching.
+          Added p-2 and gap-2 for internal spacing. Uses Button component. 
+      */}
+      <Card padding="none" className="p-2 flex gap-2 items-center justify-center self-start z-10">
+        {tools.map(tool => (
+          <Button
+            key={tool.id}
+            title={tool.title}
+            variant={activeTool === tool.id ? 'primary' : 'ghost'}
+            size="icon"
+            onClick={() => setActiveTool(tool.id as CanvasTool)}
+          >
+            <tool.icon size={18} />
+          </Button>
+        ))}
+      </Card>
 
       {/* Canvas Area */}
-      <Card as="div" 
-        className="canvas-area"
-        ref={canvasRef}
+      {/* Standardized canvas area appearance to match Card styling (bg-surface, border, shadow) 
+          Ensured it fills available space with flex-1.
+      */}
+      <div 
+        ref={canvasRef} 
+        className="flex-1 bg-bg-surface border border-border-subtle rounded-lg shadow-sm relative overflow-hidden cursor-crosshair"
         onClick={handleCanvasClick}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseUp} // Added onMouseLeave to handle mouse up outside canvas
       >
-        <div className="canvas-grid" />
-        
-        {/* Canvas Elements */}
         {elements.map(renderElement)}
-
-        {/* Empty State */}
-        {elements.length === 0 && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-text-muted text-center">
-            <MousePointerClick size={48} className="mb-3" />
-            <p>Use the toolbar to add elements to your canvas.</p>
-          </div>
-        )}      </Card>
-
-      {/* Minimap */}
-      <div className="minimap">
-        {/* Minimap content would be a scaled down version of canvas-area */}
       </div>
-
-      {/* Properties Panel */}
-      <Card className={`properties-panel ${selectedElement ? 'block' : 'hidden'}`}>
-        <h3 className="properties-title">Element Properties</h3>
-        {selectedElement ? (
-          <div>
-            <p className="text-text-tertiary text-xs">
-              Selected: {elements.find(el => el.id === selectedElement)?.type}
-            </p>
-            <button 
-              onClick={() => {
-                setElements(prev => prev.filter(el => el.id !== selectedElement));
-                setSelectedElement(null);
-              }}
-              className="mt-3 px-3 py-2 bg-accent-primary text-white border-none rounded-md cursor-pointer text-xs"
-            >
-              Delete Element
-            </button>
-          </div>
-        ) : (
-          <p className="text-text-tertiary text-xs">
-            Select an element to see its properties.
-          </p>
-        )}
-      </Card>
-      </div>
-    </PageLayout>
+    </div>
   );
 };
 

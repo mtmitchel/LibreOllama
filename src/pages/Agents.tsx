@@ -106,15 +106,15 @@ const Agents: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredAgents.map((agent) => (
-          <Card key={agent.id} className="flex flex-col gap-4">
+          <Card key={agent.id} className="flex flex-col gap-4 p-6">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
                   {getAgentIcon(agent.icon)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-text-primary">{agent.name}</h3>
-                  <p className="text-sm text-text-secondary">{agent.model}</p>
+                  <h3 className="font-semibold text-foreground">{agent.name}</h3>
+                  <p className="text-sm text-muted-foreground">{agent.model}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -129,15 +129,15 @@ const Agents: React.FC = () => {
                 <span className={`text-xs font-medium ${
                   agent.status === 'online'
                     ? 'text-green-600'
-                    : 'text-text-secondary'
+                    : 'text-muted-foreground'
                 }`}>
                   {agent.status}
                 </span>
               </div>
             </div>
-            <p className="text-text-secondary text-sm leading-relaxed">{agent.description}</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">{agent.description}</p>
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-text-primary">Capabilities</h4>
+              <h4 className="text-sm font-medium text-foreground">Capabilities</h4>
               <div className="flex flex-wrap gap-2">
                 {agent.capabilities.map((capability, index) => (
                   <span
@@ -149,16 +149,16 @@ const Agents: React.FC = () => {
                 ))}
               </div>
             </div>
-            <div className="flex items-center gap-2 pt-2 border-t border-border-subtle">
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
               <button
-                className="flex items-center gap-2 px-3 py-2 bg-bg-surface text-text-primary rounded-md text-sm font-medium hover:bg-bg-tertiary transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-muted text-foreground rounded-md text-sm font-medium hover:bg-muted/80 transition-colors"
                 onClick={() => handleConfigureAgent(agent.id)}
               >
                 <Settings2 className="w-4 h-4" />
                 Configure
               </button>
               <button
-                className="flex items-center justify-center w-8 h-8 text-text-secondary hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                className="flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                 onClick={() => handleDeleteAgent(agent.id)}
                 title="Delete agent"
               >
@@ -170,12 +170,12 @@ const Agents: React.FC = () => {
         
         {/* Create New Agent Card */}
         <div
-          className="border-2 border-dashed border-border-subtle rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-[280px]"
+          className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-[280px]"
           onClick={handleCreateAgent}
         >
-          <PlusCircle className="w-12 h-12 text-text-secondary mb-4" />
-          <h3 className="font-semibold text-text-primary mb-2">Create a new agent</h3>
-          <p className="text-sm text-text-secondary">Define capabilities and select a model.</p>
+          <PlusCircle className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="font-semibold text-foreground mb-2">Create a new agent</h3>
+          <p className="text-sm text-muted-foreground">Define capabilities and select a model.</p>
         </div>
       </div>
     </div>

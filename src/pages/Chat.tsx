@@ -1,645 +1,480 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Send,
-  Paperclip,
-  Search,
-  Filter,
-  Plus,
-  Bot,
-  User,
-  Copy,
-  Pin,
-  Users,
-  Clock,
-  Image,
-  MoreHorizontal,
-  Trash2,
-  Download,
-  MessageSquare,
-  PanelLeftClose, // Added for collapse toggle
-  PanelLeftOpen // Added for expand toggle
-} from 'lucide-react';
-import { Card } from '../components/ui/Card';
-import { useHeader } from '../contexts/HeaderContext';
+// src/pages/Chat.tsx
 
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Card, Button, Input } from '../components/ui';
+import { useHeader } from '../contexts/HeaderContext';
+import { 
+  Plus, Search, Bot, User, Paperclip, Send, MoreHorizontal, ChevronDown, Pin, Users, MessagesSquare, PanelLeft, PanelLeftOpen, Copy, Trash2, Download
+} from 'lucide-react';
+
+// --- Interfaces & Mock Data (Ready for Backend Integration) ---
 interface ChatMessage {
   id: string;
   sender: 'user' | 'ai';
   content: string;
-  timestamp: Date;
-  attachments?: Array<{ name: string; type: string; }>;
+  timestamp: string;
 }
 
 interface ChatConversation {
   id: string;
   title: string;
-  lastMessage?: string;
-  timestamp: Date;
+  lastMessage: string;
+  timestamp: string;
   isPinned?: boolean;
-  tags?: string[];
-  participants?: number;
+  participants: number;
 }
 
+const mockConversations: ChatConversation[] = [
+  { id: '1', title: 'Design system strategy', lastMessage: "Let's discuss the component architecture...", timestamp: "30m ago", isPinned: true, participants: 2 },
+  { id: '2', title: 'Code review session', lastMessage: 'The implementation looks good, but...', timestamp: "2h ago", participants: 1 },
+  { id: '3', title: 'Project planning', lastMessage: 'We need to prioritize the features...', timestamp: "1d ago", participants: 1 },
+];
+
+const mockMessages: Record<string, ChatMessage[]> = {
+  '1': [
+    { id: 'm1', sender: 'user', content: 'Can you help me understand the design system structure for our chat interface?', timestamp: '15m ago' },
+    { id: 'm2', sender: 'ai', content: "I'd be happy to help! Based on the specifications, the key components are...", timestamp: '14m ago' },
+    { id: 'm3', sender: 'user', content: "That's very helpful! Can you show me how to implement the message bubbles?", timestamp: '10m ago' },
+  ],
+  '2': [{ id: 'm4', sender: 'user', content: 'Ready for the code review.', timestamp: '2h ago' }],
+  '3': [{ id: 'm5', sender: 'user', content: 'What are the Q3 project priorities?', timestamp: '1d ago' }],
+};
+// --- End Mock Data ---
+
 export function Chat() {
-  const { setHeaderProps, headerProps } = useHeader();
-  // Assuming you have state like this
-  const [isConvoColumnOpen, setConvoColumnOpen] = useState(true);
-  const [selectedChatId, setSelectedChatId] = useState<string | null>('1'); // Renamed from selectedChat to selectedChatId for clarity
-  const [inputMessage, setInputMessage] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState<{ pinnedStatus: 'all' | 'pinned' | 'unpinned' }>({ pinnedStatus: 'all' });
-  const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false); // State for chat options dropdown
+  const { setHeaderProps } = useHeader();
   
-  // FIX: Add the missing variable that was causing the crash
-  const isConversationSidebarCollapsed = !isConvoColumnOpen;
+  // --- STATE MANAGEMENT ---
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isConvoListOpen, setIsConvoListOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredConversationId, setHoveredConversationId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const initialConversations: ChatConversation[] = [
-    {
-      id: '1',
-      title: 'Design system strategy',
-      lastMessage: 'Let\'s discuss the component architecture...',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-      isPinned: true,
-      tags: ['design', 'strategy'],
-      participants: 2
-    },
-    {
-      id: '2', 
-      title: 'Code review session',
-      lastMessage: 'The implementation looks good, but...',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      tags: ['code'],
-      participants: 1
-    },
-    {
-      id: '3',
-      title: 'Project planning',
-      lastMessage: 'We need to prioritize the features...',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      participants: 1
+  // --- DATA LOADING & SYNC ---
+  useEffect(() => {
+    // Simulate fetching conversations (replace with actual API call)
+    setConversations(mockConversations);
+    const defaultChat = mockConversations.find(c => c.isPinned) || mockConversations[0];
+    if (defaultChat) {
+      setSelectedChatId(defaultChat.id);
     }
-  ];
-
-  // FIX: Initialize conversations state as empty array to prevent crashes
-  const [conversations, setConversations] = useState<ChatConversation[]>(initialConversations || []);
-
-  const handleToggleColumn = () => {
-    const isClosing = isConvoColumnOpen;
-    setConvoColumnOpen(!isClosing);
-
-    // FIX: If the column is being closed, reset the selected chat ID.
-    // This prevents the main panel from trying to render a now-hidden item.
-    if (isClosing) {
-      setSelectedChatId(null);
-    }
-  };
-
-  // Find the full chat object from the ID
-  const selectedChat = conversations.find(c => c.id === selectedChatId);
-
-  const initialMessages: ChatMessage[] = [
-    {
-      id: '1',
-      sender: 'user',
-      content: 'Can you help me understand the design system structure for our chat interface?',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15)
-    },
-    {
-      id: '2',
-      sender: 'ai',
-      content: 'I\'d be happy to help you understand the design system structure for the chat interface. Based on the specifications, here are the key components:\n\n```css\n.chat-layout {\n  display: flex;\n  height: 100vh;\n}\n```\n\nThe chat interface follows a sidebar + main content layout with specific styling for messages, input areas, and navigation.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 10),
-      attachments: [{ name: 'design-system.css', type: 'css' }]
-    },
-    {
-      id: '3',
-      sender: 'user',
-      content: 'That\'s very helpful! Can you show me how to implement the message bubbles?',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5)
-    }
-  ];
-
-  const [messagesState, setMessagesState] = useState<ChatMessage[]>(initialMessages); 
-
-  const handleSendMessage = useCallback(() => {
-    if (inputMessage.trim() && selectedChatId) { // Ensure a chat is selected
-      const newMessage: ChatMessage = {
-        id: String(Date.now()), 
-        sender: 'user',
-        content: inputMessage,
-        timestamp: new Date(),
-      };
-      setMessagesState(prevMessages => [...prevMessages, newMessage]);
-      setInputMessage('');
-      // Update conversation's last message and timestamp
-      setConversations(prevConvos => prevConvos.map(convo => 
-        convo.id === selectedChatId 
-          ? { ...convo, lastMessage: inputMessage, timestamp: new Date() } 
-          : convo
-      ));
-    }
-  }, [inputMessage, selectedChatId, setMessagesState, setInputMessage, setConversations]);
-
-  const formatTimestamp = useCallback((date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
   }, []);
+
+  useEffect(() => {
+    // Simulate fetching messages when a chat is selected
+    if (selectedChatId) {
+      setMessages(mockMessages[selectedChatId] || []);
+    } else {
+      setMessages([]);
+    }
+    // Scroll to the bottom of the messages list
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedChatId]);
+  
+  // --- EVENT HANDLERS ---
+  const handleSendMessage = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedChatId) return;
+
+    const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: 'user',
+      content: newMessage,
+      timestamp: 'Just now',
+    };
+    
+    // Optimistically update UI
+    setMessages(prev => [...prev, userMessage]);
+    setNewMessage('');
+
+    // TODO: Send message to backend and get AI response
+  }, [newMessage, selectedChatId]);
+
+  const handleSelectChat = useCallback((chatId: string) => {
+    setSelectedChatId(chatId);
+  }, []);
+  
+  const toggleConvoList = useCallback(() => {
+    setIsConvoListOpen(!isConvoListOpen);
+  }, [isConvoListOpen]);
 
   const handleNewChat = useCallback(() => {
     const newConversationId = String(Date.now());
     const newConversation: ChatConversation = {
       id: newConversationId,
-      title: "New Chat", // Or prompt user for title
-      timestamp: new Date(),
-      lastMessage: ""
+      title: "New Chat",
+      lastMessage: "",
+      timestamp: "Just now",
+      participants: 1
     };
-    setConversations(prevConvos => [newConversation, ...prevConvos]);
+    setConversations(prev => [newConversation, ...prev]);
     setSelectedChatId(newConversationId);
-    setMessagesState([]); // Clear messages for new chat
-    console.log('New chat created:', newConversationId);
-  }, [setConversations, setSelectedChatId, setMessagesState]);
+    setMessages([]);
+  }, []);
 
   const togglePinConversation = useCallback((conversationId: string) => {
-    setConversations(prevConvos =>
-      prevConvos.map(convo =>
-        convo.id === conversationId ? { ...convo, isPinned: !convo.isPinned } : convo
-      ).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.timestamp.getTime() - a.timestamp.getTime()) // Keep pinned at top, then by time
+    setConversations(prev =>
+      prev.map(conv =>
+        conv.id === conversationId ? { ...conv, isPinned: !conv.isPinned } : conv
+      ).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
     );
-  }, [setConversations]);
+  }, []);
 
   const deleteConversation = useCallback((conversationId: string) => {
-    setConversations(prevConvos => prevConvos.filter(convo => convo.id !== conversationId));
+    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
     if (selectedChatId === conversationId) {
-      setSelectedChatId(null); 
-      setMessagesState([]); // Clear messages if active chat is deleted
+      setSelectedChatId(null);
+      setMessages([]);
     }
-  }, [selectedChatId, setConversations, setSelectedChatId, setMessagesState]);
+  }, [selectedChatId]);
 
-  const exportConversation = useCallback((conversation: ChatConversation) => {
-    const messagesToExport = messagesState; // Assuming messagesState holds messages for the selectedChat
-                                          // For a more robust solution, you might fetch/filter messages by conversation.id
-    let content = `Conversation Title: ${conversation.title}\nTimestamp: ${conversation.timestamp.toISOString()}\nParticipants: ${conversation.participants || 'N/A'}\nTags: ${conversation.tags?.join(', ') || 'N/A'}\n\nMessages:\n`;
-    
-    messagesToExport.forEach(msg => {
-      content += `------------------------------------\n`;
-      content += `Sender: ${msg.sender}\n`;
-      content += `Timestamp: ${msg.timestamp.toISOString()}\n`;
-      content += `Content: ${msg.content}\n`;
-      if (msg.attachments && msg.attachments.length > 0) {
-        content += `Attachments: ${msg.attachments.map(att => att.name).join(', ')}\n`;
-      }
-    });
-
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `conversation-${conversation.id}-${conversation.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-    console.log('Exporting conversation:', conversation.id);
-  }, [messagesState]); // Added messagesState dependency
-
-
-  const secondaryActions = useMemo(() => [
-    {
-      label: 'Add to project',
-      onClick: () => console.log('Add to project'),
-      variant: 'secondary' as const
-    },
-    {
-      label: 'Export Current Chat',
-      onClick: () => {
-        const currentConvo = conversations.find(c => c.id === selectedChatId);
-        if (currentConvo) {
-          exportConversation(currentConvo);
-        }
-      },
-      variant: 'secondary' as const,
-      disabled: !selectedChatId // Disable if no chat is selected
-    }
-  ], [selectedChatId, conversations, exportConversation]); 
-
+  // Setup header when component mounts and when selectedChat changes
   useEffect(() => {
-    const currentConversation = conversations.find(c => c.id === selectedChatId);
-    const newHeaderProps = {
-      title: currentConversation ? currentConversation.title : "Chat",
-      breadcrumb: currentConversation ? [{label: "Chat", onClick: () => setSelectedChatId(null)}, {label: currentConversation.title}] : [{label: "Chat"}],
+    const selectedChat = conversations.find(c => c.id === selectedChatId);
+    setHeaderProps({
+      title: selectedChat ? selectedChat.title : "Chat",
+      breadcrumb: selectedChat 
+        ? [{label: "Chat", onClick: () => setSelectedChatId(null)}, {label: selectedChat.title}] 
+        : [{label: "Chat"}],
       primaryAction: {
         label: 'New chat',
         onClick: handleNewChat,
         icon: <Plus size={16} />
-      },
-      secondaryActions: secondaryActions 
-    };
-    if (JSON.stringify(headerProps) !== JSON.stringify(newHeaderProps)) {
-        setHeaderProps(newHeaderProps);
-    }
-    // Not clearing header props on unmount to maintain consistency when navigating between sub-views if any.
-    // clearHeaderProps might be called by the parent layout or App component when navigating away from /chat route.
-  }, [setHeaderProps, handleNewChat, secondaryActions, headerProps, selectedChat, conversations]);
+      }
+    });
+  }, [setHeaderProps, handleNewChat, selectedChatId, conversations]);
 
-  const filteredConversations = useMemo(() => {
-    return conversations
-      .filter(convo => {
-        const matchesSearchQuery = convo.title.toLowerCase().includes(searchQuery.toLowerCase());
-        if (filterCriteria.pinnedStatus === 'pinned') {
-          return matchesSearchQuery && convo.isPinned;
-        }
-        if (filterCriteria.pinnedStatus === 'unpinned') {
-          return matchesSearchQuery && !convo.isPinned;
-        }
-        return matchesSearchQuery;
-      })
-      .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || b.timestamp.getTime() - a.timestamp.getTime());
-  }, [conversations, searchQuery, filterCriteria]);
+  const selectedChat = conversations.find(c => c.id === selectedChatId);
+  const filteredConversations = conversations.filter(conv => 
+    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="w-full h-full flex gap-6">
-      {/* Left Panel - Conversations List */}
-      <div className={`h-full transition-all duration-300 ease-in-out ${
-        !isConvoColumnOpen ? 'w-16' : 'w-1/3'
-      }`}>
-        <Card className="h-full flex flex-col" padding="none">
-          {/* Card Header: Title, New Chat, Toggle */}
-          <div className={`p-4 border-b border-border-subtle flex items-center ${isConversationSidebarCollapsed ? 'justify-center' : 'justify-between'} flex-shrink-0`}>
-            {!isConversationSidebarCollapsed && (
-              <h3 className="text-lg font-semibold text-text-primary truncate">Conversations</h3>
-            )}
-            {!isConversationSidebarCollapsed && (
-              <div className="flex items-center gap-1"> {/* Group buttons for expanded state */}
-                <button
-                  onClick={handleNewChat}
-                  title="New chat"
-                  className="p-2 hover:bg-bg-hover rounded-md transition-colors text-text-secondary hover:text-text-primary"
-                >
-                  <Plus size={18} />
-                </button>
-                <button
-                  onClick={handleToggleColumn}
-                  className="p-2 hover:bg-bg-hover rounded-md transition-colors text-text-secondary hover:text-text-primary"
-                  title="Collapse conversations"
-                >
-                  <PanelLeftClose size={18} />
-                </button>
-              </div>
-            )}
-            {isConvoColumnOpen && (
-              <button
-                onClick={handleToggleColumn}
-                className="p-2 hover:bg-bg-hover rounded-md transition-colors text-text-secondary hover:text-text-primary"
-                title="Expand conversations"
-              >
-                <PanelLeftOpen size={18} />
-              </button>
-            )}
-          </div>
-
-          {!isConversationSidebarCollapsed && (
-            <>
-              {/* Search and Filter Section */}
-              <div className="p-4 space-y-4 border-b border-border-subtle flex-shrink-0">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-                  <input
-                    type="text"
-                    placeholder="Search conversations..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-10 py-2 pr-3 pl-10 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-                <button
-                  onClick={() => setIsFilterOpen(!isFilterOpen)}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-surface rounded-md transition-colors"
-                >
-                  <Filter className="w-4 h-4" />
-                  Filter
-                </button>
-                {isFilterOpen && (
-                  <div className="p-3 border-t border-border-subtle space-y-2">
-                    <p className="text-xs font-medium text-text-secondary">Filter by Pinned Status:</p>
-                    {(['all', 'pinned', 'unpinned'] as const).map(status => (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          setFilterCriteria({ pinnedStatus: status });
-                          setIsFilterOpen(false);
-                        }}
-                        className={`w-full text-left px-2 py-1.5 text-sm rounded-md ${
-                          filterCriteria.pinnedStatus === status
-                            ? 'bg-primary text-primary-foreground'
-                            : 'hover:bg-bg-hover'
-                        }`}
-                      >
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Conversation List Section */}
-              <div className="flex-grow overflow-y-auto min-h-0"> {/* Scrollable area */}
-                <div className="flex items-center gap-2 text-sm font-medium text-text-primary mt-4 mb-3 px-4">
-                  <Clock className="w-4 h-4" />
-                  All Conversations
-                </div>
-                <div className="space-y-1.5 px-4 pb-4">
-                  {filteredConversations.length === 0 && (
-                    <div className="text-center text-text-secondary py-4">
-                      No conversations found.
-                    </div>
-                  )}
-                  {filteredConversations && filteredConversations.length > 0 && filteredConversations.map(conversation => {
-                    const [isHovered, setIsHovered] = useState(false);
-                    const isCurrentlySelected = selectedChatId === conversation.id;
-                    return (
-                      <div
-                        key={conversation.id}
-                        className={`p-2.5 rounded-md cursor-pointer transition-colors duration-150 ease-in-out relative group ${
-                          isCurrentlySelected
-                            ? 'bg-primary text-primary-foreground'
-                            : 'hover:bg-bg-hover active:bg-bg-active'
-                        }`}
-                        onClick={() => setSelectedChatId(conversation.id)}
-                        onMouseEnter={() => setIsHovered(true)}
-                        onMouseLeave={() => setIsHovered(false)}
-                      >
-                        <div className="flex justify-between items-start mb-1.5">
-                          <h4 className={`text-sm font-medium truncate pr-2 ${isCurrentlySelected ? 'text-primary-foreground' : 'text-text-primary'}`}>
-                            {conversation.title}
-                          </h4>
-                          {conversation.isPinned && (
-                             <Pin className={`w-3.5 h-3.5 flex-shrink-0 ${isCurrentlySelected ? 'text-primary-foreground/80' : 'text-primary'}`} />
-                          )}
-                        </div>
-                        {conversation.lastMessage && (
-                          <p className={`text-xs mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap ${isCurrentlySelected ? 'text-primary-foreground/90' : 'text-text-secondary'}`}>
-                            {conversation.lastMessage}
-                          </p>
-                        )}
-                        <div className="flex justify-between items-center">
-                          <div className="flex gap-1 flex-wrap">
-                            {conversation.tags?.map(tag => (
-                              <span key={tag} className={`text-xs px-1.5 py-0.5 rounded ${isCurrentlySelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-bg-surface text-text-secondary'}`}>
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                          <div className={`flex items-center gap-2 text-xs ${isCurrentlySelected ? 'text-primary-foreground/80' : 'text-text-secondary'}`}>
-                            <span>{formatTimestamp(conversation.timestamp)}</span>
-                            {conversation.participants != null && (
-                              <div className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                {conversation.participants}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {isHovered && !isCurrentlySelected && (
-                          <div className="absolute top-1 right-1 flex gap-0.5 p-0.5 bg-bg-elevated rounded-md shadow-md border border-border-subtle z-10">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); togglePinConversation(conversation.id); }} 
-                              title={conversation.isPinned ? "Unpin conversation" : "Pin conversation"}
-                              className="p-1 hover:bg-bg-hover rounded-md transition-colors"
-                            >
-                              <Pin className={`w-3.5 h-3.5 ${conversation.isPinned ? 'text-primary fill-primary' : 'text-text-secondary'}`} />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); exportConversation(conversation); }} 
-                              title="Export conversation"
-                              className="p-1 hover:bg-bg-hover rounded-md transition-colors"
-                            >
-                              <Download className="w-3.5 h-3.5 text-text-secondary hover:text-primary" />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); deleteConversation(conversation.id); }} 
-                              title="Delete conversation"
-                              className="p-1 hover:bg-bg-hover rounded-md transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-red-500 hover:text-red-600" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </Card>
-      </div>
-
-      {/* Main Chat Area */}
-      <Card className="flex-1 flex flex-col max-h-full min-w-0" padding="none"> {/* Removed transition-all duration-300 ease-in-out */}
-        {/* Chat Header */}
-        <div className="p-4 border-b border-border-subtle flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-text-secondary min-w-0">
-              {headerProps?.breadcrumb?.map((item, index) => (
-                <React.Fragment key={index}>
-                  {index > 0 && <span>&gt;</span>}
-                  <button 
-                    onClick={item.onClick} 
-                    className={`truncate hover:underline ${index === (headerProps.breadcrumb?.length ?? 0) -1 ? 'text-text-primary font-medium' : ''}`}
-                    disabled={!item.onClick}
-                  >
-                    {item.label}
-                  </button>
-                </React.Fragment>
-              )) || <span className="text-text-primary font-medium">Chat</span>}
-            </div>
-            <div className="flex items-center gap-4">
-              <select className="bg-bg-surface border border-border-subtle rounded-md py-2 px-3 text-text-primary text-sm focus:outline-none focus:ring-1 focus:ring-primary">
-                <option>Claude 3.5 Sonnet</option>
-                <option>GPT-4</option>
-                <option>Llama 2</option>
-              </select>
-              <div className="flex items-center gap-1 text-sm text-success">
-                <div className="w-2 h-2 bg-success rounded-full"></div>
-                Ready
-              </div>
-              <div className="relative">
-                <button 
-                  onClick={() => setIsMoreOptionsOpen(!isMoreOptionsOpen)}
-                  className="p-2 hover:bg-bg-surface rounded-md transition-colors"
-                  title="More options"
-                >
-                  <MoreHorizontal className="w-4 h-4 text-text-secondary" />
-                </button>
-                {isMoreOptionsOpen && (
-                  <Card className="absolute top-full right-0 mt-2 w-64 z-20 p-2 shadow-xl border border-border-subtle">
-                    <ul className="space-y-1">
-                      {[ 
-                        { label: 'Chat settings', action: () => console.log('Open chat settings') },
-                        { label: 'Model information', action: () => console.log('Show model info') },
-                        { label: 'Clear messages', action: () => console.log('Clear messages') },
-                        { label: 'Manage context/prompt', action: () => console.log('Manage context') },
-                        { label: 'Export chat', action: () => {
-                            const currentConvo = conversations.find(c => c.id === selectedChatId);
-                            if (currentConvo) exportConversation(currentConvo);
-                            setIsMoreOptionsOpen(false); // Close dropdown
-                          }
-                        }
-                      ].map(item => (
-                        <li key={item.label}>
-                          <button
-                            onClick={() => { item.action(); setIsMoreOptionsOpen(false); }}
-                            className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-bg-hover rounded-md transition-colors"
-                          >
-                            {item.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </Card>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Messages Area */}
-        <div className="flex-1 p-4 space-y-6 overflow-y-auto">
-          {selectedChat ? messagesState.map(message => { 
-            return (
-            <div 
-              key={message.id} 
-              className={`flex gap-3 relative group ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}
+    <div className="w-full h-full flex gap-3">
+      {/* SIDEBAR: CONVERSATION LIST */}
+      {isConvoListOpen && (
+        <Card className="w-80 flex flex-col" padding="none">
+          {/* Header */}
+          <div className="p-5 border-b border-border flex items-center justify-between flex-shrink-0">
+            <h2 className="text-base font-semibold text-foreground">Conversations</h2>
+            <button 
+              onClick={handleNewChat}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 transition-all duration-200 text-sm font-medium hover:scale-[1.02]"
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-bg-elevated text-text-primary'
-              }`}>
-                {message.sender === 'user' ? (
-                  <User className="w-4 h-4" />
-                ) : (
-                  <Bot className="w-4 h-4" />
-                )}
-              </div>
-              <div className={`max-w-[70%] flex flex-col ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`text-xs text-text-secondary mb-1 ${message.sender === 'user' ? 'mr-2' : 'ml-2'}`}>
-                  {message.sender === 'user' ? 'You' : 'LibreOllama Assistant'} <span className="text-xs">· {formatTimestamp(message.timestamp)}</span>
-                </div>
-                <div className={`p-3 rounded-lg text-sm relative group/bubble ${
-                  message.sender === 'user'
-                    ? 'bg-primary text-primary-foreground rounded-br-none'
-                    : 'bg-bg-secondary text-text-primary rounded-bl-none'
-                }`}>
-                  {message.content.includes('```') ? (
-                    <div>
-                      {message.content.split('```').map((part, index) => {
-                        if (index % 2 === 1) {
-                          const lines = part.split('\n');
-                          const language = lines[0];
-                          const code = lines.slice(1).join('\n');
-                          return (
-                            <pre key={index} className="bg-bg-surface border border-border-subtle rounded-md p-3 my-2 overflow-x-auto text-sm relative group/codeblock">
-                              <div className="flex justify-between items-center mb-2 text-xs text-text-secondary">
-                                <span>{language || 'code'}</span>
-                                <button 
-                                  onClick={() => navigator.clipboard.writeText(code)}
-                                  title="Copy code"
-                                  className="flex items-center gap-1 px-2 py-1 hover:bg-bg-tertiary rounded transition-colors opacity-0 group-hover/codeblock:opacity-100"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                  Copy
-                                </button>
-                              </div>
-                              <code>{code}</code>
-                            </pre>
-                          );
-                        }
-                        return <span key={index} dangerouslySetInnerHTML={{ __html: part.replace(/\n/g, '<br />') }}></span>;
-                      })}
-                    </div>
-                  ) : (
-                    <span dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, '<br />') }}></span>
-                  )}
-                  {message.attachments && message.attachments.map(att => (
-                    <div key={att.name} className={`mt-2 p-2 rounded-md flex items-center text-sm ${
-                      message.sender === 'user'
-                        ? 'bg-primary-darker border border-primary-focus text-primary-foreground' 
-                        : 'bg-bg-tertiary border border-border-subtle text-text-primary'
-                    }`}>
-                      <Paperclip className="w-3 h-3 mr-2 text-text-secondary flex-shrink-0" />
-                      <div className="min-w-0"> 
-                        <span className="font-medium block truncate">{att.name}</span>
-                        <span className="text-xs text-text-secondary">{att.type.toUpperCase()}</span>
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => navigator.clipboard.writeText(message.content)}
-                    title="Copy message content"
-                    className="absolute top-0.5 right-0.5 p-1 bg-inherit rounded-full opacity-0 group-hover/bubble:opacity-100 transition-opacity hover:bg-black/10 dark:hover:bg-white/10"
-                  >
-                    <Copy className={`w-3 h-3 ${message.sender === 'user' ? 'text-primary-foreground/80' : 'text-text-secondary' } hover:text-primary`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-            )
-          }) : (
-            <div className="flex flex-col items-center justify-center h-full text-text-secondary">
-              <MessageSquare size={48} className="mb-4 opacity-50" />
-              <p className="text-lg font-medium">No chat selected</p>
-              <p className="text-sm">Select a conversation from the list or <button onClick={handleNewChat} className="text-primary hover:underline font-medium">start a new one</button>.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Input Area */}
-        <div className="p-4 border-t border-border-subtle flex-shrink-0">
-          <div className="flex items-end gap-3">
-            <div className="flex gap-1">
-              <button className="p-2.5 hover:bg-bg-surface rounded-md transition-colors text-text-secondary hover:text-primary" title="Attach files">
-                <Paperclip className="w-4 h-4" />
-              </button>
-              <button className="p-2.5 hover:bg-bg-surface rounded-md transition-colors text-text-secondary hover:text-primary" title="Add images">
-                <Image className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex-1 relative">
-              <textarea
-                className="w-full min-h-[44px] max-h-32 py-3 px-4 bg-bg-surface border border-border-subtle rounded-lg text-text-primary placeholder-text-secondary resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder={selectedChat ? "Ask about design, code, or anything else... (Ctrl+Enter to send)" : "Select or start a new conversation to begin"}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault(); // Prevent newline in textarea
-                    handleSendMessage();
-                  }
-                }}
-                disabled={!selectedChat} 
-              />
-            </div>
-            <button
-              className={`p-3 rounded-lg transition-colors flex items-center justify-center aspect-square ${
-                inputMessage.trim() && selectedChat
-                  ? 'bg-primary text-white hover:bg-primary-hover'
-                  : 'bg-bg-surface text-text-secondary cursor-not-allowed'
-              }`}
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || !selectedChat}
-              title="Send message (Ctrl+Enter or Cmd+Enter)"
-            >
-              <Send className="w-4 h-4" />
+              <Plus size={13} /> 
+              New
             </button>
           </div>
-        </div>
+          
+          {/* Search */}
+          <div className="p-4 flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input 
+                type="search" 
+                placeholder="Search conversations..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-9 py-2 pr-3 pl-10 bg-muted/30 border border-border rounded-lg text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent focus:bg-background transition-all duration-200"
+              />
+            </div>
+          </div>
+          
+          {/* Conversations List */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Pinned Section */}
+            {filteredConversations.some(c => c.isPinned) && (
+              <div className="px-4 pt-2 pb-3 border-b border-border/50">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  <Pin className="w-3 h-3" />
+                  Pinned
+                </div>
+                <div className="space-y-1">
+                  {filteredConversations.filter(c => c.isPinned).map(conv => (
+                    <div 
+                      key={conv.id} 
+                      onClick={() => handleSelectChat(conv.id)} 
+                      onMouseEnter={() => setHoveredConversationId(conv.id)}
+                      onMouseLeave={() => setHoveredConversationId(null)}
+                      className={`relative group p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                        selectedChatId === conv.id 
+                          ? 'bg-accent text-accent-foreground shadow-accent/25 border border-accent/20' 
+                          : 'hover:bg-muted/60 border border-transparent hover:border-border/50'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-medium text-sm leading-tight line-clamp-1">{conv.title}</h4>
+                          {conv.participants > 1 && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                              <Users className="w-3 h-3" />
+                              <span>{conv.participants}</span>
+                            </div>
+                          )}
+                        </div>
+                        {conv.lastMessage && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{conv.lastMessage}</p>
+                        )}
+                        <span className="text-xs text-muted-foreground font-medium">{conv.timestamp}</span>
+                      </div>
+                      
+                      {/* Hover Actions */}
+                      {hoveredConversationId === conv.id && selectedChatId !== conv.id && (
+                        <div className="absolute top-2 right-2 flex gap-0.5 p-1 bg-popover/95 backdrop-blur-sm rounded-lg shadow-lg border border-border">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); /* TODO: Export conversation */ }} 
+                            title="Export conversation"
+                            className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                          >
+                            <Download className="w-3 h-3 text-muted-foreground" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); togglePinConversation(conv.id); }} 
+                            title="Unpin conversation"
+                            className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                          >
+                            <Pin className="w-3 h-3 text-accent fill-accent" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }} 
+                            title="Delete conversation"
+                            className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Recent Section */}
+            <div className="px-4 pt-4 pb-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                <MessagesSquare className="w-3 h-3" />
+                Recent
+              </div>
+              <div className="space-y-1">
+                {filteredConversations.filter(c => !c.isPinned).map(conv => (
+                  <div 
+                    key={conv.id} 
+                    onClick={() => handleSelectChat(conv.id)} 
+                    onMouseEnter={() => setHoveredConversationId(conv.id)}
+                    onMouseLeave={() => setHoveredConversationId(null)}
+                    className={`relative group p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                      selectedChatId === conv.id 
+                        ? 'bg-accent text-accent-foreground shadow-accent/25 border border-accent/20' 
+                        : 'hover:bg-muted/60 border border-transparent hover:border-border/50'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-medium text-sm leading-tight line-clamp-1">{conv.title}</h4>
+                        {conv.participants > 1 && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                            <Users className="w-3 h-3" />
+                            <span>{conv.participants}</span>
+                          </div>
+                        )}
+                      </div>
+                      {conv.lastMessage && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{conv.lastMessage}</p>
+                      )}
+                      <span className="text-xs text-muted-foreground font-medium">{conv.timestamp}</span>
+                    </div>
+                    
+                    {/* Hover Actions */}
+                    {hoveredConversationId === conv.id && selectedChatId !== conv.id && (
+                      <div className="absolute top-2 right-2 flex gap-0.5 p-1 bg-popover/95 backdrop-blur-sm rounded-lg shadow-lg border border-border">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); /* TODO: Export conversation */ }} 
+                          title="Export conversation"
+                          className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                        >
+                          <Download className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); togglePinConversation(conv.id); }} 
+                          title="Pin conversation"
+                          className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                        >
+                          <Pin className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }} 
+                          title="Delete conversation"
+                          className="p-1.5 hover:bg-muted rounded-md transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3 text-destructive" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* MAIN CHAT AREA */}
+      <Card className="flex-1 flex flex-col" padding="none">
+        {selectedChat ? (
+          <>
+            {/* Header */}
+            <header className="px-6 py-5 border-b border-border flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={toggleConvoList} 
+                  className="p-2 hover:bg-muted rounded-lg transition-all duration-200 text-muted-foreground hover:text-foreground hover:scale-105"
+                  title={isConvoListOpen ? "Hide conversations" : "Show conversations"}
+                >
+                  {isConvoListOpen ? <PanelLeft size={18} /> : <PanelLeftOpen size={18} />}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-lg font-semibold text-foreground mb-1">{selectedChat.title}</h1>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span>Claude 3.5 Sonnet</span>
+                      <ChevronDown size={12} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-green-600">Ready</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button className="flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all duration-200 text-sm font-medium hover:scale-[1.02]">
+                  <Download size={14} />
+                  Export
+                </button>
+                <button className="p-2 hover:bg-muted rounded-lg transition-all duration-200 text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal size={18} />
+                </button>
+              </div>
+            </header>
+
+            {/* Messages */}
+            <div className="flex-1 px-6 py-6 space-y-8 overflow-y-auto">
+              {messages.map(message => (
+                <div key={message.id} className={`flex gap-4 max-w-4xl ${message.sender === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
+                  {/* Avatar */}
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
+                    message.sender === 'user' 
+                      ? 'bg-accent text-accent-foreground border border-accent/20' 
+                      : 'bg-muted text-foreground border border-border'
+                  }`}>
+                    {message.sender === 'user' ? <User size={16} /> : <Bot size={16} />}
+                  </div>
+                  
+                  {/* Message Content */}
+                  <div className={`flex flex-col max-w-[75%] ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`text-xs text-muted-foreground mb-3 ${message.sender === 'user' ? 'mr-1' : 'ml-1'}`}>
+                      <span className="font-semibold">
+                        {message.sender === 'user' ? 'You' : 'LibreOllama'}
+                      </span>
+                      <span className="mx-2">·</span>
+                      <span>{message.timestamp}</span>
+                    </div>
+                    
+                    <div className={`relative group p-4 text-sm leading-relaxed shadow-sm ${
+                      message.sender === 'user'
+                        ? 'bg-accent text-accent-foreground rounded-2xl rounded-br-lg border border-accent/20'
+                        : 'bg-secondary text-secondary-foreground rounded-2xl rounded-bl-lg border border-border'
+                    }`}>
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      
+                      {/* Copy Button */}
+                      <button
+                        onClick={() => navigator.clipboard.writeText(message.content)}
+                        title="Copy message"
+                        className="absolute -top-2 -right-2 p-2 bg-background border border-border rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-md hover:bg-muted hover:scale-105"
+                      >
+                        <Copy className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <footer className="px-6 py-5 border-t border-border flex-shrink-0 bg-background/80 backdrop-blur-sm">
+              <form onSubmit={handleSendMessage} className="flex items-end gap-3">
+                 {/* Attachment Button */}
+                 <Button 
+                   variant="ghost" 
+                   size="icon" 
+                   type="button" 
+                   title="Attach files"
+                   className="p-3 hover:text-accent hover:scale-105"
+                  >
+                   <Paperclip className="w-4 h-4" />
+                 </Button>
+                 
+                 {/* Text Input */}
+                 <div className="flex-1 relative">
+                   <Input 
+                    as="textarea"
+                    ref={textareaRef}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder={`Message ${selectedChat?.title || 'AI'}...`}
+                    className="w-full min-h-[52px] max-h-32 py-4 px-4 rounded-xl resize-none focus:ring-2 focus:ring-accent disabled:opacity-50 h-auto"
+                    onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        handleSendMessage(e as any); // Cast to any to satisfy FormEvent requirement if needed
+                      }
+                    }}
+                    disabled={!selectedChatId}
+                    rows={1}
+                   />
+                 </div>
+                 
+                 {/* Send Button */}
+                 <Button
+                   type="submit"
+                   variant={newMessage.trim() && selectedChatId ? "primary" : "secondary"}
+                   size="icon"
+                   className={`p-3.5 ${newMessage.trim() && selectedChatId ? "hover:scale-105" : ""}`}
+                   disabled={!newMessage.trim() || !selectedChatId}
+                   title="Send message (⌘↵)"
+                 >
+                   <Send className="w-4 h-4" />
+                 </Button>
+              </form>
+            </footer>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-accent/20 to-accent/10 border border-accent/20 flex items-center justify-center mb-6">
+              <MessagesSquare size={36} className="text-accent" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-3">Welcome to LibreOllama Chat</h3>
+            <p className="text-muted-foreground max-w-md leading-relaxed mb-6">
+              Select a conversation from the list or start a new one to begin chatting with AI assistants.
+            </p>
+            <button 
+              onClick={handleNewChat} 
+              className="flex items-center gap-2 px-4 py-2.5 bg-accent text-accent-foreground rounded-xl hover:bg-accent/90 transition-all duration-200 font-medium hover:scale-105 shadow-sm"
+            >
+              <Plus size={16} />
+              Start New Conversation
+            </button>
+          </div>
+        )}
       </Card>
     </div>
   );

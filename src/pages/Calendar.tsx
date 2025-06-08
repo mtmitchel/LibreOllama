@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, ListChecks, User, Tag, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, ListChecks, Plus } from 'lucide-react';
+import { Card, Button } from '../components/ui'; // Updated to use Button from ui/index.tsx
 import { PageLayout } from '../components/ui/PageLayout';
-import { Card } from '../components/ui/Card';
+import { useHeader } from '../contexts/HeaderContext';
 
 interface CalendarEvent {
   id: string;
@@ -152,216 +153,149 @@ const Calendar: React.FC = () => {
     primaryAction: {
       label: 'New event',
       onClick: handleNewEvent,
-      icon: <Plus size={16} />
+      icon: <Plus size={16} />,
+      variant: 'primary' // Added variant for consistency
     },
     viewSwitcher: (
-      <div className="flex gap-1">
-        <button
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-            view === 'month' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
+      <div className="flex items-center gap-1"> {/* Added items-center for vertical alignment */}
+        {/* Using Button component for consistency */}
+        <Button 
+          variant={view === 'month' ? 'primary' : 'ghost'} 
+          size="sm" 
           onClick={() => setView('month')}
         >
           Month
-        </button>
-        <button
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-            view === 'week' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
+        </Button>
+        <Button 
+          variant={view === 'week' ? 'primary' : 'ghost'} 
+          size="sm" 
           onClick={() => setView('week')}
         >
           Week
-        </button>
-        <button
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-            view === 'day' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
+        </Button>
+        <Button 
+          variant={view === 'day' ? 'primary' : 'ghost'} 
+          size="sm" 
           onClick={() => setView('day')}
         >
           Day
-        </button>
+        </Button>
       </div>
     )
   };
 
   return (
     <PageLayout headerProps={headerProps}>
-      <div className="flex flex-1 gap-6">
-        <div className="flex-1">
+      {/* Standardized gap and padding for consistency */}
+      <div className="flex flex-1 gap-6 p-0 md:p-0"> {/* Removed outer padding, PageLayout handles it */}
+        <div className="flex-1 flex flex-col gap-6"> {/* Added flex-col and gap for consistent spacing */}
           {/* Calendar Navigation */}
-          <Card className="mb-6">
-            <div className="flex items-center justify-center gap-4 p-4 px-6">
-              <button
-                className="flex items-center justify-center w-8 h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                onClick={() => navigateMonth('prev')}
-                title="Previous month"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[200px] text-center">
+          <Card> {/* Using Card from ui/index.tsx, default padding will apply */}
+            <div className="flex items-center justify-between gap-4"> {/* Adjusted for better spacing and alignment */}
+              <Button variant="ghost" size="icon" onClick={() => navigateMonth('prev')}>
+                <ChevronLeft size={20} />
+              </Button>
+              <h2 className="text-lg font-semibold text-text-primary">
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
-              <button
-                className="flex items-center justify-center w-8 h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                onClick={() => navigateMonth('next')}
-                title="Next month"
-              >
-                <ChevronRight size={16} />
-              </button>
-              <button
-                className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors ml-4"
-                onClick={goToToday}
-              >
+              <Button variant="ghost" size="icon" onClick={() => navigateMonth('next')}>
+                <ChevronRight size={20} />
+              </Button>
+              <Button variant="secondary" size="sm" onClick={goToToday} className="ml-auto"> {/* Adjusted button style */}
                 Today
-              </button>
+              </Button>
             </div>
           </Card>
-        
-        <Card className="overflow-hidden">
-          {view === 'month' && (
-            <div className="grid grid-cols-7">
+
+          {/* Calendar Grid */}
+          <Card className="flex-1"> {/* Using Card and ensuring it fills available space */}
+            <div className="grid grid-cols-7 gap-px border-l border-t border-border-subtle bg-border-subtle">
               {dayNames.map(day => (
-                <div key={day} className="p-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 border-r border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 last:border-r-0">
+                <div key={day} className="py-2 text-center text-xs font-medium text-text-secondary bg-bg-surface border-r border-b border-border-subtle">
                   {day}
                 </div>
               ))}
-              {days.map((day, index) => {
-                const dayEvents = getEventsForDate(day.date);
-                return (
-                  <div 
-                    key={index} 
-                    className={`
-                      relative p-2 h-32 border-r border-b border-gray-200 dark:border-gray-700 last:border-r-0
-                      ${!day.isCurrentMonth 
-                        ? 'bg-gray-50 dark:bg-gray-900 opacity-50' 
-                        : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }
-                      ${isToday(day.date) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
-                      transition-colors cursor-pointer
-                    `}
-                  >
-                    <span className={`text-sm font-medium ${
-                      isToday(day.date) 
-                        ? 'text-blue-600 dark:text-blue-400 font-bold' 
-                        : day.isCurrentMonth 
-                          ? 'text-gray-900 dark:text-white' 
-                          : 'text-gray-400 dark:text-gray-600'
-                    }`}>
-                      {day.date.getDate()}
-                    </span>
-                    <div className="mt-1 space-y-1">
-                      {dayEvents.map(event => (
-                        <div 
-                          key={event.id} 
-                          className={`text-xs px-2 py-1 rounded-md truncate font-medium ${
-                            event.type === 'event' 
-                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                            event.type === 'meeting' 
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                              'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
-                          }`}
-                          title={event.title}
-                        >
-                          {event.title}
-                        </div>
-                      ))}
-                    </div>
+              {days.map((dayObj, index) => (
+                <div 
+                  key={index} 
+                  className={`p-2 h-32 relative bg-bg-surface border-r border-b border-border-subtle 
+                    ${!dayObj.isCurrentMonth ? 'bg-bg-muted text-text-disabled' : 'hover:bg-bg-hover'}
+                    ${isToday(dayObj.date) ? 'bg-accent-soft ring-1 ring-accent-primary' : ''}
+                  `}
+                >
+                  <span className={`text-sm ${isToday(dayObj.date) ? 'font-bold text-accent-primary' : dayObj.isCurrentMonth ? 'text-text-primary' : 'text-text-disabled'}`}>
+                    {dayObj.date.getDate()}
+                  </span>
+                  <div className="mt-1 space-y-1 overflow-y-auto max-h-20">
+                    {getEventsForDate(dayObj.date).map(event => (
+                      <div 
+                        key={event.id} 
+                        className={`px-1.5 py-0.5 text-[11px] rounded 
+                          ${event.type === 'event' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 
+                            event.type === 'meeting' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' :
+                            'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'}`}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
-          )}
-          
-          {view === 'week' && (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <CalendarDays size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">
-                  Week view coming soon
-                </p>
+          </Card>
+        </div>
+
+        {/* Task Panel */}
+        {showTaskPanel && (
+          <div className="w-80 flex-shrink-0">
+            <Card className="h-full flex flex-col"> {/* Using Card and ensuring it fills height */}
+              <div className="flex items-center justify-between p-4 border-b border-border-subtle">
+                <h3 className="text-base font-semibold text-text-primary">Tasks</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowTaskPanel(false)}>
+                  <ListChecks size={18} /> {/* Placeholder, consider a close icon */}
+                </Button>
               </div>
-            </div>
-          )}
-          
-          {view === 'day' && (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <CalendarDays size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">
-                  Day view coming soon
-                </p>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-      
-      {showTaskPanel && (
-        <Card as="aside" className="w-80">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tasks to schedule</h3>
-            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm rounded-md font-medium">
-              {tasks.length} to schedule
-            </span>
-          </div>
-          <div className="space-y-6">
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">High Priority</h4>
-              <div className="space-y-3">
-                {tasks
-                  .filter(task => task.priority === 'high')
-                  .map(task => (
-                    <div key={task.id} className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                      <div className="font-medium text-gray-900 dark:text-white text-sm">{task.title}</div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs rounded-md font-medium">
-                          {task.priority}
-                        </span>
-                        <span className="text-xs text-gray-600 dark:text-gray-400">{task.project}</span>
-                      </div>
+              <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+                {tasks.map(task => (
+                  <Card key={task.id} className="p-3 bg-bg-subtle"> {/* Nested Card with specific padding */}
+                    <h4 className="text-sm font-medium text-text-primary mb-1">{task.title}</h4>
+                    <div className="flex items-center justify-between text-xs text-text-secondary">
+                      <span className={`px-1.5 py-0.5 rounded-full text-white text-[10px]
+                        ${task.priority === 'high' ? 'bg-error' : task.priority === 'medium' ? 'bg-warning' : 'bg-success'}`}
+                      >
+                        {task.priority}
+                      </span>
+                      {task.project && <span>{task.project}</span>}
                     </div>
-                  ))
-                }
+                  </Card>
+                ))}
               </div>
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">This Week</h4>
-              <div className="space-y-3">
-                {tasks
-                  .filter(task => task.priority !== 'high')
-                  .map(task => (
-                    <div key={task.id} className="p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-                      <div className="font-medium text-gray-900 dark:text-white text-sm">{task.title}</div>
-                      <div className="mt-2">
-                        <span className="text-xs text-gray-600 dark:text-gray-400">{task.project}</span>
-                      </div>
-                    </div>
-                  ))
-                }
+              <div className="p-4 border-t border-border-subtle">
+                <Button variant="primary" className="w-full"> {/* Consistent primary button */}
+                  <Plus size={16} className="mr-1.5" /> Add new task
+                </Button>
               </div>
-            </div>
+            </Card>
           </div>
-        </Card>
-      )}
-      
-        {/* Task Panel Toggle Button */}
-        <button
-          className="fixed bottom-6 right-6 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center z-10"
-          title="Toggle Task Panel"
-          onClick={() => setShowTaskPanel(!showTaskPanel)}
-        >
-          <ListChecks size={20} />
-        </button>
+        )}
+
+        {/* Task Panel Toggle Button - consider moving or integrating better */}
+        {!showTaskPanel && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <Button 
+              variant="primary" 
+              size="icon" 
+              className="rounded-full shadow-lg w-12 h-12" // Custom sizing for FAB
+              onClick={() => setShowTaskPanel(true)}
+              aria-label="Show tasks"
+            >
+              <ListChecks size={22} />
+            </Button>
+          </div>
+        )}
       </div>
     </PageLayout>
   );
-};
+}
 
 export default Calendar;

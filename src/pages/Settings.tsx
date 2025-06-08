@@ -24,6 +24,10 @@ import {
   Check, // Added for toggle switch
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
+import {
+  Button,
+  Input,
+} from '../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 
 // Reusable Toggle Switch Component (can be moved to a separate file)
@@ -92,15 +96,7 @@ const Settings: React.FC = () => {
                       <label htmlFor="startup-view" className="font-medium text-text-primary mb-1 block">Startup view</label>
                       <p className="text-sm text-text-secondary">Choose which module to open when you start the application.</p>
                     </div>
-                    <select 
-                      id="startup-view"
-                      className="ml-4 px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      <option>Dashboard</option>
-                      <option>Last visited page</option>
-                      <option>Chat</option>
-                      <option>Notes</option>
-                    </select>
+                    {/* Select component removed */}
                   </div>
                   <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
                     <div className="flex-1">
@@ -120,27 +116,14 @@ const Settings: React.FC = () => {
                       <label htmlFor="language-select" className="font-medium text-text-primary mb-1 block">Language</label>
                       <p className="text-sm text-text-secondary">Set the display language for the entire application.</p>
                     </div>
-                    <select 
-                      id="language-select"
-                      className="ml-4 px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      <option>English (United States)</option>
-                      <option>Deutsch</option>
-                      <option>Español</option>
-                    </select>
+                    {/* Select component removed */}
                   </div>
                   <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
                     <div className="flex-1">
                       <label htmlFor="first-day-select" className="font-medium text-text-primary mb-1 block">First day of the week</label>
                       <p className="text-sm text-text-secondary">Set the first day for calendars and date pickers.</p>
                     </div>
-                    <select 
-                      id="first-day-select"
-                      className="ml-4 px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      <option>Sunday</option>
-                      <option>Monday</option>
-                    </select>
+                    {/* Select component removed */}
                   </div>
                 </div>
               </Card>
@@ -171,10 +154,10 @@ const Settings: React.FC = () => {
                       <label htmlFor="ollama-endpoint" className="font-medium text-text-primary mb-1 block">Server endpoint</label>
                       <p className="text-sm text-text-secondary">The local URL where your Ollama instance is running.</p>
                     </div>
-                    <input 
+                    <Input 
                       id="ollama-endpoint"
                       type="text" 
-                      className="ml-4 w-auto max-w-xs px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="ml-4 w-auto max-w-xs"
                       defaultValue="http://localhost:11434" 
                     />
                   </div>
@@ -184,9 +167,9 @@ const Settings: React.FC = () => {
               <Card padding="lg"> {/* Wrapped section in a Card */}
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-text-primary">Local Models</h2>
-                  <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border border-border-subtle rounded-md text-text-primary bg-bg-surface hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors">
-                    <Download size={16} /> Pull a new model
-                  </button>
+                  <Button variant="outline" size="sm">
+                    <Download size={16} className="mr-2" /> Pull a new model
+                  </Button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -209,13 +192,13 @@ const Settings: React.FC = () => {
                           <td className="p-2 whitespace-nowrap text-text-secondary">{model.size}</td>
                           <td className="p-2 whitespace-nowrap text-text-secondary">{model.modified}</td>
                           <td className="p-2 whitespace-nowrap text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button className="p-1.5 hover:bg-bg-hover rounded-md text-text-secondary hover:text-primary transition-colors" title="Update model">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-text-secondary hover:text-primary" title="Update model">
                                 <RefreshCw size={16} />
-                              </button>
-                              <button className="p-1.5 hover:bg-bg-hover rounded-md text-text-secondary hover:text-error transition-colors" title="Remove model">
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-text-secondary hover:text-error" title="Remove model">
                                 <Trash2 size={16} />
-                              </button>
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -246,9 +229,9 @@ const Settings: React.FC = () => {
                         <p className="text-sm text-text-secondary">Sync Calendar and Tasks.</p>
                       </div>
                     </div>
-                    <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border border-border-subtle rounded-md text-text-primary bg-bg-surface hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors">
-                      <LinkIcon size={16} /> Connect
-                    </button>
+                    <Button variant="outline" size="sm">
+                      <LinkIcon size={16} className="mr-2" /> Connect
+                    </Button>
                   </div>
                   <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
                     <div className="flex items-center gap-3">
@@ -258,9 +241,9 @@ const Settings: React.FC = () => {
                         <p className="text-sm text-text-secondary">Sync repositories and issues.</p>
                       </div>
                     </div>
-                    <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium border border-border-subtle rounded-md text-text-primary bg-bg-surface hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors">
-                      <LinkIcon size={16} /> Connect
-                    </button>
+                    <Button variant="outline" size="sm">
+                      <LinkIcon size={16} className="mr-2" /> Connect
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -273,14 +256,14 @@ const Settings: React.FC = () => {
                       <p className="text-sm text-text-secondary">Required for accessing Google's cloud-based AI models.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <input 
+                      <Input 
                         id="gemini-api-key"
                         type="password" 
-                        className="w-auto max-w-xs px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-auto max-w-xs"
                         placeholder="Enter Gemini API key..." 
                         defaultValue="••••••••••••••••"
                       />
-                      <button className="px-3 py-1.5 text-sm font-medium border border-border-subtle rounded-md text-text-primary bg-bg-surface hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors">Save</button>
+                      <Button variant="outline" size="sm">Save</Button>
                     </div>
                   </div>
                   <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
@@ -289,13 +272,13 @@ const Settings: React.FC = () => {
                       <p className="text-sm text-text-secondary">Required for accessing Claude models via API.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <input 
+                      <Input 
                         id="anthropic-api-key"
                         type="password" 
-                        className="w-auto max-w-xs px-3 py-2 bg-bg-surface border border-border-subtle rounded-md text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-auto max-w-xs"
                         placeholder="Enter Anthropic API key..." 
                       />
-                      <button className="px-3 py-1.5 text-sm font-medium border border-border-subtle rounded-md text-text-primary bg-bg-surface hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors">Save</button>
+                      <Button variant="outline" size="sm">Save</Button>
                     </div>
                   </div>
                 </div>
@@ -334,18 +317,15 @@ const Settings: React.FC = () => {
             {navItems.map(item => {
               const IconComponent = item.icon;
               return (
-                <button
+                <Button
                   key={item.id}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left ${
-                    activeSection === item.id
-                      ? 'bg-primary-soft text-primary font-medium' // Updated active style
-                      : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
-                  }`}
+                  variant={activeSection === item.id ? "secondary" : "ghost"} 
+                  className={`w-full justify-start text-sm font-normal ${activeSection === item.id ? 'font-medium text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                   onClick={() => setActiveSection(item.id)}
                 >
-                  <IconComponent className="w-4 h-4 flex-shrink-0" />
+                  <IconComponent className="w-4 h-4 mr-3 flex-shrink-0" />
                   <span className="truncate">{item.label}</span>
-                </button>
+                </Button>
               );
             })}
           </nav>
