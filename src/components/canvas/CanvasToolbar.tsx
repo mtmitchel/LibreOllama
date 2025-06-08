@@ -95,7 +95,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   ];
 
   return (
-    <div className="relative flex gap-4 items-center">
+    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-4 items-center">
       <Card padding="none" className="p-2 flex gap-0.5 items-center justify-center">
         {tools.map(tool => (
           <div key={tool.id} className="relative">

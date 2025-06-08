@@ -27,23 +27,15 @@ interface UseCanvasEventsProps {
 
 export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);  const {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const {
     elements, setElements,
     selectedElement, setSelectedElement,
     activeTool, setActiveTool,
-    selectedShape,
-    isDrawing, setIsDrawing,
-    currentPath, setCurrentPath,
-    isDragging, setIsDragging,
-    dragOffset, setDragOffset,
-    isResizing, setIsResizing,
-    resizeHandle, setResizeHandle,
-    resizeStartPos, setResizeStartPos,
-    resizeStartSize, setResizeStartSize,
     zoomLevel, setZoomLevel,
     panOffset, setPanOffset,
-    isCreatingLine, setIsCreatingLine,
-    lineStartPoint, setLineStartPoint,
+
     showShapeDropdown, setShowShapeDropdown,
     dropdownPosition, setDropdownPosition,
     isEditingText, setIsEditingText,
@@ -51,7 +43,19 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     textFormattingPosition, setTextFormattingPosition,
     history, setHistory,
     historyIndex, setHistoryIndex,
-    mousePos, setMousePos
+    mousePos, setMousePos,
+    isPreviewing, setIsPreviewing, // New state for drawing preview
+    previewElement, setPreviewElement, // New state for drawing preview
+    isResizing, setIsResizing,
+    resizeHandle, setResizeHandle,
+    resizeStartPos, setResizeStartPos,
+    resizeStartSize, setResizeStartSize,
+    
+    // Drag state
+    isDragging, setIsDragging,
+    dragStartPos, setDragStartPos,
+    dragStartElementPos, setDragStartElementPos
+    // saveToHistory // Removed: Not provided by useCanvasState, use local definition
   } = canvasState;
 
   // History management
@@ -166,9 +170,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     });
   }, [setIsResizing, setResizeHandle, setSelectedElement, setResizeStartPos, setResizeStartSize, zoomLevel, panOffset]);
 
-  // Mouse event handlers
   const handleResizeMove = useCallback((e: React.MouseEvent) => {
-    if (!isResizing || !resizeHandle || !selectedElement) return;
+    if (!isResizing || !resizeHandle || !selectedElement || !resizeStartPos || !resizeStartSize) return;
 
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -181,7 +184,7 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     const deltaX = currentX - resizeStartPos.x;
     const deltaY = currentY - resizeStartPos.y;
 
-    setElements(prevElements => prevElements.map(el => {
+    setElements((prevElements: CanvasElement[]) => prevElements.map(el => {
       if (el.id !== selectedElement) return el;
 
       let newWidth = resizeStartSize.width;
@@ -193,18 +196,18 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
         case 'top-left':
           newWidth = Math.max(20, resizeStartSize.width - deltaX);
           newHeight = Math.max(20, resizeStartSize.height - deltaY);
-          newX = el.x + (resizeStartSize.width - newWidth);
-          newY = el.y + (resizeStartSize.height - newHeight);
+          newX = (el.x ?? 0) + (resizeStartSize.width - newWidth);
+          newY = (el.y ?? 0) + (resizeStartSize.height - newHeight);
           break;
         case 'top-right':
           newWidth = Math.max(20, resizeStartSize.width + deltaX);
           newHeight = Math.max(20, resizeStartSize.height - deltaY);
-          newY = el.y + (resizeStartSize.height - newHeight);
+          newY = (el.y ?? 0) + (resizeStartSize.height - newHeight);
           break;
         case 'bottom-left':
           newWidth = Math.max(20, resizeStartSize.width - deltaX);
           newHeight = Math.max(20, resizeStartSize.height + deltaY);
-          newX = el.x + (resizeStartSize.width - newWidth);
+          newX = (el.x ?? 0) + (resizeStartSize.width - newWidth);
           break;
         case 'bottom-right':
           newWidth = Math.max(20, resizeStartSize.width + deltaX);
@@ -212,67 +215,85 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
           break;
         case 'top':
           newHeight = Math.max(20, resizeStartSize.height - deltaY);
-          newY = el.y + (resizeStartSize.height - newHeight);
+          newY = (el.y ?? 0) + (resizeStartSize.height - newHeight);
           break;
         case 'bottom':
           newHeight = Math.max(20, resizeStartSize.height + deltaY);
           break;
         case 'left':
           newWidth = Math.max(20, resizeStartSize.width - deltaX);
-          newX = el.x + (resizeStartSize.width - newWidth);
+          newX = (el.x ?? 0) + (resizeStartSize.width - newWidth);
           break;
         case 'right':
           newWidth = Math.max(20, resizeStartSize.width + deltaX);
           break;
       }
-
-      return { ...el, x: newX, y: newY, width: newWidth, height: newHeight };
+      return { ...el, x: newX, y: newY, width: newWidth, height: newHeight }; 
     }));
-  }, [isResizing, resizeHandle, selectedElement, resizeStartPos, resizeStartSize, zoomLevel, panOffset, setElements]);
+  }, [isResizing, resizeHandle, selectedElement, resizeStartPos, resizeStartSize, zoomLevel, panOffset, setElements, canvasRef]);
 
-  // Canvas mouse move handler
+  // Mouse event handlers
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isResizing && resizeHandle && selectedElement) {
+      handleResizeMove(e);
+      return;
+    }
+
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
-    
-    // Update mouse position for line preview
-    setMousePos({
-      x: (rawX / zoomLevel) - panOffset.x,
-      y: (rawY / zoomLevel) - panOffset.y
-    });
+    const currentX = (rawX / zoomLevel) - panOffset.x;
+    const currentY = (rawY / zoomLevel) - panOffset.y;
+    setMousePos({ x: currentX, y: currentY });
 
-    // Handle resizing
-    if (isResizing) {
-      handleResizeMove(e);
-      return;
-    }
-
-    // Handle drawing
-    if (isDrawing && activeTool === 'pen') {
-      const x = (rawX / zoomLevel) - panOffset.x;
-      const y = (rawY / zoomLevel) - panOffset.y;
+    // Handle element dragging
+    if (isDragging && selectedElement) {
+      const deltaX = currentX - dragStartPos.x;
+      const deltaY = currentY - dragStartPos.y;
       
-      setCurrentPath(prev => `${prev} L ${x} ${y}`);
+      setElements(prevElements => 
+        prevElements.map(el => 
+          el.id === selectedElement 
+            ? { 
+                ...el, 
+                x: dragStartElementPos.x + deltaX, 
+                y: dragStartElementPos.y + deltaY 
+              }
+            : el
+        )
+      );
       return;
     }
 
-    // Handle dragging
-    if (!isDragging || !selectedElement) return;
-
-    const adjustedX = (rawX / zoomLevel) - panOffset.x;
-    const adjustedY = (rawY / zoomLevel) - panOffset.y;
-    const newX = adjustedX - dragOffset.x;
-    const newY = adjustedY - dragOffset.y;
-
-    setElements(prevElements => prevElements.map(el => 
-      el.id === selectedElement 
-        ? { ...el, x: newX, y: newY }
-        : el
-    ));
-  }, [isResizing, handleResizeMove, isDrawing, activeTool, isDragging, selectedElement, dragOffset, zoomLevel, panOffset, setMousePos, setCurrentPath, setElements]);
+    if (isPreviewing && previewElement) {
+      let updatedPreview = { ...previewElement };
+      switch (previewElement.type) {
+        case 'line':
+        case 'arrow':
+          updatedPreview.x2 = currentX;
+          updatedPreview.y2 = currentY;
+          break;
+        case 'drawing': 
+          updatedPreview.path = `${previewElement.path || ''} L ${currentX.toFixed(2)} ${currentY.toFixed(2)}`;
+          break;
+        case 'rectangle':
+        case 'circle':
+        case 'triangle':
+        case 'square':
+        case 'hexagon':
+        case 'star':
+          updatedPreview.width = Math.abs(currentX - (previewElement.x || 0));
+          updatedPreview.height = Math.abs(currentY - (previewElement.y || 0));
+          if (currentX < (previewElement.x || 0)) updatedPreview.x = currentX;
+          if (currentY < (previewElement.y || 0)) updatedPreview.y = currentY;
+          break;
+      }
+      setPreviewElement(updatedPreview);
+      return;
+    }
+  }, [isDragging, selectedElement, dragStartPos, dragStartElementPos, setElements, isResizing, resizeHandle, selectedElement, handleResizeMove, zoomLevel, panOffset, setMousePos, isPreviewing, previewElement, setPreviewElement, activeTool]);
 
   // Throttled mouse move for better performance
   const throttledCanvasMouseMove = useMemo(
@@ -282,35 +303,45 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
 
   // Mouse up handler
   const handleMouseUp = useCallback(() => {
-    if (isDrawing && currentPath) {
-      const newDrawing: CanvasElement = {
-        id: Date.now().toString(),
-        type: 'drawing',
-        x: 0,
-        y: 0,
-        path: currentPath,
-        color: '#000000'
-      };
-      
-      const newElements = [...elements, newDrawing];
-      setElements(newElements);
-      saveToHistory(newElements);
-      setCurrentPath('');
-      setIsDrawing(false);
-      setActiveTool('select');
+    // Handle end of dragging
+    if (isDragging) {
+      setIsDragging(false);
+      saveToHistory(elements);
+      if (canvasRef.current) {
+        canvasRef.current.style.cursor = 'default';
+      }
       return;
     }
 
-    // Save to history when dragging ends
-    if (isDragging) {
-      saveToHistory(elements);
-    }
+    if (isPreviewing && previewElement) { 
+      let isValidElement = true;
+      if ((previewElement.type === 'rectangle' || previewElement.type === 'circle' || previewElement.type === 'triangle' || previewElement.type === 'square' || previewElement.type === 'hexagon' || previewElement.type === 'star') && (!previewElement.width || !previewElement.height || previewElement.width < 5 || previewElement.height < 5)) {
+        isValidElement = false;
+      }
+      if ((previewElement.type === 'line' || previewElement.type === 'arrow') && previewElement.x === previewElement.x2 && previewElement.y === previewElement.y2) {
+        isValidElement = false;
+      }
+      if (previewElement.type === 'drawing' && previewElement.path && previewElement.path.split('L').length < 2) { 
+        isValidElement = false;
+      }
 
-    setIsDragging(false);
-    setDragOffset({ x: 0, y: 0 });
-    setIsResizing(false);
-    setResizeHandle(null);
-  }, [isDrawing, currentPath, elements, saveToHistory, isDragging, setElements, setCurrentPath, setIsDrawing, setActiveTool, setIsDragging, setDragOffset, setIsResizing, setResizeHandle]);
+      if (isValidElement) {
+        const finalElementToAdd: CanvasElement = { ...previewElement, id: `el-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
+        setElements((prevElements: CanvasElement[]) => {
+          const updatedElements = [...prevElements, finalElementToAdd];
+          saveToHistory(updatedElements);
+          return updatedElements;
+        });
+      } else {
+      }
+      
+      setIsPreviewing(false);
+      setPreviewElement(null);
+      setIsResizing(false);
+      setResizeHandle(null);
+      if (canvasRef.current) canvasRef.current.style.cursor = 'default';
+    }
+  }, [isDragging, setIsDragging, saveToHistory, elements, canvasRef, isPreviewing, previewElement, setElements, setIsPreviewing, setPreviewElement, activeTool, setIsResizing, setResizeHandle]);
 
   // Element mouse down handler
   const handleElementMouseDown = useCallback((e: React.MouseEvent, elementId: string) => {
@@ -319,7 +350,6 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     const element = elements.find(el => el.id === elementId);
     if (!element) return;
 
-    // Handle eraser tool
     if (activeTool === 'eraser') {
       const newElements = elements.filter(el => el.id !== elementId);
       setElements(newElements);
@@ -328,9 +358,8 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
       return;
     }
 
-    // Handle highlighter tool
     if (activeTool === 'highlighter' && element.type === 'text') {
-      setElements(prevElements => prevElements.map(el => 
+      setElements((prevElements: CanvasElement[]) => prevElements.map(el => 
         el.id === elementId 
           ? { ...el, backgroundColor: el.backgroundColor ? undefined : '#ffeb3b' }
           : el
@@ -343,134 +372,134 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
       return;
     }
 
-    if (activeTool !== 'select') return;
-
-    setSelectedElement(elementId);
-    setIsDragging(true);
-    
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const adjustedX = (rawX / zoomLevel) - panOffset.x;
-    const adjustedY = (rawY / zoomLevel) - panOffset.y;
-    
-    setDragOffset({
-      x: adjustedX - element.x,
-      y: adjustedY - element.y
-    });
-  }, [elements, activeTool, zoomLevel, panOffset, saveToHistory, setElements, setSelectedElement, setIsDragging, setDragOffset]);
+    if (activeTool === 'select') {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      // Set as selected
+      setSelectedElement(elementId);
+      
+      // Start dragging
+      setIsDragging(true);
+      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+      setDragStartPos({ x: mouseX, y: mouseY });
+      setDragStartElementPos({ x: element.x, y: element.y });
+      
+      if (canvasRef.current) {
+        canvasRef.current.style.cursor = 'grabbing';
+      }
+    }
+  }, [activeTool, elements, setElements, saveToHistory, setSelectedElement, setIsDragging, setDragStartPos, setDragStartElementPos, canvasRef, panOffset, zoomLevel]);
 
   // Canvas click handler
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (activeTool === 'select' || isDragging) return;
-
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const rawX = e.clientX - rect.left;
-    const rawY = e.clientY - rect.top;
-    const x = (rawX / zoomLevel) - panOffset.x;
-    const y = (rawY / zoomLevel) - panOffset.y;
+    const mousePos = {
+      x: (e.clientX - rect.left - panOffset.x) / zoomLevel,
+      y: (e.clientY - rect.top - panOffset.y) / zoomLevel
+    };
 
-    if (activeTool === 'pen') {
-      setIsDrawing(true);
-      setCurrentPath(`M ${x} ${y}`);
+    // Text tool: create new text element
+    if (activeTool === 'text') {
+      const newElement: CanvasElement = {
+        id: `el-${Date.now()}`,
+        type: 'text',
+        x: mousePos.x,
+        y: mousePos.y,
+        width: 200, 
+        height: 30, 
+        content: 'Text',
+        fontSize: 'medium',
+        color: '#000000'
+      };
+      const newElements = [...elements, newElement];
+      setElements(newElements);
+      saveToHistory(newElements);
+      setSelectedElement(newElement.id);
+      setIsEditingText(newElement.id);
+      setActiveTool('select'); 
       return;
     }
 
-    // Handle line and arrow creation
-    if (activeTool === 'line' || activeTool === 'arrow') {
-      if (!isCreatingLine) {
-        setIsCreatingLine(true);
-        setLineStartPoint({ x, y });
-        return;
-      } else {
-        if (lineStartPoint) {
-          const newElement: CanvasElement = {
-            id: Date.now().toString(),
-            type: activeTool,
-            x: lineStartPoint.x,
-            y: lineStartPoint.y,
-            x2: x,
-            y2: y,
-            color: '#000000'
-          };
-
-          const newElements = [...elements, newElement];
-          setElements(newElements);
-          saveToHistory(newElements);
-          setIsCreatingLine(false);
-          setLineStartPoint(null);
-          setActiveTool('select');
-          return;
-        }
-      }
+    // Sticky note tool: create new sticky note
+    if (activeTool === 'sticky-note') {
+      const newElement: CanvasElement = {
+        id: `el-${Date.now()}`,
+        type: 'sticky-note',
+        x: mousePos.x,
+        y: mousePos.y,
+        width: 150,
+        height: 150,
+        content: '',
+        backgroundColor: '#FFFF00' 
+      };
+      const newElements = [...elements, newElement];
+      setElements(newElements);
+      saveToHistory(newElements);
+      setSelectedElement(newElement.id);
+      setIsEditingText(newElement.id); 
+      setActiveTool('select');
+      return;
     }
 
-    // Create other elements
-    const elementType = activeTool === 'shapes' ? selectedShape : activeTool;
-    const newElement: CanvasElement = {
-      id: Date.now().toString(),
-      type: elementType as CanvasElement['type'],
-      x,
-      y,
-      width: activeTool === 'sticky-note' ? 180 : activeTool === 'text' ? 200 : 120,
-      height: activeTool === 'sticky-note' ? 180 : activeTool === 'text' ? 60 : 80,
-      content: activeTool === 'sticky-note' ? '' : activeTool === 'text' ? 'New text' : undefined,
-      color: activeTool === 'sticky-note' ? '#facc15' : activeTool === 'rectangle' ? '#3b82f6' : activeTool === 'circle' ? '#10b981' : undefined
-    };
+    // Pan tool (select tool used for panning when clicking empty canvas)
+    if (activeTool === 'select') {
+      setSelectedElement(null); // Deselect
+      return;
+    }
+  }, [activeTool, elements, setElements, saveToHistory, setSelectedElement, setIsEditingText, setActiveTool, canvasRef, panOffset, zoomLevel]);
 
-    const newElements = [...elements, newElement];
-    setElements(newElements);
-    saveToHistory(newElements);
-    setActiveTool('select');
-  }, [activeTool, isDragging, zoomLevel, panOffset, isCreatingLine, lineStartPoint, selectedShape, elements, setIsDrawing, setCurrentPath, setIsCreatingLine, setLineStartPoint, setElements, saveToHistory, setActiveTool]);
+  // Keyboard shortcuts
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (isEditingText) return; 
 
-  // Keyboard event handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Undo/Redo shortcuts
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-        return;
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedElement) handleDeleteElement();
+    }
+    if (e.key === 'Escape') {
+      setSelectedElement(null);
+      setActiveTool('select');
+      setIsPreviewing(false); 
+      setPreviewElement(null);
+      if (showShapeDropdown) setShowShapeDropdown(false);
+      if (showTextFormatting) setShowTextFormatting(false);
+    }
+    if (!e.ctrlKey && !e.metaKey && !e.altKey) { 
+      switch (e.key.toLowerCase()) {
+        case 'v': setActiveTool('select'); break;
+        case 't': setActiveTool('text'); break;
+        case 's': setActiveTool('sticky-note'); break; 
+        case 'r': setActiveTool('rectangle'); break; 
+        case 'c': setActiveTool('circle'); break;
+        case 'p': setActiveTool('pen'); break;
+        case 'l': setActiveTool('line'); break;
+        case 'a': setActiveTool('arrow'); break;
       }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      if (e.shiftKey) {
         handleRedo();
-        return;
+      } else {
+        handleUndo();
       }
-      
-      // Element deletion
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
-        handleDeleteElement();
-      }
+    }
+  }, [
+    isEditingText, selectedElement, setSelectedElement, setActiveTool, 
+    handleDeleteElement, handleUndo, handleRedo,
+    setIsPreviewing, setPreviewElement, 
+    showShapeDropdown, setShowShapeDropdown, 
+    showTextFormatting, setShowTextFormatting
+  ]);
 
-      // Tool selection shortcuts
-      if (e.key === 'Escape') {
-        setSelectedElement(null);
-        setActiveTool('select');
-        if (showShapeDropdown) {
-          setShowShapeDropdown(false);
-          setDropdownPosition(null);
-        }
-      }
-      if (e.key === 'v' || e.key === 'V') setActiveTool('select');
-      if (e.key === 't' || e.key === 'T') setActiveTool('text');
-      if (e.key === 'n' || e.key === 'N') setActiveTool('sticky-note');
-      if (e.key === 'r' || e.key === 'R') setActiveTool('shapes');
-      if (e.key === 'p' || e.key === 'P') setActiveTool('pen');
-      if (e.key === 'e' || e.key === 'E') setActiveTool('eraser');
-      if (e.key === 'h' || e.key === 'H') setActiveTool('highlighter');
-      if (e.key === 'l' || e.key === 'L') setActiveTool('line');
-      if (e.key === 'a' || e.key === 'A') setActiveTool('arrow');
-    };
-
+  useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElement, handleDeleteElement, handleUndo, handleRedo, showShapeDropdown, setSelectedElement, setActiveTool, setShowShapeDropdown, setDropdownPosition]);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   // Click outside handler
   useEffect(() => {
@@ -543,12 +572,10 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
     
     // Event handlers
     handleCanvasClick,
-    handleCanvasMouseDown: handleCanvasClick, // Alias for backward compatibility
-    handleCanvasMouseMove: throttledCanvasMouseMove,
-    handleCanvasMouseUp: handleMouseUp,
-    handleElementMouseDown,
+    handleCanvasMouseDown: handleCanvasClick, 
+    handleCanvasMouseMove: throttledCanvasMouseMove, 
     handleMouseUp,
-    throttledCanvasMouseMove,
+    handleElementMouseDown,
     handleResizeStart,
     handleUndo,
     handleRedo,
@@ -567,10 +594,10 @@ export const useCanvasEvents = ({ canvasState }: UseCanvasEventsProps) => {
         { position: 'top-right', x: element.x + element.width - 4, y: element.y - 4 },
         { position: 'bottom-left', x: element.x - 4, y: element.y + element.height - 4 },
         { position: 'bottom-right', x: element.x + element.width - 4, y: element.y + element.height - 4 },
-        { position: 'top', x: element.x + element.width / 2 - 4, y: element.y - 4 },
-        { position: 'bottom', x: element.x + element.width / 2 - 4, y: element.y + element.height - 4 },
-        { position: 'left', x: element.x - 4, y: element.y + element.height / 2 - 4 },
-        { position: 'right', x: element.x + element.width - 4, y: element.y + element.height / 2 - 4 }
+        { position: 'top', x: element.x + (element.width / 2) - 4, y: element.y - 4 },
+        { position: 'bottom', x: element.x + (element.width / 2) - 4, y: element.y + element.height - 4 },
+        { position: 'left', x: element.x - 4, y: element.y + (element.height / 2) - 4 },
+        { position: 'right', x: element.x + element.width - 4, y: element.y + (element.height / 2) - 4 }
       ];
     },
     

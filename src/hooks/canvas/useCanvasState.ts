@@ -58,15 +58,11 @@ export interface UseCanvasStateReturn {
   pinnedCanvases: Set<string>;
   setPinnedCanvases: React.Dispatch<React.SetStateAction<Set<string>>>;
   
-  // Drawing state
-  isDrawing: boolean;
-  setIsDrawing: React.Dispatch<React.SetStateAction<boolean>>;
-  currentPath: string;
-  setCurrentPath: React.Dispatch<React.SetStateAction<string>>;
-  isDragging: boolean;
-  setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
-  dragOffset: { x: number; y: number };
-  setDragOffset: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
+  // Preview state for drawing tools
+  isPreviewing: boolean;
+  setIsPreviewing: React.Dispatch<React.SetStateAction<boolean>>;
+  previewElement: CanvasElement | null;
+  setPreviewElement: React.Dispatch<React.SetStateAction<CanvasElement | null>>;
   
   // Resize state
   isResizing: boolean;
@@ -83,12 +79,6 @@ export interface UseCanvasStateReturn {
   setZoomLevel: React.Dispatch<React.SetStateAction<number>>;
   panOffset: { x: number; y: number };
   setPanOffset: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
-  
-  // Line creation
-  isCreatingLine: boolean;
-  setIsCreatingLine: React.Dispatch<React.SetStateAction<boolean>>;
-  lineStartPoint: { x: number; y: number } | null;
-  setLineStartPoint: React.Dispatch<React.SetStateAction<{ x: number; y: number } | null>>;
   
   // Text formatting
   isEditingText: string | null;
@@ -107,7 +97,7 @@ export interface UseCanvasStateReturn {
   // Dropdown positioning
   dropdownPosition: { left: number; top: number } | null;
   setDropdownPosition: React.Dispatch<React.SetStateAction<{ left: number; top: number } | null>>;
-    // Mouse position for line preview
+  // Mouse position for line preview
   mousePos: { x: number; y: number };
   setMousePos: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
   
@@ -185,11 +175,9 @@ export const useCanvasState = (): UseCanvasStateReturn => {
   const [hoveredCanvas, setHoveredCanvas] = useState<string | null>(null);
   const [pinnedCanvases, setPinnedCanvases] = useState<Set<string>>(new Set());
   
-  // Drawing state
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPath, setCurrentPath] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  // Preview state for drawing tools
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewElement, setPreviewElement] = useState<CanvasElement | null>(null);
   
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
@@ -197,13 +185,14 @@ export const useCanvasState = (): UseCanvasStateReturn => {
   const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
   const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
   
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const [dragStartElementPos, setDragStartElementPos] = useState({ x: 0, y: 0 });
+  
   // Zoom and pan
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  
-  // Line creation
-  const [isCreatingLine, setIsCreatingLine] = useState(false);
-  const [lineStartPoint, setLineStartPoint] = useState<{ x: number; y: number } | null>(null);
   
   // Text formatting
   const [isEditingText, setIsEditingText] = useState<string | null>(null);
@@ -216,7 +205,7 @@ export const useCanvasState = (): UseCanvasStateReturn => {
   
   // Dropdown positioning
   const [dropdownPosition, setDropdownPosition] = useState<{ left: number; top: number } | null>(null);
-    // Mouse position for line preview
+  // Mouse position for line preview
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // Saved canvases management
@@ -245,15 +234,11 @@ export const useCanvasState = (): UseCanvasStateReturn => {
     pinnedCanvases,
     setPinnedCanvases,
     
-    // Drawing state
-    isDrawing,
-    setIsDrawing,
-    currentPath,
-    setCurrentPath,
-    isDragging,
-    setIsDragging,
-    dragOffset,
-    setDragOffset,
+    // Preview state
+    isPreviewing,
+    setIsPreviewing,
+    previewElement,
+    setPreviewElement,
     
     // Resize state
     isResizing,
@@ -265,17 +250,19 @@ export const useCanvasState = (): UseCanvasStateReturn => {
     resizeStartSize,
     setResizeStartSize,
     
+    // Drag state
+    isDragging,
+    setIsDragging,
+    dragStartPos,
+    setDragStartPos,
+    dragStartElementPos,
+    setDragStartElementPos,
+    
     // Zoom and pan
     zoomLevel,
     setZoomLevel,
     panOffset,
     setPanOffset,
-    
-    // Line creation
-    isCreatingLine,
-    setIsCreatingLine,
-    lineStartPoint,
-    setLineStartPoint,
     
     // Text formatting
     isEditingText,
