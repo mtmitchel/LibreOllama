@@ -1,261 +1,54 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { shallow } from 'zustand/shallow';
-import { useCanvasStore, CanvasElement, CanvasState } from '../stores/canvasStore'; // Added CanvasState, removed unused CanvasTool
+import { Stage, Container } from '@pixi/react';
+import { useCanvasStore, CanvasElement, CanvasState } from '../stores/canvasStore';
 import { useViewportCulling } from '../hooks/useViewportCulling';
-import CanvasElementComponent from '../components/canvas/CanvasElement'; 
+import CanvasElementRenderer from '../components/canvas/CanvasElementRenderer';
 import CanvasGrid from '../components/canvas/CanvasGrid';
 import { Trash2 } from 'lucide-react';
-import * as PIXI from 'pixi.js';
 
 const Canvas = () => {
-  const elements = useCanvasStore((state: CanvasState) => state.elements, shallow);
-  const selectedElementIds = useCanvasStore((state: CanvasState) => state.selectedElementIds, shallow);
-  const activeTool = useCanvasStore((state: CanvasState) => state.activeTool);
-  const zoom = useCanvasStore((state: CanvasState) => state.zoom);
-  const pan = useCanvasStore((state: CanvasState) => state.pan, shallow);
-  const isEditingText = useCanvasStore((state: CanvasState) => state.isEditingText);
-  // isDragging and dragStartPos are intentionally not selected here if handled by getState() or local refs as per original comments
+  // Single selector to get all state we need - this prevents multiple subscriptions
+  const canvasState = useCanvasStore((state: CanvasState) => ({
+    elements: state.elements,
+    selectedElementIds: state.selectedElementIds,
+    activeTool: state.activeTool,
+    zoom: state.zoom,
+    pan: state.pan,
+    isEditingText: state.isEditingText,
+    isDrawing: state.isDrawing,
+    previewElement: state.previewElement,
+  }));
 
-  const {
-    addElement,
-    updateElement,
-    deleteElement,
-    selectElement,
-    setSelectedElementIds,
-    clearSelection,
-    setActiveTool, 
-    setZoom, 
-    setPan,
-    setDragState,
-    setIsDrawing, 
-    setPreviewState, 
-    setResizeState, 
-    setIsEditingText, 
-    setTextFormattingState, 
-    addToHistory, 
-    undo,
-    redo,
-  } = useCanvasStore((state: CanvasState) => ({ 
-    addElement: state.addElement,
-    updateElement: state.updateElement,
-    deleteElement: state.deleteElement,
-    selectElement: state.selectElement,
-    setSelectedElementIds: state.setSelectedElementIds,
-    clearSelection: state.clearSelection,
-    setActiveTool: state.setActiveTool,
-    setZoom: state.setZoom,
-    setPan: state.setPan,
-    setDragState: state.setDragState,
-    setIsDrawing: state.setIsDrawing,
-    setPreviewState: state.setPreviewState,
-    setResizeState: state.setResizeState,
-    setIsEditingText: state.setIsEditingText,
-    setTextFormattingState: state.setTextFormattingState,
-    addToHistory: state.addToHistory,
-    undo: state.undo,
-    redo: state.redo,
-  })); 
+  // Extract individual values from the memoized state
+  const { elements, selectedElementIds, activeTool, zoom, pan, isEditingText, isDrawing, previewElement } = canvasState;
+  
+  // Create stable elements array using useMemo with proper dependencies
+  const elementsArray = useMemo(() => Object.values(elements), [elements]);
 
-  const pixiContainerRef = useRef<HTMLDivElement>(null); // For PIXI app rendering
+  // Get store actions directly (these are stable function references)
+  const addElement = useCanvasStore((state: CanvasState) => state.addElement);
+  const updateElement = useCanvasStore((state: CanvasState) => state.updateElement);
+  const deleteElement = useCanvasStore((state: CanvasState) => state.deleteElement);
+  const selectElement = useCanvasStore((state: CanvasState) => state.selectElement);
+  const setSelectedElementIds = useCanvasStore((state: CanvasState) => state.setSelectedElementIds);
+  const clearSelection = useCanvasStore((state: CanvasState) => state.clearSelection);
+  const setActiveTool = useCanvasStore((state: CanvasState) => state.setActiveTool);
+  const setZoom = useCanvasStore((state: CanvasState) => state.setZoom);
+  const setPan = useCanvasStore((state: CanvasState) => state.setPan);
+  const setDragState = useCanvasStore((state: CanvasState) => state.setDragState);
+  const setIsDrawing = useCanvasStore((state: CanvasState) => state.setIsDrawing);
+  const setPreviewState = useCanvasStore((state: CanvasState) => state.setPreviewState);
+  const setResizeState = useCanvasStore((state: CanvasState) => state.setResizeState);
+  const setIsEditingText = useCanvasStore((state: CanvasState) => state.setIsEditingText);
+  const setTextFormattingState = useCanvasStore((state: CanvasState) => state.setTextFormattingState);
+  const addToHistory = useCanvasStore((state: CanvasState) => state.addToHistory); 
+
   const canvasContainerRef = useRef<HTMLDivElement>(null); // For overall workspace dimensions and DOM events
-  const pixiAppRef = useRef<PIXI.Application | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const initialElementPositions = useRef<Record<string, { x: number; y: number }>>({});
   const isPanning = useRef(false);
   const [editingTextValue, setEditingTextValue] = useState(''); 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-
-  // Memoize the array of elements for useViewportCulling
-  const elementsArray = useMemo(() => Object.values(elements), [elements]);
-
-  // Effect to update canvasSize based on canvasContainerRef dimensions
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (container) {
-      const resizeObserver = new ResizeObserver(entries => {
-        for (let entry of entries) {
-          const { width, height } = entry.contentRect;
-          if (width > 0 && height > 0) {
-            setCanvasSize(prevSize => {
-              if (prevSize.width !== width || prevSize.height !== height) {
-                return { width, height };
-              }
-              return prevSize; // Return previous state if no change
-            });
-          }
-        }
-      });
-      resizeObserver.observe(container);
-      // Initial size
-      const initialWidth = container.clientWidth;
-      const initialHeight = container.clientHeight;
-      if (initialWidth > 0 && initialHeight > 0) {
-        setCanvasSize(prevSize => {
-          if (prevSize.width !== initialWidth || prevSize.height !== initialHeight) {
-            return { width: initialWidth, height: initialHeight };
-          }
-          return prevSize;
-        });
-      }
-      return () => resizeObserver.unobserve(container);
-    }
-  }, []); // Runs once on mount and when canvasContainerRef is available
-
-  // PIXI.js setup effect (initialization)
-  useEffect(() => {
-    if (!pixiContainerRef.current) {
-      // console.warn('Pixi container ref not available for Pixi app setup.'); // Keep console cleaner
-      return;
-    }
-
-    // If pixiAppRef.current is already set, it implies a previous effect instance
-    // did not clean up its ref properly, or this effect is running unexpectedly.
-    // The cleanup of the *previous* effect run is responsible for its own instance.
-    if (pixiAppRef.current) {
-        console.warn('[PixiSetup] pixiAppRef.current was not null at the start of a new setup. This might indicate an issue with the previous cleanup cycle. The new app will replace it, and the old app\'s cleanup should manage its destruction.');
-        // We do not destroy pixiAppRef.current here; its own cleanup should handle it.
-    }
-    
-    const containerElement = pixiContainerRef.current; // Capture for use in this effect
-
-    const app = new PIXI.Application({
-      resizeTo: containerElement,
-      backgroundColor: 0x1a1b1e,
-      antialias: true,
-      autoDensity: true,
-      resolution: window.devicePixelRatio || 1,
-    });
-    
-    // Append the Pixi view first
-    if (app.view instanceof HTMLCanvasElement) {
-      containerElement.appendChild(app.view);
-    } else {
-      console.error('[PixiSetup] Pixi app.view is not an HTMLCanvasElement! Aborting setup.');
-      // If view is not a canvas, app creation might be problematic, destroy it and exit.
-      app.destroy(true, { children: true, texture: true });
-      return; // Do not assign to pixiAppRef.current
-    }
-    
-    // Only assign to the ref *after* successful creation and appending of the view.
-    pixiAppRef.current = app;
-    const appInstanceForCleanup = app; // Capture the instance for this effect's cleanup closure
-
-    // console.log(`[PixiSetup] New Pixi App created and assigned to ref:`, appInstanceForCleanup);
-
-    return () => {
-      // console.log(`[PixiSetup] Cleanup for app:`, appInstanceForCleanup, `Current ref:`, pixiAppRef.current);
-      
-      // Perform cleanup on the instance created by this specific effect run.
-      if (appInstanceForCleanup) {
-        if (appInstanceForCleanup.ticker) {
-            appInstanceForCleanup.ticker.stop();
-        }
-        // Check .stage as an indicator it hasn't been fully destroyed yet by this specific instance's destroy method
-        if (appInstanceForCleanup.stage) { 
-          appInstanceForCleanup.destroy(true, { children: true, texture: true });
-          // console.log(`[PixiSetup] Destroyed app:`, appInstanceForCleanup);
-        } else {
-          // console.warn('[PixiSetup] Cleanup: App instance or stage not valid for destruction, possibly already destroyed by its own call.', appInstanceForCleanup);
-        }
-      }
-
-      // If pixiAppRef.current is still pointing to the instance this cleanup is for,
-      // then nullify it. This prevents stale refs if the component unmounts.
-      if (pixiAppRef.current === appInstanceForCleanup) {
-        pixiAppRef.current = null;
-        // console.log(`[PixiSetup] Nullified pixiAppRef.current for app:`, appInstanceForCleanup);
-      }
-    };
-  }, []); // Empty dependency array: runs once on mount, cleans up on unmountialization // Runs once on mount for initialization
-
-  // Effect for drawing elements and handling pan/zoom on the PIXI stage
-  useEffect(() => {
-    if (!pixiAppRef.current || !elements) return;
-
-    const app = pixiAppRef.current;
-    app.stage.removeChildren(); // Clear stage before redrawing
-
-    // Apply pan and zoom to the stage
-    app.stage.x = pan.x;
-    app.stage.y = pan.y;
-    app.stage.scale.set(zoom, zoom);
-
-    // Draw each element
-    Object.values(elements).forEach(element => {
-      drawPixiElement(element, app.stage);
-    });
-
-  }, [elements, pan, zoom]); // Re-run when elements, pan, or zoom change
-
-  // Helper function to draw individual PIXI elements
-  const drawPixiElement = (element: CanvasElement, stage: PIXI.Container) => {
-    const graphics = new PIXI.Graphics();
-
-    // Common properties
-    const strokeColor = element.strokeColor ? new PIXI.Color(element.strokeColor).toNumber() : 0x000000;
-    const fillColor = element.color ? new PIXI.Color(element.color).toNumber() : 0xFFFFFF;
-    const strokeWidth = element.strokeWidth ?? 1;
-
-    switch (element.type) {
-      case 'rectangle':
-        graphics.lineStyle(strokeWidth, strokeColor);
-        graphics.beginFill(fillColor);
-        graphics.drawRect(0, 0, element.width ?? 100, element.height ?? 100);
-        graphics.endFill();
-        break;
-      case 'circle': // Example for circle
-        graphics.lineStyle(strokeWidth, strokeColor);
-        graphics.beginFill(fillColor);
-        graphics.drawCircle(0, 0, (element.width ?? 100) / 2);
-        graphics.endFill();
-        // Position for circle should be its center if width/height represent diameter
-        graphics.x = element.x + (element.width ?? 100) / 2;
-        graphics.y = element.y + (element.height ?? 100) / 2;
-        stage.addChild(graphics);
-        return; // Return early as x,y for circle is handled differently
-      case 'line':
-      case 'drawing':
-        if (element.points && element.points.length > 1) {
-          graphics.lineStyle(strokeWidth, strokeColor);
-          graphics.moveTo(element.points[0].x - element.x, element.points[0].y - element.y); // Relative to element's x,y
-          for (let i = 1; i < element.points.length; i++) {
-            graphics.lineTo(element.points[i].x - element.x, element.points[i].y - element.y);
-          }
-        }
-        break;
-      case 'text':
-        const textStyle = new PIXI.TextStyle({
-          fontFamily: 'Arial',
-          fontSize: element.fontSize === 'small' ? 12 : element.fontSize === 'large' ? 24 : 16,
-          fill: fillColor,
-          wordWrap: true,
-          wordWrapWidth: element.width ?? 150,
-          align: element.textAlignment || 'left',
-          fontWeight: element.isBold ? 'bold' : 'normal',
-          fontStyle: element.isItalic ? 'italic' : 'normal',
-        });
-        const pixiText = new PIXI.Text(element.content || '', textStyle);
-        pixiText.x = element.x;
-        pixiText.y = element.y;
-        stage.addChild(pixiText);
-        return; // PIXI.Text is added directly, not the graphics object
-      // Add other cases for 'sticky-note', 'triangle', etc.
-      default:
-        // For unknown types, maybe draw a placeholder or log an error
-        // console.warn(`Unsupported element type for PIXI rendering: ${element.type}`);
-        graphics.lineStyle(1, 0xFF0000);
-        graphics.beginFill(0xCCCCCC);
-        graphics.drawRect(0, 0, element.width ?? 20, element.height ?? 20);
-        graphics.endFill();
-        break;
-    }
-
-    // Set position for graphics objects (except those handled above like circle, text)
-    graphics.x = element.x;
-    graphics.y = element.y;
-
-    stage.addChild(graphics);
-  };
 
   // Use viewport culling with container measurements
   const { visibleElements } = useViewportCulling({
@@ -267,8 +60,8 @@ const Canvas = () => {
 
   // Utility function to convert screen coordinates to canvas coordinates
   const getCanvasCoordinates = useCallback((clientX: number, clientY: number): { x: number; y: number } => {
-    if (!pixiContainerRef.current) return { x: 0, y: 0 };
-    const rect = pixiContainerRef.current.getBoundingClientRect();
+    if (!canvasContainerRef.current) return { x: 0, y: 0 };
+    const rect = canvasContainerRef.current.getBoundingClientRect();
     const x = (clientX - rect.left - pan.x) / zoom;
     const y = (clientY - rect.top - pan.y) / zoom;
     return { x, y };
@@ -289,24 +82,9 @@ const Canvas = () => {
     };
   }, []);
 
-  // Function to handle changes in the text editing area (local state for textarea)
-  const handleTextChange = useCallback((_elementId: string, newText: string) => {
-    setEditingTextValue(newText);
-  }, []);
-
-  // Placeholder for text formatting property changes from a toolbar
-  const handleTextFormatPropertyChange = useCallback((property: string, value: any) => {
-    const { selectedElementIds: currentSelectedIds, isEditingText: currentEditingId } = useCanvasStore.getState();
-    const targetId = currentEditingId || (currentSelectedIds.length > 0 ? currentSelectedIds[0] : null);
-    if (targetId) {
-      updateElement(targetId, { [property]: value });
-      addToHistory(useCanvasStore.getState().elements); // Add current state to history after update
-    }
-  }, [updateElement, addToHistory]);
-
   // Handle mouse down on an element (passed to CanvasElementComponent)
-  const handleElementMouseDown = useCallback((e: React.MouseEvent, elementId: string) => {
-    e.stopPropagation(); // Prevent canvas click from firing
+  const handleElementMouseDown = useCallback((pixiEvent: any, elementId: string) => {
+    pixiEvent.stopPropagation(); // Prevent canvas click from firing
     const { elements: currentElements, selectedElementIds: currentSelectedIds, activeTool: currentActiveTool } = useCanvasStore.getState();
     const element = currentElements[elementId];
 
@@ -314,14 +92,18 @@ const Canvas = () => {
 
     if (currentActiveTool === 'select') {
       const isSelected = currentSelectedIds.includes(elementId);
-      if (e.shiftKey) {
+      // Pixi events don't have shiftKey directly, check if it exists
+      const shiftPressed = pixiEvent.data?.originalEvent?.shiftKey || false;
+      
+      if (shiftPressed) {
         selectElement(elementId, !isSelected); // Toggle selection
       } else if (!isSelected) {
         selectElement(elementId, true); // Select only this element
       }
 
       // Prepare for dragging selected elements
-      const startDragCoords = getCanvasCoordinates(e.clientX, e.clientY);
+      // For Pixi events, use global coordinates directly
+      const startDragCoords = { x: pixiEvent.global.x, y: pixiEvent.global.y };
       initialElementPositions.current = {};
       const idsToDrag = useCanvasStore.getState().selectedElementIds; // Get current selection from store
       idsToDrag.forEach(id => {
@@ -337,7 +119,7 @@ const Canvas = () => {
       setDragState(true, startDragCoords, initialElementPositions.current);
     }
     // Potentially handle other tools if they interact with existing elements on mousedown
-  }, [selectElement, getCanvasCoordinates, setDragState, updateElement]);
+  }, [selectElement, setDragState, updateElement]);
 
   // Handle mouse down events on the main canvas workspace
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
@@ -352,12 +134,13 @@ const Canvas = () => {
     // If select tool and clicked on empty canvas, clear selection and text edit state
     if (currentStoreState.activeTool === 'select') {
       clearSelection();
-      if (currentStoreState.isEditingText) {
-        // Commit text if editing
-        if (textAreaRef.current && currentStoreState.isEditingText) {
-          updateElement(currentStoreState.isEditingText, { content: editingTextValue });
-          addToHistory(useCanvasStore.getState().elements);
-        }
+      if (currentStoreState.isEditingText) {      // Commit text if editing
+      if (textAreaRef.current && currentStoreState.isEditingText) {
+        // Get current text value from the textarea ref instead of state
+        const currentTextValue = textAreaRef.current.value;
+        updateElement(currentStoreState.isEditingText, { content: currentTextValue });
+        addToHistory(useCanvasStore.getState().elements);
+      }
         setIsEditingText(null);
         setTextFormattingState(false);
       }
@@ -394,11 +177,11 @@ const Canvas = () => {
       });
       setDragState(true, coords, null); // For drawing, dragStartPos is the drawing start
     }
-  }, [clearSelection, setIsEditingText, setTextFormattingState, getCanvasCoordinates, setIsDrawing, setPreviewState, setDragState, updateElement, editingTextValue, addToHistory]);
+  }, [clearSelection, setIsEditingText, setTextFormattingState, getCanvasCoordinates, setIsDrawing, setPreviewState, setDragState, updateElement, addToHistory]);
 
   // Global mouse move handler
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
-    const { isDragging: currentIsDragging, dragStartPos: currentDragStartPos, activeTool: currentActiveTool, zoom: currentZoom, pan: currentPan, elements: currentElements, selectedElementIds: currentSelectedIds, previewElement: currentPreviewElement, isDrawing: currentIsDrawing, dragStartElementPos: currentDragStartElementPos, isResizing: currentIsResizing, resizeStartPos: currentResizeStartPos, resizeStartSize: currentResizeStartSize, resizeHandle: currentResizeHandle } = useCanvasStore.getState();
+    const { isDragging: currentIsDragging, dragStartPos: currentDragStartPos, activeTool: currentActiveTool, zoom: currentZoom, pan: currentPan, elements: currentElements, selectedElementIds: currentSelectedIds, previewElement: currentPreviewElement, isDrawing: currentIsDrawing, dragStartElementPos: currentDragStartElementPos } = useCanvasStore.getState();
 
     if (!currentIsDragging) return;
 
@@ -426,9 +209,19 @@ const Canvas = () => {
         setPreviewState(true, { ...currentPreviewElement, x: newX, y: newY, width: newWidth, height: newHeight });
       }
     } else if (currentActiveTool === 'select' && currentDragStartElementPos && currentSelectedIds.length > 0) {
-      // Dragging elements
-      const dx = (currentMouseX - currentDragStartPos.x) / currentZoom;
-      const dy = (currentMouseY - currentDragStartPos.y) / currentZoom;
+      // Dragging elements - convert screen coordinates to canvas coordinates
+      // For Pixi events, dragStartPos is already in global screen coordinates
+      const canvasContainer = canvasContainerRef.current;
+      if (!canvasContainer) return;
+      
+      const rect = canvasContainer.getBoundingClientRect();
+      const currentCanvasX = (currentMouseX - rect.left - currentPan.x) / currentZoom;
+      const currentCanvasY = (currentMouseY - rect.top - currentPan.y) / currentZoom;
+      const startCanvasX = (currentDragStartPos.x - rect.left - currentPan.x) / currentZoom;
+      const startCanvasY = (currentDragStartPos.y - rect.top - currentPan.y) / currentZoom;
+      
+      const dx = currentCanvasX - startCanvasX;
+      const dy = currentCanvasY - startCanvasY;
 
       currentSelectedIds.forEach(id => {
         const originalPos = currentDragStartElementPos[id];
@@ -498,8 +291,8 @@ const Canvas = () => {
     const scaleFactor = 1.1;
     const newZoom = e.deltaY < 0 ? currentZoom * scaleFactor : currentZoom / scaleFactor;
     
-    if (pixiContainerRef.current) {
-      const rect = pixiContainerRef.current.getBoundingClientRect();
+    if (canvasContainerRef.current) {
+      const rect = canvasContainerRef.current.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
@@ -520,11 +313,21 @@ const Canvas = () => {
     }
   }, [handleWheel]);
 
-  // Handle element deletion (e.g., from a delete button on the element itself)
-  const handleDeleteElement = useCallback((elementId: string) => {
-    deleteElement(elementId);
-    addToHistory(useCanvasStore.getState().elements); // Add current state to history after delete
-  }, [deleteElement, addToHistory]);
+  // ResizeObserver to track canvas container size changes
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setCanvasSize({ width, height });
+      }
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Direct element creation function
   const createElementDirectly = useCallback((elementData: Partial<CanvasElement>) => {
@@ -564,11 +367,11 @@ const Canvas = () => {
       // If new text element, set editingTextValue from its content or default if empty
       setEditingTextValue(newElement.content || ''); 
     }
-  }, [generateId, addElement, addToHistory, setSelectedElementIds, setIsEditingText, setEditingTextValue]);
+  }, [generateId, addElement, addToHistory, setSelectedElementIds, setIsEditingText]);
 
   // Wrapper for delete button click (toolbar)
   const handleDeleteButtonClick = useCallback(() => {
-    const { selectedElementIds: currentSelectedIds, elements: currentElements } = useCanvasStore.getState();
+    const { selectedElementIds: currentSelectedIds } = useCanvasStore.getState();
     if (currentSelectedIds.length > 0) {
       currentSelectedIds.forEach(id => deleteElement(id));
       addToHistory(useCanvasStore.getState().elements); // Add final state to history
@@ -595,7 +398,8 @@ const Canvas = () => {
         e.preventDefault();
         if (currentEditingId) {
           // If editing text, commit changes before deselecting / clearing text edit state
-          updateElement(currentEditingId, { content: editingTextValue });
+          const currentTextValue = textAreaRef.current?.value || '';
+          updateElement(currentEditingId, { content: currentTextValue });
           addToHistory(useCanvasStore.getState().elements);
           setIsEditingText(null);
           setTextFormattingState(false);
@@ -604,7 +408,8 @@ const Canvas = () => {
       } else if (e.key === 'Enter' && !e.shiftKey) {
         if (currentEditingId) {
           e.preventDefault();
-          updateElement(currentEditingId, { content: editingTextValue });
+          const currentTextValue = textAreaRef.current?.value || '';
+          updateElement(currentEditingId, { content: currentTextValue });
           addToHistory(useCanvasStore.getState().elements);
           setIsEditingText(null);
           setTextFormattingState(false);
@@ -621,7 +426,7 @@ const Canvas = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [editingTextValue, handleDeleteButtonClick, clearSelection, setIsEditingText, setTextFormattingState, updateElement, addToHistory, textAreaRef]);
+  }, [handleDeleteButtonClick, clearSelection, setIsEditingText, setTextFormattingState, updateElement, addToHistory, textAreaRef]);
 
   return (
     <div className="canvas-container" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -683,55 +488,96 @@ const Canvas = () => {
         ref={canvasContainerRef}
         onMouseDown={handleCanvasMouseDown}
       >
-        {/* Pixi.js Stage will be mounted here via useEffect */}
+        {/* Pixi.js Stage for WebGL rendering */}
+        <Stage
+          width={canvasSize.width}
+          height={canvasSize.height}
+          options={{
+            backgroundColor: 0x1a1b1e,
+            antialias: true,
+            autoDensity: true,
+            resolution: window.devicePixelRatio || 1,
+          }}
+        >
+          <Container
+            x={pan.x}
+            y={pan.y}
+            scale={{ x: zoom, y: zoom }}
+          >
+            {/* Render all visible elements */}
+            {visibleElements.map(element => (
+              <CanvasElementRenderer
+                key={element.id}
+                element={element}
+                isSelected={selectedElementIds.includes(element.id)}
+                onMouseDown={handleElementMouseDown}
+              />
+            ))}
+            
+            {/* Preview element during drawing */}
+            {isDrawing && previewElement && (
+              <CanvasElementRenderer
+                key="preview"
+                element={previewElement}
+                isSelected={false}
+                onMouseDown={() => {}} // No interaction for preview
+              />
+            )}
+          </Container>
+        </Stage>
         
         {/* Grid overlay */}
         <CanvasGrid zoomLevel={zoom} panOffset={pan} />
         
-        {/* DOM-based elements overlay (temporary until individual elements are converted to Pixi.js) */}
-        <div className="canvas-elements" style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 10
-        }}>
-          {visibleElements.map((element) => (
-            <div
-              key={element.id}
-              style={{
-                pointerEvents: 'auto',
-                willChange: selectedElementIds.includes(element.id) ? 'transform' : 'auto' // GPU acceleration for selected elements
-              }}
-            >
-                <CanvasElementComponent
-                  element={element}
-                  isSelected={selectedElementIds.includes(element.id)}
-                  onMouseDown={handleElementMouseDown}
-                  onTextChange={handleTextChange}
-                  onTextFormatting={(elemId, rect) => {
-                    // This prop is likely for the component to signal it wants to show formatting options.
-                    // We use it to activate and position our global text formatting toolbar.
-                    const store = useCanvasStore.getState();
-                    if (store.isEditingText === elemId || selectedElementIds.includes(elemId)) {
-                      // Position relative to the element's rect in viewport coordinates
-                      // The rect provided by component would be ideal. If not, calculate based on element.
-                      const position = rect ? { left: rect.left, top: rect.top - 40 } : 
-                                       { left: element.x * zoom + pan.x, top: (element.y - 30) * zoom + pan.y }; // Fallback position
-                      setTextFormattingState(true, position);
-                    } else {
-                      setTextFormattingState(false);
-                    }
-                  }}
-                  onTextFormatPropertyChange={handleTextFormatPropertyChange}
-                  onDelete={handleDeleteElement}
-                  getTextStyles={getTextStyles}
-                />
-              </div>
-          ))}
-        </div>
+        {/* Text editing textarea - still DOM-based for text input */}
+        {isEditingText && (
+          <textarea
+            ref={textAreaRef}
+            value={editingTextValue}
+            onChange={(e) => setEditingTextValue(e.target.value)}
+            onBlur={() => {
+              if (isEditingText && textAreaRef.current) {
+                updateElement(isEditingText, { content: textAreaRef.current.value });
+                addToHistory(useCanvasStore.getState().elements);
+              }
+              setIsEditingText(null);
+              setTextFormattingState(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (isEditingText && textAreaRef.current) {
+                  updateElement(isEditingText, { content: textAreaRef.current.value });
+                  addToHistory(useCanvasStore.getState().elements);
+                }
+                setIsEditingText(null);
+                setTextFormattingState(false);
+              }
+            }}
+            style={{
+              position: 'absolute',
+              left: `${(elements[isEditingText]?.x || 0) * zoom + pan.x}px`,
+              top: `${(elements[isEditingText]?.y || 0) * zoom + pan.y}px`,
+              width: `${(elements[isEditingText]?.width || 200) * zoom}px`,
+              height: `${(elements[isEditingText]?.height || 100) * zoom}px`,
+              fontSize: `${getTextStyles(elements[isEditingText] || {} as CanvasElement).fontSize}`,
+              fontFamily: 'Arial, sans-serif',
+              fontWeight: elements[isEditingText]?.isBold ? 'bold' : 'normal',
+              fontStyle: elements[isEditingText]?.isItalic ? 'italic' : 'normal',
+              textAlign: elements[isEditingText]?.textAlignment || 'left',
+              color: elements[isEditingText]?.color || '#000000',
+              backgroundColor: elements[isEditingText]?.type === 'sticky-note' 
+                ? (elements[isEditingText]?.backgroundColor || '#FFFFE0')
+                : 'transparent',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              overflow: 'hidden',
+              zIndex: 1000,
+            }}
+            autoFocus
+          />
+        )}
       </div>
     </div>
   );
