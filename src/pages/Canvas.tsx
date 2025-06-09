@@ -80,25 +80,39 @@ const Canvas = () => {
   // Handle mouse down on an element (passed to CanvasElementComponent)
   const handleElementMouseDown = useCallback((pixiEvent: any, elementId: string) => {
     pixiEvent.stopPropagation(); // Prevent canvas click from firing
-    const { elements: currentElements, selectedElementIds: currentSelectedIds, activeTool: currentActiveTool } = useCanvasStore.getState();
+    const { elements: currentElements, activeTool: currentActiveTool, isEditingText: currentEditingText } = useCanvasStore.getState();
     const element = currentElements[elementId];
 
     if (!element) return;
 
     if (currentActiveTool === 'select') {
-      const isSelected = currentSelectedIds.includes(elementId);
       // Pixi events don't have shiftKey directly, check if it exists
       const shiftPressed = pixiEvent.data?.originalEvent?.shiftKey || false;
       
+      // Clear text editing when selecting elements (unless shift-clicking to add to selection)
+      if (!shiftPressed && currentEditingText) {
+        if (textAreaRef.current) {
+          const currentTextValue = textAreaRef.current.value;
+          updateElement(currentEditingText, { content: currentTextValue });
+          addToHistory(useCanvasStore.getState().elements);
+        }
+        setIsEditingText(null);
+        setTextFormattingState(false);
+      }
+      
       if (shiftPressed) {
-        selectElement(elementId, !isSelected); // Toggle selection
-      } else if (!isSelected) {
-        selectElement(elementId, true); // Select only this element
+        selectElement(elementId, true); // Add/toggle to selection with shift
+      } else {
+        selectElement(elementId, false); // Select only this element (clear others)
       }
 
       // Prepare for dragging selected elements
-      // For Pixi events, use global coordinates directly
-      const startDragCoords = { x: pixiEvent.global.x, y: pixiEvent.global.y };
+      // Use screen coordinates for consistent drag calculation
+      const startDragCoords = { 
+        x: pixiEvent.global.x,
+        y: pixiEvent.global.y
+      };
+      
       initialElementPositions.current = {};
       const idsToDrag = useCanvasStore.getState().selectedElementIds; // Get current selection from store
       idsToDrag.forEach(id => {

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { PanZoom, Size, ViewportBounds } from '@/types';
-import type { CanvasElement } from '@/components/canvas/CanvasElement'; 
+import type { CanvasElement } from '@/stores/canvasStore'; 
 
 export interface UseViewportCullingProps {
   elements: CanvasElement[];
