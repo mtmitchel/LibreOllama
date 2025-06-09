@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
-import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
+import { hexStringToNumber, getThemeColors } from '../../../lib/theme-utils';
 
 interface LineProps {
   element: CanvasElement;
@@ -9,17 +9,22 @@ interface LineProps {
   onMouseDown?: (e: any, elementId: string) => void;
 }
 
-const Line: React.FC<LineProps> = ({ element, isSelected, onMouseDown }) => {
-  // Draw the line
+const Line: React.FC<LineProps> = ({ element, isSelected, onMouseDown }) => {  // Draw the line
   const draw = useCallback((g: any) => {
     g.clear();
     
-    const themeColors = getThemeColors();
-    const defaultColors = getDefaultElementColors('line');
+    // Validate that we have proper coordinates
+    if (typeof element.x !== 'number' || typeof element.y !== 'number') {
+      console.warn('Line element has invalid coordinates:', element);
+      return;
+    }
     
-    const color = element.color
-      ? hexStringToNumber(element.color)
-      : defaultColors.stroke;
+    const themeColors = getThemeColors();
+    const color = element.strokeColor 
+      ? hexStringToNumber(element.strokeColor)
+      : element.color
+        ? hexStringToNumber(element.color)
+        : 0x000000; // Default to black
     const strokeWidth = element.strokeWidth || 2;
     
     g.lineStyle(strokeWidth, color);
@@ -31,8 +36,10 @@ const Line: React.FC<LineProps> = ({ element, isSelected, onMouseDown }) => {
     
     const x1 = 0; // Relative to element position
     const y1 = 0;
-    const x2 = (element.x2 || element.x) - element.x; // Make relative to element position
-    const y2 = (element.y2 || element.y) - element.y;
+    
+    // Use default end coordinates if not provided
+    const x2 = (element.x2 !== undefined ? element.x2 : element.x + 100) - element.x; // Make relative to element position
+    const y2 = (element.y2 !== undefined ? element.y2 : element.y) - element.y;
     
     g.moveTo(x1, y1);
     g.lineTo(x2, y2);

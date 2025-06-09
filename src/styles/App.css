@@ -40,3 +40,40 @@
   height: 100vh;    /* Replaced with equivalent of h-screen */
   overflow-y: auto; /* Replaced with equivalent of overflow-y-auto */
 }
+
+/* Canvas Text Editor Styles - Fix for text selection and visibility */
+.canvas-text-editor {
+  user-select: text !important; /* Allow text selection */
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  background-color: rgba(173, 216, 230, 0.2) !important; /* Light blue background to see the text area */
+  border: 1px dashed rgba(0, 0, 255, 0.5) !important; /* Dashed blue border for clarity */
+  box-sizing: border-box !important; /* Ensure padding/border are inside the width/height */
+  font-family: inherit !important;
+  color: #000000 !important; /* Force black text color */
+  pointer-events: auto !important; /* Ensure pointer events work */
+  cursor: text !important; /* Text cursor */
+}
+
+.canvas-text-editor:focus {
+  background-color: rgba(173, 216, 230, 0.3) !important;
+  border-color: rgba(0, 0, 255, 0.8) !important;
+  outline: none !important;
+  user-select: text !important; /* Maintain text selection on focus */
+  cursor: text !important; /* Text cursor when focused */
+}
+
+/* Prevent text selection interference from parent elements */
+.canvas-workspace {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Ensure text editors are always on top and selectable */
+.canvas-text-editor * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}

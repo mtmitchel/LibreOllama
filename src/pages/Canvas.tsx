@@ -1,66 +1,55 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Stage, Container } from '@pixi/react';
-import { useCanvasStore, CanvasElement, CanvasState } from '../stores/canvasStore';
+import { useCanvasStore, CanvasElement } from '../stores/canvasStore';
 import { useViewportCulling } from '../hooks/useViewportCulling';
 import CanvasElementRenderer from '../components/canvas/CanvasElementRenderer';
 import CanvasGrid from '../components/canvas/CanvasGrid';
 import { useCanvasEvents } from '../hooks/canvas/useCanvasEvents';
 import { TextFormattingToolbar } from '../components/canvas/TextFormattingToolbar';
-import { useTheme } from '../hooks/useTheme';
-import { getThemeColors } from '../lib/theme-utils';
-import { Trash2 } from 'lucide-react';
+import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
 
 const Canvas = () => {
-  // Use individual selectors to prevent object recreation and infinite loops
-  const elements = useCanvasStore((state: CanvasState) => state.elements);
-  const selectedElementIds = useCanvasStore((state: CanvasState) => state.selectedElementIds);
-  const activeTool = useCanvasStore((state: CanvasState) => state.activeTool);
-  const zoom = useCanvasStore((state: CanvasState) => state.zoom);
-  const pan = useCanvasStore((state: CanvasState) => state.pan);
-  const isEditingText = useCanvasStore((state: CanvasState) => state.isEditingText);
-  const isDrawing = useCanvasStore((state: CanvasState) => state.isDrawing);
-  const previewElement = useCanvasStore((state: CanvasState) => state.previewElement);
-  const showTextFormatting = useCanvasStore((state: CanvasState) => state.showTextFormatting);
-  const textFormattingPosition = useCanvasStore((state: CanvasState) => state.textFormattingPosition);
-  const selectedTextElement = useCanvasStore((state: CanvasState) => state.selectedTextElement);
-  
-  // Create stable elements array using useMemo with proper dependencies
+  // Use selectors for state values that trigger re-renders
+  const elements = useCanvasStore((state) => state.elements);
+  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
+  const activeTool = useCanvasStore((state) => state.activeTool);
+  const zoom = useCanvasStore((state) => state.zoom);
+  const pan = useCanvasStore((state) => state.pan);
+  const isEditingText = useCanvasStore((state) => state.isEditingText);
+  const isDrawing = useCanvasStore((state) => state.isDrawing);
+  const previewElement = useCanvasStore((state) => state.previewElement);
+  const showTextFormatting = useCanvasStore((state) => state.showTextFormatting);
+  const textFormattingPosition = useCanvasStore((state) => state.textFormattingPosition);
+  const selectedTextElement = useCanvasStore((state) => state.selectedTextElement);
+  const history = useCanvasStore((state) => state.history);
+  const historyIndex = useCanvasStore((state) => state.historyIndex);
+
+  // Memoize the elements array for stability
   const elementsArray = useMemo(() => Object.values(elements), [elements]);
 
-  // Get store actions directly (these are stable function references)
-  const addElement = useCanvasStore((state: CanvasState) => state.addElement);
-  const updateElement = useCanvasStore((state: CanvasState) => state.updateElement);
-  const updateElementContent = useCanvasStore((state: CanvasState) => state.updateElementContent);
-  const setSelectedElementIds = useCanvasStore((state: CanvasState) => state.setSelectedElementIds);
-  const setActiveTool = useCanvasStore((state: CanvasState) => state.setActiveTool);
-  const setIsEditingText = useCanvasStore((state: CanvasState) => state.setIsEditingText);
-  const setTextFormattingState = useCanvasStore((state: CanvasState) => state.setTextFormattingState);
-  const addToHistory = useCanvasStore((state: CanvasState) => state.addToHistory);
-
-  const canvasContainerRef = useRef<HTMLDivElement>(null); // For overall workspace dimensions and DOM events
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const isElementClicked = useRef(false);
+  
+  // CanvasToolbar state
+  const [selectedShape, setSelectedShape] = useState('');
+  const [showShapeDropdown, setShowShapeDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ left: number; top: number } | null>(null);
+  
+  // Compute undo/redo availability
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
 
-  // Debug: Log state changes for debugging
-  console.log('Canvas render - Current state:', {
-    elementCount: Object.keys(elements).length,
-    selectedElementIds,
-    activeTool,
-    zoom,
-    pan,
-    isEditingText,
-    canvasSize
-  });
-
-  // Use viewport culling with container measurements
+  // Setup viewport culling
   const { visibleElements } = useViewportCulling({
-    elements: elementsArray, // Use the memoized array
-    canvasSize: canvasSize, // Use the state variable
-    zoomLevel: zoom, 
-    panOffset: pan, 
+    elements: elementsArray,
+    canvasSize: canvasSize,
+    zoomLevel: zoom,
+    panOffset: pan,
   });
 
-  // Utility function to convert screen coordinates to canvas coordinates
   const getCanvasCoordinates = useCallback((clientX: number, clientY: number): { x: number; y: number } => {
     if (!canvasContainerRef.current) return { x: 0, y: 0 };
     const rect = canvasContainerRef.current.getBoundingClientRect();
@@ -69,169 +58,240 @@ const Canvas = () => {
     return { x, y };
   }, [pan, zoom]);
 
-  // Utility to generate unique IDs - more robust than Date.now() alone
-  const generateId = useCallback(() => {
-    // Use crypto.randomUUID if available, otherwise fallback to high-precision timestamp + random
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    // Fallback: high-precision timestamp + random + counter for uniqueness
-    const timestamp = performance.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 15);
-    return `${timestamp}-${random}`;
-  }, []);
+  const generateId = useCallback(() => crypto.randomUUID(), []);
 
   // Initialize canvas events hook
-  const { handleElementMouseDown, handleCanvasMouseDown, handleDeleteButtonClick } = useCanvasEvents({
+  const { handleCanvasMouseDown, handleDeleteButtonClick } = useCanvasEvents({
     canvasContainerRef,
     textAreaRef,
     getCanvasCoordinates,
-    generateId
+    generateId,
   });
+    // Element-specific mouse down handler
+  const handleElementMouseDown = useCallback((e: any, elementId: string) => {
+    isElementClicked.current = true; // Flag that an element was clicked
+    e.stopPropagation();
 
-  // Get text styles for elements
-  const getTextStyles = useCallback((element: CanvasElement) => {
-    return {
-      fontSize: element.fontSize === 'small' ? '12px' :
-                element.fontSize === 'large' ? '24px' : '16px',
-      fontWeight: element.isBold ? 'bold' : 'normal',
-      fontStyle: element.isItalic ? 'italic' : 'normal',
-      textAlign: element.textAlignment || 'left',
-      color: element.color || '#000000',
-    };
-  }, []);
+    const { activeTool: currentActiveTool, isEditingText: currentEditingText, selectElement, setIsEditingText, addToHistory, setSelectedElementIds, setDragState } = useCanvasStore.getState();
 
-
-  // Component mounting debug and ResizeObserver setup
-  useEffect(() => {
-    console.log('Canvas component mounted - Stage should only mount once');
+    if (currentActiveTool !== 'select') return;
     
+    // Handle text editing exit
+    if (currentEditingText && currentEditingText !== elementId) {
+      addToHistory(useCanvasStore.getState().elements);
+      setIsEditingText(null);
+    }
+    
+    // Handle selection
+    const shiftPressed = e.data?.originalEvent?.shiftKey || false;
+    if (shiftPressed) {
+      selectElement(elementId, true);
+    } else if (!selectedElementIds.includes(elementId)) {
+      setSelectedElementIds([elementId]);
+    }
+    
+    // Prepare for dragging
+    const { elements: currentElements, selectedElementIds: currentSelectedIds } = useCanvasStore.getState();
+    const startDragCoords = { x: e.global.x, y: e.global.y };
+    const initialPositions: Record<string, { x: number; y: number }> = {};
+    currentSelectedIds.forEach(id => {
+        if (currentElements[id]) {
+            initialPositions[id] = { x: currentElements[id].x, y: currentElements[id].y };
+        }
+    });
+
+    setDragState(true, startDragCoords, initialPositions);
+  }, [selectedElementIds]);
+  
+    // This is the main canvas mousedown, we check our flag here.
+  const onCanvasMouseDown = (e: React.MouseEvent) => {
+    // If an element was just clicked, do nothing on the canvas. Reset the flag.
+    if (isElementClicked.current) {
+        isElementClicked.current = false;
+        return;
+    }
+    // Otherwise, handle canvas click as normal (deselecting, panning, etc.)
+    handleCanvasMouseDown(e);
+  };
+  
+  // Handle double-click to start text editing
+  const handleElementDoubleClick = useCallback((elementId: string) => {
+    const element = elements[elementId];
+    if (element && (element.type === 'text' || element.type === 'sticky-note')) {
+      useCanvasStore.getState().setIsEditingText(elementId);
+    }
+  }, [elements]);
+
+  useEffect(() => {
     const container = canvasContainerRef.current;
     if (!container) return;
 
     const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        console.log('Canvas size changed:', { width, height });
-        setCanvasSize({ width, height });
-      }
+      const { width, height } = entries[0].contentRect;
+      setCanvasSize({ width, height });
     });
 
     resizeObserver.observe(container);
-    return () => {
-      console.log('Canvas component unmounting');
-      resizeObserver.disconnect();
-    };
-  }, []); // Empty deps ensures this only runs once
-
-  // Direct element creation function
+    return () => resizeObserver.disconnect();
+  }, []);
   const createElementDirectly = useCallback((elementData: Partial<CanvasElement>) => {
-    console.log('Creating element directly:', elementData);
+    if (!canvasContainerRef.current) return;
     
-    if (!canvasContainerRef.current) {
-      console.warn('Canvas container ref not available');
-      return;
-    }
+    const { pan: currentPan, zoom: currentZoom, elements: currentElements, addElement, addToHistory, setSelectedElementIds, setIsEditingText } = useCanvasStore.getState();
     
-    const { pan: currentPan, zoom: currentZoom, elements: currentElements } = useCanvasStore.getState();
-    console.log('Current store state before creation:', {
-      elementCount: Object.keys(currentElements).length,
-      pan: currentPan,
-      zoom: currentZoom
-    });
-    
-    const defaultWidth = elementData.type === 'text' || elementData.type === 'sticky-note' ? 150 : 100;
-    const defaultHeight = elementData.type === 'text' || elementData.type === 'sticky-note' ? 50 : 100;
-
-    // Calculate center of viewport for new elements
     const rect = canvasContainerRef.current.getBoundingClientRect();
     const centerX = (rect.width / 2 - currentPan.x) / currentZoom;
     const centerY = (rect.height / 2 - currentPan.y) / currentZoom;
-
-    // Special handling for line elements
-    const isLineElement = elementData.type === 'line';
-    const lineStartX = isLineElement ? centerX - 50 : centerX - defaultWidth / 2;
-    const lineStartY = isLineElement ? centerY : centerY - defaultHeight / 2;
-    const lineEndX = isLineElement ? centerX + 50 : undefined;
-    const lineEndY = isLineElement ? centerY : undefined;
-
-    const newElement: CanvasElement = {
+    
+    // Set element-specific dimensions and properties
+    let defaultWidth = 150;
+    let defaultHeight = 100;
+    let additionalProps: Partial<CanvasElement> = {};
+    
+    switch (elementData.type) {
+      case 'text':
+        defaultWidth = 200;
+        defaultHeight = 50;
+        additionalProps = {
+          content: 'Click to edit text',
+          color: '#000000',
+          fontSize: 'medium',
+          textAlignment: 'left'
+        };
+        break;
+      case 'sticky-note':
+        defaultWidth = 200;
+        defaultHeight = 150;
+        additionalProps = {
+          content: 'New sticky note',
+          backgroundColor: '#FFFFE0',
+          color: '#000000',
+          fontSize: 'medium'
+        };
+        break;
+      case 'rectangle':
+      case 'square':
+        defaultWidth = elementData.type === 'square' ? 100 : 150;
+        defaultHeight = elementData.type === 'square' ? 100 : 100;
+        additionalProps = {
+          backgroundColor: 'transparent',
+          strokeColor: '#000000',
+          strokeWidth: 2
+        };
+        break;
+      case 'circle':
+        defaultWidth = 100;
+        defaultHeight = 100;
+        additionalProps = {
+          backgroundColor: 'transparent',
+          strokeColor: '#000000',
+          strokeWidth: 2
+        };
+        break;
+      case 'triangle':
+      case 'hexagon':
+      case 'star':
+        defaultWidth = 100;
+        defaultHeight = 100;
+        additionalProps = {
+          backgroundColor: 'transparent',
+          strokeColor: '#000000',
+          strokeWidth: 2
+        };
+        break;
+      case 'line':
+        defaultWidth = 100;
+        defaultHeight = 0;
+        additionalProps = {
+          x2: centerX + 100,
+          y2: centerY,
+          strokeColor: '#000000',
+          strokeWidth: 2
+        };
+        break;
+      case 'arrow':
+        defaultWidth = 100;
+        defaultHeight = 0;
+        additionalProps = {
+          x2: centerX + 100,
+          y2: centerY,
+          strokeColor: '#000000',
+          strokeWidth: 2
+        };
+        break;
+      case 'drawing':
+        defaultWidth = 100;
+        defaultHeight = 100;
+        additionalProps = {
+          points: [],
+          strokeColor: '#000000',
+          strokeWidth: 2
+        };
+        break;
+      case 'image':
+        defaultWidth = 200;
+        defaultHeight = 150;
+        additionalProps = {
+          imageUrl: '',
+          imageName: 'Click to upload image'
+        };
+        break;
+    }    const newElement: CanvasElement = {
       id: generateId(),
-      x: elementData.x ?? lineStartX,
-      y: elementData.y ?? lineStartY,
-      x2: isLineElement ? (elementData.x2 ?? lineEndX) : undefined,
-      y2: isLineElement ? (elementData.y2 ?? lineEndY) : undefined,
-      width: elementData.width ?? (isLineElement ? undefined : defaultWidth),
-      height: elementData.height ?? (isLineElement ? undefined : defaultHeight),
-      color: elementData.color ?? '#000000',
-      backgroundColor: elementData.backgroundColor ?? (elementData.type === 'sticky-note' ? '#FFFFE0' : 'transparent'),
-      fontSize: elementData.fontSize ?? 'medium',
-      isBold: elementData.isBold ?? false,
-      isItalic: elementData.isItalic ?? false,
-      textAlignment: elementData.textAlignment ?? 'left',
-      strokeColor: elementData.strokeColor ?? (['rectangle', 'line', 'drawing'].includes(elementData.type || '') ? '#000000' : undefined),
-      strokeWidth: elementData.strokeWidth ?? (['rectangle', 'line', 'drawing'].includes(elementData.type || '') ? 2 : undefined),
-      points: elementData.points ?? (elementData.type === 'line' || elementData.type === 'drawing' ? [] : undefined),
-      isLocked: elementData.isLocked ?? false,
-      type: elementData.type || 'rectangle', // Ensure type is always set
-      content: elementData.content || (elementData.type === 'text' ? 'Text' : ''),
-      ...elementData, // Spread last to allow overrides, but ensure core properties above have defaults
+      type: elementData.type!,
+      x: centerX - defaultWidth / 2,
+      y: centerY - defaultHeight / 2,
+      width: defaultWidth,
+      height: defaultHeight,
+      isLocked: false,
+      ...additionalProps,
+      ...elementData, // Override with any specific properties passed in
     };
 
-    console.log('Created new element:', newElement);
-    
+    // Validate the new element before adding
+    if (!newElement.id || !newElement.type || typeof newElement.x !== 'number' || typeof newElement.y !== 'number') {
+      console.error('Canvas: Failed to create valid element:', newElement);
+      return;
+    }
+
+    if (import.meta.env.DEV) {
+      console.log(`Canvas: Creating new ${newElement.type} element:`, newElement);
+    }
+
     addElement(newElement);
     addToHistory({ ...currentElements, [newElement.id]: newElement });
     setSelectedElementIds([newElement.id]);
     
-    // Verify element was added to store
-    setTimeout(() => {
-      const updatedState = useCanvasStore.getState();
-      console.log('Store state after element creation:', {
-        elementCount: Object.keys(updatedState.elements).length,
-        newElementExists: !!updatedState.elements[newElement.id],
-        selectedIds: updatedState.selectedElementIds
-      });
-    }, 0);
-    
-    if (newElement.type === 'text') {
+    // Auto-start text editing for text elements
+    if (newElement.type === 'text' || newElement.type === 'sticky-note') {
       setIsEditingText(newElement.id);
-      // For new text elements, start with empty content so user can type immediately
-      updateElementContent(newElement.id, '');
     }
-  }, [generateId, addElement, addToHistory, setSelectedElementIds, setIsEditingText]);
+  }, [generateId]);
 
-  // Text formatting toolbar is now handled by text selection in individual components
-
-  // Handle double-click to enter text editing mode
-  const handleElementDoubleClick = useCallback((elementId: string) => {
-    const element = elements[elementId];
-    if (element && (element.type === 'text' || element.type === 'sticky-note')) {
-      setIsEditingText(elementId);
-      setTextFormattingState(false); // Hide toolbar when editing
-    }
-  }, [elements, setIsEditingText, setTextFormattingState]);
-
-  // Text formatting handlers
+  // Text formatting handlers (simplified versions for the refactored approach)
   const handleToggleFormat = useCallback((elementId: string, formatType: 'isBold' | 'isItalic' | 'isBulletList') => {
+    const { elements, updateElement, addToHistory } = useCanvasStore.getState();
     const element = elements[elementId];
     if (element) {
       updateElement(elementId, { [formatType]: !element[formatType] });
       addToHistory(useCanvasStore.getState().elements);
     }
-  }, [elements, updateElement, addToHistory]);
+  }, []);
 
   const handleSetFontSize = useCallback((elementId: string, fontSize: 'small' | 'medium' | 'large') => {
+    const { updateElement, addToHistory } = useCanvasStore.getState();
     updateElement(elementId, { fontSize });
     addToHistory(useCanvasStore.getState().elements);
-  }, [updateElement, addToHistory]);
+  }, []);
 
   const handleSetAlignment = useCallback((elementId: string, alignment: 'left' | 'center' | 'right') => {
+    const { updateElement, addToHistory } = useCanvasStore.getState();
     updateElement(elementId, { textAlignment: alignment });
     addToHistory(useCanvasStore.getState().elements);
-  }, [updateElement, addToHistory]);
+  }, []);
 
   const handleSetUrl = useCallback((elementId: string) => {
+    const { elements, updateElement, addToHistory } = useCanvasStore.getState();
     const element = elements[elementId];
     if (element) {
       const currentUrl = element.url || '';
@@ -241,110 +301,167 @@ const Canvas = () => {
         addToHistory(useCanvasStore.getState().elements);
       }
     }
-  }, [elements, updateElement, addToHistory]);
+  }, []);
 
   const handleUpdateContent = useCallback((elementId: string, content: string) => {
-    updateElementContent(elementId, content);
+    const { updateElement, addToHistory } = useCanvasStore.getState();
+    updateElement(elementId, { content });
     addToHistory(useCanvasStore.getState().elements);
-  }, [updateElementContent, addToHistory]);
+  }, []);
+  // Handlers for CanvasToolbar
+  const handleToolSelect = useCallback((toolId: string, event?: React.MouseEvent) => {
+    if (toolId === 'shapes' && event) {
+      // Handle shapes dropdown
+      const rect = (event.target as HTMLElement).getBoundingClientRect();
+      setDropdownPosition({
+        left: rect.left,
+        top: rect.top - 10
+      });
+      setShowShapeDropdown(!showShapeDropdown);
+      return;
+    }
+    
+    // Close dropdown when selecting other tools
+    setShowShapeDropdown(false);
+      // Handle other tools
+    if (toolId === 'select') {
+      useCanvasStore.getState().setActiveTool('select');
+    } else if (toolId === 'delete') {
+      handleDeleteButtonClick();
+    } else if (toolId === 'pen') {
+      // For pen tool, switch to drawing mode
+      useCanvasStore.getState().setActiveTool('pen');
+    } else {
+      // For shape tools, create the element directly
+      switch (toolId) {
+        case 'text':
+          createElementDirectly({ type: 'text' });
+          break;
+        case 'sticky-note':
+          createElementDirectly({ type: 'sticky-note' });
+          break;
+        case 'rectangle':
+          createElementDirectly({ type: 'rectangle' });
+          break;
+        case 'line':
+          createElementDirectly({ type: 'line' });
+          break;
+        case 'circle':
+          createElementDirectly({ type: 'circle' });
+          break;
+        case 'triangle':
+          createElementDirectly({ type: 'triangle' });
+          break;
+        case 'star':
+          createElementDirectly({ type: 'star' });
+          break;
+        case 'hexagon':
+          createElementDirectly({ type: 'hexagon' });
+          break;
+        case 'arrow':
+          createElementDirectly({ type: 'arrow' });
+          break;
+        case 'square':
+          createElementDirectly({ type: 'square' });
+          break;
+        case 'image':
+          createElementDirectly({ type: 'image' });
+          break;
+      }
+    }
+  }, [createElementDirectly, handleDeleteButtonClick, showShapeDropdown]);
+  const handleShapeSelect = useCallback((shapeId: string) => {
+    createElementDirectly({ type: shapeId as CanvasElement['type'] });
+    setSelectedShape(shapeId);
+    setShowShapeDropdown(false);
+  }, [createElementDirectly]);
 
-  const { effectiveTheme } = useTheme();
-  
-  // Get theme-aware colors, recompute when theme changes
-  const themeColors = useMemo(() => getThemeColors(), [effectiveTheme]);
+  // Additional handlers for CanvasToolbar
+  const handleUndo = useCallback(() => {
+    useCanvasStore.getState().undo();
+  }, []);
 
+  const handleRedo = useCallback(() => {
+    useCanvasStore.getState().redo();
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    const { zoom: currentZoom, setZoom } = useCanvasStore.getState();
+    setZoom(currentZoom * 1.1);
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    const { zoom: currentZoom, setZoom } = useCanvasStore.getState();
+    setZoom(currentZoom / 1.1);
+  }, []);
+  // When editing text, focus the textarea
+  useEffect(() => {
+    if (isEditingText && textAreaRef.current) {
+        textAreaRef.current.focus();
+        // Select all text when starting to edit for easy replacement
+        textAreaRef.current.select();
+    }
+  }, [isEditingText]);
+
+  // Handle clicking outside dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowShapeDropdown(false);
+      }
+    };
+
+    if (showShapeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showShapeDropdown]);
   return (
-    <div className="canvas-container" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Direct creation toolbar - single click creates elements */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2 bg-bg-surface border border-border-default p-3 rounded-lg shadow-xl">
-        <button
-          onClick={() => setActiveTool('select')}
-          className={`px-3 py-2 rounded-md transition-colors text-sm font-medium ${
-            activeTool === 'select'
-              ? 'bg-accent-primary text-white'
-              : 'bg-bg-tertiary text-text-primary hover:bg-bg-elevated'
-          }`}
-        >
-          Select
-        </button>
-        <button
-          onClick={() => createElementDirectly({ type: 'text' } as Partial<CanvasElement>)}
-          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
-        >
-          Add Text
-        </button>
-        <button
-          onClick={() => createElementDirectly({ type: 'sticky-note' } as Partial<CanvasElement>)}
-          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
-        >
-          Add Note
-        </button>
-        <button
-          onClick={() => createElementDirectly({ type: 'rectangle' } as Partial<CanvasElement>)}
-          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
-        >
-          Add Rectangle
-        </button>
-        <button
-          onClick={() => createElementDirectly({ type: 'line' } as Partial<CanvasElement>)}
-          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
-        >
-          Add Line
-        </button>
-        <button
-          onClick={() => setActiveTool('pen')}
-          className={`px-3 py-2 rounded-md transition-colors text-sm font-medium ${
-            activeTool === 'pen'
-              ? 'bg-accent-primary text-white'
-              : 'bg-bg-tertiary text-text-primary hover:bg-bg-elevated'
-          }`}
-        >
-          Pen
-        </button>
-        <button
-          onClick={() => {
-            console.log('Delete button clicked, selected elements:', selectedElementIds);
-            handleDeleteButtonClick();
-          }}
-          disabled={selectedElementIds.length === 0}
-          className={`px-3 py-2 rounded-md flex items-center gap-2 transition-colors text-sm font-medium ${
-            selectedElementIds.length > 0
-              ? 'bg-error text-white hover:opacity-90'
-              : 'bg-bg-tertiary text-text-muted cursor-not-allowed'
-          }`}
-          title="Delete selected element (Delete key)"
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
+    <div className="canvas-container" style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Replace simple toolbar with comprehensive CanvasToolbar */}      <CanvasToolbar
+        activeTool={activeTool}
+        selectedShape={selectedShape}
+        showShapeDropdown={showShapeDropdown}
+        dropdownPosition={dropdownPosition}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        dropdownRef={dropdownRef}
+        onToolSelect={handleToolSelect}
+        onShapeSelect={handleShapeSelect}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onDelete={handleDeleteButtonClick}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+      />
       
-      <div 
+      <div
         className="canvas-workspace" 
         style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
         ref={canvasContainerRef}
-        onMouseDown={handleCanvasMouseDown}
+        onMouseDown={onCanvasMouseDown} // Use our new handler
       >
-        {/* Pixi.js Stage for WebGL rendering */}
         <Stage
           width={canvasSize.width}
           height={canvasSize.height}
           options={{
-            backgroundColor: themeColors.canvasBackground,
+            backgroundColor: 0xffffff, // FIX: Hardcode to white for now
             backgroundAlpha: 1,
             antialias: true,
             autoDensity: true,
             resolution: window.devicePixelRatio || 1,
-          }}
-        >
-          <Container
-            x={pan.x}
-            y={pan.y}
-            scale={{ x: zoom, y: zoom }}
-          >
-            {/* Render all visible elements */}
-            {visibleElements.map(element => {
-              console.log('Rendering element:', element.id, element.type, { x: element.x, y: element.y });
-              return (
+          }}        >          <Container x={pan.x} y={pan.y} scale={{ x: zoom, y: zoom }}>            <CanvasGrid zoomLevel={zoom} panOffset={pan} canvasSize={canvasSize} />
+            {(() => {
+              const filteredElements = visibleElements.filter(element => element && element.id && element.type);
+              
+              if (import.meta.env.DEV) {
+                console.log(`Canvas: Rendering ${filteredElements.length} elements out of ${Object.keys(elements).length} total`);
+                if (filteredElements.length !== Object.keys(elements).length) {
+                  console.log('Canvas: Some elements filtered out by viewport culling or validation');
+                }
+              }
+              
+              return filteredElements.map(element => (
                 <CanvasElementRenderer
                   key={element.id}
                   element={element}
@@ -352,66 +469,63 @@ const Canvas = () => {
                   onMouseDown={handleElementMouseDown}
                   onDoubleClick={() => handleElementDoubleClick(element.id)}
                 />
-              );
-            })}
-            
-            {/* Preview element during drawing */}
-            {isDrawing && previewElement && (
-              <CanvasElementRenderer
-                key="preview"
-                element={previewElement}
-                isSelected={false}
-                onMouseDown={() => {}} // No interaction for preview
+              ));
+            })()}
+            {isDrawing && previewElement && previewElement.type && (
+              <CanvasElementRenderer 
+                key="preview" 
+                element={previewElement} 
+                isSelected={false} 
+                onMouseDown={() => {}} 
               />
             )}
           </Container>
         </Stage>
-        
-        {/* Grid overlay */}
-        <CanvasGrid zoomLevel={zoom} panOffset={pan} />
-        
-        {/* Text editing textarea - still DOM-based for text input */}
-        {isEditingText && (() => {
+          {isEditingText && (() => {
           const editingElement = elements[isEditingText];
           if (!editingElement) {
-            console.warn('Editing element not found:', isEditingText);
+            console.warn(`Canvas: Editing element "${isEditingText}" not found in elements`);
             return null;
           }
           
+          // Calculate textarea position and size
           const textareaX = (editingElement.x || 0) * zoom + pan.x;
           const textareaY = (editingElement.y || 0) * zoom + pan.y;
-          const textareaWidth = (editingElement.width || 200) * zoom;
-          const textareaHeight = (editingElement.height || 100) * zoom;
-          
-          console.log('Text editing positioning:', {
-            elementId: isEditingText,
-            element: { x: editingElement.x, y: editingElement.y, width: editingElement.width, height: editingElement.height },
-            zoom, pan,
-            textareaPosition: { x: textareaX, y: textareaY, width: textareaWidth, height: textareaHeight }
-          });
-          
-          return (
-            <textarea
+          const textareaWidth = Math.max((editingElement.width || 200) * zoom, 100);
+          const textareaHeight = Math.max((editingElement.height || 50) * zoom, 30);
+
+          // Debug log for textarea positioning
+          if (import.meta.env.DEV) {
+            console.log(`Canvas: Textarea positioned at (${textareaX}, ${textareaY}) with size ${textareaWidth}x${textareaHeight}`);
+          }
+
+          return (            <textarea
               ref={textAreaRef}
+              className="canvas-text-editor" // Added a class for styling
               value={editingElement.content || ''}
               onChange={(e) => {
-                // Update element content immediately for live updates - Single Source of Truth
-                updateElementContent(isEditingText, e.target.value);
+                const newContent = e.target.value;
+                useCanvasStore.getState().updateElement(isEditingText, { content: newContent });
+                if (import.meta.env.DEV) {
+                  console.log(`Canvas: Updated element "${isEditingText}" content to:`, newContent);
+                }
+              }}
+              onMouseDown={(e) => {
+                // Prevent canvas events from interfering with text selection
+                e.stopPropagation();
               }}
               onBlur={() => {
-                // Simple blur handler - just exit editing mode
-                console.log('Text editing blur - exiting edit mode');
-                addToHistory(useCanvasStore.getState().elements);
-                setIsEditingText(null);
-                setTextFormattingState(false);
+                const { elements: currentElements } = useCanvasStore.getState();
+                if (import.meta.env.DEV) {
+                  console.log(`Canvas: Finishing text edit for element "${isEditingText}"`);
+                }
+                useCanvasStore.getState().addToHistory(currentElements);
+                useCanvasStore.getState().setIsEditingText(null);
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
                   e.preventDefault();
-                  console.log('Text editing enter - exiting edit mode');
-                  addToHistory(useCanvasStore.getState().elements);
-                  setIsEditingText(null);
-                  setTextFormattingState(false);
+                  textAreaRef.current?.blur(); // Trigger the onBlur handler to save and exit
                 }
               }}
               style={{
@@ -420,23 +534,19 @@ const Canvas = () => {
                 top: `${textareaY}px`,
                 width: `${textareaWidth}px`,
                 height: `${textareaHeight}px`,
-                fontSize: `${getTextStyles(editingElement).fontSize}`,
+                fontSize: `${(editingElement.fontSize === 'small' ? 12 : editingElement.fontSize === 'large' ? 24 : 16) * zoom}px`,
+                lineHeight: 1.2,
                 fontFamily: 'var(--font-sans)',
-                fontWeight: editingElement.isBold ? 'bold' : 'normal',
-                fontStyle: editingElement.isItalic ? 'italic' : 'normal',
-                textAlign: editingElement.textAlignment || 'left',
-                color: editingElement.color || 'var(--text-primary)',
-                backgroundColor: editingElement.type === 'sticky-note'
-                  ? (editingElement.backgroundColor || '#FFFFF0')
-                  : 'transparent',
-                border: `1px solid var(--border-subtle)`,
-                borderRadius: 'var(--radius-sm)',
+                color: 'black',
+                backgroundColor: editingElement.type === 'sticky-note' ? 'rgba(255, 255, 224, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                border: '1px solid #ccc',
                 outline: 'none',
                 resize: 'none',
-                overflow: 'hidden',
+                overflowWrap: 'break-word',
+                whiteSpace: 'pre-wrap',
                 zIndex: 1000,
+                padding: '5px',
               }}
-              autoFocus
             />
           );
         })()}

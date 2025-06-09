@@ -1,7 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import { Text, Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
-import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
+import { hexStringToNumber, getThemeColors } from '../../../lib/theme-utils';
 
 interface TextElementProps {
   element: CanvasElement;
@@ -12,19 +12,17 @@ interface TextElementProps {
 
 const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseDown, onDoubleClick }) => {
   const lastClickTime = useRef<number>(0);
-  const clickTimeout = useRef<NodeJS.Timeout | null>(null);
   
   // Get theme colors
   const themeColors = getThemeColors();
-  const defaultColors = getDefaultElementColors('text');
 
   // Text style configuration with theme-aware colors
   const textStyle = {
     fontFamily: 'Inter, Arial, sans-serif',
     fontSize: element.fontSize === 'small' ? 12 : element.fontSize === 'large' ? 24 : 16,
-    fill: element.color ? hexStringToNumber(element.color) : defaultColors.fill,
+    fill: element.color ? hexStringToNumber(element.color) : 0x000000, // Default to black if no color
     wordWrap: true,
-    wordWrapWidth: element.width || 200,
+    wordWrapWidth: Math.max(element.width || 200, 50), // Minimum word wrap width
     align: element.textAlignment || 'left',
     fontWeight: element.isBold ? 'bold' : 'normal',
     fontStyle: element.isItalic ? 'italic' : 'normal',
@@ -38,9 +36,9 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
     g.beginFill(themeColors.selectionBlue, 0.1); // Semi-transparent theme color
     g.lineStyle(1, themeColors.selectionBlue, 1);
     
-    // Estimate text bounds for selection rectangle
-    const textWidth = element.width || 200;
-    const textHeight = element.height || 30;
+    // Estimate text bounds for selection rectangle with safety checks
+    const textWidth = Math.max(element.width || 200, 50);
+    const textHeight = Math.max(element.height || 30, 20);
     
     g.drawRect(-2, -2, textWidth + 4, textHeight + 4);
     g.endFill();
@@ -66,7 +64,6 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
     lastClickTime.current = now;
   }, [onDoubleClick]);
 
-
   return (
     <>
       {/* Selection background */}
@@ -78,15 +75,15 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
         />
       )}
       
-      {/* Text content */}
+      {/* Text content - always render with fallback */}
       <Text
         x={element.x}
         y={element.y}
-        text={element.content || 'Click to edit'}
+        text={element.content || 'Double-click to edit'}
         style={textStyle}
         interactive={true}
-        pointerdown={handlePointerDown}  // Immediate selection
-        pointertap={handlePointerTap}     // Double-click detection
+        pointerdown={handlePointerDown}
+        pointertap={handlePointerTap}
         cursor="text"
       />
     </>

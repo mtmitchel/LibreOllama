@@ -152,3 +152,42 @@ export function hexStringToNumber(hex: string | undefined): number {
   const cleaned = hex.replace('#', '');
   return parseInt(cleaned, 16);
 }
+
+/**
+ * Validates that a canvas element has all required properties for rendering
+ */
+export const validateCanvasElement = (element: any): boolean => {
+  if (!element) {
+    console.warn('validateCanvasElement: Element is null or undefined');
+    return false;
+  }
+
+  const required = ['id', 'type', 'x', 'y'];
+  const missing = required.filter(prop => element[prop] === undefined || element[prop] === null);
+  
+  if (missing.length > 0) {
+    console.warn(`validateCanvasElement: Missing required properties for element "${element.id}":`, missing);
+    return false;
+  }
+
+  if (typeof element.x !== 'number' || typeof element.y !== 'number') {
+    console.warn(`validateCanvasElement: Invalid coordinates for element "${element.id}":`, { x: element.x, y: element.y });
+    return false;
+  }
+
+  if (isNaN(element.x) || isNaN(element.y)) {
+    console.warn(`validateCanvasElement: NaN coordinates for element "${element.id}":`, { x: element.x, y: element.y });
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Safely gets element dimensions with fallbacks
+ */
+export const getSafeElementDimensions = (element: any): { width: number; height: number } => {
+  const width = Math.max(element.width || 100, 1);
+  const height = Math.max(element.height || 100, 1);
+  return { width, height };
+};

@@ -12,7 +12,6 @@ interface StickyNoteProps {
 
 const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDown, onDoubleClick }) => {
   const lastClickTime = useRef<number>(0);
-  const clickTimeout = useRef<NodeJS.Timeout | null>(null);
   
   // Get theme colors
   const themeColors = getThemeColors();
@@ -22,6 +21,10 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
   const drawBackground = useCallback((g: any) => {
     g.clear();
     
+    // Validate dimensions with safety checks
+    const width = Math.max(element.width || 200, 50); // Minimum width
+    const height = Math.max(element.height || 150, 30); // Minimum height
+    
     const backgroundColor = element.backgroundColor
       ? hexStringToNumber(element.backgroundColor)
       : defaultColors.background;
@@ -30,14 +33,14 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
     // Add a subtle border using theme color
     g.lineStyle(1, defaultColors.border);
     
-    // Draw rounded rectangle for sticky note
-    g.drawRoundedRect(0, 0, element.width || 200, element.height || 150, 8);
+    // Draw rounded rectangle for sticky note with validated dimensions
+    g.drawRoundedRect(0, 0, width, height, 8);
     g.endFill();
     
     // Selection indicator - use theme color
     if (isSelected) {
       g.lineStyle(2, themeColors.selectionBlue, 1);
-      g.drawRoundedRect(-2, -2, (element.width || 200) + 4, (element.height || 150) + 4, 10);
+      g.drawRoundedRect(-2, -2, width + 4, height + 4, 10);
     }
   }, [element.width, element.height, element.backgroundColor, isSelected, themeColors.selectionBlue, defaultColors.background, defaultColors.border]);
 
@@ -68,7 +71,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
     fontSize: element.fontSize === 'small' ? 12 : element.fontSize === 'large' ? 18 : 14,
     fill: element.color ? hexStringToNumber(element.color) : defaultColors.text,
     wordWrap: true,
-    wordWrapWidth: (element.width || 200) - 20, // Padding
+    wordWrapWidth: Math.max((element.width || 200) - 20, 50), // Padding with minimum
     align: element.textAlignment || 'left',
     fontWeight: element.isBold ? 'bold' : 'normal',
     fontStyle: element.isItalic ? 'italic' : 'normal',
@@ -87,15 +90,14 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
         cursor="pointer"
       />
       
-      {/* Text content */}
-      {element.content && (
-        <Text
-          x={element.x + 10} // Padding from left
-          y={element.y + 10} // Padding from top
-          text={element.content}
-          style={textStyle}
-        />
-      )}
+      {/* Text content - always render with fallback */}
+      <Text
+        x={element.x + 10} // Padding from left
+        y={element.y + 10} // Padding from top
+        text={element.content || 'Double-click to edit'}
+        style={textStyle}
+        interactive={false} // Background handles interaction
+      />
     </>
   );
 };

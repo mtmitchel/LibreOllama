@@ -25,7 +25,6 @@ declare module '@pixi/react' {
     cursor?: string;
     pointerdown?: (event: any) => void;
   }
-
   // Extend Text props to include interactive property and fix style issue
   interface TextProps extends Partial<PixiText> {
     interactive?: boolean;
@@ -35,6 +34,7 @@ declare module '@pixi/react' {
     style?: any; // Allow partial style objects
     cursor?: string;
     pointerdown?: (event: any) => void;
+    pointertap?: (event: any) => void;
   }
 
   export const Graphics: React.FC<GraphicsProps>;

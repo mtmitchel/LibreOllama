@@ -32,7 +32,6 @@ export const useCanvasEvents = ({
   // Get store actions (these are stable function references from Zustand)
   const addElement = useCanvasStore((state) => state.addElement);
   const updateElement = useCanvasStore((state) => state.updateElement);
-  const updateElementContent = useCanvasStore((state) => state.updateElementContent);
   const deleteElement = useCanvasStore((state) => state.deleteElement);
   const selectElement = useCanvasStore((state) => state.selectElement);
   const clearSelection = useCanvasStore((state) => state.clearSelection);
@@ -67,8 +66,11 @@ export const useCanvasEvents = ({
       
       // Clear text editing when selecting elements (unless shift-clicking to add to selection)
       if (!shiftPressed && currentEditingText) {
-        // Text content is already synced via updateElementContent, just exit editing mode
-        addToHistory(useCanvasStore.getState().elements);
+        if (textAreaRef.current) {
+          const currentTextValue = textAreaRef.current.value;
+          updateElement(currentEditingText, { content: currentTextValue });
+          addToHistory(useCanvasStore.getState().elements);
+        }
         setIsEditingText(null);
         setTextFormattingState(false);
         setTextSelectionState(null, null, null);
@@ -103,7 +105,6 @@ export const useCanvasEvents = ({
       setDragState(true, startDragCoords, initialElementPositions.current);
     }
   }, [selectElement, setDragState, updateElement, addToHistory, setIsEditingText, setTextFormattingState, setTextSelectionState, textAreaRef]);
-
   // Handle mouse down events on the main canvas workspace
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     console.log('Canvas mouse down:', {
@@ -113,13 +114,19 @@ export const useCanvasEvents = ({
       activeTool: useCanvasStore.getState().activeTool
     });
     
-    e.preventDefault();
     const currentStoreState = useCanvasStore.getState();
 
     if (e.target !== canvasContainerRef.current && !(e.target instanceof HTMLCanvasElement)) {
       // Click was on a React UI element over the canvas, not the canvas itself or its direct container
       console.log('Click was on UI element, ignoring');
       return;
+    }
+
+    // Only prevent default if we're going to handle the event
+    // DON'T prevent default for text editing areas
+    const isTextarea = e.target instanceof HTMLTextAreaElement;
+    if (!isTextarea) {
+      e.preventDefault();
     }
 
     // If select tool and clicked on empty canvas, clear selection and text edit state

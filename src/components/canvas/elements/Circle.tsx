@@ -17,24 +17,38 @@ const Circle: React.FC<CircleProps> = ({ element, isSelected, onMouseDown }) => 
     const themeColors = getThemeColors();
     const defaultColors = getDefaultElementColors('circle');
     
-    // Calculate radius from width/height
-    const radius = Math.min(element.width || 100, element.height || 100) / 2;
+    // Calculate radius from width/height with safety checks
+    const width = Math.max(element.width || 100, 1);
+    const height = Math.max(element.height || 100, 1);
+    const radius = Math.min(width, height) / 2;
     
     // Fill color - use element color or theme-aware default
     const fillColor = element.color
       ? hexStringToNumber(element.color)
       : defaultColors.fill;
-    g.beginFill(fillColor);
     
-    // Stroke if specified
-    if (element.strokeColor && element.strokeWidth) {
-      const strokeColor = hexStringToNumber(element.strokeColor);
-      g.lineStyle(element.strokeWidth, strokeColor);
+    // Stroke - always have a stroke for visibility if no fill
+    const strokeColor = element.strokeColor 
+      ? hexStringToNumber(element.strokeColor)
+      : element.color 
+        ? hexStringToNumber(element.color)
+        : defaultColors.stroke;
+    const strokeWidth = element.strokeWidth || 2;
+    
+    // Always set line style to ensure circle is visible
+    g.lineStyle(strokeWidth, strokeColor);
+    
+    // Only fill if we have a background color (not transparent)
+    if (element.backgroundColor !== 'transparent') {
+      g.beginFill(fillColor);
     }
     
     // Draw circle at center
     g.drawCircle(radius, radius, radius);
-    g.endFill();
+    
+    if (element.backgroundColor !== 'transparent') {
+      g.endFill();
+    }
     
     // Selection indicator - use theme color
     if (isSelected) {

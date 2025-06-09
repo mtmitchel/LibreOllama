@@ -20,8 +20,13 @@ const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, on
   const draw = useCallback((g: any) => {
     g.clear();
     
-    if (!element.points || element.points.length < 2) {
-      return; // Need at least 2 points to draw
+    // Ensure we have valid points data
+    if (!element.points || !Array.isArray(element.points) || element.points.length < 2) {
+      // Draw a small placeholder if no valid points
+      g.beginFill(0xcccccc, 0.5);
+      g.drawCircle(0, 0, 5);
+      g.endFill();
+      return;
     }
     
     const strokeColor = hexToNumber(element.strokeColor || element.color || '#000000');

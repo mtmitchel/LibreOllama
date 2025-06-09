@@ -15,10 +15,15 @@ const Arrow: React.FC<ArrowProps> = ({ element, isSelected, onMouseDown }) => {
     const cleaned = hex.replace('#', '');
     return parseInt(cleaned, 16);
   };
-
   // Draw the arrow
   const draw = useCallback((g: any) => {
     g.clear();
+    
+    // Validate that we have proper coordinates
+    if (typeof element.x !== 'number' || typeof element.y !== 'number') {
+      console.warn('Arrow element has invalid coordinates:', element);
+      return;
+    }
     
     const color = hexToNumber(element.color || '#000000');
     g.lineStyle(element.strokeWidth || 2, color);
@@ -30,8 +35,10 @@ const Arrow: React.FC<ArrowProps> = ({ element, isSelected, onMouseDown }) => {
     
     const x1 = 0; // Relative to element position
     const y1 = 0;
-    const x2 = (element.x2 || element.x) - element.x; // Make relative to element position
-    const y2 = (element.y2 || element.y) - element.y;
+    
+    // Use default end coordinates if not provided
+    const x2 = (element.x2 !== undefined ? element.x2 : element.x + 100) - element.x; // Make relative to element position
+    const y2 = (element.y2 !== undefined ? element.y2 : element.y) - element.y;
     
     // Draw line
     g.moveTo(x1, y1);

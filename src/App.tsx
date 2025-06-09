@@ -6,6 +6,9 @@ import { TopBar } from './components/layout/TopBar';
 import { CommandPalette } from './components/CommandPalette';
 import { useCommandPalette } from './hooks/useCommandPalette';
 
+// Import styles
+import './styles/canvas-text-editor.css';
+
 // Import all page components
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';

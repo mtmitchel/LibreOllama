@@ -1,5 +1,7 @@
 import React from 'react';
+import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../stores/canvasStore';
+import { validateCanvasElement } from '../../lib/theme-utils';
 
 // Import our new, native Pixi components
 import StickyNote from './elements/StickyNote';
@@ -27,33 +29,57 @@ const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({
   onMouseDown,
   onDoubleClick
 }) => {
-  switch (element.type) {
-    case 'sticky-note':
-      return <StickyNote element={element} isSelected={isSelected} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
-    case 'rectangle':
-    case 'square':
-      return <Rectangle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'circle':
-      return <Circle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'text':
-      return <TextElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
-    case 'drawing':
-      return <DrawingElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'triangle':
-      return <Triangle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'star':
-      return <Star element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'hexagon':
-      return <Hexagon element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'arrow':
-      return <Arrow element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'line':
-      return <Line element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    case 'image':
-      return <Image element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
-    default:
-      // For unsupported types, render a placeholder rectangle
-      return <Rectangle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+  // Early return for null/undefined elements
+  if (!element) {
+    console.warn('CanvasElementRenderer: Received null/undefined element');
+    return <Graphics />;
+  }
+
+  // Validate element using utility function
+  if (!validateCanvasElement(element)) {
+    console.warn('CanvasElementRenderer: Element failed validation:', element);
+    return <Graphics x={element?.x || 0} y={element?.y || 0} />;
+  }
+
+  // Debug log for troubleshooting
+  if (import.meta.env.DEV) {
+    console.log(`Rendering element "${element.id}" of type "${element.type}" at (${element.x}, ${element.y})`);
+  }
+
+  try {
+    switch (element.type) {
+      case 'sticky-note':
+        return <StickyNote element={element} isSelected={isSelected} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
+      case 'rectangle':
+      case 'square':
+        return <Rectangle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'circle':
+        return <Circle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'text':
+        return <TextElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
+      case 'drawing':
+        return <DrawingElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'triangle':
+        return <Triangle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'star':
+        return <Star element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'hexagon':
+        return <Hexagon element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'arrow':
+        return <Arrow element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'line':
+        return <Line element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      case 'image':
+        return <Image element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      default:
+        // Critical: Always return a valid PIXI component for unknown types
+        console.warn(`CanvasElementRenderer: Unknown element type "${element.type}" for element ID "${element.id}". Rendering placeholder.`);
+        return <Graphics />;
+    }
+  } catch (error) {
+    console.error(`CanvasElementRenderer: Error rendering element "${element.id}" of type "${element.type}":`, error);
+    // Return a fallback graphics element to prevent the entire canvas from breaking
+    return <Graphics x={element.x} y={element.y} />;
   }
 };
 
