@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface RectangleProps {
   element: CanvasElement;
@@ -9,24 +10,22 @@ interface RectangleProps {
 }
 
 const Rectangle: React.FC<RectangleProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
-
   // The 'draw' function is how we tell Pixi what to render
   const draw = useCallback((g: any) => {
     g.clear();
     
-    // Fill color
-    const fillColor = hexToNumber(element.color || '#bfdbfe');
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('rectangle');
+    
+    // Fill color - use element color or theme-aware default
+    const fillColor = element.color
+      ? hexStringToNumber(element.color)
+      : defaultColors.fill;
     g.beginFill(fillColor);
     
     // Stroke if specified
     if (element.strokeColor && element.strokeWidth) {
-      const strokeColor = hexToNumber(element.strokeColor);
+      const strokeColor = hexStringToNumber(element.strokeColor);
       g.lineStyle(element.strokeWidth, strokeColor);
     }
     
@@ -34,9 +33,9 @@ const Rectangle: React.FC<RectangleProps> = ({ element, isSelected, onMouseDown 
     g.drawRect(0, 0, element.width || 100, element.height || 100);
     g.endFill();
     
-    // Selection indicator
+    // Selection indicator - use theme color
     if (isSelected) {
-      g.lineStyle(2, 0x007acc, 1);
+      g.lineStyle(2, themeColors.selectionBlue, 1);
       g.drawRect(-2, -2, (element.width || 100) + 4, (element.height || 100) + 4);
     }
   }, [element.width, element.height, element.color, element.strokeColor, element.strokeWidth, isSelected]);
@@ -52,7 +51,7 @@ const Rectangle: React.FC<RectangleProps> = ({ element, isSelected, onMouseDown 
       x={element.x}
       y={element.y}
       draw={draw}
-      interactive
+      interactive={true}
       pointerdown={handlePointerDown}
       cursor="pointer"
     />

@@ -1,53 +1,80 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Graphics, Text } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface StickyNoteProps {
   element: CanvasElement;
   isSelected?: boolean;
   onMouseDown?: (e: any, elementId: string) => void;
+  onDoubleClick?: () => void;
 }
 
-const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0xFFFFE0; // Default sticky note yellow
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
+const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDown, onDoubleClick }) => {
+  const lastClickTime = useRef<number>(0);
+  const clickTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  // Get theme colors
+  const themeColors = getThemeColors();
+  const defaultColors = getDefaultElementColors('sticky-note');
 
   // Draw the sticky note background
   const drawBackground = useCallback((g: any) => {
     g.clear();
     
-    const backgroundColor = hexToNumber(element.backgroundColor || '#FFFFE0');
+    const backgroundColor = element.backgroundColor
+      ? hexStringToNumber(element.backgroundColor)
+      : defaultColors.background;
     g.beginFill(backgroundColor);
     
-    // Add a subtle border
-    g.lineStyle(1, 0xE0E0E0);
+    // Add a subtle border using theme color
+    g.lineStyle(1, defaultColors.border);
     
     // Draw rounded rectangle for sticky note
     g.drawRoundedRect(0, 0, element.width || 200, element.height || 150, 8);
     g.endFill();
     
-    // Selection indicator
+    // Selection indicator - use theme color
     if (isSelected) {
-      g.lineStyle(2, 0x007acc, 1);
+      g.lineStyle(2, themeColors.selectionBlue, 1);
       g.drawRoundedRect(-2, -2, (element.width || 200) + 4, (element.height || 150) + 4, 10);
     }
-  }, [element.width, element.height, element.backgroundColor, isSelected]);
+  }, [element.width, element.height, element.backgroundColor, isSelected, themeColors.selectionBlue, defaultColors.background, defaultColors.border]);
 
   const handlePointerDown = useCallback((e: any) => {
-    if (onMouseDown) {
-      onMouseDown(e, element.id);
+    const now = Date.now();
+    const timeDiff = now - lastClickTime.current;
+    
+    if (timeDiff < 300 && onDoubleClick) {
+      // Double click detected
+      if (clickTimeout.current) {
+        clearTimeout(clickTimeout.current);
+        clickTimeout.current = null;
+      }
+      e.stopPropagation();
+      onDoubleClick();
+    } else {
+      // Single click - delay to check for double click
+      if (clickTimeout.current) {
+        clearTimeout(clickTimeout.current);
+      }
+      clickTimeout.current = setTimeout(() => {
+        if (onMouseDown) {
+          onMouseDown(e, element.id);
+        }
+        clickTimeout.current = null;
+      }, 300);
     }
-  }, [onMouseDown, element.id]);
+    
+    lastClickTime.current = now;
+  }, [onMouseDown, onDoubleClick, element.id]);
 
-  // Text style for the sticky note content
+
+  // Text style for the sticky note content with theme-aware colors
   const textStyle = {
-    fontFamily: 'Arial',
+    fontFamily: 'Inter, Arial, sans-serif',
     fontSize: element.fontSize === 'small' ? 12 : element.fontSize === 'large' ? 18 : 14,
-    fill: element.color ? hexToNumber(element.color) : 0x000000,
+    fill: element.color ? hexStringToNumber(element.color) : defaultColors.text,
     wordWrap: true,
     wordWrapWidth: (element.width || 200) - 20, // Padding
     align: element.textAlignment || 'left',

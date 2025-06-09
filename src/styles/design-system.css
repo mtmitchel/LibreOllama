@@ -80,6 +80,17 @@
   --input-bg: var(--bg-tertiary);
   --input-placeholder: var(--text-tertiary);
   --input-focus-ring: var(--accent-primary);
+  
+  /* Canvas specific variables */
+  --canvas-bg: #1e1e1e; /* Professional dark gray canvas background for dark theme */
+  --canvas-grid-dot: var(--border-subtle);
+  --canvas-selection: var(--accent-primary);
+  --canvas-selection-bg: rgba(59, 130, 246, 0.1);
+  --canvas-element-stroke: var(--text-primary);
+  --canvas-element-fill: var(--accent-primary);
+  --canvas-text-color: var(--text-primary);
+  --canvas-sticky-bg: #FFFFF0;
+  --canvas-sticky-border: var(--border-default);
 }
 
 html.light {
@@ -95,8 +106,13 @@ html.light {
   --text-tertiary: #64748b; 
   --text-muted: #94a3b8;
   
-  --border-subtle: rgba(0, 0, 0, 0.05); 
+  --border-subtle: rgba(0, 0, 0, 0.05);
   --border-default: rgba(0, 0, 0, 0.1);
+  
+  /* Canvas light theme overrides */
+  --canvas-bg: #ffffff; /* Clean white canvas background for light theme */
+  --canvas-grid-dot: rgba(0, 0, 0, 0.08);
+  --canvas-sticky-bg: #FFFEF8;
 }
 
 /* Tailwind directives moved after variable definitions */

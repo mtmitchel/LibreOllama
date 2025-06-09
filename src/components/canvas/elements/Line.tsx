@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface LineProps {
   element: CanvasElement;
@@ -9,25 +10,23 @@ interface LineProps {
 }
 
 const Line: React.FC<LineProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
-
   // Draw the line
   const draw = useCallback((g: any) => {
     g.clear();
     
-    const color = hexToNumber(element.color || '#000000');
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('line');
+    
+    const color = element.color
+      ? hexStringToNumber(element.color)
+      : defaultColors.stroke;
     const strokeWidth = element.strokeWidth || 2;
     
     g.lineStyle(strokeWidth, color);
     
-    // Selection indicator
+    // Selection indicator - use theme color
     if (isSelected) {
-      g.lineStyle(strokeWidth + 1, 0x007acc, 0.8);
+      g.lineStyle(strokeWidth + 1, themeColors.selectionBlue, 0.8);
     }
     
     const x1 = 0; // Relative to element position

@@ -72,6 +72,8 @@ export interface CanvasState {
   isEditingText: string | null;
   showTextFormatting: boolean;
   textFormattingPosition: { left: number; top: number } | null;
+  selectedTextElement: string | null; // Element ID that has selected text
+  selectedTextRange: { start: number; end: number } | null; // Text selection range
   history: Record<string, CanvasElement>[];
   historyIndex: number;
   isDragging: boolean;
@@ -98,6 +100,7 @@ export interface CanvasState {
   setResizeState: (isResizing: boolean, handle?: string | null, startPos?: { x: number; y: number }, startSize?: { width: number; height: number }) => void;
   setIsEditingText: (elementId: string | null) => void;
   setTextFormattingState: (show: boolean, position?: { left: number; top: number } | null) => void;
+  setTextSelectionState: (elementId: string | null, range?: { start: number; end: number } | null, position?: { left: number; top: number } | null) => void;
   addToHistory: (currentElementsState: Record<string, CanvasElement>) => void;
   undo: () => void;
   redo: () => void;
@@ -121,6 +124,8 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   isEditingText: null,
   showTextFormatting: false,
   textFormattingPosition: null,
+  selectedTextElement: null,
+  selectedTextRange: null,
   history: [],
   historyIndex: -1,
   isDragging: false,
@@ -202,9 +207,16 @@ export const useCanvasStore = create<CanvasState>((set) => ({
 
   setIsEditingText: (elementId) => set({ isEditingText: elementId }),
 
-  setTextFormattingState: (show, position) => set({ 
-    showTextFormatting: show, 
-    textFormattingPosition: position ?? null 
+  setTextFormattingState: (show, position) => set({
+    showTextFormatting: show,
+    textFormattingPosition: position ?? null
+  }),
+
+  setTextSelectionState: (elementId, range, position) => set({
+    selectedTextElement: elementId,
+    selectedTextRange: range ?? null,
+    showTextFormatting: !!elementId && !!range,
+    textFormattingPosition: position ?? null
   }),
 
   addToHistory: (currentElementsState) => set((state) => {

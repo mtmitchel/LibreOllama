@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface CircleProps {
   element: CanvasElement;
@@ -9,27 +10,25 @@ interface CircleProps {
 }
 
 const Circle: React.FC<CircleProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
-
   // The 'draw' function for the circle
   const draw = useCallback((g: any) => {
     g.clear();
     
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('circle');
+    
     // Calculate radius from width/height
     const radius = Math.min(element.width || 100, element.height || 100) / 2;
     
-    // Fill color
-    const fillColor = hexToNumber(element.color || '#bfdbfe');
+    // Fill color - use element color or theme-aware default
+    const fillColor = element.color
+      ? hexStringToNumber(element.color)
+      : defaultColors.fill;
     g.beginFill(fillColor);
     
     // Stroke if specified
     if (element.strokeColor && element.strokeWidth) {
-      const strokeColor = hexToNumber(element.strokeColor);
+      const strokeColor = hexStringToNumber(element.strokeColor);
       g.lineStyle(element.strokeWidth, strokeColor);
     }
     
@@ -37,9 +36,9 @@ const Circle: React.FC<CircleProps> = ({ element, isSelected, onMouseDown }) => 
     g.drawCircle(radius, radius, radius);
     g.endFill();
     
-    // Selection indicator
+    // Selection indicator - use theme color
     if (isSelected) {
-      g.lineStyle(2, 0x007acc, 1);
+      g.lineStyle(2, themeColors.selectionBlue, 1);
       g.drawCircle(radius, radius, radius + 2);
     }
   }, [element.width, element.height, element.color, element.strokeColor, element.strokeWidth, isSelected]);

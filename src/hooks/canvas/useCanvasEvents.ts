@@ -34,7 +34,6 @@ export const useCanvasEvents = ({
   const updateElement = useCanvasStore((state) => state.updateElement);
   const deleteElement = useCanvasStore((state) => state.deleteElement);
   const selectElement = useCanvasStore((state) => state.selectElement);
-  const setSelectedElementIds = useCanvasStore((state) => state.setSelectedElementIds);
   const clearSelection = useCanvasStore((state) => state.clearSelection);
   const setPan = useCanvasStore((state) => state.setPan);
   const setZoom = useCanvasStore((state) => state.setZoom);
@@ -44,15 +43,22 @@ export const useCanvasEvents = ({
   const setResizeState = useCanvasStore((state) => state.setResizeState);
   const setIsEditingText = useCanvasStore((state) => state.setIsEditingText);
   const setTextFormattingState = useCanvasStore((state) => state.setTextFormattingState);
+  const setTextSelectionState = useCanvasStore((state) => state.setTextSelectionState);
   const addToHistory = useCanvasStore((state) => state.addToHistory);
 
   // Handle mouse down on individual elements (Pixi events)
   const handleElementMouseDown = useCallback((pixiEvent: any, elementId: string) => {
+    console.log('Element mouse down:', elementId, pixiEvent);
     pixiEvent.stopPropagation(); // Prevent canvas click from firing
     const { elements: currentElements, activeTool: currentActiveTool, isEditingText: currentEditingText } = useCanvasStore.getState();
     const element = currentElements[elementId];
 
-    if (!element) return;
+    if (!element) {
+      console.warn('Element not found in store:', elementId);
+      return;
+    }
+    
+    console.log('Processing element interaction:', { elementId, activeTool: currentActiveTool });
 
     if (currentActiveTool === 'select') {
       // Check for shift key in Pixi events
@@ -67,6 +73,7 @@ export const useCanvasEvents = ({
         }
         setIsEditingText(null);
         setTextFormattingState(false);
+        setTextSelectionState(null, null, null);
       }
       
       if (shiftPressed) {
@@ -97,20 +104,29 @@ export const useCanvasEvents = ({
 
       setDragState(true, startDragCoords, initialElementPositions.current);
     }
-  }, [selectElement, setDragState, updateElement, addToHistory, setIsEditingText, setTextFormattingState, textAreaRef]);
+  }, [selectElement, setDragState, updateElement, addToHistory, setIsEditingText, setTextFormattingState, setTextSelectionState, textAreaRef]);
 
   // Handle mouse down events on the main canvas workspace
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    console.log('Canvas mouse down:', {
+      target: e.target,
+      isCanvasContainer: e.target === canvasContainerRef.current,
+      isCanvasElement: e.target instanceof HTMLCanvasElement,
+      activeTool: useCanvasStore.getState().activeTool
+    });
+    
     e.preventDefault();
     const currentStoreState = useCanvasStore.getState();
 
     if (e.target !== canvasContainerRef.current && !(e.target instanceof HTMLCanvasElement)) {
       // Click was on a React UI element over the canvas, not the canvas itself or its direct container
+      console.log('Click was on UI element, ignoring');
       return;
     }
 
     // If select tool and clicked on empty canvas, clear selection and text edit state
     if (currentStoreState.activeTool === 'select') {
+      console.log('Canvas click with select tool - clearing selection');
       clearSelection();
       if (currentStoreState.isEditingText) {
         // Commit text if editing
@@ -121,6 +137,7 @@ export const useCanvasEvents = ({
         }
         setIsEditingText(null);
         setTextFormattingState(false);
+        setTextSelectionState(null, null, null);
       }
       // Initiate panning
       isPanning.current = true;
@@ -154,7 +171,7 @@ export const useCanvasEvents = ({
       });
       setDragState(true, coords, null); // For drawing, dragStartPos is the drawing start
     }
-  }, [canvasContainerRef, clearSelection, setIsEditingText, setTextFormattingState, getCanvasCoordinates, setIsDrawing, setPreviewState, setDragState, updateElement, addToHistory, textAreaRef]);
+  }, [canvasContainerRef, clearSelection, setIsEditingText, setTextFormattingState, setTextSelectionState, getCanvasCoordinates, setIsDrawing, setPreviewState, setDragState, updateElement, addToHistory, textAreaRef]);
 
   // Global mouse move handler - critical for preventing stuck states
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
@@ -309,6 +326,7 @@ export const useCanvasEvents = ({
         addToHistory(useCanvasStore.getState().elements);
         setIsEditingText(null);
         setTextFormattingState(false);
+        setTextSelectionState(null, null, null);
       }
       clearSelection();
     } else if (e.key === 'Enter' && !e.shiftKey) {
@@ -319,17 +337,38 @@ export const useCanvasEvents = ({
         addToHistory(useCanvasStore.getState().elements);
         setIsEditingText(null);
         setTextFormattingState(false);
+        setTextSelectionState(null, null, null);
       }
     }
-  }, [textAreaRef, deleteElement, addToHistory, clearSelection, updateElement, setIsEditingText, setTextFormattingState]);
+  }, [textAreaRef, deleteElement, addToHistory, clearSelection, updateElement, setIsEditingText, setTextFormattingState, setTextSelectionState]);
 
   // Delete button handler for toolbar
   const handleDeleteButtonClick = useCallback(() => {
-    const { selectedElementIds: currentSelectedIds } = useCanvasStore.getState();
+    const { selectedElementIds: currentSelectedIds, elements: currentElements } = useCanvasStore.getState();
+    console.log('Delete button handler called:', {
+      selectedIds: currentSelectedIds,
+      elementCount: Object.keys(currentElements).length
+    });
+    
     if (currentSelectedIds.length > 0) {
-      currentSelectedIds.forEach(id => deleteElement(id));
+      console.log('Deleting elements:', currentSelectedIds);
+      currentSelectedIds.forEach(id => {
+        console.log('Deleting element:', id);
+        deleteElement(id);
+      });
       addToHistory(useCanvasStore.getState().elements);
       clearSelection();
+      
+      // Verify deletion
+      setTimeout(() => {
+        const updatedState = useCanvasStore.getState();
+        console.log('State after deletion:', {
+          elementCount: Object.keys(updatedState.elements).length,
+          selectedIds: updatedState.selectedElementIds
+        });
+      }, 0);
+    } else {
+      console.log('No elements selected for deletion');
     }
   }, [deleteElement, addToHistory, clearSelection]);
 

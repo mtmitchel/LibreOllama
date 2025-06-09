@@ -18,23 +18,25 @@ interface CanvasElementRendererProps {
   element: CanvasElement;
   isSelected?: boolean;
   onMouseDown?: (e: any, elementId: string) => void;
+  onDoubleClick?: () => void;
 }
 
-const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({ 
-  element, 
+const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({
+  element,
   isSelected = false,
-  onMouseDown 
+  onMouseDown,
+  onDoubleClick
 }) => {
   switch (element.type) {
     case 'sticky-note':
-      return <StickyNote element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      return <StickyNote element={element} isSelected={isSelected} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
     case 'rectangle':
     case 'square':
       return <Rectangle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
     case 'circle':
       return <Circle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
     case 'text':
-      return <TextElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
+      return <TextElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
     case 'drawing':
       return <DrawingElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
     case 'triangle':

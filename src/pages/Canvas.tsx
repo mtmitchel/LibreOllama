@@ -5,6 +5,9 @@ import { useViewportCulling } from '../hooks/useViewportCulling';
 import CanvasElementRenderer from '../components/canvas/CanvasElementRenderer';
 import CanvasGrid from '../components/canvas/CanvasGrid';
 import { useCanvasEvents } from '../hooks/canvas/useCanvasEvents';
+import { TextFormattingToolbar } from '../components/canvas/TextFormattingToolbar';
+import { useTheme } from '../hooks/useTheme';
+import { getThemeColors } from '../lib/theme-utils';
 import { Trash2 } from 'lucide-react';
 
 const Canvas = () => {
@@ -17,6 +20,9 @@ const Canvas = () => {
   const isEditingText = useCanvasStore((state: CanvasState) => state.isEditingText);
   const isDrawing = useCanvasStore((state: CanvasState) => state.isDrawing);
   const previewElement = useCanvasStore((state: CanvasState) => state.previewElement);
+  const showTextFormatting = useCanvasStore((state: CanvasState) => state.showTextFormatting);
+  const textFormattingPosition = useCanvasStore((state: CanvasState) => state.textFormattingPosition);
+  const selectedTextElement = useCanvasStore((state: CanvasState) => state.selectedTextElement);
   
   // Create stable elements array using useMemo with proper dependencies
   const elementsArray = useMemo(() => Object.values(elements), [elements]);
@@ -35,6 +41,17 @@ const Canvas = () => {
   const [editingTextValue, setEditingTextValue] = useState('');
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
+  // Debug: Log state changes for debugging
+  console.log('Canvas render - Current state:', {
+    elementCount: Object.keys(elements).length,
+    selectedElementIds,
+    activeTool,
+    zoom,
+    pan,
+    isEditingText,
+    canvasSize
+  });
+
   // Use viewport culling with container measurements
   const { visibleElements } = useViewportCulling({
     elements: elementsArray, // Use the memoized array
@@ -52,8 +69,17 @@ const Canvas = () => {
     return { x, y };
   }, [pan, zoom]);
 
-  // Utility to generate unique IDs
-  const generateId = useCallback(() => `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, []);
+  // Utility to generate unique IDs - more robust than Date.now() alone
+  const generateId = useCallback(() => {
+    // Use crypto.randomUUID if available, otherwise fallback to high-precision timestamp + random
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback: high-precision timestamp + random + counter for uniqueness
+    const timestamp = performance.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 15);
+    return `${timestamp}-${random}`;
+  }, []);
 
   // Initialize canvas events hook
   const { handleElementMouseDown, handleCanvasMouseDown, handleDeleteButtonClick } = useCanvasEvents({
@@ -76,27 +102,43 @@ const Canvas = () => {
   }, []);
 
 
-  // ResizeObserver to track canvas container size changes
+  // Component mounting debug and ResizeObserver setup
   useEffect(() => {
+    console.log('Canvas component mounted - Stage should only mount once');
+    
     const container = canvasContainerRef.current;
     if (!container) return;
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
+        console.log('Canvas size changed:', { width, height });
         setCanvasSize({ width, height });
       }
     });
 
     resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, []);
+    return () => {
+      console.log('Canvas component unmounting');
+      resizeObserver.disconnect();
+    };
+  }, []); // Empty deps ensures this only runs once
 
   // Direct element creation function
   const createElementDirectly = useCallback((elementData: Partial<CanvasElement>) => {
-    if (!canvasContainerRef.current) return;
-    // const canvasRect = canvasContainerRef.current.getBoundingClientRect(); // Not strictly needed if positioning is relative to store state
+    console.log('Creating element directly:', elementData);
+    
+    if (!canvasContainerRef.current) {
+      console.warn('Canvas container ref not available');
+      return;
+    }
+    
     const { pan: currentPan, zoom: currentZoom, elements: currentElements } = useCanvasStore.getState();
+    console.log('Current store state before creation:', {
+      elementCount: Object.keys(currentElements).length,
+      pan: currentPan,
+      zoom: currentZoom
+    });
     
     const defaultWidth = elementData.type === 'text' || elementData.type === 'sticky-note' ? 150 : 100;
     const defaultHeight = elementData.type === 'text' || elementData.type === 'sticky-note' ? 50 : 100;
@@ -122,64 +164,140 @@ const Canvas = () => {
       ...elementData, // Spread last to allow overrides, but ensure core properties above have defaults
     };
 
+    console.log('Created new element:', newElement);
+    
     addElement(newElement);
     addToHistory({ ...currentElements, [newElement.id]: newElement });
     setSelectedElementIds([newElement.id]);
+    
+    // Verify element was added to store
+    setTimeout(() => {
+      const updatedState = useCanvasStore.getState();
+      console.log('Store state after element creation:', {
+        elementCount: Object.keys(updatedState.elements).length,
+        newElementExists: !!updatedState.elements[newElement.id],
+        selectedIds: updatedState.selectedElementIds
+      });
+    }, 0);
+    
     if (newElement.type === 'text') {
       setIsEditingText(newElement.id);
       // If new text element, set editingTextValue from its content or default if empty
-      setEditingTextValue(newElement.content || ''); 
+      setEditingTextValue(newElement.content || '');
     }
   }, [generateId, addElement, addToHistory, setSelectedElementIds, setIsEditingText]);
 
+  // Text formatting toolbar is now handled by text selection in individual components
+
+  // Handle double-click to enter text editing mode
+  const handleElementDoubleClick = useCallback((elementId: string) => {
+    const element = elements[elementId];
+    if (element && (element.type === 'text' || element.type === 'sticky-note')) {
+      setIsEditingText(elementId);
+      setEditingTextValue(element.content || '');
+      setTextFormattingState(false); // Hide toolbar when editing
+    }
+  }, [elements, setIsEditingText, setTextFormattingState]);
+
+  // Text formatting handlers
+  const handleToggleFormat = useCallback((elementId: string, formatType: 'isBold' | 'isItalic' | 'isBulletList') => {
+    const element = elements[elementId];
+    if (element) {
+      updateElement(elementId, { [formatType]: !element[formatType] });
+      addToHistory(useCanvasStore.getState().elements);
+    }
+  }, [elements, updateElement, addToHistory]);
+
+  const handleSetFontSize = useCallback((elementId: string, fontSize: 'small' | 'medium' | 'large') => {
+    updateElement(elementId, { fontSize });
+    addToHistory(useCanvasStore.getState().elements);
+  }, [updateElement, addToHistory]);
+
+  const handleSetAlignment = useCallback((elementId: string, alignment: 'left' | 'center' | 'right') => {
+    updateElement(elementId, { textAlignment: alignment });
+    addToHistory(useCanvasStore.getState().elements);
+  }, [updateElement, addToHistory]);
+
+  const handleSetUrl = useCallback((elementId: string) => {
+    const element = elements[elementId];
+    if (element) {
+      const currentUrl = element.url || '';
+      const newUrl = prompt('Enter URL:', currentUrl);
+      if (newUrl !== null) {
+        updateElement(elementId, { url: newUrl || undefined });
+        addToHistory(useCanvasStore.getState().elements);
+      }
+    }
+  }, [elements, updateElement, addToHistory]);
+
+  const handleUpdateContent = useCallback((elementId: string, content: string) => {
+    updateElement(elementId, { content });
+    addToHistory(useCanvasStore.getState().elements);
+  }, [updateElement, addToHistory]);
+
+  const { effectiveTheme } = useTheme();
+  
+  // Get theme-aware colors, recompute when theme changes
+  const themeColors = useMemo(() => getThemeColors(), [effectiveTheme]);
 
   return (
     <div className="canvas-container" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Direct creation toolbar - single click creates elements */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2 bg-white p-2 rounded-lg shadow-lg">
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2 bg-bg-surface border border-border-default p-3 rounded-lg shadow-xl">
         <button
           onClick={() => setActiveTool('select')}
-          className={`p-2 rounded transition-colors ${activeTool === 'select' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+          className={`px-3 py-2 rounded-md transition-colors text-sm font-medium ${
+            activeTool === 'select'
+              ? 'bg-accent-primary text-white'
+              : 'bg-bg-tertiary text-text-primary hover:bg-bg-elevated'
+          }`}
         >
           Select
         </button>
         <button
           onClick={() => createElementDirectly({ type: 'text' } as Partial<CanvasElement>)}
-          className="p-2 rounded bg-gray-200 hover:bg-blue-100 transition-colors active:bg-blue-200"
+          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
         >
           Add Text
         </button>
         <button
           onClick={() => createElementDirectly({ type: 'sticky-note' } as Partial<CanvasElement>)}
-          className="p-2 rounded bg-gray-200 hover:bg-yellow-100 transition-colors active:bg-yellow-200"
+          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
         >
           Add Note
         </button>
         <button
           onClick={() => createElementDirectly({ type: 'rectangle' } as Partial<CanvasElement>)}
-          className="p-2 rounded bg-gray-200 hover:bg-blue-100 transition-colors active:bg-blue-200"
+          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
         >
           Add Rectangle
         </button>
         <button
           onClick={() => createElementDirectly({ type: 'line' } as Partial<CanvasElement>)}
-          className="p-2 rounded bg-gray-200 hover:bg-blue-100 transition-colors active:bg-blue-200"
+          className="px-3 py-2 rounded-md bg-bg-tertiary text-text-primary hover:bg-bg-elevated transition-colors text-sm font-medium"
         >
           Add Line
         </button>
         <button
           onClick={() => setActiveTool('pen')}
-          className={`p-2 rounded transition-colors ${activeTool === 'pen' ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+          className={`px-3 py-2 rounded-md transition-colors text-sm font-medium ${
+            activeTool === 'pen'
+              ? 'bg-accent-primary text-white'
+              : 'bg-bg-tertiary text-text-primary hover:bg-bg-elevated'
+          }`}
         >
           Pen
         </button>
         <button
-          onClick={handleDeleteButtonClick}
+          onClick={() => {
+            console.log('Delete button clicked, selected elements:', selectedElementIds);
+            handleDeleteButtonClick();
+          }}
           disabled={selectedElementIds.length === 0}
-          className={`p-2 rounded flex items-center gap-1 transition-colors ${
+          className={`px-3 py-2 rounded-md flex items-center gap-2 transition-colors text-sm font-medium ${
             selectedElementIds.length > 0
-              ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              ? 'bg-error text-white hover:opacity-90'
+              : 'bg-bg-tertiary text-text-muted cursor-not-allowed'
           }`}
           title="Delete selected element (Delete key)"
         >
@@ -198,7 +316,8 @@ const Canvas = () => {
           width={canvasSize.width}
           height={canvasSize.height}
           options={{
-            backgroundColor: 0x1a1b1e,
+            backgroundColor: themeColors.canvasBackground,
+            backgroundAlpha: 1,
             antialias: true,
             autoDensity: true,
             resolution: window.devicePixelRatio || 1,
@@ -210,14 +329,18 @@ const Canvas = () => {
             scale={{ x: zoom, y: zoom }}
           >
             {/* Render all visible elements */}
-            {visibleElements.map(element => (
-              <CanvasElementRenderer
-                key={element.id}
-                element={element}
-                isSelected={selectedElementIds.includes(element.id)}
-                onMouseDown={handleElementMouseDown}
-              />
-            ))}
+            {visibleElements.map(element => {
+              console.log('Rendering element:', element.id, element.type, { x: element.x, y: element.y });
+              return (
+                <CanvasElementRenderer
+                  key={element.id}
+                  element={element}
+                  isSelected={selectedElementIds.includes(element.id)}
+                  onMouseDown={handleElementMouseDown}
+                  onDoubleClick={() => handleElementDoubleClick(element.id)}
+                />
+              );
+            })}
             
             {/* Preview element during drawing */}
             {isDrawing && previewElement && (
@@ -235,52 +358,89 @@ const Canvas = () => {
         <CanvasGrid zoomLevel={zoom} panOffset={pan} />
         
         {/* Text editing textarea - still DOM-based for text input */}
-        {isEditingText && (
-          <textarea
-            ref={textAreaRef}
-            value={editingTextValue}
-            onChange={(e) => setEditingTextValue(e.target.value)}
-            onBlur={() => {
-              if (isEditingText && textAreaRef.current) {
-                updateElement(isEditingText, { content: textAreaRef.current.value });
-                addToHistory(useCanvasStore.getState().elements);
-              }
-              setIsEditingText(null);
-              setTextFormattingState(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
+        {isEditingText && (() => {
+          const editingElement = elements[isEditingText];
+          if (!editingElement) {
+            console.warn('Editing element not found:', isEditingText);
+            return null;
+          }
+          
+          const textareaX = (editingElement.x || 0) * zoom + pan.x;
+          const textareaY = (editingElement.y || 0) * zoom + pan.y;
+          const textareaWidth = (editingElement.width || 200) * zoom;
+          const textareaHeight = (editingElement.height || 100) * zoom;
+          
+          console.log('Text editing positioning:', {
+            elementId: isEditingText,
+            element: { x: editingElement.x, y: editingElement.y, width: editingElement.width, height: editingElement.height },
+            zoom, pan,
+            textareaPosition: { x: textareaX, y: textareaY, width: textareaWidth, height: textareaHeight }
+          });
+          
+          return (
+            <textarea
+              ref={textAreaRef}
+              value={editingTextValue}
+              onChange={(e) => setEditingTextValue(e.target.value)}
+              onBlur={() => {
+                console.log('Text editing blur - committing changes');
                 if (isEditingText && textAreaRef.current) {
                   updateElement(isEditingText, { content: textAreaRef.current.value });
                   addToHistory(useCanvasStore.getState().elements);
                 }
                 setIsEditingText(null);
                 setTextFormattingState(false);
-              }
-            }}
-            style={{
-              position: 'absolute',
-              left: `${(elements[isEditingText]?.x || 0) * zoom + pan.x}px`,
-              top: `${(elements[isEditingText]?.y || 0) * zoom + pan.y}px`,
-              width: `${(elements[isEditingText]?.width || 200) * zoom}px`,
-              height: `${(elements[isEditingText]?.height || 100) * zoom}px`,
-              fontSize: `${getTextStyles(elements[isEditingText] || {} as CanvasElement).fontSize}`,
-              fontFamily: 'Arial, sans-serif',
-              fontWeight: elements[isEditingText]?.isBold ? 'bold' : 'normal',
-              fontStyle: elements[isEditingText]?.isItalic ? 'italic' : 'normal',
-              textAlign: elements[isEditingText]?.textAlignment || 'left',
-              color: elements[isEditingText]?.color || '#000000',
-              backgroundColor: elements[isEditingText]?.type === 'sticky-note' 
-                ? (elements[isEditingText]?.backgroundColor || '#FFFFE0')
-                : 'transparent',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              overflow: 'hidden',
-              zIndex: 1000,
-            }}
-            autoFocus
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  console.log('Text editing enter - committing changes');
+                  if (isEditingText && textAreaRef.current) {
+                    updateElement(isEditingText, { content: textAreaRef.current.value });
+                    addToHistory(useCanvasStore.getState().elements);
+                  }
+                  setIsEditingText(null);
+                  setTextFormattingState(false);
+                }
+              }}
+              style={{
+                position: 'absolute',
+                left: `${textareaX}px`,
+                top: `${textareaY}px`,
+                width: `${textareaWidth}px`,
+                height: `${textareaHeight}px`,
+                fontSize: `${getTextStyles(editingElement).fontSize}`,
+                fontFamily: 'var(--font-sans)',
+                fontWeight: editingElement.isBold ? 'bold' : 'normal',
+                fontStyle: editingElement.isItalic ? 'italic' : 'normal',
+                textAlign: editingElement.textAlignment || 'left',
+                color: editingElement.color || 'var(--text-primary)',
+                backgroundColor: editingElement.type === 'sticky-note'
+                  ? (editingElement.backgroundColor || '#FFFFF0')
+                  : 'transparent',
+                border: `1px solid var(--border-subtle)`,
+                borderRadius: 'var(--radius-sm)',
+                outline: 'none',
+                resize: 'none',
+                overflow: 'hidden',
+                zIndex: 1000,
+              }}
+              autoFocus
+            />
+          );
+        })()}
+
+        {/* Text Formatting Toolbar */}
+        {showTextFormatting && textFormattingPosition && selectedTextElement && (
+          <TextFormattingToolbar
+            elementId={selectedTextElement}
+            element={elements[selectedTextElement]}
+            position={textFormattingPosition}
+            onToggleFormat={handleToggleFormat}
+            onSetFontSize={handleSetFontSize}
+            onSetAlignment={handleSetAlignment}
+            onSetUrl={handleSetUrl}
+            onUpdateContent={handleUpdateContent}
           />
         )}
       </div>
