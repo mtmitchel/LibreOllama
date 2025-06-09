@@ -1,6 +1,6 @@
 // src/hooks/canvas/useCanvasEvents.ts
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { UseCanvasStateReturn, CanvasElement, CanvasTool } from './useCanvasState';
 
 export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateReturn }) => {
@@ -50,7 +50,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     setTextFormattingPosition
   } = canvasState;
 
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPanning = useRef(false);
   const currentPath = useRef<string>('');
   const drawStartPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -61,6 +61,17 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
    * Convert screen coordinates to canvas coordinates accounting for pan and zoom
    */
   const getCanvasCoordinates = useCallback((e: React.MouseEvent): { x: number; y: number } => {
+    if (!canvasRef.current) return { x: 0, y: 0 };
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+    const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+    return { x, y };
+  }, [panOffset, zoomLevel]);
+
+  /**
+   * Convert native MouseEvent to canvas coordinates (for global event listeners)
+   */
+  const getCanvasCoordinatesFromNative = useCallback((e: MouseEvent): { x: number; y: number } => {
     if (!canvasRef.current) return { x: 0, y: 0 };
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
@@ -80,6 +91,108 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     setHistoryIndex(prev => prev + 1);
   }, [history, historyIndex, setHistory, setHistoryIndex]);
 
+  // --- GLOBAL DOCUMENT EVENT LISTENERS ---
+  
+  /**
+   * CRITICAL FIX: Global document event listeners to handle mouse events outside canvas
+   * This fixes the "elements follow mouse forever" bug when dragging outside canvas bounds
+   */
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      // Handle element dragging globally
+      if (isDragging && selectedElement && dragStartPos && dragStartElementPos) {
+        e.preventDefault();
+        const currentPos = getCanvasCoordinatesFromNative(e);
+        const deltaX = currentPos.x - dragStartPos.x;
+        const deltaY = currentPos.y - dragStartPos.y;
+        
+        // Direct state update without requestAnimationFrame for immediate responsiveness
+        setElements(prev => prev.map(el =>
+          el.id === selectedElement
+            ? {
+                ...el,
+                x: dragStartElementPos.x + deltaX,
+                y: dragStartElementPos.y + deltaY
+              }
+            : el
+        ));
+        return;
+      }
+      
+      // Handle canvas panning globally
+      if (isPanning.current && dragStartPos && activeTool === 'select') {
+        e.preventDefault();
+        const deltaX = e.clientX - dragStartPos.x;
+        const deltaY = e.clientY - dragStartPos.y;
+        setPanOffset(prev => ({
+          x: prev.x + deltaX,
+          y: prev.y + deltaY
+        }));
+        setDragStartPos({ x: e.clientX, y: e.clientY });
+        return;
+      }
+    };
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      e.preventDefault();
+      
+      // Stop element dragging
+      if (isDragging) {
+        commitToHistory(elements);
+        setIsDragging(false);
+      }
+      
+      // Stop canvas panning
+      if (isPanning.current) {
+        isPanning.current = false;
+      }
+      
+      // Stop resizing
+      if (isResizing) {
+        commitToHistory(elements);
+        setIsResizing(false);
+        setResizeHandle(null);
+      }
+      
+      // Reset cursor style
+      if (canvasRef.current) {
+        canvasRef.current.style.cursor = activeTool === 'select' ? 'grab' : 'crosshair';
+      }
+      
+      // Reset drag positions
+      setDragStartPos({ x: 0, y: 0 });
+      setDragStartElementPos({ x: 0, y: 0 });
+    };
+
+    // Add global event listeners
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    // Cleanup on unmount or dependency change
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [
+    isDragging,
+    selectedElement,
+    dragStartPos,
+    dragStartElementPos,
+    elements,
+    activeTool,
+    isResizing,
+    resizeHandle,
+    getCanvasCoordinatesFromNative,
+    commitToHistory,
+    setElements,
+    setIsDragging,
+    setPanOffset,
+    setDragStartPos,
+    setDragStartElementPos,
+    setIsResizing,
+    setResizeHandle
+  ]);
+
   /**
    * Generate unique ID for new elements
    */
@@ -94,34 +207,11 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     startPos: { x: number; y: number },
     currentPos: { x: number; y: number }
   ): CanvasElement | null => {
-    if (activeTool === 'rectangle') {
-      const width = Math.abs(currentPos.x - startPos.x);
-      const height = Math.abs(currentPos.y - startPos.y);
-      
-      // Prevent zero-size elements
-      if (width < 5 && height < 5) return null;
-
-      return {
-        id: 'preview',
-        type: 'rectangle',
-        x: Math.min(startPos.x, currentPos.x),
-        y: Math.min(startPos.y, currentPos.y),
-        width,
-        height,
-        color: '#3b82f6'
-      };
-    }
-
-    if (activeTool === 'line') {
-      return {
-        id: 'preview',
-        type: 'line',
-        x: startPos.x,
-        y: startPos.y,
-        x2: currentPos.x,
-        y2: currentPos.y,
-        color: '#3b82f6'
-      };
+    console.log('🔄 PREVIEW DEBUG: createPreviewElement called with activeTool:', activeTool, 'startPos:', startPos, 'currentPos:', currentPos);
+    
+    // Rectangle, line, text, and sticky-note tools no longer use preview since they create directly from toolbar
+    if (['rectangle', 'line', 'text', 'sticky-note'].includes(activeTool)) {
+      return null;
     }
 
     return null;
@@ -133,10 +223,17 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
    * Handle mouse down events on the canvas
    */
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    console.log('🖱️ CANVAS CLICK DEBUG: handleCanvasMouseDown called with activeTool:', activeTool);
     e.preventDefault();
     e.stopPropagation();
     
+    // Set cursor style for better visual feedback
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = activeTool === 'select' ? 'grabbing' : 'crosshair';
+    }
+    
     const startPos = getCanvasCoordinates(e);
+    console.log('🖱️ CANVAS CLICK DEBUG: Canvas coordinates calculated:', startPos);
     setMousePos(startPos);
 
     // Clear any existing selections and previews when clicking on empty canvas
@@ -146,6 +243,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
       setShowTextFormatting(false);
     }
 
+    console.log('🖱️ CANVAS CLICK DEBUG: About to enter switch statement with activeTool:', activeTool);
     // Handle different tools
     switch (activeTool) {
       case 'select':
@@ -174,50 +272,11 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
 
       case 'rectangle':
       case 'line':
-        // Start shape creation
-        setIsDrawing(true);
-        setIsPreviewing(true);
-        drawStartPos.current = startPos;
-        break;
-
       case 'text':
-        // Create text element immediately
-        const textElement: CanvasElement = {
-          id: generateId(),
-          type: 'text',
-          x: startPos.x,
-          y: startPos.y,
-          width: 200,
-          height: 40,
-          content: 'New Text',
-          fontSize: 'medium',
-          color: '#000000'
-        };
-        const newTextElements = [...elements, textElement];
-        setElements(newTextElements);
-        commitToHistory(newTextElements);
-        setSelectedElement(textElement.id);
-        setIsEditingText(textElement.id);
-        setActiveTool('select');
-        break;
-
       case 'sticky-note':
-        // Create sticky note element immediately
-        const stickyElement: CanvasElement = {
-          id: generateId(),
-          type: 'sticky-note',
-          x: startPos.x,
-          y: startPos.y,
-          width: 180,
-          height: 180,
-          content: '',
-          color: '#facc15'
-        };
-        const newStickyElements = [...elements, stickyElement];
-        setElements(newStickyElements);
-        commitToHistory(newStickyElements);
-        setSelectedElement(stickyElement.id);
-        setActiveTool('select');
+        // These tools now use direct creation from toolbar buttons
+        // No longer create elements on canvas click - this prevents double creation
+        console.log(`🚫 CANVAS CLICK: ${activeTool} tool should create directly from toolbar, not canvas click`);
         break;
 
       default:
@@ -242,43 +301,17 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
   ]);
 
   /**
-   * Handle mouse move events on the canvas
+   * Handle mouse move events on the canvas (simplified - global handlers manage dragging)
    */
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    
     const currentPos = getCanvasCoordinates(e);
     setMousePos(currentPos);
 
-    // Handle panning
-    if (isPanning.current && dragStartPos && activeTool === 'select') {
-      const deltaX = e.clientX - dragStartPos.x;
-      const deltaY = e.clientY - dragStartPos.y;
-      setPanOffset(prev => ({
-        x: prev.x + deltaX,
-        y: prev.y + deltaY
-      }));
-      setDragStartPos({ x: e.clientX, y: e.clientY });
-      return;
-    }
-
-    // Handle element dragging
-    if (isDragging && selectedElement && dragStartPos && dragStartElementPos) {
-      const deltaX = currentPos.x - dragStartPos.x;
-      const deltaY = currentPos.y - dragStartPos.y;
-      
-      setElements(prev => prev.map(el =>
-        el.id === selectedElement
-          ? {
-              ...el,
-              x: dragStartElementPos.x + deltaX,
-              y: dragStartElementPos.y + deltaY
-            }
-          : el
-      ));
-      return;
-    }
-
-    // Handle element resizing
+    // Handle element resizing (still needs canvas-relative coordinates)
     if (isResizing && selectedElement && resizeHandle) {
+      e.stopPropagation();
       const element = elements.find(el => el.id === selectedElement);
       if (!element) return;
 
@@ -324,6 +357,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
 
     // Handle drawing tools
     if (isDrawing) {
+      console.log('🖱️ MOUSE MOVE DEBUG: isDrawing=true, activeTool:', activeTool, 'isPreviewing:', isPreviewing);
       if (activeTool === 'pen' && previewElement) {
         // Continue path drawing
         currentPath.current += ` L ${currentPos.x} ${currentPos.y}`;
@@ -331,21 +365,15 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
           ...previewElement,
           path: currentPath.current
         });
-      } else if (isPreviewing && (activeTool === 'rectangle' || activeTool === 'line')) {
-        // Update shape preview
-        const preview = createPreviewElement(drawStartPos.current, currentPos);
-        setPreviewElement(preview);
       }
+      // Note: Rectangle and line tools no longer use preview since they create immediately on click
     }
   }, [
     activeTool,
-    isDragging,
     isDrawing,
     isPreviewing,
     isResizing,
     selectedElement,
-    dragStartPos,
-    dragStartElementPos,
     resizeHandle,
     resizeStartPos,
     resizeStartSize,
@@ -354,35 +382,20 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     getCanvasCoordinates,
     createPreviewElement,
     setMousePos,
-    setPanOffset,
-    setDragStartPos,
     setElements,
     setPreviewElement
   ]);
 
   /**
-   * Handle mouse up events
+   * Handle mouse up events (simplified - global handler manages most cleanup)
    */
   const handleMouseUp = useCallback(() => {
-    // Stop panning
-    isPanning.current = false;
-
-    // Finalize dragging
-    if (isDragging) {
-      commitToHistory(elements);
-      setIsDragging(false);
-    }
-
-    // Finalize resizing
-    if (isResizing) {
-      commitToHistory(elements);
-      setIsResizing(false);
-      setResizeHandle(null);
-    }
-
-    // Finalize drawing
+    console.log('🖱️ MOUSE UP DEBUG: handleMouseUp called, isDrawing:', isDrawing);
+    // Finalize drawing (only thing that needs canvas-specific handling)
     if (isDrawing) {
+      console.log('🖱️ MOUSE UP DEBUG: isDrawing=true, previewElement:', previewElement);
       if (previewElement && previewElement.id === 'preview') {
+        console.log('🖱️ MOUSE UP DEBUG: Converting preview to actual element:', previewElement);
         // Convert preview to actual element
         const finalElement: CanvasElement = {
           ...previewElement,
@@ -391,48 +404,45 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
 
         // Only add if element has meaningful size
         let shouldAdd = true;
-        if (finalElement.type === 'rectangle') {
-          shouldAdd = (finalElement.width || 0) >= 5 && (finalElement.height || 0) >= 5;
-        } else if (finalElement.type === 'drawing') {
+        if (finalElement.type === 'drawing') {
           shouldAdd = currentPath.current.length > 20; // Minimum path length
         }
+        // Note: Rectangle and line elements are created immediately, not through preview conversion
 
         if (shouldAdd) {
+          console.log('✅ ELEMENT CREATION DEBUG: Adding new element to canvas:', finalElement);
           const newElements = [...elements, finalElement];
           setElements(newElements);
           commitToHistory(newElements);
           setSelectedElement(finalElement.id);
+          console.log('✅ ELEMENT CREATION DEBUG: Element added successfully, new elements count:', newElements.length);
+        } else {
+          console.log('❌ ELEMENT CREATION DEBUG: Element too small, not adding. Size:', finalElement.width, 'x', finalElement.height);
         }
+      } else {
+        console.log('❌ MOUSE UP DEBUG: No valid preview element to convert');
       }
 
       // Reset drawing state
+      console.log('🖱️ MOUSE UP DEBUG: Resetting drawing state');
       setIsDrawing(false);
       setIsPreviewing(false);
       setPreviewElement(null);
       currentPath.current = '';
+    } else {
+      console.log('🖱️ MOUSE UP DEBUG: isDrawing=false, no action needed');
     }
-
-    // Reset drag positions
-    setDragStartPos({ x: 0, y: 0 });
-    setDragStartElementPos({ x: 0, y: 0 });
   }, [
-    isDragging,
     isDrawing,
-    isResizing,
     previewElement,
     elements,
     commitToHistory,
     generateId,
-    setIsDragging,
     setIsDrawing,
     setIsPreviewing,
-    setIsResizing,
-    setResizeHandle,
     setPreviewElement,
     setElements,
-    setSelectedElement,
-    setDragStartPos,
-    setDragStartElementPos
+    setSelectedElement
   ]);
 
   /**
@@ -443,6 +453,11 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     e.preventDefault();
 
     if (activeTool !== 'select') return;
+
+    // Set dragging cursor for visual feedback
+    if (canvasRef.current) {
+      canvasRef.current.style.cursor = 'grabbing';
+    }
 
     const element = elements.find(el => el.id === elementId);
     if (!element) return;
@@ -483,6 +498,19 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     setIsDragging(true);
     setDragStartPos(currentPos);
     setDragStartElementPos({ x: element.x, y: element.y });
+    
+    // DEBUG: Log initial drag setup
+    console.log('🎯 DRAG START SETUP:', {
+      elementId,
+      screenMouse: { x: e.clientX, y: e.clientY },
+      canvasClickPos: currentPos,
+      elementPosition: { x: element.x, y: element.y },
+      elementSize: { width: element.width, height: element.height },
+      clickOffsetInElement: {
+        x: currentPos.x - element.x,
+        y: currentPos.y - element.y
+      }
+    });
 
     // Handle text editing
     if (element.type === 'text' || element.type === 'sticky-note') {
@@ -593,10 +621,11 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
 
   // --- OTHER HANDLERS ---
 
-  const handleDeleteElement = useCallback(() => {
-    if (!selectedElement) return;
+  const handleDeleteElement = useCallback((elementId?: string) => {
+    const targetElementId = elementId || selectedElement;
+    if (!targetElementId) return;
     
-    const newElements = elements.filter(el => el.id !== selectedElement);
+    const newElements = elements.filter(el => el.id !== targetElementId);
     setElements(newElements);
     commitToHistory(newElements);
     setSelectedElement(null);

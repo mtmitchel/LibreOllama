@@ -1,6 +1,7 @@
 import React, { memo, useCallback } from 'react';
-import { 
-  Link
+import {
+  Link,
+  X
 } from 'lucide-react';
 import { Card } from '../ui';
 
@@ -34,6 +35,7 @@ interface CanvasElementProps {
   onTextFormatting: (elementId: string, rect: DOMRect) => void;
   onTextChange: (elementId: string, content: string) => void;
   onTextFormatPropertyChange: (elementId: string, property: keyof CanvasElement, value: any) => void;
+  onDelete?: (elementId: string) => void;
   getTextStyles: (element: CanvasElement) => React.CSSProperties;
 }
 
@@ -44,6 +46,7 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
   onTextFormatting,
   onTextChange,
   onTextFormatPropertyChange,
+  onDelete,
   getTextStyles
 }) => {
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -64,6 +67,14 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
     onTextFormatPropertyChange(element.id, 'content', value);
   }, [onTextFormatPropertyChange, element.id]);
 
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onDelete) {
+      onDelete(element.id);
+    }
+  }, [onDelete, element.id]);
+
   // Add will-change CSS property for selected/dragged elements for GPU acceleration
   const getElementStyles = useCallback(() => {
     const baseStyles: React.CSSProperties = {};
@@ -72,6 +83,48 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
     }
     return baseStyles;
   }, [isSelected]);
+
+  // Render delete button for selected elements
+  const renderDeleteButton = () => {
+    if (!isSelected || !onDelete) return null;
+    
+    return (
+      <button
+        onClick={handleDelete}
+        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg z-10 transition-colors"
+        style={{ transform: 'translate(50%, -50%)' }}
+        title="Delete element"
+      >
+        <X size={12} />
+      </button>
+    );
+  };
+
+  // Render resize handles for selected elements
+  const renderResizeHandles = () => {
+    if (!isSelected || !element.width || !element.height) return null;
+    
+    const handleStyle = {
+      position: 'absolute' as const,
+      width: '8px',
+      height: '8px',
+      backgroundColor: '#3b82f6',
+      border: '1px solid #ffffff',
+      borderRadius: '2px',
+      cursor: 'nw-resize',
+      zIndex: 20
+    };
+
+    return (
+      <>
+        {/* Corner handles */}
+        <div style={{ ...handleStyle, top: '-4px', left: '-4px', cursor: 'nw-resize' }} />
+        <div style={{ ...handleStyle, top: '-4px', right: '-4px', cursor: 'ne-resize' }} />
+        <div style={{ ...handleStyle, bottom: '-4px', left: '-4px', cursor: 'sw-resize' }} />
+        <div style={{ ...handleStyle, bottom: '-4px', right: '-4px', cursor: 'se-resize' }} />
+      </>
+    );
+  };
 
   switch (element.type) {
     case 'sticky-note':
@@ -91,6 +144,8 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
           }}
           onMouseDown={handleMouseDown}
         >
+          {renderDeleteButton()}
+          {renderResizeHandles()}
           {element.url ? (
             <a
               href={element.url}
@@ -149,7 +204,10 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
             ...getElementStyles()
           }}
           onMouseDown={handleMouseDown}
-        />
+        >
+          {renderDeleteButton()}
+          {renderResizeHandles()}
+        </div>
       );
 
     case 'circle':
@@ -168,7 +226,10 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
             ...getElementStyles()
           }}
           onMouseDown={handleMouseDown}
-        />
+        >
+          {renderDeleteButton()}
+          {renderResizeHandles()}
+        </div>
       );
 
     case 'triangle':
@@ -189,7 +250,11 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
             ...getElementStyles()
           }}
           onMouseDown={handleMouseDown}
-        />
+        >
+          {renderDeleteButton()}
+          {renderResizeHandles()}
+          {renderResizeHandles()}
+        </div>
       );
 
     case 'star':
@@ -206,6 +271,8 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
           }}
           onMouseDown={handleMouseDown}
         >
+          {renderDeleteButton()}
+          {renderResizeHandles()}
           <svg width={element.width || 60} height={element.height || 60}>
             <polygon
               points="30,2 37,20 57,20 42,32 48,52 30,40 12,52 18,32 3,20 23,20"
@@ -229,6 +296,7 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
           }}
           onMouseDown={handleMouseDown}
         >
+          {renderDeleteButton()}
           <svg width={element.width || 60} height={element.height || 60}>
             <polygon
               points="30,2 52,15 52,45 30,58 8,45 8,15"
@@ -284,6 +352,8 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
           }}
           onMouseDown={handleMouseDown}
         >
+          {renderDeleteButton()}
+          {renderResizeHandles()}
           {element.url ? (
             <a
               href={element.url}
@@ -374,6 +444,7 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
           }}
           onMouseDown={handleMouseDown}
         >
+          {renderDeleteButton()}
           <line
             x1={element.x - Math.min(element.x, element.x2 || element.x) + 2}
             y1={element.y - Math.min(element.y, element.y2 || element.y) + 2}
@@ -404,6 +475,7 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
           }}
           onMouseDown={handleMouseDown}
         >
+          {renderDeleteButton()}
           <defs>
             <marker
               id={`arrowhead-${element.id}`}
@@ -449,6 +521,8 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
           }}
           onMouseDown={handleMouseDown}
         >
+          {renderDeleteButton()}
+          {renderResizeHandles()}
           <img
             src={element.imageUrl}
             alt={element.imageName || 'Canvas image'}
