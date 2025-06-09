@@ -32,6 +32,7 @@ export const useCanvasEvents = ({
   // Get store actions (these are stable function references from Zustand)
   const addElement = useCanvasStore((state) => state.addElement);
   const updateElement = useCanvasStore((state) => state.updateElement);
+  const updateElementContent = useCanvasStore((state) => state.updateElementContent);
   const deleteElement = useCanvasStore((state) => state.deleteElement);
   const selectElement = useCanvasStore((state) => state.selectElement);
   const clearSelection = useCanvasStore((state) => state.clearSelection);
@@ -66,11 +67,8 @@ export const useCanvasEvents = ({
       
       // Clear text editing when selecting elements (unless shift-clicking to add to selection)
       if (!shiftPressed && currentEditingText) {
-        if (textAreaRef.current) {
-          const currentTextValue = textAreaRef.current.value;
-          updateElement(currentEditingText, { content: currentTextValue });
-          addToHistory(useCanvasStore.getState().elements);
-        }
+        // Text content is already synced via updateElementContent, just exit editing mode
+        addToHistory(useCanvasStore.getState().elements);
         setIsEditingText(null);
         setTextFormattingState(false);
         setTextSelectionState(null, null, null);

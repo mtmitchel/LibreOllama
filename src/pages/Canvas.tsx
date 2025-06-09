@@ -30,6 +30,7 @@ const Canvas = () => {
   // Get store actions directly (these are stable function references)
   const addElement = useCanvasStore((state: CanvasState) => state.addElement);
   const updateElement = useCanvasStore((state: CanvasState) => state.updateElement);
+  const updateElementContent = useCanvasStore((state: CanvasState) => state.updateElementContent);
   const setSelectedElementIds = useCanvasStore((state: CanvasState) => state.setSelectedElementIds);
   const setActiveTool = useCanvasStore((state: CanvasState) => state.setActiveTool);
   const setIsEditingText = useCanvasStore((state: CanvasState) => state.setIsEditingText);
@@ -38,7 +39,6 @@ const Canvas = () => {
 
   const canvasContainerRef = useRef<HTMLDivElement>(null); // For overall workspace dimensions and DOM events
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const [editingTextValue, setEditingTextValue] = useState('');
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   // Debug: Log state changes for debugging
@@ -197,9 +197,7 @@ const Canvas = () => {
     if (newElement.type === 'text') {
       setIsEditingText(newElement.id);
       // For new text elements, start with empty content so user can type immediately
-      setEditingTextValue('');
-      // Update the element to have empty content initially
-      updateElement(newElement.id, { content: '' });
+      updateElementContent(newElement.id, '');
     }
   }, [generateId, addElement, addToHistory, setSelectedElementIds, setIsEditingText]);
 
@@ -210,7 +208,6 @@ const Canvas = () => {
     const element = elements[elementId];
     if (element && (element.type === 'text' || element.type === 'sticky-note')) {
       setIsEditingText(elementId);
-      setEditingTextValue(element.content || '');
       setTextFormattingState(false); // Hide toolbar when editing
     }
   }, [elements, setIsEditingText, setTextFormattingState]);
@@ -247,9 +244,9 @@ const Canvas = () => {
   }, [elements, updateElement, addToHistory]);
 
   const handleUpdateContent = useCallback((elementId: string, content: string) => {
-    updateElement(elementId, { content });
+    updateElementContent(elementId, content);
     addToHistory(useCanvasStore.getState().elements);
-  }, [updateElement, addToHistory]);
+  }, [updateElementContent, addToHistory]);
 
   const { effectiveTheme } = useTheme();
   
@@ -396,34 +393,23 @@ const Canvas = () => {
           return (
             <textarea
               ref={textAreaRef}
-              value={editingTextValue}
+              value={editingElement.content || ''}
               onChange={(e) => {
-                const newValue = e.target.value;
-                setEditingTextValue(newValue);
-                // Update element content immediately for live updates
-                updateElement(isEditingText, { content: newValue });
+                // Update element content immediately for live updates - Single Source of Truth
+                updateElementContent(isEditingText, e.target.value);
               }}
-              onBlur={(e) => {
-                // Only commit and exit if the blur is not due to clicking on canvas elements
-                const relatedTarget = e.relatedTarget as HTMLElement;
-                if (!relatedTarget || (!relatedTarget.closest('.canvas-container') && !relatedTarget.closest('button'))) {
-                  console.log('Text editing blur - committing changes');
-                  if (isEditingText && textAreaRef.current) {
-                    updateElement(isEditingText, { content: textAreaRef.current.value });
-                    addToHistory(useCanvasStore.getState().elements);
-                  }
-                  setIsEditingText(null);
-                  setTextFormattingState(false);
-                }
+              onBlur={() => {
+                // Simple blur handler - just exit editing mode
+                console.log('Text editing blur - exiting edit mode');
+                addToHistory(useCanvasStore.getState().elements);
+                setIsEditingText(null);
+                setTextFormattingState(false);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  console.log('Text editing enter - committing changes');
-                  if (isEditingText && textAreaRef.current) {
-                    updateElement(isEditingText, { content: textAreaRef.current.value });
-                    addToHistory(useCanvasStore.getState().elements);
-                  }
+                  console.log('Text editing enter - exiting edit mode');
+                  addToHistory(useCanvasStore.getState().elements);
                   setIsEditingText(null);
                   setTextFormattingState(false);
                 }
