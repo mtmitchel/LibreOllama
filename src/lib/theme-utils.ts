@@ -1,3 +1,5 @@
+import { CanvasElement } from '../stores/canvasStore';
+
 /**
  * Theme utilities for canvas components
  * Provides functions to convert CSS variables to Pixi.js compatible values
@@ -147,40 +149,39 @@ export const getDefaultElementColors = (elementType: string) => {
 /**
  * Converts a hex string to Pixi.js number format
  */
-export function hexStringToNumber(hex: string | undefined): number {
-  if (!hex) return 0x000000;
-  const cleaned = hex.replace('#', '');
-  return parseInt(cleaned, 16);
+export const hexStringToNumber = (hex?: string): number => {
+  if (!hex || !/^#[0-9A-F]{6}$/i.test(hex)) { // Basic validation
+    // console.warn(\`Invalid hex string: ${hex}, defaulting to black.\`);
+    return 0x000000; // Default to black
+  }
+  return parseInt(hex.replace(/^#/, ''), 16);
 }
 
 /**
  * Validates that a canvas element has all required properties for rendering
  */
-export const validateCanvasElement = (element: any): boolean => {
-  if (!element) {
-    console.warn('validateCanvasElement: Element is null or undefined');
+export const validateCanvasElement = (element: Partial<CanvasElement>): element is CanvasElement => {
+  if (!element) return false;
+  // const { id, type, x, y, width, height } = element; // Only checks these basic props
+  // return !!(id && type && typeof x === 'number' && typeof y === 'number' && typeof width === 'number' && typeof height === 'number' && width > 0 && height > 0);
+  const { id, type, x, y, width, height, points, x2, y2 } = element;
+
+  if (!id || !type || typeof x !== 'number' || typeof y !== 'number') {
     return false;
   }
 
-  const required = ['id', 'type', 'x', 'y'];
-  const missing = required.filter(prop => element[prop] === undefined || element[prop] === null);
-  
-  if (missing.length > 0) {
-    console.warn(`validateCanvasElement: Missing required properties for element "${element.id}":`, missing);
-    return false;
+  // Type-specific validation for dimensions or critical properties
+  switch (type) {
+    case 'line':
+    case 'arrow':
+      return typeof x2 === 'number' && typeof y2 === 'number'; // Lines/arrows need end points
+    case 'drawing':
+      return Array.isArray(points) && points.length > 0; // Drawings need points
+    default:
+      // For other shapes, width and height are generally expected, but allow 0 for initial creation.
+      // The renderer component should handle default/minimum sizes.
+      return typeof width === 'number' && typeof height === 'number';
   }
-
-  if (typeof element.x !== 'number' || typeof element.y !== 'number') {
-    console.warn(`validateCanvasElement: Invalid coordinates for element "${element.id}":`, { x: element.x, y: element.y });
-    return false;
-  }
-
-  if (isNaN(element.x) || isNaN(element.y)) {
-    console.warn(`validateCanvasElement: NaN coordinates for element "${element.id}":`, { x: element.x, y: element.y });
-    return false;
-  }
-
-  return true;
 };
 
 /**

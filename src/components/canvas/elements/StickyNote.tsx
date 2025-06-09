@@ -1,6 +1,6 @@
 import React, { useCallback, useRef } from 'react';
 import { Graphics, Text } from '@pixi/react';
-import { CanvasElement } from '../../../stores/canvasStore';
+import { CanvasElement, useCanvasStore } from '../../../stores/canvasStore';
 import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface StickyNoteProps {
@@ -16,6 +16,14 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
   // Get theme colors
   const themeColors = getThemeColors();
   const defaultColors = getDefaultElementColors('sticky-note');
+  
+  // Check if we're currently editing this sticky note
+  const isEditingText = useCanvasStore((state) => state.isEditingText);
+  
+  // Don't render if we're currently editing this sticky note
+  if (isEditingText === element.id) {
+    return null;
+  }
 
   // Draw the sticky note background
   const drawBackground = useCallback((g: any) => {
@@ -45,24 +53,33 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
   }, [element.width, element.height, element.backgroundColor, isSelected, themeColors.selectionBlue, defaultColors.background, defaultColors.border]);
 
   const handlePointerDown = useCallback((e: any) => {
-    // Always handle single click immediately
+    // Stop propagation to prevent canvas-level handlers from interfering
+    e.stopPropagation(); // Stops Pixi event bubbling
+    if (e.data?.originalEvent) {
+      e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
+      e.data.originalEvent.stopImmediatePropagation(); // Stops other DOM listeners on the same element
+    }
     if (onMouseDown) {
       onMouseDown(e, element.id);
     }
   }, [onMouseDown, element.id]);
 
   const handlePointerTap = useCallback((e: any) => {
-    // Use Pixi's tap event for double-click detection
-    const now = Date.now();
+    const now = Date.now(); // Define now
     const timeDiff = now - lastClickTime.current;
     
     if (timeDiff < 300 && onDoubleClick) {
-      e.stopPropagation();
+      // Stop propagation for the tap event as well if it results in a double-click action
+      e.stopPropagation(); // Stops Pixi event bubbling
+      if (e.data?.originalEvent) {
+        e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
+        e.data.originalEvent.stopImmediatePropagation(); 
+      }
       onDoubleClick();
     }
     
     lastClickTime.current = now;
-  }, [onDoubleClick]);
+  }, [onDoubleClick, lastClickTime]); // Added lastClickTime to dependencies
 
 
   // Text style for the sticky note content with theme-aware colors
@@ -77,6 +94,26 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
     fontStyle: element.isItalic ? 'italic' : 'normal',
   };
 
+  // --- START STICKYNOTE GRAPHICS DEBUGGING ---
+  // console.log(`StickyNote: Rendering <Graphics> for element ${element.id} to test invariant violation`);
+  // return (
+  //   <Graphics
+  //     x={element.x}
+  //     y={element.y}
+  //     draw={g => {
+  //       g.beginFill(0x0000ff); // Blue square for sticky note debug
+  //       g.drawRect(0, 0, Math.max(element.width || 50, 50), Math.max(element.height || 50, 50));
+  //       g.endFill();
+  //     }}
+  //     interactive
+  //     pointerdown={handlePointerDown}
+  //     pointertap={handlePointerTap}
+  //     cursor="pointer"
+  //   />
+  // );
+  // --- END STICKYNOTE GRAPHICS DEBUGGING ---
+
+  // Original Return:
   return (
     <>
       {/* Background */}
@@ -85,8 +122,13 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
         y={element.y}
         draw={drawBackground}
         interactive
-        pointerdown={handlePointerDown}  // Immediate selection
-        pointertap={handlePointerTap}     // Double-click detection
+        eventMode={'static'}
+        pointerdown={(e) => {
+          handlePointerDown(e); // This will now call the useCallback version with stopPropagation
+        }}
+        pointertap={(e) => {
+          handlePointerTap(e); // This will now call the useCallback version with stopPropagation
+        }}
         cursor="pointer"
       />
       

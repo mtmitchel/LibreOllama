@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface DrawingElementProps {
   element: CanvasElement;
@@ -9,27 +10,29 @@ interface DrawingElementProps {
 }
 
 const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
-
   // Draw the path/line
   const draw = useCallback((g: any) => {
     g.clear();
     
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('drawing');
+    
     // Ensure we have valid points data
     if (!element.points || !Array.isArray(element.points) || element.points.length < 2) {
-      // Draw a small placeholder if no valid points
-      g.beginFill(0xcccccc, 0.5);
+      // Draw a small placeholder if no valid points using theme colors
+      g.beginFill(themeColors.textSecondary, 0.5);
       g.drawCircle(0, 0, 5);
       g.endFill();
       return;
     }
     
-    const strokeColor = hexToNumber(element.strokeColor || element.color || '#000000');
+    // Handle colors consistently using theme-utils
+    const strokeColor = element.strokeColor
+      ? hexStringToNumber(element.strokeColor)
+      : element.color
+        ? hexStringToNumber(element.color)
+        : defaultColors.stroke;
+        
     const strokeWidth = element.strokeWidth || 2;
     
     g.lineStyle(strokeWidth, strokeColor);
@@ -44,7 +47,7 @@ const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, on
       g.lineTo(point.x - element.x, point.y - element.y);
     }
     
-    // Selection indicator - draw a bounding box around the drawing
+    // Theme-aware selection indicator - draw a bounding box around the drawing
     if (isSelected && element.points.length > 0) {
       // Calculate bounding box
       let minX = element.points[0].x - element.x;
@@ -61,7 +64,7 @@ const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, on
         maxY = Math.max(maxY, relY);
       });
       
-      g.lineStyle(1, 0x007acc, 1);
+      g.lineStyle(2, themeColors.selectionBlue, 1);
       g.drawRect(minX - 5, minY - 5, maxX - minX + 10, maxY - minY + 10);
     }
   }, [element.points, element.x, element.y, element.strokeColor, element.color, element.strokeWidth, isSelected]);

@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
-import { hexStringToNumber, getThemeColors } from '../../../lib/theme-utils';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface LineProps {
   element: CanvasElement;
@@ -20,19 +20,18 @@ const Line: React.FC<LineProps> = ({ element, isSelected, onMouseDown }) => {  /
     }
     
     const themeColors = getThemeColors();
-    const color = element.strokeColor 
+    const defaultColors = getDefaultElementColors('line');
+    
+    // Handle colors consistently using theme-utils
+    const strokeColor = element.strokeColor
       ? hexStringToNumber(element.strokeColor)
       : element.color
         ? hexStringToNumber(element.color)
-        : 0x000000; // Default to black
+        : defaultColors.stroke; // Use theme-aware default
+        
     const strokeWidth = element.strokeWidth || 2;
     
-    g.lineStyle(strokeWidth, color);
-    
-    // Selection indicator - use theme color
-    if (isSelected) {
-      g.lineStyle(strokeWidth + 1, themeColors.selectionBlue, 0.8);
-    }
+    g.lineStyle(strokeWidth, strokeColor);
     
     const x1 = 0; // Relative to element position
     const y1 = 0;
@@ -43,7 +42,14 @@ const Line: React.FC<LineProps> = ({ element, isSelected, onMouseDown }) => {  /
     
     g.moveTo(x1, y1);
     g.lineTo(x2, y2);
-  }, [element.x, element.y, element.x2, element.y2, element.color, element.strokeWidth, isSelected]);
+    
+    // Theme-aware selection indicator
+    if (isSelected) {
+      g.lineStyle(strokeWidth + 2, themeColors.selectionBlue, 0.8);
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+    }
+  }, [element.x, element.y, element.x2, element.y2, element.strokeColor, element.color, element.strokeWidth, isSelected]);
 
   const handlePointerDown = useCallback((e: any) => {
     if (onMouseDown) {

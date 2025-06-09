@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface TriangleProps {
   element: CanvasElement;
@@ -9,35 +10,57 @@ interface TriangleProps {
 }
 
 const Triangle: React.FC<TriangleProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
-
   // Draw the triangle
   const draw = useCallback((g: any) => {
     g.clear();
     
-    const fillColor = hexToNumber(element.color || '#8b5cf6');
-    g.beginFill(fillColor);
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('triangle');
     
-    // Selection indicator
-    if (isSelected) {
-      g.lineStyle(2, 0x007acc, 1);
+    // Validate dimensions with safety checks
+    const width = Math.max(element.width || 100, 1);
+    const height = Math.max(element.height || 100, 1);
+    
+    // Handle colors consistently using theme-utils
+    const fillColor = element.backgroundColor && element.backgroundColor !== 'transparent'
+      ? hexStringToNumber(element.backgroundColor)
+      : defaultColors.fill;
+    
+    const strokeColor = element.strokeColor
+      ? hexStringToNumber(element.strokeColor)
+      : element.color
+        ? hexStringToNumber(element.color)
+        : defaultColors.stroke;
+        
+    const strokeWidth = element.strokeWidth || 2;
+    
+    // Always set line style to ensure triangle is visible
+    g.lineStyle(strokeWidth, strokeColor);
+    
+    // Only add fill if not transparent
+    if (element.backgroundColor !== 'transparent') {
+      g.beginFill(fillColor);
     }
-    
-    const width = element.width || 60;
-    const height = element.height || 60;
     
     // Draw triangle (pointing up)
     g.moveTo(width / 2, 0);
     g.lineTo(width, height);
     g.lineTo(0, height);
     g.closePath();
-    g.endFill();
-  }, [element.width, element.height, element.color, isSelected]);
+    
+    if (element.backgroundColor !== 'transparent') {
+      g.endFill();
+    }
+    
+    // Theme-aware selection indicator
+    if (isSelected) {
+      g.lineStyle(2, themeColors.selectionBlue, 1);
+      g.moveTo(width / 2 - 2, -2);
+      g.lineTo(width + 2, height + 2);
+      g.lineTo(-2, height + 2);
+      g.closePath();
+    }
+  }, [element.width, element.height, element.backgroundColor, element.strokeColor, element.strokeWidth, element.color, isSelected]);
   const handlePointerDown = useCallback((e: any) => {
     if (onMouseDown) {
       onMouseDown(e, element.id);

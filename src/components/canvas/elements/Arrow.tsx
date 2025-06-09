@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface ArrowProps {
   element: CanvasElement;
@@ -9,12 +10,6 @@ interface ArrowProps {
 }
 
 const Arrow: React.FC<ArrowProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
   // Draw the arrow
   const draw = useCallback((g: any) => {
     g.clear();
@@ -25,13 +20,20 @@ const Arrow: React.FC<ArrowProps> = ({ element, isSelected, onMouseDown }) => {
       return;
     }
     
-    const color = hexToNumber(element.color || '#000000');
-    g.lineStyle(element.strokeWidth || 2, color);
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('arrow');
     
-    // Selection indicator
-    if (isSelected) {
-      g.lineStyle(element.strokeWidth ? element.strokeWidth + 1 : 3, 0x007acc, 0.8);
-    }
+    // Handle colors consistently using theme-utils
+    const strokeColor = element.strokeColor
+      ? hexStringToNumber(element.strokeColor)
+      : element.color
+        ? hexStringToNumber(element.color)
+        : defaultColors.stroke;
+        
+    const strokeWidth = element.strokeWidth || 2;
+    
+    // Set line style for arrow stroke
+    g.lineStyle(strokeWidth, strokeColor);
     
     const x1 = 0; // Relative to element position
     const y1 = 0;
@@ -46,10 +48,10 @@ const Arrow: React.FC<ArrowProps> = ({ element, isSelected, onMouseDown }) => {
     
     // Draw arrowhead
     const angle = Math.atan2(y2 - y1, x2 - x1);
-    const arrowLength = 10;
+    const arrowLength = Math.max(strokeWidth * 5, 10); // Scale arrowhead with stroke width
     const arrowAngle = Math.PI / 6;
     
-    g.beginFill(color);
+    g.beginFill(strokeColor);
     g.moveTo(x2, y2);
     g.lineTo(
       x2 - arrowLength * Math.cos(angle - arrowAngle),
@@ -61,7 +63,28 @@ const Arrow: React.FC<ArrowProps> = ({ element, isSelected, onMouseDown }) => {
     );
     g.closePath();
     g.endFill();
-  }, [element.x, element.y, element.x2, element.y2, element.color, element.strokeWidth, isSelected]);
+    
+    // Theme-aware selection indicator
+    if (isSelected) {
+      g.lineStyle(strokeWidth + 2, themeColors.selectionBlue, 0.8);
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+      
+      // Draw selection indicator for arrowhead
+      g.beginFill(themeColors.selectionBlue, 0.3);
+      g.moveTo(x2, y2);
+      g.lineTo(
+        x2 - arrowLength * Math.cos(angle - arrowAngle),
+        y2 - arrowLength * Math.sin(angle - arrowAngle)
+      );
+      g.lineTo(
+        x2 - arrowLength * Math.cos(angle + arrowAngle),
+        y2 - arrowLength * Math.sin(angle + arrowAngle)
+      );
+      g.closePath();
+      g.endFill();
+    }
+  }, [element.x, element.y, element.x2, element.y2, element.strokeColor, element.color, element.strokeWidth, isSelected]);
 
   const handlePointerDown = useCallback((e: any) => {
     if (onMouseDown) {

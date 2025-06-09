@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface HexagonProps {
   element: CanvasElement;
@@ -9,28 +10,39 @@ interface HexagonProps {
 }
 
 const Hexagon: React.FC<HexagonProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
-
   // Draw the hexagon
   const draw = useCallback((g: any) => {
     g.clear();
     
-    const fillColor = hexToNumber(element.color || '#06b6d4');
-    g.beginFill(fillColor);
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('hexagon');
     
-    // Selection indicator
-    if (isSelected) {
-      g.lineStyle(2, 0x007acc, 1);
+    // Validate dimensions with safety checks
+    const width = Math.max(element.width || 100, 1);
+    const height = Math.max(element.height || 100, 1);
+    
+    // Handle colors consistently using theme-utils
+    const fillColor = element.backgroundColor && element.backgroundColor !== 'transparent'
+      ? hexStringToNumber(element.backgroundColor)
+      : defaultColors.fill;
+    
+    const strokeColor = element.strokeColor
+      ? hexStringToNumber(element.strokeColor)
+      : element.color
+        ? hexStringToNumber(element.color)
+        : defaultColors.stroke;
+        
+    const strokeWidth = element.strokeWidth || 2;
+    
+    // Always set line style to ensure hexagon is visible
+    g.lineStyle(strokeWidth, strokeColor);
+    
+    // Only add fill if not transparent
+    if (element.backgroundColor !== 'transparent') {
+      g.beginFill(fillColor);
     }
     
     // Hexagon points (scaled to element size)
-    const width = element.width || 60;
-    const height = element.height || 60;
     const scaleX = width / 60;
     const scaleY = height / 60;
     
@@ -44,8 +56,27 @@ const Hexagon: React.FC<HexagonProps> = ({ element, isSelected, onMouseDown }) =
     ];
     
     g.drawPolygon(points);
-    g.endFill();
-  }, [element.width, element.height, element.color, isSelected]);
+    
+    if (element.backgroundColor !== 'transparent') {
+      g.endFill();
+    }
+    
+    // Theme-aware selection indicator
+    if (isSelected) {
+      g.lineStyle(2, themeColors.selectionBlue, 1);
+      // Draw selection outline around hexagon bounds
+      const padding = 2;
+      const selectionPoints = [
+        (30 * scaleX), (2 * scaleY) - padding,
+        (52 * scaleX) + padding, (15 * scaleY) - padding,
+        (52 * scaleX) + padding, (45 * scaleY) + padding,
+        (30 * scaleX), (58 * scaleY) + padding,
+        (8 * scaleX) - padding, (45 * scaleY) + padding,
+        (8 * scaleX) - padding, (15 * scaleY) - padding
+      ];
+      g.drawPolygon(selectionPoints);
+    }
+  }, [element.width, element.height, element.backgroundColor, element.strokeColor, element.strokeWidth, element.color, isSelected]);
 
   const handlePointerDown = useCallback((e: any) => {
     if (onMouseDown) {

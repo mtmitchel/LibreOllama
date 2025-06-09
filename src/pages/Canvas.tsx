@@ -69,46 +69,59 @@ const Canvas = () => {
   });
     // Element-specific mouse down handler
   const handleElementMouseDown = useCallback((e: any, elementId: string) => {
-    isElementClicked.current = true; // Flag that an element was clicked
-    e.stopPropagation();
+    isElementClicked.current = true; // Set the flag indicating an element was clicked
 
-    const { activeTool: currentActiveTool, isEditingText: currentEditingText, selectElement, setIsEditingText, addToHistory, setSelectedElementIds, setDragState } = useCanvasStore.getState();
+    const { activeTool: currentActiveTool, isEditingText: currentEditingText, selectElement, setIsEditingText, addToHistory, setDragState, elements: currentElements, selectedElementIds: currentSelectedIdsFromStore, pan, zoom } = useCanvasStore.getState();
 
     if (currentActiveTool !== 'select') return;
     
-    // Handle text editing exit
     if (currentEditingText && currentEditingText !== elementId) {
-      addToHistory(useCanvasStore.getState().elements);
       setIsEditingText(null);
     }
     
-    // Handle selection
     const shiftPressed = e.data?.originalEvent?.shiftKey || false;
+    let newSelectedIds: string[];
+
     if (shiftPressed) {
-      selectElement(elementId, true);
-    } else if (!selectedElementIds.includes(elementId)) {
-      setSelectedElementIds([elementId]);
+      if (currentSelectedIdsFromStore.includes(elementId)) {
+        newSelectedIds = currentSelectedIdsFromStore.filter(id => id !== elementId);
+      } else {
+        newSelectedIds = [...currentSelectedIdsFromStore, elementId];
+      }
+      useCanvasStore.getState().setSelectedElementIds(newSelectedIds);
+    } else if (!currentSelectedIdsFromStore.includes(elementId)) {
+      newSelectedIds = [elementId];
+      useCanvasStore.getState().setSelectedElementIds(newSelectedIds);
+    } else {
+      newSelectedIds = [...currentSelectedIdsFromStore];
     }
     
-    // Prepare for dragging
-    const { elements: currentElements, selectedElementIds: currentSelectedIds } = useCanvasStore.getState();
-    const startDragCoords = { x: e.global.x, y: e.global.y };
+    const finalSelectedIdsForDrag = useCanvasStore.getState().selectedElementIds;
+
+    const pannedZoomedContainer = e.currentTarget.parent; 
+    const startDragWorldCoords = e.data.getLocalPosition(pannedZoomedContainer);
+
     const initialPositions: Record<string, { x: number; y: number }> = {};
-    currentSelectedIds.forEach(id => {
-        if (currentElements[id]) {
-            initialPositions[id] = { x: currentElements[id].x, y: currentElements[id].y };
-        }
+    finalSelectedIdsForDrag.forEach(id => {
+      if (currentElements[id]) {
+        initialPositions[id] = { x: currentElements[id].x, y: currentElements[id].y };
+      }
     });
 
-    setDragState(true, startDragCoords, initialPositions);
-  }, [selectedElementIds]);
+    setDragState(true, startDragWorldCoords, initialPositions);
+  }, []); // Removed dependencies as we get fresh state from the store
   
     // This is the main canvas mousedown, we check our flag here.
   const onCanvasMouseDown = (e: React.MouseEvent) => {
     // If an element was just clicked, do nothing on the canvas. Reset the flag.
+    // The setTimeout helps ensure that if a double-click is processed by an element,
+    // this canvas handler doesn't immediately undo it.
     if (isElementClicked.current) {
-        isElementClicked.current = false;
-        return;
+      const clickedElementId = isElementClicked.current; // Store it if needed for logging
+      if (import.meta.env.DEV) console.log(`Canvas: onCanvasMouseDown - an element (${clickedElementId}) was recently clicked. Bypassing canvas click.`);
+      // Resetting the flag here. With robust stopPropagation in elements, this should be safe.
+      isElementClicked.current = false; 
+      return;
     }
     // Otherwise, handle canvas click as normal (deselecting, panning, etc.)
     handleCanvasMouseDown(e);
@@ -441,7 +454,7 @@ const Canvas = () => {
         ref={canvasContainerRef}
         onMouseDown={onCanvasMouseDown} // Use our new handler
       >
-        <Stage
+        <Stage // --- STAGE RE-ENABLED FOR DEBUGGING --- 
           width={canvasSize.width}
           height={canvasSize.height}
           options={{
@@ -450,12 +463,15 @@ const Canvas = () => {
             antialias: true,
             autoDensity: true,
             resolution: window.devicePixelRatio || 1,
-          }}        >          <Container x={pan.x} y={pan.y} scale={{ x: zoom, y: zoom }}>            <CanvasGrid zoomLevel={zoom} panOffset={pan} canvasSize={canvasSize} />
+          }}
+        >   
+          <Container x={pan.x} y={pan.y} scale={{ x: zoom, y: zoom }} eventMode={'static'} interactive={true}>
+            <CanvasGrid zoomLevel={zoom} panOffset={pan} canvasSize={canvasSize} />
             {(() => {
               const filteredElements = visibleElements.filter(element => element && element.id && element.type);
               
               if (import.meta.env.DEV) {
-                console.log(`Canvas: Rendering ${filteredElements.length} elements out of ${Object.keys(elements).length} total`);
+                console.log(`Canvas: Rendering ${filteredElements.length} elements out of ${Object.keys(elements).length} total (Element Loop Re-enabled)`);
                 if (filteredElements.length !== Object.keys(elements).length) {
                   console.log('Canvas: Some elements filtered out by viewport culling or validation');
                 }
@@ -472,15 +488,15 @@ const Canvas = () => {
               ));
             })()}
             {isDrawing && previewElement && previewElement.type && (
-              <CanvasElementRenderer 
-                key="preview" 
-                element={previewElement} 
-                isSelected={false} 
-                onMouseDown={() => {}} 
+              <CanvasElementRenderer
+                key={`preview-${previewElement.id}`}
+                element={previewElement}
+                isSelected={false} // Preview element is never selected in the same way as placed elements
+                // No mouse handlers for preview, it's just a visual
               />
             )}
           </Container>
-        </Stage>
+        </Stage> {/* --- STAGE RE-ENABLED FOR DEBUGGING --- */}
           {isEditingText && (() => {
           const editingElement = elements[isEditingText];
           if (!editingElement) {

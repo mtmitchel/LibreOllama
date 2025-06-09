@@ -50,6 +50,10 @@ export const useCanvasEvents = ({
   const handleElementMouseDown = useCallback((pixiEvent: any, elementId: string) => {
     console.log('Element mouse down:', elementId, pixiEvent);
     pixiEvent.stopPropagation(); // Prevent canvas click from firing
+    // Also stop propagation of the original DOM event if it exists
+    if (pixiEvent.data && pixiEvent.data.originalEvent && typeof pixiEvent.data.originalEvent.stopPropagation === 'function') {
+      pixiEvent.data.originalEvent.stopPropagation();
+    }
     const { elements: currentElements, activeTool: currentActiveTool, isEditingText: currentEditingText } = useCanvasStore.getState();
     const element = currentElements[elementId];
 
@@ -83,11 +87,8 @@ export const useCanvasEvents = ({
       }
 
       // Prepare for dragging selected elements
-      // Use screen coordinates for consistent drag calculation
-      const startDragCoords = { 
-        x: pixiEvent.global.x,
-        y: pixiEvent.global.y
-      };
+      // Convert screen/stage coordinates from Pixi event to WORLD coordinates
+      const startDragWorldCoords = getCanvasCoordinates(pixiEvent.global.x, pixiEvent.global.y);
       
       initialElementPositions.current = {};
       const idsToDrag = useCanvasStore.getState().selectedElementIds;
@@ -102,9 +103,10 @@ export const useCanvasEvents = ({
          initialElementPositions.current[elementId] = { x: element.x, y: element.y };
       }
 
-      setDragState(true, startDragCoords, initialElementPositions.current);
+      // Store WORLD coordinates for drag start position
+      setDragState(true, startDragWorldCoords, initialElementPositions.current);
     }
-  }, [selectElement, setDragState, updateElement, addToHistory, setIsEditingText, setTextFormattingState, setTextSelectionState, textAreaRef]);
+  }, [selectElement, setDragState, updateElement, addToHistory, setIsEditingText, setTextFormattingState, setTextSelectionState, textAreaRef, getCanvasCoordinates]); // Added getCanvasCoordinates
   // Handle mouse down events on the main canvas workspace
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     console.log('Canvas mouse down:', {
@@ -117,15 +119,16 @@ export const useCanvasEvents = ({
     const currentStoreState = useCanvasStore.getState();
 
     if (e.target !== canvasContainerRef.current && !(e.target instanceof HTMLCanvasElement)) {
-      // Click was on a React UI element over the canvas, not the canvas itself or its direct container
       console.log('Click was on UI element, ignoring');
       return;
     }
 
-    // Only prevent default if we're going to handle the event
-    // DON'T prevent default for text editing areas
     const isTextarea = e.target instanceof HTMLTextAreaElement;
-    if (!isTextarea) {
+    const isPixiCanvas = e.target instanceof HTMLCanvasElement;
+
+    if (!isTextarea && !isPixiCanvas) {
+      // Prevent default only if the target is not the textarea and not the Pixi canvas.
+      // If it's the Pixi canvas, we let the event proceed so Pixi can handle it.
       e.preventDefault();
     }
 
@@ -187,60 +190,68 @@ export const useCanvasEvents = ({
       isDragging: currentIsDragging, 
       dragStartPos: currentDragStartPos, 
       activeTool: currentActiveTool, 
-      zoom: currentZoom, 
       pan: currentPan, 
-      elements: currentElements, 
       selectedElementIds: currentSelectedIds, 
       previewElement: currentPreviewElement, 
       isDrawing: currentIsDrawing, 
-      dragStartElementPos: currentDragStartElementPos 
+      dragStartElementPos: currentDragStartElementPos,
+      zoom: currentZoom,
+      updateMultipleElements // Get the new batch update action
     } = useCanvasStore.getState();
 
     if (!currentIsDragging) return;
 
-    const currentMouseX = e.clientX;
-    const currentMouseY = e.clientY;
+    const currentMouseWorldCoords = getCanvasCoordinates(e.clientX, e.clientY); 
 
-    if (isPanning.current && currentActiveTool === 'select') {
-      const dx = currentMouseX - currentDragStartPos.x;
-      const dy = currentMouseY - currentDragStartPos.y;
-      setPan({ x: currentPan.x + dx, y: currentPan.y + dy });
-      setDragState(true, { x: currentMouseX, y: currentMouseY }, null); // Update dragStartPos for continuous panning
-    } else if (currentIsDrawing && currentPreviewElement) {
-      const coords = getCanvasCoordinates(currentMouseX, currentMouseY);
-      let newWidth = Math.abs(coords.x - currentDragStartPos.x);
-      let newHeight = Math.abs(coords.y - currentDragStartPos.y);
-      let newX = Math.min(coords.x, currentDragStartPos.x);
-      let newY = Math.min(coords.y, currentDragStartPos.y);
+    if (currentActiveTool === 'select' && currentDragStartPos && currentDragStartElementPos && currentSelectedIds.length > 0) {
+      const dx = currentMouseWorldCoords.x - currentDragStartPos.x;
+      const dy = currentMouseWorldCoords.y - currentDragStartPos.y;
+
+      const batchUpdates: Record<string, Partial<CanvasElement>> = {};
+      currentSelectedIds.forEach(id => {
+        const initialPos = currentDragStartElementPos[id];
+        if (initialPos) {
+          batchUpdates[id] = {
+            x: initialPos.x + dx,
+            y: initialPos.y + dy,
+          };
+        }
+      });
+      
+      if (Object.keys(batchUpdates).length > 0) {
+        updateMultipleElements(batchUpdates); // Use batch update
+        // DO NOT addToHistory here; do it on mouse up (drag end)
+      }
+
+    } else if (isPanning.current && currentActiveTool === 'select' && currentDragStartPos) {
+      const screenMouseCoords = { x: e.clientX, y: e.clientY };
+      const dxScreen = screenMouseCoords.x - currentDragStartPos.x;
+      const dyScreen = screenMouseCoords.y - currentDragStartPos.y;
+
+      const dxWorld = dxScreen / currentZoom;
+      const dyWorld = dyScreen / currentZoom;
+      
+      setPan({ 
+        x: currentPan.x + dxWorld, // Corrected pan direction based on prompt
+        y: currentPan.y + dyWorld  // Corrected pan direction based on prompt
+      });
+      setDragState(true, { x: screenMouseCoords.x, y: screenMouseCoords.y }, null);
+    } else if (currentIsDrawing && currentDragStartPos && currentPreviewElement) {
+      // For drawing, currentDragStartPos is world (from getCanvasCoordinates in handleCanvasMouseDown)
+      // currentMouseWorldCoords is already calculated
+      let newWidth = Math.abs(currentMouseWorldCoords.x - currentDragStartPos.x);
+      let newHeight = Math.abs(currentMouseWorldCoords.y - currentDragStartPos.y);
+      let newX = Math.min(currentMouseWorldCoords.x, currentDragStartPos.x);
+      let newY = Math.min(currentMouseWorldCoords.y, currentDragStartPos.y);
 
       if (currentPreviewElement.type === 'line' || currentPreviewElement.type === 'drawing') {
-        const updatedPoints = [...(currentPreviewElement.points || []), coords];
+        const updatedPoints = [...(currentPreviewElement.points || []), currentMouseWorldCoords];
         setPreviewState(true, { ...currentPreviewElement, points: updatedPoints, x: newX, y: newY, width: newWidth, height: newHeight });
       } else {
         setPreviewState(true, { ...currentPreviewElement, x: newX, y: newY, width: newWidth, height: newHeight });
       }
-    } else if (currentActiveTool === 'select' && currentDragStartElementPos && currentSelectedIds.length > 0) {
-      // Dragging elements - convert screen coordinates to canvas coordinates
-      const canvasContainer = canvasContainerRef.current;
-      if (!canvasContainer) return;
-      
-      const rect = canvasContainer.getBoundingClientRect();
-      const currentCanvasX = (currentMouseX - rect.left - currentPan.x) / currentZoom;
-      const currentCanvasY = (currentMouseY - rect.top - currentPan.y) / currentZoom;
-      const startCanvasX = (currentDragStartPos.x - rect.left - currentPan.x) / currentZoom;
-      const startCanvasY = (currentDragStartPos.y - rect.top - currentPan.y) / currentZoom;
-      
-      const dx = currentCanvasX - startCanvasX;
-      const dy = currentCanvasY - startCanvasY;
-
-      currentSelectedIds.forEach(id => {
-        const originalPos = currentDragStartElementPos[id];
-        if (originalPos && currentElements[id]) {
-          updateElement(id, { x: originalPos.x + dx, y: originalPos.y + dy });
-        }
-      });
     }
-  }, [canvasContainerRef, getCanvasCoordinates, setPan, setDragState, setPreviewState, updateElement]);
+  }, [getCanvasCoordinates, setPan, setDragState, setPreviewState /* updateMultipleElements is part of store, not a direct dep */]);
 
   // Global mouse up handler - critical for cleaning up interaction states
   const handleGlobalMouseUp = useCallback((_e: MouseEvent) => {

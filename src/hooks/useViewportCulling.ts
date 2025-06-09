@@ -10,6 +10,43 @@ export interface UseViewportCullingProps {
   canvasSize: Size | null; 
 }
 
+// Helper to get element bounds
+const getElementBounds = (element: CanvasElement) => {
+  // Basic bounding box, can be expanded for more complex shapes
+  // return {
+  //   left: element.x,
+  //   top: element.y,
+  //   right: element.x + (element.width || 0),
+  //   bottom: element.y + (element.height || 0),
+  // };
+  switch (element.type) {
+    case 'line':
+    case 'arrow':
+      return {
+        left: Math.min(element.x, element.x2 ?? element.x),
+        top: Math.min(element.y, element.y2 ?? element.y),
+        right: Math.max(element.x, element.x2 ?? element.x),
+        bottom: Math.max(element.y, element.y2 ?? element.y),
+      };
+    case 'drawing':
+      if (!element.points || element.points.length === 0) {
+        return { left: element.x, top: element.y, right: element.x, bottom: element.y };
+      }
+      let minX = element.points[0].x, maxX = element.points[0].x;
+      let minY = element.points[0].y, maxY = element.points[0].y;
+      element.points.forEach(p => {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y);
+      });
+      return { left: minX, top: minY, right: maxX, bottom: maxY };
+    default:
+      // Default for rectangle-like shapes
+      return { left: element.x, top: element.y, right: element.x + (element.width || 0), bottom: element.y + (element.height || 0) };
+  }
+};
+
 export const useViewportCulling = ({ elements, zoomLevel, panOffset, canvasSize }: UseViewportCullingProps) => {
   return useMemo(() => {
     // Early return for invalid parameters OR very small canvas sizes during initialization
@@ -38,16 +75,7 @@ export const useViewportCulling = ({ elements, zoomLevel, panOffset, canvasSize 
     const culledElements: CanvasElement[] = [];
 
     elements.forEach(element => {
-      // Ensure width and height are not undefined before using them
-      const elementWidth = element.width || 0;
-      const elementHeight = element.height || 0;
-
-      const elementBounds = {
-        left: element.x,
-        top: element.y,
-        right: element.x + elementWidth,
-        bottom: element.y + elementHeight,
-      };
+      const elementBounds = getElementBounds(element);
 
       const isIntersecting = 
         elementBounds.left < viewportBounds.right &&

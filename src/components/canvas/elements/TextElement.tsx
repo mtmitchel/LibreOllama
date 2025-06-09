@@ -1,6 +1,6 @@
 import React, { useCallback, useRef } from 'react';
-import { Text, Graphics } from '@pixi/react';
-import { CanvasElement } from '../../../stores/canvasStore';
+import { Text } from '@pixi/react';
+import { CanvasElement, useCanvasStore } from '../../../stores/canvasStore';
 import { hexStringToNumber, getThemeColors } from '../../../lib/theme-utils';
 
 interface TextElementProps {
@@ -15,6 +15,14 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
   
   // Get theme colors
   const themeColors = getThemeColors();
+  
+  // Check if we're currently editing this text element
+  const isEditingText = useCanvasStore((state) => state.isEditingText);
+  
+  // Don't render if we're currently editing this text element
+  if (isEditingText === element.id) {
+    return null;
+  }
 
   // Text style configuration with theme-aware colors
   const textStyle = {
@@ -27,54 +35,59 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
     fontWeight: element.isBold ? 'bold' : 'normal',
     fontStyle: element.isItalic ? 'italic' : 'normal',
   };
-
-  // Draw selection background if selected
-  const drawSelection = useCallback((g: any) => {
-    if (!isSelected) return;
-    
-    g.clear();
-    g.beginFill(themeColors.selectionBlue, 0.1); // Semi-transparent theme color
-    g.lineStyle(1, themeColors.selectionBlue, 1);
-    
-    // Estimate text bounds for selection rectangle with safety checks
-    const textWidth = Math.max(element.width || 200, 50);
-    const textHeight = Math.max(element.height || 30, 20);
-    
-    g.drawRect(-2, -2, textWidth + 4, textHeight + 4);
-    g.endFill();
-  }, [isSelected, element.width, element.height, themeColors.selectionBlue]);
+  // --- START TEMPORARY DEBUGGING ---
+  if (import.meta.env.DEV) {
+    console.log('TextElement rendering with props:', element);
+    console.log('TextElement style object:', textStyle);
+  }
+  // --- END TEMPORARY DEBUGGING ---
 
   const handlePointerDown = useCallback((e: any) => {
-    // Always handle single click immediately
+    console.log('TextElement: INNER handlePointerDown triggered for element:', element.id); // MODIFIED LOG
+    // Stop propagation to prevent canvas-level handlers from interfering
+    e.stopPropagation(); // Stops Pixi event bubbling
+    if (e.data?.originalEvent) {
+      e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
+      e.data.originalEvent.stopImmediatePropagation(); // Stops other DOM listeners on the same element
+    }
     if (onMouseDown) {
       onMouseDown(e, element.id);
     }
   }, [onMouseDown, element.id]);
 
   const handlePointerTap = useCallback((e: any) => {
-    // Use Pixi's tap event for double-click detection
-    const now = Date.now();
+    console.log(`TextElement: INNER handlePointerTap for ${element.id}, time: ${Date.now()}`); // MODIFIED LOG
+    const now = Date.now(); // Define now
     const timeDiff = now - lastClickTime.current;
     
     if (timeDiff < 300 && onDoubleClick) {
-      e.stopPropagation();
+      // Stop propagation for the tap event as well if it results in a double-click action
+      e.stopPropagation(); // Stops Pixi event bubbling
+      if (e.data?.originalEvent) {
+        e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
+        e.data.originalEvent.stopImmediatePropagation(); 
+      }
       onDoubleClick();
     }
     
     lastClickTime.current = now;
-  }, [onDoubleClick]);
+  }, [onDoubleClick, lastClickTime]); // Added lastClickTime to dependencies
 
+  // --- START AGGRESSIVE DEBUGGING --- 
+  // Return ONLY the Text component to isolate it.
+  // return (
+  //   <Text
+  //     x={Number(element.x) || 0}
+  //     y={Number(element.y) || 0}
+  //     text={"DEBUG"} // Hardcoded text
+  //     style={{ fill: 0xff0000, fontSize: 20 }} // Even simpler, hardcoded style
+  //   />
+  // );
+  // --- END AGGRESSIVE DEBUGGING --- 
+
+  // Original return statement (commented out):
   return (
     <>
-      {/* Selection background */}
-      {isSelected && (
-        <Graphics
-          x={element.x}
-          y={element.y}
-          draw={drawSelection}
-        />
-      )}
-      
       {/* Text content - always render with fallback */}
       <Text
         x={element.x}
@@ -82,10 +95,17 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
         text={element.content || 'Double-click to edit'}
         style={textStyle}
         interactive={true}
-        pointerdown={handlePointerDown}
-        pointertap={handlePointerTap}
-        cursor="text"
-      />
+        eventMode={'static'} // Added for PixiJS v7+ event handling
+        pointerdown={(e) => {
+          console.log(`TextElement: NATIVE PIXI POINTERDOWN on ${element.id} --- Target matches currentTarget: ${e.target === e.currentTarget}`);
+          handlePointerDown(e); // This will now call the useCallback version with stopPropagation
+        }}
+        pointertap={(e) => {
+          console.log(`TextElement: NATIVE PIXI POINTERTAP on ${element.id}`);
+          handlePointerTap(e); // This will now call the useCallback version with stopPropagation
+         }}
+         cursor="text"
+       />
     </>
   );
 };

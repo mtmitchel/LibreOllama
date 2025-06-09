@@ -87,6 +87,7 @@ export interface CanvasState {
   // Actions
   addElement: (element: CanvasElement) => void;
   updateElement: (id: string, updates: Partial<CanvasElement>) => void;
+  updateMultipleElements: (updates: Record<string, Partial<CanvasElement>>) => void;
   deleteElement: (id: string) => void;
   selectElement: (id: string, shiftKey?: boolean) => void; // Added shiftKey for multi-select behavior
   setSelectedElementIds: (ids: string[]) => void; // Action to directly set selected IDs
@@ -147,6 +148,16 @@ export const useCanvasStore = create<CanvasState>((set) => ({
         [id]: { ...state.elements[id], ...updates }
       }
     };
+  }),
+
+  updateMultipleElements: (updates) => set((state) => {
+    const newElements = { ...state.elements };
+    for (const id in updates) {
+      if (newElements[id]) {
+        newElements[id] = { ...newElements[id], ...updates[id] };
+      }
+    }
+    return { elements: newElements };
   }),
 
   deleteElement: (id) => set((state) => {

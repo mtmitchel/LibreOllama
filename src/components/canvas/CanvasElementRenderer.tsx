@@ -1,6 +1,6 @@
 import React from 'react';
-import { Graphics } from '@pixi/react';
-import { CanvasElement } from '../../stores/canvasStore';
+import { Graphics, Text } from '@pixi/react';
+import { CanvasElement, useCanvasStore } from '../../stores/canvasStore';
 import { validateCanvasElement } from '../../lib/theme-utils';
 
 // Import our new, native Pixi components
@@ -29,6 +29,7 @@ const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({
   onMouseDown,
   onDoubleClick
 }) => {
+
   // Early return for null/undefined elements
   if (!element) {
     console.warn('CanvasElementRenderer: Received null/undefined element');
@@ -38,7 +39,19 @@ const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({
   // Validate element using utility function
   if (!validateCanvasElement(element)) {
     console.warn('CanvasElementRenderer: Element failed validation:', element);
-    return <Graphics x={element?.x || 0} y={element?.y || 0} />;
+    // Fallback for elements missing critical data or failing validation
+    // We know element is not null here, but it might be partially formed.
+    const xPos = typeof (element as Partial<CanvasElement>).x === 'number' ? (element as Partial<CanvasElement>).x : 0;
+    const yPos = typeof (element as Partial<CanvasElement>).y === 'number' ? (element as Partial<CanvasElement>).y : 0;
+    return <Graphics x={xPos} y={yPos} draw={g => {g.beginFill(0xff0000, 0.3); g.drawRect(0,0,10,10); g.endFill();}} />;
+  }
+
+  // Check for editing state - critical for text elements
+  const isEditingText = useCanvasStore((state) => state.isEditingText);
+  
+  // Hide element during editing for text-based elements
+  if (isEditingText === element.id && (element.type === 'text' || element.type === 'sticky-note')) {
+    return null;
   }
 
   // Debug log for troubleshooting

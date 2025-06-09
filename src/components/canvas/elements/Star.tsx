@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Graphics } from '@pixi/react';
 import { CanvasElement } from '../../../stores/canvasStore';
+import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface StarProps {
   element: CanvasElement;
@@ -9,28 +10,39 @@ interface StarProps {
 }
 
 const Star: React.FC<StarProps> = ({ element, isSelected, onMouseDown }) => {
-  // Convert hex color to number for Pixi
-  const hexToNumber = (hex: string | undefined): number => {
-    if (!hex) return 0x000000;
-    const cleaned = hex.replace('#', '');
-    return parseInt(cleaned, 16);
-  };
-
   // Draw the star
   const draw = useCallback((g: any) => {
     g.clear();
     
-    const fillColor = hexToNumber(element.color || '#f59e0b');
-    g.beginFill(fillColor);
+    const themeColors = getThemeColors();
+    const defaultColors = getDefaultElementColors('star');
     
-    // Selection indicator
-    if (isSelected) {
-      g.lineStyle(2, 0x007acc, 1);
+    // Validate dimensions with safety checks
+    const width = Math.max(element.width || 100, 1);
+    const height = Math.max(element.height || 100, 1);
+    
+    // Handle colors consistently using theme-utils
+    const fillColor = element.backgroundColor && element.backgroundColor !== 'transparent'
+      ? hexStringToNumber(element.backgroundColor)
+      : defaultColors.fill;
+    
+    const strokeColor = element.strokeColor
+      ? hexStringToNumber(element.strokeColor)
+      : element.color
+        ? hexStringToNumber(element.color)
+        : defaultColors.stroke;
+        
+    const strokeWidth = element.strokeWidth || 2;
+    
+    // Always set line style to ensure star is visible
+    g.lineStyle(strokeWidth, strokeColor);
+    
+    // Only add fill if not transparent
+    if (element.backgroundColor !== 'transparent') {
+      g.beginFill(fillColor);
     }
     
     // Star points (scaled to element size)
-    const width = element.width || 60;
-    const height = element.height || 60;
     const scaleX = width / 60;
     const scaleY = height / 60;
     
@@ -48,8 +60,31 @@ const Star: React.FC<StarProps> = ({ element, isSelected, onMouseDown }) => {
     ];
     
     g.drawPolygon(points);
-    g.endFill();
-  }, [element.width, element.height, element.color, isSelected]);
+    
+    if (element.backgroundColor !== 'transparent') {
+      g.endFill();
+    }
+    
+    // Theme-aware selection indicator
+    if (isSelected) {
+      g.lineStyle(2, themeColors.selectionBlue, 1);
+      // Draw selection outline around star bounds
+      const padding = 2;
+      const selectionPoints = [
+        (30 * scaleX) - padding, (2 * scaleY) - padding,
+        (37 * scaleX) + padding, (20 * scaleY) - padding,
+        (57 * scaleX) + padding, (20 * scaleY) + padding,
+        (42 * scaleX) + padding, (32 * scaleY) + padding,
+        (48 * scaleX) + padding, (52 * scaleY) + padding,
+        (30 * scaleX), (40 * scaleY) + padding,
+        (12 * scaleX) - padding, (52 * scaleY) + padding,
+        (18 * scaleX) - padding, (32 * scaleY) + padding,
+        (3 * scaleX) - padding, (20 * scaleY) + padding,
+        (23 * scaleX) - padding, (20 * scaleY) - padding
+      ];
+      g.drawPolygon(selectionPoints);
+    }
+  }, [element.width, element.height, element.backgroundColor, element.strokeColor, element.strokeWidth, element.color, isSelected]);
 
   const handlePointerDown = useCallback((e: any) => {
     if (onMouseDown) {
