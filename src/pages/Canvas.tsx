@@ -143,12 +143,26 @@ const Canvas = () => {
     const defaultWidth = elementData.type === 'text' || elementData.type === 'sticky-note' ? 150 : 100;
     const defaultHeight = elementData.type === 'text' || elementData.type === 'sticky-note' ? 50 : 100;
 
+    // Calculate center of viewport for new elements
+    const rect = canvasContainerRef.current.getBoundingClientRect();
+    const centerX = (rect.width / 2 - currentPan.x) / currentZoom;
+    const centerY = (rect.height / 2 - currentPan.y) / currentZoom;
+
+    // Special handling for line elements
+    const isLineElement = elementData.type === 'line';
+    const lineStartX = isLineElement ? centerX - 50 : centerX - defaultWidth / 2;
+    const lineStartY = isLineElement ? centerY : centerY - defaultHeight / 2;
+    const lineEndX = isLineElement ? centerX + 50 : undefined;
+    const lineEndY = isLineElement ? centerY : undefined;
+
     const newElement: CanvasElement = {
       id: generateId(),
-      x: elementData.x ?? (100 - currentPan.x) / currentZoom, // Use provided x or default
-      y: elementData.y ?? (100 - currentPan.y) / currentZoom, // Use provided y or default
-      width: elementData.width ?? defaultWidth,
-      height: elementData.height ?? defaultHeight,
+      x: elementData.x ?? lineStartX,
+      y: elementData.y ?? lineStartY,
+      x2: isLineElement ? (elementData.x2 ?? lineEndX) : undefined,
+      y2: isLineElement ? (elementData.y2 ?? lineEndY) : undefined,
+      width: elementData.width ?? (isLineElement ? undefined : defaultWidth),
+      height: elementData.height ?? (isLineElement ? undefined : defaultHeight),
       color: elementData.color ?? '#000000',
       backgroundColor: elementData.backgroundColor ?? (elementData.type === 'sticky-note' ? '#FFFFE0' : 'transparent'),
       fontSize: elementData.fontSize ?? 'medium',
@@ -182,8 +196,10 @@ const Canvas = () => {
     
     if (newElement.type === 'text') {
       setIsEditingText(newElement.id);
-      // If new text element, set editingTextValue from its content or default if empty
-      setEditingTextValue(newElement.content || '');
+      // For new text elements, start with empty content so user can type immediately
+      setEditingTextValue('');
+      // Update the element to have empty content initially
+      updateElement(newElement.id, { content: '' });
     }
   }, [generateId, addElement, addToHistory, setSelectedElementIds, setIsEditingText]);
 
@@ -381,15 +397,24 @@ const Canvas = () => {
             <textarea
               ref={textAreaRef}
               value={editingTextValue}
-              onChange={(e) => setEditingTextValue(e.target.value)}
-              onBlur={() => {
-                console.log('Text editing blur - committing changes');
-                if (isEditingText && textAreaRef.current) {
-                  updateElement(isEditingText, { content: textAreaRef.current.value });
-                  addToHistory(useCanvasStore.getState().elements);
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setEditingTextValue(newValue);
+                // Update element content immediately for live updates
+                updateElement(isEditingText, { content: newValue });
+              }}
+              onBlur={(e) => {
+                // Only commit and exit if the blur is not due to clicking on canvas elements
+                const relatedTarget = e.relatedTarget as HTMLElement;
+                if (!relatedTarget || (!relatedTarget.closest('.canvas-container') && !relatedTarget.closest('button'))) {
+                  console.log('Text editing blur - committing changes');
+                  if (isEditingText && textAreaRef.current) {
+                    updateElement(isEditingText, { content: textAreaRef.current.value });
+                    addToHistory(useCanvasStore.getState().elements);
+                  }
+                  setIsEditingText(null);
+                  setTextFormattingState(false);
                 }
-                setIsEditingText(null);
-                setTextFormattingState(false);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

@@ -127,7 +127,10 @@ export const useCanvasEvents = ({
     // If select tool and clicked on empty canvas, clear selection and text edit state
     if (currentStoreState.activeTool === 'select') {
       console.log('Canvas click with select tool - clearing selection');
-      clearSelection();
+      // Only clear selection if not shift-clicking (to allow multi-select)
+      if (!e.shiftKey) {
+        clearSelection();
+      }
       if (currentStoreState.isEditingText) {
         // Commit text if editing
         if (textAreaRef.current && currentStoreState.isEditingText) {

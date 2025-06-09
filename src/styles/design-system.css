@@ -82,7 +82,7 @@
   --input-focus-ring: var(--accent-primary);
   
   /* Canvas specific variables */
-  --canvas-bg: #1e1e1e; /* Professional dark gray canvas background for dark theme */
+  --canvas-bg: #ffffff; /* White canvas background for dark theme */
   --canvas-grid-dot: var(--border-subtle);
   --canvas-selection: var(--accent-primary);
   --canvas-selection-bg: rgba(59, 130, 246, 0.1);
@@ -110,7 +110,7 @@ html.light {
   --border-default: rgba(0, 0, 0, 0.1);
   
   /* Canvas light theme overrides */
-  --canvas-bg: #ffffff; /* Clean white canvas background for light theme */
+  --canvas-bg: #ffffff; /* White canvas background for light theme */
   --canvas-grid-dot: rgba(0, 0, 0, 0.08);
   --canvas-sticky-bg: #FFFEF8;
 }

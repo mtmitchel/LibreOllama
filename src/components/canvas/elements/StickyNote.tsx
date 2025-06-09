@@ -42,32 +42,24 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
   }, [element.width, element.height, element.backgroundColor, isSelected, themeColors.selectionBlue, defaultColors.background, defaultColors.border]);
 
   const handlePointerDown = useCallback((e: any) => {
+    // Always handle single click immediately
+    if (onMouseDown) {
+      onMouseDown(e, element.id);
+    }
+  }, [onMouseDown, element.id]);
+
+  const handlePointerTap = useCallback((e: any) => {
+    // Use Pixi's tap event for double-click detection
     const now = Date.now();
     const timeDiff = now - lastClickTime.current;
     
     if (timeDiff < 300 && onDoubleClick) {
-      // Double click detected
-      if (clickTimeout.current) {
-        clearTimeout(clickTimeout.current);
-        clickTimeout.current = null;
-      }
       e.stopPropagation();
       onDoubleClick();
-    } else {
-      // Single click - delay to check for double click
-      if (clickTimeout.current) {
-        clearTimeout(clickTimeout.current);
-      }
-      clickTimeout.current = setTimeout(() => {
-        if (onMouseDown) {
-          onMouseDown(e, element.id);
-        }
-        clickTimeout.current = null;
-      }, 300);
     }
     
     lastClickTime.current = now;
-  }, [onMouseDown, onDoubleClick, element.id]);
+  }, [onDoubleClick]);
 
 
   // Text style for the sticky note content with theme-aware colors
@@ -90,7 +82,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
         y={element.y}
         draw={drawBackground}
         interactive
-        pointerdown={handlePointerDown}
+        pointerdown={handlePointerDown}  // Immediate selection
+        pointertap={handlePointerTap}     // Double-click detection
         cursor="pointer"
       />
       
