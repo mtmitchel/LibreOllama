@@ -1,6 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -8,6 +12,23 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [react()],
+
+  optimizeDeps: {
+    include: [
+      'pixi.js',
+      '@pixi/core',
+      '@pixi/app',
+      '@pixi/display',
+      '@pixi/graphics',
+      '@pixi/sprite',
+      '@pixi/text',
+      '@pixi/math',
+      '@pixi/ticker',
+      '@pixi/settings',
+      '@pixi/utils',
+      // Add any other specific @pixi sub-modules if errors persist for them
+    ],
+  },
 
   // Add path alias configuration
   resolve: {

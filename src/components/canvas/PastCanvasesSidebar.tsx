@@ -6,7 +6,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { Card, Button } from '../ui';
-import { SavedCanvas } from '../../hooks/canvas/useCanvasState';
+import { SavedCanvas } from '../../stores/canvasStore';
 
 interface PastCanvasesSidebarProps {
   showPastCanvases: boolean;

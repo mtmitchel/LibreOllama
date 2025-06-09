@@ -1,9 +1,9 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState, useRef, useEffect } from 'react';
 import {
-  Link,
   X
 } from 'lucide-react';
-import { Card } from '../ui';
+import { Graphics, Text, Sprite } from '@pixi/react';
+import * as PIXI from 'pixi.js';
 
 export interface CanvasElement { // Added export
   id: string;
@@ -39,6 +39,34 @@ interface CanvasElementProps {
   getTextStyles: (element: CanvasElement) => React.CSSProperties;
 }
 
+// Utility functions for Pixi.js
+const hexToPixi = (hex: string | undefined): number => {
+  if (!hex) return 0x000000;
+  const cleaned = hex.replace('#', '');
+  return parseInt(cleaned, 16);
+};
+
+const getFontSize = (fontSize?: 'small' | 'medium' | 'large'): number => {
+  switch (fontSize) {
+    case 'small': return 12;
+    case 'medium': return 16;
+    case 'large': return 20;
+    default: return 16;
+  }
+};
+
+const getTextStyle = (element: CanvasElement): Partial<PIXI.TextStyle> => {
+  return {
+    fontSize: getFontSize(element.fontSize),
+    fontWeight: element.isBold ? 'bold' : 'normal',
+    fontStyle: element.isItalic ? 'italic' : 'normal',
+    fill: element.color ? hexToPixi(element.color) : 0x000000,
+    align: element.textAlignment || 'left',
+    wordWrap: true,
+    wordWrapWidth: element.width || 200,
+  };
+};
+
 const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
   element,
   isSelected,
@@ -49,8 +77,18 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
   onDelete,
   getTextStyles
 }) => {
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    onMouseDown(e, element.id);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingText, setEditingText] = useState(element.content || '');
+  const textInputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
+
+  const handleMouseDown = useCallback((e: any) => {
+    // Convert Pixi.js event to React MouseEvent-like object
+    const syntheticEvent = {
+      ...e,
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    } as React.MouseEvent;
+    onMouseDown(syntheticEvent, element.id);
   }, [onMouseDown, element.id]);
 
   const handleTextFocus = useCallback((e: React.FocusEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -58,12 +96,22 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
     onTextFormatting(element.id, rect);
   }, [onTextFormatting, element.id]);
 
-  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-    onTextChange(element.id, e.target.value);
-  }, [onTextChange, element.id]);
+  const handleTextDoubleClick = useCallback(() => {
+    if (element.type === 'text' || element.type === 'sticky-note') {
+      setIsEditing(true);
+      setEditingText(element.content || '');
+    }
+  }, [element.type, element.content]);
 
-  const handleTextInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-    const value = (e.target as HTMLTextAreaElement).value;
+  const handleTextBlur = useCallback(() => {
+    setIsEditing(false);
+    if (editingText !== element.content) {
+      onTextChange(element.id, editingText);
+    }
+  }, [editingText, element.content, element.id, onTextChange]);
+
+  const handleTextInput = useCallback((e: React.FormEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    const value = (e.target as HTMLTextAreaElement | HTMLInputElement).value;
     onTextFormatPropertyChange(element.id, 'content', value);
   }, [onTextFormatPropertyChange, element.id]);
 
@@ -75,24 +123,27 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
     }
   }, [onDelete, element.id]);
 
-  // Add will-change CSS property for selected/dragged elements for GPU acceleration
-  const getElementStyles = useCallback(() => {
-    const baseStyles: React.CSSProperties = {};
-    if (isSelected) {
-      baseStyles.willChange = 'transform, box-shadow';
+  // Focus text input when editing starts
+  useEffect(() => {
+    if (isEditing && textInputRef.current) {
+      textInputRef.current.focus();
+      textInputRef.current.select();
     }
-    return baseStyles;
-  }, [isSelected]);
+  }, [isEditing]);
 
-  // Render delete button for selected elements
+  // Render delete button for selected elements (DOM overlay)
   const renderDeleteButton = () => {
     if (!isSelected || !onDelete) return null;
     
     return (
       <button
         onClick={handleDelete}
-        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg z-10 transition-colors"
-        style={{ transform: 'translate(50%, -50%)' }}
+        className="absolute bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg z-50 transition-colors"
+        style={{ 
+          left: element.x + (element.width || 60) - 6,
+          top: element.y - 6,
+          transform: 'translate(50%, -50%)'
+        }}
         title="Delete element"
       >
         <X size={12} />
@@ -100,441 +151,427 @@ const CanvasElementComponent: React.FC<CanvasElementProps> = memo(({
     );
   };
 
-  // Render resize handles for selected elements
+  // Render resize handles for selected elements (DOM overlay)
   const renderResizeHandles = () => {
     if (!isSelected || !element.width || !element.height) return null;
     
-    const handleStyle = {
-      position: 'absolute' as const,
+    const handleStyle: React.CSSProperties = {
+      position: 'absolute',
       width: '8px',
       height: '8px',
       backgroundColor: '#3b82f6',
       border: '1px solid #ffffff',
       borderRadius: '2px',
-      cursor: 'nw-resize',
-      zIndex: 20
+      zIndex: 40
     };
 
     return (
       <>
         {/* Corner handles */}
-        <div style={{ ...handleStyle, top: '-4px', left: '-4px', cursor: 'nw-resize' }} />
-        <div style={{ ...handleStyle, top: '-4px', right: '-4px', cursor: 'ne-resize' }} />
-        <div style={{ ...handleStyle, bottom: '-4px', left: '-4px', cursor: 'sw-resize' }} />
-        <div style={{ ...handleStyle, bottom: '-4px', right: '-4px', cursor: 'se-resize' }} />
+        <div style={{ 
+          ...handleStyle, 
+          left: element.x - 4, 
+          top: element.y - 4, 
+          cursor: 'nw-resize' 
+        }} />
+        <div style={{ 
+          ...handleStyle, 
+          left: element.x + element.width - 4, 
+          top: element.y - 4, 
+          cursor: 'ne-resize' 
+        }} />
+        <div style={{ 
+          ...handleStyle, 
+          left: element.x - 4, 
+          top: element.y + element.height - 4, 
+          cursor: 'sw-resize' 
+        }} />
+        <div style={{ 
+          ...handleStyle, 
+          left: element.x + element.width - 4, 
+          top: element.y + element.height - 4, 
+          cursor: 'se-resize' 
+        }} />
       </>
     );
   };
 
-  switch (element.type) {
-    case 'sticky-note':
-      return (
-        <Card
-          key={element.id}
-          className={`absolute cursor-move p-3 transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-          }`}
-          style={{
-            left: element.x,
-            top: element.y,
-            width: element.width,
-            height: element.height,
-            backgroundColor: element.color || '#facc15',
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          {renderResizeHandles()}
-          {element.url ? (
-            <a
-              href={element.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <textarea
-                defaultValue={element.content}
-                placeholder="Type your note..."
-                onMouseDown={(e) => e.stopPropagation()}
-                className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-gray-800 placeholder-gray-500 pointer-events-none"
-                style={{
-                  ...getTextStyles(element),
-                  whiteSpace: 'pre-wrap'
+  // Render text input overlay for editing
+  const renderTextEditOverlay = () => {
+    if (!isEditing) return null;
+
+    const InputComponent = element.isBulletList ? 'textarea' : 'input';
+    
+    return (
+      <InputComponent
+        ref={textInputRef as any}
+        value={editingText}
+        onChange={(e: any) => setEditingText(e.target.value)}
+        onBlur={handleTextBlur}
+        onFocus={handleTextFocus}
+        onInput={handleTextInput}
+        onKeyDown={(e: any) => {
+          if (e.key === 'Enter' && !element.isBulletList) {
+            handleTextBlur();
+          }
+          if (e.key === 'Escape') {
+            setIsEditing(false);
+          }
+        }}
+        className="absolute bg-white border border-blue-500 rounded px-2 py-1 z-50 shadow-lg"
+        style={{
+          ...getTextStyles(element),
+          left: element.x,
+          top: element.y,
+          width: element.width || 200,
+          height: element.isBulletList ? (element.height || 100) : 'auto',
+          resize: 'none'
+        }}
+      />
+    );
+  };
+
+  const renderPixiElement = () => {
+    switch (element.type) {
+      case 'sticky-note':
+        return (
+          <>
+            {/* Background */}
+            <Graphics
+              x={element.x}
+              y={element.y}
+              interactive
+              pointerdown={handleMouseDown}
+              pointertap={handleTextDoubleClick}
+              draw={(g) => {
+                g.clear();
+                g.beginFill(hexToPixi(element.color || '#facc15'));
+                if (isSelected) {
+                  g.lineStyle(2, 0x3b82f6);
+                }
+                g.drawRoundedRect(0, 0, element.width || 200, element.height || 150, 8);
+                g.endFill();
+              }}
+            />
+            {/* Text */}
+            {!isEditing && element.content && (
+              <Text
+                x={element.x + 12}
+                y={element.y + 12}
+                text={element.content}
+                style={getTextStyle(element)}
+                interactive
+                pointertap={handleTextDoubleClick}
+              />
+            )}
+          </>
+        );
+
+      case 'rectangle':
+      case 'square':
+        return (
+          <Graphics
+            x={element.x}
+            y={element.y}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              g.beginFill(hexToPixi(element.color || '#3b82f6'));
+              if (isSelected) {
+                g.lineStyle(2, 0x3b82f6, 0.8);
+              }
+              g.drawRect(0, 0, element.width || 100, element.height || 100);
+              g.endFill();
+            }}
+          />
+        );
+
+      case 'circle':
+        return (
+          <Graphics
+            x={element.x + (element.width || 100) / 2}
+            y={element.y + (element.height || 100) / 2}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              g.beginFill(hexToPixi(element.color || '#10b981'));
+              if (isSelected) {
+                g.lineStyle(2, 0x3b82f6, 0.8);
+              }
+              g.drawCircle(0, 0, Math.min(element.width || 100, element.height || 100) / 2);
+              g.endFill();
+            }}
+          />
+        );
+
+      case 'triangle':
+        return (
+          <Graphics
+            x={element.x}
+            y={element.y}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              g.beginFill(hexToPixi(element.color || '#8b5cf6'));
+              if (isSelected) {
+                g.lineStyle(2, 0x3b82f6, 0.8);
+              }
+              const width = element.width || 60;
+              const height = element.height || 60;
+              g.moveTo(width / 2, 0);
+              g.lineTo(width, height);
+              g.lineTo(0, height);
+              g.closePath();
+              g.endFill();
+            }}
+          />
+        );
+
+      case 'star':
+        return (
+          <Graphics
+            x={element.x}
+            y={element.y}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              g.beginFill(hexToPixi(element.color || '#f59e0b'));
+              if (isSelected) {
+                g.lineStyle(2, 0x3b82f6, 0.8);
+              }
+              
+              // Star points (scaled to element size)
+              const width = element.width || 60;
+              const height = element.height || 60;
+              const scaleX = width / 60;
+              const scaleY = height / 60;
+              
+              const points = [
+                30 * scaleX, 2 * scaleY,
+                37 * scaleX, 20 * scaleY,
+                57 * scaleX, 20 * scaleY,
+                42 * scaleX, 32 * scaleY,
+                48 * scaleX, 52 * scaleY,
+                30 * scaleX, 40 * scaleY,
+                12 * scaleX, 52 * scaleY,
+                18 * scaleX, 32 * scaleY,
+                3 * scaleX, 20 * scaleY,
+                23 * scaleX, 20 * scaleY
+              ];
+              
+              g.drawPolygon(points);
+              g.endFill();
+            }}
+          />
+        );
+
+      case 'hexagon':
+        return (
+          <Graphics
+            x={element.x}
+            y={element.y}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              g.beginFill(hexToPixi(element.color || '#06b6d4'));
+              if (isSelected) {
+                g.lineStyle(2, 0x3b82f6, 0.8);
+              }
+              
+              // Hexagon points (scaled to element size)
+              const width = element.width || 60;
+              const height = element.height || 60;
+              const scaleX = width / 60;
+              const scaleY = height / 60;
+              
+              const points = [
+                30 * scaleX, 2 * scaleY,
+                52 * scaleX, 15 * scaleY,
+                52 * scaleX, 45 * scaleY,
+                30 * scaleX, 58 * scaleY,
+                8 * scaleX, 45 * scaleY,
+                8 * scaleX, 15 * scaleY
+              ];
+              
+              g.drawPolygon(points);
+              g.endFill();
+            }}
+          />
+        );
+
+      case 'drawing':
+        return (
+          <Graphics
+            x={0}
+            y={0}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              if (element.path) {
+                g.lineStyle(2, hexToPixi(element.color || '#000000'), 1);
+                // Parse SVG path and draw it
+                // This is a simplified implementation - you might need a more robust SVG path parser
+                const pathData = element.path;
+                const commands = pathData.match(/[MmLlHhVvCcSsQqTtAaZz][^MmLlHhVvCcSsQqTtAaZz]*/g);
+                
+                if (commands) {
+                  commands.forEach(command => {
+                    const type = command[0];
+                    const coords = command.slice(1).trim().split(/[\s,]+/).map(Number);
+                    
+                    switch (type.toLowerCase()) {
+                      case 'm':
+                        if (coords.length >= 2) {
+                          g.moveTo(coords[0], coords[1]);
+                        }
+                        break;
+                      case 'l':
+                        if (coords.length >= 2) {
+                          g.lineTo(coords[0], coords[1]);
+                        }
+                        break;
+                      // Add more path commands as needed
+                    }
+                  });
+                }
+              }
+            }}
+          />
+        );
+
+      case 'text':
+        return (
+          <>
+            {/* Background if specified */}
+            {element.backgroundColor && (
+              <Graphics
+                x={element.x - 4}
+                y={element.y - 4}
+                interactive
+                pointerdown={handleMouseDown}
+                pointertap={handleTextDoubleClick}
+                draw={(g) => {
+                  g.clear();
+                  g.beginFill(hexToPixi(element.backgroundColor));
+                  if (isSelected) {
+                    g.lineStyle(1, 0x3b82f6);
+                  }
+                  g.drawRoundedRect(0, 0, (element.width || 200) + 8, (element.height || 30) + 8, 4);
+                  g.endFill();
                 }}
-                readOnly
               />
-              <Link size={12} className="absolute bottom-1 right-1" />
-            </a>
-          ) : (
-            <textarea
-              defaultValue={element.content}
-              placeholder="Type your note..."
-              className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-gray-800 placeholder-gray-500"
-              style={{
-                ...getTextStyles(element),
-                whiteSpace: 'pre-wrap'
-              }}
-              onFocus={handleTextFocus}
-              onBlur={() => {
-                // Text formatting will be handled by parent component
-              }}
-              onChange={handleTextChange}
-              onInput={handleTextInput}
-            />
-          )}
-        </Card>
-      );
-
-    case 'rectangle':
-    case 'square':
-      return (
-        <div
-          key={element.id}
-          className={`absolute cursor-move rounded-md transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-          }`}
-          style={{
-            left: element.x,
-            top: element.y,
-            width: element.width,
-            height: element.height,
-            backgroundColor: element.color || '#3b82f6',
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          {renderResizeHandles()}
-        </div>
-      );
-
-    case 'circle':
-      return (
-        <div
-          key={element.id}
-          className={`absolute cursor-move rounded-full transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-          }`}
-          style={{
-            left: element.x,
-            top: element.y,
-            width: element.width,
-            height: element.height,
-            backgroundColor: element.color || '#10b981',
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          {renderResizeHandles()}
-        </div>
-      );
-
-    case 'triangle':
-      return (
-        <div
-          key={element.id}
-          className={`absolute cursor-move transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-          }`}
-          style={{
-            left: element.x,
-            top: element.y,
-            width: 0,
-            height: 0,
-            borderLeft: `${(element.width || 60) / 2}px solid transparent`,
-            borderRight: `${(element.width || 60) / 2}px solid transparent`,
-            borderBottom: `${element.height || 60}px solid ${element.color || '#8b5cf6'}`,
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          {renderResizeHandles()}
-          {renderResizeHandles()}
-        </div>
-      );
-
-    case 'star':
-      return (
-        <div
-          key={element.id}
-          className={`absolute cursor-move transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-          }`}
-          style={{ 
-            left: element.x, 
-            top: element.y,
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          {renderResizeHandles()}
-          <svg width={element.width || 60} height={element.height || 60}>
-            <polygon
-              points="30,2 37,20 57,20 42,32 48,52 30,40 12,52 18,32 3,20 23,20"
-              fill={element.color || '#f59e0b'}
-            />
-          </svg>
-        </div>
-      );
-
-    case 'hexagon':
-      return (
-        <div
-          key={element.id}
-          className={`absolute cursor-move transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-          }`}
-          style={{ 
-            left: element.x, 
-            top: element.y,
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          <svg width={element.width || 60} height={element.height || 60}>
-            <polygon
-              points="30,2 52,15 52,45 30,58 8,45 8,15"
-              fill={element.color || '#06b6d4'}
-            />
-          </svg>
-        </div>
-      );
-
-    case 'drawing':
-      return (
-        <svg
-          key={element.id}
-          className={`absolute cursor-move transition-all duration-200 pointer-events-none ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
-          }`}
-          style={{ 
-            left: 0, 
-            top: 0, 
-            width: '100%', 
-            height: '100%',
-            ...getElementStyles()
-          }}
-        >
-          <path
-            d={element.path}
-            stroke={element.color || '#000000'}
-            strokeWidth="2"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      );
-
-    case 'text':
-      return (
-        <div
-          key={element.id}
-          className={`absolute cursor-move p-1 transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 rounded px-2 py-1 bg-white/80' : ''
-          }`}
-          style={{
-            left: element.x,
-            top: element.y,
-            width: element.width,
-            height: element.height,
-            backgroundColor: element.backgroundColor || 'transparent',
-            borderRadius: element.backgroundColor ? '4px' : '0',
-            padding: element.backgroundColor ? '4px 8px' : '4px',
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          {renderResizeHandles()}
-          {element.url ? (
-            <a
-              href={element.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {element.isBulletList ? (
-                <textarea
-                  defaultValue={element.content}
-                  className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded pointer-events-none resize-none"
-                  style={{
-                    ...getTextStyles(element),
-                    whiteSpace: 'pre-wrap',
-                    overflow: 'hidden'
-                  }}
-                  readOnly
-                />
-              ) : (
-                <input 
-                  type="text"
-                  defaultValue={element.content}
-                  className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded pointer-events-none"
-                  style={{
-                    ...getTextStyles(element),
-                    minHeight: '100%'
-                  }}
-                  readOnly
-                />
-              )}
-              <Link size={12} className="inline ml-1" />
-            </a>
-          ) : (
-            <>
-              {element.isBulletList ? (
-                <textarea
-                  defaultValue={element.content}
-                  className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded text-text-primary resize-none"
-                  style={{
-                    ...getTextStyles(element),
-                    whiteSpace: 'pre-wrap',
-                    overflow: 'hidden'
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onFocus={handleTextFocus}
-                  onBlur={() => {
-                    // Text formatting will be handled by parent component
-                  }}
-                  onChange={handleTextChange}
-                />
-              ) : (
-                <input 
-                  type="text"
-                  defaultValue={element.content}
-                  className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-accent rounded text-text-primary"
-                  style={{
-                    ...getTextStyles(element),
-                    minHeight: '100%'
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onFocus={handleTextFocus}
-                  onBlur={() => {
-                    // Text formatting will be handled by parent component
-                  }}
-                  onChange={handleTextChange}
-                />
-              )}
-            </>
-          )}
-        </div>
-      );
-
-    case 'line':
-      return (
-        <svg
-          key={element.id}
-          className={`absolute cursor-move transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
-          }`}
-          style={{
-            left: Math.min(element.x, element.x2 || element.x) - 2,
-            top: Math.min(element.y, element.y2 || element.y) - 2,
-            width: Math.abs((element.x2 || element.x) - element.x) + 4,
-            height: Math.abs((element.y2 || element.y) - element.y) + 4,
-            pointerEvents: 'auto',
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          <line
-            x1={element.x - Math.min(element.x, element.x2 || element.x) + 2}
-            y1={element.y - Math.min(element.y, element.y2 || element.y) + 2}
-            x2={(element.x2 || element.x) - Math.min(element.x, element.x2 || element.x) + 2}
-            y2={(element.y2 || element.y) - Math.min(element.y, element.y2 || element.y) + 2}
-            stroke={element.color || '#000000'}
-            strokeWidth="2"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-      );
-
-    case 'arrow':
-      return (
-        <svg
-          key={element.id}
-          className={`absolute cursor-move transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2' : ''
-          }`}
-          style={{
-            left: Math.min(element.x, element.x2 || element.x) - 10,
-            top: Math.min(element.y, element.y2 || element.y) - 10,
-            width: Math.abs((element.x2 || element.x) - element.x) + 20,
-            height: Math.abs((element.y2 || element.y) - element.y) + 20,
-            pointerEvents: 'auto',
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          <defs>
-            <marker
-              id={`arrowhead-${element.id}`}
-              markerWidth="10"
-              markerHeight="7"
-              refX="10"
-              refY="3.5"
-              orient="auto"
-            >
-              <polygon
-                points="0 0, 10 3.5, 0 7"
-                fill={element.color || '#000000'}
+            )}
+            {/* Text */}
+            {!isEditing && element.content && (
+              <Text
+                x={element.x}
+                y={element.y}
+                text={element.content}
+                style={getTextStyle(element)}
+                interactive
+                pointerdown={handleMouseDown}
+                pointertap={handleTextDoubleClick}
               />
-            </marker>
-          </defs>
-          <line
-            x1={element.x - Math.min(element.x, element.x2 || element.x) + 10}
-            y1={element.y - Math.min(element.y, element.y2 || element.y) + 10}
-            x2={(element.x2 || element.x) - Math.min(element.x, element.x2 || element.x) + 10}
-            y2={(element.y2 || element.y) - Math.min(element.y, element.y2 || element.y) + 10}
-            stroke={element.color || '#000000'}
-            strokeWidth="2"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-            markerEnd={`url(#arrowhead-${element.id})`}
-          />
-        </svg>
-      );
+            )}
+          </>
+        );
 
-    case 'image':
-      return (
-        <div
-          key={element.id}
-          className={`absolute cursor-move transition-all duration-200 ${
-            isSelected ? 'ring-2 ring-accent ring-offset-2 shadow-lg scale-105' : 'hover:shadow-md'
-          }`}
-          style={{
-            left: element.x,
-            top: element.y,
-            width: element.width,
-            height: element.height,
-            ...getElementStyles()
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {renderDeleteButton()}
-          {renderResizeHandles()}
-          <img
-            src={element.imageUrl}
-            alt={element.imageName || 'Canvas image'}
-            className="w-full h-full object-cover rounded"
-            draggable={false}
+      case 'line':
+        return (
+          <Graphics
+            x={0}
+            y={0}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              g.lineStyle(2, hexToPixi(element.color || '#000000'));
+              if (isSelected) {
+                g.lineStyle(3, 0x3b82f6, 0.8);
+              }
+              g.moveTo(element.x, element.y);
+              g.lineTo(element.x2 || element.x, element.y2 || element.y);
+            }}
           />
-        </div>
-      );
+        );
 
-    default:
-      return null;
-  }
+      case 'arrow':
+        return (
+          <Graphics
+            x={0}
+            y={0}
+            interactive
+            pointerdown={handleMouseDown}
+            draw={(g) => {
+              g.clear();
+              const color = hexToPixi(element.color || '#000000');
+              g.lineStyle(2, color);
+              if (isSelected) {
+                g.lineStyle(3, 0x3b82f6, 0.8);
+              }
+              
+              const x1 = element.x;
+              const y1 = element.y;
+              const x2 = element.x2 || element.x;
+              const y2 = element.y2 || element.y;
+              
+              // Draw line
+              g.moveTo(x1, y1);
+              g.lineTo(x2, y2);
+              
+              // Draw arrowhead
+              const angle = Math.atan2(y2 - y1, x2 - x1);
+              const arrowLength = 10;
+              const arrowAngle = Math.PI / 6;
+              
+              g.beginFill(color);
+              g.moveTo(x2, y2);
+              g.lineTo(
+                x2 - arrowLength * Math.cos(angle - arrowAngle),
+                y2 - arrowLength * Math.sin(angle - arrowAngle)
+              );
+              g.lineTo(
+                x2 - arrowLength * Math.cos(angle + arrowAngle),
+                y2 - arrowLength * Math.sin(angle + arrowAngle)
+              );
+              g.closePath();
+              g.endFill();
+            }}
+          />
+        );
+
+      case 'image':
+        return element.imageUrl ? (
+          <Sprite
+            x={element.x}
+            y={element.y}
+            width={element.width || 100}
+            height={element.height || 100}
+            image={element.imageUrl}
+            interactive
+            pointerdown={handleMouseDown}
+          />
+        ) : null;
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+      {renderPixiElement()}
+      {renderDeleteButton()}
+      {renderResizeHandles()}
+      {renderTextEditOverlay()}
+    </>
+  );
 }, (prevProps, nextProps) => {
   // Custom comparison function for memo optimization
   // Only re-render if element properties or selection state change

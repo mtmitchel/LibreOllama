@@ -9,7 +9,7 @@ import {
   Link
 } from 'lucide-react';
 import { Card, Button } from '../ui';
-import { CanvasElement } from '../../hooks/canvas/useCanvasState';
+import { CanvasElement } from '../../stores/canvasStore';
 
 interface TextFormattingToolbarProps {
   elementId: string;

@@ -1,54 +1,60 @@
 // src/hooks/canvas/useCanvasEvents.ts
 
 import { useCallback, useRef, useEffect } from 'react';
-import { UseCanvasStateReturn, CanvasElement, CanvasTool } from './useCanvasState';
+// Assuming useCanvasStore is in src/stores/canvasStore.ts
+// and exports CanvasElement, CanvasTool types
+import { useCanvasStore, CanvasElement, CanvasTool } from '../../stores/canvasStore';
 
-export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateReturn }) => {
+export const useCanvasEvents = () => {
   const {
+    // State properties from CanvasState
     elements,
-    setElements,
     activeTool,
-    setActiveTool,
-    selectedShape,
+    // selectedShape, // Removed as unused in this hook
     panOffset,
-    setPanOffset,
     zoomLevel,
-    setZoomLevel,
     isDragging,
-    setIsDragging,
-    dragStartPos,
-    setDragStartPos,
-    dragStartElementPos,
-    setDragStartElementPos,
+    dragStartPos, // Provided by store, part of isDragging state logic
+    dragStartElementPos, // Provided by store
     selectedElement,
-    setSelectedElement,
     isDrawing,
-    setIsDrawing,
-    previewElement,
-    setPreviewElement,
+    previewElement, // Provided by store, part of isPreviewing state logic
     isPreviewing,
-    setIsPreviewing,
     isResizing,
-    setIsResizing,
-    resizeHandle,
-    setResizeHandle,
-    resizeStartPos,
-    setResizeStartPos,
-    resizeStartSize,
-    setResizeStartSize,
-    history,
-    setHistory,
-    historyIndex,
-    setHistoryIndex,
-    mousePos,
-    setMousePos,
-    isEditingText,
-    setIsEditingText,
-    showTextFormatting,
-    setShowTextFormatting,
-    textFormattingPosition,
-    setTextFormattingPosition
-  } = canvasState;
+    resizeHandle, // Provided by store, part of isResizing state logic
+    resizeStartPos, // Provided by store
+    resizeStartSize, // Provided by store
+    history, // Provided by store for canUndo/canRedo checks
+    historyIndex, // Provided by store for canUndo/canRedo checks
+    // mousePos, // State variable removed as unused in this hook (setMousePos action is kept)
+    // isEditingText, // State variable removed as unused in this hook (setIsEditingText action is kept)
+    // showTextFormatting, // Removed, text formatting UI state handled by setIsEditingText
+    // textFormattingPosition, // Removed, text formatting UI state handled by setIsEditingText
+
+    // Action methods from CanvasState
+    setElements, // Direct element array replacement
+    setActiveTool,
+    // setSelectedShape, // Removed as unused in this hook
+    setPanOffset,
+    setZoomLevel,
+    setIsDrawing, // Action to set drawing state
+    setMousePos, // Action, kept as it's used
+    setIsEditingText, // Action to set which text element is being edited, kept as it's used
+
+    // Composite/specific actions from CanvasState
+    updateElement, // To update parts of an element
+    addElement,    // To add a new element
+    deleteElement, // Store's own deleteElement action
+    selectElement, // Replaces direct setSelectedElement calls
+    setPreviewState, // Manages isPreviewing and previewElement
+    setResizeState,  // Manages isResizing, resizeHandle, resizeStartPos, resizeStartSize
+    // setTextFormatState, // This action does not exist; setIsEditingText handles text formatting UI state
+    addToHistory,    // For committing changes to history
+    undo,            // Undo action
+    redo,            // Redo action
+    setDragState,    // Manages isDragging, dragStartPos, dragStartElementPos
+    setShowShapeDropdown // For toolbar UI
+  } = useCanvasStore();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isPanning = useRef(false);
@@ -83,13 +89,8 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
    * Add elements to history for undo/redo functionality
    */
   const commitToHistory = useCallback((newElements: CanvasElement[]) => {
-    // Remove any future history if we're not at the end
-    if (historyIndex < history.length - 1) {
-      setHistory(history.slice(0, historyIndex + 1));
-    }
-    setHistory(prev => [...prev, [...newElements]]);
-    setHistoryIndex(prev => prev + 1);
-  }, [history, historyIndex, setHistory, setHistoryIndex]);
+    addToHistory(newElements);
+  }, [addToHistory]);
 
   // --- GLOBAL DOCUMENT EVENT LISTENERS ---
   
@@ -98,6 +99,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
    * This fixes the "elements follow mouse forever" bug when dragging outside canvas bounds
    */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const handleGlobalMouseMove = (e: MouseEvent) => {
       // Handle element dragging globally
       if (isDragging && selectedElement && dragStartPos && dragStartElementPos) {
@@ -106,16 +108,11 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
         const deltaX = currentPos.x - dragStartPos.x;
         const deltaY = currentPos.y - dragStartPos.y;
         
-        // Direct state update without requestAnimationFrame for immediate responsiveness
-        setElements(prev => prev.map(el =>
-          el.id === selectedElement
-            ? {
-                ...el,
-                x: dragStartElementPos.x + deltaX,
-                y: dragStartElementPos.y + deltaY
-              }
-            : el
-        ));
+        // Update element position using store action
+        updateElement(selectedElement, {
+          x: dragStartElementPos.x + deltaX,
+          y: dragStartElementPos.y + deltaY
+        });
         return;
       }
       
@@ -124,11 +121,11 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
         e.preventDefault();
         const deltaX = e.clientX - dragStartPos.x;
         const deltaY = e.clientY - dragStartPos.y;
-        setPanOffset(prev => ({
-          x: prev.x + deltaX,
-          y: prev.y + deltaY
-        }));
-        setDragStartPos({ x: e.clientX, y: e.clientY });
+        setPanOffset({
+          x: panOffset.x + deltaX,
+          y: panOffset.y + deltaY
+        });
+        setDragState(true, { x: e.clientX, y: e.clientY });
         return;
       }
     };
@@ -139,7 +136,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
       // Stop element dragging
       if (isDragging) {
         commitToHistory(elements);
-        setIsDragging(false);
+        setDragState(false);
       }
       
       // Stop canvas panning
@@ -150,8 +147,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
       // Stop resizing
       if (isResizing) {
         commitToHistory(elements);
-        setIsResizing(false);
-        setResizeHandle(null);
+        setResizeState(false); // This also resets the resize handle in the store
       }
       
       // Reset cursor style
@@ -160,38 +156,24 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
       }
       
       // Reset drag positions
-      setDragStartPos({ x: 0, y: 0 });
-      setDragStartElementPos({ x: 0, y: 0 });
+      setDragState(false);
     };
 
-    // Add global event listeners
+    // Global document event listeners
     document.addEventListener('mousemove', handleGlobalMouseMove);
     document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    // Dependency arrays for global listeners are tricky. 
+    // For now, including all potentially relevant store states and actions that are read or called.
+    // This might need refinement if performance issues arise or if ESLint rules are stricter.
+    // Consider using refs for values that change frequently but shouldn't trigger re-registration.
 
     // Cleanup on unmount or dependency change
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
-  }, [
-    isDragging,
-    selectedElement,
-    dragStartPos,
-    dragStartElementPos,
-    elements,
-    activeTool,
-    isResizing,
-    resizeHandle,
-    getCanvasCoordinatesFromNative,
-    commitToHistory,
-    setElements,
-    setIsDragging,
-    setPanOffset,
-    setDragStartPos,
-    setDragStartElementPos,
-    setIsResizing,
-    setResizeHandle
-  ]);
+  }, [getCanvasCoordinatesFromNative, isDragging, selectedElement, dragStartPos, dragStartElementPos, updateElement, isPanning, activeTool, panOffset, setPanOffset, setDragState, commitToHistory, elements, isResizing, setResizeState, canvasRef]);
 
   /**
    * Generate unique ID for new elements
@@ -207,7 +189,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     startPos: { x: number; y: number },
     currentPos: { x: number; y: number }
   ): CanvasElement | null => {
-    console.log('🔄 PREVIEW DEBUG: createPreviewElement called with activeTool:', activeTool, 'startPos:', startPos, 'currentPos:', currentPos);
+    console.log(' PREVIEW DEBUG: createPreviewElement called with activeTool:', activeTool, 'startPos:', startPos, 'currentPos:', currentPos);
     
     // Rectangle, line, text, and sticky-note tools no longer use preview since they create directly from toolbar
     if (['rectangle', 'line', 'text', 'sticky-note'].includes(activeTool)) {
@@ -223,7 +205,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
    * Handle mouse down events on the canvas
    */
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
-    console.log('🖱️ CANVAS CLICK DEBUG: handleCanvasMouseDown called with activeTool:', activeTool);
+    console.log(' CANVAS CLICK DEBUG: handleCanvasMouseDown called with activeTool:', activeTool);
     e.preventDefault();
     e.stopPropagation();
     
@@ -233,23 +215,23 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     }
     
     const startPos = getCanvasCoordinates(e);
-    console.log('🖱️ CANVAS CLICK DEBUG: Canvas coordinates calculated:', startPos);
+    console.log(' CANVAS CLICK DEBUG: Canvas coordinates calculated:', startPos);
     setMousePos(startPos);
 
     // Clear any existing selections and previews when clicking on empty canvas
     if (activeTool === 'select') {
-      setSelectedElement(null);
+      selectElement(null);
       setIsEditingText(null);
-      setShowTextFormatting(false);
+      setShowShapeDropdown(false);
     }
 
-    console.log('🖱️ CANVAS CLICK DEBUG: About to enter switch statement with activeTool:', activeTool);
+    console.log(' CANVAS CLICK DEBUG: About to enter switch statement with activeTool:', activeTool);
     // Handle different tools
     switch (activeTool) {
       case 'select':
         // Start panning
         isPanning.current = true;
-        setDragStartPos({ x: e.clientX, y: e.clientY });
+        setDragState(true, { x: e.clientX, y: e.clientY });
         break;
 
       case 'pen':
@@ -267,7 +249,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
           path: currentPath.current,
           color: '#000000'
         };
-        setPreviewElement(drawingElement);
+        setPreviewState(true, drawingElement);
         break;
 
       case 'rectangle':
@@ -276,7 +258,7 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
       case 'sticky-note':
         // These tools now use direct creation from toolbar buttons
         // No longer create elements on canvas click - this prevents double creation
-        console.log(`🚫 CANVAS CLICK: ${activeTool} tool should create directly from toolbar, not canvas click`);
+        console.log(` CANVAS CLICK: ${activeTool} tool should create directly from toolbar, not canvas click`);
         break;
 
       default:
@@ -289,21 +271,22 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     generateId,
     commitToHistory,
     setElements,
-    setSelectedElement,
+    selectElement,
     setIsDrawing,
     setIsPreviewing,
-    setPreviewElement,
+    setPreviewState,
     setIsEditingText,
-    setShowTextFormatting,
+    setShowShapeDropdown,
     setActiveTool,
     setMousePos,
-    setDragStartPos
+    setDragState
   ]);
 
   /**
    * Handle mouse move events on the canvas (simplified - global handlers manage dragging)
    */
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!canvasRef.current) return;
     e.preventDefault();
     
     const currentPos = getCanvasCoordinates(e);
@@ -347,21 +330,17 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
           break;
       }
 
-      setElements(prev => prev.map(el =>
-        el.id === selectedElement
-          ? { ...el, x: newX, y: newY, width: newWidth, height: newHeight }
-          : el
-      ));
+      updateElement(selectedElement, { x: newX, y: newY, width: newWidth, height: newHeight });
       return;
     }
 
     // Handle drawing tools
     if (isDrawing) {
-      console.log('🖱️ MOUSE MOVE DEBUG: isDrawing=true, activeTool:', activeTool, 'isPreviewing:', isPreviewing);
+      console.log(' MOUSE MOVE DEBUG: isDrawing=true, activeTool:', activeTool, 'isPreviewing:', isPreviewing);
       if (activeTool === 'pen' && previewElement) {
         // Continue path drawing
         currentPath.current += ` L ${currentPos.x} ${currentPos.y}`;
-        setPreviewElement({
+        setPreviewState(true, {
           ...previewElement,
           path: currentPath.current
         });
@@ -371,31 +350,34 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
   }, [
     activeTool,
     isDrawing,
-    isPreviewing,
+    elements, // Kept for read operations if any, or if updateElement needs it implicitly
+    getCanvasCoordinates,
     isResizing,
-    selectedElement,
     resizeHandle,
     resizeStartPos,
     resizeStartSize,
+    selectedElement,
+    updateElement, // Replaces setElements for targeted updates
+    isDrawing,
+    activeTool,
     previewElement,
-    elements,
-    getCanvasCoordinates,
-    createPreviewElement,
-    setMousePos,
-    setElements,
-    setPreviewElement
+    setPreviewState,
+    currentPath,
+    drawStartPos,
+    zoomLevel,
+    panOffset
   ]);
 
   /**
    * Handle mouse up events (simplified - global handler manages most cleanup)
    */
   const handleMouseUp = useCallback(() => {
-    console.log('🖱️ MOUSE UP DEBUG: handleMouseUp called, isDrawing:', isDrawing);
+    console.log(' MOUSE UP DEBUG: handleMouseUp called, isDrawing:', isDrawing);
     // Finalize drawing (only thing that needs canvas-specific handling)
     if (isDrawing) {
-      console.log('🖱️ MOUSE UP DEBUG: isDrawing=true, previewElement:', previewElement);
+      console.log(' MOUSE UP DEBUG: isDrawing=true, previewElement:', previewElement);
       if (previewElement && previewElement.id === 'preview') {
-        console.log('🖱️ MOUSE UP DEBUG: Converting preview to actual element:', previewElement);
+        console.log(' MOUSE UP DEBUG: Converting preview to actual element:', previewElement);
         // Convert preview to actual element
         const finalElement: CanvasElement = {
           ...previewElement,
@@ -410,41 +392,39 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
         // Note: Rectangle and line elements are created immediately, not through preview conversion
 
         if (shouldAdd) {
-          console.log('✅ ELEMENT CREATION DEBUG: Adding new element to canvas:', finalElement);
-          const newElements = [...elements, finalElement];
-          setElements(newElements);
-          commitToHistory(newElements);
-          setSelectedElement(finalElement.id);
-          console.log('✅ ELEMENT CREATION DEBUG: Element added successfully, new elements count:', newElements.length);
+          console.log(' ELEMENT CREATION DEBUG: Adding new element to canvas via store action:', finalElement);
+          addElement(finalElement); // Use store action to add element and handle history
+          selectElement(finalElement.id); // Select the newly added element
+          console.log(' ELEMENT CREATION DEBUG: Element added successfully, new elements count:', elements.length);
         } else {
-          console.log('❌ ELEMENT CREATION DEBUG: Element too small, not adding. Size:', finalElement.width, 'x', finalElement.height);
+          console.log(' ELEMENT CREATION DEBUG: Element too small, not adding. Size:', finalElement.width, 'x', finalElement.height);
         }
       } else {
-        console.log('❌ MOUSE UP DEBUG: No valid preview element to convert');
+        console.log(' MOUSE UP DEBUG: No valid preview element to convert');
       }
 
       // Reset drawing state
-      console.log('🖱️ MOUSE UP DEBUG: Resetting drawing state');
+      console.log(' MOUSE UP DEBUG: Resetting drawing state');
       setIsDrawing(false);
-      setIsPreviewing(false);
-      setPreviewElement(null);
-      currentPath.current = '';
+      // setIsPreviewing(false); // Redundant, setPreviewState below handles this
+      setPreviewState(false, null);
+      selectElement(null); // Deselect after drawing/action
     } else {
-      console.log('🖱️ MOUSE UP DEBUG: isDrawing=false, no action needed');
+      console.log(' MOUSE UP DEBUG: isDrawing=false, no action needed');
     }
   }, [
     isDrawing,
     previewElement,
-    elements,
-    commitToHistory,
+    // elements, // Removed as addElement now handles element list modification
+    // commitToHistory, // Removed as addElement should handle history
     generateId,
     setIsDrawing,
-    setIsPreviewing,
-    setPreviewElement,
-    setElements,
-    setSelectedElement
+    setPreviewState,
+    addElement, // Replaces setElements and commitToHistory for new elements
+    selectElement
   ]);
 
+  // ... rest of the code remains the same ...
   /**
    * Handle mouse down on canvas elements
    */
@@ -481,26 +461,21 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     for (const [handleName, handlePos] of Object.entries(handles)) {
       if (Math.abs(currentPos.x - handlePos.x) <= handleSize &&
           Math.abs(currentPos.y - handlePos.y) <= handleSize) {
-        setIsResizing(true);
-        setResizeHandle(handleName);
-        setResizeStartPos(currentPos);
-        setResizeStartSize({
+        setResizeState(true, handleName, currentPos, {
           width: element.width || 0,
           height: element.height || 0
         });
-        setSelectedElement(elementId);
+        selectElement(elementId);
         return;
       }
     }
 
     // Start dragging element
-    setSelectedElement(elementId);
-    setIsDragging(true);
-    setDragStartPos(currentPos);
-    setDragStartElementPos({ x: element.x, y: element.y });
+    selectElement(elementId);
+    setDragState(true, currentPos, { x: element.x, y: element.y });
     
     // DEBUG: Log initial drag setup
-    console.log('🎯 DRAG START SETUP:', {
+    console.log(' DRAG START SETUP:', {
       elementId,
       screenMouse: { x: e.clientX, y: e.clientY },
       canvasClickPos: currentPos,
@@ -515,16 +490,21 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     // Handle text editing
     if (element.type === 'text' || element.type === 'sticky-note') {
       if (e.detail === 2) { // Double click
-        setIsEditingText(elementId);
-        setShowTextFormatting(true);
-        
-        // Position text formatting toolbar
+        let position;
         if (canvasRef.current) {
           const rect = canvasRef.current.getBoundingClientRect();
-          const screenX = element.x * zoomLevel + panOffset.x + rect.left;
-          const screenY = (element.y - 50) * zoomLevel + panOffset.y + rect.top;
-          setTextFormattingPosition({ left: screenX, top: screenY });
+          const toolbarHeightEstimate = 40; // Estimated height of the toolbar
+          const spacing = 10; // Desired spacing above the element
+          // Calculate screenX for the center of the element for better positioning
+          const elementScreenX = (element.x + (element.width || 0) / 2) * zoomLevel + panOffset.x + rect.left;
+          const elementScreenY = element.y * zoomLevel + panOffset.y + rect.top;
+          // Position toolbar above the element
+          position = {
+            x: elementScreenX, // Centered horizontally
+            y: elementScreenY - toolbarHeightEstimate - spacing
+          };
         }
+        setIsEditingText(elementId, position);
       }
     }
   }, [
@@ -533,38 +513,29 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     getCanvasCoordinates,
     zoomLevel,
     panOffset,
-    setSelectedElement,
-    setIsDragging,
-    setIsResizing,
-    setResizeHandle,
-    setDragStartPos,
-    setDragStartElementPos,
-    setResizeStartPos,
-    setResizeStartSize,
-    setIsEditingText,
-    setShowTextFormatting,
-    setTextFormattingPosition
+    selectElement,
+    setDragState,
+    setResizeState,
+    setIsEditingText
+    // setShowTextFormatting, // Removed, handled by setIsEditingText
+    // setTextFormattingPosition // Removed, handled by setIsEditingText
   ]);
 
   // --- TOOL AND HISTORY HANDLERS ---
 
   const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setElements(history[newIndex]);
-      setSelectedElement(null);
-    }
-  }, [history, historyIndex, setElements, setHistoryIndex, setSelectedElement]);
+    // The canUndo check (historyIndex > 0) is typically done before calling this handler.
+    // The store's undo action handles updating elements and historyIndex.
+    undo();
+    selectElement(null); // Deselect element after undo
+  }, [undo, selectElement]);
 
   const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setElements(history[newIndex]);
-      setSelectedElement(null);
-    }
-  }, [history, historyIndex, setElements, setHistoryIndex, setSelectedElement]);
+    // The canRedo check (historyIndex < history.length - 1) is typically done before calling this handler.
+    // The store's redo action handles updating elements and historyIndex.
+    redo();
+    selectElement(null); // Deselect element after redo
+  }, [redo, selectElement]);
 
   const handleToolSelect = useCallback((tool: CanvasTool) => {
     if (tool === 'undo') {
@@ -578,42 +549,37 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     }
 
     if (tool === 'zoom-in') {
-      setZoomLevel(prev => Math.min(prev * 1.2, 5));
+      setZoomLevel(Math.min(zoomLevel * 1.2, 5));
       return;
     }
 
     if (tool === 'zoom-out') {
-      setZoomLevel(prev => Math.max(prev / 1.2, 0.1));
+      setZoomLevel(Math.max(zoomLevel / 1.2, 0.1));
       return;
     }
 
     // Clear selections when switching tools
     if (tool !== 'select') {
-      setSelectedElement(null);
-      setIsEditingText(null);
-      setShowTextFormatting(false);
+      selectElement(null);
+      setIsEditingText(null); // This also hides text formatting implicitly if store handles it
     }
 
     setActiveTool(tool);
-  }, [handleUndo, handleRedo, setZoomLevel, setActiveTool, setSelectedElement, setIsEditingText, setShowTextFormatting]);
+  }, [handleUndo, handleRedo, zoomLevel, setZoomLevel, setActiveTool, selectElement, setIsEditingText]);
 
   // --- TEXT HANDLING ---
 
   const handleTextChange = useCallback((id: string, content: string) => {
-    setElements(prev => prev.map(elem => 
-      elem.id === id ? { ...elem, content } : elem
-    ));
-  }, [setElements]);
+    updateElement(id, { content });
+    // Assuming updateElement in the store handles history/state updates appropriately.
+  }, [updateElement]);
 
   const handleTextFormatting = useCallback((property: string, value: any) => {
     if (!selectedElement) return;
     
-    setElements(prev => prev.map(elem => 
-      elem.id === selectedElement 
-        ? { ...elem, [property]: value }
-        : elem
-    ));
-  }, [selectedElement, setElements]);
+    updateElement(selectedElement, { [property]: value });
+    // Assuming updateElement in the store handles history/state updates appropriately.
+  }, [selectedElement, updateElement]);
 
   const handleTextFormatPropertyChange = useCallback((property: string, value: any) => {
     handleTextFormatting(property, value);
@@ -625,19 +591,18 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     const targetElementId = elementId || selectedElement;
     if (!targetElementId) return;
     
-    const newElements = elements.filter(el => el.id !== targetElementId);
-    setElements(newElements);
-    commitToHistory(newElements);
-    setSelectedElement(null);
-  }, [selectedElement, elements, setElements, commitToHistory, setSelectedElement]);
+    deleteElement(targetElementId);
+    // Assuming the store's deleteElement action handles history and selection state (e.g., deselects the element).
+    // If selectElement(null) is still required, it should be called here and added to dependencies.
+  }, [selectedElement, deleteElement]);
 
   const handleZoomIn = useCallback(() => {
-    setZoomLevel(prev => Math.min(prev * 1.2, 5));
-  }, [setZoomLevel]);
+    setZoomLevel(Math.min(zoomLevel * 1.2, 5));
+  }, [zoomLevel, setZoomLevel]);
 
   const handleZoomOut = useCallback(() => {
-    setZoomLevel(prev => Math.max(prev / 1.2, 0.1));
-  }, [setZoomLevel]);
+    setZoomLevel(Math.max(zoomLevel / 1.2, 0.1));
+  }, [zoomLevel, setZoomLevel]);
 
   const getTextStyles = useCallback((element: CanvasElement) => {
     return {
@@ -656,15 +621,12 @@ export const useCanvasEvents = ({ canvasState }: { canvasState: UseCanvasStateRe
     const element = elements.find(el => el.id === elementId);
     if (!element) return;
 
-    setIsResizing(true);
-    setResizeHandle(handle);
-    setSelectedElement(elementId);
-    setResizeStartPos(startPos);
-    setResizeStartSize({
+    selectElement(elementId); // Ensure element is selected before resizing
+    setResizeState(true, handle, startPos, {
       width: element.width || 0,
       height: element.height || 0
     });
-  }, [elements, setIsResizing, setResizeHandle, setSelectedElement, setResizeStartPos, setResizeStartSize]);
+  }, [elements, selectElement, setResizeState]);
 
   // --- COMPUTED VALUES ---
 
