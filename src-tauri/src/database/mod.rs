@@ -5,13 +5,16 @@
 
 pub mod connection;
 pub mod models;
+pub mod operations;
 pub mod operations_v4;
+pub mod schema;
 pub mod schema_v4;
 pub mod schema_onboarding;
 
 // Re-export all the necessary items for easy access from other modules.
 // This allows other files to simply `use crate::database::ChatSession;`
 pub use models::*;
+pub use operations::*;
 pub use operations_v4::*;
 
 #[cfg(test)]

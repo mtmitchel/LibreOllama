@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, TimeZone};
 
 // Import database modules
 use crate::database::{ChatSession as DbChatSession, ChatMessage as DbChatMessage, MessageRole};
+use crate::database::operations;
 
 // Data structures for chat functionality (compatible with frontend)
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -43,8 +44,8 @@ impl From<DbChatSession> for ChatSessionApi {
         Self {
             id: db_session.id.to_string(), // Convert i32 to String
             title: db_session.session_name, // Use session_name field
-            created_at: db_session.created_at,
-            updated_at: db_session.updated_at,
+            created_at: Utc.from_utc_datetime(&db_session.created_at),
+            updated_at: Utc.from_utc_datetime(&db_session.updated_at),
             message_count: 0, // Calculated separately
         }
     }
@@ -57,7 +58,7 @@ impl From<DbChatMessage> for ChatMessageApi {
             session_id: db_message.session_id.to_string(), // Convert i32 to String
             content: db_message.content,
             role: db_message.role, // role is already a String in DbChatMessage
-            timestamp: db_message.created_at,
+            timestamp: Utc.from_utc_datetime(&db_message.created_at),
         }
     }
 }
@@ -66,9 +67,7 @@ impl From<DbChatMessage> for ChatMessageApi {
 #[tauri::command]
 pub async fn create_session(title: String) -> Result<String, String> {
     // Create a new database session
-    // This part needs to be aligned with how DbChatSession is created and what operations_v4::create_chat_session expects
-    // For now, assuming operations_v4::create_chat_session takes title and returns a session or its ID
-    let session_id = operations_v4::create_chat_session(title, "user_id_placeholder".to_string()) // Placeholder for user_id
+    let session_id = operations::create_chat_session(title, "user_id_placeholder".to_string()) // Placeholder for user_id
         .await
         .map_err(|e| format!("Failed to create session: {}", e))?;
     
@@ -77,14 +76,14 @@ pub async fn create_session(title: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn get_sessions() -> Result<Vec<ChatSessionApi>, String> {
-    let db_sessions = operations_v4::get_chat_sessions(false) 
+    let db_sessions = operations::get_chat_sessions(false) 
         .await
         .map_err(|e| format!("Failed to get sessions: {}", e))?;
     
     let mut sessions_api = Vec::new();
     for db_session in db_sessions {
         let mut session_api: ChatSessionApi = db_session.into();
-        let messages = operations_v4::get_session_messages(session_api.id.parse().unwrap_or_default()) // Parse String to i32
+        let messages = operations::get_session_messages(session_api.id.parse().unwrap_or_default()) // Parse String to i32
             .await
             .map_err(|e| format!("Failed to get message count for session {}: {}", session_api.id, e))?;
         session_api.message_count = messages.len();
@@ -98,13 +97,13 @@ pub async fn get_sessions() -> Result<Vec<ChatSessionApi>, String> {
 pub async fn send_message(session_id_str: String, content: String) -> Result<ChatMessageApi, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
 
-    // Assuming operations_v4::create_chat_message handles creating and saving the message
-    let db_message = operations_v4::create_chat_message(session_id, MessageRole::User, content)
+    // Create the chat message
+    let db_message = operations::create_chat_message(session_id, MessageRole::User, content)
         .await
         .map_err(|e| format!("Failed to send message: {}", e))?;
 
-    // Assuming operations_v4::update_chat_session_timestamp handles this or it's done within create_chat_message
-    operations_v4::update_chat_session_timestamp(session_id)
+    // Update session timestamp
+    operations::update_chat_session_timestamp(session_id)
         .await
         .map_err(|e| format!("Failed to update session timestamp: {}", e))?;
 
@@ -114,7 +113,7 @@ pub async fn send_message(session_id_str: String, content: String) -> Result<Cha
 #[tauri::command]
 pub async fn get_session_messages(session_id_str: String) -> Result<Vec<ChatMessageApi>, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
-    let db_messages = operations_v4::get_session_messages(session_id)
+    let db_messages = operations::get_session_messages(session_id)
         .await
         .map_err(|e| format!("Failed to get messages: {}", e))?;
     
@@ -126,13 +125,13 @@ pub async fn get_session_messages(session_id_str: String) -> Result<Vec<ChatMess
 
 #[tauri::command]
 pub async fn get_database_stats() -> Result<serde_json::Value, String> {
-    let sessions = operations_v4::get_chat_sessions(true)
+    let sessions = operations::get_chat_sessions(true)
         .await
         .map_err(|e| format!("Failed to get sessions: {}", e))?;
     
     let mut total_messages = 0;
     for session in &sessions {
-        let messages = operations_v4::get_session_messages(session.id)
+        let messages = operations::get_session_messages(session.id)
             .await
             .map_err(|e| format!("Failed to get messages for session {}: {}", session.id, e))?;
         total_messages += messages.len();
@@ -141,7 +140,6 @@ pub async fn get_database_stats() -> Result<serde_json::Value, String> {
     let stats = serde_json::json!({
         "total_sessions": sessions.len(),
         "total_messages": total_messages,
-        // "active_sessions": sessions.iter().filter(|s| !s.is_archived).count(), // is_archived not in new DbChatSession
         "database_type": "SQLCipher"
     });
     
@@ -149,10 +147,10 @@ pub async fn get_database_stats() -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-pub async fn delete_session(session_id_str: String) -> Result<bool, String> {
+pub async fn delete_session_v4(session_id_str: String) -> Result<bool, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
     
-    crate::database::delete_chat_session(session_id)
+    operations::delete_chat_session(session_id)
         .await
         .map_err(|e| format!("Failed to delete session: {}", e))?;
     
@@ -161,8 +159,11 @@ pub async fn delete_session(session_id_str: String) -> Result<bool, String> {
 
 #[tauri::command]
 pub async fn delete_session(session_id: String) -> Result<bool, String> {
+    let session_id_int: i32 = session_id.parse().map_err(|_| "Invalid session ID format".to_string())?;
+    
     // Check if session exists first
-    let session_exists = database::operations::get_chat_session_by_id(&session_id)
+    let session_exists = operations::get_chat_session_by_id(session_id_int)
+        .await
         .map_err(|e| format!("Failed to check session: {}", e))?
         .is_some();
     
@@ -171,7 +172,8 @@ pub async fn delete_session(session_id: String) -> Result<bool, String> {
     }
     
     // Delete session from database (messages will be deleted via foreign key constraints)
-    database::operations::delete_chat_session(&session_id)
+    operations::delete_chat_session(session_id_int)
+        .await
         .map_err(|e| format!("Failed to delete session: {}", e))?;
     
     Ok(true)

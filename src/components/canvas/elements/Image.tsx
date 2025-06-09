@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Sprite, Graphics } from '@pixi/react';
+import { Sprite, Graphics } from '../../../lib/pixi-setup';
 import { CanvasElement } from '../../../stores/canvasStore';
 
 interface ImageProps {

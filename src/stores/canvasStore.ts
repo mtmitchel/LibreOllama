@@ -36,6 +36,14 @@ interface State {
   historyIndex: number; // Add historyIndex type
   zoom: number;
   pan: { x: number; y: number };
+  // Missing state properties
+  isDrawing: boolean;
+  previewElement: CanvasElement | null;
+  showTextFormatting: boolean;
+  textFormattingPosition: any;
+  selectedTextElement: string | null;
+  // Double-click protection
+  pendingDoubleClick: string | null;
 }
 
 export interface CanvasState extends State {
@@ -48,7 +56,22 @@ export interface CanvasState extends State {
   redo: () => void; // Add redo action
   setZoom: (zoom: number) => void;
   setPan: (pan: { x: number; y: number }) => void;
-  // Define other actions if they were in your previous State definition
+  // Missing action functions
+  addElement: (element: CanvasElement) => void;
+  updateElement: (id: string, updates: Partial<CanvasElement>) => void;
+  deleteElement: (id: string) => void;
+  selectElement: (id: string, addToSelection?: boolean) => void;
+  clearSelection: () => void;
+  setIsDrawing: (isDrawing: boolean) => void;
+  setPreviewState: (isActive: boolean, element: CanvasElement | null) => void;
+  setResizeState: (isResizing: boolean, elementId: string | null, startPos: {x: number, y: number}, startSize: {width: number, height: number}) => void;
+  setTextFormattingState: (show: boolean) => void;
+  setTextSelectionState: (elementId: string | null, position: any, selectedElement: string | null) => void;
+  setActiveTool: (tool: string) => void;
+  updateMultipleElements: (updates: Record<string, Partial<CanvasElement>>) => void;
+  // Double-click protection actions
+  setPendingDoubleClick: (elementId: string | null) => void;
+  clearPendingDoubleClick: () => void;
 }
 
 export const useCanvasStore = create<CanvasState>()(
@@ -64,8 +87,22 @@ export const useCanvasStore = create<CanvasState>()(
     historyIndex: -1, // Initialize historyIndex
     zoom: 1,
     pan: { x: 0, y: 0 },
+    // Initialize missing state properties
+    isDrawing: false,
+    previewElement: null,
+    showTextFormatting: false,
+    textFormattingPosition: null,
+    selectedTextElement: null,
+    // Initialize double-click protection
+    pendingDoubleClick: null,
 
-    setIsEditingText: (id) => set({ isEditingText: id }),
+    setIsEditingText: (id) =>
+      set((state) => {
+        console.log(`CanvasStore: setIsEditingText called with id: ${id}`);
+        console.log(`CanvasStore: Previous isEditingText: ${state.isEditingText}`);
+        console.log(`CanvasStore: Current pendingDoubleClick: ${state.pendingDoubleClick}`);
+        state.isEditingText = id;
+      }),
     setSelectedElementIds: (ids) => set({ selectedElementIds: ids }),
     setDragState: (isDragging, dragStartPos, dragStartElementPositions) =>
       set({ isDragging, dragStartPos, dragStartElementPositions }),
@@ -114,6 +151,122 @@ export const useCanvasStore = create<CanvasState>()(
     },
     setZoom: (zoom) => set({ zoom }),
     setPan: (pan) => set({ pan }),
+    
+    // Missing action functions implementation
+    addElement: (element) => 
+      set((state) => {
+        state.elements[element.id] = element;
+      }),
+    
+    updateElement: (id, updates) =>
+      set((state) => {
+        if (state.elements[id]) {
+          Object.assign(state.elements[id], updates);
+        }
+      }),
+    
+    deleteElement: (id) =>
+      set((state) => {
+        delete state.elements[id];
+        state.selectedElementIds = state.selectedElementIds.filter(selectedId => selectedId !== id);
+        if (state.isEditingText === id) {
+          state.isEditingText = null;
+        }
+        if (state.selectedTextElement === id) {
+          state.selectedTextElement = null;
+          state.showTextFormatting = false;
+        }
+      }),
+    
+    selectElement: (id, addToSelection = false) =>
+      set((state) => {
+        if (addToSelection) {
+          if (state.selectedElementIds.includes(id)) {
+            // Remove from selection if already selected
+            state.selectedElementIds = state.selectedElementIds.filter(selectedId => selectedId !== id);
+          } else {
+            // Add to selection
+            state.selectedElementIds = [...state.selectedElementIds, id];
+          }
+        } else {
+          // Replace selection with just this element
+          state.selectedElementIds = [id];
+        }
+      }),
+    
+    clearSelection: () =>
+      set((state) => {
+        // Don't clear if we have a pending double-click
+        if (state.pendingDoubleClick) {
+          // Don't clear isEditingText if it matches the pending double-click
+          if (state.isEditingText !== state.pendingDoubleClick) {
+            state.isEditingText = null;
+          }
+          // Don't clear selection if the pending element is selected
+          if (!state.selectedElementIds.includes(state.pendingDoubleClick)) {
+            state.selectedElementIds = [];
+          }
+        } else {
+          state.selectedElementIds = [];
+          state.isEditingText = null;
+        }
+        state.selectedTextElement = null;
+        state.showTextFormatting = false;
+      }),
+    
+    setIsDrawing: (isDrawing) => set({ isDrawing }),
+    
+    setPreviewState: (isActive, element) =>
+      set((state) => {
+        state.isDrawing = isActive;
+        state.previewElement = element;
+      }),
+    
+    setResizeState: (_isResizing, _elementId, _startPos, _startSize) =>
+      set((state) => {
+        // For now, this is a placeholder implementation
+        // You can expand this based on your resize functionality needs
+        state.isDragging = _isResizing;
+      }),
+    
+    setTextFormattingState: (show) =>
+      set((state) => {
+        state.showTextFormatting = show;
+      }),
+    
+    setTextSelectionState: (_elementId, position, selectedElement) =>
+      set((state) => {
+        state.selectedTextElement = selectedElement;
+        state.textFormattingPosition = position;
+        if (selectedElement) {
+          state.showTextFormatting = true;
+        }
+      }),
+    
+    setActiveTool: (tool) => set({ activeTool: tool }),
+    
+    updateMultipleElements: (updates) =>
+      set((state) => {
+        for (const id in updates) {
+          if (state.elements[id]) {
+            Object.assign(state.elements[id], updates[id]);
+          }
+        }
+      }),
+    
+    setPendingDoubleClick: (elementId) =>
+      set((state) => {
+        console.log(`CanvasStore: setPendingDoubleClick called with elementId: ${elementId}`);
+        console.log(`CanvasStore: Previous pendingDoubleClick: ${state.pendingDoubleClick}`);
+        state.pendingDoubleClick = elementId;
+      }),
+    
+    clearPendingDoubleClick: () =>
+      set((state) => {
+        console.log(`CanvasStore: clearPendingDoubleClick called`);
+        console.log(`CanvasStore: Clearing pendingDoubleClick from: ${state.pendingDoubleClick}`);
+        state.pendingDoubleClick = null;
+      }),
   }))
 );
 

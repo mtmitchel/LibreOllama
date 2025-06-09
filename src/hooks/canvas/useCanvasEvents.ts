@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { useCanvasStore, CanvasElement } from '@/stores/canvasStore'; // Import CanvasElement from store
-import type { FederatedPointerEvent } from 'pixi.js';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { useCanvasStore, CanvasElement } from '@/stores/canvasStore';
 
 interface UseCanvasEventsProps {
   canvasContainerRef: React.RefObject<HTMLDivElement>;
@@ -25,12 +24,9 @@ export const useCanvasEvents = ({
   textAreaRef,
   getCanvasCoordinates,
   generateId,
-}: UseCanvasEventsProps): UseCanvasEventsReturn => {
-  // Store refs for internal state that doesn't need to trigger re-renders
+}: UseCanvasEventsProps): UseCanvasEventsReturn => {  // Store refs for internal state that doesn't need to trigger re-renders
   const isPanning = useRef(false);
   const initialElementPositions = useRef<Record<string, { x: number; y: number }>>({});
-  const lastTap = useRef<number | null>(null);
-  const lastTapId = useRef<string | null>(null);
 
   // Get store actions (these are stable function references from Zustand)
   const addElement = useCanvasStore((state) => state.addElement);
@@ -109,37 +105,42 @@ export const useCanvasEvents = ({
       // Store WORLD coordinates for drag start position
       setDragState(true, startDragWorldCoords, initialElementPositions.current);
     }
-  }, [selectElement, setDragState, updateElement, addToHistory, setIsEditingText, setTextFormattingState, setTextSelectionState, textAreaRef, getCanvasCoordinates]); // Added getCanvasCoordinates
-  // Handle mouse down events on the main canvas workspace
+  }, [selectElement, setDragState, updateElement, addToHistory, setIsEditingText, setTextFormattingState, setTextSelectionState, textAreaRef, getCanvasCoordinates]); // Added getCanvasCoordinates  // Handle mouse down events on the main canvas workspace
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
-    console.log('Canvas mouse down:', {
-      target: e.target,
-      isCanvasContainer: e.target === canvasContainerRef.current,
-      isCanvasElement: e.target instanceof HTMLCanvasElement,
-      activeTool: useCanvasStore.getState().activeTool
-    });
-    
     const currentStoreState = useCanvasStore.getState();
 
-    if (e.target !== canvasContainerRef.current && !(e.target instanceof HTMLCanvasElement)) {
-      console.log('Click was on UI element, ignoring');
+    // SAFETY NET: If we're editing text, don't interfere with text editing
+    if (currentStoreState.isEditingText) {
       return;
     }
 
-    const isTextarea = e.target instanceof HTMLTextAreaElement;
-    const isPixiCanvas = e.target instanceof HTMLCanvasElement;
+    // Check if we have a pending double-click
+    if (currentStoreState.pendingDoubleClick) {
+      return;
+    }
 
-    if (!isTextarea && !isPixiCanvas) {
-      // Prevent default only if the target is not the textarea and not the Pixi canvas.
-      // If it's the Pixi canvas, we let the event proceed so Pixi can handle it.
+    // Check if the click target is a PIXI element (real canvas or mock PIXI component)
+    const isPixiElement = e.target instanceof HTMLCanvasElement ||
+                         (e.target instanceof HTMLElement && e.target.getAttribute('data-pixi-component'));
+    
+    if (e.target !== canvasContainerRef.current && !isPixiElement) {
+      return;
+    }
+    
+    // Note: Removed early return for PIXI canvas clicks to allow panning
+    // PIXI elements will still handle their own events via stopPropagation
+
+    const isTextarea = e.target instanceof HTMLTextAreaElement;
+
+    if (!isTextarea) {
       e.preventDefault();
     }
 
     // If select tool and clicked on empty canvas, clear selection and text edit state
     if (currentStoreState.activeTool === 'select') {
       console.log('Canvas click with select tool - clearing selection');
-      // Only clear selection if not shift-clicking (to allow multi-select)
-      if (!e.shiftKey) {
+      // Only clear selection if not shift-clicking (to allow multi-select) and no pending double-click
+      if (!e.shiftKey && !currentStoreState.pendingDoubleClick) {
         clearSelection();
       }
       if (currentStoreState.isEditingText) {
@@ -189,30 +190,27 @@ export const useCanvasEvents = ({
 
   // Global mouse move handler - critical for preventing stuck states
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
-    const { 
-      isDragging: currentIsDragging, 
+    const {      isDragging: currentIsDragging, 
       dragStartPos: currentDragStartPos, 
       activeTool: currentActiveTool, 
       pan: currentPan, 
       selectedElementIds: currentSelectedIds, 
       previewElement: currentPreviewElement, 
       isDrawing: currentIsDrawing, 
-      dragStartElementPos: currentDragStartElementPos,
+      dragStartElementPositions: currentDragStartElementPositions,
       zoom: currentZoom,
       updateMultipleElements // Get the new batch update action
     } = useCanvasStore.getState();
 
     if (!currentIsDragging) return;
 
-    const currentMouseWorldCoords = getCanvasCoordinates(e.clientX, e.clientY); 
-
-    if (currentActiveTool === 'select' && currentDragStartPos && currentDragStartElementPos && currentSelectedIds.length > 0) {
+    const currentMouseWorldCoords = getCanvasCoordinates(e.clientX, e.clientY);     if (currentActiveTool === 'select' && currentDragStartPos && currentDragStartElementPositions && currentSelectedIds.length > 0) {
       const dx = currentMouseWorldCoords.x - currentDragStartPos.x;
       const dy = currentMouseWorldCoords.y - currentDragStartPos.y;
 
       const batchUpdates: Record<string, Partial<CanvasElement>> = {};
       currentSelectedIds.forEach(id => {
-        const initialPos = currentDragStartElementPos[id];
+        const initialPos = currentDragStartElementPositions[id];
         if (initialPos) {
           batchUpdates[id] = {
             x: initialPos.x + dx,
@@ -258,13 +256,12 @@ export const useCanvasEvents = ({
 
   // Global mouse up handler - critical for cleaning up interaction states
   const handleGlobalMouseUp = useCallback((_e: MouseEvent) => {
-    const { 
-      isDrawing: currentIsDrawing, 
+    const {      isDrawing: currentIsDrawing, 
       previewElement: currentPreviewElement, 
       activeTool: currentActiveTool, 
       selectedElementIds: currentSelectedIds, 
       elements: currentElements, 
-      dragStartElementPos: currentDragStartElementPos 
+      dragStartElementPositions: currentDragStartElementPositions
     } = useCanvasStore.getState();
     
     if (isPanning.current) {
@@ -277,14 +274,13 @@ export const useCanvasEvents = ({
         addElement(finalElement);
         addToHistory({ ...currentElements, [finalElement.id]: finalElement });
       }
-    }
-    // If elements were dragged, save their final positions to history
-    else if (currentActiveTool === 'select' && currentSelectedIds.length > 0 && currentDragStartElementPos) {
+    }    // If elements were dragged, save their final positions to history
+    else if (currentActiveTool === 'select' && currentSelectedIds.length > 0 && currentDragStartElementPositions) {
       // Check if positions actually changed to avoid redundant history entries
       let changed = false;
       for (const id of currentSelectedIds) {
-        if (currentElements[id] && currentDragStartElementPos[id]) {
-          if (currentElements[id].x !== currentDragStartElementPos[id].x || currentElements[id].y !== currentDragStartElementPos[id].y) {
+        if (currentElements[id] && currentDragStartElementPositions[id]) {
+          if (currentElements[id].x !== currentDragStartElementPositions[id].x || currentElements[id].y !== currentDragStartElementPositions[id].y) {
             changed = true;
             break;
           }

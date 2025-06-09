@@ -15,6 +15,7 @@ import Chat from './pages/Chat';
 import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
 import Canvas from './pages/Canvas';
+import InfiniteCanvas from './components/canvas/InfiniteCanvas';
 import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';
 import Agents from './pages/Agents';
@@ -37,7 +38,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  */
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const isCanvasPage = location.pathname === '/canvas';
+  const isCanvasPage = location.pathname === '/canvas' || location.pathname === '/infinite-canvas';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -49,6 +50,7 @@ const AppContent: React.FC = () => {
       {isCanvasPage ? (
         <Routes>
           <Route path="/canvas" element={<Canvas />} />
+          <Route path="/infinite-canvas" element={<InfiniteCanvas />} />
         </Routes>
       ) : (
         <MainLayout>

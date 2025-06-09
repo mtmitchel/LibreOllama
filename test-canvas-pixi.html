@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Canvas PIXI Integration</title>
+</head>
+<body>
+    <h1>Canvas PIXI Integration Test</h1>
+    <p>Please open the developer console and navigate to the Canvas page in your app.</p>
+    <p>Then check for the following:</p>
+    <ol>
+        <li>Look for "PIXI compatibility layer loaded - using real @pixi/react v8 components" in the console</li>
+        <li>Try creating a text element by clicking the text tool</li>
+        <li>Try double-clicking the text element to edit it</li>
+        <li>Try dragging elements around</li>
+        <li>Check for any error messages in the console</li>
+    </ol>
+    <h2>Expected Results:</h2>
+    <ul>
+        <li>✓ Real PIXI canvas should render (not mock divs)</li>
+        <li>✓ Text elements should be editable on double-click</li>
+        <li>✓ Elements should be draggable</li>
+        <li>✓ Delete key should remove selected elements</li>
+    </ul>
+</body>
+</html>

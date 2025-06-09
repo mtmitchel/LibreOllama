@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, TimeZone};
 
 // Import database modules
 use crate::database::{Agent as DbAgent, AgentExecution as DbAgentExecution};
@@ -52,22 +52,25 @@ pub struct AgentExecution {
 // Helper functions to convert between database models and API models
 impl From<DbAgent> for Agent {
     fn from(db_agent: DbAgent) -> Self {
-        // Parse tools from metadata or use empty vec
-        let tools = if let Some(metadata) = &db_agent.metadata {
-            serde_json::from_str::<Vec<String>>(metadata).unwrap_or_default()
+        // Parse tools from capabilities or parameters
+        let tools = db_agent.capabilities.clone();
+        
+        // Extract model from parameters if it exists
+        let model = if let Some(model_value) = db_agent.parameters.get("model") {
+            model_value.as_str().unwrap_or("default").to_string()
         } else {
-            Vec::new()
+            "default".to_string()
         };
 
         Self {
-            id: db_agent.id,
+            id: db_agent.id.to_string(),
             name: db_agent.name,
-            description: db_agent.description.unwrap_or_default(),
-            system_prompt: db_agent.system_prompt.unwrap_or_default(),
-            model: db_agent.model_name,
+            description: db_agent.description,
+            system_prompt: db_agent.system_prompt,
+            model,
             tools,
-            created_at: db_agent.created_at,
-            updated_at: db_agent.updated_at,
+            created_at: Utc.from_utc_datetime(&db_agent.created_at),
+            updated_at: Utc.from_utc_datetime(&db_agent.updated_at),
             is_active: db_agent.is_active,
         }
     }
@@ -76,13 +79,13 @@ impl From<DbAgent> for Agent {
 impl From<DbAgentExecution> for AgentExecution {
     fn from(db_execution: DbAgentExecution) -> Self {
         Self {
-            id: db_execution.id,
-            agent_id: db_execution.agent_id,
+            id: db_execution.id.to_string(),
+            agent_id: db_execution.agent_id.to_string(),
             input: db_execution.input,
-            output: db_execution.output.unwrap_or_default(),
-            status: db_execution.status.to_string(),
-            started_at: db_execution.started_at,
-            completed_at: db_execution.completed_at,
+            output: db_execution.output,
+            status: db_execution.status,
+            started_at: Utc.from_utc_datetime(&db_execution.executed_at),
+            completed_at: None, // This field doesn't exist in DbAgentExecution
             error_message: db_execution.error_message,
         }
     }
@@ -91,21 +94,24 @@ impl From<DbAgentExecution> for AgentExecution {
 // Tauri commands for agent functionality
 #[tauri::command]
 pub async fn create_agent(request: CreateAgentRequest) -> Result<Agent, String> {
-    // Serialize tools to JSON for metadata storage
-    let tools_json = serde_json::to_string(&request.tools)
-        .map_err(|e| format!("Failed to serialize tools: {}", e))?;
-    
     // Create database agent
-    let mut db_agent = DbAgent::new(
-        request.name,
-        Some(request.description),
-        request.model,
-        Some(request.system_prompt),
-    );
-    db_agent.metadata = Some(tools_json);
+    let parameters = serde_json::json!({"model": request.model});
+    
+    let db_agent = DbAgent {
+        id: 0, // Will be set by database
+        name: request.name,
+        description: request.description,
+        system_prompt: request.system_prompt,
+        capabilities: request.tools,
+        parameters,
+        is_active: true,
+        created_at: chrono::Local::now().naive_local(),
+        updated_at: chrono::Local::now().naive_local(),
+    };
     
     // Save to database
-    database::operations::create_agent(&db_agent)
+    crate::database::create_agent(&db_agent)
+        .await
         .map_err(|e| format!("Failed to create agent: {}", e))?;
     
     // Convert to API format and return
@@ -115,7 +121,8 @@ pub async fn create_agent(request: CreateAgentRequest) -> Result<Agent, String> 
 #[tauri::command]
 pub async fn get_agents() -> Result<Vec<Agent>, String> {
     // Get agents from database (active only by default)
-    let db_agents = database::operations::get_agents(false)
+    let db_agents = crate::database::get_agents(false)
+        .await
         .map_err(|e| format!("Failed to get agents: {}", e))?;
     
     // Convert to API format
@@ -127,7 +134,8 @@ pub async fn get_agents() -> Result<Vec<Agent>, String> {
 #[tauri::command]
 pub async fn get_agent(agent_id: String) -> Result<Agent, String> {
     // Get agent from database
-    let db_agent = database::operations::get_agent_by_id(&agent_id)
+    let db_agent = crate::database::get_agent_by_id(&agent_id)
+        .await
         .map_err(|e| format!("Failed to get agent: {}", e))?
         .ok_or("Agent not found")?;
     
@@ -138,7 +146,8 @@ pub async fn get_agent(agent_id: String) -> Result<Agent, String> {
 #[tauri::command]
 pub async fn update_agent(agent_id: String, request: UpdateAgentRequest) -> Result<Agent, String> {
     // Get existing agent from database
-    let mut db_agent = database::operations::get_agent_by_id(&agent_id)
+    let mut db_agent = crate::database::get_agent_by_id(&agent_id)
+        .await
         .map_err(|e| format!("Failed to get agent: {}", e))?
         .ok_or("Agent not found")?;
     
@@ -147,27 +156,25 @@ pub async fn update_agent(agent_id: String, request: UpdateAgentRequest) -> Resu
         db_agent.name = name;
     }
     if let Some(description) = request.description {
-        db_agent.description = Some(description);
+        db_agent.description = description;
     }
     if let Some(system_prompt) = request.system_prompt {
-        db_agent.system_prompt = Some(system_prompt);
+        db_agent.system_prompt = system_prompt;
     }
     if let Some(model) = request.model {
-        db_agent.model_name = model;
+        db_agent.parameters["model"] = serde_json::json!(model);
     }
     if let Some(tools) = request.tools {
-        // Serialize tools to JSON for metadata storage
-        let tools_json = serde_json::to_string(&tools)
-            .map_err(|e| format!("Failed to serialize tools: {}", e))?;
-        db_agent.metadata = Some(tools_json);
+        db_agent.capabilities = tools;
     }
     if let Some(is_active) = request.is_active {
         db_agent.is_active = is_active;
     }
     
     // Update timestamp and save to database
-    db_agent.touch();
-    database::operations::update_agent(&db_agent)
+    db_agent.updated_at = chrono::Local::now().naive_local();
+    crate::database::update_agent(&db_agent)
+        .await
         .map_err(|e| format!("Failed to update agent: {}", e))?;
     
     // Convert to API format and return
@@ -177,7 +184,8 @@ pub async fn update_agent(agent_id: String, request: UpdateAgentRequest) -> Resu
 #[tauri::command]
 pub async fn delete_agent(agent_id: String) -> Result<bool, String> {
     // Check if agent exists first
-    let agent_exists = database::operations::get_agent_by_id(&agent_id)
+    let agent_exists = crate::database::get_agent_by_id(&agent_id)
+        .await
         .map_err(|e| format!("Failed to check agent: {}", e))?
         .is_some();
     
@@ -186,7 +194,8 @@ pub async fn delete_agent(agent_id: String) -> Result<bool, String> {
     }
     
     // Delete agent from database
-    database::operations::delete_agent(&agent_id)
+    crate::database::delete_agent(&agent_id)
+        .await
         .map_err(|e| format!("Failed to delete agent: {}", e))?;
     
     Ok(true)
@@ -195,7 +204,8 @@ pub async fn delete_agent(agent_id: String) -> Result<bool, String> {
 #[tauri::command]
 pub async fn execute_agent(agent_id: String, input: String) -> Result<AgentExecution, String> {
     // Check if agent exists and is active
-    let db_agent = database::operations::get_agent_by_id(&agent_id)
+    let db_agent = crate::database::get_agent_by_id(&agent_id)
+        .await
         .map_err(|e| format!("Failed to get agent: {}", e))?
         .ok_or("Agent not found")?;
     
@@ -204,12 +214,16 @@ pub async fn execute_agent(agent_id: String, input: String) -> Result<AgentExecu
     }
     
     // Create a new execution record
-    let mut db_execution = DbAgentExecution::new(agent_id.clone(), None, input.clone());
-    
-    // For now, create a mock execution with a simple response
-    // In a real implementation, this would integrate with the Ollama API using the agent's configuration
-    let mock_output = format!("Mock response from agent '{}' to input: '{}'", db_agent.name, input);
-    db_execution.complete(mock_output);
+    let db_execution = DbAgentExecution {
+        id: 0, // Will be set by database
+        agent_id: agent_id.parse().unwrap_or(0),
+        session_id: None,
+        input: input.clone(),
+        output: format!("Mock response from agent '{}' to input: '{}'", db_agent.name, input),
+        status: "completed".to_string(),
+        error_message: None,
+        executed_at: chrono::Local::now().naive_local(),
+    };
     
     // Note: Since database operations for agent executions are not yet implemented in operations.rs,
     // we'll create a simple in-memory execution for now. This would need agent execution operations
@@ -226,7 +240,8 @@ pub async fn get_agent_executions(agent_id: String) -> Result<Vec<AgentExecution
     // as this is a placeholder for future implementation.
     
     // Verify agent exists
-    let _agent = database::operations::get_agent_by_id(&agent_id)
+    let _agent = crate::database::get_agent_by_id(&agent_id)
+        .await
         .map_err(|e| format!("Failed to get agent: {}", e))?
         .ok_or("Agent not found")?;
     

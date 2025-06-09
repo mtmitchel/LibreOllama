@@ -16,17 +16,9 @@ export default defineConfig(async () => ({
   optimizeDeps: {
     include: [
       'pixi.js',
-      '@pixi/core',
-      '@pixi/app',
-      '@pixi/display',
-      '@pixi/graphics',
-      '@pixi/sprite',
-      '@pixi/text',
-      '@pixi/math',
-      '@pixi/ticker',
-      '@pixi/settings',
-      '@pixi/utils',
-      // Add any other specific @pixi sub-modules if errors persist for them
+      '@pixi/react',
+      // Note: In PIXI v8, all modules are bundled into pixi.js
+      // Individual @pixi/* packages are no longer separate dependencies
     ],
   },
 

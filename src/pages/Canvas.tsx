@@ -1,15 +1,21 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Stage, Container } from '@pixi/react';
+/**
+ * Enhanced Canvas with infinite scrolling, improved positioning, and anti-aliasing
+ * Replaces the original Canvas.tsx with performance optimizations and bug fixes
+ */
+
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { Stage, Container, Graphics } from '../lib/pixi-setup';
 import { useCanvasStore, CanvasElement } from '../stores/canvasStore';
 import { useViewportCulling } from '../hooks/useViewportCulling';
 import CanvasElementRenderer from '../components/canvas/CanvasElementRenderer';
-import CanvasGrid from '../components/canvas/CanvasGrid';
+import InfiniteCanvasGrid from '../components/canvas/InfiniteCanvasGrid';
 import { useCanvasEvents } from '../hooks/canvas/useCanvasEvents';
 import { TextFormattingToolbar } from '../components/canvas/TextFormattingToolbar';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
+import { useCoordinateSystem, INFINITE_CANVAS_CONFIG } from '../lib/canvas-coordinates';
 
-const Canvas = () => {
-  // Use selectors for state values that trigger re-renders
+const Canvas: React.FC = () => {
+  // Canvas store state
   const elements = useCanvasStore((state) => state.elements);
   const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
   const activeTool = useCanvasStore((state) => state.activeTool);
@@ -24,19 +30,49 @@ const Canvas = () => {
   const history = useCanvasStore((state) => state.history);
   const historyIndex = useCanvasStore((state) => state.historyIndex);
 
-  // Memoize the elements array for stability
-  const elementsArray = useMemo(() => Object.values(elements), [elements]);
+  // Store actions
+  const setZoom = useCanvasStore((state) => state.setZoom);
+  const setPan = useCanvasStore((state) => state.setPan);
+  const addElement = useCanvasStore((state) => state.addElement);
+  const updateElement = useCanvasStore((state) => state.updateElement);
+  const addToHistory = useCanvasStore((state) => state.addToHistory);
+  const setSelectedElementIds = useCanvasStore((state) => state.setSelectedElementIds);
+  const setIsEditingText = useCanvasStore((state) => state.setIsEditingText);
+  const undo = useCanvasStore((state) => state.undo);
+  const redo = useCanvasStore((state) => state.redo);
+  const setActiveTool = useCanvasStore((state) => state.setActiveTool);
 
+  // Local state
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  const [showShapeDropdown, setShowShapeDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ left: number; top: number } | null>(null);
+
+  // Enhanced coordinate system
+  const { 
+    getCoordinateSystem,
+    getViewportCenter,
+    containerToWorld,
+    clampPan,
+    clampZoom
+  } = useCoordinateSystem(zoom, pan, canvasContainerRef);
+  
+  // Helper functions for coordinate transformations
+  const getViewportBounds = useCallback(() => {
+    const coordSystem = getCoordinateSystem();
+    return coordSystem?.getVisibleWorldBounds() || { x: 0, y: 0, width: canvasSize.width || 800, height: canvasSize.height || 600 };
+  }, [getCoordinateSystem, canvasSize]);
+
+  // Memoize the elements array for stability
+  const elementsArray = useMemo(() => Object.values(elements), [elements]);
+
+
   const isElementClicked = useRef(false);
   
   // CanvasToolbar state
   const [selectedShape, setSelectedShape] = useState('');
-  const [showShapeDropdown, setShowShapeDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ left: number; top: number } | null>(null);
   
   // Compute undo/redo availability
   const canUndo = historyIndex > 0;
@@ -53,10 +89,11 @@ const Canvas = () => {
   const getCanvasCoordinates = useCallback((clientX: number, clientY: number): { x: number; y: number } => {
     if (!canvasContainerRef.current) return { x: 0, y: 0 };
     const rect = canvasContainerRef.current.getBoundingClientRect();
-    const x = (clientX - rect.left - pan.x) / zoom;
-    const y = (clientY - rect.top - pan.y) / zoom;
-    return { x, y };
-  }, [pan, zoom]);
+    const containerX = clientX - rect.left;
+    const containerY = clientY - rect.top;
+    const worldCoords = containerToWorld({ x: containerX, y: containerY });
+    return worldCoords || { x: 0, y: 0 };
+  }, [containerToWorld]);
 
   const generateId = useCallback(() => crypto.randomUUID(), []);
 
@@ -68,70 +105,128 @@ const Canvas = () => {
     generateId,
   });
     // Element-specific mouse down handler
-  const handleElementMouseDown = useCallback((e: any, elementId: string) => {
-    isElementClicked.current = true; // Set the flag indicating an element was clicked
-
-    const { activeTool: currentActiveTool, isEditingText: currentEditingText, selectElement, setIsEditingText, addToHistory, setDragState, elements: currentElements, selectedElementIds: currentSelectedIdsFromStore, pan, zoom } = useCanvasStore.getState();
-
-    if (currentActiveTool !== 'select') return;
-    
-    if (currentEditingText && currentEditingText !== elementId) {
-      setIsEditingText(null);
-    }
-    
-    const shiftPressed = e.data?.originalEvent?.shiftKey || false;
-    let newSelectedIds: string[];
-
-    if (shiftPressed) {
-      if (currentSelectedIdsFromStore.includes(elementId)) {
-        newSelectedIds = currentSelectedIdsFromStore.filter(id => id !== elementId);
+    const handleElementMouseDown = useCallback((e: any, elementId: string) => {
+      console.log('Canvas: handleElementMouseDown called', { elementId, event: e });
+      isElementClicked.current = true; // Set the flag indicating an element was clicked
+  
+      const { activeTool: currentActiveTool, isEditingText: currentEditingText, selectElement, setIsEditingText, addToHistory, setDragState, elements: currentElements, selectedElementIds: currentSelectedIdsFromStore, pan, zoom } = useCanvasStore.getState();
+  
+      console.log('Canvas: Mouse down state check', {
+        activeTool: currentActiveTool,
+        currentEditingText,
+        selectedIds: currentSelectedIdsFromStore
+      });
+  
+      if (currentActiveTool !== 'select') {
+        console.log('Canvas: Not in select mode, ignoring mouse down');
+        return;
+      }
+      
+      if (currentEditingText && currentEditingText !== elementId) {
+        setIsEditingText(null);
+      }
+      
+      const shiftPressed = e.data?.originalEvent?.shiftKey || false;
+      let newSelectedIds: string[];
+  
+      if (shiftPressed) {
+        if (currentSelectedIdsFromStore.includes(elementId)) {
+          newSelectedIds = currentSelectedIdsFromStore.filter(id => id !== elementId);
+        } else {
+          newSelectedIds = [...currentSelectedIdsFromStore, elementId];
+        }
+        useCanvasStore.getState().setSelectedElementIds(newSelectedIds);
+      } else if (!currentSelectedIdsFromStore.includes(elementId)) {
+        newSelectedIds = [elementId];
+        useCanvasStore.getState().setSelectedElementIds(newSelectedIds);
       } else {
-        newSelectedIds = [...currentSelectedIdsFromStore, elementId];
+        newSelectedIds = [...currentSelectedIdsFromStore];
       }
-      useCanvasStore.getState().setSelectedElementIds(newSelectedIds);
-    } else if (!currentSelectedIdsFromStore.includes(elementId)) {
-      newSelectedIds = [elementId];
-      useCanvasStore.getState().setSelectedElementIds(newSelectedIds);
-    } else {
-      newSelectedIds = [...currentSelectedIdsFromStore];
-    }
-    
-    const finalSelectedIdsForDrag = useCanvasStore.getState().selectedElementIds;
-
-    const pannedZoomedContainer = e.currentTarget.parent; 
-    const startDragWorldCoords = e.data.getLocalPosition(pannedZoomedContainer);
-
-    const initialPositions: Record<string, { x: number; y: number }> = {};
-    finalSelectedIdsForDrag.forEach(id => {
-      if (currentElements[id]) {
-        initialPositions[id] = { x: currentElements[id].x, y: currentElements[id].y };
+      
+      console.log('Canvas: Selection updated', { newSelectedIds });
+      const finalSelectedIdsForDrag = useCanvasStore.getState().selectedElementIds;
+  
+      // Handle both PIXI events and DOM events for compatibility with mock PIXI system
+      let startDragWorldCoords: { x: number; y: number };
+      
+      if (e.data && e.data.getLocalPosition) {
+        // Real PIXI event
+        const pannedZoomedContainer = e.currentTarget.parent;
+        startDragWorldCoords = e.data.getLocalPosition(pannedZoomedContainer);
+        console.log('Canvas: Using real PIXI coordinates', startDragWorldCoords);
+      } else {
+        // Mock PIXI event - calculate coordinates from DOM event
+        const domEvent = e.nativeEvent || e;
+        if (domEvent && domEvent.clientX !== undefined && domEvent.clientY !== undefined) {
+          const rect = canvasContainerRef.current?.getBoundingClientRect();
+          if (rect) {
+            // Convert screen coordinates to canvas coordinates accounting for pan/zoom
+            const canvasX = (domEvent.clientX - rect.left - pan.x) / zoom;
+            const canvasY = (domEvent.clientY - rect.top - pan.y) / zoom;
+            startDragWorldCoords = { x: canvasX, y: canvasY };
+            console.log('Canvas: Using calculated DOM coordinates', {
+              clientX: domEvent.clientX,
+              clientY: domEvent.clientY,
+              rect,
+              pan,
+              zoom,
+              result: startDragWorldCoords
+            });
+          } else {
+            startDragWorldCoords = { x: 0, y: 0 };
+            console.warn('Canvas: No rect available, using 0,0');
+          }
+        } else {
+          console.warn('Canvas: Unable to determine drag coordinates from event:', e);
+          startDragWorldCoords = { x: 0, y: 0 };
+        }
       }
-    });
-
-    setDragState(true, startDragWorldCoords, initialPositions);
-  }, []); // Removed dependencies as we get fresh state from the store
+  
+      const initialPositions: Record<string, { x: number; y: number }> = {};
+      finalSelectedIdsForDrag.forEach(id => {
+        if (currentElements[id]) {
+          initialPositions[id] = { x: currentElements[id].x, y: currentElements[id].y };
+        }
+      });
+  
+      console.log('Canvas: Setting drag state', {
+        startDragWorldCoords,
+        initialPositions,
+        finalSelectedIdsForDrag
+      });
+      setDragState(true, startDragWorldCoords, initialPositions);
+    }, []); // Removed dependencies as we get fresh state from the store
   
     // This is the main canvas mousedown, we check our flag here.
   const onCanvasMouseDown = (e: React.MouseEvent) => {
-    // If an element was just clicked, do nothing on the canvas. Reset the flag.
-    // The setTimeout helps ensure that if a double-click is processed by an element,
-    // this canvas handler doesn't immediately undo it.
-    if (isElementClicked.current) {
-      const clickedElementId = isElementClicked.current; // Store it if needed for logging
-      if (import.meta.env.DEV) console.log(`Canvas: onCanvasMouseDown - an element (${clickedElementId}) was recently clicked. Bypassing canvas click.`);
-      // Resetting the flag here. With robust stopPropagation in elements, this should be safe.
-      isElementClicked.current = false; 
-      return;
-    }
-    // Otherwise, handle canvas click as normal (deselecting, panning, etc.)
+    // PIXI canvas clicks are now handled by PIXI itself (see useCanvasEvents.ts)
+    // This handler only processes clicks on the container div, not the canvas
     handleCanvasMouseDown(e);
   };
   
   // Handle double-click to start text editing
   const handleElementDoubleClick = useCallback((elementId: string) => {
+    console.log(`Canvas: handleElementDoubleClick called for element ${elementId}`);
+    console.log(`Canvas: Current elements:`, Object.keys(elements));
+    console.log(`Canvas: Stack trace:`, new Error().stack);
     const element = elements[elementId];
+    console.log(`Canvas: Found element:`, element);
+    console.log(`Canvas: Element type: ${element?.type}, is text/sticky-note: ${element && (element.type === 'text' || element.type === 'sticky-note')}`);
     if (element && (element.type === 'text' || element.type === 'sticky-note')) {
+      console.log(`Canvas: Setting isEditingText to ${elementId}`);
+      const currentEditingText = useCanvasStore.getState().isEditingText;
+      console.log(`Canvas: Current isEditingText: ${currentEditingText}`);
+      console.log(`Canvas: Current activeTool:`, useCanvasStore.getState().activeTool);
+      console.log(`Canvas: Current selectedElementIds:`, useCanvasStore.getState().selectedElementIds);
       useCanvasStore.getState().setIsEditingText(elementId);
+      // Verify the state was set
+      setTimeout(() => {
+        const newEditingText = useCanvasStore.getState().isEditingText;
+        console.log(`Canvas: After setIsEditingText, new value: ${newEditingText}`);
+        console.log(`Canvas: TextArea ref exists:`, !!textAreaRef.current);
+      }, 0);
+    } else {
+      console.log(`Canvas: Element not found or not text/sticky-note type`);
     }
   }, [elements]);
 
@@ -139,8 +234,15 @@ const Canvas = () => {
     const container = canvasContainerRef.current;
     if (!container) return;
 
+    // Set initial size immediately
+    const rect = container.getBoundingClientRect();
+    const initialSize = { width: rect.width, height: rect.height };
+    console.log('Canvas: Initial container size:', initialSize);
+    setCanvasSize(initialSize);
+
     const resizeObserver = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
+      console.log('Canvas: Container resized to:', { width, height });
       setCanvasSize({ width, height });
     });
 
@@ -153,8 +255,19 @@ const Canvas = () => {
     const { pan: currentPan, zoom: currentZoom, elements: currentElements, addElement, addToHistory, setSelectedElementIds, setIsEditingText } = useCanvasStore.getState();
     
     const rect = canvasContainerRef.current.getBoundingClientRect();
-    const centerX = (rect.width / 2 - currentPan.x) / currentZoom;
-    const centerY = (rect.height / 2 - currentPan.y) / currentZoom;
+    
+    // Calculate center position in world coordinates using proper coordinate system
+    const centerContainerX = rect.width / 2;
+    const centerContainerY = rect.height / 2;
+    
+    // Use the coordinate system for proper infinite canvas positioning
+    const worldCenter = containerToWorld({ x: centerContainerX, y: centerContainerY });
+    const centerX = worldCenter?.x || 0;
+    const centerY = worldCenter?.y || 0;
+    
+    console.log('Creating element at world position:', { x: centerX, y: centerY });
+    console.log('Container size:', { width: rect.width, height: rect.height });
+    console.log('Pan/Zoom:', { pan: currentPan, zoom: currentZoom });
     
     // Set element-specific dimensions and properties
     let defaultWidth = 150;
@@ -449,24 +562,80 @@ const Canvas = () => {
       />
       
       <div
-        className="canvas-workspace" 
-        style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
+        className="canvas-workspace"
+        style={{
+          flex: 1,
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: '#ffffff' // Ensure white background
+        }}
         ref={canvasContainerRef}
         onMouseDown={onCanvasMouseDown} // Use our new handler
       >
-        <Stage // --- STAGE RE-ENABLED FOR DEBUGGING --- 
-          width={canvasSize.width}
-          height={canvasSize.height}
+        <Stage
+          width={canvasSize.width || 800} // Provide default dimensions
+          height={canvasSize.height || 600}
           options={{
-            backgroundColor: 0xffffff, // FIX: Hardcode to white for now
+            backgroundColor: 0xf8f9fa,
             backgroundAlpha: 1,
             antialias: true,
             autoDensity: true,
-            resolution: window.devicePixelRatio || 1,
+            resolution: Math.max(window.devicePixelRatio || 1, 2), // Force higher resolution for crisp rendering
+            powerPreference: 'high-performance',
           }}
-        >   
-          <Container x={pan.x} y={pan.y} scale={{ x: zoom, y: zoom }} eventMode={'static'} interactive={true}>
-            <CanvasGrid zoomLevel={zoom} panOffset={pan} canvasSize={canvasSize} />
+          onMount={(app: any) => {
+            console.log('Canvas: PIXI Application mounted', {
+              width: app.screen.width,
+              height: app.screen.height,
+              view: app.view,
+              renderer: app.renderer
+            });
+            // Ensure the stage is interactive (v8 syntax)
+            app.stage.eventMode = 'static';
+            app.stage.interactiveChildren = true;
+            
+            // Style the canvas element directly for crisp rendering
+            if (app.view && app.view.style) {
+              app.view.style.display = 'block';
+              app.view.style.width = '100%';
+              app.view.style.height = '100%';
+              app.view.style.imageRendering = 'crisp-edges';
+              app.view.style.imageRendering = '-webkit-optimize-contrast';
+            }
+            
+            // Force resize to fill container
+            if (canvasContainerRef.current) {
+              const rect = canvasContainerRef.current.getBoundingClientRect();
+              app.renderer.resize(rect.width, rect.height);
+            }
+          }}
+        >
+          <Container x={pan.x} y={pan.y} scale={{ x: zoom, y: zoom }} eventMode="static">
+            {console.log('Canvas: Container rendered with eventMode=static')}
+            {/* Infinite canvas background */}
+             <Graphics
+               draw={(g: any) => {
+                 g.clear();
+                 // Draw infinite canvas background that extends beyond viewport
+                 const viewportBounds = getViewportBounds();
+                 const margin = 2000; // Extra margin for smooth panning
+                 g.fill(0xffffff); // White fill
+                 g.rect(
+                   viewportBounds.x - margin, 
+                   viewportBounds.y - margin, 
+                   viewportBounds.width + (margin * 2), 
+                   viewportBounds.height + (margin * 2)
+                 );
+                 g.fill();
+               }}
+            />
+            <InfiniteCanvasGrid 
+              zoomLevel={zoom} 
+              panOffset={pan} 
+              viewportWidth={canvasSize.width} 
+              viewportHeight={canvasSize.height} 
+              containerRef={canvasContainerRef}
+            />
             {(() => {
               const filteredElements = visibleElements.filter(element => element && element.id && element.type);
               
@@ -483,7 +652,18 @@ const Canvas = () => {
                   element={element}
                   isSelected={selectedElementIds.includes(element.id)}
                   onMouseDown={handleElementMouseDown}
-                  onDoubleClick={() => handleElementDoubleClick(element.id)}
+                  onDoubleClick={(e) => {
+                    console.log(`Canvas: onDoubleClick wrapper called for element ${element.id}`);
+                    console.log(`Canvas: Event passed to wrapper:`, e);
+                    console.log(`Canvas: Event type:`, e?.type);
+                    console.log(`Canvas: Calling handleElementDoubleClick...`);
+                    try {
+                      handleElementDoubleClick(element.id);
+                      console.log(`Canvas: handleElementDoubleClick completed`);
+                    } catch (error) {
+                      console.error(`Canvas: Error in handleElementDoubleClick:`, error);
+                    }
+                  }}
                 />
               ));
             })()}

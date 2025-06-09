@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use anyhow::{Context, Result};
 use dirs::data_dir;
-use rand::Rng;
+
 use rusqlite::{Connection, OpenFlags};
 
 /// Database manager that handles SQLCipher connections

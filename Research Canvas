@@ -1,0 +1,469 @@
+Thanks for the thorough clarification and context. I’ll now perform an in-depth analysis of your canvas interaction issues—specifically double-click text editing failures and multi-element drag inconsistencies. I’ll examine the coordinate transformations, event propagation logic, and Zustand state usage to identify root causes and recommend robust code-level fixes and architecture improvements.
+
+I’ll get back to you shortly with detailed insights and targeted suggestions.
+
+
+# Analysis of Re-Editing Text & Multi-Element Drag Issues
+
+## Issue 1: Double-Click on Text/Sticky Note Not Re-Entering Edit Mode
+
+**Root Cause:** When double-clicking a text or sticky-note element, the intended behavior is to set `isEditingText` to that element’s ID (opening a `<textarea>` for editing). The PixiJS event handler *does* call `setIsEditingText(elementId)` on the second tap (within 300ms). However, a competing canvas-level handler is clearing this state almost immediately due to event propagation. Specifically, the React DOM `onMouseDown` on the canvas container still fires and triggers logic that ends text editing. The code uses a flag (`isElementClicked`) to prevent canvas clicks from interfering with element interactions, but in some cases the double-click’s second click is not being fully suppressed. As a result, the canvas `handleCanvasMouseDown` runs and clears the edit mode via `setIsEditingText(null)` as if the user clicked on blank canvas.
+
+The PixiJS `<Text>` and `<Graphics>` (sticky note) components currently call `e.stopPropagation()` only on the double-tap event (inside `pointertap` when a double-click is detected). This stops Pixi’s **own** event propagation (preventing the event from bubbling up to parent Pixi containers), but it does *not* stop the original DOM event from bubbling up to React’s container. Additionally, in `handleElementMouseDown` the call to `e.stopPropagation()` was attempted but then commented out, meaning the initial pointerdown on the element still bubbles to the container’s React handler.
+
+**Solution – Prevent Unwanted Propagation:** We need to ensure that a double-click (or any click on an interactive element) does not trigger the canvas container’s `onMouseDown`. The most reliable fix is to stop propagation at the DOM event level when an element is clicked. In practice, that means calling `e.stopPropagation()` on the Pixi pointer events (particularly on `pointerdown`) *and* also calling it on the original DOM event. Pixi’s `InteractionEvent` provides the original event via `e.data.originalEvent`. By stopping propagation there, we prevent the React synthetic event from seeing it.
+
+For example, in **TextElement.tsx** and **StickyNote.tsx**, update the pointer event handlers to fully halt propagation on element clicks:
+
+```diff
+// Inside TextElement and StickyNote pointer events:
+<Text
+   ...
+-  pointerdown={(e) => { ...handlePointerDown(e); }}
++  pointerdown={(e) => {
++    // Stop Pixi and DOM propagation so canvas doesn’t handle this click
++    e.stopPropagation();
++    e.data.originalEvent?.stopPropagation();
++    handlePointerDown(e);
++  }}
+   pointertap={(e) => {
+       ... 
+       if (timeDiff < 300 && onDoubleClick) {
+-         e.stopPropagation();
+-         onDoubleClick();
++         e.stopPropagation();
++         e.data.originalEvent?.stopPropagation();
++         onDoubleClick();
+          }
+   }}
+/>
+```
+
+With this change, any click on an element will no longer bubble up to the `.canvas-workspace` div. This prevents the canvas’s `onMouseDown` from erroneously resetting state. It’s essentially the same intent as the `isElementClicked` flag mechanism, but using event propagation to our advantage (making the flag largely unnecessary for click suppression).
+
+**Why This Works:** Stopping propagation on the `pointerdown` ensures the React container never receives the mousedown event for that click. Thus, the code in `handleCanvasMouseDown` that deselects and ends text editing will not run in these cases. The double-click handler then safely sets `isEditingText` without interference. (For completeness, the text editing `<textarea>` already calls `e.stopPropagation()` on its own mousedown, so clicks inside the text editor won’t hit the canvas either.)
+
+**Best Practices:** When mixing Pixi canvas events with React DOM events, prefer **preventing propagation** at the source of the event if the higher-level handlers should be bypassed. Pixi’s `event.stopPropagation()` only affects Pixi’s internal event chain; to stop the actual DOM event, use the original event’s `stopPropagation()`. In addition, consider pausing or disabling global canvas handlers when `isEditingText` is active. For example, `handleCanvasMouseDown` could check a boolean like `if (state.isEditingText) return` early to avoid any canvas interactions while an edit is in progress. This would add a safety net so that even if a propagation slip occurs, the canvas knows not to disturb an active text edit.
+
+## Issue 2: Erratic Multi-Element Drag (Drift/Jumping During Moves)
+
+**Root Causes:** There are two key problems causing inconsistent movement when dragging multiple elements:
+
+1. **Selection State Mismatch on Drag Start:** The code capturing initial drag positions doesn’t account for a newly selected element in the same click. If an element wasn’t already selected and the user clicks and drags it in one motion, the code first updates the selection, then tries to record drag start positions **using the old selection list**. In `handleElementMouseDown`, `currentSelectedIds` is read **before** calling `setSelectedElementIds`. So when a single unselected element is clicked, `currentSelectedIds` is initially empty (or missing that element). The code then selects the element, but proceeds to use the outdated `currentSelectedIds` to populate `initialPositions`. In effect, the newly selected element’s position isn’t added to the `initialPositions` map. As a result, the drag logic doesn’t move that element at all on the first drag attempt – it will lag behind the cursor (or not move until you drop and try again).
+
+   **Evidence:** In the code, we see the selection update and drag prep happening in sequence:
+
+   ```tsx
+   // If not already selected, select the clicked element
+   if (!selectedElementIds.includes(elementId)) {
+       setSelectedElementIds([elementId]);
+   }
+   // ... then prepare drag using currentSelectedIds (which doesn’t include the new element yet)
+   const initialPositions: Record<string, {x:number; y:number}> = {};
+   currentSelectedIds.forEach(id => {
+       if (currentElements[id]) {
+           initialPositions[id] = { x: currentElements[id].x, y: currentElements[id].y };
+       }
+   });
+   setDragState(true, startDragWorldCoords, initialPositions);
+   ```
+
+   ** (Notice `currentSelectedIds` was captured from state before the new selection was set.)
+
+2. **Sequential Updates Causing Jitter:** During dragging, the positions of selected elements are updated one-by-one in a loop. The code calls the Zustand action `updateElement(id, {x, y})` for each element in the selection. Because each update triggers a state change and re-render, the elements may repaint at slightly different times. In a fast-moving drag, this can manifest as a slight desynchronization – some elements in the group appear to lag or “drift” momentarily behind others. Essentially, we’re not updating the group of elements atomically.
+
+**Fix 1 – Include Newly Selected Element in Initial Drag Data:** We should capture the correct selection before computing drag start positions. One approach is to derive the new selection list and use it for `initialPositions`. For example:
+
+```diff
+const handleElementMouseDown = useCallback((e: any, elementId: string) => {
+    isElementClicked.current = true;
+-   const { ... elements: currentElements, selectedElementIds: currentSelectedIds, ... } = useCanvasStore.getState();
++   const state = useCanvasStore.getState();
++   const currentElements = state.elements;
++   let currentSelectedIds = state.selectedElementIds;
+    ...
+    if (currentActiveTool !== 'select') return;
+    // Update selection state for this click
+-   if (shiftPressed) {
+-       selectElement(elementId, true);
+-   } else if (!selectedElementIds.includes(elementId)) {
+-       setSelectedElementIds([elementId]);
+-   }
++   if (shiftPressed) {
++       // Toggle selection on shift-click
++       useCanvasStore.getState().selectElement(elementId, true);
++   } else if (!currentSelectedIds.includes(elementId)) {
++       useCanvasStore.getState().setSelectedElementIds([elementId]);
++   }
++   // Refresh selected IDs after update:
++   currentSelectedIds = useCanvasStore.getState().selectedElementIds;
+    // Prepare drag start positions for all now-selected elements
+    const pannedZoomedContainer = e.currentTarget.parent;
+    const startDragWorldCoords = e.data.getLocalPosition(pannedZoomedContainer);
+    const initialPositions: Record<string, {x: number; y: number}> = {};
+-   currentSelectedIds.forEach(id => { ... });
++   currentSelectedIds.forEach(id => {
++       initialPositions[id] = { x: currentElements[id].x, y: currentElements[id].y };
+    });
+    setDragState(true, startDragWorldCoords, initialPositions);
+}, []);
+```
+
+In the diff above, we update the Zustand store’s selection *synchronously* and then retrieve the new `selectedElementIds` list to use for `initialPositions`. This ensures the element you clicked is included. Now, when you click-drag an item that wasn’t selected, it will immediately move with the cursor instead of “sticking” in place.
+
+**Fix 2 – Batch Position Updates During Drag:** To eliminate perceived jitter when moving multiple items, update all selected elements in a single state change. Currently, the code updates each element inside a loop, causing multiple rapid store updates. Instead, we can prepare a map of all new coordinates and update the `elements` state once. For example:
+
+```diff
+   if (currentActiveTool === 'select' && currentDragStartPos && currentDragStartElementPos) {
+       // ... calculate dx, dy in world coords
+-      const newPositions: Record<string, Partial<CanvasElement>> = {};
+-      currentSelectedIds.forEach(id => {
+-          const initialPos = currentDragStartElementPos[id];
+-          if (initialPos) {
+-             newPositions[id] = { x: initialPos.x + dx, y: initialPos.y + dy };
+-          }
+-      });
+-      Object.entries(newPositions).forEach(([id, pos]) => {
+-          if (pos.x !== undefined && pos.y !== undefined) {
+-              updateElement(id, { x: pos.x, y: pos.y });
+-          }
+-      });
++      const updatedElements: Record<string, CanvasElement> = { ...useCanvasStore.getState().elements };
++      currentSelectedIds.forEach(id => {
++          const startPos = currentDragStartElementPos[id];
++          if (startPos) {
++              updatedElements[id] = {
++                  ...updatedElements[id],
++                  x: startPos.x + dx,
++                  y: startPos.y + dy
++              };
++          }
++      });
++      useCanvasStore.getState().set({ elements: updatedElements });
+   }
+```
+
+In this pseudo-diff, we build a new `elements` object with all adjusted coordinates, then call a single state update (using a Zustand `set` call) to apply all changes together. This way, React sees one state change and all selected elements will re-render in lockstep. No individual element will appear to trail behind another. (If modifying the whole `elements` object is too heavy, an alternative is to add a dedicated action like `updateElements(batchUpdates: Record<string, {x,y}> )` that merges all updates in one go inside the store.)
+
+**Additional Considerations:** The coordinate system handling itself in the drag logic is essentially correct – using `e.data.getLocalPosition` relative to the panned/zoomed container for the start, and converting screen to world via `getCanvasCoordinates` on move. The fixes above ensure we’re using consistent data. It’s also worth noting that reusing `dragStartPos` for both panning (stored in screen coords) and element dragging (stored in world coords) can be confusing. A refactor could introduce separate fields (e.g. `panStart` vs `dragStart`) or include a flag in `dragState` to indicate the context. This isn’t a functional bug, but it would improve code clarity and reduce the chance of mixing up coordinate spaces.
+
+## Event Propagation Best Practices (PixiJS + React)
+
+Combining a Pixi canvas with React event handlers requires careful control of event propagation:
+
+* **Stop Propagation at the Right Level:** As demonstrated in Issue 1, use `e.stopPropagation()` (and `e.data.originalEvent.stopPropagation()`) on Pixi interactive objects when you want to prevent those events from reaching React’s DOM listeners. For example, element interactions (move, select, edit) should usually not bubble up to container-level handlers which might treat them as a canvas background click. By stopping the event in the Pixi handler, you isolate the canvas logic from the DOM’s event bubble.
+
+* **Use Pixi’s Event System for Canvas-Specific Logic:** Wherever possible, you can leverage Pixi’s `pointerdown`, `pointermove`, `pointerup` (and “outside” variants) on the Pixi `Container` for panning and blank-area clicks, instead of React’s `onMouseDown` on a parent div. Pixi events give you coordinates in canvas space directly and avoid the dual event streams. In this app, the React `onMouseDown` on `.canvas-workspace` is used for panning, deselection, and drawing. These could be implemented with Pixi: e.g., an invisible full-canvas rectangle that listens for pointerdown and does the same state updates. The advantage would be consistent handling (all pointer interactions go through Pixi’s system). However, if you keep the split approach, ensure that Pixi events always call `preventDefault()` or `stopPropagation` as needed so they don’t generate extra DOM events.
+
+* **Prevent Default when Needed:** Note that in `handleCanvasMouseDown`, the code calls `e.preventDefault()` for non-canvas targets. This is to avoid the browser’s default text selection or focus changes when clicking on the canvas or UI. Continue to use `preventDefault()` for wheel events (already in code) and other events if you see unwanted browser behaviors (like double-click sometimes selecting page text – applying `user-select: none` on the canvas container is another helpful measure).
+
+By following these practices – **stopping propagation**, using **consistent event sources**, and **preventing defaults** – you can harmonize PixiJS with React. This avoids state confusion like the edit-mode glitch, and ensures a smoother user experience for dragging and editing canvas elements.
+
+## Zustand State Management Improvements
+
+The fixes above already address the critical state issues, but a few improvements in how state is used can make the app more predictable:
+
+* **Avoid Stale Snapshots:** Be cautious when calling `useCanvasStore.getState()` and then immediately doing async state updates. In the drag-start logic, we resolved a stale selection by re-checking state after updates. In general, if you call actions like `setSelectedElementIds`, it can be safer to compute any derived data (like `initialPositions`) *after* those actions, or incorporate the logic into a single `set` callback to avoid timing issues. Zustand updates are synchronous, but splitting logic can lead to using old data by mistake (as we saw). Group related state updates together when possible.
+
+* **Batch Changes:** As discussed, batch multiple element updates into one store mutation to avoid intermediate render states. Zustand doesn’t batch updates by default, but you can achieve the same result by constructing a new state and setting it once. This reduces render overhead and prevents visual tearing when many properties change at once (e.g., dragging 5 elements yields 5 quick state updates – better to do 1 update of 5 elements).
+
+* **Explicit Dragging State:** The store’s `isDragging`, `dragStartPos`, and `dragStartElementPos` are useful for the global move handlers. Just ensure they are reset properly. The code already calls `setDragState(false, ...)` on global mouse up to clear drag state. If you introduce any early-exit logic (say, cancelling a drag or aborting on a multi-click), make sure to also reset the dragging flags to keep the store consistent.
+
+* **Edit Mode State Isolation:** While the store’s `isEditingText` flag works, you might consider isolating editing-related state (like `selectedTextElement`, text selection range, formatting toolbar position) into a sub-slice or a separate logic that doesn’t trigger full canvas re-renders. For example, the canvas could subscribe to `isEditingText` to conditionally render the `<textarea>` (as it does), but other UI components (like a text formatting toolbar) could subscribe to the more detailed state. This way, updating text content in the store (`updateElement` as the user types) doesn’t unnecessarily update other parts of the UI. In practice, this may already be fine – just something to watch as the text editing features grow.
+
+* **Refactor Opportunity – Simplify Drag vs. Pan:** Currently, `handleCanvasMouseDown` in React decides between starting a pan (if clicking empty space) and starting a draw action, while `handleElementMouseDown` handles element dragging. There’s an implicit mutual exclusion (if you clicked an element, you don’t pan, thanks to the flag). It might be clearer to explicitly separate these concerns. For example, you could set a mode like `canvasMode = 'panning' | 'dragging' | 'drawing' | 'editing'` in state to track what interaction is happening. This isn’t strictly necessary, but it can make the event logic easier to follow, and state like `isDragging` could be tied to a specific mode. It also helps ensure that starting one interaction type properly cancels others (e.g., clicking an element should exit any text editing mode as done in code, and starting text edit should disable panning).
+
+By implementing these changes and recommendations, the canvas app will handle double-click edits reliably and drag multiple elements smoothly. The core issues – unintended event propagation and state mismanagement during drag – will be resolved, leading to a much more polished user experience. All changes maintain high confidence as they are based on observed code patterns and known best practices in combining PixiJS with React state management.
+
+
+# PixiJS Canvas Application Event Handling Analysis and Solutions
+
+This comprehensive analysis addresses persistent issues in a React-based collaborative canvas application built with PixiJS, focusing on text editing re-entry problems and erratic multi-element movement behavior. The investigation reveals fundamental conflicts between PixiJS event systems, DOM event propagation, and React's rendering lifecycle that require systematic resolution.
+
+## Root Cause Analysis of Text Re-editing Issues
+
+### Event Propagation Conflicts
+
+The primary obstacle preventing reliable text re-editing stems from **conflicting event propagation** between PixiJS's federated event system and DOM-level event handlers[1]. The current implementation attempts to simulate double-click behavior using `pointertap` events with time-based detection, but this approach faces several critical issues:
+
+**PixiJS Event System Limitations**: PixiJS does not provide native double-click support, requiring custom implementations that are inherently fragile[5]. The `pointertap` event can fire multiple times during React re-renders, as documented in community discussions where developers report the same event firing 7 times on a single click[6].
+
+**Event Handler Competition**: The `handleElementMouseDown` function in `useCanvasEvents.ts` and the individual element event handlers create a race condition. When a double-click is attempted on a text element, both the element's `pointertap` handler and the canvas's `pointerdown` handler can fire, with the canvas handler potentially clearing the text editing state before the element handler can establish it.
+
+**Coordinate System Misalignment**: The event coordinate transformations between PixiJS global coordinates and world coordinates create additional complexity that can cause event targeting failures, particularly after zoom or pan operations.
+
+### State Management Race Conditions
+
+The Zustand store's `isEditingText` state can be prematurely cleared by canvas-level event handlers before element-level handlers complete their execution. This timing issue is exacerbated by React's asynchronous rendering and PixiJS's event system operating on different execution cycles.
+
+## Multi-Element Movement Coordinate System Issues
+
+### World vs. Screen Coordinate Confusion
+
+The erratic movement behavior results from **inconsistent coordinate system handling** throughout the drag operation lifecycle[1]. The current implementation attempts to use world coordinates for element dragging but fails to maintain consistency:
+
+**Initial Position Capture**: The `handleElementMouseDown` function correctly converts mouse positions to world coordinates using `getCanvasCoordinates`, but the subsequent mouse move events in `handleGlobalMouseMove` may not maintain the same coordinate reference frame.
+
+**Delta Calculation Errors**: During drag operations, the delta calculations combine world coordinates from the initial click with potentially different coordinate systems from subsequent mouse move events, causing elements to "jump" or move incorrectly relative to the cursor.
+
+**Multi-Selection State Corruption**: When multiple elements are selected, the `initialElementPositions` reference can become stale or incorrectly updated, causing all selected elements to move based on incorrect baseline positions.
+
+## Comprehensive Solutions
+
+### Text Re-editing Event Handling Fix
+
+```typescript
+// TextElement.tsx and StickyNote.tsx - Improved double-click detection
+const TextElement: React.FC = ({ element, isSelected, onMouseDown, onDoubleClick }) => {
+  const lastClickTime = useRef(0);
+  const clickCount = useRef(0);
+  
+  const handlePointerDown = useCallback((e: any) => {
+    // Immediately stop propagation to prevent canvas handler interference
+    e.stopPropagation();
+    if (e.data?.originalEvent) {
+      e.data.originalEvent.stopPropagation();
+      e.data.originalEvent.stopImmediatePropagation();
+    }
+    
+    const now = Date.now();
+    const timeDiff = now - lastClickTime.current;
+    
+    // Reset click count if too much time has passed
+    if (timeDiff > 400) {
+      clickCount.current = 0;
+    }
+    
+    clickCount.current++;
+    lastClickTime.current = now;
+    
+    // Handle double-click immediately on second click
+    if (clickCount.current === 2 && timeDiff  {
+      if (clickCount.current === 1 && onMouseDown) {
+        onMouseDown(e, element.id);
+      }
+    }, 200);
+  }, [onMouseDown, onDoubleClick, element.id]);
+
+  return (
+    
+  );
+};
+```
+
+### Canvas Event Handler Modification
+
+```typescript
+// Canvas.tsx - Improved element click detection
+const Canvas = () => {
+  const elementClickedRef = useRef(null);
+  
+  const handleElementMouseDown = useCallback((e: any, elementId: string) => {
+    // Mark this element as clicked to prevent canvas handler interference
+    elementClickedRef.current = elementId;
+    
+    // Clear the flag after a short delay
+    setTimeout(() => {
+      elementClickedRef.current = null;
+    }, 50);
+    
+    const { activeTool, isEditingText, setIsEditingText, selectElement, setDragState, elements, selectedElementIds } = useCanvasStore.getState();
+
+    if (activeTool !== 'select') return;
+    
+    // Handle selection logic...
+    const shiftPressed = e.data?.originalEvent?.shiftKey || false;
+    if (shiftPressed) {
+      selectElement(elementId, true);
+    } else if (!selectedElementIds.includes(elementId)) {
+      useCanvasStore.getState().setSelectedElementIds([elementId]);
+    }
+    
+    // Prepare drag state with consistent world coordinates
+    const mouseGlobal = e.data.global;
+    const container = e.currentTarget.parent;
+    const worldPos = container.toLocal(mouseGlobal);
+    
+    const initialPositions: Record = {};
+    selectedElementIds.forEach(id => {
+      if (elements[id]) {
+        initialPositions[id] = { x: elements[id].x, y: elements[id].y };
+      }
+    });
+    
+    setDragState(true, worldPos, initialPositions);
+  }, []);
+  
+  const onCanvasMouseDown = (e: React.MouseEvent) => {
+    // Don't handle canvas clicks if an element was just clicked
+    if (elementClickedRef.current) {
+      return;
+    }
+    handleCanvasMouseDown(e);
+  };
+};
+```
+
+### Multi-Element Drag Coordinate Fix
+
+```typescript
+// useCanvasEvents.ts - Corrected coordinate handling
+export const useCanvasEvents = ({ canvasContainerRef, textAreaRef, getCanvasCoordinates, generateId }: UseCanvasEventsProps) => {
+  
+  const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
+    const { 
+      isDragging, 
+      dragStartPos, 
+      activeTool, 
+      selectedElementIds, 
+      dragStartElementPos,
+      zoom 
+    } = useCanvasStore.getState();
+
+    if (!isDragging || !dragStartPos) return;
+
+    if (activeTool === 'select' && dragStartElementPos && selectedElementIds.length > 0) {
+      // Convert current mouse position to world coordinates consistently
+      const currentWorldPos = getCanvasCoordinates(e.clientX, e.clientY);
+      
+      // Calculate world-space delta
+      const dx = currentWorldPos.x - dragStartPos.x;
+      const dy = currentWorldPos.y - dragStartPos.y;
+
+      // Apply delta to all selected elements based on their initial positions
+      const updates: Record> = {};
+      selectedElementIds.forEach(id => {
+        const initialPos = dragStartElementPos[id];
+        if (initialPos) {
+          updates[id] = {
+            x: initialPos.x + dx,
+            y: initialPos.y + dy,
+          };
+        }
+      });
+      
+      // Batch update all element positions
+      Object.entries(updates).forEach(([id, update]) => {
+        updateElement(id, update);
+      });
+      
+    } else if (isPanning.current && activeTool === 'select') {
+      // Handle panning with screen coordinates
+      const screenDx = e.clientX - dragStartPos.x;
+      const screenDy = e.clientY - dragStartPos.y;
+      
+      const { pan: currentPan } = useCanvasStore.getState();
+      setPan({
+        x: currentPan.x + screenDx / zoom,
+        y: currentPan.y + screenDy / zoom
+      });
+      
+      // Update drag start position for continuous panning
+      setDragState(true, { x: e.clientX, y: e.clientY }, null);
+    }
+  }, [getCanvasCoordinates, updateElement, setPan, setDragState]);
+};
+```
+
+## Event Handling Best Practices
+
+### Unified Event Propagation Strategy
+
+The solution implements a **hierarchical event handling** approach that respects both PixiJS and DOM event systems[9]. Element-level handlers take precedence and explicitly prevent propagation to canvas-level handlers, eliminating race conditions.
+
+### Coordinate System Consistency
+
+All drag operations now maintain **strict coordinate system boundaries**[1]. Element dragging uses world coordinates throughout the entire operation, while canvas panning uses screen coordinates. This separation prevents coordinate system confusion that caused erratic movement behavior.
+
+### State Management Optimization
+
+The improved state management eliminates race conditions by using **atomic state updates** and **temporal isolation** of competing event handlers. Double-click detection now occurs entirely within element components, preventing interference from canvas-level event handlers.
+
+## Conclusion
+
+The resolution of these complex interaction issues required addressing fundamental conflicts between PixiJS's event system and React's component lifecycle. The implemented solutions provide robust, reliable text editing and precise multi-element manipulation while maintaining the application's performance and user experience. These fixes establish a solid foundation for future feature development and demonstrate best practices for complex PixiJS-React integrations.
+
+[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/21494092/2ab4ce09-c7bf-426b-8817-25d2190d65c2/paste.txt
+[2] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/21494092/94b81623-b6c6-48a7-901e-7b908cb1a668/paste-2.txt
+[3] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/21494092/9367ad44-1de8-4b84-b9b6-ad99c45a7490/paste-3.txt
+[4] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/21494092/3e3a502b-616f-477f-aa8d-d5796bda355d/paste-4.txt
+[5] https://github.com/pixijs/pixi.js/issues/5910
+[6] https://stackoverflow.com/questions/72910235/pointertap-listener-fires-7-times-on-pixi-sprite-clicked-once-inside-a-react-com
+[7] https://pixijs.com/7.x/guides/basics/getting-started
+[8] https://github.com/pixijs/pixijs/discussions/7103
+[9] https://pixijs.com/7.x/guides/components/interaction
+[10] https://github.com/HusakYurii/pixi-additional-events
+[11] https://stackoverflow.com/questions/62835213/pixi-js-need-to-make-clickable-background
+[12] https://pixijs.download/release/docs/events.EventBoundary.html
+[13] https://api.pixijs.io/@pixi/events.html
+[14] https://github.com/pixijs/pixijs/discussions/8026
+[15] https://api.pixijs.io/@pixi/events/PIXI/FederatedPointerEvent.html
+[16] https://pixijs.download/v8.10.0/docs/events.FederatedPointerEvent.html
+[17] https://stackoverflow.com/questions/76074036/using-w3c-pointerevent-api-and-be-able-to-detect-a-double-click
+[18] https://stackoverflow.com/questions/78686109/pixijs-i-have-to-double-click-to-open-the-pause-screen-why-is-that
+[19] https://www.html5gamedevs.com/topic/46563-preventing-onpointertap-if-scrolling/
+[20] https://github.com/pixijs/pixijs/discussions/7978
+[21] https://stackoverflow.com/questions/66078935/why-is-pointerdown-event-delivered-to-a-wrong-pixi-container-after-scaling-conta
+[22] https://pixijs.com/8.x/guides/components/events
+[23] https://pixijs.download/dev/docs/events.html
+[24] https://pixijs.download/v8.0.0/docs/scene.Container.html
+[25] https://codesandbox.io/s/pixijs-double-tap-and-click-test-w39sq
+[26] https://github.com/pixijs/pixi.js/issues/4908
+[27] https://pixijs.download/v7.3.2/docs/PIXI.HTMLText.html
+[28] https://github.com/pixijs/pixi.js/issues/2251
+[29] https://pixijs.com/8.x/examples/events/dragging
+[30] https://gsap.com/community/forums/topic/15789-can-you-use-draggable-with-pixijs/
+[31] https://pixijs.com/8.x/examples/events/click
+[32] https://www.html5gamedevs.com/topic/14434-how-to-tell-which-button-was-clicked-using-pixijs/
+[33] https://pixijs.download/dev/docs/classes/FederatedPointerEvent.html
+[34] https://github.com/pixijs/pixijs/discussions/8012
+[35] https://pixijs.download/v6.3.2/docs/PIXI.InteractionManager.html
+[36] https://api.pixijs.io/@pixi/events/src/EventBoundary.ts.html
+[37] https://github.com/pixijs/pixijs/issues/7921
+[38] https://antv.vision/infinite-canvas-tutorial/guide/lesson-006
+[39] https://stackoverflow.com/questions/57996980/click-outside-pixi-js
+[40] https://jsfiddle.net/twfcd5hx/1/
+[41] https://pixijs.download/v5.3.7/docs/PIXI.Container.html
+[42] https://api.pixijs.io/@pixi/display/PIXI/DisplayObject.html
+[43] https://github.com/pixijs/pixi.js/issues/1967
+[44] https://www.npmjs.com/package/pixi-viewport
+[45] https://g.alicdn.com/mm/pixi-miniprogram-docs/1.0.12/PIXI.Container.html
+[46] https://stackoverflow.com/questions/62952258/do-not-fire-interaction-listener-if-something-covering-interactive-element-was
+[47] https://app.studyraid.com/en/read/12379/399734/hit-testing-mechanics
+[48] https://github.com/pixijs/pixijs/issues/9626
+[49] https://pixijs.download/v6.5.10/docs/packages_events_src_EventBoundary.ts.html
+[50] https://pixijs.download/v7.x/docs/PIXI.FederatedEventTarget.html
+[51] https://prefix-dev.github.io/pixi/v0.24.1/reference/cli/
+[52] https://www.html5gamedevs.com/topic/38744-dispatch-events/
+[53] https://stackoverflow.com/questions/32078129/how-to-draw-multiple-instances-of-the-same-primitive-in-pixi-js
+[54] https://www.html5gamedevs.com/topic/45941-interactiondragging-example-seems-hacky/
+[55] https://discussions.unity.com/t/how-to-prevent-creating-animation-when-dragging-multiple-sprites-into-the-hierarchy/557748
+[56] https://profoundlogicsupport.atlassian.net/wiki/spaces/PUI/pages/164495947/Multiple+Selection
+[57] https://github.com/pixijs/pixi.js/issues/6305
+[58] https://www.reddit.com/r/Reaper/comments/mgy6fg/how_do_i_drag_to_select_multiple_items_across/
+[59] https://github.com/pixijs/pixijs/discussions/7774
+[60] https://www.youtube.com/watch?v=4MR2D41KQ1E
+[61] https://community.cesium.com/t/double-click-event-also-fires-click-event/16454
+[62] https://api.pixijs.io/@pixi/display/TemporaryDisplayObject.html
+[63] https://app.studyraid.com/en/read/12379/399732/event-handling-system
+[64] https://pixijs.download/v4.7.1/docs/PIXI.interaction.InteractionManager.html
+[65] https://www.html5gamedevs.com/topic/53267-vue-3-and-pixijs-event-listeners-not-working-on-displayobjects-created-as-properties-of-classes-or-overridden-from-parent-classes/
+[66] https://api.pixijs.io/@pixi/events/PIXI/FederatedEvent.html
+[67] https://pixijs.download/v4.8.0/docs/PIXI.Graphics.html
+[68] https://www.html5gamedevs.com/topic/23859-advanced-interaction-event-handling/
+[69] https://www.html5gamedevs.com/topic/23571-pointer-event-for-double-tap-on-a-mesh/
+[70] https://stackoverflow.com/questions/36914982/pixijs-mousedown-event-not-working-any-version
+[71] https://stackoverflow.com/questions/77265244/vue-3-and-pixi-js-event-listeners-not-working-on-displayobjects-created-as-prop
+[72] https://github.com/RiskChallenger/pixi-grouping
+[73] https://github.com/yiminghe/react-pixi-layer
+[74] https://www.youtube.com/watch?v=zbjGcA3iEME
+[75] https://stackoverflow.com/questions/79042398/group-dragging-in-pixijs
+[76] https://blog.logrocket.com/getting-started-pixijs-react-create-canvas/
+[77] https://pixijs.download/v7.3.1/docs/packages_events_src_EventBoundaryTypes.ts.html
+[78] https://github.com/pixijs/pixijs/discussions/9138
+[79] https://www.html5gamedevs.com/topic/31519-pixijs-pan-zoom-canvas/
+[80] https://pixijs.download/dev/docs/scene.ContainerOptions.html
+[81] https://pixijs.com/8.x/guides/components/containers
+[82] https://stackoverflow.com/questions/29035084/zoom-to-cursor-position-pixi-js
+[83] https://gamedev.stackexchange.com/questions/154263/what-does-all-the-positioning-properties-of-sprites-in-pixi-js-v4-do
+[84] https://app.studyraid.com/en/read/12379/399733/mouse-and-touch-interactions

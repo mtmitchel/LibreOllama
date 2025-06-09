@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Graphics } from '@pixi/react';
+import { Graphics } from '../../lib/pixi-setup';
 
 interface CanvasGridProps {
   zoomLevel?: number;
@@ -17,7 +17,13 @@ const CanvasGrid: React.FC<CanvasGridProps> = ({
     
     const lineColor = 0xcccccc;
     const lineWidth = 1 / zoomLevel;
-    g.lineStyle(lineWidth, lineColor, 0.3);
+    
+    // PIXI v8: Use setStrokeStyle instead of lineStyle
+    g.setStrokeStyle({
+      width: lineWidth,
+      color: lineColor,
+      alpha: 0.3
+    });
 
     const step = 20; // Grid step in world units
     const scaledStep = step * zoomLevel;
@@ -38,6 +44,9 @@ const CanvasGrid: React.FC<CanvasGridProps> = ({
       g.moveTo(0, y);
       g.lineTo(canvasSize.width, y);
     }
+    
+    // PIXI v8: Stroke the path
+    g.stroke();
   }, [zoomLevel, panOffset, canvasSize]);
 
   // Always return a valid Graphics component

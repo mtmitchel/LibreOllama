@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Interactions Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #555;
+            font-size: 18px;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .status.working {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.not-working {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.partial {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .instructions {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .console-output {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .issue {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .fix {
+            color: #28a745;
+            font-weight: bold;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Canvas Functionality Test Report</h1>
+        <p>Testing canvas interactions after PIXI v8 migration</p>
+
+        <div class="test-section">
+            <h2>Test Environment</h2>
+            <p><strong>URL:</strong> http://localhost:5173</p>
+            <p><strong>PIXI Version:</strong> v8 (using @pixi/react)</p>
+            <p><strong>Test Date:</strong> <span id="test-date"></span></p>
+        </div>
+
+        <div class="test-section">
+            <h2>1. Canvas Rendering</h2>
+            <div class="status working">✓ WORKING</div>
+            <p>The canvas renders properly with PIXI v8. The white background and grid are visible.</p>
+            <div class="console-output">
+PIXI compatibility layer loaded - using real @pixi/react v8 components
+Canvas: PIXI Application mounted, checking event system
+Canvas: Container rendered with eventMode=static
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. Drawing Elements (Pen Tool)</h2>
+            <div class="status not-working">✗ NOT WORKING - Elements Not Persisting</div>
+            <p class="issue">Issue: Drawing elements appear during creation but disappear after mouse release</p>
+            <div class="console-output">
+Rendering element "preview" of type "drawing" at (792, 389)
+Canvas: Rendering 0 elements out of 0 total
+            </div>
+            <p class="fix">Fix Applied: Modified useCanvasEvents.ts to allow canvas clicks for drawing tools</p>
+        </div>
+
+        <div class="test-section">
+            <h2>3. Creating Text Elements</h2>
+            <div class="status partial">⚠ PARTIALLY WORKING</div>
+            <p>Sticky notes can be created and edited, but regular text elements need testing</p>
+            <div class="instructions">
+                <strong>How to test:</strong>
+                <ol>
+                    <li>Click the text tool in the toolbar</li>
+                    <li>Click on the canvas to create a text element</li>
+                    <li>Double-click the text to edit it</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. Double-Click Text Editing</h2>
+            <div class="status working">✓ WORKING</div>
+            <p>Double-clicking on sticky notes opens the text editor successfully</p>
+            <div class="console-output">
+Canvas: onDoubleClick wrapper called for element c1fe12c3-6fc8-41c5-90c4-5584b5592ff1
+CanvasStore: setIsEditingText called with id: c1fe12c3-6fc8-41c5-90c4-5584b5592ff1
+Canvas: Textarea positioned at (860, 393) with size 200x150
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>5. Dragging Elements</h2>
+            <div class="status not-working">✗ NOT TESTED - No elements to drag</div>
+            <p>Cannot test dragging because elements are not persisting on the canvas</p>
+        </div>
+
+        <div class="test-section">
+            <h2>6. Selecting and Deleting Elements</h2>
+            <div class="status not-working">✗ NOT TESTED - No elements to select</div>
+            <p>Cannot test selection/deletion because elements are not persisting</p>
+        </div>
+
+        <div class="test-section">
+            <h2>7. Creating Shapes</h2>
+            <div class="status not-working">✗ NOT TESTED</div>
+            <p>Shape creation needs to be tested after fixing element persistence</p>
+        </div>
+
+        <div class="test-section">
+            <h2>PIXI v8 Deprecation Warnings</h2>
+            <div class="status partial">⚠ NEEDS FIXING</div>
+            <p>Several PIXI v8 deprecation warnings need to be addressed:</p>
+            <ul>
+                <li>Graphics#lineStyle → Graphics#setStrokeStyle</li>
+                <li>Graphics#beginFill → Graphics#fill</li>
+                <li>Graphics#drawRoundedRect → Graphics#roundRect</li>
+                <li>Graphics#endFill → not needed with Graphics#fill</li>
+                <li>Graphics#drawCircle → Graphics#circle</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>Summary</h2>
+            <p><strong>Critical Issue:</strong> Elements are not being persisted after creation. The fix in useCanvasEvents.ts should resolve this by allowing canvas clicks for drawing tools.</p>
+            <p><strong>Next Steps:</strong></p>
+            <ol>
+                <li>Test if the fix allows drawing elements to persist</li>
+                <li>Fix PIXI v8 deprecation warnings in element components</li>
+                <li>Test all shape creation tools</li>
+                <li>Verify drag and drop functionality</li>
+                <li>Test selection and deletion with keyboard shortcuts</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>Live Canvas Test</h2>
+            <p>Open the canvas in your browser at <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> and navigate to the Canvas page to test the fixes.</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('test-date').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>

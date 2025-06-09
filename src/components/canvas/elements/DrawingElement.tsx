@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Graphics } from '@pixi/react';
+import { Graphics } from '../../../lib/pixi-setup';
 import { CanvasElement } from '../../../stores/canvasStore';
 import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
@@ -20,9 +20,12 @@ const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, on
     // Ensure we have valid points data
     if (!element.points || !Array.isArray(element.points) || element.points.length < 2) {
       // Draw a small placeholder if no valid points using theme colors
-      g.beginFill(themeColors.textSecondary, 0.5);
-      g.drawCircle(0, 0, 5);
-      g.endFill();
+      // PIXI v8: Use circle and fill instead of beginFill/drawCircle/endFill
+      g.circle(0, 0, 5);
+      g.fill({
+        color: themeColors.textSecondary,
+        alpha: 0.5
+      });
       return;
     }
     
@@ -35,7 +38,12 @@ const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, on
         
     const strokeWidth = element.strokeWidth || 2;
     
-    g.lineStyle(strokeWidth, strokeColor);
+    // PIXI v8: Use setStrokeStyle instead of lineStyle
+    g.setStrokeStyle({
+      width: strokeWidth,
+      color: strokeColor,
+      alpha: 1
+    });
     
     // Move to first point (relative to element position)
     const firstPoint = element.points[0];
@@ -46,6 +54,9 @@ const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, on
       const point = element.points[i];
       g.lineTo(point.x - element.x, point.y - element.y);
     }
+    
+    // PIXI v8: Stroke the path
+    g.stroke();
     
     // Theme-aware selection indicator - draw a bounding box around the drawing
     if (isSelected && element.points.length > 0) {
@@ -64,8 +75,14 @@ const DrawingElement: React.FC<DrawingElementProps> = ({ element, isSelected, on
         maxY = Math.max(maxY, relY);
       });
       
-      g.lineStyle(2, themeColors.selectionBlue, 1);
-      g.drawRect(minX - 5, minY - 5, maxX - minX + 10, maxY - minY + 10);
+      // PIXI v8: Use setStrokeStyle and rect instead of lineStyle and drawRect
+      g.setStrokeStyle({
+        width: 2,
+        color: themeColors.selectionBlue,
+        alpha: 1
+      });
+      g.rect(minX - 5, minY - 5, maxX - minX + 10, maxY - minY + 10);
+      g.stroke();
     }
   }, [element.points, element.x, element.y, element.strokeColor, element.color, element.strokeWidth, isSelected]);
 

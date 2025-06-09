@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Graphics } from '@pixi/react';
+import { Graphics } from '../../../lib/pixi-setup';
 import { CanvasElement } from '../../../stores/canvasStore';
 import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 

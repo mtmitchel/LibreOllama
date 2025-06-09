@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Graphics } from '@pixi/react';
+import { Graphics } from '../../../lib/pixi-setup';
 import { CanvasElement } from '../../../stores/canvasStore';
 import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
@@ -67,7 +67,7 @@ const Rectangle: React.FC<RectangleProps> = ({ element, isSelected, onMouseDown 
       x={element.x}
       y={element.y}
       draw={draw}
-      interactive={true}
+      eventMode="static"
       pointerdown={handlePointerDown}
       cursor="pointer"
     />

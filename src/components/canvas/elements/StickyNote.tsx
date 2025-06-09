@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react';
-import { Graphics, Text } from '@pixi/react';
+import { Graphics, Text } from '../../../lib/pixi-setup';
 import { FederatedPointerEvent } from 'pixi.js'; // Import FederatedPointerEvent from pixi.js
 import { CanvasElement, useCanvasStore } from '../../../stores/canvasStore';
 import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
@@ -12,7 +12,8 @@ interface StickyNoteProps {
 }
 
 const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDown, onDoubleClick }) => {
-  const lastClickTime = useRef<number>(0);
+  const clickCount = useRef<number>(0);
+  const clickTimeout = useRef<NodeJS.Timeout | null>(null);
   
   // Get theme colors
   const themeColors = getThemeColors();
@@ -20,6 +21,8 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
   
   // Check if we're currently editing this sticky note
   const isEditingText = useCanvasStore((state) => state.isEditingText);
+  const setPendingDoubleClick = useCanvasStore((state) => state.setPendingDoubleClick);
+  const clearPendingDoubleClick = useCanvasStore((state) => state.clearPendingDoubleClick);
   
   // Don't render if we're currently editing this sticky note
   if (isEditingText === element.id) {
@@ -37,43 +40,93 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
     const backgroundColor = element.backgroundColor
       ? hexStringToNumber(element.backgroundColor)
       : defaultColors.background;
-    g.beginFill(backgroundColor);
+    
+    // PIXI v8: Use fill instead of beginFill/endFill
+    g.roundRect(0, 0, width, height, 8);
+    g.fill({
+      color: backgroundColor,
+      alpha: 1
+    });
     
     // Add a subtle border using theme color
-    g.lineStyle(1, defaultColors.border);
-    
-    // Draw rounded rectangle for sticky note with validated dimensions
-    g.drawRoundedRect(0, 0, width, height, 8);
-    g.endFill();
+    g.setStrokeStyle({
+      width: 1,
+      color: defaultColors.border,
+      alpha: 1
+    });
+    g.roundRect(0, 0, width, height, 8);
+    g.stroke();
     
     // Selection indicator - use theme color
     if (isSelected) {
-      g.lineStyle(2, themeColors.selectionBlue, 1);
-      g.drawRoundedRect(-2, -2, width + 4, height + 4, 10);
+      g.setStrokeStyle({
+        width: 2,
+        color: themeColors.selectionBlue,
+        alpha: 1
+      });
+      g.roundRect(-2, -2, width + 4, height + 4, 10);
+      g.stroke();
     }
   }, [element.width, element.height, element.backgroundColor, isSelected, themeColors.selectionBlue, defaultColors.background, defaultColors.border]);
 
   const handlePointerDown = useCallback((e: FederatedPointerEvent) => { // Updated type
     // Stop propagation to prevent canvas-level handlers from interfering
     e.stopPropagation(); // Stops Pixi event bubbling
-    // No need to check for e.data.originalEvent for stopPropagation here as FederatedPointerEvent handles it.
+    // CRITICAL: Also stop the original DOM event from bubbling to React handlers
+    if (e.data?.originalEvent && typeof e.data.originalEvent.stopPropagation === 'function') {
+      e.data.originalEvent.stopPropagation();
+    }
     if (onMouseDown) {
       onMouseDown(e, element.id);
     }
   }, [onMouseDown, element.id]);
 
-  const handlePointerTap = useCallback((e: FederatedPointerEvent) => { // Updated type
-    const now = Date.now(); // Define now
-    const timeDiff = now - lastClickTime.current;
+  const handlePointerTap = useCallback((e: FederatedPointerEvent) => {
+    console.log(`StickyNote: INNER handlePointerTap for ${element.id}, time: ${Date.now()}`);
+    console.log(`StickyNote: Current clickCount: ${clickCount.current}, onDoubleClick exists: ${!!onDoubleClick}`);
     
-    if (timeDiff < 300 && onDoubleClick) {
-      // Stop propagation for the tap event as well if it results in a double-click action
-      e.stopPropagation(); // Stops Pixi event bubbling
-      onDoubleClick(e); // Pass event
+    clickCount.current += 1;
+    
+    if (clickTimeout.current) {
+      clearTimeout(clickTimeout.current);
+      clickTimeout.current = null;
     }
     
-    lastClickTime.current = now;
-  }, [onDoubleClick, lastClickTime]); // Added lastClickTime to dependencies
+    if (clickCount.current === 1) {
+      console.log(`StickyNote: First click detected for ${element.id}, setting pending double-click`);
+      // Set pending double-click protection
+      setPendingDoubleClick(element.id);
+      
+      clickTimeout.current = setTimeout(() => {
+        console.log(`StickyNote: Double-click timeout expired for ${element.id}, resetting`);
+        clickCount.current = 0;
+        // Clear pending double-click after timeout
+        clearPendingDoubleClick();
+      }, 300); // Changed from 500ms to 300ms
+    } else if (clickCount.current === 2) {
+      console.log(`StickyNote: Second click detected for ${element.id}, attempting double-click`);
+      if (clickTimeout.current) {
+        clearTimeout(clickTimeout.current);
+        clickTimeout.current = null;
+      }
+      clickCount.current = 0;
+      
+      if (onDoubleClick) {
+        console.log(`StickyNote: Triggering double-click for ${element.id}, event:`, e);
+        console.log(`StickyNote: onDoubleClick function:`, onDoubleClick.toString());
+        e.stopPropagation();
+        // CRITICAL: Also stop the original DOM event from bubbling to React handlers
+        if (e.data?.originalEvent && typeof e.data.originalEvent.stopPropagation === 'function') {
+          e.data.originalEvent.stopPropagation();
+        }
+        onDoubleClick(e);
+        // Clear pending double-click after successful double-click
+        clearPendingDoubleClick();
+      } else {
+        console.log(`StickyNote: No onDoubleClick handler provided for ${element.id}`);
+      }
+    }
+  }, [onDoubleClick, element.id, setPendingDoubleClick, clearPendingDoubleClick]);
 
 
   // Text style for the sticky note content with theme-aware colors
@@ -118,14 +171,20 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
         interactive
         eventMode={'static'}
         pointerdown={(e: FederatedPointerEvent) => { // Updated type
-          // Prevent this event from bubbling to the canvas container in React
-          // e.stopPropagation(); // Already called in handlePointerDown
-          handlePointerDown(e); // This will now call the useCallback version with stopPropagation
+          // Stop both Pixi and DOM event propagation immediately
+          e.stopPropagation();
+          if (e.data?.originalEvent && typeof e.data.originalEvent.stopPropagation === 'function') {
+            e.data.originalEvent.stopPropagation();
+          }
+          handlePointerDown(e);
         }}
         pointertap={(e: FederatedPointerEvent) => { // Updated type
-          // We also stop propagation here to be thorough
-          // e.stopPropagation(); // Already called in handlePointerTap if it leads to double click
-          handlePointerTap(e); // This will now call the useCallback version with stopPropagation
+          // Stop both Pixi and DOM event propagation immediately
+          e.stopPropagation();
+          if (e.data?.originalEvent && typeof e.data.originalEvent.stopPropagation === 'function') {
+            e.data.originalEvent.stopPropagation();
+          }
+          handlePointerTap(e);
         }}
         cursor="pointer"
       />
@@ -136,7 +195,7 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
         y={element.y + 10} // Padding from top
         text={element.content || 'Double-click to edit'}
         style={textStyle}
-        interactive={false} // Background handles interaction
+        eventMode="none" // Background handles interaction
       />
     </>
   );

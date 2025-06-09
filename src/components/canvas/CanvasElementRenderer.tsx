@@ -1,5 +1,5 @@
 import React from 'react';
-import { Graphics, Text } from '@pixi/react';
+import { Graphics, Text } from '../../lib/pixi-setup';
 import { CanvasElement, useCanvasStore } from '../../stores/canvasStore';
 import { validateCanvasElement } from '../../lib/theme-utils';
 
@@ -20,7 +20,7 @@ interface CanvasElementRendererProps {
   element: CanvasElement;
   isSelected?: boolean;
   onMouseDown?: (e: any, elementId: string) => void;
-  onDoubleClick?: () => void;
+  onDoubleClick?: (e?: any) => void; // Made parameter optional to handle both cases
 }
 
 const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({
@@ -57,6 +57,10 @@ const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({
   // Debug log for troubleshooting
   if (import.meta.env.DEV) {
     console.log(`Rendering element "${element.id}" of type "${element.type}" at (${element.x}, ${element.y})`);
+    console.log(`CanvasElementRenderer: onDoubleClick prop exists: ${!!onDoubleClick}, type: ${typeof onDoubleClick}`);
+    if (onDoubleClick) {
+      console.log(`CanvasElementRenderer: onDoubleClick function:`, onDoubleClick.toString());
+    }
   }
 
   try {
@@ -69,7 +73,7 @@ const CanvasElementRenderer: React.FC<CanvasElementRendererProps> = ({
       case 'circle':
         return <Circle element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
       case 'text':
-        return <TextElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
+        return <TextElement element={element} onMouseDown={onMouseDown} onDoubleClick={onDoubleClick} />;
       case 'drawing':
         return <DrawingElement element={element} isSelected={isSelected} onMouseDown={onMouseDown} />;
       case 'triangle':
