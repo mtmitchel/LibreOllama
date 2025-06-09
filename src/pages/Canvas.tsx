@@ -7,20 +7,15 @@ import CanvasGrid from '../components/canvas/CanvasGrid';
 import { Trash2 } from 'lucide-react';
 
 const Canvas = () => {
-  // Single selector to get all state we need - this prevents multiple subscriptions
-  const canvasState = useCanvasStore((state: CanvasState) => ({
-    elements: state.elements,
-    selectedElementIds: state.selectedElementIds,
-    activeTool: state.activeTool,
-    zoom: state.zoom,
-    pan: state.pan,
-    isEditingText: state.isEditingText,
-    isDrawing: state.isDrawing,
-    previewElement: state.previewElement,
-  }));
-
-  // Extract individual values from the memoized state
-  const { elements, selectedElementIds, activeTool, zoom, pan, isEditingText, isDrawing, previewElement } = canvasState;
+  // Use individual selectors to prevent object recreation and infinite loops
+  const elements = useCanvasStore((state: CanvasState) => state.elements);
+  const selectedElementIds = useCanvasStore((state: CanvasState) => state.selectedElementIds);
+  const activeTool = useCanvasStore((state: CanvasState) => state.activeTool);
+  const zoom = useCanvasStore((state: CanvasState) => state.zoom);
+  const pan = useCanvasStore((state: CanvasState) => state.pan);
+  const isEditingText = useCanvasStore((state: CanvasState) => state.isEditingText);
+  const isDrawing = useCanvasStore((state: CanvasState) => state.isDrawing);
+  const previewElement = useCanvasStore((state: CanvasState) => state.previewElement);
   
   // Create stable elements array using useMemo with proper dependencies
   const elementsArray = useMemo(() => Object.values(elements), [elements]);
