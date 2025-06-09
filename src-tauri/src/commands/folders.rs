@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::command;
-use crate::database::{models::Folder, operations};
+use crate::database::Folder;
 
 /// Request structure for creating a new folder
 #[derive(Debug, Deserialize)]

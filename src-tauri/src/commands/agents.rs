@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 // Import database modules
-use crate::database::{self, models::{Agent as DbAgent, AgentExecution as DbAgentExecution}};
+use crate::database::{Agent as DbAgent, AgentExecution as DbAgentExecution};
 
 // Data structures for agent functionality (compatible with frontend)
 #[derive(Serialize, Deserialize, Clone, Debug)]

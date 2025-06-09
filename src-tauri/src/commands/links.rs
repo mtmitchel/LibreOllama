@@ -7,7 +7,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tauri::command;
 
-use crate::database::operations_v4::{
+use crate::database::{
     create_link_relationship, get_outgoing_links, get_backlinks, update_link_relationship,
     delete_link_relationship, upsert_content_index, get_content_index, search_content,
     get_link_suggestions, log_link_analytics, get_related_content, cleanup_old_suggestions,

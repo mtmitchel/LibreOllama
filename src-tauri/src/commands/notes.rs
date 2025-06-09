@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::command;
-use crate::database::{models::Note, operations};
+use crate::database::Note;
 
 /// Request structure for creating a new note
 #[derive(Debug, Deserialize)]

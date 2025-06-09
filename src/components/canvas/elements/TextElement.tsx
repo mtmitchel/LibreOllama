@@ -1,20 +1,17 @@
 import React, { useCallback, useRef } from 'react';
 import { Text } from '@pixi/react';
+import { FederatedPointerEvent } from 'pixi.js'; // Import FederatedPointerEvent from pixi.js
 import { CanvasElement, useCanvasStore } from '../../../stores/canvasStore';
-import { hexStringToNumber, getThemeColors } from '../../../lib/theme-utils';
+import { hexStringToNumber } from '../../../lib/theme-utils';
 
 interface TextElementProps {
   element: CanvasElement;
-  isSelected?: boolean;
-  onMouseDown?: (e: any, elementId: string) => void;
-  onDoubleClick?: () => void;
+  onMouseDown?: (e: FederatedPointerEvent, elementId: string) => void; // Updated type
+  onDoubleClick?: (e: FederatedPointerEvent) => void; // Updated type, pass event
 }
 
-const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseDown, onDoubleClick }) => {
+const TextElement: React.FC<TextElementProps> = ({ element, onMouseDown, onDoubleClick }) => {
   const lastClickTime = useRef<number>(0);
-  
-  // Get theme colors
-  const themeColors = getThemeColors();
   
   // Check if we're currently editing this text element
   const isEditingText = useCanvasStore((state) => state.isEditingText);
@@ -42,20 +39,17 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
   }
   // --- END TEMPORARY DEBUGGING ---
 
-  const handlePointerDown = useCallback((e: any) => {
+  const handlePointerDown = useCallback((e: FederatedPointerEvent) => { // Updated type
     console.log('TextElement: INNER handlePointerDown triggered for element:', element.id); // MODIFIED LOG
     // Stop propagation to prevent canvas-level handlers from interfering
     e.stopPropagation(); // Stops Pixi event bubbling
-    if (e.data?.originalEvent) {
-      e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
-      e.data.originalEvent.stopImmediatePropagation(); // Stops other DOM listeners on the same element
-    }
+    // No need to check for e.data.originalEvent for stopPropagation here as FederatedPointerEvent handles it.
     if (onMouseDown) {
       onMouseDown(e, element.id);
     }
   }, [onMouseDown, element.id]);
 
-  const handlePointerTap = useCallback((e: any) => {
+  const handlePointerTap = useCallback((e: FederatedPointerEvent) => { // Updated type
     console.log(`TextElement: INNER handlePointerTap for ${element.id}, time: ${Date.now()}`); // MODIFIED LOG
     const now = Date.now(); // Define now
     const timeDiff = now - lastClickTime.current;
@@ -63,11 +57,7 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
     if (timeDiff < 300 && onDoubleClick) {
       // Stop propagation for the tap event as well if it results in a double-click action
       e.stopPropagation(); // Stops Pixi event bubbling
-      if (e.data?.originalEvent) {
-        e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
-        e.data.originalEvent.stopImmediatePropagation(); 
-      }
-      onDoubleClick();
+      onDoubleClick(e); // Pass event
     }
     
     lastClickTime.current = now;
@@ -96,12 +86,16 @@ const TextElement: React.FC<TextElementProps> = ({ element, isSelected, onMouseD
         style={textStyle}
         interactive={true}
         eventMode={'static'} // Added for PixiJS v7+ event handling
-        pointerdown={(e) => {
+        pointerdown={(e: FederatedPointerEvent) => { // Updated type
           console.log(`TextElement: NATIVE PIXI POINTERDOWN on ${element.id} --- Target matches currentTarget: ${e.target === e.currentTarget}`);
+          // Prevent this event from bubbling to the canvas container in React
+          // e.stopPropagation(); // Already called in handlePointerDown
           handlePointerDown(e); // This will now call the useCallback version with stopPropagation
         }}
-        pointertap={(e) => {
+        pointertap={(e: FederatedPointerEvent) => { // Updated type
           console.log(`TextElement: NATIVE PIXI POINTERTAP on ${element.id}`);
+          // We also stop propagation here to be thorough
+          // e.stopPropagation(); // Already called in handlePointerTap if it leads to double click
           handlePointerTap(e); // This will now call the useCallback version with stopPropagation
          }}
          cursor="text"

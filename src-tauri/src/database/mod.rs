@@ -4,14 +4,15 @@
 //! It includes connection management, schema definitions, models, and migrations.
 
 pub mod connection;
-pub mod schema;
-pub mod schema_v2; // Added schema_v2 module
-pub mod schema_v4; // Added schema_v4 module for bidirectional linking
 pub mod models;
-pub mod models_v2;
-pub mod operations;
-pub mod operations_v2;
-pub mod operations_v4; // Added operations_v4 module for bidirectional linking
+pub mod operations_v4;
+pub mod schema_v4;
+pub mod schema_onboarding;
+
+// Re-export all the necessary items for easy access from other modules.
+// This allows other files to simply `use crate::database::ChatSession;`
+pub use models::*;
+pub use operations_v4::*;
 
 #[cfg(test)]
 pub mod test;
@@ -19,15 +20,9 @@ pub mod test;
 #[cfg(test)]
 pub mod integration_tests;
 
-// Re-export common types and functions for easier access
-pub use connection::{DatabaseManager, get_connection};
-pub use models::*;
-pub use models_v2::*;
-pub use schema::*;
-pub use operations::*;
-pub use operations_v2::*;
 
 use anyhow::Result;
+use connection::DatabaseManager; // Ensure DatabaseManager is in scope
 
 /// Initialize the database system
 ///

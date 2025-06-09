@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useCanvasStore, CanvasElement } from '../../stores/canvasStore';
+import { useCanvasStore, CanvasElement } from '@/stores/canvasStore'; // Import CanvasElement from store
+import type { FederatedPointerEvent } from 'pixi.js';
 
 interface UseCanvasEventsProps {
   canvasContainerRef: React.RefObject<HTMLDivElement>;
@@ -28,6 +29,8 @@ export const useCanvasEvents = ({
   // Store refs for internal state that doesn't need to trigger re-renders
   const isPanning = useRef(false);
   const initialElementPositions = useRef<Record<string, { x: number; y: number }>>({});
+  const lastTap = useRef<number | null>(null);
+  const lastTapId = useRef<string | null>(null);
 
   // Get store actions (these are stable function references from Zustand)
   const addElement = useCanvasStore((state) => state.addElement);

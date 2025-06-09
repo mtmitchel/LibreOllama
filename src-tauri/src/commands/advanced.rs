@@ -4,14 +4,15 @@
 //! chat templates, performance metrics, and other advanced features.
 
 use serde::{Deserialize, Serialize};
-use crate::database::{self, operations_v2, models_v2::*};
+use crate::database::{ConversationContext, ChatTemplate, UserPreference, ApplicationLog, PerformanceMetric, MetricType, RequestCache, PreferenceType, LogLevel};
 use sha2::{Sha256, Digest};
 
 // ===== Context Management Commands =====
 
 #[tauri::command]
 pub async fn get_conversation_context(session_id: String) -> Result<Option<ConversationContext>, String> {
-    operations_v2::get_conversation_context(&session_id)
+    operations_v4::get_conversation_context(&session_id)
+        .await
         .map_err(|e| format!("Failed to get conversation context: {}", e))
 }
 
@@ -23,7 +24,8 @@ pub async fn update_conversation_context(
     token_count: i32,
 ) -> Result<ConversationContext, String> {
     // Get existing context or create new one
-    let mut context = operations_v2::get_conversation_context(&session_id)
+    let mut context = operations_v4::get_conversation_context(&session_id)
+        .await
         .map_err(|e| format!("Failed to get context: {}", e))?
         .unwrap_or_else(|| ConversationContext::new(session_id, context_window_size));
 
@@ -31,14 +33,17 @@ pub async fn update_conversation_context(
     context.update_context(token_count, context_summary);
 
     // Save to database
-    if operations_v2::get_conversation_context(&context.session_id)
+    if operations_v4::get_conversation_context(&context.session_id)
+        .await
         .map_err(|e| format!("Failed to check context: {}", e))?
         .is_some()
     {
-        operations_v2::update_conversation_context(&context)
+        operations_v4::update_conversation_context(&context)
+            .await
             .map_err(|e| format!("Failed to update context: {}", e))?;
     } else {
-        operations_v2::create_conversation_context(&context)
+        operations_v4::create_conversation_context(&context)
+            .await
             .map_err(|e| format!("Failed to create context: {}", e))?;
     }
 
@@ -49,13 +54,15 @@ pub async fn update_conversation_context(
 
 #[tauri::command]
 pub async fn get_chat_templates(active_only: Option<bool>) -> Result<Vec<ChatTemplate>, String> {
-    operations_v2::get_chat_templates(active_only.unwrap_or(true))
+    operations_v4::get_chat_templates(active_only.unwrap_or(true))
+        .await
         .map_err(|e| format!("Failed to get chat templates: {}", e))
 }
 
 #[tauri::command]
 pub async fn get_chat_template(template_id: String) -> Result<Option<ChatTemplate>, String> {
-    operations_v2::get_chat_template_by_id(&template_id)
+    operations_v4::get_chat_template_by_id(&template_id)
+        .await
         .map_err(|e| format!("Failed to get chat template: {}", e))
 }
 
@@ -73,7 +80,8 @@ pub async fn create_chat_template(
     template.model_config = model_config;
     template.is_default = is_default.unwrap_or(false);
 
-    operations_v2::create_chat_template(&template)
+    operations_v4::create_chat_template(&template)
+        .await
         .map_err(|e| format!("Failed to create chat template: {}", e))?;
 
     Ok(template)
@@ -90,7 +98,8 @@ pub async fn update_chat_template(
     is_default: Option<bool>,
     is_active: Option<bool>,
 ) -> Result<ChatTemplate, String> {
-    let mut template = operations_v2::get_chat_template_by_id(&template_id)
+    let mut template = operations_v4::get_chat_template_by_id(&template_id)
+        .await
         .map_err(|e| format!("Failed to get template: {}", e))?
         .ok_or("Template not found")?;
 
@@ -100,12 +109,11 @@ pub async fn update_chat_template(
     if let Some(sm) = system_message { template.system_message = Some(sm); }
     if let Some(ip) = initial_prompts { template.initial_prompts = Some(ip); }
     if let Some(mc) = model_config { template.model_config = Some(mc); }
-    if let Some(def) = is_default { template.is_default = def; }
-    if let Some(active) = is_active { template.is_active = active; }
-    
-    template.updated_at = chrono::Utc::now();
+    if let Some(id) = is_default { template.is_default = id; }
+    if let Some(ia) = is_active { template.is_active = ia; }
 
-    operations_v2::update_chat_template(&template)
+    operations_v4::update_chat_template(&template)
+        .await
         .map_err(|e| format!("Failed to update chat template: {}", e))?;
 
     Ok(template)
@@ -113,13 +121,15 @@ pub async fn update_chat_template(
 
 #[tauri::command]
 pub async fn increment_template_usage(template_id: String) -> Result<(), String> {
-    let mut template = operations_v2::get_chat_template_by_id(&template_id)
+    let mut template = operations_v4::get_chat_template_by_id(&template_id)
+        .await
         .map_err(|e| format!("Failed to get template: {}", e))?
         .ok_or("Template not found")?;
 
     template.increment_usage();
     
-    operations_v2::update_chat_template(&template)
+    operations_v4::update_chat_template(&template)
+        .await
         .map_err(|e| format!("Failed to update template usage: {}", e))?;
 
     Ok(())
@@ -130,178 +140,148 @@ pub async fn increment_template_usage(template_id: String) -> Result<(), String>
 #[tauri::command]
 pub async fn record_performance_metric(
     metric_type: String,
-    metric_value: f64,
-    session_id: Option<String>,
-    model_name: Option<String>,
-    metadata: Option<String>,
+    value: f64,
+    component: Option<String>,
+    operation: Option<String>,
+    tags: Option<String>, // JSON string for tags
 ) -> Result<(), String> {
     let metric = PerformanceMetric::new(
         MetricType::from(metric_type),
-        metric_value,
-        session_id,
-        model_name,
-        metadata,
+        value,
+        component,
+        operation,
+        tags.map(|t| serde_json::from_str(&t).unwrap_or_default()),
     );
-
-    operations_v2::create_performance_metric(&metric)
+    operations_v4::create_performance_metric(&metric)
+        .await
         .map_err(|e| format!("Failed to record performance metric: {}", e))
 }
 
 #[tauri::command]
-pub async fn get_model_analytics(model_name: Option<String>) -> Result<serde_json::Value, String> {
-    if let Some(name) = model_name {
-        let analytics = operations_v2::get_model_analytics(&name)
-            .map_err(|e| format!("Failed to get model analytics: {}", e))?;
-        Ok(serde_json::to_value(analytics).unwrap())
-    } else {
-        let all_analytics = operations_v2::get_all_model_analytics()
-            .map_err(|e| format!("Failed to get all model analytics: {}", e))?;
-        Ok(serde_json::to_value(all_analytics).unwrap())
-    }
-}
-
-#[tauri::command]
-pub async fn update_model_performance(
-    model_name: String,
-    response_time: f64,
-    tokens_generated: i32,
-) -> Result<(), String> {
-    operations_v2::create_or_update_model_analytics(&model_name, response_time, tokens_generated)
-        .map_err(|e| format!("Failed to update model performance: {}", e))
+pub async fn get_performance_metrics(
+    metric_type: Option<String>,
+    component: Option<String>,
+    operation: Option<String>,
+    start_time: Option<String>, // ISO 8601
+    end_time: Option<String>,   // ISO 8601
+    limit: Option<i32>,
+) -> Result<Vec<PerformanceMetric>, String> {
+    operations_v4::get_performance_metrics(
+        metric_type.map(MetricType::from),
+        component,
+        operation,
+        start_time,
+        end_time,
+        limit.unwrap_or(100),
+    )
+    .await
+    .map_err(|e| format!("Failed to get performance metrics: {}", e))
 }
 
 // ===== Cache Management Commands =====
 
 #[tauri::command]
-pub async fn get_cached_response(prompt: String, model_name: String) -> Result<Option<String>, String> {
-    let request_hash = generate_request_hash(&prompt, &model_name);
-    
-    if let Some(mut cache) = operations_v2::get_cached_response(&request_hash)
-        .map_err(|e| format!("Failed to get cached response: {}", e))? 
-    {
-        cache.increment_hit();
-        operations_v2::update_cache_hit(&cache)
-            .map_err(|e| format!("Failed to update cache hit: {}", e))?;
-        Ok(Some(cache.response_text))
-    } else {
-        Ok(None)
-    }
+pub async fn cache_request(
+    key: String,
+    value: String, // JSON string
+    ttl_seconds: Option<i64>,
+) -> Result<(), String> {
+    let cache = RequestCache::new(
+        key,
+        value,
+        ttl_seconds,
+    );
+    operations_v4::create_request_cache(&cache)
+        .await
+        .map_err(|e| format!("Failed to cache request: {}", e))
 }
 
 #[tauri::command]
-pub async fn cache_response(
-    prompt: String,
-    model_name: String,
-    response: String,
-    response_metadata: Option<String>,
-    expires_in_hours: Option<i64>,
-) -> Result<(), String> {
-    let request_hash = generate_request_hash(&prompt, &model_name);
-    
-    let cache = RequestCache::new(
-        request_hash,
-        model_name,
-        prompt,
-        response,
-        response_metadata,
-        expires_in_hours,
-    );
-
-    operations_v2::create_cached_response(&cache)
-        .map_err(|e| format!("Failed to cache response: {}", e))
+pub async fn get_cached_request(key: String) -> Result<Option<RequestCache>, String> {
+    operations_v4::get_request_cache(&key)
+        .await
+        .map_err(|e| format!("Failed to get cached request: {}", e))
 }
 
-fn generate_request_hash(prompt: &str, model_name: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(prompt.as_bytes());
-    hasher.update(model_name.as_bytes());
-    format!("{:x}", hasher.finalize())
+#[tauri::command]
+pub async fn clear_request_cache(prefix: Option<String>) -> Result<(), String> {
+    operations_v4::clear_request_cache(prefix)
+        .await
+        .map_err(|e| format!("Failed to clear request cache: {}", e))
 }
 
-// ===== User Preferences Commands =====
+// ===== User Preference Commands =====
 
 #[tauri::command]
 pub async fn get_user_preference(key: String) -> Result<Option<UserPreference>, String> {
-    operations_v2::get_user_preference(&key)
+    operations_v4::get_user_preference(&key)
+        .await
         .map_err(|e| format!("Failed to get user preference: {}", e))
 }
 
 #[tauri::command]
 pub async fn set_user_preference(
     key: String,
-    value: String,
-    preference_type: String,
-    description: Option<String>,
+    value: String, // JSON string
+    preference_type: Option<String>, // "string", "number", "boolean", "json"
+    is_system_preference: Option<bool>,
 ) -> Result<(), String> {
-    // Check if preference exists
-    let mut preference = if let Some(existing) = operations_v2::get_user_preference(&key)
-        .map_err(|e| format!("Failed to check preference: {}", e))? 
-    {
-        existing
-    } else {
-        UserPreference::new(
-            key,
-            value.clone(),
-            PreferenceType::from(preference_type),
-            description,
-            false,
-        )
-    };
-
-    preference.update_value(value);
-
-    operations_v2::set_user_preference(&preference)
+    let pref = UserPreference::new(
+        key,
+        value,
+        preference_type.map(PreferenceType::from).unwrap_or(PreferenceType::String),
+        is_system_preference.unwrap_or(false),
+    );
+    operations_v4::set_user_preference(&pref)
+        .await
         .map_err(|e| format!("Failed to set user preference: {}", e))
 }
 
 #[tauri::command]
 pub async fn get_all_user_preferences(system_only: Option<bool>) -> Result<Vec<UserPreference>, String> {
-    operations_v2::get_all_user_preferences(system_only.unwrap_or(false))
-        .map_err(|e| format!("Failed to get user preferences: {}", e))
+    operations_v4::get_all_user_preferences(system_only.unwrap_or(false))
+        .await
+        .map_err(|e| format!("Failed to get all user preferences: {}", e))
 }
 
 // ===== Application Logging Commands =====
 
 #[tauri::command]
 pub async fn log_application_event(
-    level: String,
+    level: String, // "info", "warn", "error", "debug"
     message: String,
     component: Option<String>,
-    session_id: Option<String>,
-    error_code: Option<String>,
-    stack_trace: Option<String>,
-    metadata: Option<String>,
+    context: Option<String>, // JSON string
 ) -> Result<(), String> {
     let log = ApplicationLog::new(
         LogLevel::from(level),
         message,
         component,
-        session_id,
-        error_code,
-        stack_trace,
-        metadata,
+        context,
     );
-
-    operations_v2::create_application_log(&log)
-        .map_err(|e| format!("Failed to create application log: {}", e))
+    operations_v4::create_application_log(&log)
+        .await
+        .map_err(|e| format!("Failed to log application event: {}", e))
 }
 
 #[tauri::command]
 pub async fn get_application_logs(
     level: Option<String>,
     component: Option<String>,
+    start_time: Option<String>, // ISO 8601
+    end_time: Option<String>,   // ISO 8601
     limit: Option<i32>,
 ) -> Result<Vec<ApplicationLog>, String> {
     let log_level = level.map(LogLevel::from);
-    
-    operations_v2::get_application_logs(log_level, component.as_deref(), limit)
-        .map_err(|e| format!("Failed to get application logs: {}", e))
-}
-
-#[tauri::command]
-pub async fn cleanup_old_logs(max_entries: i32) -> Result<i32, String> {
-    operations_v2::cleanup_old_logs(max_entries)
-        .map_err(|e| format!("Failed to cleanup old logs: {}", e))
+    operations_v4::get_application_logs(
+        log_level,
+        component,
+        start_time,
+        end_time,
+        limit.unwrap_or(100),
+    )
+    .await
+    .map_err(|e| format!("Failed to get application logs: {}", e))
 }
 
 // ===== Chat Export/Import Commands =====
@@ -327,7 +307,7 @@ pub async fn export_chat_session(session_id: String) -> Result<ChatExport, Strin
         .map_err(|e| format!("Failed to get messages: {}", e))?;
 
     // Get context if available
-    let context = operations_v2::get_conversation_context(&session_id)
+    let context = operations_v4::get_conversation_context(&session_id)
         .map_err(|e| format!("Failed to get context: {}", e))?;
 
     Ok(ChatExport {

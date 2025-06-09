@@ -1,13 +1,14 @@
 import React, { useCallback, useRef } from 'react';
 import { Graphics, Text } from '@pixi/react';
+import { FederatedPointerEvent } from 'pixi.js'; // Import FederatedPointerEvent from pixi.js
 import { CanvasElement, useCanvasStore } from '../../../stores/canvasStore';
 import { hexStringToNumber, getThemeColors, getDefaultElementColors } from '../../../lib/theme-utils';
 
 interface StickyNoteProps {
   element: CanvasElement;
   isSelected?: boolean;
-  onMouseDown?: (e: any, elementId: string) => void;
-  onDoubleClick?: () => void;
+  onMouseDown?: (e: FederatedPointerEvent, elementId: string) => void; // Updated type
+  onDoubleClick?: (e: FederatedPointerEvent) => void; // Updated type, pass event
 }
 
 const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDown, onDoubleClick }) => {
@@ -52,30 +53,23 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
     }
   }, [element.width, element.height, element.backgroundColor, isSelected, themeColors.selectionBlue, defaultColors.background, defaultColors.border]);
 
-  const handlePointerDown = useCallback((e: any) => {
+  const handlePointerDown = useCallback((e: FederatedPointerEvent) => { // Updated type
     // Stop propagation to prevent canvas-level handlers from interfering
     e.stopPropagation(); // Stops Pixi event bubbling
-    if (e.data?.originalEvent) {
-      e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
-      e.data.originalEvent.stopImmediatePropagation(); // Stops other DOM listeners on the same element
-    }
+    // No need to check for e.data.originalEvent for stopPropagation here as FederatedPointerEvent handles it.
     if (onMouseDown) {
       onMouseDown(e, element.id);
     }
   }, [onMouseDown, element.id]);
 
-  const handlePointerTap = useCallback((e: any) => {
+  const handlePointerTap = useCallback((e: FederatedPointerEvent) => { // Updated type
     const now = Date.now(); // Define now
     const timeDiff = now - lastClickTime.current;
     
     if (timeDiff < 300 && onDoubleClick) {
       // Stop propagation for the tap event as well if it results in a double-click action
       e.stopPropagation(); // Stops Pixi event bubbling
-      if (e.data?.originalEvent) {
-        e.data.originalEvent.stopPropagation(); // Stops DOM event bubbling
-        e.data.originalEvent.stopImmediatePropagation(); 
-      }
-      onDoubleClick();
+      onDoubleClick(e); // Pass event
     }
     
     lastClickTime.current = now;
@@ -123,10 +117,14 @@ const StickyNote: React.FC<StickyNoteProps> = ({ element, isSelected, onMouseDow
         draw={drawBackground}
         interactive
         eventMode={'static'}
-        pointerdown={(e) => {
+        pointerdown={(e: FederatedPointerEvent) => { // Updated type
+          // Prevent this event from bubbling to the canvas container in React
+          // e.stopPropagation(); // Already called in handlePointerDown
           handlePointerDown(e); // This will now call the useCallback version with stopPropagation
         }}
-        pointertap={(e) => {
+        pointertap={(e: FederatedPointerEvent) => { // Updated type
+          // We also stop propagation here to be thorough
+          // e.stopPropagation(); // Already called in handlePointerTap if it leads to double click
           handlePointerTap(e); // This will now call the useCallback version with stopPropagation
         }}
         cursor="pointer"

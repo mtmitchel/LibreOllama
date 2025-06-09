@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::command;
-use crate::database::{models::N8nConnection, operations};
+use crate::database::N8nConnection;
 
 /// Request structure for creating a new N8N connection
 #[derive(Debug, Deserialize)]

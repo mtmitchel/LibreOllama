@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::command;
-use crate::database::{models::McpServer, operations};
+use crate::database::McpServer;
 
 /// Request structure for creating a new MCP server
 #[derive(Debug, Deserialize)]
