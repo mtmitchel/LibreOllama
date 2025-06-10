@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import * as fabric from 'fabric';
 
 // Define tool types (migrated from canvasStore.ts)
 export type CanvasTool = 
@@ -680,12 +681,6 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
     },
     createFabricObject: async (element: FabricCanvasElement): Promise<any | null> => {
       try {
-        // Use static imports for better reliability
-        const fabric = await import('fabric');
-        const { 
-          Rect, Circle, IText, Line, Path, Triangle, Polygon, Image: FabricImage 
-        } = fabric;
-        
         const plainElement = { ...element };
 
         let fabricObject: any = null;
@@ -705,7 +700,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         switch (plainElement.type) {
           case 'rectangle':
           case 'square':
-            fabricObject = new Rect({
+            fabricObject = new fabric.Rect({
               ...commonProps,
               width: plainElement.width || 100,
               height: plainElement.height || (plainElement.type === 'square' ? plainElement.width || 100 : 60),
@@ -713,7 +708,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
             break;
 
           case 'circle':
-            fabricObject = new Circle({
+            fabricObject = new fabric.Circle({
               ...commonProps,
               radius: plainElement.radius || (plainElement.width || 80) / 2,
             });
@@ -730,7 +725,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
               return '#000000';
             })();
             
-            fabricObject = new IText(plainElement.content || 'Text', {
+            fabricObject = new fabric.IText(plainElement.content || 'Text', {
               ...commonProps,
               fontSize: plainElement.fontSize === 'small' ? 14 : plainElement.fontSize === 'large' ? 24 : 18,
               fontWeight: plainElement.isBold ? 'bold' : 'normal',
@@ -747,7 +742,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
             if (plainElement.points && plainElement.points.length >= 2) {
               const startPoint = plainElement.points[0];
               const endPoint = plainElement.points[plainElement.points.length - 1];
-              fabricObject = new Line([
+              fabricObject = new fabric.Line([
                 startPoint.x, startPoint.y,
                 endPoint.x, endPoint.y
               ], {
@@ -765,7 +760,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
                 return path + (index === 0 ? `M ${point.x} ${point.y}` : ` L ${point.x} ${point.y}`);
               }, '');
 
-              fabricObject = new Path(pathString, {
+              fabricObject = new fabric.Path(pathString, {
                 ...commonProps,
                 stroke: plainElement.strokeColor || plainElement.color || '#000000',
                 strokeWidth: plainElement.strokeWidth || 2,
@@ -775,7 +770,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
             break;
 
           case 'triangle':
-            fabricObject = new Triangle({
+            fabricObject = new fabric.Triangle({
               ...commonProps,
               width: plainElement.width || 80,
               height: plainElement.height || 80,
@@ -795,7 +790,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
                 y: radius * Math.sin(angle),
               });
             }
-            fabricObject = new Polygon(starPoints, {
+            fabricObject = new fabric.Polygon(starPoints, {
               ...commonProps,
             });
             fabricObject.set({ left: plainElement.x + outerRadius, top: plainElement.y + outerRadius });
@@ -810,7 +805,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
                 y: hexRadius * Math.sin((i * Math.PI) / 3),
               });
             }
-            fabricObject = new Polygon(hexPoints, {
+            fabricObject = new fabric.Polygon(hexPoints, {
               ...commonProps,
             });
             fabricObject.set({ left: plainElement.x + hexRadius, top: plainElement.y + hexRadius });
@@ -833,14 +828,14 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
                 `Z`
             ].join(' ');
 
-            fabricObject = new Path(arrowPath, {
+            fabricObject = new fabric.Path(arrowPath, {
               ...commonProps,
             });
             break;
 
           case 'image':
             if (plainElement.src) {
-              const img = await FabricImage.fromURL(plainElement.src);
+              const img = await fabric.Image.fromURL(plainElement.src);
               img.set({
                 ...commonProps,
                 left: plainElement.x, 
