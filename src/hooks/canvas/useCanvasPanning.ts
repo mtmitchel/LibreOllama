@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { fabric } from 'fabric';
-type FabricCanvasInstance = fabric.Canvas;
+import { Canvas } from 'fabric';
+type FabricCanvasInstance = Canvas;
 
 export const useCanvasPanning = (canvas: FabricCanvasInstance | null) => {
   const isPanningRef = useRef(false);

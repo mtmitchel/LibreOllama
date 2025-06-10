@@ -17,6 +17,13 @@ export default defineConfig(async () => ({
       'fabric',
       // Fabric.js for canvas functionality
     ],
+    exclude: [
+      // Prevent pre-bundling issues with Fabric.js
+    ],
+  },
+  
+  ssr: {
+    noExternal: ['fabric']
   },
 
   // Add path alias configuration

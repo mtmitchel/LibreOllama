@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
-import { fabric } from 'fabric';
-type FabricCanvasInstance = fabric.Canvas;
+import { Canvas } from 'fabric';
+type FabricCanvasInstance = Canvas;
 
 interface FabricCanvasContextType {
   fabricCanvas: FabricCanvasInstance | null;

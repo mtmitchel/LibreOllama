@@ -55,7 +55,7 @@ export interface FabricCanvasElement {
   isLocked?: boolean;
   
   // Fabric.js specific properties
-  fabricObject?: any; // Reference to the actual Fabric.js object (using any for now)
+  fabricObject?: any; // Reference to the actual Fabric.js object
   fabricId?: string; // Fabric object's internal ID
   
   // Extended properties for different element types
@@ -100,7 +100,7 @@ interface FabricCanvasState {
   pendingDoubleClick: string | null;
   
   // Fabric.js specific state
-  fabricCanvas: any | null; // Using any for now
+  fabricCanvas: any | null; // The Fabric.js Canvas instance
   isCanvasReady: boolean;
   
   // Actions
@@ -680,10 +680,11 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
     },
     createFabricObject: async (element: FabricCanvasElement): Promise<any | null> => {
       try {
-        // Import Fabric.js classes directly
+        // Use static imports for better reliability
+        const fabric = await import('fabric');
         const { 
-          Rect, Circle, IText, Line, Path, Triangle, Polygon, FabricImage 
-        } = await import('fabric');
+          Rect, Circle, IText, Line, Path, Triangle, Polygon, Image: FabricImage 
+        } = fabric;
         
         const plainElement = { ...element };
 
@@ -851,12 +852,6 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
                 const scaleY = plainElement.height / (img.height || 1);
                 img.scaleX = scaleX;
                 img.scaleY = scaleY;
-              } else if (img.width && img.height) { 
-                // This line was trying to modify the 'element' (now 'plainElement') which is a copy.
-                // If the original element in the store needs updating, that's a separate concern.
-                // For now, we'll ensure the fabricObject uses the image's dimensions if not provided.
-                // plainElement.width = img.width; // Avoid modifying plainElement here if it's just for fabric creation
-                // plainElement.height = img.height;
               }
               fabricObject = img;
             }
