@@ -15,10 +15,8 @@ export default defineConfig(async () => ({
 
   optimizeDeps: {
     include: [
-      'pixi.js',
-      '@pixi/react',
-      // Note: In PIXI v8, all modules are bundled into pixi.js
-      // Individual @pixi/* packages are no longer separate dependencies
+      'fabric',
+      // Fabric.js for canvas functionality
     ],
   },
 

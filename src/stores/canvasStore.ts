@@ -3,6 +3,34 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
+// Define tool types
+export type CanvasTool = 
+  | 'select' 
+  | 'text' 
+  | 'rectangle' 
+  | 'circle' 
+  | 'triangle' 
+  | 'square' 
+  | 'hexagon' 
+  | 'star' 
+  | 'line' 
+  | 'arrow' 
+  | 'pen' 
+  | 'eraser' 
+  | 'sticky-note'
+  | 'image'
+  | 'shapes';
+
+// Define saved canvas interface
+export interface SavedCanvas {
+  id: string;
+  name: string;
+  elements: CanvasElement[];
+  createdAt: string;
+  updatedAt: string;
+  thumbnail?: string;
+}
+
 // Define CanvasElement directly in this file or import from a correct central types file if it exists.
 // For now, let's define a basic structure for CanvasElement here.
 export interface CanvasElement {

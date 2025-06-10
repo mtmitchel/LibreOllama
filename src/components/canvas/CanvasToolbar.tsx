@@ -38,8 +38,7 @@ interface CanvasToolbarProps {
   showShapeDropdown: boolean;
   dropdownPosition: { left: number; top: number } | null;
   canUndo: boolean;
-  canRedo: boolean;
-  dropdownRef: React.RefObject<HTMLDivElement>;
+  canRedo: boolean;  dropdownRef: React.RefObject<HTMLDivElement | null>;
   onToolSelect: (toolId: string, event?: React.MouseEvent) => void;
   onShapeSelect: (shapeId: string) => void;
   onUndo?: () => void; // Added
