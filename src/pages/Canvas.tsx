@@ -438,7 +438,7 @@ const Canvas: React.FC<CanvasProps> = ({
       {/* Main canvas area */}
       <div 
         ref={canvasContainerRef}
-        className="flex-1 relative bg-gray-100 overflow-hidden"
+        className="flex-1 relative bg-bg-secondary overflow-hidden"
         style={{ minHeight: '600px' }}
       >
         {/* Canvas */}

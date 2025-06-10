@@ -429,7 +429,7 @@ mod tests {
     use rusqlite::Connection;
 
     #[test]
-    fn test_v4_migration() {
+    fn test_v4_migration() -> Result<()> {
         let conn = Connection::open_in_memory().unwrap();
         
         // Run previous migrations first
@@ -450,6 +450,7 @@ mod tests {
                 .unwrap();
             assert!(exists, "Table {} should exist", table);
         }
+        Ok(())
     }
 
     #[test]

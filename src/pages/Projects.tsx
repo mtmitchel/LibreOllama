@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useHeader, HeaderProps } from '../contexts/HeaderContext';
 import { Button } from '../components/ui';
-import { Card } from '../components/ui/Card';
+import { Card } from '../components/ui';
 import {
   Plus,
   Settings,
@@ -329,20 +329,6 @@ export function Projects() {
     setNewProjectColor('#3b82f6');
     setEnableAI(false);
     setAiGoals([]);
-  };
-
-  const handleProjectAction = (projectId: string, action: 'settings' | 'archive' | 'delete') => {
-    switch (action) {
-      case 'settings':
-        console.log('Opening project settings for', projectId);
-        break;
-      case 'archive':
-        console.log('Archiving project', projectId);
-        break;
-      case 'delete':
-        console.log('Deleting project', projectId);
-        break;
-    }
   };
 
   const handleCreateAsset = (type: string) => {

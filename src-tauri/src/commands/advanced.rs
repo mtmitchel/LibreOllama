@@ -152,6 +152,7 @@ pub async fn record_performance_metric(
         .map_err(|e| format!("Failed to record performance metric: {}", e))
 }
 
+#[allow(dead_code)]
 #[tauri::command]
 pub async fn get_performance_metrics(
     metric_type: Option<String>,

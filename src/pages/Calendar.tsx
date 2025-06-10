@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, ListChecks, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react';
 import { Card, Button } from '../components/ui'; // Updated to use Button from ui/index.tsx
 import { PageLayout } from '../components/ui/PageLayout';
-import { useHeader } from '../contexts/HeaderContext';
 
 interface CalendarEvent {
   id: string;
@@ -231,9 +230,9 @@ const Calendar: React.FC = () => {
                       <div 
                         key={event.id} 
                         className={`px-1.5 py-0.5 text-[11px] rounded 
-                          ${event.type === 'event' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 
-                            event.type === 'meeting' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' :
-                            'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'}`}
+                          ${event.type === 'event' ? 'bg-accent-soft text-primary' : 
+                            event.type === 'meeting' ? 'bg-bg-tertiary text-text-primary border border-border-default' :
+                            'bg-accent-soft text-success'}`}
                       >
                         {event.title}
                       </div>

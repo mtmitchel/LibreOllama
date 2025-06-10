@@ -15,7 +15,8 @@ pub struct CreateNoteRequest {
     pub title: String,
     pub content: String,
     pub tags: Option<Vec<String>>,
-    pub folder_id: Option<String>,
+    // TODO: Add folder_id to Note model and operations
+    // pub folder_id: Option<String>,
     pub user_id: String,
 }
 
@@ -25,7 +26,8 @@ pub struct UpdateNoteRequest {
     pub title: Option<String>,
     pub content: Option<String>,
     pub tags: Option<Vec<String>>,
-    pub folder_id: Option<String>,
+    // TODO: Add folder_id to Note model and operations
+    // pub folder_id: Option<String>,
 }
 
 /// Response structure for note operations

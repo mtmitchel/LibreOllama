@@ -98,7 +98,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-2">Project Color</label>
                   <div className="flex gap-3">
-                    {['var(--accent-primary)', 'var(--accent-secondary)', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'].map(color => (
+                    {['var(--accent-primary)', 'var(--accent-secondary)', 'var(--success)', 'var(--warning)', 'var(--error)', '#8B5CF6'].map(color => (
                       <button
                         key={color}
                         className={`w-8 h-8 rounded-full border-2 transition-all ${

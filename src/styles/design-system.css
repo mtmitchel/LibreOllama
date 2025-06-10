@@ -91,6 +91,11 @@
   --canvas-text-color: var(--text-primary);
   --canvas-sticky-bg: #FFFFF0;
   --canvas-sticky-border: var(--border-default);
+  
+  /* Canvas text editor variables */
+  --canvas-editor-focus-shadow: 0 2px 12px rgba(0, 120, 212, 0.3);
+  --canvas-editor-border-focus: #0078d4;
+  --canvas-editor-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 html.light {
@@ -124,6 +129,21 @@ body {
   color: var(--text-primary); 
   line-height: 1.5; 
   -webkit-font-smoothing: antialiased; 
+}
+
+/* Canvas text editor styles - consolidated from canvas-text-editor.css */
+.canvas-text-editor {
+  font-family: var(--font-sans, 'Inter', Arial, sans-serif);
+  border-radius: 4px;
+  box-shadow: var(--canvas-editor-shadow);
+  resize: none;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.canvas-text-editor:focus {
+  box-shadow: var(--canvas-editor-focus-shadow);
+  border-color: var(--canvas-editor-border-focus);
 }
 
 /* Scrollbar styles */

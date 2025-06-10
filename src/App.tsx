@@ -6,15 +6,13 @@ import { TopBar } from './components/layout/TopBar';
 import { CommandPalette } from './components/CommandPalette';
 import { useCommandPalette } from './hooks/useCommandPalette';
 
-// Import styles
-import './styles/canvas-text-editor.css';
-
 // Import all page components
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
 import Canvas from './pages/Canvas';
+import SimpleFabricCanvas from './pages/SimpleFabricCanvas';
 import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';
 import Agents from './pages/Agents';
@@ -37,7 +35,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  */
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const isCanvasPage = location.pathname === '/canvas';
+  const isCanvasPage = location.pathname === '/canvas' || location.pathname === '/simple-canvas';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -49,6 +47,7 @@ const AppContent: React.FC = () => {
       {isCanvasPage ? (
         <Routes>
           <Route path="/canvas" element={<Canvas />} />
+          <Route path="/simple-canvas" element={<SimpleFabricCanvas />} />
         </Routes>
       ) : (
         <MainLayout>

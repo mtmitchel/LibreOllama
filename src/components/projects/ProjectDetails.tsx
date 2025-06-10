@@ -1,7 +1,5 @@
 import React from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui';
-import { Badge, Progress, Checkbox } from '../ui';
+import { Card, Button, Badge, Progress, Checkbox } from '../ui';
 import { MoreVertical, Upload, ImageIcon, File, Link, Plus, Users, Calendar, Target } from 'lucide-react';
 
 interface Project {
@@ -40,10 +38,10 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'border-red-500 text-red-600';
-      case 'medium': return 'border-yellow-500 text-yellow-600';
-      case 'low': return 'border-green-500 text-green-600';
-      default: return 'border-gray-500 text-gray-600';
+      case 'high': return 'border-error text-error';
+      case 'medium': return 'border-warning text-warning';
+      case 'low': return 'border-success text-success';
+      default: return 'border-border-default text-text-tertiary';
     }
   };
 
@@ -199,7 +197,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               <div className="space-y-4">
                 <Card className="p-4">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <div className="w-3 h-3 rounded-full bg-success" />
                     <h4 className="font-medium text-text-primary">Phase 1: Planning</h4>
                     <Badge variant="success">Completed</Badge>
                   </div>
@@ -207,7 +205,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 </Card>
                 <Card className="p-4">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <div className="w-3 h-3 rounded-full bg-primary" />
                     <h4 className="font-medium text-text-primary">Phase 2: Development</h4>
                     <Badge variant="default">In Progress</Badge>
                   </div>
@@ -215,7 +213,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 </Card>
                 <Card className="p-4">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-400" />
+                    <div className="w-3 h-3 rounded-full bg-text-tertiary" />
                     <h4 className="font-medium text-text-primary">Phase 3: Testing</h4>
                     <Badge variant="secondary">Upcoming</Badge>
                   </div>

@@ -15,7 +15,7 @@ use rusqlite::{Connection, OpenFlags};
 #[derive(Clone)]
 pub struct DatabaseManager {
     db_path: PathBuf,
-    encryption_key: String,
+    _encryption_key: String,
     connection: Arc<Mutex<Option<Connection>>>,
 }
 
@@ -33,7 +33,7 @@ impl DatabaseManager {
 
         let manager = Self {
             db_path,
-            encryption_key,
+            _encryption_key: encryption_key,
             connection: Arc::new(Mutex::new(None)),
         };
 

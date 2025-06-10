@@ -341,16 +341,28 @@ export function TabsContent({ value, children, className = '' }: TabsContentProp
 }
 
 // Checkbox Component
-interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
   label?: string;
+  onCheckedChange?: (checked: boolean) => void;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function Checkbox({ label, className = '', ...props }: CheckboxProps) {
+export function Checkbox({ label, className = '', onCheckedChange, onChange, ...props }: CheckboxProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onCheckedChange) {
+      onCheckedChange(e.target.checked);
+    }
+    if (onChange) {
+      onChange(e);
+    }
+  };
+
   return (
     <label className="flex items-center gap-2 cursor-pointer">
       <input
         type="checkbox"
         className={`w-4 h-4 text-accent-primary bg-bg-primary border-border-default rounded focus:ring-accent-primary focus:ring-2 ${className}`.trim()}
+        onChange={handleChange}
         {...props}
       />
       {label && <span className="text-text-primary text-sm">{label}</span>}

@@ -237,7 +237,7 @@ mod tests {
     use rusqlite::Connection;
 
     #[test]
-    fn test_onboarding_migration() {
+    fn test_onboarding_migration() -> Result<()> {
         let conn = Connection::open_in_memory().unwrap();
         
         // Run onboarding migration
@@ -255,6 +255,7 @@ mod tests {
                 .unwrap();
             assert!(exists, "Table {} should exist", table);
         }
+        Ok(())
     }
 
     #[test]

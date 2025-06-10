@@ -173,9 +173,8 @@ export class CoordinateSystem {
   /**
    * Get visible world bounds for the current viewport
    * Enhanced for infinite canvas
-   */
-  getVisibleWorldBounds(margin = INFINITE_CANVAS_CONFIG.CULLING_MARGIN): Bounds {
-    const { zoom, pan, containerBounds } = this.viewport;
+   */  getVisibleWorldBounds(margin = INFINITE_CANVAS_CONFIG.CULLING_MARGIN): Bounds {
+    const { containerBounds } = this.viewport;
     
     // Calculate visible area in world coordinates
     const topLeftWorld = this.containerToWorld({ x: -margin, y: -margin });

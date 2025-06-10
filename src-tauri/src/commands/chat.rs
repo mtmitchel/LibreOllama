@@ -146,6 +146,7 @@ pub async fn get_database_stats() -> Result<serde_json::Value, String> {
     Ok(stats)
 }
 
+#[allow(dead_code)]
 #[tauri::command]
 pub async fn delete_session_v4(session_id_str: String) -> Result<bool, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;

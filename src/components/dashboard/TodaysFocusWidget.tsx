@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../ui/DropdownMenu';
 import { MoreHorizontal } from 'lucide-react';
 import { FocusItem } from '../../lib/mockData';

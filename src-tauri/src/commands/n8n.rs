@@ -30,7 +30,8 @@ impl From<N8nConnection> for N8nConnectionResponse {
 #[derive(Debug, Deserialize)]
 pub struct CreateN8nConnectionRequest {
     pub name: String,
-    pub description: Option<String>,
+    // TODO: Add description to N8nConnection model and operations
+    // pub description: Option<String>,
     pub base_url: String,
     pub api_key: Option<String>,
     pub webhook_url: Option<String>,
@@ -41,7 +42,8 @@ pub struct CreateN8nConnectionRequest {
 #[derive(Debug, Deserialize)]
 pub struct UpdateN8nConnectionRequest {
     pub name: Option<String>,
-    pub description: Option<String>,
+    // TODO: Add description to N8nConnection model and operations
+    // pub description: Option<String>,
     pub base_url: Option<String>,
     pub api_key: Option<String>,
     pub webhook_url: Option<String>,

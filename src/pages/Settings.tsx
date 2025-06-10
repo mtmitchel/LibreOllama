@@ -3,8 +3,6 @@ import {
   Cog,
   User,
   Bell,
-  Server,
-  Zap,
   Palette,
   Cpu,
   NotebookPen,
@@ -17,13 +15,8 @@ import {
   Download,
   RefreshCw,
   Trash2,
-  Settings as SettingsIcon,
-  Globe,
-  Database,
-  Key,
-  Check, // Added for toggle switch
 } from 'lucide-react';
-import { Card } from '../components/ui/Card';
+import { Card } from '../components/ui';
 import {
   Button,
   Input,

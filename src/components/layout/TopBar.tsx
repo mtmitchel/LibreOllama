@@ -39,7 +39,7 @@ export const TopBar = () => {
           title="Notifications"
         >
           <Bell size={18} />
-          <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+          <div className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></div>
         </button>
         <button 
           className="p-2 rounded-full hover:bg-bg-secondary transition-colors" 

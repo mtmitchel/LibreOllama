@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../components/ui/Card';
+import { Card } from '../components/ui';
 import { Plus, List, LayoutGrid, MoreHorizontal, CircleDashed, LoaderCircle, CheckCircle } from 'lucide-react';
 import { useHeader, HeaderProps, SecondaryAction } from '../contexts/HeaderContext';
 
@@ -258,7 +258,7 @@ export default function Tasks() {
                                 </span>
                               )}
                             </div>
-                            <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                            <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
                               {task.assignee}
                             </div>
                           </div>
@@ -309,7 +309,7 @@ export default function Tasks() {
                             Due: {task.dueDate}
                           </span>
                         )}
-                        <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                        <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
                           {task.assignee}
                         </div>
                         <button className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors">

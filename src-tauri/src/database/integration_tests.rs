@@ -5,10 +5,9 @@
 
 use anyhow::Result;
 use std::fs;
-use chrono::Utc;
 use uuid::Uuid;
 
-use crate::database::{self, models::*, operations::*, DatabaseManager};
+use crate::database::{self, DatabaseManager};
 use crate::commands::agents::{CreateAgentRequest, UpdateAgentRequest};
 
 /// Test suite for database initialization and health checks
@@ -213,7 +212,6 @@ mod chat_functionality_tests {
 /// Test suite for agent functionality end-to-end
 #[cfg(test)]
 mod agent_functionality_tests {
-    use super::*;
     use crate::commands::agents::*;
 
     #[tokio::test]
@@ -462,7 +460,6 @@ mod error_handling_tests {
 /// Test suite for performance and monitoring
 #[cfg(test)]
 mod performance_tests {
-    use super::*;
 
     #[tokio::test]
     async fn test_concurrent_operations() {

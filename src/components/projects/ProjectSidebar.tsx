@@ -1,6 +1,5 @@
 import React from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui';
+import { Card, Button } from '../ui';
 import { PanelLeftOpen, PanelLeftClose, MoreVertical } from 'lucide-react';
 
 interface Project {
@@ -34,19 +33,19 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'in-progress': return 'bg-blue-500';
-      case 'upcoming': return 'bg-gray-400';
-      default: return 'bg-gray-400';
+      case 'completed': return 'bg-success';
+      case 'in-progress': return 'bg-primary';
+      case 'upcoming': return 'bg-text-tertiary';
+      default: return 'bg-text-tertiary';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'border-red-500 text-red-600';
-      case 'medium': return 'border-yellow-500 text-yellow-600';
-      case 'low': return 'border-green-500 text-green-600';
-      default: return 'border-gray-500 text-gray-600';
+      case 'high': return 'border-error text-error';
+      case 'medium': return 'border-warning text-warning';
+      case 'low': return 'border-success text-success';
+      default: return 'border-text-tertiary text-text-tertiary';
     }
   };
 

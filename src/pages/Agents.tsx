@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card } from '../components/ui/Card';
+import { Card } from '../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle } from 'lucide-react';
 
@@ -121,8 +121,8 @@ const Agents: React.FC = () => {
                 <div
                   className={`w-2 h-2 rounded-full ${
                     agent.status === 'online'
-                      ? 'bg-green-500'
-                      : 'bg-gray-400'
+                      ? 'bg-success'
+                      : 'bg-text-tertiary'
                   }`}
                   title={agent.status === 'online' ? 'Online' : 'Offline'}
                 />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../ui/Card';
+import { Card } from '../ui';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../ui/DropdownMenu';
 import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate } from 'lucide-react';
 
