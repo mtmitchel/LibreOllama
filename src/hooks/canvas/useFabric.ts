@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react';
-import { Canvas as FabricCanvas, type CanvasOptions } from 'fabric';
+import { Canvas as FabricCanvas } from 'fabric';
 
 /**
  * Custom hook to manage the lifecycle of a Fabric.js canvas instance.
@@ -14,7 +14,7 @@ import { Canvas as FabricCanvas, type CanvasOptions } from 'fabric';
  */
 export const useFabric = (
   onLoad?: (canvas: FabricCanvas) => (() => void) | void,
-  canvasOptions?: Partial<CanvasOptions>
+  canvasOptions?: any
 ) => {
   const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const disposeRef = useRef<(() => void) | void | null>(null);
@@ -162,14 +162,7 @@ export const useFabric = (
       }
 
       // Create the Fabric canvas
-      fabricCanvasRef.current = new FabricCanvas(node, mergedOptions as CanvasOptions);
-
-      // FORCE white background after initialization - NEVER allow black canvas
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.backgroundColor = '#ffffff';
-        fabricCanvasRef.current.renderAll();
-        console.log('🎨 FORCED canvas background to white after initialization');
-      }
+      fabricCanvasRef.current = new FabricCanvas(node, mergedOptions);
 
       // Call onLoad callback if provided
       if (onLoad && fabricCanvasRef.current) {
@@ -196,14 +189,7 @@ export const useFabric = (
           const retryMergedOptions = { ...customDefaultOptions, ...canvasOptions };
           
           // Retry initialization
-          fabricCanvasRef.current = new FabricCanvas(node, retryMergedOptions as CanvasOptions);
-          
-          // FORCE white background after retry - NEVER allow black canvas
-          if (fabricCanvasRef.current) {
-            fabricCanvasRef.current.backgroundColor = '#ffffff';
-            fabricCanvasRef.current.renderAll();
-            console.log('🎨 FORCED canvas background to white after retry');
-          }
+          fabricCanvasRef.current = new FabricCanvas(node, retryMergedOptions);
           
           if (onLoad && fabricCanvasRef.current) {
             disposeRef.current = onLoad(fabricCanvasRef.current);

@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Point, Canvas as FabricCanvasInstance } from 'fabric'; // Renamed Canvas to FabricCanvasInstance to avoid naming conflict
+import { Point, Canvas as FabricCanvas } from 'fabric';
 import { useFabricCanvasStore, CanvasTool } from '../stores/fabricCanvasStore';
 import { useFabricElementCreation, DEFAULT_ELEMENT_CONFIGS } from '../lib/fabric-element-creation';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
@@ -75,7 +75,7 @@ const Canvas: React.FC<CanvasProps> = ({
   useCanvasSelectionEvents(fabricInstance);
 
   // Callback for useFabric hook when canvas is loaded
-  const handleCanvasLoad = useCallback((canvas: FabricCanvasInstance) => {
+  const handleCanvasLoad = useCallback((canvas: FabricCanvas) => {
     console.log('🎨 Canvas.tsx: Fabric canvas loaded via useFabric hook.');
     // setFabricInstance(canvas); // Local state removed, store is source of truth
     setFabricCanvas(canvas); // Update store
@@ -205,7 +205,18 @@ const Canvas: React.FC<CanvasProps> = ({
             if (fabricInstance && fabricInstance.getElement()) {
               fabricInstance.setDimensions({ width: newWidth, height: newHeight });
               fabricInstance.calcOffset(); // Recalculate canvas offsets for correct mouse interaction
-              fabricInstance.renderAll();
+              
+              // Use safe rendering with context validation
+              try {
+                const ctx = fabricInstance.getContext();
+                if (ctx && typeof ctx.clearRect === 'function') {
+                  fabricInstance.renderAll();
+                } else {
+                  console.warn('Canvas context not ready during resize, skipping render');
+                }
+              } catch (error) {
+                console.warn('Canvas resize render error:', error);
+              }
             }
           });
         }
@@ -548,11 +559,8 @@ const Canvas: React.FC<CanvasProps> = ({
         <div className="flex items-center justify-center w-full h-full">
           <canvas
             ref={fabricCanvasRefSetter} // Use the ref setter from useFabric
-            className="border border-gray-300 shadow-lg"
-            style={{ 
-              cursor: activeTool === 'select' ? 'default' : 'crosshair',
-              backgroundColor: '#ffffff' // FORCE white background - never black
-            }}
+            className="border border-gray-300 shadow-lg bg-white"
+            style={{ cursor: activeTool === 'select' ? 'default' : 'crosshair' }}
           />
         </div>
 
@@ -604,46 +612,33 @@ const Canvas: React.FC<CanvasProps> = ({
               fabricInstance,
               isCanvasReady,
               fabricObjects: fabricInstance?.getObjects?.()?.length || 0,
-              fabricObjectsDetails: fabricInstance?.getObjects?.().map((obj: any) => ({
-                type: obj.type,
-                left: obj.left,
-                top: obj.top,
-                width: obj.width,
-                height: obj.height,
-                fill: obj.fill,
-                stroke: obj.stroke,
-                visible: obj.visible,
-                opacity: obj.opacity,
-                text: obj.text || 'N/A'
-              })) || [],
-              storeElements: elements,
-              canvasDimensions: {
-                width: fabricInstance?.getWidth?.(),
-                height: fabricInstance?.getHeight?.()
-              }
+              fabricObjectsDetails: fabricInstance?.getObjects?.() || [],
+              storeElements: elements
             });
             
-            // Try to make all objects visible and move them to center
-            if (fabricInstance) {
-              const objects = fabricInstance.getObjects();
-              console.log('🔧 Making objects visible and repositioning...');
-              objects.forEach((obj: any, index: number) => {
-                obj.set({
-                  left: 100 + (index * 50),
-                  top: 100 + (index * 50),
-                  fill: '#FF0000', // Red color to make sure they're visible
-                  stroke: '#000000',
-                  strokeWidth: 2,
-                  opacity: 1,
-                  visible: true
-                });
-              });
-              fabricInstance.renderAll();
-              console.log('🔧 Objects repositioned and recolored');
-            }
+            // Also test element creation manually
+            const testElement = {
+              id: 'test-' + Date.now(),
+              type: 'text' as const,
+              x: 100,
+              y: 100,
+              width: 120,
+              height: 30,
+              content: 'Test Element',
+              color: '#000000',
+              backgroundColor: 'transparent',
+              fontSize: 'medium' as const,
+              textAlignment: 'left' as const,
+              isBold: false,
+              isItalic: false,
+              isLocked: false
+            };
+            console.log('🚀 Creating test element:', testElement);
+            const { addElement } = useFabricCanvasStore.getState();
+            addElement(testElement);
           }}
         >
-          Debug & Fix
+          Debug
         </button>
       </div>
     </div>

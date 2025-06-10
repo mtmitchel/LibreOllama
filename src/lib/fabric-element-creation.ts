@@ -9,20 +9,20 @@ import { FabricCanvasElement } from '../stores/fabricCanvasStore';
 // Returns static, high-contrast colors for elements to ensure visibility on a white canvas.
 const getHighContrastElementColors = (elementType: string) => {
   const defaults = {
-    color: '#1D1D1F', // Near-black for text and strokes
-    strokeColor: '#1D1D1F',
-    strokeWidth: 2,
+    color: '#FF0000', // Change to RED for debugging visibility
+    strokeColor: '#FF0000', // Change to RED
+    strokeWidth: 3, // Increase stroke width
   };
 
   switch (elementType) {
     case 'sticky-note':
-      return { ...defaults, backgroundColor: '#FFF8B7' }; // A pleasant, light yellow
+      return { ...defaults, backgroundColor: '#FFFF00' }; // Bright yellow
     case 'text':
       return { ...defaults, backgroundColor: 'transparent' };
     default:
-      return { ...defaults, backgroundColor: '#F0F0F0' }; // A light grey for shape fills
-  }
-};
+      return { ...defaults, backgroundColor: '#00FF00' }; // Bright green
+   }
+ };
 
 export interface CreateElementOptions {
   id?: string; // Added to allow passing an ID

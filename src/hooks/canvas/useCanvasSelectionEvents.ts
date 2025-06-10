@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Canvas as FabricCanvasInstance } from 'fabric';
+import { fabric } from 'fabric';
+type FabricCanvasInstance = fabric.Canvas;
 import { useFabricCanvasStore } from '../../stores/fabricCanvasStore'; // Adjust path as needed
 
 export const useCanvasSelectionEvents = (canvas: FabricCanvasInstance | null) => {

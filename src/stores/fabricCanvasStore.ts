@@ -680,8 +680,11 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
     },
     createFabricObject: async (element: FabricCanvasElement): Promise<any | null> => {
       try {
-        const fabricModule = await import('fabric');
-        const { Rect, Circle, IText, Line, Path, Triangle, Polygon, FabricImage } = fabricModule;
+        // Import Fabric.js classes directly
+        const { 
+          Rect, Circle, IText, Line, Path, Triangle, Polygon, FabricImage 
+        } = await import('fabric');
+        
         const plainElement = { ...element };
 
         let fabricObject: any = null;

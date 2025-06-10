@@ -77,8 +77,7 @@ export function getDefaultElementColors(type: string) {
   
   switch (type) {
     case 'text':
-      // Always use black for text to ensure visibility in all themes
-      return { color: '#000000', backgroundColor: 'transparent' };
+      return { color: colors.text, backgroundColor: 'transparent' };
     case 'rectangle':
     case 'square':
       return { color: colors.primary, backgroundColor: colors.primary, strokeColor: colors.border };
@@ -96,8 +95,7 @@ export function getDefaultElementColors(type: string) {
     case 'hexagon':
       return { color: colors.primary, backgroundColor: colors.primary, strokeColor: colors.border };
     case 'sticky-note':
-      // Always use black text on yellow background for sticky notes
-      return { color: '#000000', backgroundColor: '#FFFFE0' };
+      return { color: colors.text, backgroundColor: '#FFFFE0' };
     default:
       return { color: colors.text, backgroundColor: colors.background, strokeColor: colors.border };
   }
