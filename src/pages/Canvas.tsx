@@ -5,10 +5,9 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Canvas as FabricCanvas, Point } from 'fabric';
-import { useFabricCanvasStore } from '../stores/fabricCanvasStoreFixed';
+import { useFabricCanvasStore, CanvasTool } from '../stores/fabricCanvasStore';
 import { useFabricElementCreation, DEFAULT_ELEMENT_CONFIGS } from '../lib/fabric-element-creation';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
-import { CanvasTool } from '../stores/canvasStore';
 
 interface CanvasProps {
   className?: string;

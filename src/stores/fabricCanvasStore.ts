@@ -1,10 +1,41 @@
 /**
- * Fabric.js Canvas Store - Core Feature Migration (Fixed)
- * Replaces PIXI.js-specific state management with Fabric.js-compatible store
+ * Fabric.js Canvas Store - Production Ready
+ * Centralized state management for Fabric.js-based canvas functionality
  */
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+
+// Define tool types (migrated from canvasStore.ts)
+export type CanvasTool = 
+  | 'select' 
+  | 'text' 
+  | 'rectangle' 
+  | 'circle' 
+  | 'triangle' 
+  | 'square' 
+  | 'hexagon' 
+  | 'star' 
+  | 'line' 
+  | 'arrow' 
+  | 'pen' 
+  | 'eraser' 
+  | 'sticky-note'
+  | 'image'
+  | 'shapes';
+
+// Define saved canvas interface (migrated from canvasStore.ts)
+export interface SavedCanvas {
+  id: string;
+  name: string;
+  elements: FabricCanvasElement[];
+  createdAt: string;
+  updatedAt: string;
+  thumbnail?: string;
+}
+
+// Legacy CanvasElement interface for backward compatibility
+export interface CanvasElement extends FabricCanvasElement {}
 
 // Enhanced CanvasElement interface for Fabric.js compatibility
 export interface FabricCanvasElement {
@@ -40,7 +71,7 @@ interface FabricCanvasState {
   elements: Record<string, FabricCanvasElement>;
   selectedElementIds: string[];
   isEditingText: string | boolean | null;
-  activeTool: string;
+  activeTool: CanvasTool;
   
   // Canvas interaction state
   isDragging: boolean;
@@ -88,7 +119,7 @@ interface FabricCanvasState {
   
   // State management
   setIsEditingText: (id: string | boolean | null) => void;
-  setActiveTool: (tool: string) => void;
+  setActiveTool: (tool: CanvasTool) => void;
   setDragState: (isDragging: boolean, dragStartPos: { x: number; y: number } | null, dragStartElementPositions: Record<string, { x: number; y: number }> | null) => void;
   
   // Drawing state
@@ -353,7 +384,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
       });
     },
 
-    setActiveTool: (tool: string) => {
+    setActiveTool: (tool: CanvasTool) => {
       set((state) => {
         state.activeTool = tool;
       });

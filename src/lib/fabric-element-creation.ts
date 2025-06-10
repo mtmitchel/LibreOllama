@@ -3,7 +3,7 @@
  * Replaces PIXI.js-specific element creation with Fabric.js-compatible functions
  */
 
-import { FabricCanvasElement } from '../stores/fabricCanvasStoreFixed';
+import { FabricCanvasElement } from '../stores/fabricCanvasStore';
 
 export interface CreateElementOptions {
   type: FabricCanvasElement['type'] | 'star' | 'hexagon' | 'arrow';

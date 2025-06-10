@@ -3,7 +3,7 @@
  * Provides z-ordering, grouping, and layer-based operations
  */
 
-import { CanvasElement } from '@/stores/canvasStore';
+import { CanvasElement } from '@/stores/fabricCanvasStore';
 
 export interface Layer {
   id: string;

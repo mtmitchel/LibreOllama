@@ -23,7 +23,7 @@ import {
   Highlighter
 } from 'lucide-react';
 import { Card, Button } from '../ui';
-import { CanvasTool } from '../../stores/canvasStore';
+import { CanvasTool } from '../../stores/fabricCanvasStore';
 
 export interface ShapeType {
   id: string;

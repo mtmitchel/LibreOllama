@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { useCanvasStore, CanvasElement } from '@/stores/canvasStore';
+import { useFabricCanvasStore, CanvasElement } from '@/stores/fabricCanvasStoreFixed';
 
 interface UseCanvasEventsProps {
   canvasContainerRef: React.RefObject<HTMLDivElement>;
@@ -27,23 +27,21 @@ export const useCanvasEvents = ({
 }: UseCanvasEventsProps): UseCanvasEventsReturn => {  // Store refs for internal state that doesn't need to trigger re-renders
   const isPanning = useRef(false);
   const initialElementPositions = useRef<Record<string, { x: number; y: number }>>({});
-
   // Get store actions (these are stable function references from Zustand)
-  const addElement = useCanvasStore((state) => state.addElement);
-  const updateElement = useCanvasStore((state) => state.updateElement);
-  const deleteElement = useCanvasStore((state) => state.deleteElement);
-  const selectElement = useCanvasStore((state) => state.selectElement);
-  const clearSelection = useCanvasStore((state) => state.clearSelection);
-  const setPan = useCanvasStore((state) => state.setPan);
-  const setZoom = useCanvasStore((state) => state.setZoom);
-  const setDragState = useCanvasStore((state) => state.setDragState);
-  const setIsDrawing = useCanvasStore((state) => state.setIsDrawing);
-  const setPreviewState = useCanvasStore((state) => state.setPreviewState);
-  const setResizeState = useCanvasStore((state) => state.setResizeState);
-  const setIsEditingText = useCanvasStore((state) => state.setIsEditingText);
-  const setTextFormattingState = useCanvasStore((state) => state.setTextFormattingState);
-  const setTextSelectionState = useCanvasStore((state) => state.setTextSelectionState);
-  const addToHistory = useCanvasStore((state) => state.addToHistory);
+  const addElement = useFabricCanvasStore((state) => state.addElement);
+  const updateElement = useFabricCanvasStore((state) => state.updateElement);
+  const deleteElement = useFabricCanvasStore((state) => state.deleteElement);
+  const selectElement = useFabricCanvasStore((state) => state.selectElement);
+  const clearSelection = useFabricCanvasStore((state) => state.clearSelection);
+  const setPan = useFabricCanvasStore((state) => state.setPan);
+  const setZoom = useFabricCanvasStore((state) => state.setZoom);
+  const setDragState = useFabricCanvasStore((state) => state.setDragState);
+  const setIsDrawing = useFabricCanvasStore((state) => state.setIsDrawing);
+  const setPreviewState = useFabricCanvasStore((state) => state.setPreviewState);
+  const setIsEditingText = useFabricCanvasStore((state) => state.setIsEditingText);
+  const setTextFormattingState = useFabricCanvasStore((state) => state.setTextFormattingState);
+  const setTextSelectionState = useFabricCanvasStore((state) => state.setTextSelectionState);
+  const addToHistory = useFabricCanvasStore((state) => state.addToHistory);
 
   // Handle mouse down on individual elements (Pixi events)
   const handleElementMouseDown = useCallback((pixiEvent: any, elementId: string) => {
