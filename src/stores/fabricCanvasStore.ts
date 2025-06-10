@@ -63,6 +63,7 @@ export interface FabricCanvasElement {
   strokeWidth?: number;
   radius?: number; // For circles
   points?: { x: number; y: number }[]; // For lines and drawings
+  src?: string; // For images
   [key: string]: any;
 }
 
@@ -161,6 +162,11 @@ interface FabricCanvasState {
   updateObject: (obj: any, properties: Partial<any>) => void;
 }
 
+// Utility functions
+const validateCanvas = (canvas: any): boolean => {
+  return canvas && !canvas.isDisposed && canvas.getElement && typeof canvas.getElement === 'function';
+};
+
 export const useFabricCanvasStore = create<FabricCanvasState>()(
   immer((set, get) => ({
     // Initialize state
@@ -203,7 +209,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         state.elements[element.id] = element;
       });
       
-      // Create and add Fabric.js object if canvas is ready (outside of set to handle async properly)
+      // Create and add Fabric.js object if canvas is ready
       const state = get();
       const canvas = state.fabricCanvas;
       
@@ -213,33 +219,66 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         canvasObjects: canvas ? canvas.getObjects().length : 'N/A'
       });
       
-      if (canvas && state.isCanvasReady) {
+      if (canvas && state.isCanvasReady && validateCanvas(canvas)) {
         console.log(`🔧 Creating Fabric.js object for ${element.type} element:`, element.id);
         
-        // Handle the async creation
-        state.createFabricObject(element).then((fabricObject: any) => {
-          if (fabricObject && canvas) {
-            console.log(`🔧 Fabric object created successfully:`, fabricObject.type);
-            fabricObject.customId = element.id; // Store our custom ID
+        // Create mount tracking for the async operation
+        let isMounted = true;
+        
+        // Create the Fabric object asynchronously with mount checks
+        (async () => {
+          try {
+            // Check if still mounted before creating object
+            if (!isMounted) return;
             
-            // Use centralized addObject method
-            get().addObject(fabricObject);
+            const currentStoreState = get(); // Get a fresh state proxy for this operation
+            const fabricObject = await currentStoreState.createFabricObject(element);
             
-            console.log(`✅ Added ${element.type} to Fabric.js canvas:`, element.id, `Total objects: ${canvas.getObjects().length}`);
-            
-            // Update the element with fabric object reference
-            set((state) => {
-              if (state.elements[element.id]) {
-                state.elements[element.id].fabricObject = fabricObject;
-                state.elements[element.id].fabricId = fabricObject.id || element.id;
+            // Check if still mounted and canvas is still valid before adding
+            if (isMounted && validateCanvas(canvas) && fabricObject && currentStoreState.isCanvasReady) {
+              console.log(`🔧 Fabric object created successfully:`, fabricObject.type);
+              fabricObject.customId = element.id; // Store our custom ID
+              
+              // Add to canvas
+              canvas.add(fabricObject);
+              canvas.renderAll();
+              
+              console.log(`✅ Added ${element.type} to Fabric.js canvas:`, element.id, `Total objects: ${canvas.getObjects().length}`);
+              
+              // Update the element with fabric object reference only if still mounted
+              if (isMounted) {
+                set((state) => {
+                  if (state.elements[element.id]) {
+                    state.elements[element.id].fabricObject = fabricObject;
+                    state.elements[element.id].fabricId = fabricObject.id || element.id;
+                  }
+                });
+                
+                // Set as active object if it's the only selected element
+                const freshState = get();
+                if (freshState.selectedElementIds.length === 1 && freshState.selectedElementIds[0] === element.id) {
+                  canvas.setActiveObject(fabricObject);
+                  canvas.renderAll();
+                }
               }
-            });
-          } else {
-            console.error(`❌ Failed to create Fabric.js object for ${element.type}:`, element.id);
+            } else {
+              if (!isMounted) {
+                console.log(`🔧 Component unmounted during object creation for ${element.type}:`, element.id);
+              } else {
+                console.error(`❌ Failed to create Fabric.js object for ${element.type}:`, element.id);
+              }
+            }
+          } catch (error) {
+            if (isMounted) {
+              console.error('Failed to create and add Fabric.js object:', error);
+            }
           }
-        }).catch((error: any) => {
-          console.error('Failed to create and add Fabric.js object:', error);
-        });
+        })();
+        
+        // Return cleanup function to mark as unmounted
+        return () => { 
+          isMounted = false;
+        };
       } else {
         console.warn('Canvas not ready or not available for element creation:', {
           canvasReady: state.isCanvasReady,
@@ -475,27 +514,43 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
           previousElementsArray.forEach(el => newElementsState[el.id] = el);
           state.elements = newElementsState;
           
-          // Recreate Fabric.js objects
+          // Recreate Fabric.js objects with cleanup guards
           const canvas = state.fabricCanvas;
           if (canvas) {
             canvas.clear();
-            // Process elements asynchronously
+            
+            // Create AbortController for cleanup management
+            const controller = new AbortController();
+            
+            // Process elements asynchronously with abort signal
             Promise.all(
-              Object.values(newElementsState).map(element => 
-                get().createFabricObject(element)
-              )
-            ).then((fabricObjects) => {
-              fabricObjects.forEach((fabricObject, index) => {
-                if (fabricObject && canvas) {
-                  const element = Object.values(newElementsState)[index];
-                  fabricObject.customId = element.id;
-                  canvas.add(fabricObject);
+              Object.values(newElementsState).map(element => {
+                // Check if operation was aborted before processing
+                if (controller.signal.aborted) {
+                  return Promise.resolve(null);
                 }
-              });
-              get().requestRender(); // Use centralized rendering for better performance
+                return useFabricCanvasStore.getState().createFabricObject(element);
+              })
+            ).then((fabricObjects) => {
+              // Check if operation was aborted before applying results
+              if (!controller.signal.aborted && canvas && !canvas.isDisposed) {
+                fabricObjects.forEach((fabricObject, index) => {
+                  if (fabricObject && canvas && !controller.signal.aborted) {
+                    const element = Object.values(newElementsState)[index];
+                    fabricObject.customId = element.id;
+                    canvas.add(fabricObject);
+                  }
+                });
+                get().requestRender(); // Use centralized rendering for better performance
+              }
             }).catch(error => {
-              console.error('Error recreating fabric objects during undo:', error);
+              if (!controller.signal.aborted) {
+                console.error('Error recreating fabric objects during undo:', error);
+              }
             });
+            
+            // Cleanup function to abort operations if component unmounts
+            return () => controller.abort();
           }
         } else if (state.historyIndex === 0) {
           state.historyIndex = -1;
@@ -503,7 +558,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
           
           // Clear Fabric.js canvas
           const canvas = state.fabricCanvas;
-          if (canvas) {
+          if (canvas && !canvas.isDisposed) {
             canvas.clear();
             get().requestRender(); // Use centralized rendering
           }
@@ -520,27 +575,43 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
           nextElementsArray.forEach(el => newElementsState[el.id] = el);
           state.elements = newElementsState;
           
-          // Recreate Fabric.js objects
+          // Recreate Fabric.js objects with cleanup guards
           const canvas = state.fabricCanvas;
           if (canvas) {
             canvas.clear();
-            // Process elements asynchronously
+            
+            // Create AbortController for cleanup management
+            const controller = new AbortController();
+            
+            // Process elements asynchronously with abort signal
             Promise.all(
-              Object.values(newElementsState).map(element => 
-                get().createFabricObject(element)
-              )
-            ).then((fabricObjects) => {
-              fabricObjects.forEach((fabricObject, index) => {
-                if (fabricObject && canvas) {
-                  const element = Object.values(newElementsState)[index];
-                  fabricObject.customId = element.id;
-                  canvas.add(fabricObject);
+              Object.values(newElementsState).map(element => {
+                // Check if operation was aborted before processing
+                if (controller.signal.aborted) {
+                  return Promise.resolve(null);
                 }
-              });
-              get().requestRender(); // Use centralized rendering for better performance
+                return useFabricCanvasStore.getState().createFabricObject(element);
+              })
+            ).then((fabricObjects) => {
+              // Check if operation was aborted before applying results
+              if (!controller.signal.aborted && canvas && !canvas.isDisposed) {
+                fabricObjects.forEach((fabricObject, index) => {
+                  if (fabricObject && canvas && !controller.signal.aborted) {
+                    const element = Object.values(newElementsState)[index];
+                    fabricObject.customId = element.id;
+                    canvas.add(fabricObject);
+                  }
+                });
+                get().requestRender(); // Use centralized rendering for better performance
+              }
             }).catch(error => {
-              console.error('Error recreating fabric objects during redo:', error);
+              if (!controller.signal.aborted) {
+                console.error('Error recreating fabric objects during redo:', error);
+              }
             });
+            
+            // Cleanup function to abort operations if component unmounts
+            return () => controller.abort();
           }
         }
       });
@@ -604,83 +675,97 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         const objects = canvas.getObjects();
         return objects.find((obj: any) => obj.customId === elementId) || null;
       }
-      
+
       return null;
-    },// Utility functions for Fabric.js integration
+    },
     createFabricObject: async (element: FabricCanvasElement): Promise<any | null> => {
       try {
         const fabricModule = await import('fabric');
-        const { Rect, Circle, IText, Line, Path, Triangle } = fabricModule;
-        
+        const { Rect, Circle, IText, Line, Path, Triangle, Polygon, FabricImage } = fabricModule;
+        const plainElement = { ...element };
+
         let fabricObject: any = null;
-        
-        const commonProps = {
-          left: element.x,
-          top: element.y,
-          fill: element.backgroundColor || element.color || '#000000',
-          stroke: element.strokeColor || undefined,
-          strokeWidth: element.strokeWidth || 0,
+
+        const commonProps: any = {
+          left: plainElement.x,
+          top: plainElement.y,
+          fill: plainElement.backgroundColor || plainElement.color || '#000000',
+          stroke: plainElement.strokeColor || undefined,
+          strokeWidth: plainElement.strokeWidth || 0,
           selectable: true,
           moveable: true,
+          angle: plainElement.angle || 0,
+          opacity: plainElement.opacity === undefined ? 1 : plainElement.opacity,
         };
 
-        switch (element.type) {
+        switch (plainElement.type) {
           case 'rectangle':
           case 'square':
             fabricObject = new Rect({
               ...commonProps,
-              width: element.width || 100,
-              height: element.height || (element.type === 'square' ? element.width || 100 : 60),
+              width: plainElement.width || 100,
+              height: plainElement.height || (plainElement.type === 'square' ? plainElement.width || 100 : 60),
             });
             break;
 
           case 'circle':
             fabricObject = new Circle({
               ...commonProps,
-              radius: element.radius || (element.width || 80) / 2,
+              radius: plainElement.radius || (plainElement.width || 80) / 2,
             });
             break;
 
           case 'text':
           case 'sticky-note':
-            fabricObject = new IText(element.content || 'Text', {
+            // Ensure text color is always visible - prioritize explicit hex colors
+            const textColor = (() => {
+              if (plainElement.color && plainElement.color.startsWith('#')) {
+                return plainElement.color;
+              }
+              // Force black text for visibility in all themes
+              return '#000000';
+            })();
+            
+            fabricObject = new IText(plainElement.content || 'Text', {
               ...commonProps,
-              fontSize: element.fontSize === 'small' ? 12 : element.fontSize === 'large' ? 24 : 16,
-              fontWeight: element.isBold ? 'bold' : 'normal',
-              fontStyle: element.isItalic ? 'italic' : 'normal',
-              textAlign: element.textAlignment || 'left',
-              fill: element.color || '#000000',
-              backgroundColor: element.type === 'sticky-note' ? '#FFFFE0' : element.backgroundColor,
+              fontSize: plainElement.fontSize === 'small' ? 14 : plainElement.fontSize === 'large' ? 24 : 18,
+              fontWeight: plainElement.isBold ? 'bold' : 'normal',
+              fontStyle: plainElement.isItalic ? 'italic' : 'normal',
+              textAlign: plainElement.textAlignment || 'left',
+              fill: textColor,
+              backgroundColor: plainElement.type === 'sticky-note' ? '#FFFFE0' : plainElement.backgroundColor,
+              width: plainElement.width, 
+              height: plainElement.height, 
             });
             break;
 
           case 'line':
-            if (element.points && element.points.length >= 2) {
-              const startPoint = element.points[0];
-              const endPoint = element.points[element.points.length - 1];
+            if (plainElement.points && plainElement.points.length >= 2) {
+              const startPoint = plainElement.points[0];
+              const endPoint = plainElement.points[plainElement.points.length - 1];
               fabricObject = new Line([
                 startPoint.x, startPoint.y,
                 endPoint.x, endPoint.y
               ], {
                 ...commonProps,
-                stroke: element.strokeColor || element.color || '#000000',
-                strokeWidth: element.strokeWidth || 2,
-                fill: undefined,
+                stroke: plainElement.strokeColor || plainElement.color || '#000000',
+                strokeWidth: plainElement.strokeWidth || 2,
+                fill: undefined, 
               });
             }
             break;
 
           case 'drawing':
-            if (element.points && element.points.length > 1) {
-              const pathString = element.points.reduce((path, point, index) => {
+            if (plainElement.points && plainElement.points.length > 1) {
+              const pathString = plainElement.points.reduce((path, point, index) => {
                 return path + (index === 0 ? `M ${point.x} ${point.y}` : ` L ${point.x} ${point.y}`);
               }, '');
-              
+
               fabricObject = new Path(pathString, {
                 ...commonProps,
-                stroke: element.strokeColor || element.color || '#000000',
-                strokeWidth: element.strokeWidth || 2,
-                fill: undefined,
+                stroke: plainElement.strokeColor || plainElement.color || '#000000',
+                strokeWidth: plainElement.strokeWidth || 2,
+                fill: undefined, 
               });
             }
             break;
@@ -688,94 +773,117 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
           case 'triangle':
             fabricObject = new Triangle({
               ...commonProps,
-              width: element.width || 80,
-              height: element.height || 80,
+              width: plainElement.width || 80,
+              height: plainElement.height || 80,
             });
             break;
 
           case 'star':
-            // Create a star using Polygon
             const numPoints = 5;
-            const outerRadius = (element.width || 80) / 2;
+            const outerRadius = (plainElement.width || 80) / 2;
             const innerRadius = outerRadius / 2;
-            const center = { x: 0, y: 0 };
-            const angle = Math.PI / numPoints;
-            const starPoints = [];
-
+            const starPoints: {x: number, y: number}[] = [];
             for (let i = 0; i < numPoints * 2; i++) {
               const radius = i % 2 === 0 ? outerRadius : innerRadius;
-              const x = center.x + radius * Math.sin(i * angle);
-              const y = center.y - radius * Math.cos(i * angle);
-              starPoints.push({ x, y });
+              const angle = (i * Math.PI) / numPoints - Math.PI / 2; 
+              starPoints.push({
+                x: radius * Math.cos(angle),
+                y: radius * Math.sin(angle),
+              });
             }
-
-            fabricObject = new fabricModule.Polygon(starPoints, {
+            fabricObject = new Polygon(starPoints, {
               ...commonProps,
-              width: element.width || 80,
-              height: element.height || 80,
             });
+            fabricObject.set({ left: plainElement.x + outerRadius, top: plainElement.y + outerRadius });
             break;
 
           case 'hexagon':
-            // Create a hexagon using Polygon
-            const hexRadius = (element.width || 80) / 2;
-            const hexPoints = [];
+            const hexRadius = (plainElement.width || 80) / 2;
+            const hexPoints: {x: number, y: number}[] = [];
             for (let i = 0; i < 6; i++) {
-              const x = hexRadius * Math.cos((i * 2 * Math.PI) / 6);
-              const y = hexRadius * Math.sin((i * 2 * Math.PI) / 6);
-              hexPoints.push({ x, y });
+              hexPoints.push({
+                x: hexRadius * Math.cos((i * Math.PI) / 3),
+                y: hexRadius * Math.sin((i * Math.PI) / 3),
+              });
             }
-
-            fabricObject = new fabricModule.Polygon(hexPoints, {
+            fabricObject = new Polygon(hexPoints, {
               ...commonProps,
-              width: element.width || 80,
-              height: element.height || 80,
             });
+            fabricObject.set({ left: plainElement.x + hexRadius, top: plainElement.y + hexRadius });
             break;
 
           case 'arrow':
-            // Create an arrow shape using Path
-            const arrowWidth = element.width || 100;
-            const arrowHeight = element.height || 40;
-            const headSize = arrowHeight * 0.7;
-            const shaftHeight = arrowHeight * 0.4;
-            const shaftY = (arrowHeight - shaftHeight) / 2;
+            const arrowWidth = plainElement.width || 100;
+            const arrowHeight = plainElement.height || 40; 
+            const headLength = Math.min(arrowHeight * 0.5, arrowWidth * 0.3); 
+            const shaftWidth = arrowHeight * 0.4; 
 
-            const arrowPath = `
-              M 0 ${shaftY}
-              L ${arrowWidth - headSize} ${shaftY}
-              L ${arrowWidth - headSize} 0
-              L ${arrowWidth} ${arrowHeight / 2}
-              L ${arrowWidth - headSize} ${arrowHeight}
-              L ${arrowWidth - headSize} ${shaftY + shaftHeight}
-              L 0 ${shaftY + shaftHeight}
-              Z
-            `;
+            const arrowPath = [
+                `M 0 ${ (arrowHeight - shaftWidth) / 2}`,
+                `L ${arrowWidth - headLength} ${(arrowHeight - shaftWidth) / 2}`,
+                `L ${arrowWidth - headLength} 0`,
+                `L ${arrowWidth} ${arrowHeight / 2}`,
+                `L ${arrowWidth - headLength} ${arrowHeight}`,
+                `L ${arrowWidth - headLength} ${(arrowHeight + shaftWidth) / 2}`,
+                `L 0 ${(arrowHeight + shaftWidth) / 2}`,
+                `Z`
+            ].join(' ');
 
             fabricObject = new Path(arrowPath, {
               ...commonProps,
-              width: arrowWidth,
-              height: arrowHeight,
             });
             break;
 
+          case 'image':
+            if (plainElement.src) {
+              const img = await FabricImage.fromURL(plainElement.src);
+              img.set({
+                ...commonProps,
+                left: plainElement.x, 
+                top: plainElement.y,
+              });
+
+              if (plainElement.width && plainElement.height) {
+                const scaleX = plainElement.width / (img.width || 1);
+                const scaleY = plainElement.height / (img.height || 1);
+                img.scaleX = scaleX;
+                img.scaleY = scaleY;
+              } else if (img.width && img.height) { 
+                // This line was trying to modify the 'element' (now 'plainElement') which is a copy.
+                // If the original element in the store needs updating, that's a separate concern.
+                // For now, we'll ensure the fabricObject uses the image's dimensions if not provided.
+                // plainElement.width = img.width; // Avoid modifying plainElement here if it's just for fabric creation
+                // plainElement.height = img.height;
+              }
+              fabricObject = img;
+            }
+            break;
+
           default:
-            console.warn(`Fabric.js: Unsupported element type: ${element.type}`);
+            console.warn(`Fabric.js: Unsupported element type: ${plainElement.type}`);
             return null;
         }
 
         if (fabricObject) {
-          fabricObject.customId = element.id;
-          fabricObject.selectable = !element.isLocked;
-          fabricObject.moveable = !element.isLocked;
+          fabricObject.customId = plainElement.id;
+          fabricObject.selectable = !plainElement.isLocked;
+          fabricObject.moveable = !plainElement.isLocked;
+          Object.keys(plainElement).forEach(key => {
+            if (!(key in commonProps) && key !== 'type' && key !== 'id' && fabricObject.get(key) !== undefined && plainElement[key] !== undefined) {
+              try {
+                fabricObject.set(key, plainElement[key]);
+              } catch (e) { /* ignore */ }
+            }
+          });
         }
 
         return fabricObject;
       } catch (error) {
-        console.error('Failed to create Fabric.js object:', error);
+        console.error(`Failed to create Fabric.js object for element type ${element?.type} (ID: ${element?.id}):`, error);
         return null;
       }
-    },    updateFabricObject: (elementId: string, updates: Partial<FabricCanvasElement>) => {
+    },
+    updateFabricObject: (elementId: string, updates: Partial<FabricCanvasElement>) => {
       const state = get();
       const fabricObject = get().getFabricObjectById(elementId);
       const canvas = state.fabricCanvas;
@@ -800,6 +908,9 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         if (fabricObject.type === 'i-text' && updates.content !== undefined) {
           fabricObject.set('text', updates.content);
         }
+
+        // Mark the object as dirty to ensure its cache is regenerated
+        fabricObject.dirty = true;
 
         // CRITICAL: Update coordinates after any property changes to prevent desynchronization
         fabricObject.setCoords();
