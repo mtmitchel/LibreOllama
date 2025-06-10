@@ -123,6 +123,11 @@ interface FabricCanvasState {
   // Utility functions for Fabric.js integration
   createFabricObject: (element: FabricCanvasElement) => any | null;
   updateFabricObject: (elementId: string, updates: Partial<FabricCanvasElement>) => void;
+  
+  // Centralized rendering management
+  requestRender: () => void;
+  addObject: (obj: any) => void;
+  updateObject: (obj: any, properties: Partial<any>) => void;
 }
 
 export const useFabricCanvasStore = create<FabricCanvasState>()(
@@ -185,8 +190,9 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
           if (fabricObject && canvas) {
             console.log(`🔧 Fabric object created successfully:`, fabricObject.type);
             fabricObject.customId = element.id; // Store our custom ID
-            canvas.add(fabricObject);
-            canvas.renderAll();
+            
+            // Use centralized addObject method
+            get().addObject(fabricObject);
             
             console.log(`✅ Added ${element.type} to Fabric.js canvas:`, element.id, `Total objects: ${canvas.getObjects().length}`);
             
@@ -329,7 +335,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         const canvas = state.fabricCanvas;
         if (canvas) {
           canvas.discardActiveObject();
-          canvas.renderAll();
+          get().requestRender(); // Use centralized rendering
         }
       });
     },
@@ -401,7 +407,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         const canvas = state.fabricCanvas;
         if (canvas) {
           canvas.setZoom(zoom);
-          canvas.renderAll();
+          get().requestRender(); // Use centralized rendering
         }
       });
     },
@@ -415,7 +421,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
         if (canvas && canvas.viewportTransform) {
           canvas.viewportTransform[4] = pan.x;
           canvas.viewportTransform[5] = pan.y;
-          canvas.renderAll();
+          get().requestRender(); // Use centralized rendering
         }
       });
     },
@@ -455,7 +461,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
                   canvas.add(fabricObject);
                 }
               });
-              canvas.renderAll();
+              get().requestRender(); // Use centralized rendering for better performance
             }).catch(error => {
               console.error('Error recreating fabric objects during undo:', error);
             });
@@ -468,7 +474,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
           const canvas = state.fabricCanvas;
           if (canvas) {
             canvas.clear();
-            canvas.renderAll();
+            get().requestRender(); // Use centralized rendering
           }
         }
       });
@@ -500,7 +506,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
                   canvas.add(fabricObject);
                 }
               });
-              canvas.renderAll();
+              get().requestRender(); // Use centralized rendering for better performance
             }).catch(error => {
               console.error('Error recreating fabric objects during redo:', error);
             });
@@ -551,7 +557,7 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
       
       if (element?.fabricObject && canvas) {
         canvas.remove(element.fabricObject);
-        canvas.renderAll();
+        get().requestRender(); // Use centralized rendering
       }
     },    getFabricObjectById: (elementId: string): any | null => {
       const state = get();
@@ -764,8 +770,37 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
           fabricObject.set('text', updates.content);
         }
 
-        canvas.renderAll();
+        // CRITICAL: Update coordinates after any property changes to prevent desynchronization
+        fabricObject.setCoords();
+        
+        // Use optimized render method for better performance
+        canvas.requestRenderAll();
       }
+    },
+
+    // Centralized rendering management for optimal performance
+    requestRender: () => {
+      const { fabricCanvas } = get();
+      if (fabricCanvas) {
+        fabricCanvas.requestRenderAll();
+      }
+    },
+
+    // Centralized object addition with automatic rendering
+    addObject: (obj: any) => {
+      const { fabricCanvas, requestRender } = get();
+      if (fabricCanvas) {
+        fabricCanvas.add(obj);
+        requestRender(); // Use optimized render request
+      }
+    },
+
+    // Centralized object updates with coordinate synchronization
+    updateObject: (obj: any, properties: Partial<any>) => {
+      const { requestRender } = get();
+      obj.set(properties);
+      obj.setCoords(); // IMPORTANT: Update coordinates on change
+      requestRender();
     },
   }))
 );
