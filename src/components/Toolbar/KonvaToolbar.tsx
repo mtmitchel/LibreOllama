@@ -3,7 +3,6 @@ import React from 'react';
 import Konva from 'konva'; // Import Konva for Stage type if needed by zoom functions
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
-import { getStickyNoteColors } from '../../styles/designSystem';
 import { 
   MousePointer2, 
   Type, 
@@ -26,14 +25,12 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  RotateCw,
   ArrowRight,
   Image,
-  Palette,
   Hand
 } from 'lucide-react';
 import './KonvaToolbar.css';
-import ColorPicker from '../Canvas/ColorPicker';
+import ColorPicker from '../canvas/ColorPicker';
 
 const tools = [
   { id: 'select', name: 'Select', icon: MousePointer2 },

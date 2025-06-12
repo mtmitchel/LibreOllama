@@ -1,6 +1,6 @@
 // Test component to verify Konva canvas integration
 import React from 'react';
-import { useKonvaCanvasStore } from '../stores/konvaCanvasStore';
+import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 
 export const KonvaDebugPanel: React.FC = () => {
   const { elements, selectedTool, selectedElementId, addElement } = useKonvaCanvasStore();

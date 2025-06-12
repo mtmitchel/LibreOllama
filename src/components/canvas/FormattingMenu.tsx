@@ -1,5 +1,5 @@
 // src/components/canvas/FormattingMenu.tsx
-import React from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { designSystem } from '../../styles/designSystem'; // Assuming you want to use design system tokens
 import { RichTextSegment } from '../../stores/konvaCanvasStore'; // Import for format type
@@ -17,6 +17,42 @@ export const FormattingMenu: React.FC<FormattingMenuProps> = ({
   onFormat,
   onClose 
 }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Prevent menu from closing when clicking inside
+  const handleMenuClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
+    // Add delay to prevent immediate closure
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
+
+  const handleFormatClick = useCallback((format: Partial<RichTextSegment>) => {
+    // Apply format without closing menu immediately
+    onFormat(format);
+    
+    // Optional: Close menu after a delay
+    setTimeout(() => {
+      onClose();
+    }, 150);
+  }, [onFormat, onClose]);
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
     left: `${position.x}px`,
@@ -87,8 +123,23 @@ export const FormattingMenu: React.FC<FormattingMenuProps> = ({
   };
 
   return createPortal(
-    <div style={menuStyle} onMouseDown={(e) => e.stopPropagation()} /* Prevent canvas interaction */ >
-      <button onClick={onClose} style={closeButtonStyle} title="Close Menu">✕</button>
+    <div 
+      ref={menuRef}
+      style={menuStyle} 
+      onMouseDown={handleMenuClick}
+      onClick={handleMenuClick}
+    >
+      <button 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }} 
+        style={closeButtonStyle} 
+        title="Close Menu"
+      >
+        ✕
+      </button>
       {/* Selected text preview */}
       <div style={selectedTextStyle} title={selectedText}>
         Selected: "{selectedText.length > 25 ? selectedText.substring(0, 25) + '...' : selectedText}"
@@ -96,17 +147,80 @@ export const FormattingMenu: React.FC<FormattingMenuProps> = ({
       
       {/* Text formatting buttons */}
       <div style={buttonRowStyle}>
-        <button style={buttonStyle} onClick={() => onFormat({ fontStyle: 'bold' })} title="Bold"><b>B</b></button>
-        <button style={buttonStyle} onClick={() => onFormat({ fontStyle: 'italic' })} title="Italic"><i>I</i></button>
-        <button style={buttonStyle} onClick={() => onFormat({ textDecoration: 'underline' })} title="Underline"><u>U</u></button>
-        <button style={buttonStyle} onClick={() => onFormat({ textDecoration: 'line-through' })} title="Strikethrough"><s>S</s></button>
+        <button 
+          style={buttonStyle} 
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFormatClick({ fontStyle: 'bold' });
+          }} 
+          title="Bold"
+        >
+          <b>B</b>
+        </button>
+        <button 
+          style={buttonStyle} 
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFormatClick({ fontStyle: 'italic' });
+          }} 
+          title="Italic"
+        >
+          <i>I</i>
+        </button>
+        <button 
+          style={buttonStyle} 
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFormatClick({ textDecoration: 'underline' });
+          }} 
+          title="Underline"
+        >
+          <u>U</u>
+        </button>
+        <button 
+          style={buttonStyle} 
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFormatClick({ textDecoration: 'line-through' });
+          }} 
+          title="Strikethrough"
+        >
+          <s>S</s>
+        </button>
       </div>
       
       {/* Font size and color */}
       <div style={buttonRowStyle}>
         <select 
           style={selectStyle} 
-          onChange={(e) => onFormat({ fontSize: parseInt(e.target.value) })} 
+          onChange={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFormatClick({ fontSize: parseInt(e.target.value) });
+          }} 
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           defaultValue={16}
           title="Font Size"
         >
@@ -119,7 +233,14 @@ export const FormattingMenu: React.FC<FormattingMenuProps> = ({
         </select>
         <input 
           type="color" 
-          onChange={(e) => onFormat({ fill: e.target.value })} 
+          onChange={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFormatClick({ fill: e.target.value });
+          }} 
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           style={{ ...buttonStyle, width: '40px', height: 'auto', padding: '2px' }} 
           title="Text Color"
           defaultValue={designSystem.colors.secondary[700]} // Default to standard dark gray text color

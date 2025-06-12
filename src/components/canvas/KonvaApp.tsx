@@ -65,8 +65,7 @@ const KonvaApp: React.FC = () => {
           background: `linear-gradient(135deg, ${designSystem.colors.secondary[50]} 0%, ${designSystem.colors.secondary[100]} 100%)`,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
-        }}
+          justifyContent: 'center'        }}
       >        <KonvaCanvas
           width={canvasSize.width}
           height={canvasSize.height}
@@ -76,9 +75,8 @@ const KonvaApp: React.FC = () => {
           panZoomState={panZoomState}
           stageRef={stageRef}
           onWheelHandler={handleWheel}
-          onTouchMoveHandler={handleTouchMove} // Pass down touch handlers
-          onTouchEndHandler={handleTouchEnd}   // Pass down touch handlers
-        />
+          onTouchMoveHandler={handleTouchMove}
+          onTouchEndHandler={handleTouchEnd}        />
       </div>
       
       {selectedElementId && (

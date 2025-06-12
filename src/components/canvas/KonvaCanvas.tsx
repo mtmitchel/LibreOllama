@@ -1,14 +1,12 @@
 // src/components/Canvas/KonvaCanvas.tsx
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Stage, Layer, Transformer, Rect, Circle, Text, Line, Star, Group, Image } from 'react-konva';
-import { Html } from 'react-konva-utils';
+import { Stage, Layer, Transformer, Rect, Circle, Line, Star } from 'react-konva';
 import Konva from 'konva';
 import { useKonvaCanvasStore, CanvasElement, RichTextSegment } from '../../stores/konvaCanvasStore';
 import RichTextRenderer, { RichTextElementType } from './RichTextRenderer';
-import SelectableText from './SelectableText';
+import UnifiedTextElement from './UnifiedTextElement';
 import ImageElement from './ImageElement';
 import { designSystem } from '../../styles/designSystem';
-import { useImage } from 'react-konva';
 
 // CanvasElement and RichTextSegment are now imported from the store.
 // Local PanZoomState can remain if specific, or be imported if common.
@@ -43,13 +41,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // Get elements from store
   const elementArray = Object.values(elements);
 
-  // Debug logging
-  console.log('🔍 KonvaCanvas Debug:', {
-    elementsCount: elementArray.length,
-    selectedTool,
-    selectedElementId,
-    elements: elementArray
-  });
+  // Performance optimization: removed excessive logging
 
   // Canvas initialization check
   useEffect(() => {
@@ -86,14 +78,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // Add virtualization for large numbers of elements
   const MAX_VISIBLE_ELEMENTS = 1000;
 
-  // Handlers for inline text editing
+  // Handlers for inline text editing - simplified since UnifiedTextElement handles most of this
   const handleTextDoubleClick = useCallback((elementId: string) => {
     setEditingTextId(elementId);
   }, [setEditingTextId]);
 
   const handleTextUpdate = useCallback((elementId: string, newText: string) => {
     updateElementText(elementId, newText);
-    // setEditingTextId(null); // SelectableText's onBlur/onKeyDown already calls onEditingCancel which does this
   }, [updateElementText]);
 
   const handleEditingCancel = useCallback(() => {
@@ -109,29 +100,58 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       return elementArray;
     }
     
-    // Implement viewport culling here
-    return elementArray.slice(0, MAX_VISIBLE_ELEMENTS);
-  }, [elementArray]);
+    // Implement viewport culling for better performance
+    const viewportBounds = {
+      x: -panZoomState.position.x / panZoomState.scale,
+      y: -panZoomState.position.y / panZoomState.scale,
+      width: (stageRef.current?.width() || window.innerWidth) / panZoomState.scale,
+      height: (stageRef.current?.height() || window.innerHeight) / panZoomState.scale
+    };
+    
+    return elementArray.filter(element => {
+      // Always include selected elements and text elements being edited
+      if (element.id === selectedElementId || 
+          (editingTextId === element.id && (element.type === 'text' || element.type === 'sticky-note'))) {
+        return true;
+      }
+      
+      // Check if element intersects with viewport
+      const elementBounds = {
+        x: element.x,
+        y: element.y,
+        width: element.width || 100,
+        height: element.height || 100
+      };
+      
+      return !(elementBounds.x + elementBounds.width < viewportBounds.x ||
+               elementBounds.x > viewportBounds.x + viewportBounds.width ||
+               elementBounds.y + elementBounds.height < viewportBounds.y ||
+               elementBounds.y > viewportBounds.y + viewportBounds.height);
+    }).slice(0, MAX_VISIBLE_ELEMENTS);
+  }, [elementArray, panZoomState, selectedElementId, editingTextId]);
 
-  const handleMouseDown = useCallback((e: any) => {
+  const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     console.log('🎯 Mouse down - tool:', selectedTool, 'target:', e.target.getClassName());
     
     if (selectedTool === 'pen') {
       setIsDrawing(true);
-      const pos = e.target.getStage().getPointerPosition();
+      const stage = e.target.getStage();
+      const pos = stage?.getPointerPosition();
+      if (!pos) return;
       setCurrentPath([pos.x, pos.y]);
     }
   }, [selectedTool]);
 
-  const handleMouseMove = useCallback((e: any) => {
+  const handleMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!isDrawing || selectedTool !== 'pen') return;
     
     const stage = e.target.getStage();
-    const point = stage.getPointerPosition();
+    const point = stage?.getPointerPosition();
+    if (!point) return;
     setCurrentPath(prev => [...prev, point.x, point.y]);
   }, [isDrawing, selectedTool]);
 
-  const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleMouseUp = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
     // Pen tool is special, it draws on mouse move and finalizes on mouse up.
     if (selectedTool === 'pen') {
       if (isDrawing && currentPath.length > 2) { // Ensure there's something to draw
@@ -212,7 +232,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   }, [isDrawing, selectedTool, currentPath, addElement, setSelectedElement]);
 
   // Canvas click handler - ONLY handles selection/deselection
-  const handleStageClick = useCallback((e: any) => {
+  const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     // Ignore if this is part of a double-click sequence
     if (e.evt?.detail > 1) {
       console.log('🎯 Ignoring stage click - part of double-click sequence');
@@ -245,7 +265,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     console.log('🎯 Clicked on existing element');
   }, [setSelectedElement]);
 
-  const handleElementClick = useCallback((e: any, element: CanvasElement) => {
+  const handleElementClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => {
     // Ignore if this is part of a double-click sequence
     if (e.evt?.detail > 1) {
       return;
@@ -259,14 +279,14 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
 
 
-  const handleDragEnd = useCallback((e: any, elementId: string) => {
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
     const newX = e.target.x();
     const newY = e.target.y();
     
     updateElement(elementId, { x: newX, y: newY });
   }, [updateElement]);
 
-  const handleTransformEnd = useCallback((e: any, elementId: string) => {
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>, elementId: string) => {
     const node = e.target;
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
@@ -330,12 +350,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   
   // Render individual canvas elements based on their type
   const renderElement = useCallback((element: CanvasElement): React.ReactNode => {
+    console.log('🎨 Rendering element:', element.type, element.id, element);
+    
     const isSelected = element.id === selectedElementId;
     const isEditing = editingTextId === element.id;
 
-    // Common props for Konva shapes, passed to SelectableText or RichTextRenderer as well
+    // Common props for Konva shapes, passed to UnifiedTextElement or RichTextRenderer as well
     const konvaElementProps = {
-      key: element.id,
       id: element.id,
       x: element.x,
       y: element.y,
@@ -356,6 +377,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       case 'rectangle':
         return (
           <Rect
+            key={element.id}
             {...konvaElementProps}
             width={element.width}
             height={element.height}
@@ -366,6 +388,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       case 'circle':
         return (
           <Circle
+            key={element.id}
             {...konvaElementProps}
             radius={element.radius}
             fill={element.fill || designSystem.colors.secondary[100]}
@@ -373,26 +396,52 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         );
       case 'text':
         return (
-          <SelectableText
-            element={element as CanvasElement & { type: 'text', text?: string, fontSize?: number, x: number, y: number, id: string }}
-            onFormatChange={handleFormatChange}
-            {...konvaElementProps}
-            onDblClick={(e) => {
-              e.cancelBubble = true;
-              handleTextDoubleClick(element.id);
+          <UnifiedTextElement
+            key={element.id}
+            element={{
+              ...element,
+              type: 'text',
+              text: element.text || ''
             }}
-            isEditing={editingTextId === element.id}
-            onTextUpdate={handleTextUpdate}
-            onEditingCancel={handleEditingCancel}
+            isSelected={isSelected}
+            onUpdate={updateElement}
+            onSelect={setSelectedElement}
+            konvaProps={{
+              draggable: !isEditing && (selectedTool === 'select' || selectedTool === 'pan'),
+              onClick: (e: Konva.KonvaEventObject<MouseEvent>) => handleElementClick(e, element),
+              onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => handleDragEnd(e, element.id),
+              onTransformEnd: (e: Konva.KonvaEventObject<Event>) => handleTransformEnd(e, element.id)
+            }}
+          />
+        );
+      case 'sticky-note':
+        return (
+          <UnifiedTextElement
+            key={element.id}
+            element={{
+              ...element,
+              type: 'sticky-note',
+              text: element.text || ''
+            }}
+            isSelected={isSelected}
+            onUpdate={updateElement}
+            onSelect={setSelectedElement}
+            konvaProps={{
+              draggable: !isEditing && (selectedTool === 'select' || selectedTool === 'pan'),
+              onClick: (e: Konva.KonvaEventObject<MouseEvent>) => handleElementClick(e, element),
+              onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => handleDragEnd(e, element.id),
+              onTransformEnd: (e: Konva.KonvaEventObject<Event>) => handleTransformEnd(e, element.id)
+            }}
           />
         );
       case 'rich-text':
         return (
           <RichTextRenderer
+            key={element.id}
             element={element as RichTextElementType}
             {...konvaElementProps}
             onFormatChange={handleFormatChange}
-            onDblClick={(e) => {
+            onDblClick={(e: any) => {
               e.cancelBubble = true;
               e.evt?.stopPropagation();
               handleTextDoubleClick(element.id);
@@ -407,6 +456,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       case 'pen':
         return (
           <Line
+            key={element.id}
             {...konvaElementProps}
             points={element.points}
             stroke={element.stroke || (element.type === 'pen' ? designSystem.colors.secondary[800] : designSystem.canvasStyles.border)}
@@ -426,6 +476,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       case 'star':
         return (
           <Star
+            key={element.id}
             {...konvaElementProps}
             numPoints={element.sides || 5}
             innerRadius={element.innerRadius || (element.width || 100) / 4}
@@ -438,6 +489,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       case 'triangle':
         return (
           <Line 
+            key={element.id}
             {...konvaElementProps}
             points={[
               0, -(element.height || 60) / 2, 
@@ -449,69 +501,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             stroke={element.stroke || designSystem.colors.success[500]} // Assuming success[500] for both fill and stroke if not specified
             strokeWidth={element.strokeWidth || 2}
           />
-        );
-      case 'sticky-note':
-        return (
-          <Group {...konvaElementProps}>
-            <Rect
-              width={element.width || 150}
-              height={element.height || 100}
-              fill={element.backgroundColor || designSystem.colors.stickyNote.yellow}
-              shadowColor={designSystem.colors.secondary[500]} // Using a mid-gray for shadow color
-              shadowBlur={5}
-              shadowOffsetX={2}
-              shadowOffsetY={2}
-              cornerRadius={designSystem.borderRadius.sm}
-            />
-            {isEditing && editingTextId === element.id ? (
-              <Html>
-                <textarea
-                  style={{
-                    position: 'absolute',
-                    left: designSystem.spacing.sm,
-                    top: designSystem.spacing.sm,
-                    width: `${(element.width || 150) - designSystem.spacing.md}px`,
-                    height: `${(element.height || 100) - designSystem.spacing.md}px`,
-                    fontSize: `${element.fontSize || designSystem.typography.fontSize.sm}px`,
-                    fontFamily: element.fontFamily || designSystem.typography.fontFamily.sans,
-                    color: element.textColor || designSystem.colors.secondary[700],
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    resize: 'none',
-                    padding: '4px'
-                  }}
-                  defaultValue={element.text}
-                  autoFocus
-                  onBlur={(e) => {
-                    updateElement(element.id, { text: e.target.value });
-                    setEditingTextId(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setEditingTextId(null);
-                    }
-                  }}
-                />
-              </Html>
-            ) : (
-              <Text
-                text={element.text || 'Double-click to edit'} // Simple text for sticky note content
-                fontSize={element.fontSize || designSystem.typography.fontSize.sm}
-                fontFamily={element.fontFamily || designSystem.typography.fontFamily.sans}
-                fill={element.textColor || designSystem.colors.secondary[700]} // Default text color
-                width={element.width ? element.width - designSystem.spacing.md : 150 - designSystem.spacing.md}
-                height={element.height ? element.height - designSystem.spacing.md : 100 - designSystem.spacing.md}
-                padding={designSystem.spacing.sm}
-                align="left"
-                verticalAlign="top"
-                onDblClick={(e) => {
-                  e.cancelBubble = true;
-                  setEditingTextId(element.id);
-                }}
-              />
-            )}
-          </Group>
         );
       case 'image':
         return (
@@ -602,10 +591,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           backgroundColor: designSystem.canvasStyles.background,
           cursor: selectedTool === 'pan' ? 'grab' : 'default'
         }}
-      >
-        <Layer ref={layerRef}>
-          {visibleElements.map(element => renderElement(element))}
-          {isDrawing && currentPath.length > 0 && (
+      ><Layer ref={layerRef}>{visibleElements.map(element => renderElement(element))}{isDrawing && currentPath.length > 0 && (
             <Line
               points={currentPath}
               stroke="#000000"
@@ -614,9 +600,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
               lineJoin="round"
               tension={0.5}
             />
-          )}
-          {/* Transformer for resizing selected elements */}
-          <Transformer
+          )}<Transformer
             ref={transformerRef}
             boundBoxFunc={(oldBox, newBox) => {
               // Limit resize to minimum size
@@ -641,9 +625,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             anchorCornerRadius={2}
             rotationAnchorOffset={25}
             rotationSnapTolerance={5}
-          />
-        </Layer>
-      </Stage>
+          /></Layer></Stage>
     </div>
   );
 };

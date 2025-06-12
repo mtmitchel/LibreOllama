@@ -24,6 +24,9 @@ The LibreOllama canvas system has been successfully migrated from Fabric.js to K
 - **✅ Import Error Resolution**: Fixed `useImage` import from `use-image` to `react-konva` in ImageElement.tsx and KonvaCanvas.tsx
 - **✅ Enhanced Element Dragging**: Elements draggable with Select/Pan tools, disabled during text editing
 - **✅ Improved Text Editing**: Double-click editing for text/sticky notes works independent of selected tool
+- **✅ Rich Text Formatting System**: Real-time bold, italic, underline formatting with visual feedback
+- **✅ Context Menu Enhancements**: Persistent formatting menu with active state indicators and toggle functionality
+- **✅ Real-time Preview**: Immediate visual feedback for formatting changes in textarea
 - **✅ Instant Tool Switching**: Removed setTimeout delays for immediate tool responsiveness
 - **✅ Complete CSS Variables Migration**: All styling now uses LibreOllama design system variables
 - **✅ Professional Toolbar**: Replaced random gradients with clean, flat design system styling

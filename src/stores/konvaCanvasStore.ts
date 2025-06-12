@@ -7,6 +7,7 @@ const areStylesEqual = (seg1: Omit<RichTextSegment, 'text'>, seg2: Omit<RichText
   return seg1.fontSize === seg2.fontSize &&
          seg1.fontFamily === seg2.fontFamily &&
          seg1.fontStyle === seg2.fontStyle &&
+         seg1.fontWeight === seg2.fontWeight &&
          seg1.textDecoration === seg2.textDecoration &&
          seg1.fill === seg2.fill &&
          seg1.url === seg2.url;
@@ -45,7 +46,8 @@ export interface RichTextSegment {
   text: string;
   fontSize?: number;
   fontFamily?: string;
-  fontStyle?: string; // e.g., 'normal', 'bold', 'italic', 'bold italic'
+  fontStyle?: string; // e.g., 'normal', 'italic'
+  fontWeight?: string; // e.g., 'normal', 'bold'
   textDecoration?: string; // e.g., 'underline', 'line-through', or ''
   fill?: string; // Text color for this segment
   url?: string; // Optional URL for clickable links

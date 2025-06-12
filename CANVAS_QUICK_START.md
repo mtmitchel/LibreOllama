@@ -12,13 +12,16 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
 1. **Import Error Fixed** – Resolved `useImage` import issue in ImageElement.tsx and KonvaCanvas.tsx
 2. **Enhanced Element Dragging** – Elements can now be dragged when using Select or Pan tools
 3. **Improved Text Editing** – Double-click to edit text works independent of selected tool
-4. **Instant Tool Switching** – Removed setTimeout delays for improved responsiveness
-5. **Dragging Logic** – Dragging disabled during text editing for better UX
+4. **Rich Text Formatting** – Real-time bold, italic, and underline formatting with visual feedback
+5. **Context Menu Enhancements** – Persistent formatting menu with active state indicators
+6. **Instant Tool Switching** – Removed setTimeout delays for improved responsiveness
+7. **Dragging Logic** – Dragging disabled during text editing for better UX
 
 ### ✅ Complete Feature Set
 
 #### 🎨 Drawing Tools  
-- **📝 Text** - Click to add, double-click to edit with textarea overlay
+- **📝 Text** - Click to add, double-click to edit with textarea overlay and rich formatting
+- **🎨 Rich Text Formatting** - Real-time bold, italic, underline with context menu
 - **🟨 Sticky Notes** - Colored sticky note annotations with Group-based rendering
 - **🟦 Shapes** - Rectangle, Circle, Triangle, Star with custom styling
 - **➖ Lines** - Straight lines with stroke customization
@@ -26,6 +29,8 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
 
 #### 🛠️ Professional Features
 - **🎯 Selection & Transform** - Professional transform handles with red accent
+- **🎨 Rich Text Editor** - Context menu with bold, italic, underline formatting
+- **⚡ Real-time Feedback** - Visual indicators for active formatting states
 - **🗑️ Delete** - Remove objects (Delete/Backspace keys)
 - **⌨️ Keyboard Shortcuts** - Delete, Escape key support
 - **📱 Responsive** - Adaptive canvas sizing
@@ -56,8 +61,11 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
 - Dragging is **disabled during text editing** for better UX
 
 ### Editing Text
-- **Text Elements**: Double-click to edit
-- **Sticky Notes**: Double-click the text area
+- **Text Elements**: Double-click to edit with rich formatting support
+- **Sticky Notes**: Double-click the text area for inline editing
+- **Rich Text Formatting**: Right-click or select text to access formatting menu
+- **Real-time Preview**: See bold, italic, underline changes instantly
+- **Context Menu**: Persistent formatting menu with active state indicators
 - **Tool selection is no longer required** for editing
 - Works independent of currently selected tool
 

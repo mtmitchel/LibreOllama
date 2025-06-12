@@ -15,6 +15,9 @@ The **KonvaCanvas** is the official, fully-featured whiteboard/drawing canvas im
 - **🔧 Import Error Fixed**: Corrected `useImage` import from `use-image` to `react-konva` in ImageElement.tsx and KonvaCanvas.tsx
 - **🎯 Element Dragging**: Elements can now be dragged when using Select or Pan tools, disabled during text editing
 - **✏️ Double-Click Text Editing**: Text elements and sticky notes support double-click editing independent of selected tool
+- **🎨 Rich Text Formatting**: Real-time bold, italic, underline formatting with context menu
+- **⚡ Visual Feedback**: Active state indicators for formatting buttons with toggle functionality
+- **📋 Context Menu Persistence**: Formatting menu stays open during text editing for better UX
 - **⚡ Tool Switching**: Removed setTimeout delay for instant tool switching and improved responsiveness
 - **🎨 LibreOllama Design System**: Toolbar now fully compliant with design system CSS variables
 - **🚫 Removed Random Styling**: Eliminated random gradient backgrounds in favor of clean, flat design
@@ -38,7 +41,8 @@ The **KonvaCanvas** is the official, fully-featured whiteboard/drawing canvas im
 ## Features Complete ✅
 
 ### Core Drawing Tools
-- **📝 Text**: Editable text with textarea overlay and multi-line support
+- **📝 Text**: Editable text with textarea overlay, multi-line support, and rich formatting
+- **🎨 Rich Text Formatting**: Real-time bold, italic, underline with context menu
 - **📌 Sticky Notes**: Colored sticky note annotations with Group-based rendering
 - **🟦 Shapes**: Rectangle, Circle, Triangle, Star with fill, stroke, and transparency
 - **➖ Lines**: Straight lines with customizable stroke and caps
@@ -48,6 +52,10 @@ The **KonvaCanvas** is the official, fully-featured whiteboard/drawing canvas im
 ### Professional Editing Features
 - **🎯 Selection & Movement**: Native Konva selection with transform handles
 - **🔄 Resize & Rotate**: Professional transform handles with design system colors
+- **✏️ Text Editing**: Textarea overlay with multi-line support and auto-sizing
+- **🎨 Rich Text Formatting**: Context menu with bold, italic, underline formatting
+- **⚡ Real-time Feedback**: Visual indicators for active formatting states
+- **📋 Persistent Context Menu**: Formatting menu stays open during editing
 - **🗑️ Delete**: Remove selected objects (Delete/Backspace keys)
 - **📐 Design System**: Consistent styling using LibreOllama CSS variables
 - **⌨️ Keyboard Shortcuts**: Delete, Escape key support

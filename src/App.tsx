@@ -11,7 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
-import KonvaApp from './components/Canvas/KonvaApp'; // New Konva-based canvas
+import KonvaApp from './components/canvas/KonvaApp'; // New Konva-based canvas
 import CanvasTest from './pages/CanvasTest'; // Test canvas
 import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';

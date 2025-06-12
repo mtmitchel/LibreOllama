@@ -1,0 +1,236 @@
+# **Text Editing Double Window Issue - Root Cause Analysis**
+
+Looking at your screenshots and comprehensive documentation, I can see the **exact problem**. You have **two overlapping text editing systems** running simultaneously:
+
+## **Root Cause: Dual Text Editing Components**
+
+From your architecture document, you have **both components active**:
+
+1. **SelectableText.tsx** (811 lines) - Rich text editing with context menu
+2. **SimpleTextElement.tsx** - Basic text editing with textarea overlay
+
+**Both components are responding to double-click events**, creating the dual window effect you're seeing.
+
+## **Immediate Fix: Remove Duplicate Component**
+
+### **In KonvaCanvas.tsx renderElement function:**
+
+```tsx
+// CURRENT PROBLEMATIC CODE (causing dual windows)
+case 'text':
+case 'sticky-note':
+  return (
+    <>
+            {/* First window */}
+         {/* Second window */}
+    
+  );
+
+// FIXED CODE - Use only ONE component
+case 'text':
+case 'sticky-note':
+  return (
+    
+  );
+```
+
+## **Why This Happened**
+
+From your documentation, during the migration from Fabric.js to Konva.js, you created multiple text components:
+
+1. **UnifiedTextElement** (with createPortal - caused React-Konva issues)
+2. **SelectableText** (rich formatting with context menu)
+3. **SimpleTextElement** (basic editing fix)
+
+All three are likely still being imported and used simultaneously.
+
+## **Clean Solution: Single Text Component**
+
+### **Enhanced SimpleTextElement.tsx (Single Window)**
+
+```tsx
+// src/components/Canvas/SingleTextElement.tsx
+import React, { useState, useRef, useCallback } from 'react';
+import { Text } from 'react-konva';
+
+interface SingleTextElementProps {
+  element: {
+    id: string;
+    x: number;
+    y: number;
+    text: string;
+    width?: number;
+    height?: number;
+    fontSize?: number;
+    fontFamily?: string;
+    fill?: string;
+    fontStyle?: string;
+    textDecoration?: string;
+  };
+  isSelected: boolean;
+  onUpdate: (elementId: string, updates: any) => void;
+  onSelect: (elementId: string) => void;
+}
+
+const SingleTextElement: React.FC = ({
+  element,
+  isSelected,
+  onUpdate,
+  onSelect
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const textRef = useRef(null);
+
+  const handleDoubleClick = useCallback((e: any) => {
+    e.cancelBubble = true;
+    e.evt.stopPropagation();
+    
+    setIsEditing(true);
+    
+    // Create SINGLE editing interface
+    const stage = e.target.getStage();
+    const textPosition = textRef.current.absolutePosition();
+    const stageBox = stage.container().getBoundingClientRect();
+    
+    // Create container for editor
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = `${stageBox.left + textPosition.x}px`;
+    container.style.top = `${stageBox.top + textPosition.y - 50}px`;
+    container.style.zIndex = '1000';
+    container.style.backgroundColor = 'white';
+    container.style.border = '2px solid #2196F3';
+    container.style.borderRadius = '8px';
+    container.style.padding = '8px';
+    container.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    
+    // Format buttons
+    const formatBar = document.createElement('div');
+    formatBar.style.display = 'flex';
+    formatBar.style.gap = '4px';
+    formatBar.style.marginBottom = '8px';
+    
+    const createBtn = (text: string, action: () => void) => {
+      const btn = document.createElement('button');
+      btn.textContent = text;
+      btn.style.padding = '4px 8px';
+      btn.style.border = '1px solid #ddd';
+      btn.style.borderRadius = '4px';
+      btn.style.cursor = 'pointer';
+      btn.style.backgroundColor = 'white';
+      btn.onclick = action;
+      return btn;
+    };
+    
+    let currentStyle = element.fontStyle || 'normal';
+    
+    const boldBtn = createBtn('B', () => {
+      currentStyle = currentStyle.includes('bold') 
+        ? currentStyle.replace('bold', '').trim()
+        : `${currentStyle} bold`.trim();
+      boldBtn.style.backgroundColor = currentStyle.includes('bold') ? '#2196F3' : 'white';
+      boldBtn.style.color = currentStyle.includes('bold') ? 'white' : 'black';
+      textarea.style.fontWeight = currentStyle.includes('bold') ? 'bold' : 'normal';
+    });
+    
+    const italicBtn = createBtn('I', () => {
+      currentStyle = currentStyle.includes('italic')
+        ? currentStyle.replace('italic', '').trim()
+        : `${currentStyle} italic`.trim();
+      italicBtn.style.backgroundColor = currentStyle.includes('italic') ? '#2196F3' : 'white';
+      italicBtn.style.color = currentStyle.includes('italic') ? 'white' : 'black';
+      textarea.style.fontStyle = currentStyle.includes('italic') ? 'italic' : 'normal';
+    });
+    
+    formatBar.appendChild(boldBtn);
+    formatBar.appendChild(italicBtn);
+    
+    // Textarea
+    const textarea = document.createElement('textarea');
+    textarea.value = element.text;
+    textarea.style.width = `${Math.max(200, element.width || 200)}px`;
+    textarea.style.height = `${Math.max(50, element.height || 50)}px`;
+    textarea.style.fontSize = `${element.fontSize || 16}px`;
+    textarea.style.fontFamily = element.fontFamily || 'Arial';
+    textarea.style.color = element.fill || '#000000';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.resize = 'none';
+    textarea.style.backgroundColor = 'transparent';
+    
+    // Done button
+    const doneBtn = createBtn('Done', () => {
+      onUpdate(element.id, { 
+        text: textarea.value,
+        fontStyle: currentStyle || 'normal'
+      });
+      removeEditor();
+    });
+    doneBtn.style.backgroundColor = '#2196F3';
+    doneBtn.style.color = 'white';
+    doneBtn.style.marginTop = '8px';
+    
+    container.appendChild(formatBar);
+    container.appendChild(textarea);
+    container.appendChild(doneBtn);
+    document.body.appendChild(container);
+    
+    textarea.focus();
+    textarea.select();
+    
+    const removeEditor = () => {
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+      setIsEditing(false);
+    };
+    
+    // Keyboard shortcuts
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        removeEditor();
+      }
+      e.stopPropagation();
+    });
+    
+  }, [element, onUpdate]);
+
+  const handleClick = useCallback((e: any) => {
+    e.cancelBubble = true;
+    onSelect(element.id);
+  }, [element.id, onSelect]);
+
+  return (
+    
+  );
+};
+
+export default SingleTextElement;
+```
+
+## **Update KonvaCanvas.tsx**
+
+```tsx
+// Remove all other text component imports
+import SingleTextElement from './SingleTextElement';
+
+// In renderElement function
+case 'text':
+case 'sticky-note':
+  return (
+    
+  );
+```
+
+## **Remove Unused Components**
+
+1. **Delete or comment out** `SelectableText.tsx` import
+2. **Remove** `UnifiedTextElement.tsx` if still present
+3. **Keep only** `SingleTextElement.tsx`
+
+This will give you **exactly one editing window** with formatting options built-in, eliminating the dual window problem you're experiencing.
+
+[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/21494092/c2d472e5-49a1-4805-9596-572bd933253b/paste.txt
+[2] https://pplx-res.cloudinary.com/image/private/user_uploads/21494092/90381556-e32c-4b4b-8fef-4c2a68dc05ea/image.jpg
+[3] https://pplx-res.cloudinary.com/image/private/user_uploads/21494092/70a7934a-06f1-43f6-b98a-a0ed2ccb3159/image.jpg
+[4] https://pplx-res.cloudinary.com/image/private/user_uploads/21494092/699830b6-eb24-4691-a534-886a8522b80d/image.jpg
