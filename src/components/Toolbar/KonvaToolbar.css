@@ -5,34 +5,37 @@
   /* Using design system variables for consistency - clean flat design */
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .konva-toolbar-group {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1);
+  gap: 2px;
+  padding: 4px;
   border-radius: var(--radius-md);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-default);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  position: relative;
 }
 
 .konva-toolbar-tool-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
   border: none;
   background: transparent;
   color: var(--text-secondary);
@@ -41,19 +44,21 @@
   font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.15s ease;
-  min-width: 40px;
+  min-width: 36px;
   height: 36px;
+  position: relative;
 }
 
 .konva-toolbar-tool-btn:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
 .konva-toolbar-tool-btn.active {
   background: var(--accent-primary);
   color: white;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .konva-toolbar-tool-btn.connect-tool {
@@ -95,9 +100,9 @@
 .konva-toolbar-action-btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
   border: none;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -105,34 +110,46 @@
   transition: all 0.15s ease;
   height: 36px;
   white-space: nowrap;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
 }
 
 .konva-toolbar-action-btn.primary {
   background: var(--accent-primary);
   color: white;
+  border-color: var(--accent-primary);
 }
 
 .konva-toolbar-action-btn.primary:hover {
-  opacity: 0.9;
+  background: var(--accent-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .konva-toolbar-action-btn.danger {
-  background: var(--error);
-  color: white;
+  background: transparent;
+  color: var(--error);
+  border-color: var(--error);
 }
 
 .konva-toolbar-action-btn.danger:hover {
-  opacity: 0.9;
+  background: var(--error);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
 .konva-toolbar-action-btn.secondary {
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-default);
 }
 
 .konva-toolbar-action-btn.secondary:hover {
-  background: var(--bg-elevated);
+  background: var(--bg-tertiary);
+  border-color: var(--border-default);
+  transform: translateY(-1px);
 }
 
 .konva-toolbar-action-btn:disabled {
@@ -175,23 +192,65 @@
   outline-offset: 2px;
 }
 
-/* Tool tooltip enhancements */
-.konva-toolbar-tool-btn[title]:hover::after,
-.konva-toolbar-action-btn[title]:hover::after {
-  content: attr(title);
+/* Tool label for active tool */
+.tool-label {
   position: absolute;
-  bottom: -30px;
+  bottom: -24px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  padding: var(--space-1) var(--space-2);
+  background: var(--accent-primary);
+  color: white;
+  padding: 2px 8px;
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   white-space: nowrap;
-  z-index: 1000;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-default);
+  pointer-events: none;
+  box-shadow: var(--shadow-sm);
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Visual separator */
+.konva-toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: var(--border-subtle);
+  margin: 0 var(--space-2);
+}
+
+/* Zoom controls specific styling */
+.konva-toolbar-zoom-controls {
+  background: var(--bg-tertiary);
+}
+
+.konva-toolbar-zoom-controls .konva-toolbar-action-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+}
+
+.konva-toolbar-zoom-controls .konva-toolbar-action-btn:hover {
+  background: var(--bg-secondary);
+}
+
+/* Color picker integration */
+.color-picker {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Responsive adjustments */

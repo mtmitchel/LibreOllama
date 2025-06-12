@@ -24,6 +24,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-konva": "^19.0.5",
+    "react-konva-utils": "^1.1.0",
     "react-router-dom": "^7.6.2",
     "zustand": "^5.0.5"
   },

@@ -6,6 +6,15 @@
 
 Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professional tools implemented using Konva.js + React-Konva.
 
+## 🔧 Recent Updates (June 2025)
+
+### ✅ Canvas Functionality Updates
+1. **Import Error Fixed** – Resolved `useImage` import issue in ImageElement.tsx and KonvaCanvas.tsx
+2. **Enhanced Element Dragging** – Elements can now be dragged when using Select or Pan tools
+3. **Improved Text Editing** – Double-click to edit text works independent of selected tool
+4. **Instant Tool Switching** – Removed setTimeout delays for improved responsiveness
+5. **Dragging Logic** – Dragging disabled during text editing for better UX
+
 ### ✅ Complete Feature Set
 
 #### 🎨 Drawing Tools  
@@ -33,11 +42,24 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
 
 ### Basic Workflow
 1. **Add Objects**: Select tool from toolbar, click canvas to create
-2. **Move Objects**: Click and drag any object around canvas
+2. **Move Objects**: Use Select or Pan tools to drag objects around canvas
 3. **Resize/Rotate**: Use transform handles (red accent styling)
-4. **Edit Text**: Double-click text objects for textarea editing
+4. **Edit Text**: Double-click text objects or sticky notes for textarea editing (works independent of selected tool)
 5. **Delete**: Select object and press Delete/Backspace
 6. **Deselect**: Press Escape or click empty canvas area
+
+📋 Usage Instructions (Updated)
+### Moving Elements
+- Use the **Select** tool (mouse pointer icon) or **Pan** tool
+- Click and drag elements to reposition them
+- Selected elements display transform handles
+- Dragging is **disabled during text editing** for better UX
+
+### Editing Text
+- **Text Elements**: Double-click to edit
+- **Sticky Notes**: Double-click the text area
+- **Tool selection is no longer required** for editing
+- Works independent of currently selected tool
 
 ## ⌨️ Keyboard Shortcuts
 

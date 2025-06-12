@@ -11,7 +11,11 @@ The **KonvaCanvas** is the official, fully-featured whiteboard/drawing canvas im
 
 ## Recent Updates ✨
 
-### Design System Integration (June 2025)
+### Canvas Functionality Updates (June 2025)
+- **🔧 Import Error Fixed**: Corrected `useImage` import from `use-image` to `react-konva` in ImageElement.tsx and KonvaCanvas.tsx
+- **🎯 Element Dragging**: Elements can now be dragged when using Select or Pan tools, disabled during text editing
+- **✏️ Double-Click Text Editing**: Text elements and sticky notes support double-click editing independent of selected tool
+- **⚡ Tool Switching**: Removed setTimeout delay for instant tool switching and improved responsiveness
 - **🎨 LibreOllama Design System**: Toolbar now fully compliant with design system CSS variables
 - **🚫 Removed Random Styling**: Eliminated random gradient backgrounds in favor of clean, flat design
 - **📱 Responsive Design**: Proper breakpoints and mobile-friendly toolbar layout
@@ -219,9 +223,9 @@ export const useKonvaCanvasStore = create<CanvasState>()(
 ### Basic Usage
 1. Navigate to `/canvas` in the application
 2. **New Workflow**: Click toolbar buttons to instantly create elements (except Select/Connect tools)
-3. Click and drag to move objects around the canvas
+3. **Moving Elements**: Use Select or Pan tools to drag elements around the canvas
 4. Use transform handles to resize/rotate objects
-5. Double-click text elements to edit with textarea overlay
+5. **Text Editing**: Double-click text elements or sticky notes to edit (works independent of selected tool)
 6. Use Delete/Backspace to remove selected objects
 
 ### Toolbar Workflow Changes

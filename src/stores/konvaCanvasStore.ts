@@ -53,7 +53,7 @@ export interface RichTextSegment {
 
 export interface CanvasElement {
   id: string;
-  type: 'text' | 'rectangle' | 'circle' | 'line' | 'pen' | 'triangle' | 'star' | 'sticky-note' | 'rich-text';
+  type: 'text' | 'rectangle' | 'circle' | 'line' | 'arrow' | 'pen' | 'triangle' | 'star' | 'sticky-note' | 'rich-text' | 'image';
   x: number;
   y: number;
   width?: number;
@@ -67,12 +67,15 @@ export interface CanvasElement {
   strokeWidth?: number;
   points?: number[];
   sides?: number; // for star
-  innerRadius?: number; // for star
   backgroundColor?: string; // for sticky notes
   textColor?: string; // for sticky notes
   fontSize?: number; // Default font size for text-based elements
   fontFamily?: string; // Default font family for text-based elements
   segments?: RichTextSegment[]; // For 'rich-text' elements
+  imageUrl?: string; // For image elements
+  arrowStart?: boolean; // For lines/arrows
+  arrowEnd?: boolean; // For lines/arrows
+  color?: string; // General color property for shapes
 }
 
 interface HistoryState {

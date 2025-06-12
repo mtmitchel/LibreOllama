@@ -20,7 +20,11 @@ The LibreOllama canvas system has been successfully migrated from Fabric.js to K
 
 ## 🎨 Recent Major Updates
 
-### Design System Integration (June 2025)
+### Canvas Functionality Updates (June 2025)
+- **✅ Import Error Resolution**: Fixed `useImage` import from `use-image` to `react-konva` in ImageElement.tsx and KonvaCanvas.tsx
+- **✅ Enhanced Element Dragging**: Elements draggable with Select/Pan tools, disabled during text editing
+- **✅ Improved Text Editing**: Double-click editing for text/sticky notes works independent of selected tool
+- **✅ Instant Tool Switching**: Removed setTimeout delays for immediate tool responsiveness
 - **✅ Complete CSS Variables Migration**: All styling now uses LibreOllama design system variables
 - **✅ Professional Toolbar**: Replaced random gradients with clean, flat design system styling
 - **✅ Lucide Icons**: Upgraded from emoji-based icons to professional Lucide React icons

@@ -26,20 +26,28 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  RotateCw
+  RotateCw,
+  ArrowRight,
+  Image,
+  Palette,
+  Hand
 } from 'lucide-react';
 import './KonvaToolbar.css';
+import ColorPicker from '../Canvas/ColorPicker';
 
 const tools = [
   { id: 'select', name: 'Select', icon: MousePointer2 },
+  { id: 'pan', name: 'Pan', icon: Hand },
   { id: 'text', name: 'Text', icon: Type },
   { id: 'sticky-note', name: 'Sticky Note', icon: StickyNote },
   { id: 'rectangle', name: 'Rectangle', icon: Square },
   { id: 'circle', name: 'Circle', icon: Circle },
   { id: 'line', name: 'Line', icon: Minus },
+  { id: 'arrow', name: 'Arrow', icon: ArrowRight },
   { id: 'triangle', name: 'Triangle', icon: Triangle },
   { id: 'star', name: 'Star', icon: Star },
   { id: 'pen', name: 'Pen', icon: Pen },
+  { id: 'image', name: 'Image', icon: Image },
   { id: 'connect', name: 'Connect', icon: Zap }
 ];
 
@@ -69,8 +77,12 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    elements,
+    updateElement
   } = useKonvaCanvasStore();
+  
+  const selectedElement = selectedElementId ? elements[selectedElementId] : null;
   const { saveToFile, loadFromFile } = useTauriCanvas();
 
   const handleDeleteSelected = () => {
@@ -113,10 +125,187 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     console.log('🔧 Tool selected:', toolId);
     setSelectedTool(toolId);
     
-    // Only set the tool - do NOT create elements immediately
-    // Elements will be created when user clicks on the canvas
-    console.log('✅ Tool set to:', toolId, '- Click canvas to create elements');
+    // For drawing tools (not select/connect), create element immediately
+    if (toolId !== 'select' && toolId !== 'connect' && toolId !== 'pan') {
+      const { addElement, setSelectedElement } = useKonvaCanvasStore.getState();
+      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Calculate center position of visible canvas area
+      const centerX = 400;
+      const centerY = 300;
+      
+      let newElement: any = null;
+      
+      switch (toolId) {
+        case 'text':
+          newElement = {
+            id: generateId(),
+            type: 'text',
+            x: centerX,
+            y: centerY,
+            text: 'Click to edit',
+            fontSize: 18,
+            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
+            fill: '#1E293B',
+            width: 200
+          };
+          break;
+          
+        case 'sticky-note':
+          newElement = {
+            id: generateId(),
+            type: 'sticky-note',
+            x: centerX - 75,
+            y: centerY - 50,
+            width: 150,
+            height: 100,
+            text: 'New note',
+            backgroundColor: '#FFEB3B',
+            textColor: '#1E293B',
+            fontSize: 14,
+            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif"
+          };
+          break;
+          
+        case 'rectangle':
+          newElement = {
+            id: generateId(),
+            type: 'rectangle',
+            x: centerX - 75,
+            y: centerY - 50,
+            width: 150,
+            height: 100,
+            fill: '#DBEAFE',
+            stroke: '#3B82F6',
+            strokeWidth: 2
+          };
+          break;
+          
+        case 'circle':
+          newElement = {
+            id: generateId(),
+            type: 'circle',
+            x: centerX,
+            y: centerY,
+            radius: 60,
+            fill: '#DCFCE7',
+            stroke: '#22C55E',
+            strokeWidth: 2
+          };
+          break;
+          
+        case 'line':
+          newElement = {
+            id: generateId(),
+            type: 'line',
+            x: centerX - 75,
+            y: centerY,
+            points: [0, 0, 150, 0],
+            stroke: '#1E293B',
+            strokeWidth: 2,
+            arrowStart: false,
+            arrowEnd: false
+          };
+          break;
+          
+        case 'arrow':
+          newElement = {
+            id: generateId(),
+            type: 'arrow',
+            x: centerX - 75,
+            y: centerY,
+            points: [0, 0, 150, 0],
+            stroke: '#1E293B',
+            strokeWidth: 2,
+            arrowStart: false,
+            arrowEnd: true
+          };
+          break;
+          
+        case 'image':
+          // For image tool, trigger file input
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const imageUrl = event.target?.result as string;
+                const img = new window.Image();
+                img.onload = () => {
+                  const imageElement = {
+                    id: generateId(),
+                    type: 'image' as const,
+                    x: centerX - img.width / 4,
+                    y: centerY - img.height / 4,
+                    width: img.width / 2,
+                    height: img.height / 2,
+                    imageUrl
+                  };
+                  addElement(imageElement);
+                  setSelectedElement(imageElement.id);
+                  setTimeout(() => setSelectedTool('select'), 100);
+                };
+                img.src = imageUrl;
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+          input.click();
+          return; // Don't continue with normal element creation
+          break;
+          
+        case 'triangle':
+          newElement = {
+            id: generateId(),
+            type: 'triangle',
+            x: centerX,
+            y: centerY,
+            width: 100,
+            height: 80,
+            fill: '#FEF3C7',
+            stroke: '#F59E0B',
+            strokeWidth: 2
+          };
+          break;
+          
+        case 'star':
+          newElement = {
+            id: generateId(),
+            type: 'star',
+            x: centerX,
+            y: centerY,
+            numPoints: 5,
+            innerRadius: 30,
+            radius: 60,
+            fill: '#E1BEE7',
+            stroke: '#9C27B0',
+            strokeWidth: 2
+          };
+          break;
+      }
+      
+      if (newElement) {
+        addElement(newElement);
+        setSelectedElement(newElement.id);
+        
+        // After creating element, switch to select tool immediately
+        setSelectedTool('select');
+      }
+    }
   };
+  
+  const handleColorChange = (color: string, type: 'fill' | 'stroke' | 'backgroundColor') => {
+    if (!selectedElementId) return;
+    
+    updateElement(selectedElementId, { [type]: color });
+  };
+  
+  const canShowColorPicker = selectedElement && 
+    ['rectangle', 'circle', 'triangle', 'star', 'sticky-note'].includes(selectedElement.type);
+  
   return (
     <div className="konva-toolbar">
       {/* Drawing Tools */}
@@ -139,6 +328,19 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           );
         })}
       </div>
+
+      {/* Color Picker for Selected Elements */}
+      {canShowColorPicker && (
+        <div className="konva-toolbar-group">
+          <ColorPicker
+            selectedColor={selectedElement?.fill || selectedElement?.backgroundColor}
+            onColorChange={(color) => handleColorChange(color, 
+              selectedElement?.type === 'sticky-note' ? 'backgroundColor' : 'fill'
+            )}
+            type={selectedElement?.type === 'sticky-note' ? 'sticky' : 'fill'}
+          />
+        </div>
+      )}
 
       {/* Zoom Controls */}
       <div className="konva-toolbar-group konva-toolbar-zoom-controls">
@@ -173,6 +375,28 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
         >
           <Maximize size={16} />
           <span>Fit</span>
+        </button>
+      </div>
+
+      {/* Undo/Redo */}
+      <div className="konva-toolbar-group">
+        <button
+          onClick={undo}
+          disabled={!canUndo()}
+          className={`konva-toolbar-action-btn ${!canUndo() ? 'disabled' : ''}`}
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo2 size={16} />
+          <span>Undo</span>
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo()}
+          className={`konva-toolbar-action-btn ${!canRedo() ? 'disabled' : ''}`}
+          title="Redo (Ctrl+Y)"
+        >
+          <Redo2 size={16} />
+          <span>Redo</span>
         </button>
       </div>
 

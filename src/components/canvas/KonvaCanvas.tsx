@@ -1,11 +1,14 @@
 // src/components/Canvas/KonvaCanvas.tsx
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Stage, Layer, Transformer, Rect, Circle, Text, Line, Star, Group } from 'react-konva';
+import { Stage, Layer, Transformer, Rect, Circle, Text, Line, Star, Group, Image } from 'react-konva';
+import { Html } from 'react-konva-utils';
 import Konva from 'konva';
 import { useKonvaCanvasStore, CanvasElement, RichTextSegment } from '../../stores/konvaCanvasStore';
 import RichTextRenderer, { RichTextElementType } from './RichTextRenderer';
 import SelectableText from './SelectableText';
+import ImageElement from './ImageElement';
 import { designSystem } from '../../styles/designSystem';
+import { useImage } from 'react-konva';
 
 // CanvasElement and RichTextSegment are now imported from the store.
 // Local PanZoomState can remain if specific, or be imported if common.
@@ -278,8 +281,9 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         updates.radius = Math.max(5, (element.radius || 50) * Math.max(scaleX, scaleY));
         break;
       case 'text':
-        updates.width = Math.max(20, (element.width || 120) * scaleX);
-        updates.height = Math.max(15, (element.height || 30) * scaleY);
+      case 'rich-text':
+        updates.width = Math.max(50, (element.width || 200) * scaleX);
+        updates.fontSize = Math.max(10, (element.fontSize || 16) * Math.max(scaleX, scaleY));
         break;
       case 'sticky-note':
         updates.width = Math.max(100, (element.width || 150) * scaleX);
@@ -323,7 +327,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       id: element.id,
       x: element.x,
       y: element.y,
-      draggable: !isEditing && selectedTool === 'select', // Draggable with select tool and not editing
+      draggable: !isEditing && (selectedTool === 'select' || selectedTool === 'pan'), // Draggable with select/pan tool and not editing
       onClick: (e: Konva.KonvaEventObject<MouseEvent>) => handleElementClick(e, element),
       onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => handleDragEnd(e, element.id),
       onTransformEnd: (e: Konva.KonvaEventObject<Event>) => handleTransformEnd(e, element.id),
@@ -361,7 +365,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             element={element as CanvasElement & { type: 'text', text?: string, fontSize?: number, x: number, y: number, id: string }}
             onFormatChange={handleFormatChange}
             {...konvaElementProps}
-            onDblClick={() => handleTextDoubleClick(element.id)}
+            onDblClick={(e) => {
+              e.cancelBubble = true;
+              handleTextDoubleClick(element.id);
+            }}
             isEditing={editingTextId === element.id}
             onTextUpdate={handleTextUpdate}
             onEditingCancel={handleEditingCancel}
@@ -380,6 +387,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           />
         );
       case 'line':
+      case 'arrow':
       case 'pen':
         return (
           <Line
@@ -390,6 +398,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             lineCap="round"
             lineJoin="round"
             tension={element.type === 'pen' ? 0.5 : 0}
+            // Add arrow heads for arrow type
+            {...(element.type === 'arrow' || element.arrowEnd ? {
+              pointerLength: 20,
+              pointerWidth: 20,
+              pointerAtBeginning: element.arrowStart,
+              pointerAtEnding: element.arrowEnd !== false
+            } : {})}
           />
         );
       case 'star':
@@ -432,25 +447,63 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
               shadowOffsetY={2}
               cornerRadius={designSystem.borderRadius.sm}
             />
-            {/* For sticky notes, text editing is handled by SelectableText if we choose to use it */}
-            {/* Or a simpler Konva.Text if direct editing is preferred without context menu */}
-            <Text
-              text={element.text} // Simple text for sticky note content
-              fontSize={element.fontSize || designSystem.typography.fontSize.sm}
-              fontFamily={element.fontFamily || designSystem.typography.fontFamily.sans}
-              fill={element.textColor || designSystem.colors.secondary[700]} // Default text color
-              width={element.width ? element.width - designSystem.spacing.md : 150 - designSystem.spacing.md}
-              height={element.height ? element.height - designSystem.spacing.md : 100 - designSystem.spacing.md}
-              padding={designSystem.spacing.sm}
-              align="left"
-              verticalAlign="top"
-              onDblClick={() => {
-                if (selectedTool === 'select') {
+            {isEditing && editingTextId === element.id ? (
+              <Html>
+                <textarea
+                  style={{
+                    position: 'absolute',
+                    left: designSystem.spacing.sm,
+                    top: designSystem.spacing.sm,
+                    width: `${(element.width || 150) - designSystem.spacing.md}px`,
+                    height: `${(element.height || 100) - designSystem.spacing.md}px`,
+                    fontSize: `${element.fontSize || designSystem.typography.fontSize.sm}px`,
+                    fontFamily: element.fontFamily || designSystem.typography.fontFamily.sans,
+                    color: element.textColor || designSystem.colors.secondary[700],
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    padding: '4px'
+                  }}
+                  defaultValue={element.text}
+                  autoFocus
+                  onBlur={(e) => {
+                    updateElement(element.id, { text: e.target.value });
+                    setEditingTextId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setEditingTextId(null);
+                    }
+                  }}
+                />
+              </Html>
+            ) : (
+              <Text
+                text={element.text || 'Double-click to edit'} // Simple text for sticky note content
+                fontSize={element.fontSize || designSystem.typography.fontSize.sm}
+                fontFamily={element.fontFamily || designSystem.typography.fontFamily.sans}
+                fill={element.textColor || designSystem.colors.secondary[700]} // Default text color
+                width={element.width ? element.width - designSystem.spacing.md : 150 - designSystem.spacing.md}
+                height={element.height ? element.height - designSystem.spacing.md : 100 - designSystem.spacing.md}
+                padding={designSystem.spacing.sm}
+                align="left"
+                verticalAlign="top"
+                onDblClick={(e) => {
+                  e.cancelBubble = true;
                   setEditingTextId(element.id);
-                }
-              }}
-            />
+                }}
+              />
+            )}
           </Group>
+        );
+      case 'image':
+        return (
+          <ImageElement
+            key={element.id}
+            element={element}
+            konvaProps={konvaElementProps}
+          />
         );
       default:
         console.warn('Unhandled element type in renderElement:', element.type);
