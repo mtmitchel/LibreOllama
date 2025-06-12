@@ -1,44 +1,45 @@
 // src/components/Canvas/KonvaCanvas.tsx
-import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
-import { Stage, Layer, Text, Rect, Circle, Line, Transformer, Star, Group } from 'react-konva';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Stage, Layer, Transformer, Rect, Circle, Text, Line, Star, Group } from 'react-konva';
 import Konva from 'konva';
-import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
+import { useKonvaCanvasStore, CanvasElement, RichTextSegment } from '../../stores/konvaCanvasStore';
+import RichTextRenderer, { RichTextElementType } from './RichTextRenderer';
+import SelectableText from './SelectableText';
 import { designSystem } from '../../styles/designSystem';
 
-interface CanvasElement {
-  id: string;
-  type: 'text' | 'rectangle' | 'circle' | 'line' | 'pen' | 'triangle' | 'star' | 'sticky-note';
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  radius?: number;
-  text?: string;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-  points?: number[];
-  sides?: number; // for star
-  innerRadius?: number; // for star
-  backgroundColor?: string; // for sticky notes
-  textColor?: string; // for sticky notes
+// CanvasElement and RichTextSegment are now imported from the store.
+// Local PanZoomState can remain if specific, or be imported if common.
+interface PanZoomState {
+  scale: number;
+  position: { x: number; y: number };
 }
 
 interface KonvaCanvasProps {
   width: number;
   height: number;
   onElementSelect?: (element: CanvasElement) => void;
+  panZoomState: PanZoomState;
+  stageRef: React.RefObject<Konva.Stage | null>;
+  onWheelHandler: (e: Konva.KonvaEventObject<WheelEvent>) => void;
+  onTouchMoveHandler?: (e: Konva.KonvaEventObject<TouchEvent>) => void;
+  onTouchEndHandler?: (e: Konva.KonvaEventObject<TouchEvent>) => void;
 }
 
 const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   width,
   height,
-  onElementSelect
+  onElementSelect,
+  panZoomState,
+  stageRef, // Use this passed-in ref
+  onWheelHandler,
+  onTouchMoveHandler,
+  onTouchEndHandler
 }) => {
+  const { elements, selectedTool, selectedElementId, editingTextId, setSelectedElement, addElement, updateElement, applyTextFormat, setEditingTextId, updateElementText } = useKonvaCanvasStore();
+
   // Get elements from store
-  const { elements, addElement, updateElement, setSelectedElement, selectedElementId, selectedTool } = useKonvaCanvasStore();
   const elementArray = Object.values(elements);
-  
+
   // Debug logging
   console.log('🔍 KonvaCanvas Debug:', {
     elementsCount: elementArray.length,
@@ -59,8 +60,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<number[]>([]);
-  const [editingTextId, setEditingTextId] = useState<string | null>(null);
-  const stageRef = useRef<Konva.Stage>(null);
+  // stageRef is now passed as a prop
   const layerRef = useRef<Konva.Layer>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   
@@ -82,6 +82,24 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   
   // Add virtualization for large numbers of elements
   const MAX_VISIBLE_ELEMENTS = 1000;
+
+  // Handlers for inline text editing
+  const handleTextDoubleClick = useCallback((elementId: string) => {
+    setEditingTextId(elementId);
+  }, [setEditingTextId]);
+
+  const handleTextUpdate = useCallback((elementId: string, newText: string) => {
+    updateElementText(elementId, newText);
+    // setEditingTextId(null); // SelectableText's onBlur/onKeyDown already calls onEditingCancel which does this
+  }, [updateElementText]);
+
+  const handleEditingCancel = useCallback(() => {
+    setEditingTextId(null);
+  }, [setEditingTextId]);
+
+  const handleFormatChange = useCallback((elementId: string, format: Partial<RichTextSegment>, selection: { start: number; end: number }) => {
+    applyTextFormat(elementId, format, selection);
+  }, [applyTextFormat]);
 
   const visibleElements = useMemo(() => {
     if (elementArray.length <= MAX_VISIBLE_ELEMENTS) {
@@ -110,26 +128,85 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     setCurrentPath(prev => [...prev, point.x, point.y]);
   }, [isDrawing, selectedTool]);
 
-  const handleMouseUp = useCallback(() => {
-    if (isDrawing && currentPath.length > 0) {
-      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const newElement: CanvasElement = {
-        id: generateId(),
-        type: 'pen',
-        x: 0,
-        y: 0,
-        points: currentPath,
-        stroke: '#000000',
-        strokeWidth: 2,
-        fill: 'transparent'
-      };
-      
-      addElement(newElement);
+  const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Pen tool is special, it draws on mouse move and finalizes on mouse up.
+    if (selectedTool === 'pen') {
+      if (isDrawing && currentPath.length > 2) { // Ensure there's something to draw
+        const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newElement: CanvasElement = {
+          id: generateId(),
+          type: 'pen',
+          x: 0, // Pen drawings are positioned by their points array, not a single x/y
+          y: 0,
+          points: currentPath,
+          stroke: designSystem.colors.secondary[800],
+          strokeWidth: 3,
+          fill: 'transparent',
+        };
+        addElement(newElement);
+      }
       setCurrentPath([]);
+      setIsDrawing(false);
+      return;
     }
+
+    // For other tools, we create the element on mouse up (a "click" action).
+    // We check isDrawing to ensure this only happens after a mouseDown on the canvas.
+    // DISABLED: Elements are now created immediately from toolbar, not on canvas clicks
+    /*
+    if (isDrawing) {
+      const stage = e.target.getStage();
+      if (!stage) {
+        setIsDrawing(false);
+        return;
+      }
+
+      const pointer = stage.getPointerPosition();
+      if (!pointer) {
+        setIsDrawing(false);
+        return;
+      }
+
+      // This is the crucial part: get pointer position relative to the stage's transform
+      const transform = stage.getAbsoluteTransform().copy();
+      transform.invert();
+      const pos = transform.point(pointer);
+
+      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const elementId = generateId();
+      let newElement: CanvasElement | null = null;
+
+      switch (selectedTool) {
+        case 'rectangle':
+          newElement = { id: elementId, type: 'rectangle', x: pos.x - 75, y: pos.y - 50, width: 150, height: 100, fill: designSystem.colors.primary[200] };
+          break;
+        case 'circle':
+          newElement = { id: elementId, type: 'circle', x: pos.x, y: pos.y, radius: 60, fill: designSystem.colors.success[500] };
+          break;
+        case 'star':
+          newElement = { id: elementId, type: 'star', x: pos.x, y: pos.y, numPoints: 5, innerRadius: 30, outerRadius: 70, fill: designSystem.colors.warning[500] };
+          break;
+        case 'line':
+          // A simple horizontal line
+          newElement = { id: elementId, type: 'line', x: pos.x - 75, y: pos.y, points: [0, 0, 150, 0], stroke: designSystem.colors.secondary[800], strokeWidth: 4 };
+          break;
+        case 'text':
+          newElement = { id: elementId, type: 'text', x: pos.x, y: pos.y, text: 'Double-click to edit', fontSize: 24, fontFamily: designSystem.typography.fontFamily.sans, fill: designSystem.colors.secondary[900], width: 250 };
+          break;
+        case 'rich-text':
+          newElement = { id: elementId, type: 'rich-text', x: pos.x, y: pos.y, segments: [{ text: 'Formatted text', fill: designSystem.colors.primary[500], fontSize: 24, fontFamily: designSystem.typography.fontFamily.sans }], width: 200 };
+          break;
+      }
+
+      if (newElement) {
+        addElement(newElement);
+        setSelectedElement(elementId); // Select the new element for immediate interaction
+      }
+    }
+    */
+    
     setIsDrawing(false);
-  }, [isDrawing, currentPath, addElement]);
+  }, [isDrawing, selectedTool, currentPath, addElement, setSelectedElement]);
 
   // Canvas click handler - ONLY handles selection/deselection
   const handleStageClick = useCallback((e: any) => {
@@ -165,90 +242,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     onElementSelect?.(element);
   }, [onElementSelect, setSelectedElement]);
 
-  const handleTextDoubleClick = useCallback((element: CanvasElement) => {
-    if (element.type !== 'text' && element.type !== 'sticky-note') return;
-    
-    setEditingTextId(element.id);
-    setSelectedElement(null); // Hide transformer during editing
-    
-    // Create HTML input overlay for text editing
-    const stage = stageRef.current;
-    if (!stage) return;
-    
-    const stageBox = stage.container().getBoundingClientRect();
-    const textElement = stage.findOne(`#${element.id}`);
-    
-    if (!textElement) return;
-    
-    // Calculate absolute position
-    const absolutePosition = textElement.getAbsolutePosition();
-    
-    // Create textarea for multi-line text editing
-    const textarea = document.createElement('textarea');
-    textarea.value = element.text || '';
-    textarea.style.position = 'absolute';
-    textarea.style.left = `${stageBox.left + absolutePosition.x + (element.type === 'sticky-note' ? 10 : 0)}px`;
-    textarea.style.top = `${stageBox.top + absolutePosition.y + (element.type === 'sticky-note' ? 10 : 0)}px`;
-    textarea.style.width = `${Math.max((element.width || 120) - (element.type === 'sticky-note' ? 20 : 0), 120)}px`;
-    textarea.style.height = `${Math.max((element.height || 30) - (element.type === 'sticky-note' ? 20 : 0), 30)}px`;
-    textarea.style.fontSize = element.type === 'sticky-note' ? '14px' : '16px';
-    textarea.style.fontFamily = 'Arial, sans-serif';
-    textarea.style.border = '2px solid #3B82F6';
-    textarea.style.borderRadius = '4px';
-    textarea.style.padding = '4px 6px';
-    textarea.style.backgroundColor = element.type === 'sticky-note' ? 'transparent' : 'white';
-    textarea.style.zIndex = '1000';
-    textarea.style.resize = 'none';
-    textarea.style.outline = 'none';
-    textarea.style.color = element.textColor || '#333333';
-    
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    
-    const finishEditing = () => {
-      const newText = textarea.value || (element.type === 'sticky-note' ? 'Double-click to edit' : 'Text');
-      
-      if (element.type === 'text') {
-        // Calculate text width/height based on content for regular text
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (context) {
-          context.font = '16px Arial';
-          const metrics = context.measureText(newText);
-          const textWidth = Math.max(metrics.width + 20, 120);
-          const textHeight = Math.max((newText.split('\n').length * 20) + 10, 30);
-          
-          updateElement(element.id, { 
-            text: newText,
-            width: textWidth,
-            height: textHeight
-          });
-        } else {
-          updateElement(element.id, { text: newText });
-        }
-      } else {
-        // For sticky notes, just update the text
-        updateElement(element.id, { text: newText });
-      }
-      
-      document.body.removeChild(textarea);
-      setEditingTextId(null);
-      setSelectedElement(element.id); // Restore selection
-    };
-    
-    textarea.addEventListener('blur', finishEditing);
-    textarea.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        finishEditing();
-      } else if (e.key === 'Escape') {
-        document.body.removeChild(textarea);
-        setEditingTextId(null);
-        setSelectedElement(element.id);
-      }
-    });
-  }, [updateElement, setSelectedElement]);
+
 
   const handleDragEnd = useCallback((e: any, elementId: string) => {
     const newX = e.target.x();
@@ -316,135 +310,153 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     updateElement(elementId, updates);
   }, [updateElement, elements]);
 
-  const renderElement = (element: CanvasElement) => {
+
+  
+  // Render individual canvas elements based on their type
+  const renderElement = useCallback((element: CanvasElement): React.ReactNode => {
     const isSelected = element.id === selectedElementId;
-    const isEditing = element.id === editingTextId;
-    
-    const commonProps = {
+    const isEditing = editingTextId === element.id;
+
+    // Common props for Konva shapes, passed to SelectableText or RichTextRenderer as well
+    const konvaElementProps = {
       key: element.id,
       id: element.id,
       x: element.x,
       y: element.y,
-      fill: element.fill,
-      stroke: isSelected ? '#EF4444' : element.stroke,
-      strokeWidth: isSelected ? 3 : element.strokeWidth,
-      draggable: !isEditing,
-      onClick: (e: any) => handleElementClick(e, element),
-      onDragEnd: (e: any) => handleDragEnd(e, element.id),
-      onTransformEnd: (e: any) => handleTransformEnd(e, element.id),
-      // Add opacity when editing text
-      opacity: isEditing ? 0.5 : 1,
+      draggable: !isEditing && selectedTool === 'select', // Draggable with select tool and not editing
+      onClick: (e: Konva.KonvaEventObject<MouseEvent>) => handleElementClick(e, element),
+      onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => handleDragEnd(e, element.id),
+      onTransformEnd: (e: Konva.KonvaEventObject<Event>) => handleTransformEnd(e, element.id),
+      opacity: 1, // Keep elements fully visible even when editing
+      stroke: isSelected ? designSystem.colors.primary[500] : element.stroke,
+      strokeWidth: isSelected ? (element.strokeWidth || 1) + 1.5 : element.strokeWidth,
+      shadowColor: isSelected ? designSystem.colors.primary[300] : undefined,
+      shadowBlur: isSelected ? 10 : 0,
+      shadowOpacity: isSelected ? 0.7 : 0,
+      perfectDrawEnabled: false, // Improves performance for many shapes
     };
 
     switch (element.type) {
-      case 'text':
-        return (
-          <Text
-            {...commonProps}
-            text={element.text || 'Text'}
-            fontSize={16}
-            fontFamily="Arial"
-            width={element.width}
-            height={element.height}
-            align="left"
-            verticalAlign="top"
-            wrap="word"
-            onDblClick={() => handleTextDoubleClick(element)}
-          />
-        );
-      case 'sticky-note':
-        return (
-          <Group
-            {...commonProps}
-            onDblClick={() => handleTextDoubleClick(element)}
-          >
-            <Rect
-              width={element.width || 150}
-              height={element.height || 100}
-              fill={element.backgroundColor || designSystem.colors.stickyNote.yellow}
-              stroke={element.stroke || designSystem.colors.stickyNote.yellowBorder}
-              strokeWidth={isSelected ? 3 : 2}
-              cornerRadius={8}
-              shadowColor="rgba(0, 0, 0, 0.15)"
-              shadowBlur={6}
-              shadowOffset={{ x: 2, y: 2 }}
-              shadowOpacity={0.8}
-            />
-            <Text
-              x={10}
-              y={10}
-              text={element.text || 'Double-click to edit'}
-              fontSize={14}
-              fontFamily="Arial"
-              fill={element.textColor || '#333333'}
-              width={(element.width || 150) - 20}
-              height={(element.height || 100) - 20}
-              align="left"
-              verticalAlign="top"
-              wrap="word"
-              lineHeight={1.2}
-            />
-          </Group>
-        );
       case 'rectangle':
         return (
           <Rect
-            {...commonProps}
+            {...konvaElementProps}
             width={element.width}
             height={element.height}
+            fill={element.fill || designSystem.colors.primary[100]}
+            cornerRadius={designSystem.borderRadius.md}
           />
         );
       case 'circle':
         return (
           <Circle
-            {...commonProps}
+            {...konvaElementProps}
             radius={element.radius}
+            fill={element.fill || designSystem.colors.secondary[100]}
+          />
+        );
+      case 'text':
+        return (
+          <SelectableText
+            element={element as CanvasElement & { type: 'text', text?: string, fontSize?: number, x: number, y: number, id: string }}
+            onFormatChange={handleFormatChange}
+            {...konvaElementProps}
+            onDblClick={() => handleTextDoubleClick(element.id)}
+            isEditing={editingTextId === element.id}
+            onTextUpdate={handleTextUpdate}
+            onEditingCancel={handleEditingCancel}
+          />
+        );
+      case 'rich-text':
+        return (
+          <RichTextRenderer
+            element={element as RichTextElementType}
+            {...konvaElementProps}
+            onFormatChange={handleFormatChange}
+            onDblClick={() => handleTextDoubleClick(element.id)}
+            isEditing={editingTextId === element.id}
+            onTextUpdate={handleTextUpdate}
+            onEditingCancel={handleEditingCancel}
           />
         );
       case 'line':
+      case 'pen':
         return (
           <Line
-            {...commonProps}
-            points={element.points || [0, 0, 100, 0]}
+            {...konvaElementProps}
+            points={element.points}
+            stroke={element.stroke || (element.type === 'pen' ? designSystem.colors.secondary[800] : designSystem.canvasStyles.border)}
+            strokeWidth={element.strokeWidth || (element.type === 'pen' ? 3 : 2)}
             lineCap="round"
             lineJoin="round"
-          />
-        );
-      case 'triangle':
-        return (
-          <Line
-            {...commonProps}
-            points={element.points || [0, -50, -50, 50, 50, 50, 0, -50]}
-            closed={true}
-            lineCap="round"
-            lineJoin="round"
+            tension={element.type === 'pen' ? 0.5 : 0}
           />
         );
       case 'star':
         return (
           <Star
-            {...commonProps}
+            {...konvaElementProps}
             numPoints={element.sides || 5}
-            innerRadius={element.innerRadius || 25}
-            outerRadius={element.radius || 50}
+            innerRadius={element.innerRadius || (element.width || 100) / 4}
+            outerRadius={element.radius || (element.width || 100) / 2}
+            fill={element.fill || designSystem.colors.warning[500]}
+            stroke={element.stroke || designSystem.colors.warning[600]}
+            strokeWidth={element.strokeWidth || 2}
           />
         );
-      case 'pen':
+      case 'triangle':
         return (
-          <Line
-            {...commonProps}
-            points={element.points || []}
-            lineCap="round"
-            lineJoin="round"
-            tension={0.5}
-            // Pen strokes should not be transformable
-            draggable={false}
+          <Line 
+            {...konvaElementProps}
+            points={[
+              0, -(element.height || 60) / 2, 
+              (element.width || 100) / 2, (element.height || 60) / 2, 
+              -(element.width || 100) / 2, (element.height || 60) / 2, 
+            ]}
+            closed
+            fill={element.fill || designSystem.colors.success[500]}
+            stroke={element.stroke || designSystem.colors.success[500]} // Assuming success[500] for both fill and stroke if not specified
+            strokeWidth={element.strokeWidth || 2}
           />
+        );
+      case 'sticky-note':
+        return (
+          <Group {...konvaElementProps}>
+            <Rect
+              width={element.width || 150}
+              height={element.height || 100}
+              fill={element.backgroundColor || designSystem.colors.stickyNote.yellow}
+              shadowColor={designSystem.colors.secondary[500]} // Using a mid-gray for shadow color
+              shadowBlur={5}
+              shadowOffsetX={2}
+              shadowOffsetY={2}
+              cornerRadius={designSystem.borderRadius.sm}
+            />
+            {/* For sticky notes, text editing is handled by SelectableText if we choose to use it */}
+            {/* Or a simpler Konva.Text if direct editing is preferred without context menu */}
+            <Text
+              text={element.text} // Simple text for sticky note content
+              fontSize={element.fontSize || designSystem.typography.fontSize.sm}
+              fontFamily={element.fontFamily || designSystem.typography.fontFamily.sans}
+              fill={element.textColor || designSystem.colors.secondary[700]} // Default text color
+              width={element.width ? element.width - designSystem.spacing.md : 150 - designSystem.spacing.md}
+              height={element.height ? element.height - designSystem.spacing.md : 100 - designSystem.spacing.md}
+              padding={designSystem.spacing.sm}
+              align="left"
+              verticalAlign="top"
+              onDblClick={() => {
+                if (selectedTool === 'select') {
+                  setEditingTextId(element.id);
+                }
+              }}
+            />
+          </Group>
         );
       default:
+        console.warn('Unhandled element type in renderElement:', element.type);
         return null;
     }
-  };
+  }, [selectedElementId, editingTextId, selectedTool, applyTextFormat, designSystem, setSelectedElement, updateElement, onElementSelect, handleFormatChange, handleTextDoubleClick, handleTextUpdate, handleEditingCancel]);
 
   // Keyboard event handling
   useEffect(() => {
@@ -458,7 +470,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       } else if (e.key === 'Escape') {
         setSelectedElement(null);
         if (editingTextId) {
-          setEditingTextId(null);
+          // Call the store action to cancel editing
+          setEditingTextId(null); 
         }
       }
     };
@@ -467,7 +480,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedElementId, editingTextId, setSelectedElement]);
+  }, [selectedElementId, editingTextId, setSelectedElement, setEditingTextId]);
 
   return (
     <div 
@@ -499,8 +512,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           🎨 Canvas ready! Select a tool from the toolbar to create elements
         </div>
       )}
-      
-      <Stage
+        <Stage
         ref={stageRef}
         width={width}
         height={height}
@@ -508,9 +520,18 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         onMousemove={handleMouseMove}
         onMouseup={handleMouseUp}
         onClick={handleStageClick}
+        onWheel={onWheelHandler}
+        onTouchMove={onTouchMoveHandler}
+        onTouchEnd={onTouchEndHandler}
+        draggable={selectedTool === 'pan'}
+        x={panZoomState.position.x}
+        y={panZoomState.position.y}
+        scaleX={panZoomState.scale}
+        scaleY={panZoomState.scale}
         style={{ 
           display: 'block',
-          backgroundColor: designSystem.canvasStyles.background
+          backgroundColor: designSystem.canvasStyles.background,
+          cursor: selectedTool === 'pan' ? 'grab' : 'default'
         }}
       >
         <Layer ref={layerRef}>

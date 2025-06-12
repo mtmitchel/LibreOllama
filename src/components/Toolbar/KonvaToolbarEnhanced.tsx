@@ -1,6 +1,5 @@
 // src/components/Toolbar/KonvaToolbar.tsx
 import React from 'react';
-import Konva from 'konva'; // Import Konva for Stage type if needed by zoom functions
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
 import { getStickyNoteColors } from '../../styles/designSystem';
@@ -43,21 +42,7 @@ const tools = [
   { id: 'connect', name: 'Connect', icon: Zap }
 ];
 
-interface KonvaToolbarProps {
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onResetZoom: () => void;
-  onZoomToFit: () => void;
-  stageRef?: React.RefObject<Konva.Stage>; // Optional: if zoom functions need direct stage access here
-  elements?: any[]; // Optional: if zoomToFit needs elements directly here
-}
-
-const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
-  onZoomIn,
-  onZoomOut,
-  onResetZoom,
-  onZoomToFit
-}) => {
+const KonvaToolbar: React.FC = () => {
   const { 
     selectedTool, 
     setSelectedTool, 
@@ -79,10 +64,22 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     }
   };
 
-  const handleZoomIn = () => onZoomIn();
-  const handleZoomOut = () => onZoomOut();
-  const handleResetZoom = () => onResetZoom();
-  const handleZoomToFit = () => onZoomToFit();
+  // Zoom control functions - these will be exposed globally for keyboard shortcuts
+  const handleResetZoom = () => {
+    (window as any).resetZoom?.();
+  };
+
+  const handleZoomToFit = () => {
+    (window as any).zoomToFit?.();
+  };
+
+  const handleZoomIn = () => {
+    (window as any).zoomIn?.();
+  };
+
+  const handleZoomOut = () => {
+    (window as any).zoomOut?.();
+  };
 
   const exportCanvasData = () => {
     const elements = exportCanvas();
@@ -95,6 +92,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
   };
+
   const importCanvasData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -109,14 +107,77 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       };
       reader.readAsText(file);
     }
-  };  const handleToolClick = (toolId: string) => {
+  };
+
+  const handleToolClick = (toolId: string) => {
     console.log('🔧 Tool selected:', toolId);
     setSelectedTool(toolId);
     
-    // Only set the tool - do NOT create elements immediately
-    // Elements will be created when user clicks on the canvas
-    console.log('✅ Tool set to:', toolId, '- Click canvas to create elements');
+    // Create element immediately when non-select and non-connect tool is clicked
+    if (toolId !== 'select' && toolId !== 'connect') {
+      console.log('🚀 Creating element for tool:', toolId);
+      const { addElement, setSelectedElement } = useKonvaCanvasStore.getState();
+      
+      // Create element at center of canvas
+      const centerPosition = { x: 400, y: 300 };
+      
+      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const newElement: any = {
+        id: generateId(),
+        type: toolId,
+        x: centerPosition.x,
+        y: centerPosition.y,
+        fill: '#3B82F6',
+        stroke: '#1E40AF',
+        strokeWidth: 2
+      };
+
+      // Set default properties based on tool type
+      switch (toolId) {
+        case 'text':
+          newElement.text = 'Double-click to edit';
+          newElement.width = 150;
+          newElement.height = 25;
+          break;
+        case 'sticky-note':
+          const stickyColors = getStickyNoteColors('yellow');
+          newElement.text = 'Double-click to edit';
+          newElement.width = 150;
+          newElement.height = 100;
+          newElement.backgroundColor = stickyColors.fill;
+          newElement.stroke = stickyColors.stroke;
+          newElement.textColor = '#333333';
+          break;
+        case 'rectangle':
+          newElement.width = 100;
+          newElement.height = 80;
+          break;
+        case 'circle':
+          newElement.radius = 50;
+          break;
+        case 'line':
+          newElement.points = [0, 0, 100, 0];
+          break;
+        case 'triangle':
+          newElement.radius = 50;
+          break;
+        case 'star':
+          newElement.radius = 50;
+          newElement.innerRadius = 25;
+          newElement.sides = 5;
+          break;
+        case 'pen':
+          // Pen tool doesn't create immediate elements
+          return;
+      }
+      
+      addElement(newElement);
+      setSelectedElement(newElement.id);
+      console.log('✅ Element created directly from toolbar:', newElement);
+    }
   };
+
   return (
     <div className="konva-toolbar">
       {/* Drawing Tools */}
@@ -140,36 +201,62 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
         })}
       </div>
 
+      {/* History Controls */}
+      <div className="konva-toolbar-action-group">
+        <button
+          onClick={undo}
+          disabled={!canUndo()}
+          className={`konva-toolbar-action-btn secondary ${!canUndo() ? 'disabled' : ''}`}
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo2 size={16} />
+          <span>Undo</span>
+        </button>
+        
+        <button
+          onClick={redo}
+          disabled={!canRedo()}
+          className={`konva-toolbar-action-btn secondary ${!canRedo() ? 'disabled' : ''}`}
+          title="Redo (Ctrl+Y)"
+        >
+          <Redo2 size={16} />
+          <span>Redo</span>
+        </button>
+      </div>
+
       {/* Zoom Controls */}
-      <div className="konva-toolbar-group konva-toolbar-zoom-controls">
+      <div className="konva-toolbar-action-group">
         <button
           onClick={handleZoomIn}
-          className="konva-toolbar-action-btn"
-          title="Zoom In (+)"
+          className="konva-toolbar-action-btn secondary"
+          title="Zoom In (Ctrl++)"
         >
           <ZoomIn size={16} />
           <span>Zoom In</span>
         </button>
+
         <button
           onClick={handleZoomOut}
-          className="konva-toolbar-action-btn"
-          title="Zoom Out (-)"
+          className="konva-toolbar-action-btn secondary"
+          title="Zoom Out (Ctrl+-)"
         >
           <ZoomOut size={16} />
           <span>Zoom Out</span>
         </button>
+        
         <button
           onClick={handleResetZoom}
-          className="konva-toolbar-action-btn"
-          title="Reset Zoom (0)"
+          className="konva-toolbar-action-btn secondary"
+          title="Reset Zoom (Ctrl+0)"
         >
-          <RotateCcw size={16} />
+          <RotateCw size={16} />
           <span>Reset</span>
         </button>
+        
         <button
           onClick={handleZoomToFit}
-          className="konva-toolbar-action-btn"
-          title="Zoom to Fit Content (F)"
+          className="konva-toolbar-action-btn secondary"
+          title="Fit to Screen (Ctrl+1)"
         >
           <Maximize size={16} />
           <span>Fit</span>

@@ -1,9 +1,9 @@
-/* Enhanced Konva Canvas Styles */
+/* Enhanced Konva Canvas Styles - Design System Compliant */
 
 /* Global canvas container enhancements */
 .konva-canvas-container {
   position: relative;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: var(--bg-primary);
 }
 
 .konva-canvas-container::before {
@@ -14,7 +14,7 @@
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
+    radial-gradient(circle at 1px 1px, var(--border-subtle) 1px, transparent 0);
   background-size: 20px 20px;
   pointer-events: none;
   z-index: 1;
@@ -32,6 +32,7 @@
   -webkit-backdrop-filter: blur(10px);
 }
 
+/* Remove gradient background - use design system instead */
 .konva-toolbar::before {
   content: '';
   position: absolute;
@@ -39,7 +40,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   z-index: -1;
 }
 
@@ -56,7 +58,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
   transition: left 0.5s;
 }
 
@@ -71,9 +73,9 @@
   justify-content: center;
   width: 100%;
   height: 400px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  border-radius: 12px;
-  border: 2px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-default);
 }
 
 .loading-spinner {
@@ -143,16 +145,16 @@ textarea.canvas-text-editor {
   }
 }
 
-/* Dark mode support */
+/* Dark mode support - Use design system variables */
 @media (prefers-color-scheme: dark) {
   .konva-canvas-container {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    border-color: #475569;
+    background: var(--bg-primary);
+    border-color: var(--border-default);
   }
   
   .konva-canvas-container::before {
     background-image: 
-      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0);
+      radial-gradient(circle at 1px 1px, var(--border-subtle) 1px, transparent 0);
   }
 }
 
@@ -165,12 +167,12 @@ textarea.canvas-text-editor {
 
 /* Accessibility improvements */
 .tool-button:focus {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
 .tool-button:focus-visible {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 /* Print styles */
@@ -180,8 +182,8 @@ textarea.canvas-text-editor {
   }
   
   .konva-canvas-container {
-    border: 1px solid #000000;
+    border: 1px solid var(--text-primary);
     box-shadow: none;
-    background: #ffffff;
+    background: var(--bg-primary);
   }
 }

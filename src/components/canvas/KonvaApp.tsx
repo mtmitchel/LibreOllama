@@ -1,14 +1,31 @@
 // src/components/Canvas/KonvaApp.tsx
-import React, { useState, useEffect } from 'react';
-import KonvaCanvas from './KonvaCanvas';
+import React, { useState, useEffect, useRef } from 'react';
+import Konva from 'konva';
+import KonvaCanvas from '../canvas/KonvaCanvas'; // Corrected casing
 import KonvaToolbar from '../Toolbar/KonvaToolbar';
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 import { designSystem } from '../../styles/designSystem';
+import { usePanZoom } from '../../hooks/usePanZoom';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import '../../styles/konvaCanvas.css';
 
 const KonvaApp: React.FC = () => {
+  const stageRef = useRef<Konva.Stage>(null);
+  const { 
+    panZoomState, 
+    handleWheel, 
+    handleTouchMove, 
+    handleTouchEnd, 
+    resetZoom, 
+    zoomToFit, 
+    zoomIn, 
+    zoomOut 
+  } = usePanZoom();
+
+  // Enable keyboard shortcuts for pan/zoom and other canvas actions
+  useKeyboardShortcuts(); // This hook might need stageRef or zoom functions if it handles zoom shortcuts
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
-  const { selectedElementId } = useKonvaCanvasStore();
+  const { selectedElementId, elements: canvasElements } = useKonvaCanvasStore();
 
   useEffect(() => {
     const updateCanvasSize = () => {
@@ -33,7 +50,12 @@ const KonvaApp: React.FC = () => {
         backgroundColor: designSystem.colors.secondary[50] 
       }}
     >
-      <KonvaToolbar />
+      <KonvaToolbar 
+        onZoomIn={() => { if (stageRef.current) zoomIn(stageRef.current); }}
+        onZoomOut={() => { if (stageRef.current) zoomOut(stageRef.current); }}
+        onResetZoom={() => { if (stageRef.current) resetZoom(stageRef.current); }}
+        onZoomToFit={() => { if (stageRef.current && canvasElements) zoomToFit(stageRef.current, Object.values(canvasElements)); }}
+      />
       
       <div 
         id="canvas-container" 
@@ -51,6 +73,11 @@ const KonvaApp: React.FC = () => {
           onElementSelect={(element) => {
             console.log('Element selected:', element);
           }}
+          panZoomState={panZoomState}
+          stageRef={stageRef}
+          onWheelHandler={handleWheel}
+          onTouchMoveHandler={handleTouchMove} // Pass down touch handlers
+          onTouchEndHandler={handleTouchEnd}   // Pass down touch handlers
         />
       </div>
       

@@ -9,6 +9,28 @@ The **KonvaCanvas** is the official, fully-featured whiteboard/drawing canvas im
 **🔗 Route**: `/canvas` (via KonvaApp)
 **🔄 Migration**: Successfully migrated from Fabric.js to Konva.js (June 2025)
 
+## Recent Updates ✨
+
+### Design System Integration (June 2025)
+- **🎨 LibreOllama Design System**: Toolbar now fully compliant with design system CSS variables
+- **🚫 Removed Random Styling**: Eliminated random gradient backgrounds in favor of clean, flat design
+- **📱 Responsive Design**: Proper breakpoints and mobile-friendly toolbar layout
+- **🎯 Accessibility**: Focus states, proper contrast ratios, and keyboard navigation
+- **🔧 CSS Architecture**: Modular CSS with BEM-style naming conventions
+
+### Enhanced Toolbar Features
+- **⚡ Connection Tool**: Added dynamic shape connection system with visual feedback
+- **🎨 Lucide Icons**: Professional icon system replacing emoji-based icons
+- **🎪 Interactive Feedback**: Hover states, active states, and smooth transitions
+- **📊 Tool Grouping**: Logical organization of drawing tools vs action buttons
+- **🎭 Tool Labels**: Dynamic label display for active tools
+
+### Element Creation Improvements (June 2025)
+- **⚡ Immediate Creation**: Fixed "click tool → click canvas → create element" flow to "click tool → create element immediately"
+- **🎯 Direct Toolbar Actions**: Elements now appear instantly when toolbar buttons are clicked (except Select/Connect tools)
+- **🔄 Streamlined UX**: Eliminated unwanted element duplication on canvas clicks
+- **🧠 Smart Tool Handling**: Connection and select tools maintain click-to-use workflow for specialized interactions
+
 ## Features Complete ✅
 
 ### Core Drawing Tools
@@ -17,38 +39,78 @@ The **KonvaCanvas** is the official, fully-featured whiteboard/drawing canvas im
 - **🟦 Shapes**: Rectangle, Circle, Triangle, Star with fill, stroke, and transparency
 - **➖ Lines**: Straight lines with customizable stroke and caps
 - **✏️ Freehand Drawing**: Pen tool for sketching with smooth strokes
+- **⚡ Shape Connections**: Dynamic connection system between shapes with bezier curves
 
 ### Professional Editing Features
 - **🎯 Selection & Movement**: Native Konva selection with transform handles
-- **🔄 Resize & Rotate**: Professional transform handles with red accent styling
+- **🔄 Resize & Rotate**: Professional transform handles with design system colors
 - **🗑️ Delete**: Remove selected objects (Delete/Backspace keys)
-- **📐 Professional Design**: Design system with gradients and animations
+- **📐 Design System**: Consistent styling using LibreOllama CSS variables
 - **⌨️ Keyboard Shortcuts**: Delete, Escape key support
+- **🔗 Connection Management**: Smart connection detection and validation
 
 ### Canvas Controls
 - **💾 Save/Load**: JSON-based canvas persistence with Tauri backend
-- **📱 Responsive**: Adaptive canvas sizing
+- **📱 Responsive**: Adaptive canvas sizing with mobile-optimized toolbar
 - **🔍 Debug Mode**: Comprehensive logging for troubleshooting
+- **📤 Export/Import**: JSON-based canvas data exchange
 
 ## Architecture
 
 ### Component Structure
 ```
 KonvaApp.tsx
-├── KonvaToolbar.tsx (Professional toolbar)
+├── KonvaToolbar.tsx (Design system compliant toolbar)
+│   ├── Tool buttons with Lucide icons
+│   ├── Action buttons with proper styling
+│   └── CSS-based responsive design
 └── KonvaCanvas.tsx
     ├── Stage (Konva container)
     ├── Layer (Konva layer)
+    ├── ConnectionLayer (For shape connections)
     ├── Elements rendering
     └── Transformer (Selection handles)
 ```
 
 ### Key Dependencies
-- **konva**: Core canvas library
-- **react-konva**: React wrapper for Konva.js
+- **konva**: Core canvas library (^9.2.0)
+- **react-konva**: React wrapper for Konva.js (^18.2.10)
 - **zustand**: State management with immer middleware
+- **lucide-react**: Professional icon system
+- **tailwindcss**: Utility-first CSS with design system variables
+
+### New Components
+- **ConnectionManager**: Dynamic shape connection system with bezier curves and smart detection
+- **ConnectableShape**: React component for shapes with connection points and visual feedback
+- **KonvaToolbar.css**: Modular CSS architecture using design system variables instead of inline styles
 
 ## Implementation Details
+
+### Design System Integration
+The canvas now follows LibreOllama's design system principles:
+
+```css
+/* Toolbar styling using design system variables */
+.konva-toolbar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.konva-toolbar-tool-btn {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: all 0.15s ease;
+}
+
+.konva-toolbar-tool-btn.active {
+  background: var(--accent-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+```
 
 ### Canvas Initialization
 ```typescript
@@ -69,8 +131,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({ width, height }) => {
           {Object.values(elements).map(element => renderElement(element))}
           <Transformer 
             ref={transformerRef}
-            borderStroke="#EF4444"
-            anchorFill="#FFFFFF"
+            borderStroke="var(--accent-primary)"
+            anchorFill="var(--bg-surface)"
           />
         </Layer>
       </Stage>
@@ -79,31 +141,50 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({ width, height }) => {
 };
 ```
 
-### Object Creation Pattern
-Each drawing tool follows a similar pattern:
-1. Handle stage click event
-2. Create CanvasElement object
-3. Add to Zustand store
-4. Element automatically renders via React-Konva
+### Toolbar-Driven Element Creation
+Elements are now created immediately when toolbar buttons are clicked:
 
-Example:
 ```typescript
-const handleStageClick = (e: any) => {
-  if (selectedTool === 'rectangle') {
+const handleToolClick = (toolId: string) => {
+  setSelectedTool(toolId);
+  
+  // Create element immediately for drawing tools
+  if (toolId !== 'select' && toolId !== 'connect') {
+    const { addElement, setSelectedElement } = useKonvaCanvasStore.getState();
+    
     const newElement: CanvasElement = {
       id: generateId(),
-      type: 'rectangle',
-      x: pointerPosition.x,
-      y: pointerPosition.y,
-      width: 100,
-      height: 80,
+      type: toolId,
+      x: 400, // Center position
+      y: 300,
       fill: '#3B82F6',
       stroke: '#1E40AF',
       strokeWidth: 2
     };
+    
     addElement(newElement);
+    setSelectedElement(newElement.id);
   }
 };
+```
+
+### Connection System Architecture
+The dynamic shape connection system provides professional diagramming capabilities:
+
+```typescript
+// Connection Manager initialization
+const connectionManager = new ConnectionManager(stage, layer);
+
+// Register shapes as connectable
+connectionManager.registerConnectableShape(shape, [
+  { x: 0, y: height / 2, type: 'input', id: 'left' },
+  { x: width, y: height / 2, type: 'output', id: 'right' },
+  { x: width / 2, y: 0, type: 'bidirectional', id: 'top' },
+  { x: width / 2, y: height, type: 'bidirectional', id: 'bottom' }
+]);
+
+// Connections update automatically when shapes move
+connection.source.shape.on('dragmove', updateConnection);
 ```
 
 ### State Management
@@ -137,11 +218,17 @@ export const useKonvaCanvasStore = create<CanvasState>()(
 
 ### Basic Usage
 1. Navigate to `/canvas` in the application
-2. Use toolbar buttons to select tools
-3. Click on canvas to create elements
-4. Click and drag to move objects
-5. Use transform handles to resize/rotate
-6. Double-click text elements to edit
+2. **New Workflow**: Click toolbar buttons to instantly create elements (except Select/Connect tools)
+3. Click and drag to move objects around the canvas
+4. Use transform handles to resize/rotate objects
+5. Double-click text elements to edit with textarea overlay
+6. Use Delete/Backspace to remove selected objects
+
+### Toolbar Workflow Changes
+- **Drawing Tools** (Text, Rectangle, Circle, etc.): Click button → Element appears immediately at canvas center
+- **Select Tool**: Click to enable selection mode for existing objects
+- **Connect Tool**: Click to enable connection mode between shapes
+- **Pen Tool**: Click button → Element created, then draw on canvas for freehand paths
 
 ### Keyboard Shortcuts
 - **Delete/Backspace**: Delete selected object
@@ -169,10 +256,19 @@ interface CanvasElement {
 ```
 
 ### Drawing Workflow
-1. Select a tool from the toolbar
-2. For shapes/text: Click the button to add at default position
-3. For drawing: Click pencil tool, then draw on canvas
-4. For images: Click image button and select file
+1. **Immediate Creation**: Click any drawing tool button to instantly create an element
+2. **Positioning**: Elements appear at canvas center (400, 300) and can be moved immediately
+3. **Selection**: Click on any object to select it (red transform handles appear)
+4. **Editing**: Double-click text/sticky notes to edit content with textarea overlay
+5. **Connections**: Use Connect tool to create dynamic connections between shapes
+6. **Deletion**: Select object and press Delete/Backspace to remove
+
+### Enhanced Features
+- **No Canvas Clicks Required**: Elements create instantly on toolbar button press
+- **Smart Tool Handling**: Select and Connect tools maintain click-to-use workflow
+- **Visual Feedback**: Active tools show in toolbar with design system styling
+- **Professional Icons**: Lucide React icons for all tools (MousePointer2, Type, Square, etc.)
+- **Design System Integration**: All styling uses CSS variables (--accent-primary, --bg-surface, etc.)
 
 ## Customization
 
