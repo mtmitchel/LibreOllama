@@ -48,144 +48,64 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
 ### Basic Workflow
 1. **Add Objects**: Select tool from toolbar, click canvas to create
 2. **Move Objects**: Use Select or Pan tools to drag objects around canvas
-3. **Resize/Rotate**: Use transform handles (red accent styling)
-4. **Edit Text**: Double-click text objects or sticky notes for textarea editing (works independent of selected tool)
-5. **Delete**: Select object and press Delete/Backspace
-6. **Deselect**: Press Escape or click empty canvas area
+3. **Edit Text**: Double-click any text element to edit content
+4. **Format Text**: Use the formatting menu for bold, italic, underline
+5. **Delete Objects**: Select and press Delete/Backspace
+6. **Save Work**: Use the Save button in toolbar
 
-📋 Usage Instructions (Updated)
-### Moving Elements
-- Use the **Select** tool (mouse pointer icon) or **Pan** tool
-- Click and drag elements to reposition them
-- Selected elements display transform handles
-- Dragging is **disabled during text editing** for better UX
+### Keyboard Shortcuts
+- **Delete/Backspace**: Delete selected objects
+- **Escape**: Exit text editing mode
+- **Ctrl+Z**: Undo last action
+- **Ctrl+Y**: Redo last action
+- **Ctrl++**: Zoom in
+- **Ctrl+-**: Zoom out
+- **Ctrl+0**: Reset zoom
+- **Ctrl+1**: Fit to view
 
-### Editing Text
-- **Text Elements**: Double-click to edit with rich formatting support
-- **Sticky Notes**: Double-click the text area for inline editing
-- **Rich Text Formatting**: Right-click or select text to access formatting menu
-- **Real-time Preview**: See bold, italic, underline changes instantly
-- **Context Menu**: Persistent formatting menu with active state indicators
-- **Tool selection is no longer required** for editing
-- Works independent of currently selected tool
+## 🎨 Available Tools
 
-## ⌨️ Keyboard Shortcuts
+### Drawing Tools
+- **Select**: Click to select and transform objects
+- **Text**: Add text elements with rich formatting
+- **Sticky Note**: Add colored sticky notes
+- **Rectangle**: Draw rectangles with custom styling
+- **Circle**: Draw perfect circles
+- **Triangle**: Draw triangles
+- **Star**: Draw multi-pointed stars
+- **Line**: Draw straight lines
+- **Pen**: Freehand drawing
 
-| Shortcut | Action |
-|----------|--------|
-| `Delete` / `Backspace` | Delete selected object |
-| `Escape` | Deselect all objects |
-| `Ctrl+Y` | Redo action |
-| `Alt+Drag` | Pan canvas viewport |
-| `Mouse Wheel` | Zoom in/out |
+### Action Tools
+- **Delete**: Remove selected objects
+- **Clear**: Remove all objects
+- **Undo/Redo**: Navigate through history
+- **Zoom Controls**: Zoom in/out/reset/fit
+- **Save/Load**: Persist canvas state
 
-## 🎨 Professional Features
+## 🎯 Element Creation
 
-### Modern UI Design
-- **Clean Toolbar**: Professional toolbar with gradient styling
-- **Design System**: Comprehensive color palette and animations
-- **Visual Feedback**: Hover states and smooth transitions
-- **Status Display**: Selected element indicator
-- **Red Accent**: Professional red selection highlighting (#EF4444)
+Elements are created **immediately** when you click a tool button (except Select and Connect tools):
 
-### Advanced Interactions
-- **Transform Controls**: Built-in resize/rotate handles via Transformer
-- **Text Editing**: Textarea overlay with multi-line support
-- **Sticky Notes**: Group-based rendering with colored backgrounds
-- **Canvas Persistence**: Save/load functionality with Tauri backend
-- **State Management**: Reliable Zustand store with immer middleware
+1. Click a tool button (e.g., Rectangle)
+2. The element appears instantly at the center of the canvas
+3. The element is automatically selected with transform handles
+4. You can immediately resize, move, or style the element
 
-## 📁 Implementation Structure
+## 🎨 Text Formatting
 
-### Current Architecture
-```
-src/components/Canvas/KonvaCanvas.tsx     # 580 lines - Main canvas component
-src/components/Canvas/KonvaApp.tsx        # App integration wrapper
-src/components/Toolbar/KonvaToolbar.tsx   # Professional toolbar
-src/stores/konvaCanvasStore.ts            # Zustand state management
-src/styles/designSystem.ts               # Professional design system
-```
-
-### Key Dependencies
-- **Konva.js + React-Konva** - Modern canvas engine with React integration
-- **Zustand + Immer** - State management  
-- **React 19** - Component framework
-- **TypeScript** - Type safety
-
-## 🔧 Technical Details
-
-### Canvas Configuration
-```typescript
-const KonvaCanvas: React.FC<KonvaCanvasProps> = ({ width, height }) => {
-  const { elements, selectedTool } = useKonvaCanvasStore();
-  
-  return (
-    <Stage width={width} height={height} onClick={handleStageClick}>
-      <Layer>
-        {Object.values(elements).map(element => renderElement(element))}
-        <Transformer ref={transformerRef} borderStroke="#EF4444" />
-      </Layer>
-    </Stage>
-  );
-};
-```
-
-### Tool Creation Example
-```typescript
-const handleStageClick = (e: any) => {
-  if (selectedTool === 'rectangle') {
-    const newElement: CanvasElement = {
-      id: generateId(),
-      type: 'rectangle',
-      x: pointerPosition.x,
-      y: pointerPosition.y,
-      width: 100,
-      height: 80,
-      fill: '#3B82F6',
-      stroke: '#1E40AF',
-      strokeWidth: 2
-    };
-    addElement(newElement);
-  }
-};
-```
-
-## 🎯 Success Metrics
-
-### ✅ All Requirements Met
-- **Immediate element visibility** ✅ - No invisible objects bug (fixed from Fabric.js)
-- **Reliable element creation** ✅ - No constructor issues (fixed from Fabric.js)
-- **Modern, polished design** ✅ - Professional design system with gradients
-- **All requested features** ✅ - 8 tools, sticky notes, text editing
-- **Professional interactions** ✅ - Transform handles, smooth selection
-- **Canvas persistence** ✅ - JSON-based save/load with Tauri backend
-- **Keyboard shortcuts** ✅ - Delete, Escape key support
-
-### 🚀 Beyond Requirements
-- **React integration** - Perfect React-Konva compatibility
-- **Type safety** - Full TypeScript implementation
-- **Performance optimized** - Viewport culling for 1000+ elements
-- **State management** - Reliable Zustand store with immer
-- **Error handling** - Comprehensive debugging and recovery
-
-## 🎉 Ready for Production
-
-The KonvaCanvas implementation is **complete and fully functional**. The migration from Fabric.js to Konva.js has successfully eliminated all critical issues while providing enhanced features and better React integration.
+1. Create a text element by clicking the Text tool
+2. Double-click the text to enter editing mode
+3. Use the formatting menu to apply:
+   - **Bold**: Toggle bold formatting
+   - **Italic**: Toggle italic formatting
+   - **Underline**: Toggle underline formatting
+   - **Font Size**: Adjust text size
+   - **Color**: Change text color
+   - **List Type**: None, bullet, or numbered
 
 ## 📚 Developer Documentation
-
 ### For Developers Working on Canvas
+
 - **[`docs/MODERN_CANVAS_DOCUMENTATION.md`](docs/MODERN_CANVAS_DOCUMENTATION.md)** - Complete technical implementation guide with architecture details and code examples
-- **[`docs/CANVAS_IMPLEMENTATION_FINAL.md`](docs/CANVAS_IMPLEMENTATION_FINAL.md)** - Master reference document with comprehensive feature matrix and success metrics
-- **[`KONVA_IMPLEMENTATION_COMPLETE.md`](KONVA_IMPLEMENTATION_COMPLETE.md)** - Migration history and technical details of the Fabric.js to Konva.js transition
-
-### Testing & Debugging
-- **[`tests/konva-canvas-test.html`](tests/konva-canvas-test.html)** - Comprehensive testing guide with manual testing checklist
-
-**Next Steps**: Use `/canvas` and enjoy the fully-featured drawing experience!
-
----
-
-*Implementation completed: June 2025*  
-*Component: `src/components/Canvas/KonvaCanvas.tsx`*  
-*Route: `/canvas`*
+- **[`docs/KONVA_IMPLEMENTATION_COMPLETE.md`](docs/KONVA_IMPLEMENTATION_COMPLETE.md)** - Migration history and technical details of the Fabric.js to Konva.js transition
