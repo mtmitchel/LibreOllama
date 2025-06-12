@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Canvas Debug</title>
+    <script src="https://unpkg.com/fabric@6.0.2/dist/index.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        #canvas-container {
+            border: 3px solid #ff0000;
+            background: white;
+            margin: 20px 0;
+            padding: 10px;
+        }
+        canvas {
+            border: 1px solid #000;
+            background: white;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #007cba;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #005a8b;
+        }
+        .info {
+            background: #e6f3ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Minimal Canvas Debug Test</h1>
+        
+        <div class="info">
+            <p><strong>Purpose:</strong> Test if Fabric.js can render simple objects without any React/store interference.</p>
+            <p><strong>Expected:</strong> You should see a red rectangle and blue text on the canvas below.</p>
+        </div>
+        
+        <div id="canvas-container">
+            <canvas id="testCanvas" width="800" height="600"></canvas>
+        </div>
+        
+        <div>
+            <button onclick="addTestObjects()">Add Test Objects</button>
+            <button onclick="clearCanvas()">Clear Canvas</button>
+            <button onclick="logCanvasState()">Log Canvas State</button>
+            <button onclick="testViewport()">Test Viewport Reset</button>
+        </div>
+        
+        <div id="output" class="info" style="margin-top: 20px;">
+            <p>Canvas info will appear here...</p>
+        </div>
+    </div>
+
+    <script>
+        let canvas;
+        
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+            console.log(message);
+        }
+        
+        // Initialize canvas
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                canvas = new fabric.Canvas('testCanvas', {
+                    backgroundColor: '#ffffff',
+                    selection: true,
+                    preserveObjectStacking: true
+                });
+                
+                log('✅ Fabric.js canvas initialized successfully');
+                log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
+                log(`Canvas zoom: ${canvas.getZoom()}`);
+                log(`Canvas viewport: [${canvas.viewportTransform.join(', ')}]`);
+                
+                // Automatically add test objects
+                setTimeout(addTestObjects, 500);
+                
+            } catch (error) {
+                log(`❌ Error initializing canvas: ${error.message}`);
+            }
+        });
+        
+        function addTestObjects() {
+            if (!canvas) {
+                log('❌ Canvas not initialized');
+                return;
+            }
+            
+            try {
+                // Clear existing objects first
+                canvas.clear();
+                canvas.backgroundColor = '#ffffff';
+                
+                // Add a simple red rectangle
+                const rect = new fabric.Rect({
+                    left: 100,
+                    top: 100,
+                    width: 150,
+                    height: 100,
+                    fill: '#ff0000',
+                    stroke: '#000000',
+                    strokeWidth: 2
+                });
+                
+                canvas.add(rect);
+                log('✅ Added red rectangle at (100, 100)');
+                
+                // Add blue text
+                const text = new fabric.IText('TEST VISIBLE', {
+                    left: 300,
+                    top: 150,
+                    fontSize: 24,
+                    fill: '#0000ff',
+                    fontWeight: 'bold'
+                });
+                
+                canvas.add(text);
+                log('✅ Added blue text at (300, 150)');
+                
+                // Add a green circle
+                const circle = new fabric.Circle({
+                    left: 150,
+                    top: 250,
+                    radius: 50,
+                    fill: '#00ff00',
+                    stroke: '#000000',
+                    strokeWidth: 2
+                });
+                
+                canvas.add(circle);
+                log('✅ Added green circle at (150, 250)');
+                
+                // Force render
+                canvas.renderAll();
+                log('✅ Canvas rendered - objects should be visible now!');
+                
+                logCanvasState();
+                
+            } catch (error) {
+                log(`❌ Error adding objects: ${error.message}`);
+            }
+        }
+        
+        function clearCanvas() {
+            if (canvas) {
+                canvas.clear();
+                canvas.backgroundColor = '#ffffff';
+                canvas.renderAll();
+                log('🧹 Canvas cleared');
+            }
+        }
+        
+        function logCanvasState() {
+            if (!canvas) {
+                log('❌ Canvas not available');
+                return;
+            }
+            
+            const objects = canvas.getObjects();
+            log(`📊 Canvas State:`);
+            log(`  - Objects: ${objects.length}`);
+            log(`  - Zoom: ${canvas.getZoom()}`);
+            log(`  - Viewport: [${canvas.viewportTransform.join(', ')}]`);
+            log(`  - Dimensions: ${canvas.width}x${canvas.height}`);
+            log(`  - Background: ${canvas.backgroundColor}`);
+            
+            objects.forEach((obj, i) => {
+                log(`  - Object ${i}: ${obj.type} at (${obj.left}, ${obj.top}) - visible: ${obj.visible}`);
+            });
+        }
+        
+        function testViewport() {
+            if (!canvas) {
+                log('❌ Canvas not available');
+                return;
+            }
+            
+            log('🔄 Testing viewport reset...');
+            
+            // Reset viewport to identity
+            canvas.setZoom(1.0);
+            canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+            canvas.renderAll();
+            
+            log('✅ Viewport reset to identity matrix');
+            logCanvasState();
+        }
+    </script>
+</body>
+</html>

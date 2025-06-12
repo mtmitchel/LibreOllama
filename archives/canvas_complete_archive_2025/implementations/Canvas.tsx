@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Point, Canvas as FabricCanvas } from 'fabric';
+import * as fabric from 'fabric';
 import { useFabricCanvasStore, CanvasTool } from '../stores/fabricCanvasStore';
 import { useFabricElementCreation, DEFAULT_ELEMENT_CONFIGS } from '../lib/fabric-element-creation';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
@@ -75,11 +75,75 @@ const Canvas: React.FC<CanvasProps> = ({
   useCanvasSelectionEvents(fabricInstance);
 
   // Callback for useFabric hook when canvas is loaded
-  const handleCanvasLoad = useCallback((canvas: FabricCanvas) => {
+  const handleCanvasLoad = useCallback((canvas: fabric.Canvas) => {
     console.log('🎨 Canvas.tsx: Fabric canvas loaded via useFabric hook.');
-    // setFabricInstance(canvas); // Local state removed, store is source of truth
     setFabricCanvas(canvas); // Update store
     setCanvasReady(true);
+
+    // CRITICAL: Force proper canvas setup for visibility
+    console.log('🔧 Setting up canvas for proper rendering...');
+    
+    // Ensure canvas has proper dimensions
+    const canvasElement = canvas.getElement();
+    if (canvasElement) {
+      console.log('📏 Canvas element dimensions:', {
+        width: canvasElement.width,
+        height: canvasElement.height,
+        clientWidth: canvasElement.clientWidth,
+        clientHeight: canvasElement.clientHeight,
+        style: canvasElement.style.cssText
+      });
+      
+      // Force canvas dimensions if they're not set properly
+      if (canvasElement.width === 0 || canvasElement.height === 0) {
+        console.log('⚠️ Canvas has zero dimensions, forcing 800x600');
+        canvas.setDimensions({ width: 800, height: 600 });
+      }
+    }
+
+    // CRITICAL: Reset viewport to ensure elements are visible
+    console.log('🔍 Resetting canvas viewport to default state');
+    canvas.setZoom(1.0);
+    canvas.viewportTransform = [1, 0, 0, 1, 0, 0]; // Identity matrix
+    
+    // Force multiple render calls to ensure visibility
+    canvas.renderAll();
+    requestAnimationFrame(() => {
+      canvas.renderAll();
+      console.log('🎨 Double render completed');
+    });
+
+    // CRITICAL: Restore existing elements when canvas is reinitialized
+    const currentElements = useFabricCanvasStore.getState().elements;
+    const elementIds = Object.keys(currentElements);
+    
+    if (elementIds.length > 0) {
+      console.log('🔄 Canvas reinitialized - checking if elements need to be restored');
+      console.log('🔄 Store has', elementIds.length, 'elements, canvas has', canvas.getObjects().length, 'objects');
+      
+      // Only restore if canvas is empty but store has elements
+      if (canvas.getObjects().length === 0) {
+        console.log('🔄 Restoring', elementIds.length, 'elements to empty canvas');
+        
+        // Restore elements by recreating their Fabric objects
+        elementIds.forEach(elementId => {
+          const element = currentElements[elementId];
+          if (element && !element.fabricObject) {
+            console.log('🔄 Recreating Fabric object for:', element.id, element.type);
+            // The store's addElement will handle creating the Fabric object
+            const state = useFabricCanvasStore.getState();
+            state.createFabricObject(element).then((fabricObject: any) => {
+              if (fabricObject && canvas && !canvas.isDisposed) {
+                fabricObject.customId = element.id;
+                canvas.add(fabricObject);
+                canvas.renderAll();
+                console.log('✅ Restored element:', element.id);
+              }
+            });
+          }
+        });
+      }
+    }
 
     // Event listeners setup
     const handleWheel = (opt: any) => {
@@ -88,7 +152,7 @@ const Canvas: React.FC<CanvasProps> = ({
       zoom *= 0.999 ** delta;
       if (zoom > 20) zoom = 20;
       if (zoom < 0.01) zoom = 0.01;
-      canvas.zoomToPoint(new Point(opt.e.offsetX, opt.e.offsetY), zoom);
+      canvas.zoomToPoint(new fabric.Point(opt.e.offsetX, opt.e.offsetY), zoom);
       opt.e.preventDefault();
       opt.e.stopPropagation();
     };
@@ -182,8 +246,44 @@ const Canvas: React.FC<CanvasProps> = ({
     // Note: useFabric already includes its own defaults like renderOnAddRemove: false etc.
   }), [canvasDimens.width, canvasDimens.height]);
 
-  // Initialize useFabric hook
-  const fabricCanvasRefSetter = useFabric(handleCanvasLoad, memoizedCanvasOptions);
+  // DIRECT CANVAS INITIALIZATION - BYPASS PROBLEMATIC HOOK
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useEffect(() => {
+    if (!canvasRef.current) {
+      console.log('❌ Canvas ref not available');
+      return;
+    }
+
+    console.log('🚀 DIRECT: Starting canvas initialization...');
+
+    try {
+      // Create canvas directly without hook
+      const canvas = new fabric.Canvas(canvasRef.current, {
+        width: canvasDimens.width,
+        height: canvasDimens.height,
+        backgroundColor: '#ffffff',
+        selection: true,
+        preserveObjectStacking: true
+      });
+
+      console.log('✅ DIRECT: Fabric canvas created');
+
+      // Call the existing handleCanvasLoad logic
+      handleCanvasLoad(canvas);
+
+      return () => {
+        console.log('🧹 DIRECT: Disposing canvas');
+        canvas.dispose();
+      };
+
+    } catch (error) {
+      console.error('❌ DIRECT: Canvas initialization failed:', error);
+    }
+  }, [canvasDimens.width, canvasDimens.height, handleCanvasLoad]);
+
+  // Remove the problematic useFabric hook
+  // const fabricCanvasRefSetter = useFabric(handleCanvasLoad, memoizedCanvasOptions);
 
   // Update canvas size when container resizes
   useEffect(() => {
@@ -476,14 +576,14 @@ const Canvas: React.FC<CanvasProps> = ({
   const handleZoomIn = useCallback(() => {
     if (fabricInstance) {
       const currentZoom = fabricInstance.getZoom();
-      fabricInstance.zoomToPoint(new Point(fabricInstance.getWidth() / 2, fabricInstance.getHeight() / 2), Math.min(currentZoom * 1.2, 20));
+      fabricInstance.zoomToPoint(new fabric.Point(fabricInstance.getWidth() / 2, fabricInstance.getHeight() / 2), Math.min(currentZoom * 1.2, 20));
     }
   }, [fabricInstance]);
 
   const handleZoomOut = useCallback(() => {
     if (fabricInstance) {
       const currentZoom = fabricInstance.getZoom();
-      fabricInstance.zoomToPoint(new Point(fabricInstance.getWidth() / 2, fabricInstance.getHeight() / 2), Math.max(currentZoom / 1.2, 0.01));
+      fabricInstance.zoomToPoint(new fabric.Point(fabricInstance.getWidth() / 2, fabricInstance.getHeight() / 2), Math.max(currentZoom / 1.2, 0.01));
     }
   }, [fabricInstance]);
 
@@ -528,6 +628,131 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   }, [elements, showWelcomeModal]);
 
+  // TEMPORARY: Add test elements when canvas is ready + FIX VIEWPORT
+  useEffect(() => {
+    if (isCanvasReady && fabricInstance && Object.keys(elements).length === 0) {
+      console.log('🚀 Adding test elements for debugging...');
+      
+      // CRITICAL: Reset canvas viewport to ensure visibility
+      console.log('🔍 Current canvas state:', {
+        zoom: fabricInstance.getZoom(),
+        viewportTransform: fabricInstance.viewportTransform,
+        width: fabricInstance.getWidth(),
+        height: fabricInstance.getHeight(),
+        objectCount: fabricInstance.getObjects().length
+      });
+      
+      // Reset zoom to 1.0 and center viewport
+      fabricInstance.setZoom(1.0);
+      fabricInstance.viewportTransform = [1, 0, 0, 1, 0, 0]; // Reset to identity matrix
+      
+      // BYPASS STORE SYSTEM - Add objects directly to Fabric
+      setTimeout(() => {
+        try {
+          // Clear any existing objects first
+          fabricInstance.clear();
+          fabricInstance.backgroundColor = '#ffffff';
+          
+          // Add objects directly to Fabric canvas without store
+          const directRect = new fabric.Rect({
+            left: 100,
+            top: 100,
+            width: 150,
+            height: 100,
+            fill: '#ff0000',
+            stroke: '#000000',
+            strokeWidth: 2
+          });
+          
+          fabricInstance.add(directRect);
+          console.log('✅ Direct red rectangle added');
+          
+          const directText = new fabric.IText('DIRECT TEST - VISIBLE?', {
+            left: 300,
+            top: 150,
+            fontSize: 24,
+            fill: '#0000ff',
+            fontWeight: 'bold'
+          });
+          
+          fabricInstance.add(directText);
+          console.log('✅ Direct blue text added');
+          
+          const directCircle = new fabric.Circle({
+            left: 150,
+            top: 250,
+            radius: 50,
+            fill: '#00ff00',
+            stroke: '#000000',
+            strokeWidth: 2
+          });
+          
+          fabricInstance.add(directCircle);
+          console.log('✅ Direct green circle added');
+          
+          // FORCE canvas render after adding elements
+          fabricInstance.renderAll();
+          console.log('🎨 Direct objects rendered - should be visible now!');
+          
+          // AGGRESSIVE FIX: Check if canvas context is working properly
+          const canvasElement = fabricInstance.getElement();
+          if (canvasElement) {
+            const ctx = canvasElement.getContext('2d');
+            if (ctx) {
+              console.log('🧪 CONTEXT TEST: Drawing directly to 2D context...');
+              
+              // Draw directly on canvas context to test if it's visible
+              ctx.save();
+              ctx.fillStyle = 'orange';
+              ctx.fillRect(500, 50, 100, 100);
+              ctx.fillStyle = 'purple';
+              ctx.font = '16px Arial';
+              ctx.fillText('DIRECT CONTEXT', 520, 100);
+              ctx.restore();
+              
+              console.log('🧪 Direct context drawing completed');
+            }
+            
+            // Force canvas to recalculate everything
+            console.log('🔄 Forcing canvas recalculation...');
+            fabricInstance.calcOffset();
+            fabricInstance.setCoords();
+            fabricInstance.renderAll();
+            
+            // Try setting object coordinates explicitly
+            const objects = fabricInstance.getObjects();
+            objects.forEach((obj: any, index: number) => {
+              console.log(`🔧 Object ${index}: ${obj.type} at (${obj.left}, ${obj.top})`);
+              obj.setCoords();
+            });
+            
+            // Final render
+            fabricInstance.renderAll();
+          }
+          
+          // Log final state for debugging
+          console.log('🔍 Final direct canvas state:', {
+            zoom: fabricInstance.getZoom(),
+            viewportTransform: fabricInstance.viewportTransform,
+            objectCount: fabricInstance.getObjects().length,
+            objects: fabricInstance.getObjects().map((obj: any) => ({
+              type: obj.type,
+              left: obj.left,
+              top: obj.top,
+              width: obj.width,
+              height: obj.height,
+              visible: obj.visible,
+              fill: obj.fill
+            }))
+          });
+          
+        } catch (error) {
+          console.error('❌ Error adding direct objects:', error);
+        }
+      }, 500); // Small delay to ensure canvas is fully ready
+    }
+  }, [isCanvasReady, fabricInstance, elements]);
+
   return (
     <FabricCanvasContext.Provider value={{ fabricCanvas: fabricInstance }}>
       <div className={className}>
@@ -556,12 +781,25 @@ const Canvas: React.FC<CanvasProps> = ({
         style={{ minHeight: '600px' }}
       >
         {/* Canvas */}
-        <div className="flex items-center justify-center w-full h-full">
-          <canvas
-            ref={fabricCanvasRefSetter} // Use the ref setter from useFabric
-            className="border border-gray-300 shadow-lg bg-white"
-            style={{ cursor: activeTool === 'select' ? 'default' : 'crosshair' }}
-          />
+        <div className="flex items-center justify-center w-full h-full canvas-wrapper">
+          <div className="canvas-container">
+            <canvas
+              ref={canvasRef} // Use direct ref instead of hook ref
+              className="border-4 border-red-500 shadow-lg bg-white fabric-main-canvas"
+              data-fabric="true"
+              style={{ 
+                cursor: activeTool === 'select' ? 'default' : 'crosshair',
+                minWidth: '800px',
+                minHeight: '600px',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                opacity: 1,
+                visibility: 'visible',
+                zIndex: 1,
+                backgroundColor: '#ffffff'
+              }}
+            />
+          </div>
         </div>
 
         {/* Welcome modal */}
@@ -599,46 +837,103 @@ const Canvas: React.FC<CanvasProps> = ({
             <div>Elements: {Object.keys(elements).length} | Selected: {selectedElementIds.length}</div>
             <div>Tool: {activeTool} | {isEditingText ? 'Editing Text' : 'Ready'}</div>
             <div>History: {historyIndex + 1}/{history.length}</div>
-            <div>Canvas Ready: {isCanvasReady ? 'Yes' : 'No'} | Fabric Objects: {fabricInstance?.getObjects?.()?.length || 'N/A'}</div>
+            <div className={isCanvasReady ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+              Canvas Ready: {isCanvasReady ? '✅ YES' : '❌ NO'} | Fabric Objects: {fabricInstance?.getObjects?.()?.length || 'N/A'}
+            </div>
+            <div className="text-blue-600 font-bold">🚀 DIRECT INIT MODE</div>
           </div>
         </div>
 
         {/* Debug button */}
         <button 
-          className="absolute bottom-4 left-4 bg-red-500 text-white px-3 py-2 rounded-lg text-xs"
+          className="absolute bottom-4 left-4 bg-red-500 text-white px-3 py-2 rounded-lg text-xs z-50"
           onClick={() => {
+            alert('🚀 DEBUG BUTTON CLICKED!');
+            console.log('🚀 DEBUG BUTTON CLICKED!');
+            
             console.log('🚀 DEBUG STATE:', {
               elements: Object.keys(elements).length,
-              fabricInstance,
+              fabricInstance: !!fabricInstance,
               isCanvasReady,
-              fabricObjects: fabricInstance?.getObjects?.()?.length || 0,
-              fabricObjectsDetails: fabricInstance?.getObjects?.() || [],
-              storeElements: elements
+              fabricObjects: fabricInstance?.getObjects?.()?.length || 0
             });
             
-            // Also test element creation manually
-            const testElement = {
-              id: 'test-' + Date.now(),
-              type: 'text' as const,
-              x: 100,
-              y: 100,
-              width: 120,
-              height: 30,
-              content: 'Test Element',
-              color: '#000000',
-              backgroundColor: 'transparent',
-              fontSize: 'medium' as const,
-              textAlignment: 'left' as const,
-              isBold: false,
-              isItalic: false,
-              isLocked: false
-            };
-            console.log('🚀 Creating test element:', testElement);
-            const { addElement } = useFabricCanvasStore.getState();
-            addElement(testElement);
+            // Test canvas visibility and styling
+            if (fabricInstance && isCanvasReady) {
+              const canvasElement = fabricInstance.getElement();
+              const canvasStyles = window.getComputedStyle(canvasElement);
+              
+              console.log('🧪 CANVAS ELEMENT DEBUG:', {
+                display: canvasStyles.display,
+                visibility: canvasStyles.visibility,
+                opacity: canvasStyles.opacity,
+                position: canvasStyles.position,
+                zIndex: canvasStyles.zIndex,
+                transform: canvasStyles.transform,
+                overflow: canvasStyles.overflow,
+                width: canvasElement.width,
+                height: canvasElement.height,
+                clientWidth: canvasElement.clientWidth,
+                clientHeight: canvasElement.clientHeight,
+                offsetWidth: canvasElement.offsetWidth,
+                offsetHeight: canvasElement.offsetHeight
+              });
+              
+              // Test if canvas context is working
+              const ctx = canvasElement.getContext('2d');
+              if (ctx) {
+                console.log('🧪 CANVAS CONTEXT TEST:');
+                // Draw a direct rectangle on canvas context
+                ctx.fillStyle = 'red';
+                ctx.fillRect(50, 50, 100, 100);
+                ctx.fillStyle = 'blue';
+                ctx.font = '20px Arial';
+                ctx.fillText('RAW CANVAS TEST', 200, 100);
+                console.log('✅ Drew directly to canvas context');
+              }
+              
+              console.log('🧪 MANUAL TEST: Creating direct Fabric object...');
+              alert('Adding green rectangle and blue text...');
+              
+              try {
+                const directRect = new fabric.Rect({
+                  left: 400,
+                  top: 50,
+                  width: 100,
+                  height: 80,
+                  fill: '#00ff00',
+                  stroke: '#000000',
+                  strokeWidth: 2
+                });
+                
+                fabricInstance.add(directRect);
+                console.log('🧪 Direct rectangle added');
+                
+                const directText = new fabric.IText('MANUAL TEST', {
+                  left: 400,
+                  top: 200,
+                  fontSize: 20,
+                  fill: '#0000ff'
+                });
+                
+                fabricInstance.add(directText);
+                console.log('🧪 Direct text added');
+                
+                fabricInstance.renderAll();
+                console.log('🧪 Canvas rendered');
+                
+                alert('Direct elements added! Check console for details.');
+                
+              } catch (error) {
+                console.error('🧪 Error creating direct elements:', error);
+                alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            } else {
+              alert(`Canvas not ready! fabricInstance: ${!!fabricInstance}, isCanvasReady: ${isCanvasReady}`);
+            }
           }}
         >
-          Debug
+          🚀 DIRECT INIT - DEBUG
         </button>
       </div>
     </div>

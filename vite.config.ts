@@ -20,6 +20,10 @@ export default defineConfig(async () => ({
     exclude: [
       // Prevent pre-bundling issues with Fabric.js
     ],
+    esbuildOptions: {
+      // Ensure Fabric.js is treated as a module
+      target: 'es2020',
+    }
   },
   
   ssr: {

@@ -14,6 +14,7 @@ use commands::notes::*;
 use commands::mcp::*;
 use commands::n8n::*;
 use commands::links::*;
+use commands::canvas::*;
 
 // Database imports
 
@@ -171,7 +172,10 @@ pub fn run() {
             cleanup_link_suggestions,
             create_multiple_links,
             batch_index_content,
-            get_link_statistics
+            get_link_statistics,
+            // Canvas commands for Konva.js integration
+            save_canvas_data,
+            load_canvas_data
         ])
         .setup(|_app| {
             println!("✅ [BACKEND-SUCCESS] All Tauri commands registered successfully");

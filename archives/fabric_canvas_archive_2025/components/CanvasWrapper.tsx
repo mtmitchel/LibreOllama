@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Canvas from '../pages/Canvas'; // Adjust path if Canvas.tsx is elsewhere
+import ModernFabricCanvas from '../pages/ModernFabricCanvas';
 
 const CanvasWrapper: React.FC = () => {
   const [mountKey, setMountKey] = useState(0);
+  const [useSimpleCanvas, setUseSimpleCanvas] = useState(false);
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -16,7 +17,8 @@ const CanvasWrapper: React.FC = () => {
     }
   }, []);
 
-  return <Canvas key={mountKey} />;
+  // Using the modern, fully-featured canvas implementation
+  return <ModernFabricCanvas key={mountKey} />;
 };
 
 export default CanvasWrapper;

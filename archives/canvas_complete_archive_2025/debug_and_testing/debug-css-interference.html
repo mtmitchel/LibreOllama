@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Interference Test</title>
+    <script src="https://unpkg.com/fabric@6.0.2/dist/index.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        /* Test 1: No CSS styling */
+        .test1 canvas {
+            border: 2px solid red;
+        }
+        
+        /* Test 2: Flex container (like LibreOllama) */
+        .test2 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 400px;
+            background: #f0f0f0;
+            border: 2px solid blue;
+        }
+        .test2 canvas {
+            border: 2px solid green;
+            background: white;
+        }
+        
+        /* Test 3: Complex CSS (simulating Tailwind/LibreOllama) */
+        .test3 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 400px;
+            background: #f0f0f0;
+            border: 2px solid purple;
+            position: relative;
+            overflow: hidden;
+        }
+        .test3 canvas {
+            border: 4px solid orange;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: white;
+            min-width: 600px;
+            min-height: 300px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        /* Test 4: Canvas fixes applied */
+        .test4 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 400px;
+            background: #f0f0f0;
+            border: 2px solid teal;
+            position: relative;
+        }
+        .test4 .canvas-container {
+            line-height: normal;
+            font-family: inherit;
+            position: relative;
+            contain: layout style;
+        }
+        .test4 canvas {
+            box-sizing: content-box !important;
+            position: relative !important;
+            transform: none !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            flex-shrink: 0 !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+            border: 2px solid red;
+            background: white;
+            width: 600px;
+            height: 300px;
+        }
+        
+        .info {
+            background: #e6f3ff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 CSS Interference Test for Fabric.js</h1>
+    
+    <div class="info">
+        <strong>Purpose:</strong> Test if CSS styling is preventing Fabric.js objects from rendering.
+        Each test adds more complex CSS to isolate the issue.
+    </div>
+
+    <h2>Test 1: Basic Canvas (No styling)</h2>
+    <div class="test1">
+        <canvas id="canvas1" width="600" height="300"></canvas>
+    </div>
+
+    <h2>Test 2: Flex Container</h2>
+    <div class="test2">
+        <canvas id="canvas2" width="600" height="300"></canvas>
+    </div>
+
+    <h2>Test 3: Complex CSS (LibreOllama style)</h2>
+    <div class="test3">
+        <canvas id="canvas3" width="600" height="300"></canvas>
+    </div>
+
+    <h2>Test 4: With Canvas Fixes Applied</h2>
+    <div class="test4">
+        <div class="canvas-container">
+            <canvas id="canvas4" width="600" height="300"></canvas>
+        </div>
+    </div>
+
+    <div id="results" class="info">
+        <h3>Test Results:</h3>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const canvases = [
+            { id: 'canvas1', name: 'Basic' },
+            { id: 'canvas2', name: 'Flex Container' },
+            { id: 'canvas3', name: 'Complex CSS' },
+            { id: 'canvas4', name: 'With Fixes' }
+        ];
+
+        function log(message) {
+            const output = document.getElementById('output');
+            output.innerHTML += `<p>${message}</p>`;
+            console.log(message);
+        }
+
+        function addTestObjects(canvas, testName) {
+            try {
+                // Red rectangle
+                const rect = new fabric.Rect({
+                    left: 50,
+                    top: 50,
+                    width: 100,
+                    height: 80,
+                    fill: '#ff0000',
+                    stroke: '#000000',
+                    strokeWidth: 2
+                });
+                canvas.add(rect);
+
+                // Blue text
+                const text = new fabric.IText('TEST', {
+                    left: 200,
+                    top: 100,
+                    fontSize: 20,
+                    fill: '#0000ff',
+                    fontWeight: 'bold'
+                });
+                canvas.add(text);
+
+                // Green circle
+                const circle = new fabric.Circle({
+                    left: 300,
+                    top: 150,
+                    radius: 40,
+                    fill: '#00ff00',
+                    stroke: '#000000',
+                    strokeWidth: 2
+                });
+                canvas.add(circle);
+
+                canvas.renderAll();
+                
+                const objectCount = canvas.getObjects().length;
+                log(`✅ ${testName}: Added ${objectCount} objects successfully`);
+                
+                // Check if objects are actually visible by checking their bounds
+                const bounds = canvas.calcViewportBoundaries();
+                log(`📊 ${testName}: Canvas bounds - ${JSON.stringify(bounds)}`);
+
+            } catch (error) {
+                log(`❌ ${testName}: Error - ${error.message}`);
+            }
+        }
+
+        // Initialize all canvases
+        canvases.forEach(({ id, name }) => {
+            try {
+                const canvas = new fabric.Canvas(id, {
+                    backgroundColor: '#ffffff',
+                    selection: true,
+                    preserveObjectStacking: true
+                });
+
+                log(`🎨 ${name}: Canvas initialized`);
+                
+                // Add test objects after a short delay
+                setTimeout(() => addTestObjects(canvas, name), 100);
+                
+            } catch (error) {
+                log(`❌ ${name}: Failed to initialize - ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

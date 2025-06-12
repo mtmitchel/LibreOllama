@@ -41,7 +41,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **💬 AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **🗂️ Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **📝 Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **🎨 Canvas** | A professional-grade, infinite whiteboard. Perfect for brainstorming, user flows, mind-mapping, and visual thinking. Supports sticky notes, shapes, text, and drawing. |
+| **🎨 Canvas** | A professional-grade, infinite whiteboard powered by **Konva.js**. Perfect for brainstorming, user flows, mind-mapping, and visual thinking. Features include sticky notes, shapes, text editing, freehand drawing, and transform controls. |
 | **✅ Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **🗓️ Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **🤖 Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -54,10 +54,11 @@ LibreOllama is built on a modern, robust, and privacy-focused technology stack.
 
 * **Framework**: [**Tauri**](https://tauri.app/) - A framework for building lightweight, secure, and cross-platform desktop applications using web technologies.
 * **Frontend**: [**React**](https://reactjs.org/) & [**TypeScript**](https://www.typescriptlang.org/) - For a type-safe, component-based user interface.
+* **Canvas**: [**Konva.js**](https://konvajs.org/) & [**React-Konva**](https://github.com/konvajs/react-konva) - High-performance 2D canvas library for professional whiteboard functionality.
 * **Backend & Core Logic**: [**Rust**](https://www.rust-lang.org/) - Powers the secure, high-performance backend, managing everything from database connections to system-level commands.
 * **Styling**: [**Tailwind CSS**](https://tailwindcss.com/) - A utility-first CSS framework for rapid, consistent styling, configured to use our internal design token system.
+* **State Management**: [**Zustand**](https://zustand.surge.sh/) & React Context API - For simple, predictable state management with immer for immutable updates.
 * **Database**: [**SQLCipher**](https://www.zetetic.net/sqlcipher/) (via `rusqlite`) - An encrypted SQLite database to keep all your data secure at rest.
-* **State Management**: React Hooks & Context API - For simple, predictable state management.
 
 ## ⚙️ Getting Started: Development Setup
 
@@ -100,7 +101,52 @@ Your LibreOllama desktop application will launch, and any changes you make to th
 
 The repository is organized to maintain a clear separation between the frontend and backend code.
 
-libreollama/├── docs/                      # 📚 Comprehensive project documentation├── src/                       # ⚛️ React Frontend│   ├── components/            #   Shared UI components & page-specific components│   ├── contexts/              #   React Context providers for global state│   ├── hooks/                 #   Custom React hooks│   ├── pages/                 #   Top-level page components for each module│   ├── styles/                #   Global CSS and the design system foundation│   ├── lib/                   #   Utility functions and type definitions│   └── main.tsx               #   Application entry point├── src-tauri/                 # 🦀 Rust Backend (Tauri Core)│   ├── capabilities/          #   Tauri permission manifests│   ├── src/                   #   Rust source code│   │   ├── commands/          #     Tauri commands exposed to the frontend│   │   ├── database/          #     All database logic (schema, models, operations)│   │   └── lib.rs             #     Main Rust library, command registration│   ├── build.rs               #   Tauri build script│   └── tauri.conf.json        #   Core Tauri application configuration├── tailwind.config.ts         # Tailwind CSS configuration file└── README.md                  # This file
+```
+libreollama/
+├── docs/                      # 📚 Comprehensive project documentation
+│   ├── development/           #   Developer setup and backend guides
+│   ├── design-system/         #   UI/UX design documentation
+│   └── archive/              #   Historical documentation and completed phases
+├── src/                       # ⚛️ React Frontend
+│   ├── components/            #   Shared UI components & page-specific components
+│   ├── contexts/              #   React Context providers for global state
+│   ├── hooks/                 #   Custom React hooks
+│   ├── pages/                 #   Top-level page components for each module
+│   ├── stores/                #   Zustand state management stores
+│   ├── styles/                #   Global CSS and the design system foundation
+│   ├── lib/                   #   Utility functions and type definitions
+│   └── main.tsx               #   Application entry point
+├── src-tauri/                 # 🦀 Rust Backend (Tauri Core)
+│   ├── capabilities/          #   Tauri permission manifests
+│   ├── src/                   #   Rust source code
+│   │   ├── commands/          #     Tauri commands exposed to the frontend
+│   │   ├── database/          #     All database logic (schema, models, operations)
+│   │   └── lib.rs             #     Main Rust library, command registration
+│   ├── build.rs               #   Tauri build script
+│   └── tauri.conf.json        #   Core Tauri application configuration
+├── archives/                  # 📦 Archived legacy code and documentation
+├── tailwind.config.ts         # Tailwind CSS configuration file
+└── README.md                  # This file
+```
+
+## 📚 Documentation
+
+LibreOllama includes comprehensive documentation to help you get started quickly and contribute effectively.
+
+### **Quick Start Guides**
+- **[Canvas Quick Start](./CANVAS_QUICK_START.md)** - Get up and running with the Konva.js whiteboard in minutes
+- **[Konva Implementation Complete](./KONVA_IMPLEMENTATION_COMPLETE.md)** - Comprehensive technical documentation for the canvas migration and current state
+
+### **Detailed Documentation**
+- **[Documentation Index](./docs/README.md)** - Complete guide to all available documentation
+- **[Development Setup](./docs/development/DEV-STARTUP-GUIDE.md)** - Environment setup and development workflow
+- **[Canvas Implementation](./docs/CANVAS_IMPLEMENTATION_FINAL.md)** - Technical details of the Konva.js canvas system
+- **[UI Implementation](./docs/UI_IMPLEMENTATION_COMPLETE.md)** - Complete UI/UX design system and component documentation
+
+### **Developer Resources**
+- **[Rust Development Setup](./docs/development/RUST_DEVELOPMENT_SETUP.md)** - Backend development with Tauri
+- **[Database Setup](./docs/development/DATABASE_SETUP.md)** - Local database configuration and management
+- **[Design System](./docs/design-system/)** - UI components and design guidelines
 ## ❤️ Contributing
 
 We welcome contributions of all kinds! Whether you're fixing a bug, adding a new feature, or improving documentation, your help is appreciated.

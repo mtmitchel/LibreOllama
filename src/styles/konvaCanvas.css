@@ -1,0 +1,187 @@
+/* Enhanced Konva Canvas Styles */
+
+/* Global canvas container enhancements */
+.konva-canvas-container {
+  position: relative;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.konva-canvas-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.konva-canvas-container canvas {
+  position: relative;
+  z-index: 2;
+}
+
+/* Toolbar enhancements */
+.konva-toolbar {
+  position: relative;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.konva-toolbar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+  z-index: -1;
+}
+
+/* Button hover animations */
+.tool-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.tool-button:hover::before {
+  left: 100%;
+}
+
+/* Professional loading state */
+.canvas-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 400px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Enhanced selection feedback */
+.element-selected {
+  filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3));
+}
+
+/* Sticky note shadow enhancements */
+.sticky-note-shadow {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Text editing overlay improvements */
+textarea.canvas-text-editor {
+  font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif !important;
+  line-height: 1.4;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .konva-toolbar {
+    padding: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .tool-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .tool-button span:last-child {
+    display: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .konva-canvas-container {
+    border-color: #000000;
+    border-width: 3px;
+  }
+  
+  .konva-toolbar {
+    background: #000000 !important;
+  }
+  
+  .tool-button {
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .konva-canvas-container {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-color: #475569;
+  }
+  
+  .konva-canvas-container::before {
+    background-image: 
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0);
+  }
+}
+
+/* Performance optimizations */
+.konva-canvas-container,
+.konva-toolbar {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Accessibility improvements */
+.tool-button:focus {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.tool-button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Print styles */
+@media print {
+  .konva-toolbar {
+    display: none;
+  }
+  
+  .konva-canvas-container {
+    border: 1px solid #000000;
+    box-shadow: none;
+    background: #ffffff;
+  }
+}

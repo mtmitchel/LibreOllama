@@ -194,7 +194,54 @@ export const useFabricCanvasStore = create<FabricCanvasState>()(
     // Fabric.js canvas management
     setFabricCanvas: (canvas: any | null) => {
       set((state) => {
+        const prevCanvas = state.fabricCanvas;
         state.fabricCanvas = canvas;
+        
+        // If we're setting a new canvas and we have existing elements, restore them
+        if (canvas && prevCanvas !== canvas && Object.keys(state.elements).length > 0) {
+          console.log('🔄 New canvas detected with existing elements - scheduling restoration');
+          
+          // Use setTimeout to avoid immediate recreation during store update
+          setTimeout(() => {
+            const currentState = get();
+            const elements = currentState.elements;
+            
+            // Check if canvas is still empty and we have elements to restore
+            if (canvas.getObjects().length === 0 && Object.keys(elements).length > 0) {
+              console.log('🔄 Restoring elements to new canvas:', Object.keys(elements));
+              
+              Object.values(elements).forEach(element => {
+                // Clear any existing fabric object references since canvas is new
+                element.fabricObject = undefined;
+                element.fabricId = undefined;
+                
+                // Create new Fabric object for this element
+                currentState.createFabricObject(element).then(fabricObject => {
+                  if (fabricObject && canvas && !canvas.isDisposed) {
+                    fabricObject.customId = element.id;
+                    canvas.add(fabricObject);
+                    
+                    // Update element with new fabric object reference
+                    set((state) => {
+                      if (state.elements[element.id]) {
+                        state.elements[element.id].fabricObject = fabricObject;
+                        state.elements[element.id].fabricId = fabricObject.id || element.id;
+                      }
+                    });
+                  }
+                });
+              });
+              
+              // Render all at once after all elements are added
+              setTimeout(() => {
+                if (canvas && !canvas.isDisposed) {
+                  canvas.renderAll();
+                  console.log('✅ Canvas restoration complete');
+                }
+              }, 200);
+            }
+          }, 100);
+        }
       });
     },
 

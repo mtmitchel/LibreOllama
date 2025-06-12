@@ -4,6 +4,7 @@ import App from "./App";
 import { ThemeProvider } from "./components/ThemeProvider";
 import "./styles/design-system.css";
 import "./styles/App.css";
+import "./styles/canvas-fixes.css";
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

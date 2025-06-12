@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react';
-import { Canvas as FabricCanvas } from 'fabric';
+import * as fabric from 'fabric';
 
 /**
  * Custom hook to manage the lifecycle of a Fabric.js canvas instance.
@@ -13,10 +13,10 @@ import { Canvas as FabricCanvas } from 'fabric';
  * @returns A ref callback to be passed to the HTML canvas element.
  */
 export const useFabric = (
-  onLoad?: (canvas: FabricCanvas) => (() => void) | void,
+  onLoad?: (canvas: fabric.Canvas) => (() => void) | void,
   canvasOptions?: any
 ) => {
-  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
+  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   const disposeRef = useRef<(() => void) | void | null>(null);
   const nodeRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -162,7 +162,14 @@ export const useFabric = (
       }
 
       // Create the Fabric canvas
-      fabricCanvasRef.current = new FabricCanvas(node, mergedOptions);
+      fabricCanvasRef.current = new fabric.Canvas(node, mergedOptions);
+      
+      // CRITICAL: Force immediate render after creation
+      console.log('🎨 useFabric: Canvas created, forcing initial render...');
+      if (fabricCanvasRef.current) {
+        fabricCanvasRef.current.renderAll();
+        console.log('✅ useFabric: Initial render completed');
+      }
 
       // Call onLoad callback if provided
       if (onLoad && fabricCanvasRef.current) {
@@ -189,7 +196,7 @@ export const useFabric = (
           const retryMergedOptions = { ...customDefaultOptions, ...canvasOptions };
           
           // Retry initialization
-          fabricCanvasRef.current = new FabricCanvas(node, retryMergedOptions);
+          fabricCanvasRef.current = new fabric.Canvas(node, retryMergedOptions);
           
           if (onLoad && fabricCanvasRef.current) {
             disposeRef.current = onLoad(fabricCanvasRef.current);

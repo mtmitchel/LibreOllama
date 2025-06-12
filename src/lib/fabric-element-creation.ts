@@ -7,22 +7,36 @@ import { FabricCanvasElement } from '../stores/fabricCanvasStore';
 // import { getDefaultElementColors } from './theme-utils'; // REPLACED with getHighContrastElementColors
 
 // Returns static, high-contrast colors for elements to ensure visibility on a white canvas.
+// Replace debugging colors with proper production colors
 const getHighContrastElementColors = (elementType: string) => {
   const defaults = {
-    color: '#FF0000', // Change to RED for debugging visibility
-    strokeColor: '#FF0000', // Change to RED
-    strokeWidth: 3, // Increase stroke width
+    color: '#000000', // Black text
+    strokeColor: '#333333', // Dark gray stroke
+    strokeWidth: 2,
   };
 
   switch (elementType) {
     case 'sticky-note':
-      return { ...defaults, backgroundColor: '#FFFF00' }; // Bright yellow
+      return { ...defaults, backgroundColor: '#fffacd' }; // Light yellow
     case 'text':
       return { ...defaults, backgroundColor: 'transparent' };
+    case 'rectangle':
+    case 'square':
+      return { ...defaults, backgroundColor: '#e3f2fd' }; // Light blue
+    case 'circle':
+      return { ...defaults, backgroundColor: '#f3e5f5' }; // Light purple
+    case 'triangle':
+      return { ...defaults, backgroundColor: '#e8f5e9' }; // Light green
+    case 'star':
+      return { ...defaults, backgroundColor: '#fff3e0' }; // Light orange
+    case 'hexagon':
+      return { ...defaults, backgroundColor: '#fce4ec' }; // Light pink
+    case 'arrow':
+      return { ...defaults, backgroundColor: '#e0f2f1' }; // Light teal
     default:
-      return { ...defaults, backgroundColor: '#00FF00' }; // Bright green
-   }
- };
+      return { ...defaults, backgroundColor: '#f5f5f5' }; // Light gray
+  }
+};
 
 export interface CreateElementOptions {
   id?: string; // Added to allow passing an ID
@@ -312,3 +326,4 @@ export function getDefaultElementConfigs(): Record<string, Partial<CreateElement
  * @deprecated Use getDefaultElementConfigs() for theme-aware colors
  */
 export const DEFAULT_ELEMENT_CONFIGS: Record<string, Partial<CreateElementOptions>> = getDefaultElementConfigs();
+

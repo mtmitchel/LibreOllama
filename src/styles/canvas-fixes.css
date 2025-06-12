@@ -84,3 +84,57 @@
   min-width: 0 !important;
   min-height: 0 !important;
 }
+
+/* Additional aggressive fixes for Fabric.js visibility issues */
+
+/* Force canvas to be visible and properly rendered */
+canvas[data-fabric] {
+  /* Ensure canvas is always visible */
+  opacity: 1 !important;
+  visibility: visible !important;
+  
+  /* Force proper z-index */
+  z-index: 1 !important;
+  
+  /* Prevent any CSS transforms that might hide content */
+  transform: none !important;
+  
+  /* Ensure proper sizing */
+  width: 800px !important;
+  height: 600px !important;
+  
+  /* Force background to be white */
+  background-color: #ffffff !important;
+}
+
+/* Fix for Fabric.js upper canvas (where objects are rendered) */
+.upper-canvas {
+  /* Ensure upper canvas is visible */
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 2 !important;
+  pointer-events: auto !important;
+}
+
+/* Fix for any CSS that might interfere with Fabric rendering */
+.canvas-container * {
+  /* Reset any problematic inherited styles */
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Force canvas background to always be white */
+.canvas-container {
+  background-color: #ffffff !important;
+}
+
+.lower-canvas {
+  background-color: #ffffff !important;
+}
+
+/* Ensure Fabric.js objects are always visible */
+.canvas-container canvas {
+  background-color: #ffffff !important;
+}

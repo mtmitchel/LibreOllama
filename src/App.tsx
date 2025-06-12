@@ -11,7 +11,8 @@ import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
-import CanvasWrapper from './components/CanvasWrapper'; // Changed from Canvas to CanvasWrapper
+import KonvaApp from './components/Canvas/KonvaApp'; // New Konva-based canvas
+import CanvasTest from './pages/CanvasTest'; // Test canvas
 import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';
 import Agents from './pages/Agents';
@@ -34,7 +35,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  */
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const isCanvasPage = location.pathname === '/canvas';
+  const isCanvasPage = location.pathname === '/canvas' || location.pathname === '/canvas-test';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -45,7 +46,8 @@ const AppContent: React.FC = () => {
       {/* Otherwise, wrap the content in the standard MainLayout. */}
       {isCanvasPage ? (
         <Routes>
-          <Route path="/canvas" element={<CanvasWrapper />} />
+          <Route path="/canvas" element={<KonvaApp />} />
+          <Route path="/canvas-test" element={<CanvasTest />} />
         </Routes>
       ) : (
         <MainLayout>
