@@ -213,6 +213,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
   // Canvas click handler - ONLY handles selection/deselection
   const handleStageClick = useCallback((e: any) => {
+    // Ignore if this is part of a double-click sequence
+    if (e.evt?.detail > 1) {
+      console.log('🎯 Ignoring stage click - part of double-click sequence');
+      return;
+    }
+
     const stage = e.target.getStage();
     
     console.log('🎯 Stage click - target:', e.target.getClassName(), 'targetId:', e.target.id());
@@ -240,7 +246,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   }, [setSelectedElement]);
 
   const handleElementClick = useCallback((e: any, element: CanvasElement) => {
+    // Ignore if this is part of a double-click sequence
+    if (e.evt?.detail > 1) {
+      return;
+    }
+
     e.cancelBubble = true;
+    e.evt?.stopPropagation();
     setSelectedElement(element.id);
     onElementSelect?.(element);
   }, [onElementSelect, setSelectedElement]);
@@ -380,7 +392,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             element={element as RichTextElementType}
             {...konvaElementProps}
             onFormatChange={handleFormatChange}
-            onDblClick={() => handleTextDoubleClick(element.id)}
+            onDblClick={(e) => {
+              e.cancelBubble = true;
+              e.evt?.stopPropagation();
+              handleTextDoubleClick(element.id);
+            }}
             isEditing={editingTextId === element.id}
             onTextUpdate={handleTextUpdate}
             onEditingCancel={handleEditingCancel}

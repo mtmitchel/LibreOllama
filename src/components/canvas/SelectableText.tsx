@@ -163,17 +163,15 @@ const SelectableText: React.FC<SelectableTextProps> = ({
             listening={false}
           />
         )}
-      </Group>
-
-      {/* Inline text editor */}
-      {isEditing && (
-        <Html>
-          <textarea
+        {/* Inline text editor */}
+        {isEditing && (
+          <Html>
+            <textarea
             ref={textareaRef}
             style={{
               position: 'absolute',
-              left: `${getTextareaPosition().x}px`,
-              top: `${getTextareaPosition().y}px`,
+              left: '0px',
+              top: '0px',
               width: `${width}px`,
               minHeight: `${height}px`,
               fontSize: `${fontSize}px`,
@@ -207,6 +205,7 @@ const SelectableText: React.FC<SelectableTextProps> = ({
           />
         </Html>
       )}
+      </Group>
 
       {/* Context Menu */}
       {showContextMenu && selection && (
