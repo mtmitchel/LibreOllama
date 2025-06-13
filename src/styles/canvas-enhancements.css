@@ -1,0 +1,237 @@
+/* Canvas-specific styles for enhanced UX */
+
+/* Smooth cursor transitions */
+.konva-content {
+  cursor: default;
+  transition: cursor 0.15s ease;
+}
+
+/* Canvas container styles */
+.konva-canvas-container {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Prevent text selection on canvas */
+.konvajs-content {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Resize cursor styles */
+.konva-transformer-handle {
+  transition: all 0.2s ease;
+}
+
+.konva-transformer-handle:hover {
+  transform: scale(1.2);
+}
+
+/* Editing mode styles */
+.canvas-editing-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 9998;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Textarea styles */
+.canvas-textarea {
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Formatting menu animation */
+.formatting-menu {
+  animation: menuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Resize hint animations */
+.resize-hint {
+  animation: pulseHint 2s ease-in-out infinite;
+}
+
+@keyframes pulseHint {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* Selection highlight */
+.selected-element {
+  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
+}
+
+/* Hover effects for tools */
+.tool-hover {
+  transition: all 0.15s ease;
+}
+
+.tool-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth transitions for element states */
+.canvas-element {
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+/* Improved focus styles */
+.canvas-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Edit mode pulsing animation */
+@keyframes editPulse {
+  0%, 100% {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 4px #3B82F6;
+  }
+  50% {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 6px #60A5FA;
+  }
+}
+
+/* Text selection styles */
+.canvas-textarea::selection {
+  background-color: #3B82F6;
+  color: white;
+}
+
+.canvas-textarea::-moz-selection {
+  background-color: #3B82F6;
+  color: white;
+}
+
+/* Loading states */
+.canvas-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #64748B;
+  font-size: 14px;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Error states */
+.canvas-error {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FEE2E2;
+  color: #DC2626;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', system-ui, sans-serif;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+  animation: errorShake 0.5s ease;
+}
+
+@keyframes errorShake {
+  0%, 100% {
+    transform: translateX(-50%);
+  }
+  25% {
+    transform: translateX(-52%);
+  }
+  75% {
+    transform: translateX(-48%);
+  }
+}
+
+/* Performance optimizations */
+.canvas-stage {
+  will-change: transform;
+}
+
+.canvas-layer {
+  will-change: contents;
+}
+
+/* Mobile touch optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .konva-transformer-handle {
+    min-width: 20px;
+    min-height: 20px;
+  }
+  
+  .resize-hint {
+    width: 8px !important;
+    height: 60px !important;
+  }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .konva-canvas-container {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .canvas-loading {
+    color: #94A3B8;
+  }
+  
+  .canvas-error {
+    background: #7F1D1D;
+    color: #FCA5A5;
+  }
+}

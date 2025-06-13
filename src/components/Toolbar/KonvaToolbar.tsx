@@ -140,7 +140,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             type: 'text',
             x: centerX,
             y: centerY,
-            text: 'Click to edit',
+            text: '', // Empty text for FigJam-style placeholder behavior
             fontSize: 18,
             fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
             fill: '#1E293B',
@@ -214,8 +214,9 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             points: [0, 0, 150, 0],
             stroke: '#1E293B',
             strokeWidth: 2,
-            arrowStart: false,
-            arrowEnd: true
+            fill: '#1E293B', // Add fill for arrow head
+            pointerLength: 10,
+            pointerWidth: 8
           };
           break;
           
@@ -287,6 +288,12 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       if (newElement) {
         addElement(newElement);
         setSelectedElement(newElement.id);
+        
+        // For text elements, immediately enter edit mode for FigJam-style behavior
+        if (newElement.type === 'text') {
+          const { setEditingTextId } = useKonvaCanvasStore.getState();
+          setEditingTextId(newElement.id);
+        }
         
         // After creating element, switch to select tool immediately
         setSelectedTool('select');

@@ -73,11 +73,17 @@ export interface CanvasElement {
   textColor?: string; // for sticky notes
   fontSize?: number; // Default font size for text-based elements
   fontFamily?: string; // Default font family for text-based elements
+  fontStyle?: string; // Font style (normal, italic, bold, bold italic)
+  textDecoration?: string; // Text decoration (underline, line-through, etc.)
+  listType?: string; // List type (none, bullet, numbered)
+  isHyperlink?: boolean; // Whether the text is a hyperlink
+  hyperlinkUrl?: string; // URL for hyperlinks
   segments?: RichTextSegment[]; // For 'rich-text' elements
   imageUrl?: string; // For image elements
   arrowStart?: boolean; // For lines/arrows
   arrowEnd?: boolean; // For lines/arrows
   color?: string; // General color property for shapes
+  rotation?: number; // Rotation angle in degrees
 }
 
 interface HistoryState {

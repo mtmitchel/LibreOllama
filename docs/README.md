@@ -6,7 +6,7 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 
 **New to LibreOllama?** Start here:
 - **[Main README](../README.md)** - Project overview, tech stack, and development setup
-- **[Canvas Quick Start](../CANVAS_QUICK_START.md)** - Get started with the whiteboard in minutes
+- **[Canvas Documentation](./CANVAS_DOCUMENTATION.md)** - Complete canvas documentation and user guide
 - **[Development Startup Guide](./development/DEV-STARTUP-GUIDE.md)** - Set up your development environment
 
 ## 📚 Core Feature Documentation
@@ -15,8 +15,7 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 Our professional-grade whiteboard is powered by Konva.js for high performance and rich interactions.
 
 - **[Canvas Implementation Final](./CANVAS_IMPLEMENTATION_FINAL.md)** - Complete technical documentation for Konva.js canvas implementation
-- **[Modern Canvas Documentation](./MODERN_CANVAS_DOCUMENTATION.md)** - User guide and developer reference for the canvas system
-- **[Konva Implementation Complete](../KONVA_IMPLEMENTATION_COMPLETE.md)** - Migration details and current state overview
+- **[Canvas Documentation](./CANVAS_DOCUMENTATION.md)** - Comprehensive canvas documentation including architecture, features, and development guide
 
 ### **🎨 UI/UX Design System**
 Comprehensive documentation of our design system, components, and user experience improvements.
@@ -64,8 +63,7 @@ The [`../archives/`](../archives/) folder contains:
 - 3 Development setup guides
 
 ### **Root Directory Documentation**
-- **[Canvas Quick Start](../CANVAS_QUICK_START.md)** - Quick reference for canvas features
-- **[Konva Implementation Complete](../KONVA_IMPLEMENTATION_COMPLETE.md)** - Comprehensive migration and implementation details
+- **[Canvas Documentation](./CANVAS_DOCUMENTATION.md)** - Complete canvas reference and implementation details
 
 ## 📝 Documentation Guidelines
 
@@ -77,7 +75,7 @@ The [`../archives/`](../archives/) folder contains:
 
 ### **For Users**
 1. **Begin with the [Main README](../README.md)** for project overview
-2. **Use [Canvas Quick Start](../CANVAS_QUICK_START.md)** to get started with the whiteboard
+2. **Use [Canvas Documentation](./CANVAS_DOCUMENTATION.md)** to get started with the whiteboard
 3. **Refer to feature-specific guides** for detailed usage instructions
 
 ---

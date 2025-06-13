@@ -134,8 +134,7 @@ libreollama/
 LibreOllama includes comprehensive documentation to help you get started quickly and contribute effectively.
 
 ### **Quick Start Guides**
-- **[Canvas Quick Start](./CANVAS_QUICK_START.md)** - Get up and running with the Konva.js whiteboard in minutes
-- **[Konva Implementation Complete](./KONVA_IMPLEMENTATION_COMPLETE.md)** - Comprehensive technical documentation for the canvas migration and current state
+- **[Canvas Documentation](./docs/CANVAS_DOCUMENTATION.md)** - Complete canvas documentation including user guide, architecture, and development information
 
 ### **Detailed Documentation**
 - **[Documentation Index](./docs/README.md)** - Complete guide to all available documentation

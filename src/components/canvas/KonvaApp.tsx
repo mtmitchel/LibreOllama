@@ -8,6 +8,7 @@ import { designSystem } from '../../styles/designSystem';
 import { usePanZoom } from '../../hooks/usePanZoom';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import '../../styles/konvaCanvas.css';
+import '../../styles/canvas-enhancements.css';
 
 const KonvaApp: React.FC = () => {
   const stageRef = useRef<Konva.Stage>(null);

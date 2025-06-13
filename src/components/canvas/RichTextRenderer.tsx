@@ -106,7 +106,7 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
         textNode.on('mouseleave', mouseLeaveHandler);
         
         // Store cleanup function on the node for later use
-        textNode._cleanupEvents = () => {
+        (textNode as any)._cleanupEvents = () => {
           if (clickTimeout) window.clearTimeout(clickTimeout);
           textNode.off('click tap', clickHandler);
           textNode.off('dblclick', dblClickHandler);
@@ -154,6 +154,7 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
           }
         }}
         onSelect={() => {}}
+        onStartEdit={() => {}}
         konvaProps={groupProps}
       />
     );
