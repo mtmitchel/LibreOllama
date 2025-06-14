@@ -115,7 +115,6 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
         <Group
           x={element.x}
           y={element.y}
-          draggable={true} // Always draggable when not editing
           onDragEnd={(e) => {
             onUpdate(element.id, {
               x: e.target.x(),
@@ -191,7 +190,6 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
         <Group
           x={element.x}
           y={element.y}
-          draggable={true} // Always draggable when not editing
           onDragEnd={(e) => {
             onUpdate(element.id, {
               x: e.target.x(),

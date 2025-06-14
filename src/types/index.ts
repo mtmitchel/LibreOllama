@@ -15,5 +15,39 @@ export interface ViewportBounds {
   bottom: number;
 }
 
-// Re-export CanvasElement types if they are defined elsewhere and used broadly
-// For now, assuming CanvasElement specific types are handled in their own files or are simple enough not to need a central definition yet.
+// Base element interface with section support
+export interface BaseElement {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  rotation?: number;
+  isLocked?: boolean;
+  isHidden?: boolean;
+  // NEW: Section membership - tracks which section contains this element
+  sectionId?: string | null;
+}
+
+// Coordinate system types for the refactoring
+export interface Coordinates {
+  x: number;
+  y: number;
+}
+
+export interface ElementPosition {
+  // Stored coordinates (relative to parent section or canvas)
+  local: Coordinates;
+  // Computed absolute coordinates (for hit testing, connectors)
+  absolute?: Coordinates;
+}
+
+// Helper type for coordinate context
+export type CoordinateSpace = 'local' | 'absolute' | 'screen';
+
+// Bounding box for element bounds calculations
+export interface BoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}

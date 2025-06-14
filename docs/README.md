@@ -12,10 +12,13 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 ## 📚 Core Feature Documentation
 
 ### **🎨 Canvas/Whiteboard System**
-Our professional-grade whiteboard is powered by Konva.js for high performance and rich interactions.
+Our professional-grade whiteboard is powered by Konva.js for high performance and rich interactions. Features **FigJam-style sections** for hierarchical organization, advanced rich text editing with floating toolbar, and comprehensive visual feedback systems.
 
-- **[Canvas Implementation Final](./CANVAS_IMPLEMENTATION_FINAL.md)** - Complete technical documentation for Konva.js canvas implementation
-- **[Canvas Documentation](./CANVAS_DOCUMENTATION.md)** - Comprehensive canvas documentation including architecture, features, and development guide
+- [Canvas Documentation](CANVAS_DOCUMENTATION.md) - Complete canvas system overview with section system and advanced text editing
+- [Canvas Implementation Guide](CANVAS_IMPLEMENTATION_GUIDE.md) - Technical implementation details including section architecture and coordinate conversion
+- [Canvas Development Best Practices](CANVAS_DEVELOPMENT_BEST_PRACTICES.md) - Implementation patterns and development guidelines
+- [Canvas Comprehensive Analysis](CANVAS_COMPREHENSIVE_ANALYSIS.md) - In-depth technical analysis and architecture review
+- [Canvas Implementation & Fixes](CANVAS_FIXES_SUMMARY.md) - Comprehensive fixes including section system implementation
 
 ### **🎨 UI/UX Design System**
 Comprehensive documentation of our design system, components, and user experience improvements.

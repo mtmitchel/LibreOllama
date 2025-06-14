@@ -7,12 +7,7 @@ import {
   MousePointer2, 
   Type, 
   StickyNote, 
-  Square, 
-  Circle, 
-  Minus, 
   Pen, 
-  Triangle, 
-  Star,
   Trash2,
   RotateCcw,
   Download,
@@ -25,28 +20,33 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  ArrowRight,
   Image,
-  Hand
+  Hand,
+  Layout
 } from 'lucide-react';
 import './KonvaToolbar.css';
 import ColorPicker from '../canvas/ColorPicker';
+import ShapesDropdown from './ShapesDropdown';
 
-const tools = [
+const basicTools = [
   { id: 'select', name: 'Select', icon: MousePointer2 },
-  { id: 'pan', name: 'Pan', icon: Hand },
+  { id: 'pan', name: 'Pan', icon: Hand }
+];
+
+const contentTools = [
   { id: 'text', name: 'Text', icon: Type },
   { id: 'sticky-note', name: 'Sticky Note', icon: StickyNote },
-  { id: 'rectangle', name: 'Rectangle', icon: Square },
-  { id: 'circle', name: 'Circle', icon: Circle },
-  { id: 'line', name: 'Line', icon: Minus },
-  { id: 'arrow', name: 'Arrow', icon: ArrowRight },
-  { id: 'triangle', name: 'Triangle', icon: Triangle },
-  { id: 'star', name: 'Star', icon: Star },
+  { id: 'section', name: 'Section', icon: Layout }
+];
+
+const drawingTools = [
   { id: 'pen', name: 'Pen', icon: Pen },
   { id: 'image', name: 'Image', icon: Image },
   { id: 'connect', name: 'Connect', icon: Zap }
 ];
+
+// Shape tools are now handled by ShapesDropdown component
+const shapeToolIds = ['rectangle', 'circle', 'connector-line', 'connector-arrow', 'triangle', 'star'];
 
 interface KonvaToolbarProps {
   onZoomIn: () => void;
@@ -124,29 +124,34 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     
     // For drawing tools (not select/connect), create element immediately
     if (toolId !== 'select' && toolId !== 'connect' && toolId !== 'pan') {
-      const { addElement, setSelectedElement } = useKonvaCanvasStore.getState();
-      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Calculate center position of visible canvas area
-      const centerX = 400;
-      const centerY = 300;
-      
-      let newElement: any = null;
-      
-      switch (toolId) {
-        case 'text':
-          newElement = {
-            id: generateId(),
-            type: 'text',
-            x: centerX,
-            y: centerY,
-            text: '', // Empty text for FigJam-style placeholder behavior
-            fontSize: 18,
-            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
-            fill: '#1E293B',
-            width: 200
-          };
-          break;
+      createElementForTool(toolId);
+    }
+  };
+  
+  const createElementForTool = (toolId: string) => {
+    const { addElement, setSelectedElement } = useKonvaCanvasStore.getState();
+    const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Calculate center position of visible canvas area
+    const centerX = 400;
+    const centerY = 300;
+    
+    let newElement: any = null;
+    
+    switch (toolId) {
+      case 'text':
+        newElement = {
+          id: generateId(),
+          type: 'text',
+          x: centerX,
+          y: centerY,
+          text: '', // Empty text for FigJam-style placeholder behavior
+          fontSize: 18,
+          fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
+          fill: '#1E293B',
+          width: 200
+        };
+        break;
           
         case 'sticky-note':
           newElement = {
@@ -191,34 +196,11 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           };
           break;
           
-        case 'line':
-          newElement = {
-            id: generateId(),
-            type: 'line',
-            x: centerX - 75,
-            y: centerY,
-            points: [0, 0, 150, 0],
-            stroke: '#1E293B',
-            strokeWidth: 2,
-            arrowStart: false,
-            arrowEnd: false
-          };
-          break;
-          
-        case 'arrow':
-          newElement = {
-            id: generateId(),
-            type: 'arrow',
-            x: centerX - 75,
-            y: centerY,
-            points: [0, 0, 150, 0],
-            stroke: '#1E293B',
-            strokeWidth: 2,
-            fill: '#1E293B', // Add fill for arrow head
-            pointerLength: 10,
-            pointerWidth: 8
-          };
-          break;
+        case 'connector-line':
+        case 'connector-arrow':
+          // Connector tools don't create elements immediately
+          // They activate the drawing mode instead
+          return;
           
         case 'image':
           // For image tool, trigger file input
@@ -283,6 +265,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             strokeWidth: 2
           };
           break;
+          
+        case 'section':
+          // Section tool activates drawing mode, doesn't create element immediately
+          return;
       }
       
       if (newElement) {
@@ -296,9 +282,8 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
         }
         
         // After creating element, switch to select tool immediately
-        setSelectedTool('select');
+        setTimeout(() => setSelectedTool('select'), 100);
       }
-    }
   };
   
   const handleColorChange = (color: string, type: 'fill' | 'stroke' | 'backgroundColor') => {
@@ -312,9 +297,9 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   
   return (
     <div className="konva-toolbar">
-      {/* Drawing Tools */}
+      {/* Basic Tools */}
       <div className="konva-toolbar-group">
-        {tools.map(tool => {
+        {basicTools.map(tool => {
           const IconComponent = tool.icon;
           const isActive = selectedTool === tool.id;
           return (
@@ -325,9 +310,47 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
               title={tool.name}
             >
               <IconComponent size={16} />
-              {isActive && (
-                <span className="tool-label">{tool.name}</span>
-              )}
+            </button>
+          );
+        })}
+      </div>
+      
+      {/* Content Tools */}
+      <div className="konva-toolbar-group">
+        {contentTools.map(tool => {
+          const IconComponent = tool.icon;
+          const isActive = selectedTool === tool.id;
+          return (
+            <button
+              key={tool.id}
+              onClick={() => handleToolClick(tool.id)}
+              className={`konva-toolbar-tool-btn ${isActive ? 'active' : ''}`}
+              title={tool.name}
+            >
+              <IconComponent size={16} />
+            </button>
+          );
+        })}
+      </div>
+      
+      {/* Shapes Dropdown */}
+      <div className="konva-toolbar-group">
+        <ShapesDropdown onToolSelect={handleToolClick} />
+      </div>
+      
+      {/* Drawing Tools */}
+      <div className="konva-toolbar-group">
+        {drawingTools.map(tool => {
+          const IconComponent = tool.icon;
+          const isActive = selectedTool === tool.id;
+          return (
+            <button
+              key={tool.id}
+              onClick={() => handleToolClick(tool.id)}
+              className={`konva-toolbar-tool-btn ${isActive ? 'active' : ''}`}
+              title={tool.name}
+            >
+              <IconComponent size={16} />
             </button>
           );
         })}
@@ -354,7 +377,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Zoom In (+)"
         >
           <ZoomIn size={16} />
-          <span>Zoom In</span>
         </button>
         <button
           onClick={handleZoomOut}
@@ -362,7 +384,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Zoom Out (-)"
         >
           <ZoomOut size={16} />
-          <span>Zoom Out</span>
         </button>
         <button
           onClick={handleResetZoom}
@@ -370,7 +391,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Reset Zoom (0)"
         >
           <RotateCcw size={16} />
-          <span>Reset</span>
         </button>
         <button
           onClick={handleZoomToFit}
@@ -378,7 +398,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Zoom to Fit Content (F)"
         >
           <Maximize size={16} />
-          <span>Fit</span>
         </button>
       </div>
 
@@ -391,7 +410,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Undo (Ctrl+Z)"
         >
           <Undo2 size={16} />
-          <span>Undo</span>
         </button>
         <button
           onClick={redo}
@@ -400,7 +418,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Redo (Ctrl+Y)"
         >
           <Redo2 size={16} />
-          <span>Redo</span>
         </button>
       </div>
 
@@ -414,7 +431,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Delete Selected (Del)"
         >
           <Trash2 size={16} />
-          <span>Delete</span>
         </button>
         
         {/* Clear Canvas */}
@@ -424,7 +440,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Clear all elements from canvas"
         >
           <RotateCcw size={16} />
-          <span>Clear</span>
         </button>
         
         {/* Export */}
@@ -434,7 +449,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Export canvas as JSON"
         >
           <Download size={16} />
-          <span>Export</span>
         </button>
         
         {/* Save to File */}
@@ -444,7 +458,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Save canvas to file"
         >
           <Save size={16} />
-          <span>Save</span>
         </button>
         
         {/* Load from File */}
@@ -454,7 +467,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           title="Load canvas from file"
         >
           <FolderOpen size={16} />
-          <span>Load</span>
         </button>
         
         {/* Import */}
@@ -464,7 +476,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           style={{ cursor: 'pointer' }}
         >
           <Upload size={16} />
-          <span>Import</span>
           <input
             type="file"
             accept=".json"

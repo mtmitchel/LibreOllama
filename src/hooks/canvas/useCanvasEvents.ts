@@ -26,21 +26,21 @@ export const useCanvasEvents = ({
   // Store refs for internal state that doesn't need to trigger re-renders
   const initialElementPositions = useRef<Record<string, { x: number; y: number }>>({});
     // Get store actions
-  const addElement = useFabricCanvasStore((state) => state.addElement);
-  const updateElement = useFabricCanvasStore((state) => state.updateElement);
-  const deleteElement = useFabricCanvasStore((state) => state.deleteElement);
-  const selectElement = useFabricCanvasStore((state) => state.selectElement);
-  const clearSelection = useFabricCanvasStore((state) => state.clearSelection);
-  const setPan = useFabricCanvasStore((state) => state.setPan);
-  const setZoom = useFabricCanvasStore((state) => state.setZoom);
-  const setDragState = useFabricCanvasStore((state) => state.setDragState);
-  const setIsDrawing = useFabricCanvasStore((state) => state.setIsDrawing);
-  const setPreviewState = useFabricCanvasStore((state) => state.setPreviewState);
-  const setIsEditingText = useFabricCanvasStore((state) => state.setIsEditingText);
-  const setTextFormattingState = useFabricCanvasStore((state) => state.setTextFormattingState);
-  const setTextSelectionState = useFabricCanvasStore((state) => state.setTextSelectionState);
-  const addToHistory = useFabricCanvasStore((state) => state.addToHistory);
-  const updateMultipleElements = useFabricCanvasStore((state) => state.updateMultipleElements);
+  const addElement = useKonvaCanvasStore((state) => state.addElement);
+  const updateElement = useKonvaCanvasStore((state) => state.updateElement);
+  const deleteElement = useKonvaCanvasStore((state) => state.deleteElement);
+  const selectElement = useKonvaCanvasStore((state) => state.selectElement);
+  const clearSelection = useKonvaCanvasStore((state) => state.clearSelection);
+  const setPan = useKonvaCanvasStore((state) => state.setPan);
+  const setZoom = useKonvaCanvasStore((state) => state.setZoom);
+  const setDragState = useKonvaCanvasStore((state) => state.setDragState);
+  const setIsDrawing = useKonvaCanvasStore((state) => state.setIsDrawing);
+  const setPreviewState = useKonvaCanvasStore((state) => state.setPreviewState);
+  const setIsEditingText = useKonvaCanvasStore((state) => state.setIsEditingText);
+  const setTextFormattingState = useKonvaCanvasStore((state) => state.setTextFormattingState);
+  const setTextSelectionState = useKonvaCanvasStore((state) => state.setTextSelectionState);
+  const addToHistory = useKonvaCanvasStore((state) => state.addToHistory);
+  const updateMultipleElements = useKonvaCanvasStore((state) => state.updateMultipleElements);
 
   // Handle mouse down on individual elements
   const handleElementMouseDown = useCallback((pixiEvent: any, elementId: string) => {
@@ -51,7 +51,7 @@ export const useCanvasEvents = ({
       pixiEvent.data.originalEvent.stopPropagation();
     }
     
-    const { elements: currentElements, activeTool: currentActiveTool, isEditingText: currentEditingText } = useFabricCanvasStore.getState();
+    const { elements: currentElements, activeTool: currentActiveTool, isEditingText: currentEditingText } = useKonvaCanvasStore.getState();
     const element = currentElements[elementId];
 
     if (!element) {
@@ -84,7 +84,7 @@ export const useCanvasEvents = ({
       const startDragWorldCoords = getCanvasCoordinates(pixiEvent.global.x, pixiEvent.global.y);
       
       initialElementPositions.current = {};
-      const idsToDrag = useFabricCanvasStore.getState().selectedElementIds;
+      const idsToDrag = useKonvaCanvasStore.getState().selectedElementIds;
       idsToDrag.forEach((id: string) => {
         if (currentElements[id]) {
           initialElementPositions.current[id] = { x: currentElements[id].x, y: currentElements[id].y };
@@ -100,7 +100,7 @@ export const useCanvasEvents = ({
   }, [selectElement, updateElement, addToHistory, setDragState, setIsEditingText, setTextFormattingState, setTextSelectionState, getCanvasCoordinates, textAreaRef]);
   // Handle mouse down on canvas background
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
-    const currentStoreState = useFabricCanvasStore.getState();
+    const currentStoreState = useKonvaCanvasStore.getState();
 
     // SAFETY NET: If we're editing text, don't interfere with text editing
     if (currentStoreState.isEditingText) {
@@ -223,7 +223,7 @@ export const useCanvasEvents = ({
 
   // Global mouse move handler
   const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
-    const currentStoreState = useFabricCanvasStore.getState();
+    const currentStoreState = useKonvaCanvasStore.getState();
     const {
       isDragging: currentIsDragging,
       isDrawing: currentIsDrawing,
@@ -262,7 +262,7 @@ export const useCanvasEvents = ({
 
   // Global mouse up handler
   const handleGlobalMouseUp = useCallback(() => {
-    const currentStoreState = useFabricCanvasStore.getState();
+    const currentStoreState = useKonvaCanvasStore.getState();
     const {
       isDragging: currentIsDragging,
       isDrawing: currentIsDrawing,
@@ -285,7 +285,7 @@ export const useCanvasEvents = ({
 
   // Keyboard event handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    const { selectedElementIds: currentSelectedIds, isEditingText: currentEditingId } = useFabricCanvasStore.getState();
+    const { selectedElementIds: currentSelectedIds, isEditingText: currentEditingId } = useKonvaCanvasStore.getState();
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (currentSelectedIds.length > 0) {
@@ -314,7 +314,7 @@ export const useCanvasEvents = ({
   // Handle wheel events for zooming
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    const { zoom: currentZoom, pan: currentPan } = useFabricCanvasStore.getState();
+    const { zoom: currentZoom, pan: currentPan } = useKonvaCanvasStore.getState();
     const scaleFactor = 1.1;
     const newZoom = e.deltaY < 0 ? currentZoom * scaleFactor : currentZoom / scaleFactor;
     
@@ -334,7 +334,7 @@ export const useCanvasEvents = ({
 
   // Delete button click handler
   const handleDeleteButtonClick = useCallback(() => {
-    const { selectedElementIds: currentSelectedIds, elements: currentElements } = useFabricCanvasStore.getState();
+    const { selectedElementIds: currentSelectedIds, elements: currentElements } = useKonvaCanvasStore.getState();
     
     if (currentSelectedIds.length > 0) {
       console.log('Deleting elements:', currentSelectedIds);
@@ -347,7 +347,7 @@ export const useCanvasEvents = ({
       addToHistory();
       
       setTimeout(() => {
-        const updatedState = useFabricCanvasStore.getState();
+        const updatedState = useKonvaCanvasStore.getState();
         if (updatedState.selectedElementIds.length === 0) {
           clearSelection();
         }

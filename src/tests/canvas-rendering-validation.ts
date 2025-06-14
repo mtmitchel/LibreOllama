@@ -8,7 +8,7 @@
 // Extend window interface for testing
 declare global {
   interface Window {
-    useFabricCanvasStore?: any;
+    useKonvaCanvasStore?: any;
     runCanvasRenderingTests?: () => void;
     testObjectCreation?: () => boolean;
     testCoordinateSynchronization?: () => boolean;
@@ -20,7 +20,7 @@ declare global {
 function testObjectCreation(): boolean {
   console.log('🧪 Testing object creation and immediate visibility...');
   
-  const store = window.useFabricCanvasStore?.getState();
+  const store = window.useKonvaCanvasStore?.getState();
   if (!store) {
     console.error('❌ Canvas store not available');
     return false;
@@ -59,7 +59,7 @@ function testObjectCreation(): boolean {
 function testCoordinateSynchronization(): boolean {
   console.log('🧪 Testing coordinate synchronization...');
   
-  const store = window.useFabricCanvasStore?.getState();
+  const store = window.useKonvaCanvasStore?.getState();
   if (!store || !store.fabricCanvas) {
     console.error('❌ Canvas store not available');
     return false;
@@ -98,7 +98,7 @@ function testCoordinateSynchronization(): boolean {
 function testRenderingPerformance(): boolean {
   console.log('🧪 Testing centralized rendering performance...');
   
-  const store = window.useFabricCanvasStore?.getState();
+  const store = window.useKonvaCanvasStore?.getState();
   if (!store) {
     console.error('❌ Canvas store not available');
     return false;
