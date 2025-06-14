@@ -60,7 +60,7 @@ export const ToolbarSeparator: React.FC<SeparatorProps> = ({ style = {} }) => {
     width: '1px',
     height: '20px',
     backgroundColor: '#444',
-    margin: '0 4px',
+    margin: '0 2px',
     ...style
   };
 
@@ -234,24 +234,30 @@ export const FONT_SIZE_OPTIONS = [
   { value: '72', label: '72px' }
 ];
 
-// Alignment options with clear text alignment icons
+// Alignment options with industry-standard text alignment icons
 export const ALIGNMENT_OPTIONS = [
-  { value: 'left', label: '⬅' },
-  { value: 'center', label: '⬌' },
-  { value: 'right', label: '➡' }
+  { value: 'left', label: 'L' },
+  { value: 'center', label: 'C' },
+  { value: 'right', label: 'R' }
 ];
 
 // New font size dropdown with preset options and custom input
 interface FontSizeDropdownProps {
   value: number;
   onChange: (size: number) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
 export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
   value,
-  onChange
+  onChange,
+  isOpen: externalIsOpen,
+  onToggle
 }) => {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = onToggle || setInternalIsOpen;
   const [customSize, setCustomSize] = React.useState('');
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -263,23 +269,15 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
     { label: 'Huge', value: 48 }
   ];
 
-  // Close dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
+  // Note: Click-outside detection is now handled by the FloatingTextToolbar
 
   const handleSizeChange = (size: number) => {
     onChange(size);
-    setIsOpen(false);
+    if (onToggle) {
+      onToggle(); // Close dropdown when external control is used
+    } else {
+      setIsOpen(false);
+    }
   };
 
   const handleCustomSizeSubmit = () => {
@@ -298,9 +296,10 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
   };
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={dropdownRef} data-dropdown-container style={{ position: 'relative', display: 'inline-block' }}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        data-dropdown-button
+        onClick={() => onToggle ? onToggle() : setIsOpen(!isOpen)}
         style={{
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           border: '1px solid #444',
@@ -309,8 +308,8 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
           padding: '6px 8px',
           fontSize: '12px',
           cursor: 'pointer',
-          minWidth: '80px',
-          maxWidth: '120px',
+          minWidth: '70px',
+          maxWidth: '100px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -330,17 +329,18 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
       
       {isOpen && (
         <div
+          data-dropdown-content
           style={{
             position: 'absolute',
             top: '100%',
             left: '0',
-            width: '200px',
+            width: '180px',
             backgroundColor: '#1a1a1a',
             border: '1px solid #444',
             borderRadius: '6px',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
             zIndex: 10001,
-            padding: '6px 0',
+            padding: '4px 0',
             marginTop: '2px'
           }}
         >
@@ -349,7 +349,7 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
               key={size.value}
               onClick={() => handleSizeChange(size.value)}
               style={{
-                padding: '10px 16px',
+                padding: '8px 12px',
                 color: value === size.value ? '#3B82F6' : '#ffffff',
                 cursor: 'pointer',
                 fontSize: '13px',
@@ -374,9 +374,9 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
             </div>
           ))}
           
-          <div style={{ borderTop: '1px solid #333', margin: '6px 0' }} />
+          <div style={{ borderTop: '1px solid #333', margin: '4px 0' }} />
           
-          <div style={{ padding: '10px 16px' }}>
+          <div style={{ padding: '8px 12px' }}>
             <input
               type="number"
               placeholder="Custom size (8-72)"
@@ -387,7 +387,7 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
               max="72"
               style={{
                 width: '100%',
-                padding: '6px 10px',
+                padding: '5px 8px',
                 backgroundColor: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid #555',
                 borderRadius: '4px',
@@ -406,6 +406,414 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
               }}
             />
           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Style Preset Dropdown with professional design matching FontSizeDropdown
+interface StylePresetDropdownProps {
+  value: string;
+  onChange: (preset: string) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
+}
+
+export const StylePresetDropdown: React.FC<StylePresetDropdownProps> = ({
+  value,
+  onChange,
+  isOpen: externalIsOpen,
+  onToggle
+}) => {
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = onToggle || setInternalIsOpen;
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const presetOptions = [
+    {
+      value: 'default',
+      label: 'Text',
+      description: 'Regular body text',
+      fontSize: '16px'
+    },
+    {
+      value: 'heading',
+      label: 'Heading',
+      description: 'Large title text',
+      fontSize: '24px'
+    },
+    {
+      value: 'subheading',
+      label: 'Subheading',
+      description: 'Medium subtitle text',
+      fontSize: '18px'
+    }
+  ];
+
+  // Note: Click-outside detection is now handled by the FloatingTextToolbar
+
+  const handlePresetChange = (preset: string) => {
+    onChange(preset);
+    if (onToggle) {
+      onToggle(); // Close dropdown when external control is used
+    } else {
+      setIsOpen(false);
+    }
+  };
+
+  const currentPreset = presetOptions.find(option => option.value === value) || presetOptions[0];
+
+  return (
+    <div ref={dropdownRef} data-dropdown-container style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        data-dropdown-button
+        onClick={() => onToggle ? onToggle() : setIsOpen(!isOpen)}
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          border: '1px solid #444',
+          borderRadius: '4px',
+          color: '#ffffff',
+          padding: '6px 10px',
+          fontSize: '12px',
+          cursor: 'pointer',
+          minWidth: '100px',
+          maxWidth: '140px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transition: 'all 0.2s ease',
+          fontWeight: '500'
+        }}
+        title="Text Style"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+        }}
+      >
+        <span>{currentPreset.label}</span>
+        <span style={{ marginLeft: '8px', fontSize: '10px' }}>▼</span>
+      </button>
+      
+      {isOpen && (
+        <div
+          data-dropdown-content
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: '0',
+            width: '200px',
+            backgroundColor: '#1a1a1a',
+            border: '1px solid #444',
+            borderRadius: '6px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+            zIndex: 10001,
+            padding: '4px 0',
+            marginTop: '2px'
+          }}
+        >
+          {presetOptions.map(option => (
+            <div
+              key={option.value}
+              onClick={() => handlePresetChange(option.value)}
+              style={{
+                padding: '10px 12px',
+                color: value === option.value ? '#3B82F6' : '#ffffff',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                backgroundColor: value === option.value ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (value !== option.value) {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (value !== option.value) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {value === option.value && <span style={{ marginRight: '10px', color: '#3B82F6' }}>✓</span>}
+                  <span style={{
+                    fontWeight: value === option.value ? '600' : '500',
+                    fontSize: option.value === 'heading' ? '15px' : option.value === 'subheading' ? '14px' : '13px'
+                  }}>
+                    {option.label}
+                  </span>
+                </div>
+                <span style={{
+                  fontSize: '11px',
+                  color: '#888',
+                  fontWeight: '400'
+                }}>
+                  {option.fontSize}
+                </span>
+              </div>
+              <span style={{
+                fontSize: '10px',
+                color: '#999',
+                fontWeight: '400',
+                marginLeft: value === option.value ? '16px' : '0px'
+              }}>
+                {option.description}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Text Alignment Dropdown with proper positioning to avoid cutoff
+interface TextAlignmentDropdownProps {
+  value: string;
+  onChange: (alignment: string) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
+  toolbarRef?: React.RefObject<HTMLDivElement | null>;
+}
+
+export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
+  value,
+  onChange,
+  isOpen: externalIsOpen,
+  onToggle,
+  toolbarRef
+}) => {
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = onToggle || setInternalIsOpen;
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const [shouldAlignRight, setShouldAlignRight] = React.useState(false);
+
+  const alignmentOptions = [
+    {
+      value: 'left',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="2" y="3" width="8" height="2" rx="0.5"/>
+          <rect x="2" y="6" width="12" height="2" rx="0.5"/>
+          <rect x="2" y="9" width="10" height="2" rx="0.5"/>
+          <rect x="2" y="12" width="14" height="2" rx="0.5"/>
+        </svg>
+      ),
+      description: 'Align left'
+    },
+    {
+      value: 'center',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="4" y="3" width="8" height="2" rx="0.5"/>
+          <rect x="2" y="6" width="12" height="2" rx="0.5"/>
+          <rect x="3" y="9" width="10" height="2" rx="0.5"/>
+          <rect x="1" y="12" width="14" height="2" rx="0.5"/>
+        </svg>
+      ),
+      description: 'Align center'
+    },
+    {
+      value: 'right',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="6" y="3" width="8" height="2" rx="0.5"/>
+          <rect x="2" y="6" width="12" height="2" rx="0.5"/>
+          <rect x="4" y="9" width="10" height="2" rx="0.5"/>
+          <rect x="0" y="12" width="14" height="2" rx="0.5"/>
+        </svg>
+      ),
+      description: 'Align right'
+    }
+  ];
+
+  // Note: Click-outside detection is now handled by the FloatingTextToolbar
+
+  // Simple and reliable positioning calculation
+  React.useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        const button = buttonRef.current!;
+        const buttonRect = button.getBoundingClientRect();
+        
+        const dropdownWidth = 140; // Fixed width of dropdown
+        const SAFETY_MARGIN = 16; // Margin from edge to account for shadows and borders
+        
+        // First try to use toolbar reference if available
+        if (toolbarRef?.current) {
+          const toolbar = toolbarRef.current;
+          const toolbarRect = toolbar.getBoundingClientRect();
+          
+          // Calculate if dropdown would overflow when left-aligned
+          const leftAlignedRightEdge = buttonRect.left + dropdownWidth;
+          const wouldOverflow = leftAlignedRightEdge > (toolbarRect.right - SAFETY_MARGIN);
+          
+          console.log('🔍 [DROPDOWN DEBUG] Position check with toolbar:', {
+            buttonLeft: buttonRect.left,
+            dropdownWidth,
+            wouldReachTo: leftAlignedRightEdge,
+            toolbarRight: toolbarRect.right,
+            wouldOverflow
+          });
+          
+          setShouldAlignRight(wouldOverflow);
+        } else {
+          // Fallback: check against viewport
+          const viewportWidth = window.innerWidth;
+          const leftAlignedRightEdge = buttonRect.left + dropdownWidth;
+          const wouldOverflow = leftAlignedRightEdge > (viewportWidth - SAFETY_MARGIN);
+          
+          console.log('🔍 [DROPDOWN DEBUG] Position check with viewport:', {
+            buttonLeft: buttonRect.left,
+            dropdownWidth,
+            wouldReachTo: leftAlignedRightEdge,
+            viewportWidth,
+            wouldOverflow
+          });
+          
+          setShouldAlignRight(wouldOverflow);
+        }
+      });
+    }
+  }, [isOpen, toolbarRef]);
+
+  const handleAlignmentChange = (alignment: string) => {
+    onChange(alignment);
+    if (onToggle) {
+      onToggle(); // Close dropdown when external control is used
+    } else {
+      setIsOpen(false);
+    }
+  };
+
+  const currentAlignment = alignmentOptions.find(option => option.value === value) || alignmentOptions[0];
+
+  return (
+    <div ref={dropdownRef} data-dropdown-container style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        ref={buttonRef}
+        data-dropdown-button
+        onClick={() => onToggle ? onToggle() : setIsOpen(!isOpen)}
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          border: '1px solid #444',
+          borderRadius: '4px',
+          color: '#ffffff',
+          padding: '6px 8px',
+          fontSize: '12px',
+          cursor: 'pointer',
+          minWidth: '50px',
+          maxWidth: '60px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transition: 'all 0.2s ease',
+          fontWeight: '600'
+        }}
+        title="Text Alignment"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+        }}
+      >
+        <span>{currentAlignment.icon}</span>
+        <span style={{ marginLeft: '4px', fontSize: '10px' }}>▼</span>
+      </button>
+      
+      {isOpen && (
+        <div
+          data-dropdown-content
+          style={{
+            position: 'absolute',
+            top: '100%',
+            // Simple positioning: left-align by default, right-align if would overflow
+            ...(shouldAlignRight
+              ? {
+                  right: '0',
+                  left: 'auto'
+                }
+              : {
+                  left: '0',
+                  right: 'auto'
+                }
+            ),
+            width: '140px',
+            backgroundColor: '#1a1a1a',
+            border: '1px solid #444',
+            borderRadius: '6px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+            zIndex: 10001,
+            padding: '4px 0',
+            marginTop: '2px'
+          }}
+        >
+          {alignmentOptions.map(option => (
+            <div
+              key={option.value}
+              onClick={() => handleAlignmentChange(option.value)}
+              style={{
+                padding: '8px 12px',
+                color: value === option.value ? '#3B82F6' : '#ffffff',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: value === option.value ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (value !== option.value) {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (value !== option.value) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {value === option.value && <span style={{ marginRight: '10px', color: '#3B82F6' }}>✓</span>}
+                <span style={{
+                  fontWeight: value === option.value ? '600' : '500',
+                  fontSize: '14px',
+                  fontFamily: 'monospace',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px'
+                }}>
+                  {option.icon}
+                </span>
+              </div>
+              <span style={{
+                fontSize: '10px',
+                color: '#888',
+                fontWeight: '400'
+              }}>
+                {option.description}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
