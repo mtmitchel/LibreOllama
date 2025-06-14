@@ -59,6 +59,46 @@ export const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
   onDone
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Inject styles for FigJam-style textarea
+  useEffect(() => {
+    const styleId = 'figjam-textarea-styles';
+    let styleElement = document.getElementById(styleId);
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      styleElement.innerHTML = `
+        .text-editing-textarea.figjam-style::placeholder {
+          color: rgba(255, 255, 255, 0.6);
+          font-style: normal;
+        }
+        
+        .text-editing-textarea.figjam-style::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .text-editing-textarea.figjam-style::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+        }
+        
+        .text-editing-textarea.figjam-style::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 4px;
+        }
+        
+        .text-editing-textarea.figjam-style::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.5);
+        }
+      `;
+      document.head.appendChild(styleElement);
+    }
+    
+    return () => {
+      // Cleanup is optional since we reuse the same style element
+    };
+  }, []);
 
   // Auto-focus textarea when editing starts - ONLY when editing state changes, not on text changes
   useEffect(() => {
@@ -169,35 +209,26 @@ export const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
             height: textareaPosition.height + 'px',
             fontSize: previewFormat.fontSize + 'px',
             fontFamily: previewFormat.fontFamily,
-            color: previewFormat.isHyperlink ? '#2196F3' : previewFormat.color,
+            color: '#ffffff', // White text for FigJam style
             fontWeight: previewFormat.bold ? 'bold' : 'normal',
             fontStyle: previewFormat.italic ? 'italic' : 'normal',
             textDecoration: [
               previewFormat.underline || previewFormat.isHyperlink ? 'underline' : '',
               previewFormat.strikethrough ? 'line-through' : ''
             ].filter(Boolean).join(' ') || 'none',
-            border: '2px solid #3B82F6',
-            borderTopLeftRadius: '0px',
-            borderTopRightRadius: '0px',
-            borderBottomLeftRadius: element.type === 'sticky-note' ? '12px' : '8px',
-            borderBottomRightRadius: element.type === 'sticky-note' ? '12px' : '8px',
-            borderTop: 'none',
+            border: '3px solid #3B82F6',
+            borderRadius: '12px', // Rounded corners for FigJam style
             padding: element.type === 'sticky-note' ? '12px' : '8px',
             resize: 'none',
             outline: 'none',
-            backgroundColor: element.type === 'sticky-note'
-              ? 'rgba(255, 251, 235, 0.95)'
-              : 'rgba(255, 255, 255, 0.95)',
+            backgroundColor: '#3B82F6', // Blue background for FigJam style
             boxSizing: 'border-box',
-            boxShadow: element.type === 'sticky-note'
-              ? '0 8px 32px rgba(33, 150, 243, 0.25), 0 4px 16px rgba(0, 0, 0, 0.1)'
-              : '0 4px 12px rgba(0, 0, 0, 0.15)',
-            // Remove listStyleType as we're handling bullets in the text content
-            transition: element.type === 'sticky-note' ? 'all 0.2s ease-in-out' : 'none',
-            backdropFilter: element.type === 'sticky-note' ? 'blur(8px)' : 'none',
+            boxShadow: '0 4px 16px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s ease-in-out',
+            backdropFilter: 'blur(4px)',
             zIndex: 9999
           }}
-          className="text-editing-textarea"
+          className="text-editing-textarea figjam-style"
         />,
         document.body
       )}

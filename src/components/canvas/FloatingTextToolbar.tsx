@@ -152,9 +152,8 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       y: element.y
     });
     
-    // Calculate toolbar dimensions - ensure adequate space for all elements
-    // Make toolbar wider to accommodate all buttons without overflow
-    const toolbarWidth = Math.min(800, Math.max(700, (element.width || 200) * 2.5));
+    // Calculate toolbar dimensions - reduce width to fit content better
+    const toolbarWidth = Math.min(650, Math.max(550, (element.width || 200) * 2));
     const toolbarHeight = 48;
     const gap = 12; // 12px buffer above text box as required
     
@@ -346,13 +345,14 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
         onClick={() => {
           if (format.isHyperlink) {
             // Remove hyperlink
-            onFormatChange('isHyperlink');
+            onFormatChange('isHyperlink', false);
+            onFormatChange('hyperlinkUrl', '');
           } else {
             // Add hyperlink - prompt for URL
             const url = prompt('Enter URL:');
-            if (url) {
+            if (url !== null) { // Allow empty string to clear URL
               onFormatChange('hyperlinkUrl', url);
-              onFormatChange('isHyperlink');
+              onFormatChange('isHyperlink', !!url);
             }
           }
         }}

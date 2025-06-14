@@ -52,12 +52,27 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
     onStartEdit(element.id);
   }, [onStartEdit, element.id, element.type]);
 
-  // Handle text click for hyperlinks - only in view mode (not editing)
+  // Handle text click for hyperlinks - only in view mode with delay
   const handleTextClick = useCallback((e: any) => {
+    // Prevent hyperlink navigation if this is part of a double-click
+    if (e.evt?.detail > 1) {
+      e.cancelBubble = true;
+      return;
+    }
+    
     // Only handle hyperlink clicks if not currently editing
     if (!isEditing && element.isHyperlink && element.hyperlinkUrl) {
       e.cancelBubble = true;
-      window.open(element.hyperlinkUrl, '_blank');
+      
+      // Add a small delay to ensure this isn't part of a double-click
+      setTimeout(() => {
+        // Ensure URL has proper protocol
+        let url = element.hyperlinkUrl;
+        if (url && !url.match(/^https?:\/\//)) {
+          url = 'https://' + url;
+        }
+        window.open(url, '_blank');
+      }, 200);
     }
   }, [isEditing, element.isHyperlink, element.hyperlinkUrl]);
 
