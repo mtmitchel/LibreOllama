@@ -12,6 +12,11 @@ import FloatingTextToolbar from './FloatingTextToolbar';
 import SectionElement from './SectionElement';
 import TableElement from './TableElement';
 import { designSystem } from '../../styles/designSystem';
+import '../../styles/konvaCanvas.css';
+import '../../styles/canvas-enhanced.css';
+import '../../styles/canvas-sections-enhanced.css';
+import '../../styles/canvas-transform-enhanced.css';
+import '../../styles/text-editing-enhanced.css';
 import { SectionElement as SectionType, isElementInSection } from '../../types/section';
 
 // CanvasElement and RichTextSegment are now imported from the store.
@@ -1505,33 +1510,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   }, [selectedElementId, editingTextId, setSelectedElement, setEditingTextId, isDrawingConnector]);
 
   return (
-    <div 
-      className="konva-canvas-container"
-      style={{
-        border: `2px solid ${designSystem.colors.secondary[200]}`,
-        borderRadius: `${designSystem.borderRadius.lg}px`,
-        boxShadow: designSystem.shadows.lg,
-        background: designSystem.canvasStyles.background,
-        overflow: 'hidden',
-        position: 'relative'
-      }}
-    >
+    <div className="konva-canvas-container">
       {/* Canvas ready indicator */}
       {elementArray.length === 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          background: 'rgba(59, 130, 246, 0.1)',
-          padding: '8px 12px',
-          borderRadius: '6px',
-          fontSize: '14px',
-          color: '#3B82F6',
-          fontFamily: designSystem.typography.fontFamily.sans,
-          zIndex: 10,
-          pointerEvents: 'none'
-        }}>
-          🎨 Canvas ready! Select a tool from the toolbar to create elements
+        <div className="canvas-ready-indicator">
+          Canvas ready! Select a tool from the toolbar to create elements
         </div>
       )}
       
@@ -1675,22 +1658,27 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
                         'bottom-left', 'bottom-center', 'bottom-right'];
               }
             })()}
-            borderStroke="#2196F3"
-            borderStrokeWidth={3}
+            borderStroke="#3B82F6"
+            borderStrokeWidth={2}
             borderDash={[8, 4]}
             anchorFill="#FFFFFF"
-            anchorStroke="#2196F3"
-            anchorStrokeWidth={3}
-            anchorSize={12}
-            anchorCornerRadius={6}
-            rotationAnchorOffset={30}
+            anchorStroke="#3B82F6"
+            anchorStrokeWidth={2}
+            anchorSize={14}
+            anchorCornerRadius={7}
+            rotateAnchorOffset={35}
             rotationSnapTolerance={5}
+            rotateAnchorSize={20}
+            rotateAnchorFill="#3B82F6"
+            rotateAnchorStroke="#FFFFFF"
+            rotateAnchorStrokeWidth={2}
             // Enhanced visual feedback
-            padding={5}
+            padding={8}
             // Add shadow effect for better visibility
-            shadowColor="rgba(33, 150, 243, 0.3)"
-            shadowBlur={8}
-            shadowOffset={{ x: 0, y: 2 }}
+            shadowColor="rgba(59, 130, 246, 0.3)"
+            shadowBlur={12}
+            shadowOffset={{ x: 0, y: 4 }}
+            shadowOpacity={0.5}
           /></Layer></Stage>
 
       {/* Text editing overlay - completely outside Konva */}

@@ -1,0 +1,320 @@
+/* Canvas Transform Controls Enhanced - Modern Selection and Transform Handles */
+
+/* ==================== Transformer Customization ==================== */
+/* These styles enhance Konva's default transformer appearance */
+
+/* Selection border enhancement */
+.konva-transformer-border {
+  stroke: var(--accent-primary) !important;
+  stroke-width: 2 !important;
+  stroke-dasharray: 8 4 !important;
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.2));
+  animation: transformerDash 20s linear infinite;
+}
+
+@keyframes transformerDash {
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+
+/* ==================== Transform Anchors ==================== */
+.konva-transformer-anchor {
+  /* Applied via Konva configuration */
+  fill: white !important;
+  stroke: var(--accent-primary) !important;
+  stroke-width: 2 !important;
+  width: 14px !important;
+  height: 14px !important;
+  corner-radius: 7px !important;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Anchor hover state */
+.konva-transformer-anchor:hover {
+  fill: var(--accent-primary) !important;
+  transform: scale(1.3);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* ==================== Rotation Handle ==================== */
+.konva-transformer-rotater {
+  fill: var(--accent-primary) !important;
+  stroke: white !important;
+  stroke-width: 2 !important;
+  width: 20px !important;
+  height: 20px !important;
+  offset: 35px !important;
+}
+
+.konva-transformer-rotater::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, 
+    rgba(59, 130, 246, 0.2) 0%, 
+    transparent 70%);
+  pointer-events: none;
+}
+
+/* ==================== Custom Selection Overlay ==================== */
+.canvas-selection-overlay {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid var(--accent-primary);
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.05);
+  animation: selectionFadeIn 0.2s ease;
+}
+
+@keyframes selectionFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==================== Multi-Selection ==================== */
+.canvas-multi-selection {
+  border: 2px dashed var(--accent-primary);
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 4px;
+  animation: multiSelectPulse 2s ease-in-out infinite;
+}
+
+@keyframes multiSelectPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ==================== Selection Handles for Different Elements ==================== */
+
+/* Text element handles - only horizontal resize */
+.transformer-text-element .konva-transformer-anchor:not(.middle-left):not(.middle-right) {
+  display: none !important;
+}
+
+/* Circle element handles - maintain aspect ratio indicator */
+.transformer-circle-element .konva-transformer-anchor {
+  cursor: move !important;
+}
+
+/* Line/Connector handles - special appearance */
+.transformer-connector-element .konva-transformer-anchor {
+  fill: var(--accent-secondary) !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* ==================== Hover Effects ==================== */
+.canvas-element-hoverable {
+  transition: filter 0.2s ease;
+}
+
+.canvas-element-hoverable:hover {
+  filter: brightness(1.05) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+  cursor: pointer;
+}
+
+/* ==================== Dragging States ==================== */
+.canvas-element-dragging {
+  opacity: 0.8;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15));
+  cursor: grabbing !important;
+}
+
+.canvas-element-drag-preview {
+  opacity: 0.5;
+  border: 2px dashed var(--accent-primary);
+}
+
+/* ==================== Snap Guidelines ==================== */
+.canvas-snap-line {
+  stroke: var(--accent-primary);
+  stroke-width: 1;
+  stroke-dasharray: 5 5;
+  opacity: 0.5;
+  pointer-events: none;
+  animation: snapLineFade 0.3s ease;
+}
+
+@keyframes snapLineFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.5;
+  }
+}
+
+.canvas-snap-point {
+  fill: var(--accent-primary);
+  stroke: white;
+  stroke-width: 2;
+  r: 4;
+  opacity: 0.8;
+  animation: snapPointPulse 0.5s ease;
+}
+
+@keyframes snapPointPulse {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+
+/* ==================== Resize Cursors ==================== */
+.resize-cursor-n { cursor: n-resize !important; }
+.resize-cursor-s { cursor: s-resize !important; }
+.resize-cursor-e { cursor: e-resize !important; }
+.resize-cursor-w { cursor: w-resize !important; }
+.resize-cursor-ne { cursor: ne-resize !important; }
+.resize-cursor-nw { cursor: nw-resize !important; }
+.resize-cursor-se { cursor: se-resize !important; }
+.resize-cursor-sw { cursor: sw-resize !important; }
+
+/* ==================== Element Specific Enhancements ==================== */
+
+/* Sticky notes with lifted appearance */
+.canvas-sticky-note {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.canvas-sticky-note:hover {
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.16));
+  transform: translateY(-2px) rotate(-0.5deg);
+}
+
+/* Images with smooth loading */
+.canvas-image {
+  opacity: 0;
+  animation: imageLoad 0.3s ease forwards;
+}
+
+@keyframes imageLoad {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Shapes with enhanced interactivity */
+.canvas-shape {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.canvas-shape:hover {
+  filter: brightness(1.08) saturate(1.1);
+}
+
+/* ==================== Connection Points ==================== */
+.connection-point {
+  fill: white;
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  r: 6;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.canvas-element:hover .connection-point {
+  opacity: 0.8;
+}
+
+.connection-point:hover {
+  opacity: 1 !important;
+  r: 8;
+  fill: var(--accent-primary);
+}
+
+/* ==================== Drawing Mode Indicators ==================== */
+.canvas-drawing-mode {
+  position: relative;
+}
+
+.canvas-drawing-mode::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid var(--accent-primary);
+  border-radius: 12px;
+  pointer-events: none;
+  animation: drawingModePulse 2s ease-in-out infinite;
+}
+
+@keyframes drawingModePulse {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1.01);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.02);
+  }
+}
+
+/* ==================== Performance Optimizations ==================== */
+.canvas-element {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* ==================== Accessibility ==================== */
+.canvas-element:focus-visible {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: 4px;
+}
+
+/* ==================== Dark Mode Adjustments ==================== */
+html.dark .konva-transformer-border {
+  stroke: rgba(96, 165, 250, 0.8) !important;
+  filter: drop-shadow(0 2px 4px rgba(96, 165, 250, 0.3));
+}
+
+html.dark .konva-transformer-anchor {
+  fill: #1E293B !important;
+  stroke: rgba(96, 165, 250, 0.8) !important;
+}
+
+html.dark .konva-transformer-anchor:hover {
+  fill: var(--accent-primary) !important;
+}
+
+/* ==================== Reduced Motion ==================== */
+@media (prefers-reduced-motion: reduce) {
+  .konva-transformer-border,
+  .canvas-selection-overlay,
+  .canvas-element,
+  .connection-point {
+    animation: none !important;
+    transition: none !important;
+  }
+}

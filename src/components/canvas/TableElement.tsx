@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { Group, Rect, Text, Line } from 'react-konva';
+import React, { useRef } from 'react';
+import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../../stores/konvaCanvasStore';
 
@@ -76,6 +76,41 @@ const TableElement: React.FC<TableElementProps> = ({
       newTableData[rowIndex][colIndex] = newValue;
       onUpdate({ tableData: newTableData });
     }
+  };
+
+  const addRow = () => {
+    const newRow = Array(cols).fill('');
+    const newTableData = [...normalizedTableData, newRow];
+    onUpdate({ 
+      rows: rows + 1,
+      tableData: newTableData 
+    });
+  };
+
+  const removeRow = () => {
+    if (rows <= 1) return;
+    const newTableData = normalizedTableData.slice(0, -1);
+    onUpdate({ 
+      rows: rows - 1,
+      tableData: newTableData 
+    });
+  };
+
+  const addColumn = () => {
+    const newTableData = normalizedTableData.map(row => [...row, '']);
+    onUpdate({ 
+      cols: cols + 1,
+      tableData: newTableData 
+    });
+  };
+
+  const removeColumn = () => {
+    if (cols <= 1) return;
+    const newTableData = normalizedTableData.map(row => row.slice(0, -1));
+    onUpdate({ 
+      cols: cols - 1,
+      tableData: newTableData 
+    });
   };
 
   return (
@@ -155,6 +190,195 @@ const TableElement: React.FC<TableElementProps> = ({
           dash={[5, 5]}
           listening={false}
         />
+      )}
+
+      {/* Add/Remove controls when selected */}
+      {isSelected && (
+        <>
+          {/* Add Row Button */}
+          <Group
+            x={totalWidth + 10}
+            y={totalHeight / 2 - 10}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              addRow();
+            }}
+            onTap={(e) => {
+              e.cancelBubble = true;
+              addRow();
+            }}
+          >
+            <Rect
+              width={20}
+              height={20}
+              fill="#EBF4FF"
+              stroke="#3B82F6"
+              strokeWidth={1}
+              cornerRadius={2}
+              shadowColor="rgba(0, 0, 0, 0.1)"
+              shadowBlur={2}
+              shadowOffsetY={1}
+            />
+            <Text
+              x={10}
+              y={10}
+              text="+"
+              fontSize={14}
+              fontFamily={fontFamily}
+              fill="#3B82F6"
+              align="center"
+              verticalAlign="middle"
+              width={20}
+              height={20}
+              listening={false}
+            />
+          </Group>
+
+          {/* Remove Row Button */}
+          <Group
+            x={totalWidth + 35}
+            y={totalHeight / 2 - 10}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              removeRow();
+            }}
+            onTap={(e) => {
+              e.cancelBubble = true;
+              removeRow();
+            }}
+          >
+            <Rect
+              width={20}
+              height={20}
+              fill="#F8FAFC"
+              stroke="#64748B"
+              strokeWidth={1}
+              cornerRadius={2}
+              shadowColor="rgba(0, 0, 0, 0.1)"
+              shadowBlur={2}
+              shadowOffsetY={1}
+            />
+            <Text
+              x={10}
+              y={10}
+              text="−"
+              fontSize={14}
+              fontFamily={fontFamily}
+              fill="#64748B"
+              align="center"
+              verticalAlign="middle"
+              width={20}
+              height={20}
+              listening={false}
+            />
+          </Group>
+
+          {/* Add Column Button */}
+          <Group
+            x={totalWidth / 2 - 10}
+            y={totalHeight + 10}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              addColumn();
+            }}
+            onTap={(e) => {
+              e.cancelBubble = true;
+              addColumn();
+            }}
+          >
+            <Rect
+              width={20}
+              height={20}
+              fill="#EBF4FF"
+              stroke="#3B82F6"
+              strokeWidth={1}
+              cornerRadius={2}
+              shadowColor="rgba(0, 0, 0, 0.1)"
+              shadowBlur={2}
+              shadowOffsetY={1}
+            />
+            <Text
+              x={10}
+              y={10}
+              text="+"
+              fontSize={14}
+              fontFamily={fontFamily}
+              fill="#3B82F6"
+              align="center"
+              verticalAlign="middle"
+              width={20}
+              height={20}
+              listening={false}
+            />
+          </Group>
+
+          {/* Remove Column Button */}
+          <Group
+            x={totalWidth / 2 + 15}
+            y={totalHeight + 10}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              removeColumn();
+            }}
+            onTap={(e) => {
+              e.cancelBubble = true;
+              removeColumn();
+            }}
+          >
+            <Rect
+              width={20}
+              height={20}
+              fill="#F8FAFC"
+              stroke="#64748B"
+              strokeWidth={1}
+              cornerRadius={2}
+              shadowColor="rgba(0, 0, 0, 0.1)"
+              shadowBlur={2}
+              shadowOffsetY={1}
+            />
+            <Text
+              x={10}
+              y={10}
+              text="−"
+              fontSize={14}
+              fontFamily={fontFamily}
+              fill="#64748B"
+              align="center"
+              verticalAlign="middle"
+              width={20}
+              height={20}
+              listening={false}
+            />
+          </Group>
+
+          {/* Resize Handle */}
+          <Group
+            x={totalWidth - 5}
+            y={totalHeight - 5}
+            draggable
+            onDragMove={(e) => {
+              e.cancelBubble = true;
+              const newCellWidth = Math.max(50, (e.target.x() + 5) / cols);
+              const newCellHeight = Math.max(30, (e.target.y() + 5) / rows);
+              onUpdate({ 
+                cellWidth: newCellWidth,
+                cellHeight: newCellHeight 
+              });
+            }}
+          >
+            <Rect
+              width={10}
+              height={10}
+              fill="#3B82F6"
+              stroke="#FFFFFF"
+              strokeWidth={1}
+              cornerRadius={1}
+              shadowColor="rgba(0, 0, 0, 0.2)"
+              shadowBlur={3}
+              shadowOffsetY={1}
+            />
+          </Group>
+        </>
       )}
     </Group>
   );

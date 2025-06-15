@@ -31,9 +31,15 @@ const SectionElement: React.FC<SectionElementProps> = ({
   const titleTextRef = useRef<Konva.Text>(null);
   const groupRef = useRef<Konva.Group>(null);
 
-  const titleBarHeight = section.titleBarHeight || 40;
-  const titleFontSize = section.titleFontSize || 14;
+  const titleFontSize = section.titleFontSize || 13;
   const titleColor = section.titleColor || '#FFFFFF';
+  
+  // Modern section design values
+  const sectionBorderColor = '#2563EB'; // Blue-600
+  const sectionBackgroundColor = '#FFFFFF';
+  const titlePillColor = '#2563EB'; // Blue-600
+  const titlePillHeight = 24;
+  const titlePillPadding = 12;
 
   // Handle double-click on title to edit
   const handleTitleDoubleClick = () => {
@@ -67,14 +73,15 @@ const SectionElement: React.FC<SectionElementProps> = ({
       input.style.position = 'fixed';
       input.style.left = `${containerRect.left + textPosition.x}px`;
       input.style.top = `${containerRect.top + textPosition.y}px`;
-      input.style.width = `${section.width - 20}px`;
+      input.style.width = `${Math.max(120, section.title ? section.title.length * (titleFontSize * 0.6) : 80)}px`;
       input.style.fontSize = `${titleFontSize}px`;
       input.style.fontFamily = designSystem.typography.fontFamily.sans;
+      input.style.fontWeight = '600';
       input.style.color = titleColor;
-      input.style.background = 'transparent';
-      input.style.border = '1px solid ' + section.borderColor;
-      input.style.borderRadius = '4px';
-      input.style.padding = '2px 4px';
+      input.style.background = titlePillColor;
+      input.style.border = 'none';
+      input.style.borderRadius = `${titlePillHeight / 2}px`;
+      input.style.padding = `${(titlePillHeight - titleFontSize) / 2}px ${titlePillPadding}px`;
       input.style.outline = 'none';
       input.style.zIndex = '1000';
 
@@ -129,10 +136,7 @@ const SectionElement: React.FC<SectionElementProps> = ({
     const node = e.target;
     node.opacity(section.opacity || 1);
     
-    // Get the new position from the dragged Group
-    const newPosition = { x: node.x(), y: node.y() };
-    
-    // Call the drag end handler with the section ID and new position
+    // Call the drag end handler with the section ID
     onDragEnd(e, section.id);
   };
 
@@ -189,57 +193,61 @@ const SectionElement: React.FC<SectionElementProps> = ({
         onClick={handleSectionClick}
       />
 
-      {/* Section Background */}
+      {/* Section Background - Modern white with blue border */}
       <Rect
         x={0}
         y={0}
         width={section.width}
         height={section.height}
-        fill={section.backgroundColor}
-        stroke={section.borderColor}
-        strokeWidth={section.borderWidth}
-        cornerRadius={section.cornerRadius}
+        fill={sectionBackgroundColor}
+        stroke={sectionBorderColor}
+        strokeWidth={2}
+        cornerRadius={8}
         listening={true}
         name="section-background"
         // Add shadow for selected sections
-        shadowColor={isSelected ? section.borderColor : undefined}
-        shadowBlur={isSelected ? 8 : 0}
-        shadowOpacity={isSelected ? 0.3 : 0}
+        shadowColor={isSelected ? sectionBorderColor : 'rgba(0, 0, 0, 0.1)'}
+        shadowBlur={isSelected ? 12 : 4}
+        shadowOpacity={isSelected ? 0.4 : 0.1}
         shadowOffsetX={0}
-        shadowOffsetY={2}
+        shadowOffsetY={isSelected ? 4 : 2}
       />
 
-      {/* Title Bar Background */}
-      <Rect
-        x={0}
-        y={0}
-        width={section.width}
-        height={titleBarHeight}
-        fill={section.borderColor}
-        cornerRadius={[section.cornerRadius, section.cornerRadius, 0, 0]}
-        opacity={0.9}
-      />
+      {/* Title Pill Badge */}
+      <Group x={16} y={16}>
+        <Rect
+          x={0}
+          y={0}
+          width={section.title ? (section.title.length * (titleFontSize * 0.6)) + (titlePillPadding * 2) : 80}
+          height={titlePillHeight}
+          fill={titlePillColor}
+          cornerRadius={titlePillHeight / 2} // Perfect pill shape
+          shadowColor="rgba(0, 0, 0, 0.1)"
+          shadowBlur={2}
+          shadowOpacity={0.3}
+          shadowOffsetX={0}
+          shadowOffsetY={1}
+        />
+        
+        {/* Section Title */}
+        <Text
+          ref={titleTextRef}
+          x={titlePillPadding}
+          y={(titlePillHeight - titleFontSize) / 2 + 1} // Center vertically
+          text={section.title || 'Section'}
+          fontSize={titleFontSize}
+          fontFamily={designSystem.typography.fontFamily.sans}
+          fill={titleColor}
+          fontStyle="600" // Semi-bold
+          onDblClick={handleTitleDoubleClick}
+          listening={true}
+          opacity={isEditingTitle ? 0 : 1}
+        />
+      </Group>
 
-      {/* Section Title */}
-      <Text
-        ref={titleTextRef}
-        x={10}
-        y={10}
-        text={section.title || 'Section'}
-        fontSize={titleFontSize}
-        fontFamily={designSystem.typography.fontFamily.sans}
-        fill={titleColor}
-        fontStyle="bold"
-        onDblClick={handleTitleDoubleClick}
-        listening={true}
-        width={section.width - 100} // Leave space for controls
-        ellipsis={true}
-        opacity={isEditingTitle ? 0 : 1}
-      />
-
-      {/* Section Controls (visible when selected) */}
+      {/* Section Controls (visible when selected) - positioned in top-right */}
       {isSelected && (
-        <Group x={section.width - 70} y={8}>
+        <Group x={section.width - 80} y={12}>
           {/* Lock/Unlock Button */}
           <Group
             x={0}
@@ -252,16 +260,21 @@ const SectionElement: React.FC<SectionElementProps> = ({
             <Rect
               x={0}
               y={0}
-              width={24}
-              height={24}
-              fill="rgba(255, 255, 255, 0.1)"
-              cornerRadius={4}
-              stroke="rgba(255, 255, 255, 0.3)"
+              width={28}
+              height={28}
+              fill="rgba(255, 255, 255, 0.95)"
+              cornerRadius={6}
+              stroke={sectionBorderColor}
               strokeWidth={1}
+              shadowColor="rgba(0, 0, 0, 0.1)"
+              shadowBlur={2}
+              shadowOpacity={0.3}
+              shadowOffsetX={0}
+              shadowOffsetY={1}
             />
             <Text
-              x={4}
-              y={6}
+              x={6}
+              y={8}
               text={section.isLocked ? '🔒' : '🔓'}
               fontSize={12}
               align="center"
@@ -271,7 +284,7 @@ const SectionElement: React.FC<SectionElementProps> = ({
 
           {/* Hide/Show Button */}
           <Group
-            x={30}
+            x={36}
             y={0}
             onClick={(e) => {
               e.cancelBubble = true;
@@ -281,16 +294,21 @@ const SectionElement: React.FC<SectionElementProps> = ({
             <Rect
               x={0}
               y={0}
-              width={24}
-              height={24}
-              fill="rgba(255, 255, 255, 0.1)"
-              cornerRadius={4}
-              stroke="rgba(255, 255, 255, 0.3)"
+              width={28}
+              height={28}
+              fill="rgba(255, 255, 255, 0.95)"
+              cornerRadius={6}
+              stroke={sectionBorderColor}
               strokeWidth={1}
+              shadowColor="rgba(0, 0, 0, 0.1)"
+              shadowBlur={2}
+              shadowOpacity={0.3}
+              shadowOffsetX={0}
+              shadowOffsetY={1}
             />
             <Text
-              x={4}
-              y={6}
+              x={6}
+              y={8}
               text="👁"
               fontSize={12}
               align="center"
@@ -300,18 +318,22 @@ const SectionElement: React.FC<SectionElementProps> = ({
         </Group>
       )}
 
-      {/* Content area indicator (subtle) */}
-      <Rect
-        x={2}
-        y={titleBarHeight + 2}
-        width={section.width - 4}
-        height={section.height - titleBarHeight - 4}
-        stroke={section.borderColor}
-        strokeWidth={1}
-        opacity={0.2}
-        dash={[5, 5]}
-        listening={false}
-      />
+      {/* Content area - subtle visual guide for empty sections */}
+      {section.containedElementIds.length === 0 && (
+        <Group x={24} y={56}>
+          <Text
+            x={0}
+            y={0}
+            text="Drop content here..."
+            fontSize={12}
+            fontFamily={designSystem.typography.fontFamily.sans}
+            fill="#94A3B8" // Gray-400
+            fontStyle="italic"
+            opacity={0.6}
+            listening={false}
+          />
+        </Group>
+      )}
 
       {/* Render contained elements as direct Group children */}
       {section.containedElementIds.map(elementId => {

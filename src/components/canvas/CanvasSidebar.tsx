@@ -231,66 +231,32 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   return (
     <>
       {/* Sidebar */}
-      <div 
-        className={`canvas-sidebar ${isOpen ? 'open' : ''}`}
-        style={{
-          backgroundColor: designSystem.colors.secondary[50],
-          borderRight: `1px solid ${designSystem.colors.secondary[200]}`,
-          position: 'relative' // Ensure proper positioning context
-        }}
-      >
+      <div className={`canvas-sidebar ${isOpen ? 'open' : 'collapsed'}`}>
         {/* Header */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: `${designSystem.spacing.md}px ${designSystem.spacing.lg}px`,
-          borderBottom: `1px solid ${designSystem.colors.secondary[200]}`
-        }}>
-          <h2 style={{
-            fontSize: designSystem.typography.fontSize.lg,
-            fontWeight: designSystem.typography.fontWeight.semibold,
-            color: designSystem.colors.secondary[700]
-          }}>
-            Canvases
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: designSystem.spacing.sm }}>
+        <div className="canvas-sidebar-header">
+          <h2 className="canvas-sidebar-title">Canvases</h2>
+          <div className="canvas-sidebar-actions">
             <button 
               onClick={handleCreateCanvas} 
-              style={{
-                background: designSystem.colors.primary[500],
-                color: 'white',
-                border: 'none',
-                padding: `${designSystem.spacing.xs}px ${designSystem.spacing.sm}px`,
-                borderRadius: designSystem.borderRadius.md,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: designSystem.spacing.xs,
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.primary[600]}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.primary[500]}
+              className="canvas-sidebar-new-btn"
             >
               <Plus size={16} />
-              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>New</span>
+              <span>New</span>
             </button>
           </div>
         </div>
 
         {/* Search */}
         <div className="canvas-sidebar-search">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search canvases..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              fontFamily: designSystem.typography.fontFamily.sans,
-              fontSize: designSystem.typography.fontSize.sm
-            }}
-          />
+          <div className="canvas-sidebar-search-wrapper">
+            <Search className="canvas-sidebar-search-icon" size={16} />
+            <input
+              type="text"
+              placeholder="Search canvases..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Canvas List */}
@@ -300,11 +266,6 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
               key={canvas.id}
               className={`canvas-sidebar-item ${selectedCanvasId === canvas.id ? 'selected' : ''}`}
               onClick={() => loadCanvas(canvas.id)}
-              style={{
-                backgroundColor: selectedCanvasId === canvas.id 
-                  ? designSystem.colors.primary[100]
-                  : 'transparent'
-              }}
             >
               {/* Thumbnail or placeholder */}
               <div className="canvas-sidebar-thumbnail">

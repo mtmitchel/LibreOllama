@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 import './ShapesDropdown.css';
+import './ShapesDropdown-enhanced.css';
 
 const shapeTools = [
   { id: 'rectangle', name: 'Rectangle', icon: Square },
@@ -59,15 +60,15 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
     <div className="shapes-dropdown" ref={dropdownRef}>
       <button
         onClick={toggleDropdown}
-        className={`konva-toolbar-tool-btn shapes-dropdown-trigger ${
+        className={`shapes-dropdown-trigger ${
           shapeTools.some(tool => tool.id === selectedTool) ? 'active' : ''
-        }`}
+        } ${isOpen ? 'open' : ''}`}
         title={`Shapes (${currentShapeTool.name} selected)`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         <CurrentIcon size={16} />
-        <ChevronDown size={12} className="dropdown-arrow" />
+        <ChevronDown size={12} style={{ marginLeft: '2px', transition: 'transform 0.2s' }} />
       </button>
       
       {isOpen && (

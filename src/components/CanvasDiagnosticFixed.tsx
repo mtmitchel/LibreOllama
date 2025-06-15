@@ -1,13 +1,5 @@
 /**
  * Canvas Diagnostic Component
- * Tests canvas rendering and performance monitoring
- */
-
-import React, { useEffect, useRef } from 'react';
-import { useKonvaCanvasStore } from '../stores/konvaCanvasStore';
-
-/**
- * Canvas Diagnostic Component
  * Performance and state monitoring for canvas
  */
 

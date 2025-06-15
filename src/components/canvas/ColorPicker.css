@@ -1,0 +1,263 @@
+/* ColorPicker.css - Modern Color Selection Component following LibreOllama Design System */
+
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  border-radius: 10px;
+  border: 1px solid var(--border-default);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.color-picker:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+/* Dark mode support */
+html.dark .color-picker {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ==================== Color Picker Icon ==================== */
+.color-picker-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.color-picker:hover .color-picker-icon {
+  color: var(--accent-primary);
+  transform: rotate(10deg);
+}
+
+/* ==================== Color Swatches Container ==================== */
+.color-picker-swatches {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ==================== Individual Color Swatch ==================== */
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Hover effect */
+.color-swatch:hover {
+  transform: scale(1.15) translateY(-2px);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Active/Selected state */
+.color-swatch.selected {
+  border-color: var(--accent-primary);
+  transform: scale(1.1);
+  box-shadow: 
+    0 0 0 3px rgba(59, 130, 246, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.color-swatch.selected:hover {
+  transform: scale(1.15);
+}
+
+/* Selection indicator */
+.color-swatch.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* White swatch needs dark check */
+.color-swatch.selected.swatch-white::after {
+  color: #333;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Transparent/None swatch pattern */
+.color-swatch.swatch-transparent {
+  background-image: 
+    linear-gradient(45deg, #E5E7EB 25%, transparent 25%),
+    linear-gradient(-45deg, #E5E7EB 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #E5E7EB 75%),
+    linear-gradient(-45deg, transparent 75%, #E5E7EB 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+  background-color: white;
+}
+
+/* ==================== Tooltip ==================== */
+.color-swatch::before {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: rgba(30, 41, 59, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 1000;
+}
+
+.color-swatch:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+/* ==================== Divider (if needed) ==================== */
+.color-picker-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-default);
+  margin: 0 4px;
+  opacity: 0.5;
+}
+
+/* ==================== Sticky Note Colors ==================== */
+.color-picker.sticky-colors .color-swatch {
+  box-shadow: 
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* ==================== Loading State ==================== */
+.color-picker.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.color-picker.loading .color-swatch {
+  animation: colorPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes colorPulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ==================== Compact Mode ==================== */
+.color-picker.compact {
+  padding: 4px 6px;
+  gap: 6px;
+}
+
+.color-picker.compact .color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+/* ==================== Expanded Mode with More Colors ==================== */
+.color-picker-expanded {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  min-width: 280px;
+}
+
+/* ==================== Custom Color Input ==================== */
+.color-picker-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.color-picker-custom input[type="color"] {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+}
+
+.color-picker-custom input[type="text"] {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+/* ==================== Accessibility ==================== */
+.color-swatch:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+  .color-picker {
+    padding: 4px 6px;
+    gap: 6px;
+  }
+  
+  .color-swatch {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* ==================== Animation Performance ==================== */
+@media (prefers-reduced-motion: reduce) {
+  .color-swatch,
+  .color-swatch::before,
+  .color-picker {
+    transition: none !important;
+    animation: none !important;
+  }
+}

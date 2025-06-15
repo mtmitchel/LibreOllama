@@ -10,6 +10,11 @@ import { designSystem } from '../../styles/designSystem';
 import { usePanZoom } from '../../hooks/usePanZoom';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import '../../styles/konvaCanvas.css';
+import '../../styles/canvas-enhanced.css';
+import '../../styles/canvas-sections-enhanced.css';
+import '../../styles/canvas-transform-enhanced.css';
+import '../../styles/text-editing-enhanced.css';
+import '../../styles/canvas-final-polish.css';
 import '../../styles/canvas-enhancements.css';
 
 const KonvaApp: React.FC = () => {

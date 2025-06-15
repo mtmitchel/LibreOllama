@@ -1,0 +1,509 @@
+/* Canvas Final Polish - Comprehensive Enhancements for LibreOllama Canvas */
+
+/* ==================== Global Canvas Enhancements ==================== */
+#canvas-container {
+  background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+html.dark #canvas-container {
+  background: linear-gradient(135deg, #111827 0%, #0F172A 100%);
+}
+
+/* Subtle grid pattern overlay */
+#canvas-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+html.dark #canvas-container::before {
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* ==================== Canvas Loading State ==================== */
+.canvas-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.canvas-loading-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.canvas-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--border-default);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: canvasSpin 0.8s linear infinite;
+}
+
+@keyframes canvasSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== Canvas Tools Visual Feedback ==================== */
+.canvas-tool-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.6;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  animation: toolPreviewPulse 1s ease-in-out infinite;
+}
+
+@keyframes toolPreviewPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* ==================== Enhanced Context Menus ==================== */
+.canvas-context-menu {
+  position: absolute;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 200px;
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  z-index: 10000;
+  animation: contextMenuOpen 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes contextMenuOpen {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.canvas-context-menu-item {
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.canvas-context-menu-item:hover {
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+  transform: translateX(2px);
+}
+
+.canvas-context-menu-item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+  transition: color 0.15s ease;
+}
+
+.canvas-context-menu-item:hover svg {
+  color: var(--accent-primary);
+}
+
+.canvas-context-menu-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 8px 0;
+}
+
+/* ==================== Notification Toasts ==================== */
+.canvas-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  animation: toastSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 10001;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+.canvas-toast.success {
+  border-color: var(--success);
+  background: linear-gradient(135deg, 
+    rgba(16, 185, 129, 0.1) 0%, 
+    rgba(16, 185, 129, 0.05) 100%);
+}
+
+.canvas-toast.error {
+  border-color: var(--error);
+  background: linear-gradient(135deg, 
+    rgba(239, 68, 68, 0.1) 0%, 
+    rgba(239, 68, 68, 0.05) 100%);
+}
+
+/* ==================== Minimap ==================== */
+.canvas-minimap {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  width: 200px;
+  height: 150px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  opacity: 0.9;
+  transition: all 0.3s ease;
+}
+
+.canvas-minimap:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.canvas-minimap-viewport {
+  position: absolute;
+  border: 2px solid var(--accent-primary);
+  background: rgba(59, 130, 246, 0.1);
+  cursor: move;
+  transition: background 0.2s ease;
+}
+
+.canvas-minimap-viewport:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* ==================== Rulers ==================== */
+.canvas-ruler {
+  position: absolute;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.canvas-ruler-horizontal {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+}
+
+.canvas-ruler-vertical {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 24px;
+}
+
+.canvas-ruler-tick {
+  position: absolute;
+  background: var(--border-default);
+}
+
+/* ==================== Collaboration Cursors ==================== */
+.collaboration-cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9998;
+  transition: all 0.1s ease;
+}
+
+.collaboration-cursor-pointer {
+  width: 20px;
+  height: 20px;
+  transform: rotate(-45deg);
+  border-radius: 50% 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.collaboration-cursor-label {
+  position: absolute;
+  top: 20px;
+  left: 10px;
+  padding: 4px 8px;
+  background: inherit;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== Export Preview ==================== */
+.canvas-export-preview {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10002;
+  backdrop-filter: blur(8px);
+  animation: exportPreviewFade 0.3s ease;
+}
+
+@keyframes exportPreviewFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.canvas-export-preview-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+  animation: exportPreviewSlide 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes exportPreviewSlide {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ==================== Performance Indicators ==================== */
+.canvas-performance-monitor {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #00FF00;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* ==================== Empty State ==================== */
+.canvas-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-tertiary);
+  animation: emptyStateFade 0.5s ease;
+}
+
+@keyframes emptyStateFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.canvas-empty-state-icon {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 24px;
+  opacity: 0.3;
+}
+
+.canvas-empty-state-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.canvas-empty-state-description {
+  font-size: 16px;
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ==================== Keyboard Shortcuts Overlay ==================== */
+.canvas-shortcuts-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10003;
+  backdrop-filter: blur(8px);
+}
+
+.canvas-shortcuts-content {
+  background: var(--bg-elevated);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: var(--shadow-xl);
+}
+
+.canvas-shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.canvas-shortcut-keys {
+  display: flex;
+  gap: 4px;
+}
+
+.canvas-shortcut-key {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ==================== Final Touches ==================== */
+
+/* Smooth transitions for all interactive elements */
+.konva-toolbar-btn,
+.konva-toolbar-tool-btn,
+.konva-toolbar-action-btn,
+.canvas-sidebar-item,
+.shapes-dropdown-trigger,
+.color-swatch {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Consistent focus states */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Prevent text selection on UI elements */
+.konva-toolbar,
+.canvas-sidebar,
+.floating-text-toolbar {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Smooth scrolling */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Performance optimizations */
+.canvas-gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Print styles */
+@media print {
+  .konva-toolbar,
+  .canvas-sidebar,
+  .floating-text-toolbar,
+  .canvas-ready-indicator,
+  .canvas-minimap,
+  .canvas-ruler {
+    display: none !important;
+  }
+  
+  #canvas-container {
+    background: white !important;
+  }
+  
+  #canvas-container::before {
+    display: none !important;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .konva-canvas-container {
+    border-width: 3px;
+  }
+  
+  .canvas-ready-indicator,
+  .floating-text-toolbar,
+  .canvas-sidebar {
+    border: 2px solid;
+  }
+}

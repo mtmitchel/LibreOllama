@@ -1,7 +1,6 @@
 // src/components/Canvas/UnifiedTextElement.tsx
 import React, { useRef, useCallback } from 'react';
 import { Text, Group, Rect } from 'react-konva';
-import { designSystem } from '../../styles/designSystem';
 
 interface UnifiedTextElementProps {
   element: {
@@ -97,20 +96,24 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
   
   // Display text with proper logic
   const displayText = shouldShowMainText ? formattedText : 'Double-click to edit';
-  
-  // Text display properties
-  const textDisplayProps = {
-    text: displayText,
-    fontSize: element.fontSize || 16,
-    fontFamily: element.fontFamily || 'Inter, sans-serif',
-    fill: element.isHyperlink ? '#2196F3' : (element.fill || element.textColor || '#3b82f6'),
-    fontStyle: element.fontStyle || 'normal',
-    textDecoration: element.isHyperlink ? 'underline' : (element.textDecoration || 'none')
-  };
 
   // Render Konva elements only
   const renderKonvaElements = () => {
     if (element.type === 'sticky-note') {
+      const stickyWidth = element.width || 200;
+      const stickyHeight = element.height || 140;
+      
+      // Softer, more muted sticky note colors - gentler on the eyes
+      const stickyColors = {
+        yellow: { main: '#F5F0C8', light: '#F8F4D6', dark: '#E8E0B8', shadow: 'rgba(245, 240, 200, 0.3)' },
+        blue: { main: '#E3EDF7', light: '#EBF4FD', dark: '#D1E0F0', shadow: 'rgba(227, 237, 247, 0.3)' },
+        green: { main: '#E8F5E8', light: '#F0FAF0', dark: '#D8EBD8', shadow: 'rgba(232, 245, 232, 0.3)' },
+        pink: { main: '#F5E8F0', light: '#FAF0F5', dark: '#E8D8E3', shadow: 'rgba(245, 232, 240, 0.3)' },
+        orange: { main: '#F5F0E8', light: '#FAF5F0', dark: '#E8E0D8', shadow: 'rgba(245, 240, 232, 0.3)' }
+      };
+      
+      const currentColor = stickyColors.yellow; // Default to yellow, could be made configurable
+      
       return (
         <Group
           x={element.x}
@@ -133,30 +136,93 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
           onDblTap={handleDoubleClick}
           {...konvaProps}
         >
+          {/* Very soft drop shadow */}
+          <Rect
+            x={2}
+            y={2}
+            width={stickyWidth}
+            height={stickyHeight}
+            fill="rgba(0, 0, 0, 0.08)"
+            cornerRadius={3}
+            listening={false}
+          />
+          
+          {/* Main sticky note background with very soft styling */}
           <Rect
             ref={textRef}
-            width={element.width || 200}
-            height={element.height || 100}
-            fill={element.backgroundColor || designSystem.colors.primary[50]}
-            stroke={isSelected ? designSystem.colors.primary[400] : 'transparent'}
-            strokeWidth={isSelected ? 2 : 0}
-            cornerRadius={8}
-            shadowColor="rgba(0,0,0,0.1)"
+            width={stickyWidth}
+            height={stickyHeight}
+            fill={element.backgroundColor || currentColor.main}
+            stroke={isSelected ? currentColor.dark : 'rgba(0, 0, 0, 0.05)'}
+            strokeWidth={isSelected ? 1.5 : 0.5}
+            cornerRadius={3}
+            shadowColor={currentColor.shadow}
             shadowBlur={4}
-            shadowOffset={{ x: 0, y: 2 }}
-            shadowOpacity={0.8}
+            shadowOffset={{ x: 1, y: 2 }}
+            shadowOpacity={0.3}
           />
-          {/* Fix 1: Only render one text component based on state */}
+          
+          {/* Very subtle light overlay for paper texture */}
+          <Rect
+            x={0}
+            y={0}
+            width={stickyWidth}
+            height={stickyHeight * 0.25}
+            fill={currentColor.light}
+            opacity={0.3}
+            cornerRadius={3}
+            listening={false}
+          />
+          
+          {/* Minimal corner fold effect */}
+          <Group>
+            {/* Tiny corner fold shadow */}
+            <Rect
+              x={stickyWidth - 12}
+              y={0}
+              width={12}
+              height={12}
+              fill={currentColor.dark}
+              opacity={0.1}
+              cornerRadius={[0, 3, 0, 0]} 
+              listening={false}
+            />
+            
+            {/* Corner fold highlight line */}
+            <Rect
+              x={stickyWidth - 10}
+              y={1}
+              width={8}
+              height={0.5}
+              fill="rgba(255, 255, 255, 0.5)"
+              listening={false}
+            />
+          </Group>
+          
+          {/* Barely visible horizontal lines */}
+          {Array.from({ length: Math.floor((stickyHeight - 60) / 35) }, (_, i) => (
+            <Rect
+              key={i}
+              x={16}
+              y={55 + i * 35}
+              width={stickyWidth - 32}
+              height={0.3}
+              fill="rgba(0, 0, 0, 0.03)"
+              listening={false}
+            />
+          ))}
+          
+          {/* Text content with softer, warmer color */}
           {shouldShowMainText && (
             <Text
-              x={12}
-              y={12}
-              width={(element.width || 200) - 24}
-              height={(element.height || 100) - 24}
+              x={16}
+              y={16}
+              width={stickyWidth - 32}
+              height={stickyHeight - 32}
               text={formattedText}
-              fontSize={element.fontSize || 16}
-              fontFamily={element.fontFamily || 'Inter, sans-serif'}
-              fill={element.isHyperlink ? '#2196F3' : (element.fill || element.textColor || '#3b82f6')}
+              fontSize={(element.fontSize || 14)}
+              fontFamily={element.fontFamily || "'Inter', 'Helvetica', sans-serif"}
+              fill={element.isHyperlink ? '#4A90E2' : (element.textColor || '#4A5568')}
               fontStyle={element.fontStyle || 'normal'}
               textDecoration={element.isHyperlink ? 'underline' : (element.textDecoration || 'none')}
               align="left"
@@ -164,22 +230,40 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
               wrap="word"
               onClick={handleTextClick}
               onTap={handleTextClick}
+              lineHeight={1.5}
             />
           )}
           {shouldShowPlaceholder && (
             <Text
-              x={12}
-              y={12}
-              width={(element.width || 200) - 24}
-              height={(element.height || 100) - 24}
-              text="Double-click to add text"
-              fontSize={14}
-              fontFamily="Inter, sans-serif"
-              fill="#666666"
+              x={16}
+              y={16}
+              width={stickyWidth - 32}
+              height={stickyHeight - 32}
+              text="Double-click to edit"
+              fontSize={13}
+              fontFamily="'Inter', 'Helvetica', sans-serif"
+              fill="#8B949E"
               align="left"
               verticalAlign="top"
               fontStyle="italic"
-              opacity={0.8}
+              opacity={0.5}
+            />
+          )}
+          
+          {/* Soft selection glow effect */}
+          {isSelected && (
+            <Rect
+              x={-1}
+              y={-1}
+              width={stickyWidth + 2}
+              height={stickyHeight + 2}
+              stroke={currentColor.dark}
+              strokeWidth={2}
+              fill="transparent"
+              cornerRadius={4}
+              opacity={0.7}
+              listening={false}
+              dash={[6, 3]}
             />
           )}
         </Group>

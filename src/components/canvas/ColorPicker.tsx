@@ -2,6 +2,7 @@
 import React from 'react';
 import { designSystem } from '../../styles/designSystem';
 import { Palette } from 'lucide-react';
+import './ColorPicker.css';
 
 interface ColorPickerProps {
   selectedColor?: string;
@@ -28,33 +29,25 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ selectedColor, onColorChange,
   ];
 
   return (
-    <div className="color-picker" style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '8px',
-      background: designSystem.colors.secondary[100],
-      borderRadius: '8px',
-      border: `1px solid ${designSystem.colors.secondary[300]}`
-    }}>
-      <Palette size={16} style={{ color: designSystem.colors.secondary[600] }} />
-      <div style={{ display: 'flex', gap: '4px' }}>
+    <div className={`color-picker ${type === 'sticky' ? 'sticky-colors' : ''}`}>
+      <Palette className="color-picker-icon" size={18} />
+      <div className="color-picker-swatches">
         {colors.map(color => (
           <button
             key={color.value}
             onClick={() => onColorChange(color.value)}
+            className={`color-swatch ${
+              color.value === selectedColor ? 'selected' : ''
+            } ${
+              color.value === 'transparent' ? 'swatch-transparent' : ''
+            } ${
+              color.value === '#FFFFFF' ? 'swatch-white' : ''
+            }`}
             style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '4px',
-              border: color.value === selectedColor ? `2px solid ${designSystem.colors.primary[500]}` : `1px solid ${designSystem.colors.secondary[400]}`,
-              background: color.value === 'transparent' ? 
-                `repeating-linear-gradient(45deg, #ccc, #ccc 2px, white 2px, white 4px)` : 
-                color.value,
-              cursor: 'pointer',
-              transition: 'all 0.2s'
+              backgroundColor: color.value !== 'transparent' ? color.value : undefined
             }}
             title={color.label}
+            aria-label={`Select ${color.label} color`}
           />
         ))}
       </div>

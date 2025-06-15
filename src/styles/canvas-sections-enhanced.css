@@ -1,0 +1,411 @@
+/* Canvas Sections Enhanced Styles - Modern FigJam-style Sections */
+
+/* ==================== Section Container ==================== */
+.canvas-section {
+  position: relative;
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-clip: padding-box;
+}
+
+/* Section hover state */
+.canvas-section:hover {
+  filter: brightness(1.02);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Selected section */
+.canvas-section.selected {
+  box-shadow: 
+    0 0 0 3px var(--accent-primary),
+    0 8px 24px rgba(59, 130, 246, 0.15);
+  animation: sectionSelected 0.3s ease;
+}
+
+@keyframes sectionSelected {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ==================== Section Header ==================== */
+.section-header {
+  position: absolute;
+  top: -32px;
+  left: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(255, 255, 255, 0.9) 100%);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-radius: 12px 12px 0 0;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+/* Dark mode section header */
+html.dark .section-header {
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 0.95) 0%, 
+    rgba(30, 41, 59, 0.9) 100%);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Section title */
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+/* Section title editing */
+.section-title-input {
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  outline: none;
+  width: 100%;
+}
+
+.section-title-input:focus {
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ==================== Section Actions ==================== */
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.section-header:hover .section-actions {
+  opacity: 1;
+}
+
+.section-action-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.section-action-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
+html.dark .section-action-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ==================== Section Body Styles ==================== */
+.section-content {
+  padding: 24px;
+  min-height: 200px;
+  position: relative;
+}
+
+/* Empty section placeholder */
+.section-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  opacity: 0.6;
+  pointer-events: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.section-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  opacity: 0.4;
+}
+
+/* ==================== Section Resize Handles ==================== */
+.section-resize-handle {
+  position: absolute;
+  background: var(--accent-primary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.canvas-section:hover .section-resize-handle,
+.canvas-section.selected .section-resize-handle {
+  opacity: 0.8;
+}
+
+.section-resize-handle:hover {
+  opacity: 1 !important;
+}
+
+/* Corner handles */
+.section-resize-nw,
+.section-resize-ne,
+.section-resize-sw,
+.section-resize-se {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.section-resize-nw {
+  top: -6px;
+  left: -6px;
+  cursor: nw-resize;
+}
+
+.section-resize-ne {
+  top: -6px;
+  right: -6px;
+  cursor: ne-resize;
+}
+
+.section-resize-sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: sw-resize;
+}
+
+.section-resize-se {
+  bottom: -6px;
+  right: -6px;
+  cursor: se-resize;
+}
+
+/* Edge handles */
+.section-resize-n,
+.section-resize-s {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.section-resize-e,
+.section-resize-w {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 40px;
+  border-radius: 3px;
+}
+
+.section-resize-n {
+  top: -3px;
+  cursor: n-resize;
+}
+
+.section-resize-s {
+  bottom: -3px;
+  cursor: s-resize;
+}
+
+.section-resize-e {
+  right: -3px;
+  cursor: e-resize;
+}
+
+.section-resize-w {
+  left: -3px;
+  cursor: w-resize;
+}
+
+/* ==================== Section Templates ==================== */
+.section-template-grid {
+  background-image: 
+    linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.section-template-kanban {
+  background-image: 
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 200px,
+      var(--border-subtle) 200px,
+      var(--border-subtle) 201px
+    );
+}
+
+/* ==================== Section Lock State ==================== */
+.canvas-section.locked {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.canvas-section.locked::after {
+  content: '🔒';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+/* ==================== Section Collapse State ==================== */
+.canvas-section.collapsed {
+  height: auto !important;
+}
+
+.canvas-section.collapsed .section-content {
+  display: none;
+}
+
+.canvas-section.collapsed .section-header {
+  border-radius: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ==================== Section Drop Zone ==================== */
+.section-drop-zone {
+  position: absolute;
+  inset: 0;
+  border: 3px dashed var(--accent-primary);
+  border-radius: 16px;
+  background: var(--accent-soft);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.section-drop-zone.active {
+  opacity: 1;
+  animation: dropZonePulse 1s ease-in-out infinite;
+}
+
+@keyframes dropZonePulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ==================== Section Colors ==================== */
+.section-color-blue {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: #3B82F6;
+}
+
+.section-color-green {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: #22C55E;
+}
+
+.section-color-yellow {
+  background-color: rgba(250, 204, 21, 0.1);
+  border-color: #FACC15;
+}
+
+.section-color-purple {
+  background-color: rgba(168, 85, 247, 0.1);
+  border-color: #A855F7;
+}
+
+.section-color-red {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: #EF4444;
+}
+
+.section-color-gray {
+  background-color: rgba(107, 114, 128, 0.1);
+  border-color: #6B7280;
+}
+
+/* ==================== Animation Classes ==================== */
+.section-creating {
+  animation: sectionCreate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes sectionCreate {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.section-deleting {
+  animation: sectionDelete 0.3s ease forwards;
+}
+
+@keyframes sectionDelete {
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+  .section-header {
+    height: 28px;
+    top: -28px;
+    padding: 0 12px;
+  }
+  
+  .section-title {
+    font-size: 13px;
+  }
+  
+  .section-content {
+    padding: 16px;
+  }
+}
+
+/* ==================== Accessibility ==================== */
+.canvas-section:focus-visible {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.section-action-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
