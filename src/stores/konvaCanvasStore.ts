@@ -55,6 +55,67 @@ export interface RichTextSegment {
   url?: string; // Optional URL for clickable links
 }
 
+// Enhanced Table Data Model for FigJam-style functionality
+export interface TableCell {
+  id: string;
+  text?: string; // Plain text content
+  richTextSegments?: RichTextSegment[]; // Rich text content
+  containedElementIds: string[]; // IDs of canvas elements inside this cell
+  backgroundColor?: string;
+  textColor?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+  padding?: number;
+  isHeader?: boolean;
+}
+
+export interface TableRow {
+  id: string;
+  height: number;
+  minHeight?: number;
+  maxHeight?: number;
+  isResizable?: boolean;
+  backgroundColor?: string;
+  isHeader?: boolean;
+}
+
+export interface TableColumn {
+  id: string;
+  width: number;
+  minWidth?: number;
+  maxWidth?: number;
+  isResizable?: boolean;
+  backgroundColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
+}
+
+export interface TableSelection {
+  type: 'cell' | 'row' | 'column' | 'table';
+  cellIds?: string[];
+  rowIds?: string[];
+  columnIds?: string[];
+  startCell?: { row: number; col: number };
+  endCell?: { row: number; col: number };
+}
+
+export interface EnhancedTableData {
+  rows: TableRow[];
+  columns: TableColumn[];
+  cells: TableCell[][]; // 2D array of cells [row][col]
+  selection?: TableSelection;
+  showGridLines?: boolean;
+  cornerRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  defaultCellPadding?: number;
+  autoResizeRows?: boolean;
+  allowDragAndDrop?: boolean;
+  keyboardNavigationEnabled?: boolean;
+}
+
 export interface CanvasElement {
   id: string;
   type: 'text' | 'rectangle' | 'circle' | 'line' | 'arrow' | 'pen' | 'triangle' | 'star' | 'sticky-note' | 'rich-text' | 'image' | 'connector' | 'section' | 'table';
@@ -110,6 +171,7 @@ export interface CanvasElement {
   borderColor?: string;
   headerBackgroundColor?: string;
   cellBackgroundColor?: string;
+  enhancedTableData?: EnhancedTableData;
 }
 
 interface HistoryState {
@@ -193,6 +255,18 @@ interface CanvasState {
   getElementsBySection: (sectionId: string) => CanvasElement[];
   getFreeElements: () => CanvasElement[]; // Elements not in any section
   
+  // Enhanced Table Operations
+  createEnhancedTable: (x: number, y: number, rows?: number, cols?: number) => string;
+  updateTableCell: (tableId: string, rowIndex: number, colIndex: number, updates: Partial<TableCell>) => void;
+  addTableRow: (tableId: string, insertIndex?: number) => void;
+  addTableColumn: (tableId: string, insertIndex?: number) => void;
+  removeTableRow: (tableId: string, rowIndex: number) => void;
+  removeTableColumn: (tableId: string, colIndex: number) => void;
+  resizeTableRow: (tableId: string, rowIndex: number, newHeight: number) => void;
+  resizeTableColumn: (tableId: string, colIndex: number, newWidth: number) => void;
+  setTableSelection: (tableId: string, selection: TableSelection | null) => void;
+  addElementToTableCell: (tableId: string, rowIndex: number, colIndex: number, elementId: string) => void;
+
   // Multiple canvas management
   createCanvas: (name: string) => string;
   switchCanvas: (canvasId: string) => void;
@@ -205,6 +279,11 @@ interface CanvasState {
 
 export const useKonvaCanvasStore = create<CanvasState>()(
   immer((set, get) => ({
+    // Multiple canvases support
+    canvases: {},
+    currentCanvasId: null,
+    
+    // Current canvas state
     elements: {},
     sections: {},
     selectedTool: 'select',
@@ -941,6 +1020,463 @@ export const useKonvaCanvasStore = create<CanvasState>()(
       return Object.values(elements).filter(
         element => !element.sectionId && element.type !== 'section'
       );
+    },
+
+    // Enhanced Table Operations
+    createEnhancedTable: (x: number, y: number, rows?: number, cols?: number) => {
+      const tableId = `table_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create table rows
+      const tableRows: TableRow[] = Array(rows || 3).fill(null).map((_, index) => ({
+        id: `row_${tableId}_${index}`,
+        height: index === 0 ? 60 : 50, // Header row slightly taller
+        minHeight: 30,
+        isResizable: true,
+        isHeader: index === 0
+      }));
+      
+      // Create table columns
+      const tableColumns: TableColumn[] = Array(cols || 3).fill(null).map((_, index) => ({
+        id: `col_${tableId}_${index}`,
+        width: 120,
+        minWidth: 60,
+        isResizable: true,
+        textAlign: 'left'
+      }));
+      
+      // Create table cells
+      const tableCells: TableCell[][] = Array(rows || 3).fill(null).map((_, rowIndex) =>
+        Array(cols || 3).fill(null).map((_, colIndex) => ({
+          id: `cell_${tableId}_${rowIndex}_${colIndex}`,
+          text: rowIndex === 0 ? `Header ${colIndex + 1}` : '',
+          containedElementIds: [],
+          backgroundColor: rowIndex === 0 ? '#F3F4F6' : '#FFFFFF',
+          textColor: '#1E293B',
+          fontSize: 14,
+          fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
+          textAlign: 'left',
+          verticalAlign: 'middle',
+          padding: 8,
+          isHeader: rowIndex === 0
+        }))
+      );
+      
+      const enhancedTableData: EnhancedTableData = {
+        rows: tableRows,
+        columns: tableColumns,
+        cells: tableCells,
+        showGridLines: true,
+        cornerRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        defaultCellPadding: 8,
+        autoResizeRows: true,
+        allowDragAndDrop: true,
+        keyboardNavigationEnabled: true
+      };
+      
+      const tableElement: CanvasElement = {
+        id: tableId,
+        type: 'table',
+        x,
+        y,
+        width: (cols || 3) * 120,
+        height: (rows || 3) * 50 + 10, // Extra height for header
+        enhancedTableData,
+        // Keep backward compatibility
+        rows: rows || 3,
+        cols: cols || 3,
+        cellWidth: 120,
+        cellHeight: 50,
+        tableData: tableCells.map(row => row.map(cell => cell.text || '')),
+        borderColor: '#E5E7EB',
+        headerBackgroundColor: '#F3F4F6',
+        cellBackgroundColor: '#FFFFFF'
+      };
+      
+      get().addElement(tableElement);
+      return tableId;
+    },
+
+    updateTableCell: (tableId: string, rowIndex: number, colIndex: number, updates: Partial<TableCell>) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const cell = element.enhancedTableData.cells[rowIndex]?.[colIndex];
+        if (!cell) return;
+        
+        // Update the enhanced cell data
+        Object.assign(cell, updates);
+        
+        // Update backward compatibility data
+        if (updates.text !== undefined && element.tableData) {
+          if (!element.tableData[rowIndex]) {
+            element.tableData[rowIndex] = [];
+          }
+          element.tableData[rowIndex][colIndex] = updates.text;
+        }
+      });
+      
+      get().addToHistory(`Update table cell [${rowIndex}, ${colIndex}]`);
+    },
+
+    addTableRow: (tableId: string, insertIndex?: number) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const { enhancedTableData } = element;
+        const actualIndex = insertIndex ?? enhancedTableData.rows.length;
+        
+        // Create new row
+        const newRow: TableRow = {
+          id: `row_${tableId}_${Date.now()}`,
+          height: 50,
+          minHeight: 30,
+          isResizable: true,
+          isHeader: false
+        };
+        
+        // Create new cells for this row
+        const newCells: TableCell[] = enhancedTableData.columns.map((_, colIndex) => ({
+          id: `cell_${tableId}_${actualIndex}_${colIndex}_${Date.now()}`,
+          text: '',
+          containedElementIds: [],
+          backgroundColor: '#FFFFFF',
+          textColor: '#1E293B',
+          fontSize: 14,
+          fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
+          textAlign: 'left',
+          verticalAlign: 'middle',
+          padding: 8,
+          isHeader: false
+        }));
+        
+        // Insert row and cells
+        enhancedTableData.rows.splice(actualIndex, 0, newRow);
+        enhancedTableData.cells.splice(actualIndex, 0, newCells);
+        
+        // Update backward compatibility
+        element.rows = enhancedTableData.rows.length;
+        if (element.tableData) {
+          element.tableData.splice(actualIndex, 0, newCells.map(cell => cell.text || ''));
+        }
+        
+        // Update table height
+        element.height = enhancedTableData.rows.reduce((sum, row) => sum + row.height, 0);
+      });
+      
+      get().addToHistory('Add table row');
+    },
+
+    addTableColumn: (tableId: string, insertIndex?: number) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const { enhancedTableData } = element;
+        const actualIndex = insertIndex ?? enhancedTableData.columns.length;
+        
+        // Create new column
+        const newColumn: TableColumn = {
+          id: `col_${tableId}_${Date.now()}`,
+          width: 120,
+          minWidth: 60,
+          isResizable: true,
+          textAlign: 'left'
+        };
+        
+        // Insert column
+        enhancedTableData.columns.splice(actualIndex, 0, newColumn);
+        
+        // Add new cells to each row
+        enhancedTableData.cells.forEach((row, rowIndex) => {
+          const newCell: TableCell = {
+            id: `cell_${tableId}_${rowIndex}_${actualIndex}_${Date.now()}`,
+            text: '',
+            containedElementIds: [],
+            backgroundColor: rowIndex === 0 ? '#F3F4F6' : '#FFFFFF',
+            textColor: '#1E293B',
+            fontSize: 14,
+            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
+            textAlign: 'left',
+            verticalAlign: 'middle',
+            padding: 8,
+            isHeader: rowIndex === 0
+          };
+          row.splice(actualIndex, 0, newCell);
+        });
+        
+        // Update backward compatibility
+        element.cols = enhancedTableData.columns.length;
+        if (element.tableData) {
+          element.tableData.forEach((row, rowIndex) => {
+            row.splice(actualIndex, 0, '');
+          });
+        }
+        
+        // Update table width
+        element.width = enhancedTableData.columns.reduce((sum, col) => sum + col.width, 0);
+      });
+      
+      get().addToHistory('Add table column');
+    },
+
+    removeTableRow: (tableId: string, rowIndex: number) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const { enhancedTableData } = element;
+        if (rowIndex < 0 || rowIndex >= enhancedTableData.rows.length) return;
+        
+        // Remove any contained elements from cells in this row
+        enhancedTableData.cells[rowIndex].forEach(cell => {
+          cell.containedElementIds.forEach(elementId => {
+            delete state.elements[elementId];
+          });
+        });
+        
+        // Remove row and cells
+        enhancedTableData.rows.splice(rowIndex, 1);
+        enhancedTableData.cells.splice(rowIndex, 1);
+        
+        // Update backward compatibility
+        element.rows = enhancedTableData.rows.length;
+        if (element.tableData) {
+          element.tableData.splice(rowIndex, 1);
+        }
+        
+        // Update table height
+        element.height = enhancedTableData.rows.reduce((sum, row) => sum + row.height, 0);
+      });
+      
+      get().addToHistory('Remove table row');
+    },
+
+    removeTableColumn: (tableId: string, colIndex: number) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const { enhancedTableData } = element;
+        if (colIndex < 0 || colIndex >= enhancedTableData.columns.length) return;
+        
+        // Remove any contained elements from cells in this column
+        enhancedTableData.cells.forEach(row => {
+          const cell = row[colIndex];
+          if (cell) {
+            cell.containedElementIds.forEach(elementId => {
+              delete state.elements[elementId];
+            });
+          }
+        });
+        
+        // Remove column and cells
+        enhancedTableData.columns.splice(colIndex, 1);
+        enhancedTableData.cells.forEach(row => {
+          row.splice(colIndex, 1);
+        });
+        
+        // Update backward compatibility
+        element.cols = enhancedTableData.columns.length;
+        if (element.tableData) {
+          element.tableData.forEach(row => {
+            row.splice(colIndex, 1);
+          });
+        }
+        
+        // Update table width
+        element.width = enhancedTableData.columns.reduce((sum, col) => sum + col.width, 0);
+      });
+      
+      get().addToHistory('Remove table column');
+    },
+
+    resizeTableRow: (tableId: string, rowIndex: number, newHeight: number) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const row = element.enhancedTableData.rows[rowIndex];
+        if (!row) return;
+        
+        const minHeight = row.minHeight || 30;
+        row.height = Math.max(minHeight, newHeight);
+        
+        // Update table height
+        element.height = element.enhancedTableData.rows.reduce((sum, r) => sum + r.height, 0);
+      });
+      
+      get().addToHistory('Resize table row');
+    },
+
+    resizeTableColumn: (tableId: string, colIndex: number, newWidth: number) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const column = element.enhancedTableData.columns[colIndex];
+        if (!column) return;
+        
+        const minWidth = column.minWidth || 60;
+        column.width = Math.max(minWidth, newWidth);
+        
+        // Update table width
+        element.width = element.enhancedTableData.columns.reduce((sum, col) => sum + col.width, 0);
+      });
+      
+      get().addToHistory('Resize table column');
+    },
+
+    setTableSelection: (tableId: string, selection: TableSelection | null) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        element.enhancedTableData.selection = selection || undefined;
+      });
+    },
+
+    addElementToTableCell: (tableId: string, rowIndex: number, colIndex: number, elementId: string) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        const targetElement = state.elements[elementId];
+        
+        if (!element || !targetElement || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        const cell = element.enhancedTableData.cells[rowIndex]?.[colIndex];
+        if (!cell) return;
+        
+        // Remove element from any existing cell
+        Object.values(state.elements).forEach(el => {
+          if (el.type === 'table' && el.enhancedTableData) {
+            el.enhancedTableData.cells.forEach(row => {
+              row.forEach(c => {
+                c.containedElementIds = c.containedElementIds.filter(id => id !== elementId);
+              });
+            });
+          }
+        });
+        
+        // Add to new cell
+        if (!cell.containedElementIds.includes(elementId)) {
+          cell.containedElementIds.push(elementId);
+        }
+        
+        // Convert element coordinates to be relative to the cell
+        // This will be handled in the rendering component
+      });
+      
+      get().addToHistory('Add element to table cell');
+    },
+
+    // Multiple canvas management
+    createCanvas: (name: string) => {
+      const canvasId = `canvas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newCanvas: Canvas = {
+        id: canvasId,
+        name,
+        elements: {},
+        sections: {},
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      
+      set((state) => {
+        state.canvases[canvasId] = newCanvas;
+        if (!state.currentCanvasId) {
+          state.currentCanvasId = canvasId;
+        }
+      });
+      
+      return canvasId;
+    },
+
+    switchCanvas: (canvasId: string) => {
+      const { canvases } = get();
+      if (!canvases[canvasId]) return;
+      
+      // Save current canvas state
+      get().saveCurrentCanvas();
+      
+      set((state) => {
+        state.currentCanvasId = canvasId;
+        state.elements = { ...canvases[canvasId].elements };
+        state.sections = { ...canvases[canvasId].sections };
+        state.selectedElementId = null;
+        state.editingTextId = null;
+      });
+    },
+
+    deleteCanvas: (canvasId: string) => {
+      set((state) => {
+        delete state.canvases[canvasId];
+        if (state.currentCanvasId === canvasId) {
+          const remainingCanvases = Object.keys(state.canvases);
+          state.currentCanvasId = remainingCanvases.length > 0 ? remainingCanvases[0] : null;
+          if (state.currentCanvasId) {
+            const newCanvas = state.canvases[state.currentCanvasId];
+            state.elements = { ...newCanvas.elements };
+            state.sections = { ...newCanvas.sections };
+          } else {
+            state.elements = {};
+            state.sections = {};
+          }
+        }
+      });
+    },
+
+    renameCanvas: (canvasId: string, newName: string) => {
+      set((state) => {
+        if (state.canvases[canvasId]) {
+          state.canvases[canvasId].name = newName;
+          state.canvases[canvasId].updatedAt = Date.now();
+        }
+      });
+    },
+
+    duplicateCanvas: (canvasId: string) => {
+      const { canvases } = get();
+      const sourceCanvas = canvases[canvasId];
+      if (!sourceCanvas) return '';
+      
+      const newCanvasId = `canvas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const duplicatedCanvas: Canvas = {
+        id: newCanvasId,
+        name: `${sourceCanvas.name} (Copy)`,
+        elements: JSON.parse(JSON.stringify(sourceCanvas.elements)),
+        sections: JSON.parse(JSON.stringify(sourceCanvas.sections)),
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      
+      set((state) => {
+        state.canvases[newCanvasId] = duplicatedCanvas;
+      });
+      
+      return newCanvasId;
+    },
+
+    updateCanvasThumbnail: (canvasId: string, thumbnail: string) => {
+      set((state) => {
+        if (state.canvases[canvasId]) {
+          state.canvases[canvasId].thumbnail = thumbnail;
+          state.canvases[canvasId].updatedAt = Date.now();
+        }
+      });
+    },
+
+    saveCurrentCanvas: () => {
+      const { currentCanvasId, elements, sections, canvases } = get();
+      if (!currentCanvasId || !canvases[currentCanvasId]) return;
+      
+      set((state) => {
+        state.canvases[currentCanvasId].elements = { ...elements };
+        state.canvases[currentCanvasId].sections = { ...sections };
+        state.canvases[currentCanvasId].updatedAt = Date.now();
+      });
     },
   }))
 );

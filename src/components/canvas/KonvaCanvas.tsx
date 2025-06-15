@@ -10,7 +10,7 @@ import ConnectorRenderer from './ConnectorRenderer';
 import TextEditingOverlay from './TextEditingOverlay';
 import FloatingTextToolbar from './FloatingTextToolbar';
 import SectionElement from './SectionElement';
-import TableElement from './TableElement';
+import EnhancedTableElement from './EnhancedTableElement';
 import { designSystem } from '../../styles/designSystem';
 import { SectionElement as SectionType, isElementInSection } from '../../types/section';
 
@@ -629,7 +629,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     return true;
   };
 
-  // Helper function to find nearest element for connector snapping
   const findNearestElement = useCallback((x: number, y: number) => {
     const SNAP_DISTANCE = 20;
     const elementsArray = Object.values(elements);
@@ -655,7 +654,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     return null;
   }, [elements, sections]);
 
-  // Helper function to get anchor point coordinates
   const getAnchorPoint = (element: CanvasElement, anchor: string) => {
     // Get element coordinates - convert to absolute if in a section
     let elementX = element.x;
@@ -1454,17 +1452,22 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         );
       case 'table':
         return (
-          <TableElement
+          <EnhancedTableElement
             key={element.id}
             element={element}
             isSelected={isSelected}
             onSelect={() => setSelectedElement(element.id)}
             onUpdate={(updates) => updateElement(element.id, updates)}
             onDragStart={(e) => {
-              // Optional drag start handler
+              // Set drag data for drag-and-drop into table cells
+              if (e.evt.dataTransfer) {
+                e.evt.dataTransfer.setData('text/plain', element.id);
+                e.evt.dataTransfer.effectAllowed = 'move';
+              }
             }}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
             isDragging={false}
+            stageRef={stageRef}
           />
         );
       default:

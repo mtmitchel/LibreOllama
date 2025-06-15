@@ -46,6 +46,8 @@ src/components/canvas/
 ├── UnifiedTextElement.tsx          # Text rendering (253 lines)
 ├── ImageElement.tsx                # Image handling (198 lines)
 ├── SectionElement.tsx              # Section containers
+├── EnhancedTableElement.tsx        # FigJam-style tables with inline editing (659 lines)
+├── TableCellEditor.tsx             # Inline table cell text editor
 ├── ConnectorRenderer.tsx           # Dynamic connectors
 ├── ConnectorTool.tsx               # Connector creation tool
 ├── RichTextRenderer.tsx            # Rich text display (166 lines)
@@ -90,6 +92,7 @@ src-tauri/src/commands/
 - **Freehand**: Pen tool for sketching
 - **Sticky Notes**: Colored annotation notes
 - **Images**: Image upload and positioning
+- **Enhanced Tables**: Professional FigJam-style tables with inline editing, dynamic row/column management, drag-and-drop support, and boundary-based controls
 - **Sections**: FigJam-style organizational containers for grouping elements
 - **Connectors**: Dynamic connectors that attach to shape anchor points
 
@@ -135,6 +138,47 @@ src-tauri/src/commands/
 - Konva Groups handle transforms automatically during rendering
 - No manual coordinate updates when moving sections
 
+### Enhanced Tables Architecture
+
+**FigJam-Style Table System**:
+- Professional table editing with inline text editing and dynamic structure management
+- Rich data model supporting flexible cell content, styling, and layout
+- Boundary-based interaction model for intuitive row/column operations
+- Drag-and-drop support for canvas elements into table cells
+
+**Table Data Model**:
+```typescript
+interface EnhancedTableData {
+  rows: TableRow[];           // Dynamic row configuration
+  columns: TableColumn[];     // Dynamic column configuration  
+  cells: TableCell[][];       // 2D array of rich cell data
+  styling: TableStyling;      // Global table appearance
+}
+
+interface TableCell {
+  text: string;               // Primary text content
+  richTextSegments?: RichTextSegment[];  // Rich formatting
+  containedElementIds?: string[];        // Drag-dropped elements
+  styling?: CellStyling;      // Per-cell appearance
+  alignment?: TextAlignment;   // Text alignment
+}
+```
+
+**Interaction Features**:
+- **Boundary Add Controls**: Blue circular "+" buttons appear on grid line hover for adding rows/columns
+- **Header Delete Controls**: Red circular "−" buttons appear on row/column headers for deletion
+- **Inline Text Editing**: Double-click any cell to edit with HTML overlay (`TableCellEditor`)
+- **Resize Handles**: Blue circular handles on table edges for proportional resizing
+- **Drag-and-Drop**: Canvas elements can be dragged into table cells for rich content
+- **Keyboard Navigation**: Tab, Enter, and arrow keys for efficient cell navigation
+
+**Technical Implementation**:
+- **Hover Detection**: Large threshold areas (15px boundaries, 40px headers) prevent flicker
+- **Event Handling**: Global mouse tracking for smooth resize operations
+- **State Management**: Integrated with Zustand store via `addTableRow`, `removeTableColumn`, `updateTableCell` methods
+- **Visual Feedback**: Hover highlights, selection borders, and smooth transitions
+- **Performance**: Efficient rendering with Konva Groups and optimized event handling
+
 ## State Management
 
 ### Zustand Store (`konvaCanvasStore.ts`)
@@ -156,6 +200,13 @@ interface CanvasState {
 - `createSection()`: Create new sections
 - `updateElementSection()`: Manage section membership
 - `applyTextFormat()`: Apply rich text formatting
+- `createEnhancedTable()`: Create FigJam-style tables with rich data structure
+- `updateTableCell()`: Update individual cell properties and content
+- `addTableRow()` / `addTableColumn()`: Dynamic row/column insertion
+- `removeTableRow()` / `removeTableColumn()`: Row/column deletion with cleanup
+- `resizeTableRow()` / `resizeTableColumn()`: Manual resize operations
+- `setTableSelection()`: Multi-selection state management
+- `addElementToTableCell()`: Drag-and-drop support for canvas elements into cells
 
 ## Development Guidelines
 

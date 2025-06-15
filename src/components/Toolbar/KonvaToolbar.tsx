@@ -276,30 +276,11 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           return;
           
         case 'table':
-          newElement = {
-            id: generateId(),
-            type: 'table',
-            x: centerX - 150,
-            y: centerY - 100,
-            width: 300,
-            height: 200,
-            rows: 3,
-            cols: 3,
-            cellWidth: 100,
-            cellHeight: 50,
-            tableData: [
-              ['Header 1', 'Header 2', 'Header 3'],
-              ['Row 1 Cell 1', 'Row 1 Cell 2', 'Row 1 Cell 3'],
-              ['Row 2 Cell 1', 'Row 2 Cell 2', 'Row 2 Cell 3']
-            ],
-            borderColor: '#E5E7EB',
-            headerBackgroundColor: '#F3F4F6',
-            cellBackgroundColor: '#FFFFFF',
-            fill: '#1E293B',
-            fontSize: 14,
-            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif"
-          };
-          break;
+          // Use the enhanced table creation method
+          const { createEnhancedTable } = useKonvaCanvasStore.getState();
+          const tableId = createEnhancedTable(centerX - 180, centerY - 75, 3, 3);
+          setSelectedElement(tableId);
+          return;
       }
       
       if (newElement) {
