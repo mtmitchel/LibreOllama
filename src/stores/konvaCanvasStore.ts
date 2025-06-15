@@ -57,7 +57,7 @@ export interface RichTextSegment {
 
 export interface CanvasElement {
   id: string;
-  type: 'text' | 'rectangle' | 'circle' | 'line' | 'arrow' | 'pen' | 'triangle' | 'star' | 'sticky-note' | 'rich-text' | 'image' | 'connector' | 'section';
+  type: 'text' | 'rectangle' | 'circle' | 'line' | 'arrow' | 'pen' | 'triangle' | 'star' | 'sticky-note' | 'rich-text' | 'image' | 'connector' | 'section' | 'table';
   x: number;
   y: number;
   width?: number;
@@ -100,6 +100,16 @@ export interface CanvasElement {
   // Lock and visibility states
   isLocked?: boolean;
   isHidden?: boolean;
+  
+  // Table-specific properties
+  rows?: number;
+  cols?: number;
+  cellWidth?: number;
+  cellHeight?: number;
+  tableData?: string[][];
+  borderColor?: string;
+  headerBackgroundColor?: string;
+  cellBackgroundColor?: string;
 }
 
 interface HistoryState {
@@ -108,7 +118,22 @@ interface HistoryState {
   action: string;
 }
 
+interface Canvas {
+  id: string;
+  name: string;
+  elements: Record<string, CanvasElement>;
+  sections: Record<string, SectionElement>;
+  createdAt: number;
+  updatedAt: number;
+  thumbnail?: string;
+}
+
 interface CanvasState {
+  // Multiple canvases support
+  canvases: Record<string, Canvas>;
+  currentCanvasId: string | null;
+  
+  // Current canvas state
   elements: Record<string, CanvasElement>;
   sections: Record<string, SectionElement>;
   selectedTool: string;
@@ -125,6 +150,7 @@ interface CanvasState {
   addElement: (element: CanvasElement) => void;
   updateElement: (id: string, updates: Partial<CanvasElement>) => void;
   deleteElement: (id: string) => void;
+  duplicateElement: (id: string) => void;
   setSelectedTool: (tool: string) => void;
   setSelectedElement: (id: string | null) => void;
   clearCanvas: () => void;
@@ -166,6 +192,15 @@ interface CanvasState {
   // Helper methods for section management
   getElementsBySection: (sectionId: string) => CanvasElement[];
   getFreeElements: () => CanvasElement[]; // Elements not in any section
+  
+  // Multiple canvas management
+  createCanvas: (name: string) => string;
+  switchCanvas: (canvasId: string) => void;
+  deleteCanvas: (canvasId: string) => void;
+  renameCanvas: (canvasId: string, newName: string) => void;
+  duplicateCanvas: (canvasId: string) => string;
+  updateCanvasThumbnail: (canvasId: string, thumbnail: string) => void;
+  saveCurrentCanvas: () => void;
 }
 
 export const useKonvaCanvasStore = create<CanvasState>()(
@@ -298,6 +333,66 @@ export const useKonvaCanvasStore = create<CanvasState>()(
         }
       });
       get().addToHistory(`Delete ${element?.type || 'element'}`);
+    },
+
+    duplicateElement: (id) => {
+      const element = get().elements[id];
+      if (!element) return;
+      
+      const newId = `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const offset = 20; // Offset for duplicated element
+      
+      const duplicatedElement: CanvasElement = {
+        ...element,
+        id: newId,
+        x: element.x + offset,
+        y: element.y + offset,
+      };
+      
+      // Handle section duplication separately
+      if (element.type === 'section') {
+        const section = get().sections[id];
+        if (!section) return;
+        
+        const newSectionId = `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const duplicatedSection: SectionElement = {
+          ...section,
+          id: newSectionId,
+          x: section.x + offset,
+          y: section.y + offset,
+          containedElementIds: [],
+          title: `${section.title} (Copy)`
+        };
+        
+        set((state) => {
+          state.sections[newSectionId] = duplicatedSection;
+          state.elements[newSectionId] = duplicatedSection as any;
+          state.selectedElementId = newSectionId;
+        });
+        
+        // Duplicate contained elements
+        section.containedElementIds.forEach(containedId => {
+          const containedElement = get().elements[containedId];
+          if (containedElement) {
+            const newContainedId = `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const duplicatedContained: CanvasElement = {
+              ...containedElement,
+              id: newContainedId,
+              sectionId: newSectionId
+            };
+            
+            set((state) => {
+              state.elements[newContainedId] = duplicatedContained;
+              state.sections[newSectionId].containedElementIds.push(newContainedId);
+            });
+          }
+        });
+      } else {
+        // Regular element duplication
+        get().addElement(duplicatedElement);
+      }
+      
+      get().addToHistory(`Duplicate ${element.type}`);
     },
 
     setSelectedTool: (tool) => {

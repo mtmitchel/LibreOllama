@@ -10,6 +10,7 @@ export const useKeyboardShortcuts = () => {
     canRedo, 
     selectedElementId, 
     deleteElement,
+    duplicateElement,
     setSelectedTool,
     setSelectedElement
   } = useKonvaCanvasStore();
@@ -64,7 +65,9 @@ export const useKeyboardShortcuts = () => {
             break;
           case 'd':
             e.preventDefault();
-            // Duplicate selected - future feature
+            if (selectedElementId) {
+              duplicateElement(selectedElementId);
+            }
             break;
         }
       } else {
@@ -125,5 +128,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, canUndo, canRedo, selectedElementId, deleteElement, setSelectedTool, setSelectedElement]);
+  }, [undo, redo, canUndo, canRedo, selectedElementId, deleteElement, duplicateElement, setSelectedTool, setSelectedElement]);
 };

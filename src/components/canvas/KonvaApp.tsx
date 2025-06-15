@@ -1,8 +1,10 @@
 // src/components/Canvas/KonvaApp.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import Konva from 'konva';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 import KonvaCanvas from '../canvas/KonvaCanvas'; // Corrected casing
 import KonvaToolbar from '../Toolbar/KonvaToolbar';
+import CanvasSidebar from '../canvas/CanvasSidebar';
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 import { designSystem } from '../../styles/designSystem';
 import { usePanZoom } from '../../hooks/usePanZoom';
@@ -26,6 +28,7 @@ const KonvaApp: React.FC = () => {
   // Enable keyboard shortcuts for pan/zoom and other canvas actions
   useKeyboardShortcuts(); // This hook might need stageRef or zoom functions if it handles zoom shortcuts
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { selectedElementId, elements: canvasElements } = useKonvaCanvasStore();
 
   useEffect(() => {
@@ -56,18 +59,27 @@ const KonvaApp: React.FC = () => {
         onZoomOut={() => { if (stageRef.current) zoomOut(stageRef.current); }}
         onResetZoom={() => { if (stageRef.current) resetZoom(stageRef.current); }}
         onZoomToFit={() => { if (stageRef.current && canvasElements) zoomToFit(stageRef.current, Object.values(canvasElements)); }}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
       />
       
-      <div 
-        id="canvas-container" 
-        style={{
-          flex: 1,
-          padding: `${designSystem.spacing.lg}px`,
-          background: `linear-gradient(135deg, ${designSystem.colors.secondary[50]} 0%, ${designSystem.colors.secondary[100]} 100%)`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'        }}
-      >        <KonvaCanvas
+      <div className="flex h-full">
+
+        {sidebarOpen && (
+          <CanvasSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+        )}
+        
+        <div 
+          id="canvas-container" 
+          style={{
+            flex: 1,
+            padding: `${designSystem.spacing.lg}px`,
+            background: `linear-gradient(135deg, ${designSystem.colors.secondary[50]} 0%, ${designSystem.colors.secondary[100]} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >        <KonvaCanvas
           width={canvasSize.width}
           height={canvasSize.height}
           onElementSelect={(element) => {
@@ -77,7 +89,9 @@ const KonvaApp: React.FC = () => {
           stageRef={stageRef}
           onWheelHandler={handleWheel}
           onTouchMoveHandler={handleTouchMove}
-          onTouchEndHandler={handleTouchEnd}        />
+          onTouchEndHandler={handleTouchEnd}
+        />
+        </div>
       </div>
       
       {selectedElementId && (

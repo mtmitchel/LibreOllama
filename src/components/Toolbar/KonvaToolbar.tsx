@@ -22,7 +22,10 @@ import {
   Maximize,
   Image,
   Hand,
-  Layout
+  Layout,
+  Table,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import './KonvaToolbar.css';
 import ColorPicker from '../canvas/ColorPicker';
@@ -36,13 +39,13 @@ const basicTools = [
 const contentTools = [
   { id: 'text', name: 'Text', icon: Type },
   { id: 'sticky-note', name: 'Sticky Note', icon: StickyNote },
-  { id: 'section', name: 'Section', icon: Layout }
+  { id: 'section', name: 'Section', icon: Layout },
+  { id: 'table', name: 'Table', icon: Table }
 ];
 
 const drawingTools = [
   { id: 'pen', name: 'Pen', icon: Pen },
-  { id: 'image', name: 'Image', icon: Image },
-  { id: 'connect', name: 'Connect', icon: Zap }
+  { id: 'image', name: 'Image', icon: Image }
 ];
 
 // Shape tools are now handled by ShapesDropdown component
@@ -53,15 +56,17 @@ interface KonvaToolbarProps {
   onZoomOut: () => void;
   onResetZoom: () => void;
   onZoomToFit: () => void;
-  stageRef?: React.RefObject<Konva.Stage>; // Optional: if zoom functions need direct stage access here
-  elements?: any[]; // Optional: if zoomToFit needs elements directly here
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   onZoomIn,
   onZoomOut,
   onResetZoom,
-  onZoomToFit
+  onZoomToFit,
+  sidebarOpen,
+  onToggleSidebar
 }) => {
   const { 
     selectedTool, 
@@ -269,6 +274,32 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
         case 'section':
           // Section tool activates drawing mode, doesn't create element immediately
           return;
+          
+        case 'table':
+          newElement = {
+            id: generateId(),
+            type: 'table',
+            x: centerX - 150,
+            y: centerY - 100,
+            width: 300,
+            height: 200,
+            rows: 3,
+            cols: 3,
+            cellWidth: 100,
+            cellHeight: 50,
+            tableData: [
+              ['Header 1', 'Header 2', 'Header 3'],
+              ['Row 1 Cell 1', 'Row 1 Cell 2', 'Row 1 Cell 3'],
+              ['Row 2 Cell 1', 'Row 2 Cell 2', 'Row 2 Cell 3']
+            ],
+            borderColor: '#E5E7EB',
+            headerBackgroundColor: '#F3F4F6',
+            cellBackgroundColor: '#FFFFFF',
+            fill: '#1E293B',
+            fontSize: 14,
+            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif"
+          };
+          break;
       }
       
       if (newElement) {
@@ -297,6 +328,18 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   
   return (
     <div className="konva-toolbar">
+      {/* Sidebar Toggle Button */}
+      <div className="konva-toolbar-group">
+        <button
+          onClick={onToggleSidebar}
+          className="konva-toolbar-tool-btn"
+          title={sidebarOpen ? "Collapse canvas list" : "Expand canvas list"}
+          aria-label={sidebarOpen ? "Collapse canvas list" : "Expand canvas list"}
+        >
+          {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+        </button>
+      </div>
+      
       {/* Basic Tools */}
       <div className="konva-toolbar-group">
         {basicTools.map(tool => {

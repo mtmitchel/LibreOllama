@@ -10,6 +10,7 @@ import ConnectorRenderer from './ConnectorRenderer';
 import TextEditingOverlay from './TextEditingOverlay';
 import FloatingTextToolbar from './FloatingTextToolbar';
 import SectionElement from './SectionElement';
+import TableElement from './TableElement';
 import { designSystem } from '../../styles/designSystem';
 import { SectionElement as SectionType, isElementInSection } from '../../types/section';
 
@@ -1451,6 +1452,21 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             renderElement={renderElement}
           />
         );
+      case 'table':
+        return (
+          <TableElement
+            key={element.id}
+            element={element}
+            isSelected={isSelected}
+            onSelect={() => setSelectedElement(element.id)}
+            onUpdate={(updates) => updateElement(element.id, updates)}
+            onDragStart={(e) => {
+              // Optional drag start handler
+            }}
+            onDragEnd={(e) => handleDragEnd(e, element.id)}
+            isDragging={false}
+          />
+        );
       default:
         console.warn('Unhandled element type in renderElement:', element.type);
         return null;
@@ -1519,53 +1535,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         </div>
       )}
       
-      {/* DEBUG: Test elements button */}
-      <div style={{
-        position: 'absolute',
-        top: '20px',
-        right: '20px',
-        zIndex: 10
-      }}>
-        <button
-          onClick={() => {
-            const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            // Add a test rectangle
-            addElement({
-              id: generateId(),
-              type: 'rectangle',
-              x: 100,
-              y: 100,
-              width: 150,
-              height: 100,
-              fill: '#3B82F6',
-              stroke: '#1E40AF',
-              strokeWidth: 2
-            });
-            // Add a test circle
-            addElement({
-              id: generateId(),
-              type: 'circle',
-              x: 400,
-              y: 200,
-              radius: 50,
-              fill: '#10B981',
-              stroke: '#059669',
-              strokeWidth: 2
-            });
-          }}
-          style={{
-            background: '#3B82F6',
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            cursor: 'pointer'
-          }}
-        >
-          Add Test Shapes
-        </button>
-      </div>
+      {/* Debug button removed */}
         <Stage
         ref={stageRef}
         width={width}
