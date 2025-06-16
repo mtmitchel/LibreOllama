@@ -10,6 +10,7 @@ import ConnectorRenderer from './ConnectorRenderer';
 import TextEditingOverlay from './TextEditingOverlay';
 import FloatingTextToolbar from './FloatingTextToolbar';
 import SectionElement from './SectionElement';
+import StickyNoteElement from './StickyNoteElement';
 import { EnhancedTableElement } from '../canvas/EnhancedTableElement'; // Using enhanced table implementation
 import { designSystem } from '../../styles/designSystem';
 import '../../styles/konvaCanvas.css';
@@ -696,7 +697,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   };
 
   const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Handle table tool
+    // Handle table tool - use enhanced table creation from store
     if (selectedTool === 'table') {
       const stage = e.target.getStage();
       if (!stage) return;
@@ -707,80 +708,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       transform.invert();
       const pos = transform.point(pointer);
       
-      console.log('📊 Creating table at:', `(${Math.round(pos.x)}, ${Math.round(pos.y)})`);
-      
-      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Create a default 3x3 table with enhanced structure
-      const rows = 3;
-      const cols = 3;
-      const cellWidth = 100;
-      const cellHeight = 50;
-      
-      // Create enhanced table data structure
-      const enhancedTableData = {
-        rows: Array(rows).fill(null).map((_, i) => ({
-          id: `row_${i}`,
-          height: cellHeight,
-          minHeight: 30,
-          isResizable: true,
-          isHeader: i === 0
-        })),
-        columns: Array(cols).fill(null).map((_, i) => ({
-          id: `col_${i}`,
-          width: cellWidth,
-          minWidth: 50,
-          isResizable: true,
-          textAlign: 'left' as const
-        })),
-        cells: Array(rows).fill(null).map((_, rowIndex) =>
-          Array(cols).fill(null).map((_, colIndex) => ({
-            id: `cell_${rowIndex}_${colIndex}`,
-            text: rowIndex === 0 ? `Header ${colIndex + 1}` : `Row ${rowIndex}, Col ${colIndex + 1}`,
-            containedElementIds: [],
-            backgroundColor: rowIndex === 0 ? '#F3F4F6' : '#FFFFFF',
-            textColor: '#1E293B',
-            fontSize: 14,
-            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
-            textAlign: 'left' as const,
-            verticalAlign: 'middle' as const,
-            padding: 8,
-            isHeader: rowIndex === 0
-          }))
-        ),
-        showGridLines: true,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        defaultCellPadding: 8
-      };
-      
-      const tableElement: CanvasElement = {
-        id: generateId(),
-        type: 'table',
-        x: pos.x,
-        y: pos.y,
-        width: cellWidth * cols,
-        height: cellHeight * rows,
-        rows,
-        cols,
-        cellWidth,
-        cellHeight,
-        tableData: [
-          ['Header 1', 'Header 2', 'Header 3'],
-          ['Row 1, Col 1', 'Row 1, Col 2', 'Row 1, Col 3'],
-          ['Row 2, Col 1', 'Row 2, Col 2', 'Row 2, Col 3']
-        ],
-        enhancedTableData,
-        borderColor: '#E5E7EB',
-        headerBackgroundColor: '#F3F4F6',
-        cellBackgroundColor: '#FFFFFF',
-        fill: '#1E293B',
-        fontSize: 14,
-        fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif"
-      };
-
-      addElement(tableElement);
-      setSelectedElement(tableElement.id);
+      // Use the enhanced table creation system
+      const { createEnhancedTable } = useKonvaCanvasStore.getState();
+      const tableId = createEnhancedTable(pos.x, pos.y, 3, 3);
+      setSelectedElement(tableId);
       
       // Switch back to select tool
       setSelectedTool('select');
@@ -1419,23 +1350,16 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         );
       case 'sticky-note':
         return (
-          <UnifiedTextElement
+          <StickyNoteElement
             key={element.id}
-            element={{
-              ...element,
-              type: 'sticky-note',
-              text: element.text || ''
-            }}
+            element={element}
             isSelected={isSelected}
-            isEditing={editingElement?.id === element.id} // Pass editing state to hide original text
-            onUpdate={updateElement}
-            onSelect={setSelectedElement}
-            onStartEdit={handleStartTextEdit}
-            konvaProps={{
-              id: element.id,
-              draggable: isDraggable, // Respect locked state
-              onClick: (e: Konva.KonvaEventObject<MouseEvent>) => handleElementClick(e, element),
-              onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => handleDragEnd(e, element.id)
+            isDraggable={isDraggable}
+            onSelect={(id, e) => handleElementClick(e, element)}
+            onDragEnd={(e) => handleDragEnd(e, element.id)}
+            onDoubleClick={(e) => {
+              e.cancelBubble = true;
+              handleStartTextEdit(element.id);
             }}
           />
         );
@@ -1540,13 +1464,25 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           />
         );
       case 'table':
+        console.log('🔍 [CANVAS DEBUG] === Rendering Table Element ===');
+        console.log('🔍 [CANVAS DEBUG] Table ID:', element.id);
+        console.log('🔍 [CANVAS DEBUG] Is selected:', isSelected);
+        console.log('🔍 [CANVAS DEBUG] Element:', element);
+        console.log('🔍 [CANVAS DEBUG] Has enhanced data:', !!element.enhancedTableData);
+        
         return (
           <EnhancedTableElement // Using enhanced table implementation
             key={element.id}
             element={element}
             isSelected={isSelected}
-            onSelect={(element) => setSelectedElement(element.id)}
-            onUpdate={(updates) => updateElement(element.id, updates)}
+            onSelect={(element) => {
+              console.log('🔍 [CANVAS DEBUG] Table selected:', element.id);
+              setSelectedElement(element.id);
+            }}
+            onUpdate={(updates) => {
+              console.log('🔍 [CANVAS DEBUG] Table update:', updates);
+              updateElement(element.id, updates);
+            }}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
             stageRef={stageRef}
           />

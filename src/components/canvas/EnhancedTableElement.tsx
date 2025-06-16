@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
@@ -60,21 +60,29 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
 
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
-  const [resizeHandle, setResizeHandle] = useState<'se' | 'e' | 's' | null>(null);
+  const [resizeHandle, setResizeHandle] = useState<'se' | 'e' | 's' | 'col' | 'row' | null>(null);
   const [resizeStartPos, setResizeStartPos] = useState<{ x: number; y: number } | null>(null);
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
   const [liveSize, setLiveSize] = useState<{ width: number, height: number } | null>(null);
+  
+  // Individual column/row resize state
+  const [resizingColumnIndex, setResizingColumnIndex] = useState<number | null>(null);
+  const [resizingRowIndex, setResizingRowIndex] = useState<number | null>(null);
+  const [columnStartWidth, setColumnStartWidth] = useState<number | null>(null);
+  const [rowStartHeight, setRowStartHeight] = useState<number | null>(null);
 
   // Hover timeout refs to prevent flicker
   const cellHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Store methods
-  const { 
-    sections, 
-    updateElement, 
+  const {
+    sections,
+    updateElement,
     updateTableCell,
     addTableRow,
-    addTableColumn
+    addTableColumn,
+    resizeTableColumn,
+    resizeTableRow
   } = useKonvaCanvasStore();
 
   // Get enhanced table data from element with null safety
@@ -101,8 +109,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   const displayWidth = liveSize?.width ?? totalWidth;
   const displayHeight = liveSize?.height ?? totalHeight;
 
-  // Handle drag end
-  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+  // Handle drag end - memoized to prevent render loops
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     try {
       const node = e.target;
       onUpdate({
@@ -115,13 +123,13 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
     } catch (error) {
       console.error("An error occurred in EnhancedTableElement:", error);
     }
-  };
+  }, [onUpdate, onDragEnd]);
 
-  // Handle cell click
-  const handleCellClick = (_rowIndex: number, _colIndex: number, e: Konva.KonvaEventObject<MouseEvent>) => {
+  // Handle cell click - memoized to prevent render loops
+  const handleCellClick = useCallback((_rowIndex: number, _colIndex: number, e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
     onSelect(element);
-  };
+  }, [onSelect, element]);
 
   // Handle cell double-click for editing
   const handleCellDoubleClick = (rowIndex: number, colIndex: number) => {
@@ -133,9 +141,9 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
       }
       
       const stage = stageRef.current;
-      const container = stage.container();
-      if (!container) {
-        console.error("An error occurred in EnhancedTableElement:", "container is missing");
+      const stageContainer = stage.container();
+      if (!stageContainer) {
+        console.error("An error occurred in EnhancedTableElement:", "stageContainer is missing");
         return;
       }
       
@@ -149,36 +157,26 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         return;
       }
       
-      // Compute cellX, cellY by summing widths/heights
-      const cellX = tableColumns.slice(0, colIndex).reduce((sum, c) => sum + (c?.width || 100), 0);
-      const cellY = tableRows.slice(0, rowIndex).reduce((sum, r) => sum + (r?.height || 40), 0);
-      
-      // Locate the Konva group by element.id
-      const konvaGroup = stage.findOne(`#${element.id}`);
-      if (!konvaGroup) {
-        console.error("An error occurred in EnhancedTableElement:", `Konva group not found for element ID: ${element.id}`);
+      // Use simplified approach with findOne for reliable cell lookup
+      const cellId = `${element.id}-cell-${rowIndex}-${colIndex}`;
+      const cellNode = stage.findOne(`#${cellId}`);
+      if (!cellNode) {
+        console.error("An error occurred in EnhancedTableElement:", `Cell node not found for ID: ${cellId}`);
         return;
       }
       
-      // Get absolute table position and derive cellAbsolutePos
-      const tableAbsolutePos = konvaGroup.getAbsolutePosition();
-      const cellAbsolutePos = {
-        x: tableAbsolutePos.x + cellX,
-        y: tableAbsolutePos.y + cellY
-      };
+      // Get cell's absolute position using Konva's built-in methods
+      const cellPosition = cellNode.getAbsolutePosition();
+      const stageScale = stage.scaleX();
+      const stageRect = stageContainer.getBoundingClientRect();
       
-      // Convert to screen coordinates via getBoundingClientRect()
-      const containerRect = container.getBoundingClientRect();
-      const stageTransform = stage.getAbsoluteTransform();
-      const screenPoint = stageTransform.point(cellAbsolutePos);
-      
-      // Call setEditingCell and setEditingCellPosition with { x, y, width, height }
+      // Calculate screen position accounting for stage scaling and container positioning
       setEditingCell({ row: rowIndex, col: colIndex });
       setEditingCellPosition({
-        x: containerRect.left + screenPoint.x,
-        y: containerRect.top + screenPoint.y,
-        width: tableColumns[colIndex]?.width || 100,
-        height: tableRows[rowIndex]?.height || 40
+        x: stageRect.left + (cellPosition.x * stageScale),
+        y: stageRect.top + (cellPosition.y * stageScale),
+        width: (tableColumns[colIndex]?.width || 100) * stageScale,
+        height: (tableRows[rowIndex]?.height || 40) * stageScale
       });
     } catch (error) {
       console.error("An error occurred in EnhancedTableElement:", error);
@@ -207,7 +205,9 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   // Handle resize start
   const handleResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, handle: 'se' | 'e' | 's') => {
     try {
+      console.log('🔧 [RESIZE DEBUG] Custom resize start:', handle);
       e.evt.preventDefault();
+      e.evt.stopPropagation();
       e.cancelBubble = true;
       setIsResizing(true);
       setResizeHandle(handle);
@@ -226,9 +226,65 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
     }
   };
 
+  // Handle column resize start
+  const handleColumnResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, colIndex: number) => {
+    try {
+      console.log('🔧 [RESIZE DEBUG] Column resize start:', colIndex);
+      e.evt.preventDefault();
+      e.evt.stopPropagation();
+      e.cancelBubble = true;
+      setIsResizing(true);
+      setResizeHandle('col');
+      setResizingColumnIndex(colIndex);
+      
+      const currentColumn = tableColumns[colIndex];
+      if (currentColumn) {
+        setColumnStartWidth(currentColumn.width);
+      }
+      
+      const stage = e.target.getStage();
+      if (stage) {
+        const pointerPos = stage.getPointerPosition();
+        if (pointerPos) {
+          setResizeStartPos({ x: pointerPos.x, y: pointerPos.y });
+        }
+      }
+    } catch (error) {
+      console.error("An error occurred in EnhancedTableElement:", error);
+    }
+  };
+
+  // Handle row resize start
+  const handleRowResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, rowIndex: number) => {
+    try {
+      console.log('🔧 [RESIZE DEBUG] Row resize start:', rowIndex);
+      e.evt.preventDefault();
+      e.evt.stopPropagation();
+      e.cancelBubble = true;
+      setIsResizing(true);
+      setResizeHandle('row');
+      setResizingRowIndex(rowIndex);
+      
+      const currentRow = tableRows[rowIndex];
+      if (currentRow) {
+        setRowStartHeight(currentRow.height);
+      }
+      
+      const stage = e.target.getStage();
+      if (stage) {
+        const pointerPos = stage.getPointerPosition();
+        if (pointerPos) {
+          setResizeStartPos({ x: pointerPos.x, y: pointerPos.y });
+        }
+      }
+    } catch (error) {
+      console.error("An error occurred in EnhancedTableElement:", error);
+    }
+  };
+
   // Handle resize with global mouse tracking and throttling
   useEffect(() => {
-    if (isResizing && resizeHandle && resizeStartPos && resizeStartSize && stageRef?.current) {
+    if (isResizing && resizeHandle && resizeStartPos && stageRef?.current) {
       const stage = stageRef.current;
       
       const handleMouseMove = throttle((e: MouseEvent) => {
@@ -243,53 +299,72 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         const deltaX = stagePointerPos.x - resizeStartPos.x;
         const deltaY = stagePointerPos.y - resizeStartPos.y;
 
-        let newWidth = resizeStartSize.width;
-        let newHeight = resizeStartSize.height;
+        if (resizeHandle === 'col' && resizingColumnIndex !== null && columnStartWidth !== null) {
+          // Individual column resize using store function
+          const newWidth = Math.max(MIN_CELL_WIDTH, Math.min(MAX_CELL_WIDTH, columnStartWidth + deltaX));
+          resizeTableColumn(element.id, resizingColumnIndex, newWidth);
+        } else if (resizeHandle === 'row' && resizingRowIndex !== null && rowStartHeight !== null) {
+          // Individual row resize using store function
+          const newHeight = Math.max(MIN_CELL_HEIGHT, Math.min(MAX_CELL_HEIGHT, rowStartHeight + deltaY));
+          resizeTableRow(element.id, resizingRowIndex, newHeight);
+        } else if (resizeStartSize) {
+          // Table-wide resize (existing behavior)
+          let newWidth = resizeStartSize.width;
+          let newHeight = resizeStartSize.height;
 
-        if (resizeHandle === 'se' || resizeHandle === 'e') {
-          newWidth = Math.max(MIN_TABLE_WIDTH, Math.min(1200, resizeStartSize.width + deltaX));
-        }
-        if (resizeHandle === 'se' || resizeHandle === 's') {
-          newHeight = Math.max(MIN_TABLE_HEIGHT, Math.min(800, resizeStartSize.height + deltaY));
-        }
+          if (resizeHandle === 'se' || resizeHandle === 'e') {
+            newWidth = Math.max(MIN_TABLE_WIDTH, Math.min(1200, resizeStartSize.width + deltaX));
+          }
+          if (resizeHandle === 'se' || resizeHandle === 's') {
+            newHeight = Math.max(MIN_TABLE_HEIGHT, Math.min(800, resizeStartSize.height + deltaY));
+          }
 
-        // Only update liveSize during drag (no expensive calculations)
-        setLiveSize({ width: newWidth, height: newHeight });
+          // Only update liveSize during drag (no expensive calculations)
+          setLiveSize({ width: newWidth, height: newHeight });
+        }
       }, 16); // 60fps throttling (16ms)
 
       const handleMouseUp = () => {
-        // Perform final expensive proportional calculations using liveSize and resizeStartSize
-        if (liveSize && resizeStartSize && enhancedTableData) {
-          const widthRatio = liveSize.width / resizeStartSize.width;
-          const heightRatio = liveSize.height / resizeStartSize.height;
+        if (resizeHandle === 'col' || resizeHandle === 'row') {
+          // Individual column/row resize cleanup
+          setResizingColumnIndex(null);
+          setResizingRowIndex(null);
+          setColumnStartWidth(null);
+          setRowStartHeight(null);
+        } else {
+          // Table-wide resize cleanup (existing behavior)
+          if (liveSize && resizeStartSize && enhancedTableData) {
+            const widthRatio = liveSize.width / resizeStartSize.width;
+            const heightRatio = liveSize.height / resizeStartSize.height;
 
-          // Update columns and rows with the ratios applied to their dimensions
-          const updatedColumns = enhancedTableData.columns.map(col => ({
-            ...col,
-            width: Math.max(MIN_CELL_WIDTH, Math.min(MAX_CELL_WIDTH, col.width * widthRatio))
-          }));
-          
-          const updatedRows = enhancedTableData.rows.map(row => ({
-            ...row,
-            height: Math.max(MIN_CELL_HEIGHT, Math.min(MAX_CELL_HEIGHT, row.height * heightRatio))
-          }));
-          
-          // Call onUpdate with the final calculated values
-          onUpdate({
-            enhancedTableData: {
-              ...enhancedTableData,
-              columns: updatedColumns,
-              rows: updatedRows
-            }
-          });
+            // Update columns and rows with the ratios applied to their dimensions
+            const updatedColumns = enhancedTableData.columns.map(col => ({
+              ...col,
+              width: Math.max(MIN_CELL_WIDTH, Math.min(MAX_CELL_WIDTH, col.width * widthRatio))
+            }));
+            
+            const updatedRows = enhancedTableData.rows.map(row => ({
+              ...row,
+              height: Math.max(MIN_CELL_HEIGHT, Math.min(MAX_CELL_HEIGHT, row.height * heightRatio))
+            }));
+            
+            // Call onUpdate with the final calculated values
+            onUpdate({
+              enhancedTableData: {
+                ...enhancedTableData,
+                columns: updatedColumns,
+                rows: updatedRows
+              }
+            });
+          }
+          setLiveSize(null);
+          setResizeStartSize(null);
         }
 
-        // Reset all resize-related state including setLiveSize(null)
+        // Reset all resize-related state
         setIsResizing(false);
         setResizeHandle(null);
         setResizeStartPos(null);
-        setResizeStartSize(null);
-        setLiveSize(null);
       };
 
       document.addEventListener('mousemove', handleMouseMove);
@@ -300,7 +375,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizing, resizeHandle, resizeStartPos, resizeStartSize, liveSize, enhancedTableData, element.id, onUpdate, stageRef]);
+  }, [isResizing, resizeHandle, resizeStartPos, resizeStartSize, liveSize, enhancedTableData, element.id, onUpdate, stageRef, resizingColumnIndex, resizingRowIndex, columnStartWidth, rowStartHeight, tableColumns, tableRows, resizeTableColumn, resizeTableRow]);
 
   // Handle table mouse leave with delay
   const handleTableMouseLeave = () => {
@@ -316,23 +391,23 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
     }
   };
 
-  // Handle cell hover with debounce
-  const handleCellMouseEnter = (row: number, col: number) => {
+  // Handle cell hover with debounce - memoized callbacks
+  const handleCellMouseEnter = useCallback((row: number, col: number) => {
     if (cellHoverTimeoutRef.current) {
       clearTimeout(cellHoverTimeoutRef.current);
       cellHoverTimeoutRef.current = null;
     }
     setHoveredCell({ row, col });
-  };
+  }, []);
 
-  const handleCellMouseLeave = () => {
+  const handleCellMouseLeave = useCallback(() => {
     cellHoverTimeoutRef.current = setTimeout(() => {
       setHoveredCell(null);
     }, 100);
-  };
+  }, []);
 
-  // Render table cells
-  const renderCells = () => {
+  // Render table cells - memoized to prevent infinite render loops
+  const renderCells = useMemo(() => {
     try {
       return tableRows.map((row, rowIndex) =>
         tableColumns.map((col, colIndex) => {
@@ -341,7 +416,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
           const cellY = tableRows.slice(0, rowIndex).reduce((sum, r) => sum + (r?.height || 40), 0);
 
           return (
-            <Group key={`${rowIndex}-${colIndex}`} x={cellX} y={cellY}>
+            <Group key={`${rowIndex}-${colIndex}`} id={`${element.id}-cell-${rowIndex}-${colIndex}`} x={cellX} y={cellY}>
               {/* Cell rectangle */}
               <Rect
                 key={`cell-${rowIndex}-${colIndex}`}
@@ -394,9 +469,9 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
       console.error("An error occurred in EnhancedTableElement:", error);
       return [];
     }
-  };
+  }, [tableRows, tableColumns, enhancedTableData, element.id, editingCell, hoveredCell, designSystem]);
 
-  return (
+  const tableJSX = (
     <>
       <Group
         id={element.id}
@@ -421,7 +496,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         />
 
         {/* Table cells */}
-        {renderCells()}
+        {renderCells}
 
         {/* Resize handles - only show when selected with larger size and hitbox */}
         {isSelected && (
@@ -491,6 +566,54 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
                 if (container) container.style.cursor = 'default';
               }}
             />
+
+            {/* Column resize handles - positioned between columns */}
+            {tableColumns.slice(0, -1).map((_, colIndex) => {
+              const handleX = tableColumns.slice(0, colIndex + 1).reduce((sum, c) => sum + (c?.width || 100), 0);
+              return (
+                <Rect
+                  key={`col-handle-${colIndex}`}
+                  x={handleX - 5}
+                  y={0}
+                  width={10}
+                  height={displayHeight}
+                  fill="transparent"
+                  onMouseDown={(e) => handleColumnResizeStart(e, colIndex)}
+                  onMouseEnter={(e) => {
+                    const container = e.target.getStage()?.container();
+                    if (container) container.style.cursor = 'ew-resize';
+                  }}
+                  onMouseLeave={(e) => {
+                    const container = e.target.getStage()?.container();
+                    if (container) container.style.cursor = 'default';
+                  }}
+                />
+              );
+            })}
+
+            {/* Row resize handles - positioned between rows */}
+            {tableRows.slice(0, -1).map((_, rowIndex) => {
+              const handleY = tableRows.slice(0, rowIndex + 1).reduce((sum, r) => sum + (r?.height || 40), 0);
+              return (
+                <Rect
+                  key={`row-handle-${rowIndex}`}
+                  x={0}
+                  y={handleY - 5}
+                  width={displayWidth}
+                  height={10}
+                  fill="transparent"
+                  onMouseDown={(e) => handleRowResizeStart(e, rowIndex)}
+                  onMouseEnter={(e) => {
+                    const container = e.target.getStage()?.container();
+                    if (container) container.style.cursor = 'ns-resize';
+                  }}
+                  onMouseLeave={(e) => {
+                    const container = e.target.getStage()?.container();
+                    if (container) container.style.cursor = 'default';
+                  }}
+                />
+              );
+            })}
           </>
         )}
 
@@ -588,4 +711,6 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
       )}
     </>
   );
+  
+  return tableJSX;
 };

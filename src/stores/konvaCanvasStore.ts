@@ -1303,7 +1303,8 @@ export const useKonvaCanvasStore = create<CanvasState>()(
         if (!row) return;
         
         const minHeight = row.minHeight || 30;
-        row.height = Math.max(minHeight, newHeight);
+        const maxHeight = row.maxHeight || 200;
+        row.height = Math.max(minHeight, Math.min(maxHeight, newHeight));
         
         // Update table height
         element.height = element.enhancedTableData.rows.reduce((sum, r) => sum + r.height, 0);
@@ -1320,8 +1321,9 @@ export const useKonvaCanvasStore = create<CanvasState>()(
         const column = element.enhancedTableData.columns[colIndex];
         if (!column) return;
         
-        const minWidth = column.minWidth || 60;
-        column.width = Math.max(minWidth, newWidth);
+        const minWidth = column.minWidth || 50;
+        const maxWidth = column.maxWidth || 500;
+        column.width = Math.max(minWidth, Math.min(maxWidth, newWidth));
         
         // Update table width
         element.width = element.enhancedTableData.columns.reduce((sum, col) => sum + col.width, 0);

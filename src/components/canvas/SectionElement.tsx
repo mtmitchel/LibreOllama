@@ -70,9 +70,9 @@ const SectionElement: React.FC<SectionElementProps> = ({
       input.style.width = `${section.width - 20}px`;
       input.style.fontSize = `${titleFontSize}px`;
       input.style.fontFamily = designSystem.typography.fontFamily.sans;
-      input.style.color = titleColor;
-      input.style.background = 'transparent';
-      input.style.border = '1px solid ' + section.borderColor;
+      input.style.color = designSystem.colors.secondary[800];
+      input.style.background = designSystem.colors.secondary[100];
+      input.style.border = '1px solid ' + designSystem.colors.secondary[300];
       input.style.borderRadius = '4px';
       input.style.padding = '2px 4px';
       input.style.outline = 'none';
@@ -189,46 +189,55 @@ const SectionElement: React.FC<SectionElementProps> = ({
         onClick={handleSectionClick}
       />
 
-      {/* Section Background */}
+      {/* Drop shadow for depth */}
+      <Rect
+        x={0}
+        y={4}
+        width={section.width}
+        height={section.height}
+        fill="rgba(0, 0, 0, 0.1)"
+        cornerRadius={designSystem.borderRadius.lg}
+        shadowBlur={12}
+        shadowOffsetX={0}
+        shadowOffsetY={4}
+        listening={false}
+      />
+
+      {/* Main body background */}
       <Rect
         x={0}
         y={0}
         width={section.width}
         height={section.height}
-        fill={section.backgroundColor}
-        stroke={section.borderColor}
-        strokeWidth={section.borderWidth}
-        cornerRadius={section.cornerRadius}
+        fill={designSystem.colors.secondary[50]}
+        stroke={isSelected ? designSystem.colors.primary[500] : 'transparent'}
+        strokeWidth={isSelected ? 2 : 0}
+        cornerRadius={designSystem.borderRadius.lg}
         listening={true}
         name="section-background"
-        // Add shadow for selected sections
-        shadowColor={isSelected ? section.borderColor : undefined}
-        shadowBlur={isSelected ? 8 : 0}
-        shadowOpacity={isSelected ? 0.3 : 0}
-        shadowOffsetX={0}
-        shadowOffsetY={2}
       />
 
-      {/* Title Bar Background */}
+      {/* Header bar background */}
       <Rect
         x={0}
         y={0}
         width={section.width}
         height={titleBarHeight}
-        fill={section.borderColor}
-        cornerRadius={[section.cornerRadius, section.cornerRadius, 0, 0]}
-        opacity={0.9}
+        fill={designSystem.colors.secondary[100]}
+        cornerRadius={[designSystem.borderRadius.lg, designSystem.borderRadius.lg, 0, 0]}
+        listening={true}
+        name="section-header"
       />
 
       {/* Section Title */}
       <Text
         ref={titleTextRef}
         x={10}
-        y={10}
+        y={(titleBarHeight - titleFontSize) / 2} // Vertically center in 40px header
         text={section.title || 'Section'}
         fontSize={titleFontSize}
         fontFamily={designSystem.typography.fontFamily.sans}
-        fill={titleColor}
+        fill={designSystem.colors.secondary[800]}
         fontStyle="bold"
         onDblClick={handleTitleDoubleClick}
         listening={true}
@@ -254,9 +263,9 @@ const SectionElement: React.FC<SectionElementProps> = ({
               y={0}
               width={24}
               height={24}
-              fill="rgba(255, 255, 255, 0.1)"
+              fill={designSystem.colors.secondary[200]}
               cornerRadius={4}
-              stroke="rgba(255, 255, 255, 0.3)"
+              stroke={designSystem.colors.secondary[300]}
               strokeWidth={1}
             />
             <Text
@@ -283,9 +292,9 @@ const SectionElement: React.FC<SectionElementProps> = ({
               y={0}
               width={24}
               height={24}
-              fill="rgba(255, 255, 255, 0.1)"
+              fill={designSystem.colors.secondary[200]}
               cornerRadius={4}
-              stroke="rgba(255, 255, 255, 0.3)"
+              stroke={designSystem.colors.secondary[300]}
               strokeWidth={1}
             />
             <Text
@@ -300,18 +309,6 @@ const SectionElement: React.FC<SectionElementProps> = ({
         </Group>
       )}
 
-      {/* Content area indicator (subtle) */}
-      <Rect
-        x={2}
-        y={titleBarHeight + 2}
-        width={section.width - 4}
-        height={section.height - titleBarHeight - 4}
-        stroke={section.borderColor}
-        strokeWidth={1}
-        opacity={0.2}
-        dash={[5, 5]}
-        listening={false}
-      />
 
       {/* Render contained elements as direct Group children */}
       {section.containedElementIds.map(elementId => {

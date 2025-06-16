@@ -107,30 +107,29 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
     if (isEditing && !hasInitialized) {
       logDebug('Initializing editor focus');
       
-      // Use requestAnimationFrame for more reliable focus timing
+      // Use a short timeout to ensure the element is in the DOM before focusing
       const focusTimeout = setTimeout(() => {
-        const focused = focusAndSelectText();
-        if (focused) {
-          setHasInitialized(true);
+        if (textareaRef.current) {
+          try {
+            textareaRef.current.focus();
+            textareaRef.current.select(); // Select all text for better UX
+            setHasInitialized(true);
+            logDebug('Successfully focused and selected text');
+          } catch (error) {
+            logDebug('Error during focus operation', error);
+            onCancelEditing();
+          }
         } else {
-          // Retry focus after a short delay
-          setTimeout(() => {
-            const retryFocused = focusAndSelectText();
-            if (retryFocused) {
-              setHasInitialized(true);
-            } else {
-              logDebug('Failed to focus after retry, canceling edit');
-              onCancelEditing();
-            }
-          }, 50);
+          logDebug('Textarea ref not available, canceling edit');
+          onCancelEditing();
         }
-      }, 16); // One frame delay
+      }, 10); // Short delay to ensure DOM element is ready
       
       return () => clearTimeout(focusTimeout);
     } else if (!isEditing) {
       setHasInitialized(false);
     }
-  }, [isEditing, hasInitialized, focusAndSelectText, onCancelEditing]);
+  }, [isEditing, hasInitialized, onCancelEditing]);
 
   // Enhanced keyboard event handling with error boundaries
   const handleSave = useCallback(() => {
