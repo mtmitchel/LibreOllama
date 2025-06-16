@@ -108,10 +108,6 @@ const validateRichTextSegments = (segments: RichTextSegment[]): boolean => {
 const memoizedFormatCache = new Map<string, RichTextSegment[]>();
 const MAX_CACHE_SIZE = 100;
 
-const getCacheKey = (segments: RichTextSegment[], formatType: string, value: any, selection: { start: number; end: number }): string => {
-  return `${segments.length}-${formatType}-${JSON.stringify(value)}-${selection.start}-${selection.end}`;
-};
-
 const clearFormatCache = () => {
   if (memoizedFormatCache.size > MAX_CACHE_SIZE) {
     // Clear half the cache to prevent memory bloat

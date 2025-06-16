@@ -1,7 +1,6 @@
 // src/components/Canvas/KonvaApp.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import Konva from 'konva';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
 import KonvaCanvas from '../canvas/KonvaCanvas'; // Corrected casing
 import KonvaToolbar from '../Toolbar/KonvaToolbar';
 import CanvasSidebar from '../canvas/CanvasSidebar';

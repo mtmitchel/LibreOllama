@@ -2,16 +2,16 @@
 import React, { useRef, useCallback } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../../stores/konvaCanvasStore';
-import type { RichTextSegment } from '../../types/richText';
+import { CanvasElement, useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
+import type { StandardTextFormat } from '../../types/richText';
 import { designSystem, getStickyNoteColors } from '../../styles/designSystem';
-import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
+import { richTextManager as UnifiedRichTextManager } from './RichTextSystem/UnifiedRichTextManager'; // Corrected import alias
 import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
-import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 
 interface StickyNoteElementProps {
-  element: CanvasElement;
+  element: CanvasElement & { textStyle?: StandardTextFormat };
   isSelected: boolean;
+  isEditing?: boolean;
   isDraggable?: boolean;
   onSelect: (id: string, e: Konva.KonvaEventObject<MouseEvent>) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
@@ -21,10 +21,11 @@ interface StickyNoteElementProps {
 const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   element,
   isSelected,
+  isEditing = false,
   isDraggable = true,
   onSelect,
   onDragEnd,
-  onDoubleClick
+  onDoubleClick,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   
@@ -108,7 +109,8 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   // Handle double click for editing
   const handleDoubleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
-    onDoubleClick(e);
+    // onDoubleClick(e); // This will now be handled by KonvaCanvas to set isEditing
+    if (onDoubleClick) onDoubleClick(e); // Propagate if needed for other selection logic
   }, [onDoubleClick]);
 
   // Handle single click for selection
@@ -131,12 +133,15 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   // Get display text - prioritize rich text segments, fallback to basic text
   const getDisplayText = () => {
     if (hasRichTextSegments) {
-      return richTextManager.segmentsToPlainText(element.richTextSegments!);
+      return UnifiedRichTextManager.segmentsToPlainText(element.richTextSegments!);
     }
     return hasBasicText ? element.text! : '';
   };
-  
-  const displayText = getDisplayText();
+    const displayText = getDisplayText();
+
+  if (isEditing) {
+    return null; // KonvaCanvas will handle rendering the editor
+  }
 
   return (
     <Group
@@ -198,21 +203,16 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
           let konvaFontStyle = segment.fontStyle || 'normal';
           if (segment.fontWeight === 'bold') {
             konvaFontStyle = konvaFontStyle === 'italic' ? 'bold italic' : 'bold';
+          } else if (segment.fontWeight === 'normal' && konvaFontStyle === 'italic') {
+            // Ensure 'normal' fontWeight with 'italic' style is just 'italic'
+            konvaFontStyle = 'italic';
           }
-
-          console.log(`[STICKY NOTE DEBUG] Rendering segment ${index}:`, {
-            text: segment.text,
-            fontSize: segment.fontSize || element.fontSize || 14,
-            fontStyle: konvaFontStyle,
-            fill: segment.fill || element.textColor || designSystem.colors.secondary[900],
-            textDecoration: segment.textDecoration || element.textDecoration || 'none'
-          });
           
           return (
             <Text
               key={index}
-              x={16}
-              y={segmentY}
+              x={10} // Basic padding
+              y={segmentY} // Calculated Y position
               width={width - 32}
               height={height - 40}
               text={segment.text}

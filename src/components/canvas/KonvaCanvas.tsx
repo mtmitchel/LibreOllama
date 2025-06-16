@@ -60,14 +60,14 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     isEditing: boolean;
     cellPosition: { x: number; y: number; width: number; height: number };
     cellText: string;
-    richTextSegments: any[];
+    richTextSegments: RichTextSegment[];
     fontSize?: number;
     fontFamily?: string;
     textColor?: string;
     textAlign?: 'left' | 'center' | 'right';
     onTextChange: (text: string) => void;
-    onRichTextChange?: (segments: any[]) => void;
-    onFinishEditing: () => void;
+    onRichTextChange?: (segments: RichTextSegment[]) => void;
+    onFinishEditing: (finalSegments: RichTextSegment[]) => void;
     onCancelEditing: () => void;
     elementId?: string;
     elementType?: 'text' | 'sticky-note' | 'table-cell';
@@ -372,8 +372,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           onRichTextChange: (segments: any[]) => {
             updateElement(elementId, { ...element, richTextSegments: segments } as any);
           },
-          onFinishEditing: () => {
+          onFinishEditing: (finalSegments: RichTextSegment[]) => {
             console.log('🎯 [RICH TEXT EDITING DEBUG] onFinishEditing called for text/sticky-note element:', elementId);
+            // Update the element with the final segments
+            updateElement(elementId, { ...element, richTextSegments: finalSegments } as any);
             setEditingTextId(null);
             setRichTextEditingData(null);
           },
@@ -438,7 +440,9 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           onRichTextChange: (segments: any[]) => {
             updateElement(elementId, { ...element, richTextSegments: segments } as any);
           },
-          onFinishEditing: () => {
+          onFinishEditing: (finalSegments: RichTextSegment[]) => {
+            // Update the element with the final segments
+            updateElement(elementId, { ...element, richTextSegments: finalSegments } as any);
             setEditingTextId(null);
             setRichTextEditingData(null);
           },
@@ -1336,6 +1340,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             key={element.id}
             element={element}
             isSelected={isSelected}
+            isEditing={editingTextId === element.id} // Pass editing state
             isDraggable={isDraggable}
             onSelect={(_, e) => handleElementClick(e, element)}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
@@ -1723,16 +1728,24 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         <RichTextCellEditor
           isEditing={richTextEditingData.isEditing}
           cellPosition={richTextEditingData.cellPosition}
-          cellText={richTextEditingData.cellText}
-          richTextSegments={richTextEditingData.richTextSegments}
-          fontSize={richTextEditingData.fontSize}
-          fontFamily={richTextEditingData.fontFamily}
-          textColor={richTextEditingData.textColor}
-          textAlign={richTextEditingData.textAlign}
-          onTextChange={richTextEditingData.onTextChange}
-          onRichTextChange={richTextEditingData.onRichTextChange}
+          initialSegments={richTextEditingData.richTextSegments}
+          onRichTextChange={richTextEditingData.onRichTextChange || (() => {})}
           onFinishEditing={richTextEditingData.onFinishEditing}
           onCancelEditing={richTextEditingData.onCancelEditing}
+          defaultFormat={{
+            fontSize: richTextEditingData.fontSize || 14,
+            fontFamily: richTextEditingData.fontFamily || designSystem.typography.fontFamily.sans,
+            textColor: richTextEditingData.textColor || designSystem.colors.secondary[800],
+            textAlign: richTextEditingData.textAlign || 'left',
+            bold: false,
+            italic: false,
+            underline: false,
+            strikethrough: false,
+            listType: 'none',
+            isHyperlink: false,
+            hyperlinkUrl: '',
+            textStyle: 'default',
+          }}
         />
       )}
 

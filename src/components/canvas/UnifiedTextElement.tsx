@@ -2,12 +2,12 @@
 import React, { useRef, useCallback } from 'react';
 import { Text, Group, Rect } from 'react-konva';
 import { designSystem } from '../../styles/designSystem';
-import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
-import type { RichTextSegment } from '../../types/richText';
 import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
+import { RichTextSegment } from '../../types/richText';
+import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
 
-interface UnifiedTextElementProps {
+export interface UnifiedTextElementProps {
   element: {
     id: string;
     x: number;
@@ -30,10 +30,10 @@ interface UnifiedTextElementProps {
     isHyperlink?: boolean;
     hyperlinkUrl?: string;
     textAlign?: 'left' | 'center' | 'right';
-    richTextSegments?: RichTextSegment[]; // Add rich text support
+    richTextSegments?: RichTextSegment[];
   };
   isSelected: boolean;
-  isEditing?: boolean; // Add editing state prop
+  isEditing?: boolean;
   onUpdate: (elementId: string, updates: any) => void;
   onSelect: (elementId: string) => void;
   onStartEdit: (elementId: string) => void;
@@ -137,30 +137,6 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
   // Text display logic
   const shouldShowPlaceholder = !hasContent;
   const shouldShowMainText = hasContent && !isEditing;
-  
-  // Text display properties with enhanced formatting support
-  const textDisplayProps = {
-    text: displayText,
-    fontSize: element.fontSize || 16,
-    fontFamily: element.fontFamily || 'Inter, sans-serif',
-    fill: element.isHyperlink ? '#2196F3' : (element.fill || element.textColor || '#3b82f6'),
-    fontStyle: (() => {
-      let style = element.fontStyle || 'normal';
-      // Handle combined bold and italic styles for Konva
-      if (element.fontWeight === 'bold' && style === 'italic') {
-        return 'bold italic';
-      } else if (element.fontWeight === 'bold') {
-        return 'bold';
-      }
-      return style;
-    })(),
-    textDecoration: (() => {
-      if (element.isHyperlink) return 'underline';
-      if (element.textDecoration) return element.textDecoration;
-      return 'none';
-    })(),
-    align: element.textAlign || 'left'
-  };
 
   // Render Konva elements only
   const renderKonvaElements = () => {
