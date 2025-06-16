@@ -1513,10 +1513,21 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     };
   }, [selectedElementId, editingTextId, setSelectedElement, setEditingTextId, isDrawingConnector]);
 
+  // Safe ref callback to avoid read-only ref issues
+  const handleStageRef = useCallback((stage: Konva.Stage | null) => {
+    if (stageRef && typeof stageRef === 'object' && 'current' in stageRef) {
+      try {
+        (stageRef as React.MutableRefObject<Konva.Stage | null>).current = stage;
+      } catch (error) {
+        console.warn('Could not assign to stageRef:', error);
+      }
+    }
+  }, [stageRef]);
+
   return (
     <div className="konva-canvas-container">
       <Stage
-        ref={stageRef}
+        ref={handleStageRef}
         width={width}
         height={height}
         onMouseDown={handleMouseDown}
@@ -1531,7 +1542,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         y={panZoomState.position.y}
         scaleX={panZoomState.scale}
         scaleY={panZoomState.scale}
-        style={{ 
+        style={{
           display: 'block',
           backgroundColor: designSystem.canvasStyles.background,
           cursor: selectedTool === 'pan' ? 'grab' : (selectedTool.startsWith('connector-') ? 'crosshair' : 'default')

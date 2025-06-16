@@ -4,6 +4,7 @@ import { immer } from 'zustand/middleware/immer';
 import { ConnectorEndpoint, ConnectorStyle } from '../types/connector';
 import { SectionElement, isElementInSection, convertAbsoluteToRelative, sectionTemplates } from '../types/section';
 import type { RichTextSegment } from '../types/richText';
+import { triggerLayerRedraw, getStageRef } from '../utils/canvasRedrawUtils';
 
 // Re-export for backward compatibility
 export type { RichTextSegment };
@@ -272,6 +273,10 @@ interface CanvasState {
   editingTextId: string | null; // ID of the text element currently being edited
   canvasSize: { width: number; height: number };
   
+  // Canvas redraw management
+  canvasRedrawRequired: boolean;
+  stageRefs: Set<React.RefObject<any>>;
+  
   // History management
   history: HistoryState[];
   historyIndex: number;
@@ -349,6 +354,12 @@ interface CanvasState {
   duplicateCanvas: (canvasId: string) => string;
   updateCanvasThumbnail: (canvasId: string, thumbnail: string) => void;
   saveCurrentCanvas: () => void;
+
+  // Canvas redraw bridge methods
+  registerStageRef: (stageRef: React.RefObject<any>) => void;
+  unregisterStageRef: (stageRef: React.RefObject<any>) => void;
+  triggerCanvasRedraw: (immediate?: boolean) => void;
+  setCanvasRedrawRequired: (required: boolean) => void;
 }
 
 export const useKonvaCanvasStore = create<CanvasState>()(
@@ -364,6 +375,10 @@ export const useKonvaCanvasStore = create<CanvasState>()(
     selectedElementId: null,
     editingTextId: null,
     canvasSize: { width: 800, height: 600 },
+    
+    // Canvas redraw state
+    canvasRedrawRequired: false,
+    stageRefs: new Set(),
     
     // History state
     history: [],
@@ -1308,6 +1323,10 @@ export const useKonvaCanvasStore = create<CanvasState>()(
       console.log('🏪 [STORE DEBUG] === Store update completed ===');
       console.log('🏪 [STORE DEBUG] Adding to history...');
       get().addToHistory(`Update table cell [${rowIndex}, ${colIndex}]`);
+      
+      // FIXED: Trigger immediate canvas redraw after table cell update
+      console.log('🏪 [STORE DEBUG] Triggering canvas redraw...');
+      get().triggerCanvasRedraw(true);
       console.log('🏪 [STORE DEBUG] ===========================');
     },
 
@@ -1690,6 +1709,58 @@ export const useKonvaCanvasStore = create<CanvasState>()(
         state.canvases[currentCanvasId].elements = { ...elements };
         state.canvases[currentCanvasId].sections = { ...sections };
         state.canvases[currentCanvasId].updatedAt = Date.now();
+      });
+    },
+
+    // Canvas redraw bridge methods
+    registerStageRef: (stageRef: React.RefObject<any>) => {
+      set((state) => {
+        state.stageRefs.add(stageRef);
+      });
+    },
+
+    unregisterStageRef: (stageRef: React.RefObject<any>) => {
+      set((state) => {
+        state.stageRefs.delete(stageRef);
+      });
+    },
+
+    triggerCanvasRedraw: (immediate: boolean = true) => {
+      const { stageRefs } = get();
+      
+      // Try registered stage refs first
+      let redrawn = false;
+      stageRefs.forEach(stageRef => {
+        if (triggerLayerRedraw(stageRef, { immediate, debug: false })) {
+          redrawn = true;
+        }
+      });
+      
+      // Fallback to DOM search if no registered refs worked
+      if (!redrawn) {
+        const fallbackStageRef = getStageRef();
+        if (fallbackStageRef) {
+          triggerLayerRedraw(fallbackStageRef, { immediate, debug: false });
+        }
+      }
+      
+      // Reset redraw flag
+      set((state) => {
+        state.canvasRedrawRequired = false;
+      });
+    },
+
+    setCanvasRedrawRequired: (required: boolean) => {
+      set((state) => {
+        state.canvasRedrawRequired = required;
+        
+        // If redraw is required, trigger it immediately
+        if (required) {
+          // Use setTimeout to avoid calling get() during set()
+          setTimeout(() => {
+            get().triggerCanvasRedraw(true);
+          }, 0);
+        }
       });
     },
   }))

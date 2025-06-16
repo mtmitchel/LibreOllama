@@ -13,7 +13,7 @@ import '../../styles/konvaCanvas.css';
 import '../../styles/canvas-enhancements.css';
 
 const KonvaApp: React.FC = () => {
-  const stageRef = useRef<Konva.Stage>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
   const { 
     panZoomState, 
     handleWheel, 

@@ -3,6 +3,7 @@ import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, useKonvaCanvasStore, RichTextSegment } from '../../stores/konvaCanvasStore';
 import { designSystem } from '../../styles/designSystem';
+import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
 
 // Constants for improved UX
 const MIN_CELL_WIDTH = 80; // Increased from 60px
@@ -126,6 +127,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   const resizeTableColumn = useKonvaCanvasStore(state => state.resizeTableColumn);
   const resizeTableRow = useKonvaCanvasStore(state => state.resizeTableRow);
   const selectedTool = useKonvaCanvasStore(state => state.selectedTool);
+  const registerStageRef = useKonvaCanvasStore(state => state.registerStageRef);
+  const unregisterStageRef = useKonvaCanvasStore(state => state.unregisterStageRef);
 
   // Get enhanced table data from element with null safety
   const enhancedTableData = element.enhancedTableData;
@@ -865,17 +868,10 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
                     groupX = cellWidth - totalTextWidth - 8;
                   }
 
-                  // FIXED: Force layer redraw after rendering rich text segments
-                  setTimeout(() => {
-                    const stage = stageRef?.current;
-                    if (stage) {
-                      const layer = stage.getLayers()[0]; // Get the first layer
-                      if (layer) {
-                        layer.batchDraw();
-                        console.log('[TABLE CELL DEBUG] Layer redrawn after rich text segments render');
-                      }
-                    }
-                  }, 0);
+                  // FIXED: Immediate layer redraw after rendering rich text segments
+                  if (triggerLayerRedraw(stageRef, { immediate: true, debug: true })) {
+                    console.log('[TABLE CELL DEBUG] Layer redrawn immediately after rich text segments render');
+                  }
 
                   return (
                     <Group x={groupX} y={0} width={cellWidth} clipFunc={(ctx) => { ctx.rect(0, 0, cellWidth, row?.height || 40); }}>
@@ -1430,9 +1426,16 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
     }
   }, [editingCell, editingCellPosition, enhancedTableData, onEditingStateChange, handleTextChange, handleRichTextChange, handleFinishEditing, handleCancelEditing]);
 
-  // Clean up timeouts on unmount
+  // Register stage ref and clean up timeouts on unmount
   useEffect(() => {
+    if (stageRef?.current) {
+      registerStageRef(stageRef);
+    }
+    
     return () => {
+      if (stageRef?.current) {
+        unregisterStageRef(stageRef);
+      }
       if (cellHoverTimeoutRef.current) {
         clearTimeout(cellHoverTimeoutRef.current);
       }
@@ -1443,7 +1446,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         clearTimeout(headerHoverTimeoutRef.current);
       }
     };
-  }, []);
+  }, [registerStageRef, unregisterStageRef]);
 
   return tableContent;
 };

@@ -4,6 +4,8 @@ import { Text, Group, Rect } from 'react-konva';
 import { designSystem } from '../../styles/designSystem';
 import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
 import type { RichTextSegment } from '../../types/richText';
+import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
+import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 
 interface UnifiedTextElementProps {
   element: {
@@ -48,6 +50,30 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
   konvaProps
 }) => {
   const textRef = useRef<any>(null);
+  
+  // Store methods for canvas redraw registration
+  const registerStageRef = useKonvaCanvasStore(state => state.registerStageRef);
+  const unregisterStageRef = useKonvaCanvasStore(state => state.unregisterStageRef);
+  
+  // Create a ref to the stage for redraw registration
+  const stageRef = useRef<any>(null);
+  
+  // Update stage ref when component mounts/updates
+  React.useEffect(() => {
+    if (textRef.current) {
+      const stage = textRef.current.getStage();
+      if (stage && stage !== stageRef.current) {
+        stageRef.current = stage;
+        registerStageRef({ current: stage });
+      }
+    }
+    
+    return () => {
+      if (stageRef.current) {
+        unregisterStageRef({ current: stageRef.current });
+      }
+    };
+  }, [registerStageRef, unregisterStageRef]);
 
   // Handle double click - ALWAYS prioritize edit mode over hyperlink navigation
   const handleDoubleClick = useCallback((e: any) => {
@@ -362,6 +388,15 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
               opacity={0.8}
             />
           )}
+          
+          {/* FIXED: Trigger layer redraw after rich text segments are rendered */}
+          {shouldShowMainText && hasRichTextSegments && (() => {
+            // Immediate redraw to ensure rich text segments are visible
+            if (stageRef.current) {
+              triggerLayerRedraw({ current: stageRef.current }, { immediate: true, debug: false });
+            }
+            return null;
+          })()}
         </Group>
       );
     }

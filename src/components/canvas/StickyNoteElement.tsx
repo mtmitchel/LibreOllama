@@ -6,6 +6,8 @@ import { CanvasElement } from '../../stores/konvaCanvasStore';
 import type { RichTextSegment } from '../../types/richText';
 import { designSystem, getStickyNoteColors } from '../../styles/designSystem';
 import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
+import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
+import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 
 interface StickyNoteElementProps {
   element: CanvasElement;
@@ -25,6 +27,30 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   onDoubleClick
 }) => {
   const groupRef = useRef<Konva.Group>(null);
+  
+  // Store methods for canvas redraw registration
+  const registerStageRef = useKonvaCanvasStore(state => state.registerStageRef);
+  const unregisterStageRef = useKonvaCanvasStore(state => state.unregisterStageRef);
+  
+  // Create a ref to the stage for redraw registration
+  const stageRef = useRef<any>(null);
+  
+  // Update stage ref when component mounts/updates
+  React.useEffect(() => {
+    if (groupRef.current) {
+      const stage = groupRef.current.getStage();
+      if (stage && stage !== stageRef.current) {
+        stageRef.current = stage;
+        registerStageRef({ current: stage });
+      }
+    }
+    
+    return () => {
+      if (stageRef.current) {
+        unregisterStageRef({ current: stageRef.current });
+      }
+    };
+  }, [registerStageRef, unregisterStageRef]);
 
   // Default size if not specified
   const width = element.width || 200;
@@ -204,6 +230,15 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
           );
         })
       )}
+      
+      {/* FIXED: Trigger layer redraw after rich text segments are rendered */}
+      {hasContent && hasRichTextSegments && (() => {
+        // Immediate redraw to ensure rich text segments are visible
+        if (stageRef.current) {
+          triggerLayerRedraw({ current: stageRef.current }, { immediate: true, debug: false });
+        }
+        return null;
+      })()}
 
       {/* Fallback to basic text if no rich text segments */}
       {hasContent && !hasRichTextSegments && (

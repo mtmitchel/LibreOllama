@@ -154,10 +154,9 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     }
     return null;
   }, []);
-  // Initialize local state with potentially rich text segments
-  const [localText, setLocalText] = useState(richTextManager.segmentsToPlainText(richTextSegments) || cellText);
-  const [localSegments, setLocalSegments] = useState<RichTextSegment[]>(
-    richTextSegments.length > 0
+  // FIXED: Simplified state management - single source of truth
+  const [editorState, setEditorState] = useState(() => {
+    const initialSegments = richTextSegments.length > 0
       ? richTextSegments
       : plainTextToSegments(cellText, {
           fontSize,
@@ -172,13 +171,19 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
           isHyperlink: false,
           hyperlinkUrl: '',
           textStyle: 'default'
-        })
-  );
-  const localSegmentsRef = useRef(localSegments); // Ref to keep track of localSegments for callbacks
-
+        });
+    
+    return {
+      segments: initialSegments,
+      plainText: richTextManager.segmentsToPlainText(initialSegments) || cellText
+    };
+  });
+  
+  // Keep ref for callbacks that need immediate access
+  const editorStateRef = useRef(editorState);
   useEffect(() => {
-    localSegmentsRef.current = localSegments;
-  }, [localSegments]);
+    editorStateRef.current = editorState;
+  }, [editorState]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
@@ -209,12 +214,7 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
   // Initialize local state when editing starts, but don't sync during active editing
   useEffect(() => {
     if (isEditing && !hasInitialized) {
-      // If richTextSegments are provided, initialize localText from them
-      // Otherwise, use cellText
-      const initialText = richTextSegments.length > 0 ? richTextManager.segmentsToPlainText(richTextSegments) : cellText;
-      setLocalText(initialText);
-      
-      // Initialize localSegments: use richTextSegments if available, otherwise convert cellText
+      // FIXED: Initialize with simplified state
       const initialSegments = richTextSegments.length > 0
         ? richTextSegments
         : plainTextToSegments(cellText, {
@@ -231,8 +231,13 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
             hyperlinkUrl: '',
             textStyle: 'default'
           });
-      setLocalSegments(initialSegments);
-      localSegmentsRef.current = initialSegments;
+      
+      const initialText = richTextManager.segmentsToPlainText(initialSegments) || cellText;
+      
+      setEditorState({
+        segments: initialSegments,
+        plainText: initialText
+      });
 
 
       const focusTimeout = setTimeout(() => {
@@ -271,8 +276,12 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
   // Only sync with props when not editing or when editing session starts
   useEffect(() => {
     if (!isEditing) {
-      setLocalText(cellText);
-      setLocalSegments(richTextSegments);
+      const newSegments = richTextSegments.length > 0 ? richTextSegments : [];
+      const newText = richTextManager.segmentsToPlainText(newSegments) || cellText;
+      setEditorState({
+        segments: newSegments,
+        plainText: newText
+      });
     }
   }, [isEditing, cellText, richTextSegments]);
 
@@ -287,14 +296,14 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     // Always show toolbar for table cell editing, regardless of selection
     setShowToolbar(true);
 
-    if (localSegments.length === 0) {
+    if (editorState.segments.length === 0) {
       return;
     }
 
     let currentPos = 0;
     let formatFound = false;
 
-    for (const segment of localSegments) {
+    for (const segment of editorState.segments) {
       const segmentEnd = currentPos + segment.text.length;
 
       if (start >= currentPos && start <= segmentEnd) {
@@ -318,8 +327,8 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       currentPos = segmentEnd;
     }
 
-    if (!formatFound && start === localText.length && localSegments.length > 0) {
-      const lastSegment = localSegments[localSegments.length - 1];
+    if (!formatFound && start === editorState.plainText.length && editorState.segments.length > 0) {
+      const lastSegment = editorState.segments[editorState.segments.length - 1];
       if (lastSegment) {
         setCurrentFormat({
           bold: lastSegment.fontWeight === 'bold',
@@ -337,18 +346,17 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
         });
       }
     }
-  }, [localSegments, fontSize, fontFamily, textColor, localText.length]);
+  }, [editorState.segments, fontSize, fontFamily, textColor, editorState.plainText.length]);
 
   // Enhanced keyboard event handling
   const handleSave = useCallback(() => {
     try {
       // For plain text saving (if still needed by some parent)
-      onTextChange(richTextManager.segmentsToPlainText(localSegmentsRef.current));
+      onTextChange(richTextManager.segmentsToPlainText(editorStateRef.current.segments));
       
       // For rich text saving
       if (onRichTextChange) {
-        
-        onRichTextChange(localSegmentsRef.current);
+        onRichTextChange(editorStateRef.current.segments);
       }
       onFinishEditing();
     } catch (error) {
@@ -359,8 +367,12 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
 
   const handleCancel = useCallback(() => {
     try {
-      setLocalText(cellText);
-      setLocalSegments(richTextSegments);
+      const resetSegments = richTextSegments.length > 0 ? richTextSegments : [];
+      const resetText = richTextManager.segmentsToPlainText(resetSegments) || cellText;
+      setEditorState({
+        segments: resetSegments,
+        plainText: resetText
+      });
       onCancelEditing();
     } catch (error) {
       logError('ERROR during cancel operation', error);
@@ -441,47 +453,46 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       const preset = presets.find(p => p.id === presetName);
       
       if (preset) {
-        
-        const result = richTextManager.applyStylePreset(localSegmentsRef.current, preset.id);
+        const result = richTextManager.applyStylePreset(editorStateRef.current.segments, preset.id);
         if (result.success) {
           newSegments = result.segments;
         } else {
           console.error(`❌ [EDITOR] Style preset error: ${result.error}`);
-          newSegments = [...localSegmentsRef.current];
+          newSegments = [...editorStateRef.current.segments];
         }
       } else {
         console.warn(`⚠️ [EDITOR] Style preset "${presetName}" not found.`);
-        newSegments = [...localSegmentsRef.current];
+        newSegments = [...editorStateRef.current.segments];
       }
     } else {
       // Handle individual formatting commands
-      
       newSegments = applyFormattingToSegments(
-        localSegmentsRef.current,
+        editorStateRef.current.segments,
         command as keyof StandardTextFormat,
         value,
         currentSelection
       );
     }
 
-    if (newSegments && Array.isArray(newSegments)) { // Check if newSegments is not null and is an array
+    if (newSegments && Array.isArray(newSegments)) {
+      const newPlainText = richTextManager.segmentsToPlainText(newSegments);
       
-      setLocalSegments(newSegments); // Update local state
+      // FIXED: Update unified state
+      setEditorState({
+        segments: newSegments,
+        plainText: newPlainText
+      });
       
       // Call onRichTextChange immediately for user-initiated formatting changes
       if (onRichTextChange) {
-        
         onRichTextChange(newSegments);
       }
       
-      // Update textarea text if segments changed
-      const newPlainText = richTextManager.segmentsToPlainText(newSegments);
+      // Update textarea if needed
       if (textareaRef.current && textareaRef.current.value !== newPlainText) {
         // Preserve cursor position if possible (simplified)
         const currentCursorPos = textareaRef.current.selectionStart;
-        setLocalText(newPlainText); // Update localText state
         // Restore cursor position after text update
-        // This is tricky and might need more sophisticated handling
         setTimeout(() => {
           if (textareaRef.current) {
             try {
@@ -492,24 +503,16 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
           }
         }, 0);
       }
-
-
     } else {
       console.warn('[RichTextCellEditor] newSegments is null, not an array, or empty after formatting. No update. Command:', command, 'Value:', value, 'Result:', newSegments);
     }
 
     // Update toolbar state based on the new selection/formatting
     setTimeout(() => {
-      if (textareaRef.current) { // Check textareaRef.current again
-        const currentFormats = getFormattingState(textareaRef.current, localSegmentsRef.current); // Use ref for most up-to-date segments
-        const activeListType = getListTypeForSelection(textareaRef.current, localSegmentsRef.current);
-        // 
-        // if (updateToolbarState) { // updateToolbarState would need to be a prop
-        //   updateToolbarState({ ...currentFormats, listType: activeListType || 'none' });
-        // }
-        // For now, let's update the internal currentFormat state used by the editor's textarea style
+      if (textareaRef.current) {
+        const currentFormats = getFormattingState(textareaRef.current, editorStateRef.current.segments);
+        const activeListType = getListTypeForSelection(textareaRef.current, editorStateRef.current.segments);
         setCurrentFormat((prev: StandardTextFormat) => ({...prev, ...currentFormats, listType: activeListType || 'none'}));
-
       }
     }, 0);
   }, [onRichTextChange]);
@@ -579,18 +582,11 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     }
   }, [isEditing, handleSave, handleCancel, handleFormatToggle]);
 
-  // Handle text change - update localText and attempt to sync localSegments
+  // Handle text change - update editorState with unified approach
   const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     try {
       const newText = e.target.value;
-      setLocalText(newText); // Always update plain text view
 
-      // Attempt to update segments based on plain text change.
-      // This is a simplification. A real rich text editor would parse the input
-      // and try to maintain or update formatting intelligently.
-      // For now, if text changes, we'll create a single segment with current/default format.
-      // This means formatting might be lost if user types directly into a multi-segment formatted text.
-      
       // Get current cursor position to find which segment's format to carry over (simplified)
       const cursorPos = e.target.selectionStart;
       let formatToCarry: Partial<StandardTextFormat> = {
@@ -601,12 +597,11 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
         italic: currentFormat.italic,
         underline: currentFormat.underline,
         strikethrough: currentFormat.strikethrough,
-        // listType, hyperlink, textAlign, textStyle are harder to manage here
       };
 
-      if (localSegmentsRef.current.length > 0) {
+      if (editorStateRef.current.segments.length > 0) {
           let charCount = 0;
-          for (const segment of localSegmentsRef.current) {
+          for (const segment of editorStateRef.current.segments) {
               charCount += segment.text.length;
               if (cursorPos <= charCount) {
                   formatToCarry = {
@@ -625,18 +620,21 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       
       const newSegments = plainTextToSegments(newText, formatToCarry);
       
-      setLocalSegments(newSegments); // This will trigger the useEffect for onRichTextChange
+      // FIXED: Update unified state
+      setEditorState({
+        segments: newSegments,
+        plainText: newText
+      });
       
       // Call onRichTextChange immediately for user-initiated text changes
       if (onRichTextChange && newSegments.length > 0) {
-        
         onRichTextChange(newSegments);
       }
 
     } catch (error) {
       logError('ERROR handling text change', error);
     }
-  }, [currentFormat, onRichTextChange]); // Add onRichTextChange as dependency
+  }, [currentFormat, onRichTextChange]);
 
   // Handle blur - simplified to prevent race conditions
   const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
@@ -771,7 +769,7 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
         <textarea
           ref={textareaRef}
           style={textareaStyle}
-          value={localText}
+          value={editorState.plainText}
           onChange={handleTextChange}
           onBlur={handleBlur}
           onSelect={handleTextSelection}
