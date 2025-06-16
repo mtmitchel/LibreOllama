@@ -28,7 +28,7 @@ class TestLogger {
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ${message}`;
     this.logs.push(logEntry);
-    console.log(`🧪 ADVANCED TEST: ${logEntry}`);
+    // console.log(`🧪 ADVANCED TEST: ${logEntry}`);
   }
 
   error(message: string): void {

@@ -1,0 +1,31 @@
+/* Canvas Sections Enhanced Styles */
+
+.canvas-section {
+  pointer-events: none;
+}
+
+.canvas-section-border {
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  stroke-dasharray: 8, 4;
+  opacity: 0.6;
+}
+
+.canvas-section-handle {
+  fill: var(--accent-primary);
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.canvas-section-label {
+  fill: var(--text-primary);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: all;
+}
+
+.canvas-section-background {
+  fill: var(--accent-soft);
+  opacity: 0.1;
+}

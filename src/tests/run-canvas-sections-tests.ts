@@ -32,19 +32,19 @@ export class CanvasSectionsTestExecutor {
   private advancedTestRunner = new ExtendedSectionTestRunner();
 
   async executeAllTests(): Promise<ComprehensiveTestReport> {
-    console.log('🚀 Starting Comprehensive Canvas Sections Testing...');
-    console.log('='.repeat(80));
+    // console.log('🚀 Starting Comprehensive Canvas Sections Testing...');
+    // console.log('='.repeat(80));
     
     const startTime = performance.now();
     
     try {
       // Execute core functionality tests
-      console.log('\n📋 PHASE 1: Core Functionality Tests');
-      console.log('-'.repeat(50));
+      // console.log('\n📋 PHASE 1: Core Functionality Tests');
+      // console.log('-'.repeat(50));
       const coreResults = await this.coreTestRunner.runAllTests();
       
-      console.log('\n📋 PHASE 2: Advanced Features Tests');
-      console.log('-'.repeat(50));
+      // console.log('\n📋 PHASE 2: Advanced Features Tests');
+      // console.log('-'.repeat(50));
       const advancedResults = await this.advancedTestRunner.runAdvancedTests();
       
       const endTime = performance.now();
@@ -159,78 +159,78 @@ export class CanvasSectionsTestExecutor {
   }
 
   private displayResults(report: ComprehensiveTestReport): void {
-    console.log('\n' + '='.repeat(80));
-    console.log('📊 COMPREHENSIVE TEST REPORT');
-    console.log('='.repeat(80));
+    // console.log('\n' + '='.repeat(80));
+    // console.log('📊 COMPREHENSIVE TEST REPORT');
+    // console.log('='.repeat(80));
     
-    console.log(`\n⏱️  Execution Time: ${report.executionTime}`);
-    console.log(`📈 Test Suites: ${report.totalSuites}`);
-    console.log(`🧪 Total Tests: ${report.totalTests}`);
-    console.log(`✅ Passed: ${report.passedTests}`);
-    console.log(`❌ Failed: ${report.failedTests}`);
-    console.log(`🎯 Success Rate: ${((report.passedTests / report.totalTests) * 100).toFixed(1)}%`);
+    // console.log(`\n⏱️  Execution Time: ${report.executionTime}`);
+    // console.log(`📈 Test Suites: ${report.totalSuites}`);
+    // console.log(`🧪 Total Tests: ${report.totalTests}`);
+    // console.log(`✅ Passed: ${report.passedTests}`);
+    // console.log(`❌ Failed: ${report.failedTests}`);
+    // console.log(`🎯 Success Rate: ${((report.passedTests / report.totalTests) * 100).toFixed(1)}%`);
     
     const resultEmoji = report.overallResult === 'PASSED' ? '🟢' : '🔴';
-    console.log(`\n${resultEmoji} OVERALL RESULT: ${report.overallResult}`);
+    // console.log(`\n${resultEmoji} OVERALL RESULT: ${report.overallResult}`);
     
     // Core tests summary
-    console.log('\n📋 CORE FUNCTIONALITY TESTS:');
-    console.log(`   Status: ${report.coreTests.passed ? '✅ PASSED' : '❌ FAILED'}`);
-    console.log(`   Summary: ${report.coreTests.summary}`);
+    // console.log('\n📋 CORE FUNCTIONALITY TESTS:');
+    // console.log(`   Status: ${report.coreTests.passed ? '✅ PASSED' : '❌ FAILED'}`);
+    // console.log(`   Summary: ${report.coreTests.summary}`);
     
     // Advanced tests summary
-    console.log('\n🚀 ADVANCED FEATURES TESTS:');
-    console.log(`   Status: ${report.advancedTests.passed ? '✅ PASSED' : '❌ FAILED'}`);
-    console.log(`   Summary: ${report.advancedTests.summary}`);
+    // console.log('\n🚀 ADVANCED FEATURES TESTS:');
+    // console.log(`   Status: ${report.advancedTests.passed ? '✅ PASSED' : '❌ FAILED'}`);
+    // console.log(`   Summary: ${report.advancedTests.summary}`);
     
     // Detailed results by suite
-    console.log('\n📝 DETAILED RESULTS BY SUITE:');
-    console.log('-'.repeat(50));
+    // console.log('\n📝 DETAILED RESULTS BY SUITE:');
+    // console.log('-'.repeat(50));
     
     const allSuites = [...report.coreTests.suites, ...report.advancedTests.suites];
     allSuites.forEach((suite, index) => {
       const suiteStatus = suite.overallPassed ? '✅' : '❌';
       const passedCount = suite.results.filter((r: any) => r.passed).length;
       
-      console.log(`\n${index + 1}. ${suiteStatus} ${suite.suiteName}`);
-      console.log(`   Tests: ${passedCount}/${suite.results.length} passed`);
+      // console.log(`\n${index + 1}. ${suiteStatus} ${suite.suiteName}`);
+      // console.log(`   Tests: ${passedCount}/${suite.results.length} passed`);
       
       // Show failed tests
       const failedTests = suite.results.filter((r: any) => !r.passed);
       if (failedTests.length > 0) {
-        console.log('   Failed Tests:');
+        // console.log('   Failed Tests:');
         failedTests.forEach((test: any) => {
-          console.log(`   ❌ ${test.testName}: ${test.details}`);
+          // console.log(`   ❌ ${test.testName}: ${test.details}`);
         });
       }
     });
     
     // Critical issues
     if (report.criticalIssues.length > 0) {
-      console.log('\n🚨 CRITICAL ISSUES IDENTIFIED:');
-      console.log('-'.repeat(50));
+      // console.log('\n🚨 CRITICAL ISSUES IDENTIFIED:');
+      // console.log('-'.repeat(50));
       report.criticalIssues.forEach((issue, index) => {
-        console.log(`${index + 1}. ${issue}`);
+        // console.log(`${index + 1}. ${issue}`);
       });
     }
     
     // Recommendations
     if (report.recommendations.length > 0) {
-      console.log('\n💡 RECOMMENDATIONS:');
-      console.log('-'.repeat(50));
+      // console.log('\n💡 RECOMMENDATIONS:');
+      // console.log('-'.repeat(50));
       report.recommendations.forEach((recommendation, index) => {
-        console.log(`${index + 1}. ${recommendation}`);
+        // console.log(`${index + 1}. ${recommendation}`);
       });
     }
     
     // FigJam compatibility assessment
-    console.log('\n🎨 FIGJAM COMPATIBILITY ASSESSMENT:');
-    console.log('-'.repeat(50));
+    // console.log('\n🎨 FIGJAM COMPATIBILITY ASSESSMENT:');
+    // console.log('-'.repeat(50));
     this.assessFigJamCompatibility(report);
     
-    console.log('\n' + '='.repeat(80));
-    console.log('✨ Test execution completed!');
-    console.log('='.repeat(80));
+    // console.log('\n' + '='.repeat(80));
+    // console.log('✨ Test execution completed!');
+    // console.log('='.repeat(80));
   }
 
   private assessFigJamCompatibility(report: ComprehensiveTestReport): void {
@@ -270,8 +270,8 @@ export class CanvasSectionsTestExecutor {
     compatibilityFactors.forEach(factor => {
       const statusEmoji = factor.status === 'IMPLEMENTED' || factor.status === 'OPTIMIZED' ? '✅' : 
                           factor.status === 'NEEDS_WORK' ? '⚠️' : '❌';
-      console.log(`${statusEmoji} ${factor.name}: ${factor.status}`);
-      console.log(`   ${factor.description}`);
+      // console.log(`${statusEmoji} ${factor.name}: ${factor.status}`);
+      // console.log(`   ${factor.description}`);
     });
     
     const implementedCount = compatibilityFactors.filter(f => 
@@ -280,14 +280,14 @@ export class CanvasSectionsTestExecutor {
     
     const compatibilityPercentage = (implementedCount / compatibilityFactors.length) * 100;
     
-    console.log(`\n🎯 FigJam Compatibility: ${compatibilityPercentage.toFixed(1)}%`);
+    // console.log(`\n🎯 FigJam Compatibility: ${compatibilityPercentage.toFixed(1)}%`);
     
     if (compatibilityPercentage >= 90) {
-      console.log('🟢 Excellent FigJam-style implementation!');
+      // console.log('🟢 Excellent FigJam-style implementation!');
     } else if (compatibilityPercentage >= 75) {
-      console.log('🟡 Good implementation with minor improvements needed');
+      // console.log('🟡 Good implementation with minor improvements needed');
     } else {
-      console.log('🔴 Significant work needed to achieve FigJam-style behavior');
+      // console.log('🔴 Significant work needed to achieve FigJam-style behavior');
     }
   }
 }

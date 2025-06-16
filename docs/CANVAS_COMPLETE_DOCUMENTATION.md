@@ -4,6 +4,62 @@
 > **Framework**: Konva.js + React-Konva + Zustand + TypeScript  
 > **Route**: `/canvas`
 
+## 🎯 Canvas is Production Ready!
+
+Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professional tools implemented using Konva.js + React-Konva.
+
+## 🔧 Recent Updates (June 2025)
+
+### ✅ Canvas Functionality Updates
+1. **Import Error Fixed** – Resolved `useImage` import issue in ImageElement.tsx and KonvaCanvas.tsx
+2. **Enhanced Element Dragging** – Elements can now be dragged when using Select or Pan tools
+3. **Improved Text Editing** – Double-click to edit text works independent of selected tool
+4. **Rich Text Formatting** – Real-time bold, italic, and underline formatting with visual feedback
+5. **Context Menu Enhancements** – Persistent formatting menu with active state indicators
+6. **Instant Tool Switching** – Removed setTimeout delays for improved responsiveness
+7. **Dragging Logic** – Dragging disabled during text editing for better UX
+
+## 🚀 Quick Start
+
+### Getting Started
+1. **Navigate** to `/canvas` in LibreOllama
+2. **Select Tool** from the modern toolbar  
+3. **Create Objects** by clicking on the canvas
+4. **Interact** with objects using native Konva transform controls
+
+### Basic Workflow
+1. **Add Objects**: Select tool from toolbar, click canvas to create
+2. **Move Objects**: Use Select or Pan tools to drag objects around canvas
+
+## 📋 Canvas Table Implementation Fixes
+
+### Recent Table Fixes Applied
+
+#### 1. ✅ **Fixed Hover Flicker**
+- **Problem**: Hover interactions were flickering and difficult to click
+- **Solution**: 
+  - Implemented proper 100ms debounced hover state clearing using timeout refs
+  - Added separate timeout management for boundary, header, and cell hovers
+  - Clear previous timeouts before setting new hover states
+  - Added proper cleanup of all timeouts on component unmount
+  - Modified mouse leave handlers to use delayed clearing
+
+#### 2. ✅ **Fixed Text Editing Position**
+- **Problem**: Text editing overlay was not positioned correctly, especially with pan/zoom
+- **Solution**:
+  - Added proper coordinate transformation accounting for canvas pan/zoom using stage transform
+  - Added support for tables inside sections (converting relative to absolute coordinates)
+  - Calculate screen coordinates properly using container rect and stage transformation
+  - Scale cell dimensions according to current zoom level
+
+#### 3. ✅ **Fixed Resize Functionality**
+- **Problem**: Table resize was buggy with inconsistent coordinate systems
+- **Solution**:
+  - Fixed coordinate system consistency by using stage pointer position throughout
+  - Properly update table data structure without overwriting the entire object
+  - Calculate mouse deltas using consistent stage-relative coordinates
+  - Maintain proportional scaling of all columns and rows
+
 ## Overview
 
 The LibreOllama Canvas is a sophisticated 2D graphics editing system built with Konva.js and React-Konva. It provides professional drawing tools, rich text editing, shape creation, section organization, and collaborative features with desktop integration via Tauri.

@@ -1,4 +1,4 @@
-// src/components/Canvas/KonvaCanvas.tsx
+// src/components/canvas/KonvaCanvas.tsx
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Stage, Layer, Transformer, Rect, Circle, Line, Star, Arrow } from 'react-konva';
 import Konva from 'konva';
@@ -10,8 +10,13 @@ import ConnectorRenderer from './ConnectorRenderer';
 import TextEditingOverlay from './TextEditingOverlay';
 import FloatingTextToolbar from './FloatingTextToolbar';
 import SectionElement from './SectionElement';
-import EnhancedTableElement from './EnhancedTableElement';
+import { EnhancedTableElement } from '../canvas/EnhancedTableElement'; // Using enhanced table implementation
 import { designSystem } from '../../styles/designSystem';
+import '../../styles/konvaCanvas.css';
+import '../../styles/canvas-enhancements.css';
+import '../../styles/canvas-sections-enhanced.css';
+import '../../styles/canvas-transform-enhanced.css';
+import '../../styles/text-editing-enhanced.css';
 import { SectionElement as SectionType, isElementInSection } from '../../types/section';
 
 // CanvasElement and RichTextSegment are now imported from the store.
@@ -42,7 +47,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   onTouchMoveHandler,
   onTouchEndHandler
 }) => {
-  const { elements, sections, selectedTool, selectedElementId, editingTextId, setSelectedElement, addElement, updateElement, applyTextFormat, setEditingTextId, updateElementText, setSelectedTool, createSection, updateSection, updateElementSection, moveSection, getSectionContainingElement, addElementToSection, removeElementFromSection, handleSectionDragEnd } = useKonvaCanvasStore();
+  const { elements, sections, selectedTool, selectedElementId, editingTextId, setSelectedElement, addElement, updateElement, applyTextFormat, setEditingTextId, updateElementText, setSelectedTool, createSection, updateSection, addElementToSection, removeElementFromSection, handleSectionDragEnd } = useKonvaCanvasStore();
 
   // State for text editing overlays - completely separate from Konva
   const [editingElement, setEditingElement] = useState<CanvasElement | null>(null);
@@ -91,16 +96,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
   // Performance optimization: removed excessive logging
 
-  // Canvas initialization check
-  useEffect(() => {
-    console.log('🎨 KonvaCanvas initialized:', {
-      width,
-      height,
-      selectedTool,
-      storeElementsCount: Object.keys(elements).length
-    });
-  }, [width, height, selectedTool, elements]);
-  
+  // Canvas initialization check removed to reduce console noise
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<number[]>([]);
   // stageRef is now passed as a prop
@@ -311,6 +308,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     if (element.type === 'text' || element.type === 'sticky-note') {
       console.log('🐛 [DEBUG] KonvaCanvas - Setting up editing state for text/sticky-note element');
       
+      setEditingTextId(elementId);
       setEditingElement(element);
       setEditText(element.text || '');
       setShowFormatMenu(true);
@@ -629,6 +627,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     return true;
   };
 
+  // Helper function to find nearest element for connector snapping
   const findNearestElement = useCallback((x: number, y: number) => {
     const SNAP_DISTANCE = 20;
     const elementsArray = Object.values(elements);
@@ -654,6 +653,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     return null;
   }, [elements, sections]);
 
+  // Helper function to get anchor point coordinates
   const getAnchorPoint = (element: CanvasElement, anchor: string) => {
     // Get element coordinates - convert to absolute if in a section
     let elementX = element.x;
@@ -696,6 +696,97 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   };
 
   const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Handle table tool
+    if (selectedTool === 'table') {
+      const stage = e.target.getStage();
+      if (!stage) return;
+      
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const transform = stage.getAbsoluteTransform().copy();
+      transform.invert();
+      const pos = transform.point(pointer);
+      
+      console.log('📊 Creating table at:', `(${Math.round(pos.x)}, ${Math.round(pos.y)})`);
+      
+      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create a default 3x3 table with enhanced structure
+      const rows = 3;
+      const cols = 3;
+      const cellWidth = 100;
+      const cellHeight = 50;
+      
+      // Create enhanced table data structure
+      const enhancedTableData = {
+        rows: Array(rows).fill(null).map((_, i) => ({
+          id: `row_${i}`,
+          height: cellHeight,
+          minHeight: 30,
+          isResizable: true,
+          isHeader: i === 0
+        })),
+        columns: Array(cols).fill(null).map((_, i) => ({
+          id: `col_${i}`,
+          width: cellWidth,
+          minWidth: 50,
+          isResizable: true,
+          textAlign: 'left' as const
+        })),
+        cells: Array(rows).fill(null).map((_, rowIndex) =>
+          Array(cols).fill(null).map((_, colIndex) => ({
+            id: `cell_${rowIndex}_${colIndex}`,
+            text: rowIndex === 0 ? `Header ${colIndex + 1}` : `Row ${rowIndex}, Col ${colIndex + 1}`,
+            containedElementIds: [],
+            backgroundColor: rowIndex === 0 ? '#F3F4F6' : '#FFFFFF',
+            textColor: '#1E293B',
+            fontSize: 14,
+            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
+            textAlign: 'left' as const,
+            verticalAlign: 'middle' as const,
+            padding: 8,
+            isHeader: rowIndex === 0
+          }))
+        ),
+        showGridLines: true,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        defaultCellPadding: 8
+      };
+      
+      const tableElement: CanvasElement = {
+        id: generateId(),
+        type: 'table',
+        x: pos.x,
+        y: pos.y,
+        width: cellWidth * cols,
+        height: cellHeight * rows,
+        rows,
+        cols,
+        cellWidth,
+        cellHeight,
+        tableData: [
+          ['Header 1', 'Header 2', 'Header 3'],
+          ['Row 1, Col 1', 'Row 1, Col 2', 'Row 1, Col 3'],
+          ['Row 2, Col 1', 'Row 2, Col 2', 'Row 2, Col 3']
+        ],
+        enhancedTableData,
+        borderColor: '#E5E7EB',
+        headerBackgroundColor: '#F3F4F6',
+        cellBackgroundColor: '#FFFFFF',
+        fill: '#1E293B',
+        fontSize: 14,
+        fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif"
+      };
+
+      addElement(tableElement);
+      setSelectedElement(tableElement.id);
+      
+      // Switch back to select tool
+      setSelectedTool('select');
+      return;
+    }
+
     // Handle section tool
     if (selectedTool === 'section') {
       const stage = e.target.getStage();
@@ -1078,8 +1169,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     onElementSelect?.(element);
   }, [onElementSelect, setSelectedElement, selectedElementId]);
 
-
-
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
     e.cancelBubble = true;
     const node = e.target;
@@ -1452,21 +1541,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         );
       case 'table':
         return (
-          <EnhancedTableElement
+          <EnhancedTableElement // Using enhanced table implementation
             key={element.id}
             element={element}
             isSelected={isSelected}
-            onSelect={() => setSelectedElement(element.id)}
+            onSelect={(element) => setSelectedElement(element.id)}
             onUpdate={(updates) => updateElement(element.id, updates)}
-            onDragStart={(e) => {
-              // Set drag data for drag-and-drop into table cells
-              if (e.evt.dataTransfer) {
-                e.evt.dataTransfer.setData('text/plain', element.id);
-                e.evt.dataTransfer.effectAllowed = 'move';
-              }
-            }}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
-            isDragging={false}
             stageRef={stageRef}
           />
         );
@@ -1508,33 +1589,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   }, [selectedElementId, editingTextId, setSelectedElement, setEditingTextId, isDrawingConnector]);
 
   return (
-    <div 
-      className="konva-canvas-container"
-      style={{
-        border: `2px solid ${designSystem.colors.secondary[200]}`,
-        borderRadius: `${designSystem.borderRadius.lg}px`,
-        boxShadow: designSystem.shadows.lg,
-        background: designSystem.canvasStyles.background,
-        overflow: 'hidden',
-        position: 'relative'
-      }}
-    >
+    <div className="konva-canvas-container">
       {/* Canvas ready indicator */}
       {elementArray.length === 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          background: 'rgba(59, 130, 246, 0.1)',
-          padding: '8px 12px',
-          borderRadius: '6px',
-          fontSize: '14px',
-          color: '#3B82F6',
-          fontFamily: designSystem.typography.fontFamily.sans,
-          zIndex: 10,
-          pointerEvents: 'none'
-        }}>
-          🎨 Canvas ready! Select a tool from the toolbar to create elements
+        <div className="canvas-ready-indicator">
+          Canvas ready! Select a tool from the toolbar to create elements
         </div>
       )}
       
@@ -1678,22 +1737,27 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
                         'bottom-left', 'bottom-center', 'bottom-right'];
               }
             })()}
-            borderStroke="#2196F3"
-            borderStrokeWidth={3}
+            borderStroke="#3B82F6"
+            borderStrokeWidth={2}
             borderDash={[8, 4]}
             anchorFill="#FFFFFF"
-            anchorStroke="#2196F3"
-            anchorStrokeWidth={3}
-            anchorSize={12}
-            anchorCornerRadius={6}
-            rotationAnchorOffset={30}
+            anchorStroke="#3B82F6"
+            anchorStrokeWidth={2}
+            anchorSize={14}
+            anchorCornerRadius={7}
+            rotateAnchorOffset={35}
             rotationSnapTolerance={5}
+            rotateAnchorSize={20}
+            rotateAnchorFill="#3B82F6"
+            rotateAnchorStroke="#FFFFFF"
+            rotateAnchorStrokeWidth={2}
             // Enhanced visual feedback
-            padding={5}
+            padding={8}
             // Add shadow effect for better visibility
-            shadowColor="rgba(33, 150, 243, 0.3)"
-            shadowBlur={8}
-            shadowOffset={{ x: 0, y: 2 }}
+            shadowColor="rgba(59, 130, 246, 0.3)"
+            shadowBlur={12}
+            shadowOffset={{ x: 0, y: 4 }}
+            shadowOpacity={0.5}
           /></Layer></Stage>
 
       {/* Text editing overlay - completely outside Konva */}

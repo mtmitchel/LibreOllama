@@ -1,0 +1,66 @@
+/* Text Editing Enhanced Styles */
+
+.text-editing-overlay {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: all;
+}
+
+.text-editor-input {
+  border: 2px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  padding: var(--space-2);
+  outline: none;
+  resize: none;
+}
+
+.text-editor-input:focus {
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.floating-text-toolbar {
+  position: absolute;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
+  display: flex;
+  gap: var(--space-1);
+  z-index: 1001;
+}
+
+.text-format-button {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  transition: all 0.2s;
+}
+
+.text-format-button:hover {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.text-format-button.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.text-selection-highlight {
+  background: var(--accent-soft);
+  border-radius: 2px;
+}

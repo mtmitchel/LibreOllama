@@ -99,14 +99,14 @@ class TestLogger {
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ${message}`;
     this.logs.push(logEntry);
-    console.log(`🧪 TEST LOG: ${logEntry}`);
+    // console.log(`🧪 TEST LOG: ${logEntry}`);
   }
 
   error(message: string): void {
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ERROR: ${message}`;
     this.logs.push(logEntry);
-    console.error(`❌ TEST ERROR: ${logEntry}`);
+    // console.error(`❌ TEST ERROR: ${logEntry}`);
   }
 
   getLogs(): string[] {
@@ -301,7 +301,8 @@ export class CoordinateSystemTests {
       const sectionedElement = { ...mockElements.sectionedElement1 };
       
       // Get initial absolute position of element
-      const initialAbsolute = CoordinateService.toAbsolute(sectionedElement, { section1: section });
+      const initialAbsolute = CoordinateService.toAbsolute(sectionedElement, mockSections);
+      
       this.logger.log(`Initial absolute position of element: (${initialAbsolute.x}, ${initialAbsolute.y})`);
       
       // Simulate section drag by moving section 100px right, 50px down
@@ -906,7 +907,7 @@ export class SectionTestRunner {
     overallPassed: boolean;
     summary: string;
   }> {
-    console.log('🧪 Starting Canvas Sections Validation Tests...');
+    // console.log('🧪 Starting Canvas Sections Validation Tests...');
     
     const suites: TestSuite[] = [];
     
@@ -922,7 +923,7 @@ export class SectionTestRunner {
     
     const summary = `Tests completed: ${passedTests}/${totalTests} passed. Overall result: ${overallPassed ? 'PASSED' : 'FAILED'}`;
     
-    console.log(`🧪 Test Summary: ${summary}`);
+    // console.log(`🧪 Test Summary: ${summary}`);
     
     return {
       suites,

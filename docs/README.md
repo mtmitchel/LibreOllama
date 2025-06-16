@@ -6,7 +6,7 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 
 **New to LibreOllama?** Start here:
 - **[Main README](../README.md)** - Project overview, tech stack, and development setup
-- **[Canvas Documentation](./CANVAS_DOCUMENTATION.md)** - Complete canvas documentation and user guide
+- **[Canvas Documentation](./CANVAS_COMPLETE_DOCUMENTATION.md)** - Complete canvas documentation and user guide
 - **[Development Startup Guide](./development/DEV-STARTUP-GUIDE.md)** - Set up your development environment
 
 ## 📚 Core Feature Documentation
@@ -14,16 +14,14 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 ### **🎨 Canvas/Whiteboard System**
 Our professional-grade whiteboard is powered by Konva.js for high performance and rich interactions. Features **FigJam-style sections** for hierarchical organization, advanced rich text editing with floating toolbar, and comprehensive visual feedback systems.
 
-- [Canvas Documentation](CANVAS_DOCUMENTATION.md) - Complete canvas system overview with section system and advanced text editing
-- [Canvas Implementation Guide](CANVAS_IMPLEMENTATION_GUIDE.md) - Technical implementation details including section architecture and coordinate conversion
-- [Canvas Development Best Practices](CANVAS_DEVELOPMENT_BEST_PRACTICES.md) - Implementation patterns and development guidelines
-- [Canvas Comprehensive Analysis](CANVAS_COMPREHENSIVE_ANALYSIS.md) - In-depth technical analysis and architecture review
-- [Canvas Implementation & Fixes](CANVAS_FIXES_SUMMARY.md) - Comprehensive fixes including section system implementation
+- [Canvas Complete Documentation](CANVAS_COMPLETE_DOCUMENTATION.md) - Comprehensive canvas system overview with section system, advanced text editing, and implementation details
+- [Enhanced Tables Documentation](ENHANCED_TABLES_DOCUMENTATION.md) - FigJam-style table system with rich interactions
+- [Enhanced Table Implementation](ENHANCED_TABLE_IMPLEMENTATION.md) - Technical implementation details for canvas tables
+
 
 ### **🎨 UI/UX Design System**
 Comprehensive documentation of our design system, components, and user experience improvements.
 
-- **[UI Implementation Complete](./UI_IMPLEMENTATION_COMPLETE.md)** - Consolidated report of all UI/UX improvements, design system consolidation, and component refactoring
 - **[Design System Documentation](./design-system/)** - Component library and design guidelines
 
 ### **📝 Rich Text & Notes**
@@ -44,29 +42,29 @@ Comprehensive documentation of our design system, components, and user experienc
 
 ## 🗂️ Historical Documentation
 
-### **Archive (Completed Phases)**
-The [`archive/`](./archive/) folder contains:
-- Phase completion reports
-- Legacy implementation documentation  
-- Migration plans and validation reports
-- Outdated but historically significant documentation
+### **Completed Phases**
+The [`completed-phases/`](./completed-phases/) folder contains:
+- **[Canvas Cleanup Summary](./completed-phases/CANVAS_CLEANUP_SUMMARY.md)** - Documentation consolidation and cleanup report
+- **[Konva Implementation Complete](./completed-phases/KONVA_IMPLEMENTATION_COMPLETE.md)** - Migration from Fabric.js to Konva.js documentation
+- **[UI Implementation Complete](./completed-phases/UI_IMPLEMENTATION_COMPLETE.md)** - Consolidated report of all UI/UX improvements and design system consolidation
 
 ### **Project Archives**
 The [`../archives/`](../archives/) folder contains:
-- **`fabric_canvas_archive_2025/`** - All Fabric.js-related components and documentation
-- **`docs_archive_2025/`** - Outdated documentation that has been superseded
+- **`consolidated_canvas_archive_2025/`** - All historical canvas implementations and documentation
+- **`src_backup_20250606/`** - Source code backup
 
 ## 📋 Documentation Organization
 
-### **Current Active Documentation** (8 files)
-- 2 Canvas/Whiteboard guides
-- 1 Comprehensive UI/UX implementation guide  
+### **Current Active Documentation** (6 files)
+
+- 3 Canvas/Whiteboard guides (Complete docs, Enhanced tables, Implementation)
 - 1 Notes/Rich text guide
 - 1 Dashboard testing guide
-- 3 Development setup guides
+- 1 Design system guide (2 files in design-system/)
+- 4 Development setup guides (in development/)
 
 ### **Root Directory Documentation**
-- **[Canvas Documentation](./CANVAS_DOCUMENTATION.md)** - Complete canvas reference and implementation details
+- **[Canvas Complete Documentation](./CANVAS_COMPLETE_DOCUMENTATION.md)** - Complete canvas reference and implementation details
 
 ## 📝 Documentation Guidelines
 
@@ -78,7 +76,7 @@ The [`../archives/`](../archives/) folder contains:
 
 ### **For Users**
 1. **Begin with the [Main README](../README.md)** for project overview
-2. **Use [Canvas Documentation](./CANVAS_DOCUMENTATION.md)** to get started with the whiteboard
+2. **Use [Canvas Complete Documentation](./CANVAS_COMPLETE_DOCUMENTATION.md)** to get started with the whiteboard
 3. **Refer to feature-specific guides** for detailed usage instructions
 
 ---

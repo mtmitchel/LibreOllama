@@ -41,7 +41,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A professional-grade, infinite whiteboard powered by **Konva.js**. Perfect for brainstorming, user flows, mind-mapping, and visual thinking. Features include **FigJam-style sections** for organizing content, **enhanced tables** with inline editing, drag-and-drop, and dynamic row/column management, sticky notes, shapes, advanced rich text editing with floating toolbar and selection detection, freehand drawing, connectors, and comprehensive transform controls. Includes hierarchical organization with automatic coordinate conversion and visual feedback systems. |
+| **Canvas** | A professional-grade, infinite whiteboard powered by **Konva.js**. Perfect for brainstorming, user flows, mind-mapping, and visual thinking. Features include **FigJam-style sections** for organizing content, **enhanced tables** with inline editing, drag-and-drop, and dynamic row/column management, sticky notes, shapes, advanced rich text editing with floating toolbar and selection detection, freehand drawing, connectors, and comprehensive transform controls. Includes hierarchical organization with automatic coordinate conversion and visual feedback systems. The canvas system is well-organized with 18 active components categorized into core canvas functionality, element types, UI components, and utilities. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -109,11 +109,14 @@ libreollama/
 │   └── archive/              #   Historical documentation and completed phases
 ├── src/                       # React Frontend
 │   ├── components/            #   Shared UI components & page-specific components
+│   │   └── canvas/            #     Professional whiteboard with 18 organized components
+│   │       └── backup/        #       Legacy components for reference
 │   ├── contexts/              #   React Context providers for global state
 │   ├── hooks/                 #   Custom React hooks
 │   ├── pages/                 #   Top-level page components for each module
 │   ├── stores/                #   Zustand state management stores
-│   ├── styles/                #   Global CSS and the design system foundation
+│   ├── styles/                #   Organized CSS system with design tokens
+│   │   └── README.md          #     Style organization and import hierarchy documentation
 │   ├── lib/                   #   Utility functions and type definitions
 │   └── main.tsx               #   Application entry point
 ├── src-tauri/                 # Rust Backend (Tauri Core)
@@ -135,6 +138,7 @@ LibreOllama includes comprehensive documentation to help you get started quickly
 
 ### **Quick Start Guides**
 - **[Canvas Documentation](./docs/CANVAS_DOCUMENTATION.md)** - Complete canvas documentation including user guide, architecture, and development information
+- **[Styles Organization](./src/styles/README.md)** - CSS organization, import hierarchy, and design system documentation
 
 ### **Detailed Documentation**
 - **[Documentation Index](./docs/README.md)** - Complete guide to all available documentation

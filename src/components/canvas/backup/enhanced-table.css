@@ -1,0 +1,207 @@
+/* Enhanced Table Component Styles */
+
+.enhanced-table-container {
+  position: relative;
+  user-select: none;
+}
+
+/* Table Cell Styles */
+.table-cell {
+  stroke: var(--border-default);
+  stroke-width: 1;
+  fill: var(--bg-surface);
+  transition: all 0.2s ease;
+}
+
+.table-cell:hover {
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+}
+
+.table-cell.editing {
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  stroke-dasharray: 4, 4;
+}
+
+/* Table Text Styles */
+.table-text {
+  fill: var(--text-primary);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  dominant-baseline: hanging;
+  pointer-events: none;
+}
+
+.table-header-text {
+  font-weight: 600;
+  fill: var(--text-primary);
+}
+
+/* Add/Remove Handles */
+.table-add-handle {
+  fill: var(--accent-primary);
+  stroke: white;
+  stroke-width: 2;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  pointer-events: all;
+}
+
+.table-add-handle:hover {
+  fill: var(--accent-secondary);
+  transform: scale(1.2);
+}
+
+.table-add-handle.visible {
+  opacity: 1;
+}
+
+.table-remove-handle {
+  fill: var(--error);
+  stroke: white;
+  stroke-width: 2;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  pointer-events: all;
+}
+
+.table-remove-handle:hover {
+  fill: #dc2626;
+  transform: scale(1.2);
+}
+
+.table-remove-handle.visible {
+  opacity: 1;
+}
+
+/* Resize Handles */
+.table-resize-handle {
+  fill: var(--accent-primary);
+  stroke: white;
+  stroke-width: 2;
+  cursor: ew-resize;
+  opacity: 0;
+  transition: all 0.2s ease;
+  pointer-events: all;
+}
+
+.table-resize-handle.vertical {
+  cursor: ns-resize;
+}
+
+.table-resize-handle:hover {
+  fill: var(--accent-secondary);
+  transform: scale(1.1);
+}
+
+.table-resize-handle.visible {
+  opacity: 1;
+}
+
+/* Corner resize handle */
+.table-corner-handle {
+  fill: var(--accent-primary);
+  stroke: white;
+  stroke-width: 2;
+  cursor: nw-resize;
+  opacity: 0;
+  transition: all 0.2s ease;
+  pointer-events: all;
+}
+
+.table-corner-handle:hover {
+  fill: var(--accent-secondary);
+  transform: scale(1.1);
+}
+
+.table-corner-handle.visible {
+  opacity: 1;
+}
+
+/* Detection Areas for Hover */
+.table-boundary-detector {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.table-header-detector {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+/* Table Cell Editor Overlay */
+.table-cell-editor {
+  position: absolute;
+  background: var(--bg-surface);
+  border: 2px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  padding: var(--space-2);
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+  z-index: 1000;
+  line-height: 1.4;
+  overflow: hidden;
+}
+
+.table-cell-editor:focus {
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* Table Selection Indicator */
+.table-selection-rect {
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  fill: var(--accent-soft);
+  stroke-dasharray: 8, 4;
+  opacity: 0.6;
+}
+
+/* Hover Areas */
+.table-hover-area {
+  fill: var(--accent-soft);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.table-hover-area.active {
+  opacity: 0.3;
+}
+
+/* Animation for handle appearance */
+@keyframes handleAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.table-handle-animated {
+  animation: handleAppear 0.2s ease;
+}
+
+/* Responsive handle sizes */
+@media (max-width: 768px) {
+  .table-add-handle,
+  .table-remove-handle,
+  .table-resize-handle,
+  .table-corner-handle {
+    r: 8; /* Larger handles on smaller screens */
+  }
+}
