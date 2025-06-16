@@ -15,14 +15,17 @@ import {
   FONT_SIZE_OPTIONS,
   ALIGNMENT_OPTIONS
 } from './ToolbarComponents';
+import { richTextManager } from './RichTextSystem';
+import type { StandardTextFormat } from '../../types/richText';
 
+// Legacy interface for backward compatibility - maps to StandardTextFormat
 interface TextFormat {
   bold: boolean;
   italic: boolean;
   underline: boolean;
   strikethrough: boolean;
   fontSize: number;
-  color: string;
+  color: string; // Maps to textColor in StandardTextFormat
   fontFamily: string;
   listType: 'none' | 'bullet' | 'numbered';
   isHyperlink: boolean;
@@ -57,48 +60,43 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   
+  // Enhanced format change handler with command translation
+  const handleFormatChange = (command: string, value?: any) => {
+    // Translate legacy commands to standardized commands
+    const translatedCommand = richTextManager.translateCommand(command);
+    if (translatedCommand) {
+      onFormatChange(translatedCommand, value);
+    } else {
+      onFormatChange(command, value);
+    }
+  };
 
   // Click-outside detection to auto-save and close toolbar
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      console.log('🔍 [CLICK-OUTSIDE DEBUG] Click detected', {
-        target: event.target,
-        currentOpenDropdown: openDropdown,
-        eventType: event.type,
-        timeStamp: event.timeStamp
-      });
-      
       const target = event.target as Element;
       
       // Check if click is inside any dropdown (including content and buttons)
       const isClickInDropdown = target.closest('[data-dropdown-container]') !== null;
-      const dropdownContainer = target.closest('[data-dropdown-container]');
       const dropdownButton = target.closest('[data-dropdown-button]');
       
-      // Check if click is inside toolbar
-      const isClickInToolbar = toolbarRef.current?.contains(target);
+      // Check if click is inside toolbar (including by our data attributes)
+      const isClickInToolbar = toolbarRef.current?.contains(target) ||
+                              target.closest('[data-floating-toolbar="true"]') !== null ||
+                              target.closest('[data-text-toolbar="floating"]') !== null;
       
       // Check if click is on the text element being edited
       const isClickOnTextElement = target.closest(`[id="${element.id}"]`) !== null;
       
+      // Check if click is on table cell editing area
+      const isClickOnTableEditor = target.closest('[data-testid="rich-text-cell-editor"]') !== null ||
+                                   target.closest('[data-table-cell-editor="true"]') !== null;
+      
       // Check if click is on the stage/canvas
       const isClickOnStage = target.closest('.konva-canvas-container') !== null;
       
-      console.log('🔍 [CLICK-OUTSIDE DEBUG] Click analysis', {
-        isClickInDropdown,
-        dropdownContainer: !!dropdownContainer,
-        dropdownButton: !!dropdownButton,
-        isClickInToolbar,
-        isClickOnTextElement,
-        isClickOnStage,
-        targetTagName: target.tagName,
-        targetId: target.id,
-        targetClasses: target.className
-      });
-      
       // If clicking on a dropdown button, don't close anything - let the button handle it
       if (dropdownButton) {
-        console.log('🔍 [CLICK-OUTSIDE DEBUG] Click on dropdown button - allowing button to handle state');
         return;
       }
       
@@ -109,17 +107,12 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
         
         // Close any open dropdowns if clicking outside them (but not on dropdown buttons)
         if (!updatedIsClickInDropdown && !dropdownButton && openDropdown) {
-          console.log('🔍 [CLICK-OUTSIDE DEBUG] Closing dropdown due to outside click (delayed check)', {
-            wasOpen: openDropdown,
-            reason: 'click outside dropdown after delay'
-          });
           setOpenDropdown(null);
         }
         
-        // Only close toolbar if clicking completely outside toolbar, dropdowns, and text element
-        if (!isClickInToolbar && !updatedIsClickInDropdown && !isClickOnTextElement &&
+        // Only close toolbar if clicking completely outside toolbar, dropdowns, text element, and table editor
+        if (!isClickInToolbar && !updatedIsClickInDropdown && !isClickOnTextElement && !isClickOnTableEditor &&
             (isClickOnStage || !target.closest('.konva-canvas-container'))) {
-          console.log('🔍 [TOOLBAR DEBUG] Click outside detected - auto-saving (delayed check)');
           onDone(); // Auto-save instead of cancel
         }
       }, 50); // Small delay to allow React state updates and DOM changes
@@ -140,10 +133,33 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
   }, [isVisible, onDone, element.id, openDropdown]);
   // Calculate toolbar position directly above text element
   const toolbarPosition = useMemo(() => {
-    if (!stageRef.current || !isVisible) return { x: 0, y: 0 };
+    if (!isVisible) return { x: 0, y: 0 };
     
-    const stage = stageRef.current;
-    const stageBox = stage.container().getBoundingClientRect();
+    // Try to get stage from multiple sources for better compatibility
+    let stage = null;
+    if (stageRef?.current) {
+      stage = stageRef.current;
+    } else {
+      // Fallback: find stage from DOM
+      const canvasContainer = document.querySelector('.konva-canvas-container canvas');
+      if (canvasContainer) {
+        const konvaStage = (canvasContainer as any).__konvaStage;
+        if (konvaStage) stage = konvaStage;
+      }
+    }
+    
+    if (!stage) {
+      // Fallback positioning - place toolbar at a reasonable screen position
+      return {
+        x: Math.max(20, element.x),
+        y: Math.max(60, element.y - 60),
+        width: 550,
+        height: 48
+      };
+    }
+    
+    const stageContainer = stage.container();
+    const stageBox = stageContainer.getBoundingClientRect();
     const stageTransform = stage.getAbsoluteTransform();
     
     // Convert element position to screen coordinates
@@ -152,41 +168,28 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       y: element.y
     });
     
-    // Calculate toolbar dimensions - reduce width to fit content better
+    // Calculate toolbar dimensions
     const toolbarWidth = Math.min(650, Math.max(550, (element.width || 200) * 2));
     const toolbarHeight = 48;
-    const gap = 12; // 12px buffer above text box as required
     
-    // Center toolbar above element
-    const toolbarX = stageBox.left + elementScreenPos.x + ((element.width || 200) / 2) - (toolbarWidth / 2);
-    // Ensure 12px buffer above text box - increase gap from element
-    const toolbarY = stageBox.top + elementScreenPos.y - toolbarHeight - gap;
+    // Special handling for table cell editing (element id is 'table-cell')
+    const isTableCell = element.id === 'table-cell';
+    
+    let toolbarX, toolbarY;
+    if (isTableCell) {
+      // Center toolbar above the table cell with a small gap
+      toolbarX = stageBox.left + elementScreenPos.x + ((element.width || 200) / 2) - (toolbarWidth / 2);
+      toolbarY = stageBox.top + elementScreenPos.y - toolbarHeight - 8; // 8px gap above the table
+    } else {
+      // Regular text element positioning
+      const gap = 20;
+      toolbarX = stageBox.left + elementScreenPos.x + ((element.width || 200) / 2) - (toolbarWidth / 2);
+      toolbarY = stageBox.top + elementScreenPos.y - toolbarHeight - gap;
+    }
     
     // Ensure toolbar stays within viewport
     const clampedX = Math.max(20, Math.min(toolbarX, window.innerWidth - toolbarWidth - 20));
     const clampedY = Math.max(20, toolbarY);
-    
-    console.log('🔍 [TOOLBAR DEBUG] Toolbar position calculation:', {
-      element: {
-        x: element.x,
-        y: element.y,
-        width: element.width || 200
-      },
-      calculated: {
-        toolbarWidth,
-        toolbarHeight,
-        toolbarX,
-        toolbarY
-      },
-      clamped: {
-        x: clampedX,
-        y: clampedY
-      },
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight
-      }
-    });
     
     return {
       x: clampedX,
@@ -205,9 +208,11 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
     width: `${toolbarPosition.width}px`,
     height: `${toolbarPosition.height}px`,
     borderRadius: '24px', // Pill shape
-    backgroundColor: '#1a1a1a', // Consistent dark background
-    border: '1px solid #333',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)',
+    backgroundColor: element.id === 'table-cell' ? '#1a1a1a' : '#1a1a1a', // Slightly different bg for table cells
+    border: element.id === 'table-cell' ? '1px solid #444' : '1px solid #333', // Slightly more prominent border for table cells
+    boxShadow: element.id === 'table-cell' 
+      ? '0 8px 32px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3)' // Enhanced shadow for table cells
+      : '0 8px 32px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -224,46 +229,19 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
 
   return createPortal(
     <div
-      ref={(el) => {
-        if (el && toolbarRef.current !== el) {
-          toolbarRef.current = el;
-          // Log actual toolbar dimensions after render
-          const rect = el.getBoundingClientRect();
-          console.log('🔍 [TOOLBAR DEBUG] Actual toolbar dimensions after render:', {
-            left: rect.left,
-            right: rect.right,
-            width: rect.width,
-            height: rect.height,
-            expectedWidth: toolbarPosition.width,
-            widthMatch: toolbarPosition.width ? Math.abs(rect.width - toolbarPosition.width) < 1 : false
-          });
-        }
-      }}
+      ref={toolbarRef}
       style={pillStyle}
+      data-floating-toolbar="true"
+      data-text-toolbar="floating"
+      data-toolbar-type="text-formatting"
       onClick={(e) => {
-        console.log('🔍 [TOOLBAR DEBUG] Toolbar container clicked', {
-          target: e.target,
-          currentTarget: e.currentTarget,
-          eventPhase: e.eventPhase
-        });
-        
         const target = e.target as HTMLElement;
         const isDropdownButton = target.closest('[data-dropdown-button]');
         const isInteractiveElement = target.closest('button, input, select');
         
-        console.log('🔍 [TOOLBAR DEBUG] Click analysis', {
-          isDropdownButton: !!isDropdownButton,
-          isInteractiveElement: !!isInteractiveElement,
-          targetTagName: target.tagName,
-          targetClasses: target.className
-        });
-        
         // Only stop propagation for non-interactive elements
         if (!isDropdownButton && !isInteractiveElement) {
-          console.log('🔍 [TOOLBAR DEBUG] Stopping propagation for non-interactive element');
           e.stopPropagation();
-        } else {
-          console.log('🔍 [TOOLBAR DEBUG] Allowing event to propagate for interactive element');
         }
       }}
     >
@@ -272,19 +250,15 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
         value="default"
         onChange={(preset) => {
           if (preset === 'heading') {
-            onFormatChange('fontSize', 24);
-            onFormatChange('bold');
+            handleFormatChange('fontSize', 24);
+            handleFormatChange('bold', true);
           } else if (preset === 'subheading') {
-            onFormatChange('fontSize', 18);
-            onFormatChange('bold');
+            handleFormatChange('fontSize', 18);
+            handleFormatChange('bold', true);
           }
         }}
         isOpen={openDropdown === 'style'}
         onToggle={() => {
-          console.log('🔍 [DROPDOWN DEBUG] StylePresetDropdown toggle clicked', {
-            currentState: openDropdown,
-            willBecome: openDropdown === 'style' ? null : 'style'
-          });
           setOpenDropdown(openDropdown === 'style' ? null : 'style');
         }}
       />
@@ -294,10 +268,9 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       {/* Font Size Dropdown */}
       <FontSizeDropdown
         value={format.fontSize}
-        onChange={(size) => onFormatChange('fontSize', size)}
+        onChange={(size) => handleFormatChange('fontSize', size)}
         isOpen={openDropdown === 'fontSize'}
         onToggle={() => {
-          console.log('🔍 [DROPDOWN DEBUG] FontSize toggle:', openDropdown === 'fontSize' ? 'closing' : 'opening');
           setOpenDropdown(openDropdown === 'fontSize' ? null : 'fontSize');
         }}
       />
@@ -307,14 +280,14 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       {/* Text Formatting */}
       <ToolbarButton
         active={format.bold}
-        onClick={() => onFormatChange('bold')}
+        onClick={() => handleFormatChange('bold')}
         title="Bold"
       >
         <strong>B</strong>
       </ToolbarButton>
       <ToolbarButton
         active={format.italic}
-        onClick={() => onFormatChange('italic')}
+        onClick={() => handleFormatChange('italic')}
         title="Italic"
         style={{ fontStyle: 'italic' }}
       >
@@ -322,7 +295,7 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       </ToolbarButton>
       <ToolbarButton
         active={format.underline}
-        onClick={() => onFormatChange('underline')}
+        onClick={() => handleFormatChange('underline')}
         title="Underline"
         style={{ textDecoration: 'underline' }}
       >
@@ -330,7 +303,7 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       </ToolbarButton>
       <ToolbarButton
         active={format.strikethrough}
-        onClick={() => onFormatChange('strikethrough')}
+        onClick={() => handleFormatChange('strikethrough')}
         title="Strikethrough"
         style={{ textDecoration: 'line-through' }}
       >
@@ -345,14 +318,14 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
         onClick={() => {
           if (format.isHyperlink) {
             // Remove hyperlink
-            onFormatChange('isHyperlink', false);
-            onFormatChange('hyperlinkUrl', '');
+            handleFormatChange('isHyperlink', false);
+            handleFormatChange('hyperlinkUrl', '');
           } else {
             // Add hyperlink - prompt for URL
             const url = prompt('Enter URL:');
             if (url !== null) { // Allow empty string to clear URL
-              onFormatChange('hyperlinkUrl', url);
-              onFormatChange('isHyperlink', !!url);
+              handleFormatChange('hyperlinkUrl', url);
+              handleFormatChange('isHyperlink', !!url);
             }
           }
         }}
@@ -364,7 +337,7 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       {/* Bullet List Button - using better icon */}
       <ToolbarButton
         active={format.listType === 'bullet'}
-        onClick={() => onFormatChange('listType', format.listType === 'bullet' ? 'none' : 'bullet')}
+        onClick={() => handleFormatChange('listType', format.listType === 'bullet' ? 'none' : 'bullet')}
         title="Bullet List"
       >
         ⦿
@@ -375,7 +348,9 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       {/* Color Picker with circle icon and dropdown */}
       <ToolbarColorPicker
         value={format.color}
-        onChange={(color) => onFormatChange('color', color)}
+        onChange={(color) => {
+          handleFormatChange('textColor', color);
+        }}
       />
 
       <ToolbarSeparator />
@@ -383,10 +358,11 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
       {/* Text Alignment Dropdown */}
       <TextAlignmentDropdown
         value="left"
-        onChange={(align: string) => onFormatChange('align', align)}
+        onChange={(align: string) => {
+          handleFormatChange('textAlign', align);
+        }}
         isOpen={openDropdown === 'alignment'}
         onToggle={() => {
-          console.log('🔍 [DROPDOWN DEBUG] TextAlignment toggle:', openDropdown === 'alignment' ? 'closing' : 'opening');
           setOpenDropdown(openDropdown === 'alignment' ? null : 'alignment');
         }}
         toolbarRef={toolbarRef}

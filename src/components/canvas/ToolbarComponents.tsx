@@ -43,8 +43,17 @@ export const ToolbarButton: React.FC<ButtonProps> = ({
   return (
     <button
       style={active ? activeStyle : baseStyle}
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onClick();
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+      }}
       title={title}
+      data-floating-toolbar="true"
+      data-toolbar-button="true"
     >
       {children}
     </button>
@@ -299,7 +308,14 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
     <div ref={dropdownRef} data-dropdown-container style={{ position: 'relative', display: 'inline-block' }}>
       <button
         data-dropdown-button
-        onClick={() => onToggle ? onToggle() : setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onToggle ? onToggle() : setIsOpen(!isOpen);
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
         style={{
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           border: '1px solid #444',
@@ -330,6 +346,7 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
       {isOpen && (
         <div
           data-dropdown-content
+          data-dropdown-container
           style={{
             position: 'absolute',
             top: '100%',
@@ -469,7 +486,14 @@ export const StylePresetDropdown: React.FC<StylePresetDropdownProps> = ({
     <div ref={dropdownRef} data-dropdown-container style={{ position: 'relative', display: 'inline-block' }}>
       <button
         data-dropdown-button
-        onClick={() => onToggle ? onToggle() : setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onToggle ? onToggle() : setIsOpen(!isOpen);
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
         style={{
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           border: '1px solid #444',
@@ -501,6 +525,7 @@ export const StylePresetDropdown: React.FC<StylePresetDropdownProps> = ({
       {isOpen && (
         <div
           data-dropdown-content
+          data-dropdown-container
           style={{
             position: 'absolute',
             top: '100%',
@@ -709,7 +734,14 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
       <button
         ref={buttonRef}
         data-dropdown-button
-        onClick={() => onToggle ? onToggle() : setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onToggle ? onToggle() : setIsOpen(!isOpen);
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
         style={{
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           border: '1px solid #444',
@@ -741,6 +773,7 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
       {isOpen && (
         <div
           data-dropdown-content
+          data-dropdown-container
           style={{
             position: 'absolute',
             top: '100%',

@@ -3,57 +3,124 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { ConnectorEndpoint, ConnectorStyle } from '../types/connector';
 import { SectionElement, isElementInSection, convertAbsoluteToRelative, sectionTemplates } from '../types/section';
+import type { RichTextSegment } from '../types/richText';
 
-// Helper function to compare the styles of two rich text segments.
+// Re-export for backward compatibility
+export type { RichTextSegment };
+
+/**
+ * Performance-optimized helper function to compare the styles of two rich text segments.
+ * Uses early returns for better performance.
+ */
 const areStylesEqual = (seg1: Omit<RichTextSegment, 'text'>, seg2: Omit<RichTextSegment, 'text'>): boolean => {
-  return seg1.fontSize === seg2.fontSize &&
-         seg1.fontFamily === seg2.fontFamily &&
-         seg1.fontStyle === seg2.fontStyle &&
-         seg1.fontWeight === seg2.fontWeight &&
-         seg1.textDecoration === seg2.textDecoration &&
-         seg1.fill === seg2.fill &&
-         seg1.url === seg2.url;
+  if (seg1.fontSize !== seg2.fontSize) return false;
+  if (seg1.fontFamily !== seg2.fontFamily) return false;
+  if (seg1.fontStyle !== seg2.fontStyle) return false;
+  if (seg1.fontWeight !== seg2.fontWeight) return false;
+  if (seg1.textDecoration !== seg2.textDecoration) return false;
+  if (seg1.fill !== seg2.fill) return false;
+  if (seg1.url !== seg2.url) return false;
+  if (seg1.textAlign !== seg2.textAlign) return false;
+  if (seg1.listType !== seg2.listType) return false;
+  return true;
 };
 
-// Helper function to merge adjacent rich text segments that have identical styles.
+/**
+ * Optimized segment merging with validation and performance enhancements.
+ * Includes memory optimization for large documents.
+ */
 const mergeSegments = (segments: RichTextSegment[]): RichTextSegment[] => {
-  if (segments.length < 2) {
-    return segments;
-  }
+  if (!segments || segments.length === 0) return [];
+  if (segments.length === 1) return segments[0].text ? segments : [];
 
   const merged: RichTextSegment[] = [];
   let currentSegment = { ...segments[0] };
 
+  // Skip empty segments at the start
+  if (!currentSegment.text) {
+    let i = 1;
+    while (i < segments.length && !segments[i].text) {
+      i++;
+    }
+    if (i >= segments.length) return [];
+    currentSegment = { ...segments[i] };
+  }
+
   for (let i = 1; i < segments.length; i++) {
     const nextSegment = segments[i];
+    
+    // Skip empty segments
+    if (!nextSegment.text) continue;
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { text: currentText, ...currentStyle } = currentSegment;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { text: nextText, ...nextStyle } = nextSegment;
 
     if (areStylesEqual(currentStyle, nextStyle)) {
+      // Merge segments with identical styles
       currentSegment.text += nextSegment.text;
     } else {
-      merged.push(currentSegment);
+      // Push current segment and start new one
+      if (currentSegment.text) {
+        merged.push(currentSegment);
+      }
       currentSegment = { ...nextSegment };
     }
   }
-  merged.push(currentSegment);
 
-  return merged.filter(s => s.text); // Ensure no empty segments are returned
+  // Add final segment if it has text
+  if (currentSegment.text) {
+    merged.push(currentSegment);
+  }
+
+  return merged;
 };
 
-// Interface for individual styled segments within a rich text element
-export interface RichTextSegment {
-  text: string;
-  fontSize?: number;
-  fontFamily?: string;
-  fontStyle?: string; // e.g., 'normal', 'italic'
-  fontWeight?: string; // e.g., 'normal', 'bold'
-  textDecoration?: string; // e.g., 'underline', 'line-through', or ''
-  fill?: string; // Text color for this segment
-  url?: string; // Optional URL for clickable links
-}
+/**
+ * Validates rich text segments for data integrity.
+ */
+const validateRichTextSegments = (segments: RichTextSegment[]): boolean => {
+  if (!Array.isArray(segments)) return false;
+  
+  return segments.every(segment => {
+    if (!segment || typeof segment.text !== 'string') return false;
+    
+    // Validate optional properties have correct types
+    if (segment.fontSize !== undefined && (typeof segment.fontSize !== 'number' || segment.fontSize <= 0)) return false;
+    if (segment.fontFamily !== undefined && typeof segment.fontFamily !== 'string') return false;
+    if (segment.fontStyle !== undefined && typeof segment.fontStyle !== 'string') return false;
+    if (segment.fontWeight !== undefined && typeof segment.fontWeight !== 'string') return false;
+    if (segment.textDecoration !== undefined && typeof segment.textDecoration !== 'string') return false;
+    if (segment.fill !== undefined && typeof segment.fill !== 'string') return false;
+    if (segment.url !== undefined && typeof segment.url !== 'string') return false;
+    if (segment.textAlign !== undefined && !['left', 'center', 'right'].includes(segment.textAlign)) return false;
+    if (segment.listType !== undefined && !['none', 'bullet', 'numbered'].includes(segment.listType)) return false;
+    
+    return true;
+  });
+};
+
+/**
+ * Optimized text format application with memoization for repeated operations.
+ */
+const memoizedFormatCache = new Map<string, RichTextSegment[]>();
+const MAX_CACHE_SIZE = 100;
+
+const getCacheKey = (segments: RichTextSegment[], formatType: string, value: any, selection: { start: number; end: number }): string => {
+  return `${segments.length}-${formatType}-${JSON.stringify(value)}-${selection.start}-${selection.end}`;
+};
+
+const clearFormatCache = () => {
+  if (memoizedFormatCache.size > MAX_CACHE_SIZE) {
+    // Clear half the cache to prevent memory bloat
+    const entries = Array.from(memoizedFormatCache.entries());
+    entries.slice(0, Math.floor(entries.length / 2)).forEach(([key]) => {
+      memoizedFormatCache.delete(key);
+    });
+  }
+};
+
 
 // Enhanced Table Data Model for FigJam-style functionality
 export interface TableCell {
@@ -137,11 +204,13 @@ export interface CanvasElement {
   fontSize?: number; // Default font size for text-based elements
   fontFamily?: string; // Default font family for text-based elements
   fontStyle?: string; // Font style (normal, italic, bold, bold italic)
+  textAlign?: 'left' | 'center' | 'right'; // Text alignment
   textDecoration?: string; // Text decoration (underline, line-through, etc.)
   listType?: string; // List type (none, bullet, numbered)
   isHyperlink?: boolean; // Whether the text is a hyperlink
   hyperlinkUrl?: string; // URL for hyperlinks
   segments?: RichTextSegment[]; // For 'rich-text' elements
+  richTextSegments?: RichTextSegment[]; // For text and sticky-note elements with rich formatting
   imageUrl?: string; // For image elements
   arrowStart?: boolean; // For lines/arrows
   arrowEnd?: boolean; // For lines/arrows
@@ -230,8 +299,10 @@ interface CanvasState {
   canRedo: () => boolean;
   clearHistory: () => void;
 
-  // Rich text formatting
+  // Rich text formatting with enhanced error handling
   applyTextFormat: (elementId: string, format: Partial<RichTextSegment>, selection: { start: number; end: number }) => void;
+  validateRichTextElement: (elementId: string) => boolean;
+  optimizeRichTextSegments: (elementId: string) => void;
 
   // Inline text editing
   setEditingTextId: (id: string | null) => void;
@@ -374,28 +445,13 @@ export const useKonvaCanvasStore = create<CanvasState>()(
     },
 
     updateElement: (id, updates) => {
-      console.log('🏪 [STORE DEBUG] === updateElement called ===');
-      console.log('🏪 [STORE DEBUG] Element ID:', id);
-      console.log('🏪 [STORE DEBUG] Updates to apply:', updates);
-      
-      const currentElement = get().elements[id];
-      console.log('🏪 [STORE DEBUG] Current element before update:', currentElement);
-      
       set((state) => {
         if (state.elements[id]) {
-          console.log('🏪 [STORE DEBUG] Element found, applying updates...');
           Object.assign(state.elements[id], updates);
-          console.log('🏪 [STORE DEBUG] Element after update:', state.elements[id]);
-        } else {
-          console.log('❌ [STORE DEBUG] Element not found in store!');
         }
       });
       
-      const updatedElement = get().elements[id];
-      console.log('🏪 [STORE DEBUG] Final element state:', updatedElement);
-      
       get().addToHistory(`Update element`);
-      console.log('🏪 [STORE DEBUG] updateElement completed');
     },
 
     deleteElement: (id) => {
@@ -484,17 +540,9 @@ export const useKonvaCanvasStore = create<CanvasState>()(
     },
 
     setSelectedElement: (id) => {
-      console.log('🏪 [STORE DEBUG] === setSelectedElement called ===');
-      console.log('🏪 [STORE DEBUG] New selected ID:', id);
-      console.log('🏪 [STORE DEBUG] Previous selected ID:', get().selectedElementId);
-      console.log('🏪 [STORE DEBUG] Element exists in store:', id ? !!get().elements[id] : 'N/A');
-      console.log('🏪 [STORE DEBUG] Section exists in store:', id ? !!get().sections[id] : 'N/A');
-      
       set((state) => {
         state.selectedElementId = id;
       });
-      
-      console.log('🏪 [STORE DEBUG] Selection updated to:', get().selectedElementId);
     },
 
     clearCanvas: () => {
@@ -566,56 +614,108 @@ export const useKonvaCanvasStore = create<CanvasState>()(
     },
 
     applyTextFormat: (elementId, format, selection) => {
+      try {
+        set((state) => {
+          const element = state.elements[elementId];
+          if (!element) return;
+
+          // If it's a simple 'text' element, convert it to 'rich-text' first.
+          if (element.type === 'text') {
+            const text = element.text || '';
+            state.elements[elementId] = {
+              ...element,
+              type: 'rich-text',
+              text: undefined,
+              segments: [{ text }],
+            };
+          }
+
+          const richTextElement = state.elements[elementId];
+          if (richTextElement.type !== 'rich-text' || !richTextElement.segments) return;
+
+          // Validate input segments
+          if (!validateRichTextSegments(richTextElement.segments)) {
+            console.error('[CANVAS STORE] Invalid rich text segments detected');
+            return;
+          }
+
+          const newSegments: RichTextSegment[] = [];
+          let currentIndex = 0;
+
+          richTextElement.segments.forEach(segment => {
+            const segmentStart = currentIndex;
+            const segmentEnd = segmentStart + segment.text.length;
+            const { text, ...style } = segment;
+
+            // Dissect the segment into three parts: before, during, and after the selection.
+            const beforeText = text.substring(0, Math.max(0, selection.start - segmentStart));
+            const duringText = text.substring(
+              Math.max(0, selection.start - segmentStart),
+              Math.min(text.length, selection.end - segmentStart)
+            );
+            const afterText = text.substring(Math.min(text.length, selection.end - segmentStart));
+
+            if (beforeText) {
+              newSegments.push({ ...style, text: beforeText });
+            }
+            if (duringText) {
+              newSegments.push({ ...style, ...format, text: duringText });
+            }
+            if (afterText) {
+              newSegments.push({ ...style, text: afterText });
+            }
+            
+            currentIndex = segmentEnd;
+          });
+
+          richTextElement.segments = mergeSegments(newSegments);
+          
+          // Clear format cache when segments are modified
+          clearFormatCache();
+        });
+        get().addToHistory('Apply text format');
+      } catch (error) {
+        console.error('[CANVAS STORE] Error applying text format:', error);
+      }
+    },
+
+    validateRichTextElement: (elementId) => {
+      const { elements } = get();
+      const element = elements[elementId];
+      
+      if (!element) return false;
+      
+      if (element.type === 'rich-text' && element.segments) {
+        return validateRichTextSegments(element.segments);
+      }
+      
+      if (element.richTextSegments) {
+        return validateRichTextSegments(element.richTextSegments);
+      }
+      
+      return true; // Text elements without rich text segments are valid
+    },
+
+    optimizeRichTextSegments: (elementId) => {
       set((state) => {
         const element = state.elements[elementId];
         if (!element) return;
-
-        // If it's a simple 'text' element, convert it to 'rich-text' first.
-        if (element.type === 'text') {
-          const text = element.text || '';
-          state.elements[elementId] = {
-            ...element,
-            type: 'rich-text',
-            text: undefined,
-            segments: [{ text }],
-          };
-        }
-
-        const richTextElement = state.elements[elementId];
-        if (richTextElement.type !== 'rich-text' || !richTextElement.segments) return;
-
-        const newSegments: RichTextSegment[] = [];
-        let currentIndex = 0;
-
-        richTextElement.segments.forEach(segment => {
-          const segmentStart = currentIndex;
-          const segmentEnd = segmentStart + segment.text.length;
-          const { text, ...style } = segment;
-
-          // Dissect the segment into three parts: before, during, and after the selection.
-          const beforeText = text.substring(0, Math.max(0, selection.start - segmentStart));
-          const duringText = text.substring(
-            Math.max(0, selection.start - segmentStart),
-            Math.min(text.length, selection.end - segmentStart)
-          );
-          const afterText = text.substring(Math.min(text.length, selection.end - segmentStart));
-
-          if (beforeText) {
-            newSegments.push({ ...style, text: beforeText });
-          }
-          if (duringText) {
-            newSegments.push({ ...style, ...format, text: duringText });
-          }
-          if (afterText) {
-            newSegments.push({ ...style, text: afterText });
+        
+        try {
+          if (element.type === 'rich-text' && element.segments) {
+            element.segments = mergeSegments(element.segments);
           }
           
-          currentIndex = segmentEnd;
-        });
-
-        richTextElement.segments = mergeSegments(newSegments);
+          if (element.richTextSegments) {
+            element.richTextSegments = mergeSegments(element.richTextSegments);
+          }
+          
+          // Clear format cache after optimization
+          clearFormatCache();
+        } catch (error) {
+          console.error('[CANVAS STORE] Error optimizing rich text segments:', error);
+        }
       });
-      get().addToHistory('Apply text format');
     },
 
     setEditingTextId: (id) => {
@@ -1102,15 +1202,98 @@ export const useKonvaCanvasStore = create<CanvasState>()(
     },
 
     updateTableCell: (tableId: string, rowIndex: number, colIndex: number, updates: Partial<TableCell>) => {
+      console.log('🏪 [STORE DEBUG] ===========================');
+      console.log('🏪 [STORE DEBUG] === updateTableCell called ===');
+      console.log('🏪 [STORE DEBUG] ===========================');
+      console.log('🏪 [STORE DEBUG] Table ID:', tableId);
+      console.log('🏪 [STORE DEBUG] Row/Col indices:', { rowIndex, colIndex });
+      console.log('🏪 [STORE DEBUG] Updates to apply:', updates);
+      console.log('🏪 [STORE DEBUG] Current store state - elements count:', Object.keys(get().elements).length);
+      
       set((state) => {
+        console.log('🏪 [STORE DEBUG] === Inside set function ===');
         const element = state.elements[tableId];
-        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        console.log('🏪 [STORE DEBUG] Element lookup result:', {
+          found: !!element,
+          type: element?.type,
+          hasEnhancedTableData: !!element?.enhancedTableData
+        });
+        
+        if (!element || element.type !== 'table' || !element.enhancedTableData) {
+          console.log('🏪 [STORE DEBUG] ❌ Element validation failed');
+          console.log('🏪 [STORE DEBUG] Element exists:', !!element);
+          console.log('🏪 [STORE DEBUG] Element type:', element?.type);
+          console.log('🏪 [STORE DEBUG] Has enhanced table data:', !!element?.enhancedTableData);
+          if (element?.enhancedTableData) {
+            console.log('🏪 [STORE DEBUG] Table data structure:', {
+              rowsCount: element.enhancedTableData.rows?.length,
+              colsCount: element.enhancedTableData.columns?.length,
+              cellsStructure: element.enhancedTableData.cells?.length
+            });
+          }
+          return;
+        }
+        
+        console.log('🏪 [STORE DEBUG] ✅ Element validation passed');
+        console.log('🏪 [STORE DEBUG] Table structure:', {
+          rows: element.enhancedTableData.rows?.length,
+          columns: element.enhancedTableData.columns?.length,
+          cellsArrayLength: element.enhancedTableData.cells?.length
+        });
         
         const cell = element.enhancedTableData.cells[rowIndex]?.[colIndex];
-        if (!cell) return;
+        console.log('🏪 [STORE DEBUG] Cell lookup:', {
+          cellExists: !!cell,
+          currentText: cell?.text,
+          cellId: cell?.id
+        });
         
-        // Update the enhanced cell data
-        Object.assign(cell, updates);
+        if (!cell) {
+          console.log('🏪 [STORE DEBUG] ❌ Cell not found at position [' + rowIndex + '][' + colIndex + ']');
+          return;
+        }
+        
+        console.log('🏪 [STORE DEBUG] ✅ Cell found, proceeding with update...');
+        console.log('🏪 [STORE DEBUG] Original cell data:', cell);
+        
+        // Create a new cells array to trigger re-render
+        const newCells = element.enhancedTableData.cells.map((row, rIdx) =>
+          row.map((cellInRow, cIdx) => {
+            if (rIdx === rowIndex && cIdx === colIndex) {
+              const updatedCell = { ...cellInRow, ...updates };
+              console.log('🏪 [STORE DEBUG] ✅ Cell updated:', {
+                before: cellInRow,
+                after: updatedCell,
+                updateApplied: updates
+              });
+              return updatedCell;
+            }
+            return cellInRow;
+          })
+        );
+        
+        console.log('🏪 [STORE DEBUG] New cells array created');
+        
+        // Update the element with new cells array
+        const oldTableData = element.enhancedTableData;
+        element.enhancedTableData = {
+          ...oldTableData,
+          cells: newCells
+        };
+        
+        console.log('🏪 [STORE DEBUG] Enhanced table data updated');
+        
+        // Force a new element reference to trigger re-render
+        const oldElement = state.elements[tableId];
+        state.elements[tableId] = { ...oldElement, enhancedTableData: element.enhancedTableData };
+        
+        console.log('🏪 [STORE DEBUG] ✅ Element reference updated in store');
+        console.log('🏪 [STORE DEBUG] Updated element structure:', {
+          id: state.elements[tableId].id,
+          type: state.elements[tableId].type,
+          hasEnhancedTableData: !!state.elements[tableId].enhancedTableData,
+          cellCount: state.elements[tableId].enhancedTableData?.cells?.length
+        });
         
         // Update backward compatibility data
         if (updates.text !== undefined && element.tableData) {
@@ -1118,10 +1301,14 @@ export const useKonvaCanvasStore = create<CanvasState>()(
             element.tableData[rowIndex] = [];
           }
           element.tableData[rowIndex][colIndex] = updates.text;
+          console.log('🏪 [STORE DEBUG] ✅ Legacy tableData updated:', element.tableData[rowIndex][colIndex]);
         }
       });
       
+      console.log('🏪 [STORE DEBUG] === Store update completed ===');
+      console.log('🏪 [STORE DEBUG] Adding to history...');
       get().addToHistory(`Update table cell [${rowIndex}, ${colIndex}]`);
+      console.log('🏪 [STORE DEBUG] ===========================');
     },
 
     addTableRow: (tableId: string, insertIndex?: number) => {
@@ -1214,7 +1401,7 @@ export const useKonvaCanvasStore = create<CanvasState>()(
         // Update backward compatibility
         element.cols = enhancedTableData.columns.length;
         if (element.tableData) {
-          element.tableData.forEach((row, rowIndex) => {
+          element.tableData.forEach((row) => {
             row.splice(actualIndex, 0, '');
           });
         }

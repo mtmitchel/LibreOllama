@@ -1,13 +1,8 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, useKonvaCanvasStore, RichTextSegment } from '../../stores/konvaCanvasStore';
 import { designSystem } from '../../styles/designSystem';
-
-// RichTextCellEditor is used in JSX rendering later in the file
-// RichTextCellEditor is used in JSX rendering later in the file, so we keep the import
-// RichTextCellEditor is used in JSX rendering later in the file
-// RichTextCellEditor type is used implicitly through the component
 
 // Constants for improved UX
 const MIN_CELL_WIDTH = 80; // Increased from 60px
@@ -63,6 +58,14 @@ interface EnhancedTableElementProps {
   onEditingStateChange?: (editingData: TableEditingData | null) => void;
 }
 
+// Helper function to generate a stable key from table data
+const getTableDataKey = (tableData: any) => {
+  if (!tableData?.cells) return 'empty';
+  return tableData.cells.map((row: any[]) => 
+    row.map((cell: any) => cell?.text || '').join('|')
+  ).join('||');
+};
+
 export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   element,
   isSelected,
@@ -86,10 +89,18 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
 
   // Resize state using refs to prevent re-renders
   const isResizingRef = useRef(false);
-  const resizeHandleRef = useRef<'se' | 'e' | 's' | 'col' | 'row' | null>(null);
+  const resizeHandleRef = useRef<'se' | 'e' | 's' | 'nw' | 'n' | 'ne' | 'w' | 'sw' | 'col' | 'row' | null>(null);
   const resizeStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const resizeStartSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const resizeStartElementPosRef = useRef<{ x: number; y: number } | null>(null);
   const [liveSize, setLiveSize] = useState<{ width: number, height: number } | null>(null);
+  const liveSizeRef = useRef<{ width: number; height: number } | null>(null);
+  
+  // Wrapper function to update both state and ref
+  const updateLiveSize = useCallback((size: { width: number; height: number } | null) => {
+    liveSizeRef.current = size;
+    setLiveSize(size);
+  }, []);
   
   // Individual column/row resize state using refs
   const resizingColumnIndexRef = useRef<number | null>(null);
@@ -98,24 +109,23 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   const rowStartHeightRef = useRef<number | null>(null);
   
   // Event handlers refs for cleanup
-  const mouseMoveHandlerRef = useRef<((e: MouseEvent) => void) | null>(null);
-  const mouseUpHandlerRef = useRef<((e: MouseEvent) => void) | null>(null);
+  const mouseMoveHandlerRef = useRef<((e: Konva.KonvaEventObject<MouseEvent>) => void) | null>(null);
+  const mouseUpHandlerRef = useRef<(() => void) | null>(null);
 
   // Hover timeout refs to prevent flicker
   const cellHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const boundaryHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const headerHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Store methods
-  const {
-    updateTableCell,
-    addTableRow,
-    addTableColumn,
-    removeTableRow,
-    removeTableColumn,
-    resizeTableColumn,
-    resizeTableRow
-  } = useKonvaCanvasStore();
+  // Store methods - using specific selectors to prevent unnecessary re-renders
+  const updateTableCell = useKonvaCanvasStore(state => state.updateTableCell);
+  const addTableRow = useKonvaCanvasStore(state => state.addTableRow);
+  const addTableColumn = useKonvaCanvasStore(state => state.addTableColumn);
+  const removeTableRow = useKonvaCanvasStore(state => state.removeTableRow);
+  const removeTableColumn = useKonvaCanvasStore(state => state.removeTableColumn);
+  const resizeTableColumn = useKonvaCanvasStore(state => state.resizeTableColumn);
+  const resizeTableRow = useKonvaCanvasStore(state => state.resizeTableRow);
+  const selectedTool = useKonvaCanvasStore(state => state.selectedTool);
 
   // Get enhanced table data from element with null safety
   const enhancedTableData = element.enhancedTableData;
@@ -140,6 +150,11 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   // Display variables for resize optimization
   const displayWidth = liveSize?.width ?? totalWidth;
   const displayHeight = liveSize?.height ?? totalHeight;
+
+  // Debug log the display dimensions
+  if (liveSize) {
+    console.log('🔧 [RESIZE DEBUG] Using live size for display:', { displayWidth, displayHeight, liveSize, totalWidth, totalHeight });
+  }
 
   // Handle drag end - memoized to prevent render loops
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
@@ -226,24 +241,24 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
     try {
       // Validate stageRef and container existence
       if (!stageRef?.current) {
-        console.error("An error occurred in EnhancedTableElement:", "stageRef is missing");
+        console.error("ERROR: stageRef is missing");
         return;
       }
       
       const stage = stageRef.current;
       const stageContainer = stage.container();
       if (!stageContainer) {
-        console.error("An error occurred in EnhancedTableElement:", "stageContainer is missing");
+        console.error("ERROR: stageContainer is missing");
         return;
       }
       
       // Validate indices against tableRows and tableColumns
       if (rowIndex < 0 || rowIndex >= tableRows.length) {
-        console.error("An error occurred in EnhancedTableElement:", `Invalid row index: ${rowIndex}, tableRows length: ${tableRows.length}`);
+        console.error("ERROR: Invalid row index:", rowIndex, "length:", tableRows.length);
         return;
       }
       if (colIndex < 0 || colIndex >= tableColumns.length) {
-        console.error("An error occurred in EnhancedTableElement:", `Invalid column index: ${colIndex}, tableColumns length: ${tableColumns.length}`);
+        console.error("ERROR: Invalid column index:", colIndex, "length:", tableColumns.length);
         return;
       }
       
@@ -251,7 +266,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
       const cellId = `${element.id}-cell-${rowIndex}-${colIndex}`;
       const cellNode = stage.findOne(`#${cellId}`);
       if (!cellNode) {
-        console.error("An error occurred in EnhancedTableElement:", `Cell node not found for ID: ${cellId}`);
+        console.error("ERROR: Cell node not found for ID:", cellId);
         return;
       }
       
@@ -273,64 +288,63 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
       // Convert to viewport coordinates for portal positioning
       // Since RichTextCellEditor uses a portal to document.body with position: 'absolute',
       // we need coordinates relative to the viewport
-      setEditingCell({ row: rowIndex, col: colIndex });
-      setEditingCellPosition({
+      const editingPosition = {
         x: stageRect.left + screenX,
         y: stageRect.top + screenY,
         width: (tableColumns[colIndex]?.width || 100) * stageScale,
         height: (tableRows[rowIndex]?.height || 40) * stageScale
-      });
+      };
+      
+      setEditingCell({ row: rowIndex, col: colIndex });
+      setEditingCellPosition(editingPosition);
     } catch (error) {
-      console.error("An error occurred in EnhancedTableElement:", error);
+      console.error("ERROR in handleCellDoubleClick:", error);
     }
   };
 
   // Handle text change during editing
-  const handleTextChange = (newText: string) => {
+  const handleTextChange = useCallback((newText: string) => {
     if (editingCell) {
       updateTableCell(element.id, editingCell.row, editingCell.col, { text: newText });
     }
-  };
+  }, [editingCell, element.id, updateTableCell]);
 
   // Handle rich text change during editing
-  const handleRichTextChange = (segments: RichTextSegment[]) => {
+  const handleRichTextChange = useCallback((segments: RichTextSegment[]) => {
     if (editingCell) {
       updateTableCell(element.id, editingCell.row, editingCell.col, { 
         richTextSegments: segments,
         text: segments.map(s => s.text).join('') // Keep plain text in sync
       });
     }
-  };
+  }, [editingCell, element.id, updateTableCell]);
 
   // Handle finish editing
-  const handleFinishEditing = () => {
+  const handleFinishEditing = useCallback(() => {
     setEditingCell(null);
     setEditingCellPosition(null);
-  };
+  }, []);
 
   // Handle cancel editing
-  const handleCancelEditing = () => {
+  const handleCancelEditing = useCallback(() => {
     setEditingCell(null);
     setEditingCellPosition(null);
-  };
+  }, []);
 
   // Handle resize start
-  const handleResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, handle: 'se' | 'e' | 's') => {
+  const handleResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, handle: 'se' | 'e' | 's' | 'nw' | 'n' | 'ne' | 'w' | 'sw') => {
     try {
-      console.log('🔧 [RESIZE DEBUG] Custom resize start:', handle);
       e.evt.preventDefault();
       e.evt.stopPropagation();
       e.cancelBubble = true;
-      setIsResizing(true);
-      resizeHandleRef.current = handle;
+      setIsResizing(true); // For reactivity in draggable
       
       // Use stage coordinates consistently
       const stage = e.target.getStage();
       if (stage) {
         const pointerPos = stage.getPointerPosition();
         if (pointerPos) {
-          resizeStartPosRef.current = { x: pointerPos.x, y: pointerPos.y };
-          setResizeStartSize({ width: totalWidth, height: totalHeight });
+          startResizeOperation(handle, { x: pointerPos.x, y: pointerPos.y }, { width: totalWidth, height: totalHeight });
         }
       }
     } catch (error) {
@@ -341,24 +355,17 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   // Handle column resize start
   const handleColumnResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, colIndex: number) => {
     try {
-      console.log('🔧 [RESIZE DEBUG] Column resize start:', colIndex);
       e.evt.preventDefault();
       e.evt.stopPropagation();
       e.cancelBubble = true;
-      setIsResizing(true);
-      resizeHandleRef.current = 'col';
-      setResizingColumnIndex(colIndex);
+      setIsResizing(true); // For reactivity in draggable
       
       const currentColumn = tableColumns[colIndex];
-      if (currentColumn) {
-        setColumnStartWidth(currentColumn.width);
-      }
-      
       const stage = e.target.getStage();
-      if (stage) {
+      if (stage && currentColumn) {
         const pointerPos = stage.getPointerPosition();
         if (pointerPos) {
-          resizeStartPosRef.current = { x: pointerPos.x, y: pointerPos.y };
+          startResizeOperation('col', { x: pointerPos.x, y: pointerPos.y }, { width: totalWidth, height: totalHeight }, colIndex);
         }
       }
     } catch (error) {
@@ -369,24 +376,17 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   // Handle row resize start
   const handleRowResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, rowIndex: number) => {
     try {
-      console.log('🔧 [RESIZE DEBUG] Row resize start:', rowIndex);
       e.evt.preventDefault();
       e.evt.stopPropagation();
       e.cancelBubble = true;
-      setIsResizing(true);
-      resizeHandleRef.current = 'row';
-      setResizingRowIndex(rowIndex);
+      setIsResizing(true); // For reactivity in draggable
       
       const currentRow = tableRows[rowIndex];
-      if (currentRow) {
-        setRowStartHeight(currentRow.height);
-      }
-      
       const stage = e.target.getStage();
-      if (stage) {
+      if (stage && currentRow) {
         const pointerPos = stage.getPointerPosition();
         if (pointerPos) {
-          resizeStartPosRef.current = { x: pointerPos.x, y: pointerPos.y };
+          startResizeOperation('row', { x: pointerPos.x, y: pointerPos.y }, { width: totalWidth, height: totalHeight }, undefined, rowIndex);
         }
       }
     } catch (error) {
@@ -410,7 +410,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
     onUpdateRef.current = onUpdate;
     resizeTableColumnRef.current = resizeTableColumn;
     resizeTableRowRef.current = resizeTableRow;
-  });
+  }, [enhancedTableData, totalWidth, totalHeight, onUpdate, resizeTableColumn, resizeTableRow]);
 
   // Throttled resize functions to prevent excessive updates
   const throttledColumnResize = useRef(
@@ -426,12 +426,16 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   ).current;
 
   // Direct resize event handling without useEffect to prevent duplication
-  const startResizeOperation = useCallback((handle: 'se' | 'e' | 's' | 'col' | 'row', startPos: { x: number; y: number }, startSize: { width: number; height: number }, columnIndex?: number, rowIndex?: number) => {
-    console.log('🔄 [RESIZE DEBUG] Starting resize operation:', { handle, startPos, startSize, columnIndex, rowIndex });
+  const startResizeOperation = useCallback((handle: 'se' | 'e' | 's' | 'nw' | 'n' | 'ne' | 'w' | 'sw' | 'col' | 'row', startPos: { x: number; y: number }, startSize: { width: number; height: number }, columnIndex?: number, rowIndex?: number) => {
+    console.log('🔧 [RESIZE DEBUG] startResizeOperation called with handle:', handle);
     
-    if (!stageRef?.current) return;
+    if (!stageRef?.current) {
+      console.log('❌ [RESIZE DEBUG] No stage reference found!');
+      return;
+    }
     
     const stage = stageRef.current;
+    console.log('✅ [RESIZE DEBUG] Stage reference found, attaching event handlers');
     
     // Clean up any existing handlers
     if (mouseMoveHandlerRef.current) {
@@ -446,17 +450,20 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
     resizeHandleRef.current = handle;
     resizeStartPosRef.current = startPos;
     resizeStartSizeRef.current = startSize;
+    resizeStartElementPosRef.current = { x: element.x, y: element.y };
     
     if (handle === 'col' && columnIndex !== undefined) {
       resizingColumnIndexRef.current = columnIndex;
       columnStartWidthRef.current = tableColumns[columnIndex]?.width || 100;
+      console.log('🔧 [RESIZE DEBUG] Column resize setup:', { columnIndex, startWidth: columnStartWidthRef.current });
     } else if (handle === 'row' && rowIndex !== undefined) {
       resizingRowIndexRef.current = rowIndex;
       rowStartHeightRef.current = tableRows[rowIndex]?.height || 40;
+      console.log('🔧 [RESIZE DEBUG] Row resize setup:', { rowIndex, startHeight: rowStartHeightRef.current });
     }
     
     // Create new event handlers
-    const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const handleMouseMove = () => {
       const pointerPos = stage.getPointerPosition();
       if (!pointerPos || !resizeStartPosRef.current || !resizeStartSizeRef.current) return;
 
@@ -466,29 +473,51 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
       if (resizeHandleRef.current === 'col' && resizingColumnIndexRef.current !== null && columnStartWidthRef.current !== null) {
         // Individual column resize using throttled store function
         const newWidth = Math.max(MIN_CELL_WIDTH, Math.min(MAX_CELL_WIDTH, columnStartWidthRef.current + deltaX));
-throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
+        console.log('🔧 [RESIZE DEBUG] Column resize:', { columnIndex: resizingColumnIndexRef.current, newWidth, deltaX });
+        throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
       } else if (resizeHandleRef.current === 'row' && resizingRowIndexRef.current !== null && rowStartHeightRef.current !== null) {
         // Individual row resize using throttled store function
         const newHeight = Math.max(MIN_CELL_HEIGHT, Math.min(MAX_CELL_HEIGHT, rowStartHeightRef.current + deltaY));
+        console.log('🔧 [RESIZE DEBUG] Row resize:', { rowIndex: resizingRowIndexRef.current, newHeight, deltaY, startHeight: rowStartHeightRef.current });
+        throttledRowResize(element.id, resizingRowIndexRef.current, newHeight);
         throttledRowResize(element.id, resizingRowIndexRef.current, newHeight);
       } else {
         // Table-wide resize with live feedback
         let newWidth = resizeStartSizeRef.current.width;
         let newHeight = resizeStartSizeRef.current.height;
+        let newX = resizeStartElementPosRef.current?.x || element.x;
+        let newY = resizeStartElementPosRef.current?.y || element.y;
 
         if (resizeHandleRef.current?.includes('e')) {
           newWidth = Math.max(MIN_TABLE_WIDTH, resizeStartSizeRef.current.width + deltaX);
         }
+        if (resizeHandleRef.current?.includes('w')) {
+          newWidth = Math.max(MIN_TABLE_WIDTH, resizeStartSizeRef.current.width - deltaX);
+          newX = resizeStartElementPosRef.current!.x + deltaX;
+        }
         if (resizeHandleRef.current?.includes('s')) {
           newHeight = Math.max(MIN_TABLE_HEIGHT, resizeStartSizeRef.current.height + deltaY);
         }
+        if (resizeHandleRef.current?.includes('n')) {
+          newHeight = Math.max(MIN_TABLE_HEIGHT, resizeStartSizeRef.current.height - deltaY);
+          newY = resizeStartElementPosRef.current!.y + deltaY;
+        }
 
-        setLiveSize({ width: newWidth, height: newHeight });
+        updateLiveSize({ width: newWidth, height: newHeight });
+        
+        // Update position for north/west resizing
+        if (resizeHandleRef.current?.includes('w') || resizeHandleRef.current?.includes('n')) {
+          const { updateElement } = useKonvaCanvasStore.getState();
+          updateElement(element.id, { x: newX, y: newY });
+        }
       }
     };
 
     const handleMouseUp = () => {
-      console.log('🔄 [RESIZE DEBUG] Ending resize operation:', resizeHandleRef.current);
+      console.log('🔧 [RESIZE DEBUG] Mouse up during resize');
+      console.log('🔧 [RESIZE DEBUG] Current handle:', resizeHandleRef.current);
+      console.log('🔧 [RESIZE DEBUG] Live size from ref:', liveSizeRef.current);
+      console.log('🔧 [RESIZE DEBUG] Live size from state:', liveSize);
       
       if (resizeHandleRef.current === 'col' || resizeHandleRef.current === 'row') {
         // Individual column/row resize cleanup
@@ -496,32 +525,92 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
         resizingRowIndexRef.current = null;
         columnStartWidthRef.current = null;
         rowStartHeightRef.current = null;
-      } else if (liveSize && enhancedTableDataRef.current) {
-        // Table-wide resize final update using stable references
-        const currentTableData = enhancedTableDataRef.current;
-        const currentTotalWidth = totalWidthRef.current;
-        const currentTotalHeight = totalHeightRef.current;
+      } else if (liveSizeRef.current && resizeHandleRef.current) {
+        console.log('🔧 [RESIZE DEBUG] Applying final table resize with live size:', liveSizeRef.current);
+        // Table-wide resize final update
+        const { updateElement } = useKonvaCanvasStore.getState();
+        const currentElement = useKonvaCanvasStore.getState().elements[element.id];
         
-        const widthRatio = liveSize.width / currentTotalWidth;
-        const heightRatio = liveSize.height / currentTotalHeight;
+        if (currentElement?.enhancedTableData) {
+          const currentTableData = currentElement.enhancedTableData;
+          const currentColumns = currentTableData.columns || [];
+          const currentRows = currentTableData.rows || [];
+          
+          // Calculate current total dimensions
+          const currentTotalWidth = currentColumns.reduce((sum, col) => sum + (col?.width || 100), 0);
+          const currentTotalHeight = currentRows.reduce((sum, row) => sum + (row?.height || 40), 0);
+          
+          if (resizeHandleRef.current?.includes('e') && !resizeHandleRef.current?.includes('s') && !resizeHandleRef.current?.includes('n')) {
+            // Only horizontal resize (e, w)
+            const widthRatio = liveSizeRef.current.width / currentTotalWidth;
+            const updatedColumns = currentColumns.map(col => ({
+              ...col,
+              width: Math.max(MIN_CELL_WIDTH, Math.round(col.width * widthRatio)),
+            }));
+            
+            updateElement(element.id, {
+              width: liveSizeRef.current.width,
+              enhancedTableData: {
+                ...currentTableData,
+                columns: updatedColumns,
+              },
+            });
+          } else if (resizeHandleRef.current?.includes('w') && !resizeHandleRef.current?.includes('s') && !resizeHandleRef.current?.includes('n')) {
+            // Only horizontal resize (w)
+            const widthRatio = liveSizeRef.current.width / currentTotalWidth;
+            const updatedColumns = currentColumns.map(col => ({
+              ...col,
+              width: Math.max(MIN_CELL_WIDTH, Math.round(col.width * widthRatio)),
+            }));
+            
+            updateElement(element.id, {
+              width: liveSizeRef.current.width,
+              enhancedTableData: {
+                ...currentTableData,
+                columns: updatedColumns,
+              },
+            });
+          } else if ((resizeHandleRef.current?.includes('s') || resizeHandleRef.current?.includes('n')) && !resizeHandleRef.current?.includes('e') && !resizeHandleRef.current?.includes('w')) {
+            // Only vertical resize (s, n)
+            const heightRatio = liveSizeRef.current.height / currentTotalHeight;
+            const updatedRows = currentRows.map(row => ({
+              ...row,
+              height: Math.max(MIN_CELL_HEIGHT, Math.round(row.height * heightRatio)),
+            }));
+            
+            updateElement(element.id, {
+              height: liveSizeRef.current.height,
+              enhancedTableData: {
+                ...currentTableData,
+                rows: updatedRows,
+              },
+            });
+          } else {
+            // Both dimensions (corner handles: se, sw, ne, nw)
+            const widthRatio = liveSizeRef.current.width / currentTotalWidth;
+            const heightRatio = liveSizeRef.current.height / currentTotalHeight;
 
-        const updatedColumns = currentTableData.columns.map(col => ({
-          ...col,
-          width: Math.max(MIN_CELL_WIDTH, col.width * widthRatio),
-        }));
+            const updatedColumns = currentColumns.map(col => ({
+              ...col,
+              width: Math.max(MIN_CELL_WIDTH, Math.round(col.width * widthRatio)),
+            }));
 
-        const updatedRows = currentTableData.rows.map(row => ({
-          ...row,
-          height: Math.max(MIN_CELL_HEIGHT, row.height * heightRatio),
-        }));
-        
-        onUpdateRef.current({
-          enhancedTableData: {
-            ...currentTableData,
-            columns: updatedColumns,
-            rows: updatedRows,
-          },
-        });
+            const updatedRows = currentRows.map(row => ({
+              ...row,
+              height: Math.max(MIN_CELL_HEIGHT, Math.round(row.height * heightRatio)),
+            }));
+            
+            updateElement(element.id, {
+              width: liveSizeRef.current.width,
+              height: liveSizeRef.current.height,
+              enhancedTableData: {
+                ...currentTableData,
+                columns: updatedColumns,
+                rows: updatedRows,
+              },
+            });
+          }
+        }
       }
 
       // Clean up event handlers
@@ -532,36 +621,26 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
         stage.off('mouseup', mouseUpHandlerRef.current);
       }
       
-      // Reset state
+      // Reset state - CRITICAL: Reset both ref and state versions
       isResizingRef.current = false;
+      setIsResizing(false); // For reactivity in draggable
       resizeHandleRef.current = null;
       resizeStartPosRef.current = null;
       resizeStartSizeRef.current = null;
+      resizeStartElementPosRef.current = null;
       mouseMoveHandlerRef.current = null;
       mouseUpHandlerRef.current = null;
-      setLiveSize(null);
+      updateLiveSize(null);
     };
     
     // Store handlers in refs for cleanup
-    mouseMoveHandlerRef.current = (e: MouseEvent) => {
-      // Convert MouseEvent to KonvaEventObject<MouseEvent>
-      const konvaEvent = {
-        evt: e,
-        target: stage,
-        currentTarget: stage,
-        type: 'mousemove',
-        cancelBubble: false,
-        pointerId: 1
-      } as Konva.KonvaEventObject<MouseEvent>;
-      
-      handleMouseMove(konvaEvent);
-    };
+    mouseMoveHandlerRef.current = handleMouseMove;
     mouseUpHandlerRef.current = handleMouseUp;
     
     // Attach event handlers
     stage.on('mousemove', handleMouseMove);
     stage.on('mouseup', handleMouseUp);
-  }, [element.id, tableColumns, tableRows, throttledColumnResize, throttledRowResize, enhancedTableDataRef, totalWidthRef, totalHeightRef, onUpdateRef, liveSize]);
+  }, [element.id, tableColumns, tableRows, throttledColumnResize, throttledRowResize, enhancedTableDataRef, totalWidthRef, totalHeightRef, onUpdateRef, updateLiveSize]);
 
   // Handle table mouse leave with delay
   const handleTableMouseLeave = () => {
@@ -628,14 +707,17 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
     }, 100);
   }, []);
 
-  // Render table cells - memoized to prevent infinite render loops
-  const renderCells = useMemo(() => {
+  // Render table cells - DO NOT MEMOIZE to ensure updates are reflected
+  const renderCells = () => {
     try {
       return tableRows.map((row, rowIndex) =>
         tableColumns.map((col, colIndex) => {
           const cellData = enhancedTableData?.cells?.[rowIndex]?.[colIndex] || { text: '' };
-          const cellX = tableColumns.slice(0, colIndex).reduce((sum, c) => sum + (c?.width || 100), 0);
-          const cellY = tableRows.slice(0, rowIndex).reduce((sum, r) => sum + (r?.height || 40), 0);
+          // Ensure we have the latest cell data from the store
+          const cellText = cellData?.text || '';
+          
+          const cellX = tableColumns.slice(0, colIndex).reduce((sum, c) => sum + (c?.width || 100), 0) + 6;
+          const cellY = tableRows.slice(0, rowIndex).reduce((sum, r) => sum + (r?.height || 40), 0) + 6;
 
           return (
             <Group key={`${rowIndex}-${colIndex}`} id={`${element.id}-cell-${rowIndex}-${colIndex}`} x={cellX} y={cellY}>
@@ -672,14 +754,14 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
               {colIndex === 0 && (
                 <Rect
                   key={`row-header-${rowIndex}`}
-                  x={-40}
+                  x={-34}
                   y={-5}
                   width={40}
                   height={(row?.height || 40) + 10}
                   fill="transparent"
                   onMouseEnter={() => handleHeaderMouseEnter('row', rowIndex, { 
-                    x: (element.x || 0) - 30, 
-                    y: (element.y || 0) + tableRows.slice(0, rowIndex).reduce((sum, row) => sum + (row?.height || 40), 0) + (tableRows[rowIndex]?.height || 40) / 2
+                    x: -30, 
+                    y: tableRows.slice(0, rowIndex).reduce((sum, row) => sum + (row?.height || 40), 0) + (tableRows[rowIndex]?.height || 40) / 2 + 6
                   })}
                   onMouseLeave={handleHeaderMouseLeave}
                 />
@@ -690,13 +772,13 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
                 <Rect
                   key={`col-header-${colIndex}`}
                   x={-5}
-                  y={-40}
+                  y={-34}
                   width={(col?.width || 100) + 10}
                   height={40}
                   fill="transparent"
                   onMouseEnter={() => handleHeaderMouseEnter('column', colIndex, { 
-                    x: (element.x || 0) + tableColumns.slice(0, colIndex).reduce((sum, col) => sum + (col?.width || 100), 0) + (tableColumns[colIndex]?.width || 100) / 2,
-                    y: (element.y || 0) - 30
+                    x: tableColumns.slice(0, colIndex).reduce((sum, col) => sum + (col?.width || 100), 0) + (tableColumns[colIndex]?.width || 100) / 2 + 6,
+                    y: -30
                   })}
                   onMouseLeave={handleHeaderMouseLeave}
                 />
@@ -704,31 +786,80 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
 
               {/* Cell text - render rich text segments if available, otherwise plain text */}
               {cellData?.richTextSegments && cellData.richTextSegments.length > 0 ? (
-                // Render rich text segments
-                cellData.richTextSegments.map((segment, segmentIndex) => {
-                  // For now, render each segment as a separate Text component
-                  // This is a simplified approach - a more advanced implementation would handle line wrapping
+                // Render rich text segments with proper positioning
+                (() => {
+                  let currentX = 0;
+                  const segmentsToRender = [];
+                  const cellWidth = col?.width || 100;
+                  
+                  if (cellData.richTextSegments) {
+                    for (let segmentIndex = 0; segmentIndex < cellData.richTextSegments.length; segmentIndex++) {
+                      const segment = cellData.richTextSegments[segmentIndex];
+                      
+                      let konvaFontStyle = segment.fontStyle || 'normal';
+                      if (segment.fontWeight === 'bold') {
+                        konvaFontStyle = konvaFontStyle === 'italic' ? 'bold italic' : 'bold';
+                      }
+
+                      // @ts-ignore - listType may not be on the base segment type yet
+                      if (segment.listType === 'bullet' && segmentIndex === 0) {
+                        segmentsToRender.push(
+                          <Text
+                            key={`bullet-${rowIndex}-${colIndex}-${segmentIndex}`}
+                            x={0}
+                            y={8}
+                            text={"• "}
+                            fontSize={segment.fontSize || cellData.fontSize || 14}
+                            fontFamily={segment.fontFamily || cellData.fontFamily || designSystem.typography.fontFamily.sans}
+                            fill={segment.fill || cellData.textColor || designSystem.colors.secondary[800]}
+                            listening={false}
+                            verticalAlign="top"
+                          />
+                        );
+                        currentX += 15;
+                      }
+                      
+                      const textNode = new Konva.Text({
+                        text: segment.text,
+                        fontSize: segment.fontSize || cellData.fontSize || 14,
+                        fontFamily: segment.fontFamily || cellData.fontFamily || designSystem.typography.fontFamily.sans,
+                        fontStyle: konvaFontStyle,
+                      });
+                      
+                      segmentsToRender.push(
+                        <Text
+                          key={`text-${rowIndex}-${colIndex}-${segmentIndex}`}
+                          x={currentX}
+                          y={8}
+                          text={segment.text}
+                          fontSize={segment.fontSize || cellData.fontSize || 14}
+                          fontFamily={segment.fontFamily || cellData.fontFamily || designSystem.typography.fontFamily.sans}
+                          fill={segment.fill || cellData.textColor || designSystem.colors.secondary[800]}
+                          fontStyle={konvaFontStyle}
+                          textDecoration={segment.textDecoration || ''}
+                          verticalAlign="top"
+                          listening={false}
+                        />
+                      );
+
+                      currentX += textNode.width();
+                    }
+                  }
+
+                  const totalTextWidth = currentX;
+                  let groupX = 8; // Default left alignment with padding
+                  if (cellData.textAlign === 'center') {
+                    groupX = (cellWidth - totalTextWidth) / 2;
+                  } else if (cellData.textAlign === 'right') {
+                    groupX = cellWidth - totalTextWidth - 8;
+                  }
+
                   return (
-                    <Text
-                      key={`text-${rowIndex}-${colIndex}-${segmentIndex}`}
-                      x={8}
-                      y={8}
-                      width={(col?.width || 100) - 16}
-                      height={(row?.height || 40) - 16}
-                      text={segment.text}
-                      fontSize={segment.fontSize || cellData.fontSize || 14}
-                      fontFamily={segment.fontFamily || cellData.fontFamily || designSystem.typography.fontFamily.sans}
-                      fill={segment.fill || cellData.textColor || designSystem.colors.secondary[800]}
-                      fontStyle={segment.fontStyle || 'normal'}
-                      fontWeight={segment.fontWeight || 'normal'}
-                      textDecoration={segment.textDecoration || ''}
-                      align={cellData.textAlign || 'left'}
-                      verticalAlign="top"
-                      wrap="word"
-                      listening={false}
-                    />
+                    <Group x={groupX} y={0} width={cellWidth} clipFunc={(ctx) => { ctx.rect(0, 0, cellWidth, row?.height || 40); }}>
+                        {segmentsToRender}
+                    </Group>
                   );
-                })
+                })()
               ) : (
                 // Render plain text
                 <Text
@@ -737,7 +868,7 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
                   y={8}
                   width={(col?.width || 100) - 16}
                   height={(row?.height || 40) - 16}
-                  text={cellData?.text || ''}
+                  text={cellText}
                   fontSize={cellData?.fontSize || 14}
                   fontFamily={cellData?.fontFamily || designSystem.typography.fontFamily.sans}
                   fill={cellData?.textColor || designSystem.colors.secondary[800]}
@@ -755,22 +886,25 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
       console.error("An error occurred in EnhancedTableElement:", error);
       return [];
     }
-  }, [tableRows, tableColumns, enhancedTableData, element.id, editingCell, hoveredCell, designSystem]);
+  };
+
+  const isDraggable = (selectedTool === 'select' || selectedTool === 'table') && !isResizing && !editingCell;
 
   const tableContent = (
     <Group
+        key={`${element.id}-${getTableDataKey(enhancedTableData)}`}
         id={element.id}
         x={element.x}
         y={element.y}
-        draggable={!isResizing && !editingCell}
+        draggable={isDraggable}
         onDragEnd={handleDragEnd}
         onMouseLeave={handleTableMouseLeave}
         opacity={editingCell ? 0.95 : 1.0}
       >
         {/* Table background */}
         <Rect
-          x={0}
-          y={0}
+          x={6}
+          y={6}
           width={displayWidth}
           height={displayHeight}
           fill="white"
@@ -782,36 +916,95 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
         />
 
         {/* Table cells */}
-        {renderCells}
+        {renderCells()}
 
-        {/* Resize handles - only show when selected with larger size and hitbox */}
+        {/* Resize handles - only show when selected with consistent spacing from table edges */}
         {isSelected && (
           <>
-            {/* Corner Resize Handle */}
-            <Rect
-              x={displayWidth - 8}
-              y={displayHeight - 8}
-              width={16}
-              height={16}
+            {/* Top-left resize handle */}
+            <Circle
+              x={-8}
+              y={-8}
+              radius={6}
               fill={designSystem.colors.primary[500]}
-              onMouseDown={(e) => handleResizeStart(e, 'se')}
+              stroke="white"
+              strokeWidth={2}
+              onMouseDown={(e) => handleResizeStart(e, 'nw')}
               onMouseEnter={(e) => {
                 const container = e.target.getStage()?.container();
-                if (container) container.style.cursor = 'se-resize';
+                if (container) container.style.cursor = 'nw-resize';
               }}
               onMouseLeave={(e) => {
                 const container = e.target.getStage()?.container();
                 if (container) container.style.cursor = 'default';
               }}
             />
-
-            {/* Right Resize Handle */}
-            <Rect
-              x={displayWidth - 4}
-              y={0}
-              width={8}
-              height={displayHeight}
+            
+            {/* Top-center resize handle */}
+            <Circle
+              x={displayWidth / 2}
+              y={-8}
+              radius={6}
               fill={designSystem.colors.primary[500]}
+              stroke="white"
+              strokeWidth={2}
+              onMouseDown={(e) => handleResizeStart(e, 'n')}
+              onMouseEnter={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'n-resize';
+              }}
+              onMouseLeave={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'default';
+              }}
+            />
+            
+            {/* Top-right resize handle */}
+            <Circle
+              x={displayWidth + 8}
+              y={-8}
+              radius={6}
+              fill={designSystem.colors.primary[500]}
+              stroke="white"
+              strokeWidth={2}
+              onMouseDown={(e) => handleResizeStart(e, 'ne')}
+              onMouseEnter={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'ne-resize';
+              }}
+              onMouseLeave={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'default';
+              }}
+            />
+            
+            {/* Middle-left resize handle */}
+            <Circle
+              x={-8}
+              y={displayHeight / 2}
+              radius={6}
+              fill={designSystem.colors.primary[500]}
+              stroke="white"
+              strokeWidth={2}
+              onMouseDown={(e) => handleResizeStart(e, 'w')}
+              onMouseEnter={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'w-resize';
+              }}
+              onMouseLeave={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'default';
+              }}
+            />
+            
+            {/* Middle-right resize handle */}
+            <Circle
+              x={displayWidth + 8}
+              y={displayHeight / 2}
+              radius={6}
+              fill={designSystem.colors.primary[500]}
+              stroke="white"
+              strokeWidth={2}
               onMouseDown={(e) => handleResizeStart(e, 'e')}
               onMouseEnter={(e) => {
                 const container = e.target.getStage()?.container();
@@ -823,13 +1016,33 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
               }}
             />
             
-            {/* Bottom Resize Handle */}
-            <Rect
-              x={0}
-              y={displayHeight - 4}
-              width={displayWidth}
-              height={8}
+            {/* Bottom-left resize handle */}
+            <Circle
+              x={-8}
+              y={displayHeight + 8}
+              radius={6}
               fill={designSystem.colors.primary[500]}
+              stroke="white"
+              strokeWidth={2}
+              onMouseDown={(e) => handleResizeStart(e, 'sw')}
+              onMouseEnter={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'sw-resize';
+              }}
+              onMouseLeave={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'default';
+              }}
+            />
+            
+            {/* Bottom-center resize handle */}
+            <Circle
+              x={displayWidth / 2}
+              y={displayHeight + 8}
+              radius={6}
+              fill={designSystem.colors.primary[500]}
+              stroke="white"
+              strokeWidth={2}
               onMouseDown={(e) => handleResizeStart(e, 's')}
               onMouseEnter={(e) => {
                 const container = e.target.getStage()?.container();
@@ -840,16 +1053,35 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
                 if (container) container.style.cursor = 'default';
               }}
             />
+            
+            {/* Bottom-right resize handle (corner) */}
+            <Circle
+              x={displayWidth + 8}
+              y={displayHeight + 8}
+              radius={6}
+              fill={designSystem.colors.primary[500]}
+              stroke="white"
+              strokeWidth={2}
+              onMouseDown={(e) => handleResizeStart(e, 'se')}
+              onMouseEnter={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'se-resize';
+              }}
+              onMouseLeave={(e) => {
+                const container = e.target.getStage()?.container();
+                if (container) container.style.cursor = 'default';
+              }}
+            />
 
             {/* Column resize handles - positioned between columns */}
             {tableColumns.slice(0, -1).map((_, colIndex) => {
-              const handleX = tableColumns.slice(0, colIndex + 1).reduce((sum, c) => sum + (c?.width || 100), 0);
+              const handleX = tableColumns.slice(0, colIndex + 1).reduce((sum, c) => sum + (c?.width || 100), 0) + 6;
               return (
                 <Rect
                   key={`col-handle-${colIndex}`}
-                  x={handleX - 5}
-                  y={0}
-                  width={10}
+                  x={handleX}
+                  y={6}
+                  width={12}
                   height={displayHeight}
                   fill="transparent"
                   onMouseDown={(e) => handleColumnResizeStart(e, colIndex)}
@@ -867,14 +1099,14 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
 
             {/* Row resize handles - positioned between rows */}
             {tableRows.slice(0, -1).map((_, rowIndex) => {
-              const handleY = tableRows.slice(0, rowIndex + 1).reduce((sum, r) => sum + (r?.height || 40), 0);
+              const handleY = tableRows.slice(0, rowIndex + 1).reduce((sum, r) => sum + (r?.height || 40), 0) + 6;
               return (
                 <Rect
                   key={`row-handle-${rowIndex}`}
-                  x={0}
-                  y={handleY - 5}
+                  x={6}
+                  y={handleY}
                   width={displayWidth}
-                  height={10}
+                  height={12}
                   fill="transparent"
                   onMouseDown={(e) => handleRowResizeStart(e, rowIndex)}
                   onMouseEnter={(e) => {
@@ -896,20 +1128,20 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
           <>
             {/* Row Add Handles - Improved with larger hit areas and debounced hover */}
             {tableRows.map((_, index) => {
-              let yPos = 0;
+              let yPos = 6;
               for (let i = 0; i <= index; i++) {
                 yPos += tableRows[i]?.height || 40;
               }
               return (
                 <Rect
                   key={`row-hover-${index}`}
-                  x={-15}
-                  y={yPos - 15}
-                  width={displayWidth + 30}
-                  height={30}
+                  x={0}
+                  y={yPos - 6}
+                  width={displayWidth + 12}
+                  height={12}
                   fill="transparent"
                   onMouseEnter={() => handleBoundaryMouseEnter('row', index, {
-                    x: displayWidth / 2,
+                    x: displayWidth / 2 + 6,
                     y: yPos
                   })}
                   onMouseLeave={handleBoundaryMouseLeave}
@@ -920,21 +1152,21 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
 
             {/* Column Add Handles - Improved with larger hit areas and debounced hover */}
             {tableColumns.map((_, index) => {
-              let xPos = 0;
+              let xPos = 6;
               for (let i = 0; i <= index; i++) {
                 xPos += tableColumns[i]?.width || 100;
               }
               return (
                 <Rect
                   key={`col-hover-${index}`}
-                  x={xPos - 15}
-                  y={-15}
-                  width={30}
-                  height={displayHeight + 30}
+                  x={xPos - 6}
+                  y={0}
+                  width={12}
+                  height={displayHeight + 12}
                   fill="transparent"
                   onMouseEnter={() => handleBoundaryMouseEnter('column', index, {
                     x: xPos,
-                    y: displayHeight / 2
+                    y: displayHeight / 2 + 6
                   })}
                   onMouseLeave={handleBoundaryMouseLeave}
                   listening={true}
@@ -1170,9 +1402,10 @@ throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
         onFinishEditing: handleFinishEditing,
         onCancelEditing: handleCancelEditing
       } : null;
+      
       onEditingStateChange(editingData);
     }
-  }, [editingCell, editingCellPosition, enhancedTableData, onEditingStateChange]);
+  }, [editingCell, editingCellPosition, enhancedTableData, onEditingStateChange, handleTextChange, handleRichTextChange, handleFinishEditing, handleCancelEditing]);
 
   // Clean up timeouts on unmount
   useEffect(() => {

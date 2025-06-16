@@ -2,6 +2,8 @@
 import React, { useRef, useCallback } from 'react';
 import { Text, Group, Rect } from 'react-konva';
 import { designSystem } from '../../styles/designSystem';
+import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
+import type { RichTextSegment } from '../../types/richText';
 
 interface UnifiedTextElementProps {
   element: {
@@ -20,10 +22,13 @@ interface UnifiedTextElementProps {
     stroke?: string;
     strokeWidth?: number;
     fontStyle?: string;
+    fontWeight?: string;
     textDecoration?: string;
     listType?: string;
     isHyperlink?: boolean;
     hyperlinkUrl?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    richTextSegments?: RichTextSegment[]; // Add rich text support
   };
   isSelected: boolean;
   isEditing?: boolean; // Add editing state prop
@@ -76,36 +81,59 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
     }
   }, [isEditing, element.isHyperlink, element.hyperlinkUrl]);
 
-  // Fix 4: Implement list rendering logic
-  const formatTextForDisplay = (text: string, listType?: string) => {
-    if (!listType || listType === 'none' || !text) return text;
-    
-    const lines = text.split('\n');
-    return lines.map((line, index) => {
-      if (listType === 'bullet') return `• ${line}`;
-      if (listType === 'numbered') return `${index + 1}. ${line}`;
-      return line;
-    }).join('\n');
+  // Rich text support
+  const hasRichTextSegments = element.richTextSegments && element.richTextSegments.length > 0;
+  const hasBasicText = element.text && element.text.trim() !== '';
+  const hasContent = hasRichTextSegments || hasBasicText;
+  
+  // Get display text - prioritize rich text segments, fallback to basic text
+  const getDisplayText = () => {
+    if (hasRichTextSegments) {
+      return richTextManager.segmentsToPlainText(element.richTextSegments!);
+    }
+    if (hasBasicText) {
+      // Apply list formatting to basic text
+      const text = element.text!;
+      if (!element.listType || element.listType === 'none') return text;
+      
+      const lines = text.split('\n');
+      return lines.map((line, index) => {
+        if (element.listType === 'bullet') return `• ${line}`;
+        if (element.listType === 'numbered') return `${index + 1}. ${line}`;
+        return line;
+      }).join('\n');
+    }
+    return '';
   };
-
-  // Apply list formatting to displayed text
-  const formattedText = formatTextForDisplay(element.text, element.listType);
   
-  // Fix 1: Ensure only one text layer is visible at any time
-  const shouldShowPlaceholder = !element.text || element.text.trim() === '';
-  const shouldShowMainText = !shouldShowPlaceholder && !isEditing;
+  const displayText = getDisplayText();
   
-  // Display text with proper logic
-  const displayText = shouldShowMainText ? formattedText : 'Double-click to edit';
+  // Text display logic
+  const shouldShowPlaceholder = !hasContent;
+  const shouldShowMainText = hasContent && !isEditing;
   
-  // Text display properties
+  // Text display properties with enhanced formatting support
   const textDisplayProps = {
     text: displayText,
     fontSize: element.fontSize || 16,
     fontFamily: element.fontFamily || 'Inter, sans-serif',
     fill: element.isHyperlink ? '#2196F3' : (element.fill || element.textColor || '#3b82f6'),
-    fontStyle: element.fontStyle || 'normal',
-    textDecoration: element.isHyperlink ? 'underline' : (element.textDecoration || 'none')
+    fontStyle: (() => {
+      let style = element.fontStyle || 'normal';
+      // Handle combined bold and italic styles for Konva
+      if (element.fontWeight === 'bold' && style === 'italic') {
+        return 'bold italic';
+      } else if (element.fontWeight === 'bold') {
+        return 'bold';
+      }
+      return style;
+    })(),
+    textDecoration: (() => {
+      if (element.isHyperlink) return 'underline';
+      if (element.textDecoration) return element.textDecoration;
+      return 'none';
+    })(),
+    align: element.textAlign || 'left'
   };
 
   // Render Konva elements only
@@ -147,26 +175,59 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
             shadowOffset={{ x: 0, y: 2 }}
             shadowOpacity={0.8}
           />
-          {/* Fix 1: Only render one text component based on state */}
-          {shouldShowMainText && (
+          
+          {/* Rich text segments rendering for sticky notes */}
+          {shouldShowMainText && hasRichTextSegments && (
+            element.richTextSegments!.map((segment, index) => {
+              // Calculate text positioning for each segment
+              const segmentY = 12 + (index * (segment.fontSize || 14) * 1.4);
+              
+              return (
+                <Text
+                  key={index}
+                  x={12}
+                  y={segmentY}
+                  width={(element.width || 200) - 24}
+                  height={(element.height || 100) - 24}
+                  text={segment.text}
+                  fontSize={segment.fontSize || element.fontSize || 14}
+                  fontFamily={segment.fontFamily || element.fontFamily || 'Inter, sans-serif'}
+                  fill={segment.fill || element.textColor || designSystem.colors.secondary[900]}
+                  fontStyle={segment.fontStyle || element.fontStyle || 'normal'}
+                  fontWeight={segment.fontWeight || 'normal'}
+                  textDecoration={segment.textDecoration || element.textDecoration || 'none'}
+                  align={element.textAlign || 'left'}
+                  verticalAlign="top"
+                  wrap="word"
+                  onClick={handleTextClick}
+                  onTap={handleTextClick}
+                />
+              );
+            })
+          )}
+
+          {/* Fallback to basic text if no rich text segments */}
+          {shouldShowMainText && !hasRichTextSegments && (
             <Text
               x={12}
               y={12}
               width={(element.width || 200) - 24}
               height={(element.height || 100) - 24}
-              text={formattedText}
-              fontSize={element.fontSize || 16}
+              text={displayText}
+              fontSize={element.fontSize || 14}
               fontFamily={element.fontFamily || 'Inter, sans-serif'}
-              fill={element.isHyperlink ? '#2196F3' : (element.fill || element.textColor || '#3b82f6')}
+              fill={element.textColor || designSystem.colors.secondary[900]}
               fontStyle={element.fontStyle || 'normal'}
-              textDecoration={element.isHyperlink ? 'underline' : (element.textDecoration || 'none')}
-              align="left"
+              textDecoration={element.textDecoration || 'none'}
+              align={element.textAlign || 'left'}
               verticalAlign="top"
               wrap="word"
               onClick={handleTextClick}
               onTap={handleTextClick}
             />
           )}
+          
+          {/* Placeholder text for sticky notes */}
           {shouldShowPlaceholder && (
             <Text
               x={12}
@@ -176,8 +237,8 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
               text="Double-click to add text"
               fontSize={14}
               fontFamily="Inter, sans-serif"
-              fill="#666666"
-              align="left"
+              fill="rgba(0, 0, 0, 0.4)"
+              align={element.textAlign || 'left'}
               verticalAlign="top"
               fontStyle="italic"
               opacity={0.8}
@@ -210,25 +271,57 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
           onDblTap={handleDoubleClick}
           {...konvaProps}
         >
-          {/* Fix 1: Only render one text component based on state */}
-          {shouldShowMainText && (
+          {/* Rich text segments rendering for regular text elements */}
+          {shouldShowMainText && hasRichTextSegments && (
+            element.richTextSegments!.map((segment, index) => {
+              // Calculate text positioning for each segment
+              const segmentY = index * (segment.fontSize || 16) * 1.4;
+              
+              return (
+                <Text
+                  key={index}
+                  ref={index === 0 ? textRef : undefined} // Only attach ref to first segment
+                  y={segmentY}
+                  width={element.width || 200}
+                  height={element.height}
+                  text={segment.text}
+                  fontSize={segment.fontSize || element.fontSize || 16}
+                  fontFamily={segment.fontFamily || element.fontFamily || 'Inter, sans-serif'}
+                  fill={segment.fill || element.fill || element.textColor || '#3b82f6'}
+                  fontStyle={segment.fontStyle || element.fontStyle || 'normal'}
+                  fontWeight={segment.fontWeight || 'normal'}
+                  textDecoration={segment.textDecoration || element.textDecoration || 'none'}
+                  align={element.textAlign || 'left'}
+                  verticalAlign="top"
+                  wrap="word"
+                  onClick={handleTextClick}
+                  onTap={handleTextClick}
+                />
+              );
+            })
+          )}
+
+          {/* Fallback to basic text if no rich text segments */}
+          {shouldShowMainText && !hasRichTextSegments && (
             <Text
               ref={textRef}
               width={element.width || 200}
               height={element.height}
-              text={formattedText}
+              text={displayText}
               fontSize={element.fontSize || 16}
               fontFamily={element.fontFamily || 'Inter, sans-serif'}
               fill={element.isHyperlink ? '#2196F3' : (element.fill || element.textColor || '#3b82f6')}
               fontStyle={element.fontStyle || 'normal'}
               textDecoration={element.isHyperlink ? 'underline' : (element.textDecoration || 'none')}
-              align="left"
+              align={element.textAlign || 'left'}
               verticalAlign="top"
               wrap="word"
               onClick={handleTextClick}
               onTap={handleTextClick}
             />
           )}
+          
+          {/* Placeholder text for regular text elements */}
           {shouldShowPlaceholder && (
             <Text
               width={element.width || 200}

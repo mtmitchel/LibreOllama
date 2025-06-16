@@ -14,10 +14,13 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 ### **🎨 Canvas/Whiteboard System**
 Our professional-grade whiteboard is powered by Konva.js for high performance and rich interactions. Features **FigJam-style sections** for hierarchical organization, advanced rich text editing with floating toolbar, and comprehensive visual feedback systems.
 
-- [Canvas Complete Documentation](CANVAS_COMPLETE_DOCUMENTATION.md) - Comprehensive canvas system overview with section system, advanced text editing, and implementation details
-- [Enhanced Tables Documentation](ENHANCED_TABLES_DOCUMENTATION.md) - FigJam-style table system with rich interactions
-- [Enhanced Table Implementation](ENHANCED_TABLE_IMPLEMENTATION.md) - Technical implementation details for canvas tables
-- [Table Duplication Fix](TABLE_DUPLICATION_FIX.md) - Technical analysis and solution for table creation duplication issues
+**Current Status**: Canvas system is functional with active development. Table functionality includes 8-handle resize system, optimized performance, and improved code quality.
+
+- [Canvas Complete Documentation](CANVAS_COMPLETE_DOCUMENTATION.md) - Main canvas system overview with section system, advanced text editing, and implementation details
+- [Canvas Tables Documentation](CANVAS_TABLES.md) - Consolidated table functionality, implementation details, and fixes
+- [Canvas Architecture Analysis](CANVAS_ARCHITECTURE_ANALYSIS.md) - Technical architecture details
+
+> **Note**: Previous separate table documentation files have been consolidated into `CANVAS_TABLES.md` and archived in `../archives/consolidated_canvas_archive_2025/`
 
 
 ### **🎨 UI/UX Design System**

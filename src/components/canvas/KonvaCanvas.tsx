@@ -8,7 +8,6 @@ import UnifiedTextElement from './UnifiedTextElement';
 import ImageElement from './ImageElement';
 import ConnectorRenderer from './ConnectorRenderer';
 import TextEditingOverlay from './TextEditingOverlay';
-import FloatingTextToolbar from './FloatingTextToolbar';
 import { RichTextCellEditor } from './RichTextCellEditor';
 import SectionElement from './SectionElement';
 import StickyNoteElement from './StickyNoteElement';
@@ -54,12 +53,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // State for text editing overlays - completely separate from Konva
   const [editingElement, setEditingElement] = useState<CanvasElement | null>(null);
   const [editText, setEditText] = useState('');
-  const [showFormatMenu, setShowFormatMenu] = useState(false);
   const [textareaPosition, setTextareaPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   
-  // State for table cell editing - completely separate from Konva
-  const [tableEditingData, setTableEditingData] = useState<{
+  // Unified rich text editing data for ALL text editing (text, sticky notes, AND table cells)
+  const [richTextEditingData, setRichTextEditingData] = useState<{
     isEditing: boolean;
     cellPosition: { x: number; y: number; width: number; height: number };
     cellText: string;
@@ -72,8 +69,31 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     onRichTextChange?: (segments: any[]) => void;
     onFinishEditing: () => void;
     onCancelEditing: () => void;
+    elementId?: string;
+    elementType?: 'text' | 'sticky-note' | 'table-cell';
   } | null>(null);
-  const [previewFormat, setPreviewFormat] = useState<{
+
+  // Debug effect to monitor rich text editing data changes
+  useEffect(() => {
+    console.log('🎯 [RICH TEXT EDITING DEBUG] === RICH TEXT EDITING DATA CHANGE ===');
+    console.log('🎯 [RICH TEXT EDITING DEBUG] Rich text editing data updated:', richTextEditingData);
+    if (richTextEditingData) {
+      console.log('🎯 [RICH TEXT EDITING DEBUG] Editing details:', {
+        isEditing: richTextEditingData.isEditing,
+        cellPosition: richTextEditingData.cellPosition,
+        cellText: richTextEditingData.cellText,
+        elementId: richTextEditingData.elementId,
+        elementType: richTextEditingData.elementType,
+        hasOnTextChange: !!richTextEditingData.onTextChange,
+        hasOnFinishEditing: !!richTextEditingData.onFinishEditing,
+        hasOnCancelEditing: !!richTextEditingData.onCancelEditing
+      });
+    } else {
+      console.log('🎯 [RICH TEXT EDITING DEBUG] Rich text editing data is null');
+    }
+  }, [richTextEditingData]);
+
+  const [previewFormat] = useState<{
     bold: boolean;
     italic: boolean;
     underline: boolean;
@@ -84,6 +104,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     listType: 'none' | 'bullet' | 'numbered';
     isHyperlink: boolean;
     hyperlinkUrl: string;
+    textAlign: 'left' | 'center' | 'right';
+    textStyle: 'default' | 'heading' | 'subheading';
   }>({
     bold: false,
     italic: false,
@@ -94,10 +116,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     fontFamily: 'Inter, sans-serif',
     listType: 'none',
     isHyperlink: false,
-    hyperlinkUrl: ''
+    hyperlinkUrl: '',
+    textAlign: 'left',
+    textStyle: 'default'
   });
-  const [appliedFormats, setAppliedFormats] = useState<Set<string>>(new Set());
-
+  
   // Connector drawing state
   const [isDrawingConnector, setIsDrawingConnector] = useState(false);
   const [connectorStart, setConnectorStart] = useState<{x: number; y: number; elementId?: string; anchor?: string} | null>(null);
@@ -290,62 +313,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     const element = elements[elementId];
     if (!element) return;
 
-    // Fix 3: Simplified and improved viewport boundary detection logic
-    const calculateMenuPosition = (elementX: number, elementY: number, elementWidth: number, _elementHeight: number) => {
-      const menuHeight = 400;
-      const menuWidth = Math.max(320, Math.min(elementWidth, 400));
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-      const margin = 20;
-      
-      // Simple, reliable boundary detection
-      let menuX = elementX + elementWidth + margin; // Try right side first
-      let menuY = elementY;
-      
-      // Check horizontal bounds - if doesn't fit on right, try left
-      if (menuX + menuWidth > viewportWidth - margin) {
-        menuX = elementX - menuWidth - margin; // Try left side
-        if (menuX < margin) {
-          // If doesn't fit on left either, center it
-          menuX = Math.max(margin, (viewportWidth - menuWidth) / 2);
-        }
-      }
-      
-      // Check vertical bounds - ensure menu fits within viewport
-      if (menuY + menuHeight > viewportHeight - margin) {
-        menuY = Math.max(margin, viewportHeight - menuHeight - margin);
-      }
-      
-      // Final bounds check to ensure menu never goes outside viewport
-      menuX = Math.max(margin, Math.min(menuX, viewportWidth - menuWidth - margin));
-      menuY = Math.max(margin, Math.min(menuY, viewportHeight - menuHeight - margin));
-      
-      return { x: menuX, y: menuY };
-    };
-    
     if (element.type === 'text' || element.type === 'sticky-note') {
-      console.log('🐛 [DEBUG] KonvaCanvas - Setting up editing state for text/sticky-note element');
+      console.log('🐛 [DEBUG] KonvaCanvas - Setting up rich text editing for text/sticky-note element');
       
       setEditingTextId(elementId);
-      setEditingElement(element);
-      setEditText(element.text || '');
-      setShowFormatMenu(true);
       
-      // Initialize preview format from element
-      setPreviewFormat({
-        bold: element.fontStyle?.includes('bold') || false,
-        italic: element.fontStyle?.includes('italic') || false,
-        underline: element.textDecoration?.includes('underline') || false,
-        strikethrough: element.textDecoration?.includes('line-through') || false,
-        fontSize: element.fontSize || 16,
-        color: element.fill || element.textColor || '#3b82f6',
-        fontFamily: element.fontFamily || 'Inter, sans-serif',
-        listType: (element.listType as 'none' | 'bullet' | 'numbered') || 'none' as const,
-        isHyperlink: element.isHyperlink || false,
-        hyperlinkUrl: element.hyperlinkUrl || ''
-      });
-      
-      // Calculate positions for overlay with enhanced positioning logic
+      // Calculate positions for rich text editor
       if (stageRef.current) {
         const stage = stageRef.current;
         const container = stage.container();
@@ -373,75 +346,107 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         
         const elementScreenPoint = stageTransform.point(elementCanvasPoint);
         
-        // Calculate textarea position - position exactly where text element appears
-        const textareaX = containerRect.left + elementScreenPoint.x;
-        const textareaY = containerRect.top + elementScreenPoint.y;
-        const textareaWidth = Math.max(200, (element.width || 200) * stageScale);
-        const textareaHeight = Math.max(100, (element.height || 100) * stageScale);
+        // Calculate editing position - position exactly where text element appears
+        const editingX = containerRect.left + elementScreenPoint.x;
+        const editingY = containerRect.top + elementScreenPoint.y;
+        const editingWidth = Math.max(200, (element.width || 200) * stageScale);
+        const editingHeight = Math.max(100, (element.height || 100) * stageScale);
         
-        const menuPosition = calculateMenuPosition(textareaX, textareaY, textareaWidth, textareaHeight);
-        const menuX = menuPosition.x;
-        const menuY = menuPosition.y;
+        const editingPosition = { x: editingX, y: editingY, width: editingWidth, height: editingHeight };
         
-        const finalTextareaPos = { x: textareaX, y: textareaY, width: textareaWidth, height: textareaHeight };
-        const finalMenuPos = { x: menuX, y: menuY };
-        
-        setTextareaPosition(finalTextareaPos);
-        setMenuPosition(finalMenuPos);
+        // Set up rich text editing data
+        setRichTextEditingData({
+          isEditing: true,
+          cellPosition: editingPosition,
+          cellText: element.text || '',
+          richTextSegments: (element as any).richTextSegments || [],
+          fontSize: element.fontSize,
+          fontFamily: element.fontFamily,
+          textColor: element.textColor || element.fill,
+          textAlign: element.textAlign || 'left',
+          elementId: elementId,
+          elementType: element.type as 'text' | 'sticky-note',
+          onTextChange: (newText: string) => {
+            updateElement(elementId, { text: newText });
+          },
+          onRichTextChange: (segments: any[]) => {
+            updateElement(elementId, { ...element, richTextSegments: segments } as any);
+          },
+          onFinishEditing: () => {
+            console.log('🎯 [RICH TEXT EDITING DEBUG] onFinishEditing called for text/sticky-note element:', elementId);
+            setEditingTextId(null);
+            setRichTextEditingData(null);
+          },
+          onCancelEditing: () => {
+            console.log('🎯 [RICH TEXT EDITING DEBUG] onCancelEditing called for text/sticky-note element:', elementId);
+            setEditingTextId(null);
+            setRichTextEditingData(null);
+          }
+        });
       }
     } else if (element.type === 'rich-text') {
-      // Handle rich-text elements (existing logic)
-      console.log('🐛 [DEBUG] KonvaCanvas - Rich text element found, setting up editing state');
+      // Rich-text elements should also use the unified rich text editor
+      console.log('🐛 [DEBUG] KonvaCanvas - Setting up rich text editing for rich-text element');
       
       setEditingTextId(elementId);
-      setEditingElement(element);
-      setEditText(element.text || '');
-      setShowFormatMenu(true);
       
-      // Calculate positions for overlay with enhanced positioning logic
+      // Calculate positions for rich text editor (same logic as text/sticky-note)
       if (stageRef.current) {
         const stage = stageRef.current;
         const container = stage.container();
         const containerRect = container.getBoundingClientRect();
         
-        // Enhanced position calculation using proper stage-to-screen coordinate conversion
         const stageScale = stage.scaleX();
         const stageTransform = stage.getAbsoluteTransform();
         
-        // CRITICAL FIX: For elements in sections, we need absolute coordinates
-        // Check if element has a sectionId (new coordinate system)
         let elementCanvasPoint: { x: number; y: number };
         
         if (element.sectionId && sections[element.sectionId]) {
-          // Element is in a section - convert relative to absolute coordinates
           const section = sections[element.sectionId];
           elementCanvasPoint = {
             x: section.x + element.x,
             y: section.y + element.y
           };
         } else {
-          // Element is on main stage - use coordinates directly
           elementCanvasPoint = { x: element.x, y: element.y };
         }
         
         const elementScreenPoint = stageTransform.point(elementCanvasPoint);
         
-        // Calculate textarea position - position exactly where text element appears
-        const textareaX = containerRect.left + elementScreenPoint.x;
-        const textareaY = containerRect.top + elementScreenPoint.y;
-        const textareaWidth = Math.max(200, (element.width || 200) * stageScale);
-        const textareaHeight = Math.max(100, (element.height || 100) * stageScale);
+        const editingX = containerRect.left + elementScreenPoint.x;
+        const editingY = containerRect.top + elementScreenPoint.y;
+        const editingWidth = Math.max(200, (element.width || 200) * stageScale);
+        const editingHeight = Math.max(100, (element.height || 100) * stageScale);
         
-        // Fix 3: Use same simplified menu positioning logic for rich-text
-        const menuPosition = calculateMenuPosition(textareaX, textareaY, textareaWidth, textareaHeight);
-        const menuX = menuPosition.x;
-        const menuY = menuPosition.y;
+        const editingPosition = { x: editingX, y: editingY, width: editingWidth, height: editingHeight };
         
-        const finalTextareaPos = { x: textareaX, y: textareaY, width: textareaWidth, height: textareaHeight };
-        const finalMenuPos = { x: menuX, y: menuY };
-        
-        setTextareaPosition(finalTextareaPos);
-        setMenuPosition(finalMenuPos);
+        // Set up rich text editing data for rich-text elements
+        setRichTextEditingData({
+          isEditing: true,
+          cellPosition: editingPosition,
+          cellText: element.text || '',
+          richTextSegments: (element as any).richTextSegments || [],
+          fontSize: element.fontSize,
+          fontFamily: element.fontFamily,
+          textColor: element.textColor || element.fill,
+          textAlign: element.textAlign || 'left',
+          elementId: elementId,
+          elementType: 'text', // Treat rich-text as text for editing purposes
+          onTextChange: (newText: string) => {
+            updateElement(elementId, { text: newText });
+          },
+          onRichTextChange: (segments: any[]) => {
+            updateElement(elementId, { ...element, richTextSegments: segments } as any);
+          },
+          onFinishEditing: () => {
+            setEditingTextId(null);
+            setRichTextEditingData(null);
+          },
+          onCancelEditing: () => {
+            setEditingTextId(null);
+            setRichTextEditingData(null);
+          }
+        });
       }
     }
   }, [elements, setEditingTextId, stageRef]);
@@ -454,10 +459,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     setEditingTextId(null);
     setEditingElement(null);
     setEditText('');
-    setShowFormatMenu(false);
     setTextareaPosition(null);
-    setMenuPosition(null);
-    setAppliedFormats(new Set());
+    setRichTextEditingData(null); // Clear rich text editing data
   }, [setEditingTextId]);
 
   const handleEditingDone = useCallback(() => {
@@ -496,7 +499,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           textDecoration,
           listType: previewFormat.listType,
           isHyperlink: previewFormat.isHyperlink,
-          hyperlinkUrl: previewFormat.hyperlinkUrl
+          hyperlinkUrl: previewFormat.hyperlinkUrl,
+          textAlign: previewFormat.textAlign
         };
         
         // Explicitly exclude x, y coordinates to prevent section jumping
@@ -531,56 +535,47 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     handleEditingCancel();
   }, [editingElement, editText, previewFormat, updateElement, handleEditingCancel]);
 
-  const handleFormattingChange = useCallback((formatType: string, value?: any) => {
-    setPreviewFormat(prev => {
-      const newFormat = { ...prev };
-      
-      switch (formatType) {
-        case 'bold':
-          newFormat.bold = !prev.bold;
-          break;
-        case 'italic':
-          newFormat.italic = !prev.italic;
-          break;
-        case 'underline':
-          newFormat.underline = !prev.underline;
-          break;
-        case 'strikethrough':
-          newFormat.strikethrough = !prev.strikethrough;
-          break;
-        case 'fontSize':
-          newFormat.fontSize = parseInt(value) || 16;
-          break;
-        case 'color':
-          newFormat.color = value || '#000000';
-          break;
-        case 'fontFamily':
-          newFormat.fontFamily = value || 'Inter, sans-serif';
-          break;
-        case 'listType':
-          newFormat.listType = value || 'none';
-          break;
-        case 'isHyperlink':
-          newFormat.isHyperlink = !prev.isHyperlink;
-          if (!newFormat.isHyperlink) {
-            newFormat.hyperlinkUrl = '';
-          }
-          break;
-        case 'hyperlinkUrl':
-          newFormat.hyperlinkUrl = value || '';
-          if (value) {
-            newFormat.isHyperlink = true;
-          }
-          break;
-      }
-      
-      return newFormat;
-    });
-  }, []);
-
   const handleFormatChange = useCallback((elementId: string, format: Partial<RichTextSegment>, selection: { start: number; end: number }) => {
     applyTextFormat(elementId, format, selection);
   }, [applyTextFormat]);
+
+  // Handler for table cell editing - this connects EnhancedTableElement to RichTextCellEditor
+  const handleTableEditingStateChange = useCallback((editingData: any) => {
+    console.log('🎯 [TABLE EDITING DEBUG] === TABLE EDITING STATE CHANGE ===');
+    console.log('🎯 [TABLE EDITING DEBUG] Editing data received:', editingData);
+    
+    if (editingData && editingData.isEditing) {
+      console.log('🎯 [TABLE EDITING DEBUG] Setting up rich text editing for table cell');
+      
+      // Convert table editing data to rich text editing format
+      setRichTextEditingData({
+        isEditing: true,
+        cellPosition: editingData.cellPosition,
+        cellText: editingData.cellText,
+        richTextSegments: editingData.richTextSegments || [],
+        fontSize: editingData.fontSize,
+        fontFamily: editingData.fontFamily,
+        textColor: editingData.textColor,
+        textAlign: editingData.textAlign,
+        elementType: 'table-cell', // Mark as table cell
+        onTextChange: editingData.onTextChange,
+        onRichTextChange: editingData.onRichTextChange,
+        onFinishEditing: () => {
+          console.log('🎯 [TABLE EDITING DEBUG] Table cell editing finished');
+          setRichTextEditingData(null);
+          editingData.onFinishEditing();
+        },
+        onCancelEditing: () => {
+          console.log('🎯 [TABLE EDITING DEBUG] Table cell editing cancelled');
+          setRichTextEditingData(null);
+          editingData.onCancelEditing();
+        }
+      });
+    } else {
+      console.log('🎯 [TABLE EDITING DEBUG] Clearing table editing state');
+      setRichTextEditingData(null);
+    }
+  }, []);
 
   const visibleElements = useMemo(() => {
     // Separate free elements (no sectionId) and sectioned elements
@@ -690,8 +685,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       const points = {
         'top': { x: elementX, y: elementY - radius },
         'bottom': { x: elementX, y: elementY + radius },
-        'left': { x: elementX - radius, y: elementY },
-        'right': { x: elementX + radius, y: elementY },
         'center': { x: elementX, y: elementY }
       };
       return points[anchor as keyof typeof points] || { x: elementX, y: elementY };
@@ -1269,30 +1262,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     const isEditing = editingTextId === element.id;
     
     // Elements inside sections should remain draggable for repositioning within/between sections
-    const isInSection = element.sectionId !== null && element.sectionId !== undefined;
     // Disable child drags when their parent section is selected, so dragging moves the section instead
+    // Allow dragging when select tool is active OR when the tool matches the element type (e.g., "table" tool for table elements)
     const isDraggable =
       !isEditing &&
-      selectedTool === 'select' &&
+      (selectedTool === 'select' || selectedTool === element.type) &&
       !(element as any).isLocked &&
       !(element.sectionId && selectedElementId === element.sectionId);
-    console.log('[DRAG DEBUG] RenderElement isDraggable check', {
-      elementId: element.id,
-      sectionId: element.sectionId,
-      selectedSectionId: selectedElementId,
-      isDraggable,
-    });
-    
-    console.log('🔍 [RENDER DEBUG] Element draggability:', {
-      elementId: element.id,
-      elementType: element.type,
-      sectionId: element.sectionId,
-      isInSection,
-      isDraggable,
-      isEditing,
-      selectedTool,
-      isLocked: (element as any).isLocked
-    });
 
     // Common props for Konva shapes, passed to UnifiedTextElement or RichTextRenderer as well
     const konvaElementProps = {
@@ -1361,7 +1337,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             element={element}
             isSelected={isSelected}
             isDraggable={isDraggable}
-            onSelect={(id, e) => handleElementClick(e, element)}
+            onSelect={(_, e) => handleElementClick(e, element)}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
             onDoubleClick={(e) => {
               e.cancelBubble = true;
@@ -1470,19 +1446,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           />
         );
       case 'table':
-        console.log('🔍 [CANVAS DEBUG] === Rendering Table Element ===');
-        console.log('🔍 [CANVAS DEBUG] Table ID:', element.id);
-        console.log('🔍 [CANVAS DEBUG] Is selected:', isSelected);
-        console.log('🔍 [CANVAS DEBUG] Element:', element);
-        console.log('🔍 [CANVAS DEBUG] Has enhanced data:', !!element.enhancedTableData);
-        
         return (
           <EnhancedTableElement // Using enhanced table implementation
             key={element.id}
             element={element}
             isSelected={isSelected}
             onSelect={(element) => {
-              console.log('🔍 [CANVAS DEBUG] Table selected:', element.id);
               setSelectedElement(element.id);
             }}
             onUpdate={(updates) => {
@@ -1491,7 +1460,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             }}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
             stageRef={stageRef}
-            onEditingStateChange={setTableEditingData}
+            onEditingStateChange={handleTableEditingStateChange}
           />
         );
       default:
@@ -1503,24 +1472,37 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // Keyboard event handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      console.log('🎯 [KEYBOARD DEBUG] Key pressed:', e.key, {
+        selectedElementId,
+        editingTextId,
+        isDrawingConnector,
+        target: e.target
+      });
+      
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedElementId && !editingTextId) {
+          console.log('🎯 [KEYBOARD DEBUG] Deleting element:', selectedElementId);
           const { deleteElement } = useKonvaCanvasStore.getState();
           deleteElement(selectedElementId);
           setSelectedElement(null);
         }
       } else if (e.key === 'Escape') {
+        console.log('🎯 [KEYBOARD DEBUG] Escape pressed - canceling operations');
         // Cancel connector drawing if in progress
         if (isDrawingConnector) {
+          console.log('🎯 [KEYBOARD DEBUG] Canceling connector drawing');
           setIsDrawingConnector(false);
           setConnectorStart(null);
           setConnectorEnd(null);
           return;
         }
+        console.log('🎯 [KEYBOARD DEBUG] Clearing selection and editing state');
         setSelectedElement(null);
         if (editingTextId) {
           // Call the store action to cancel editing
-          setEditingTextId(null); 
+          console.log('🎯 [KEYBOARD DEBUG] Clearing editing text ID:', editingTextId);
+          setEditingTextId(null);
+          setRichTextEditingData(null); // Also clear rich text editing data
         }
       }
     };
@@ -1533,15 +1515,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
   return (
     <div className="konva-canvas-container">
-      {/* Canvas ready indicator */}
-      {elementArray.length === 0 && (
-        <div className="canvas-ready-indicator">
-          Canvas ready! Select a tool from the toolbar to create elements
-        </div>
-      )}
-      
-      {/* Debug button removed */}
-        <Stage
+      <Stage
         ref={stageRef}
         width={width}
         height={height}
@@ -1668,6 +1642,9 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
               if (selectedElement?.type === 'text') {
                 // Text elements: only horizontal resize
                 return ['middle-left', 'middle-right'];
+              } else if (selectedElement?.type === 'table') {
+                // Table elements: disable transformer (use custom resize handles)
+                return [];
               } else if (selectedSection?.type === 'section') {
                 // Sections: full resize capability
                 return ['top-left', 'top-center', 'top-right',
@@ -1711,68 +1688,43 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             id: editingElement.id,
             x: editingElement.x,
             y: editingElement.y,
-            text: editingElement.text || '',
             width: editingElement.width,
             height: editingElement.height,
+            text: editingElement.text || '',
             fontSize: editingElement.fontSize,
             fontFamily: editingElement.fontFamily,
+            textColor: editingElement.textColor,
             fill: editingElement.fill,
-            type: 'text', // Rich text treated as text for overlay purposes
             backgroundColor: editingElement.backgroundColor,
-            textColor: editingElement.textColor
+            type: editingElement.type as 'text' | 'sticky-note'
           }}
           editText={editText}
-          onEditTextChange={(newText) => {
-            setEditText(newText);
-          }}
-          showFormatMenu={false} // Disable old format menu
+          onEditTextChange={setEditText}
           textareaPosition={textareaPosition}
-          menuPosition={menuPosition}
-          previewFormat={previewFormat}
-          appliedFormats={appliedFormats}
-          onFormatting={handleFormattingChange}
           onCancel={handleEditingCancel}
           onDone={handleEditingDone}
           stageRef={stageRef}
         />
       )}
 
-      {/* Table cell editing overlay - completely outside Konva */}
-      {tableEditingData && (
+      {/* Unified rich text editing overlay for ALL text editing (text, sticky notes, AND table cells) */}
+      {richTextEditingData && (
         <RichTextCellEditor
-          isEditing={tableEditingData.isEditing}
-          cellPosition={tableEditingData.cellPosition}
-          cellText={tableEditingData.cellText}
-          richTextSegments={tableEditingData.richTextSegments}
-          fontSize={tableEditingData.fontSize}
-          fontFamily={tableEditingData.fontFamily}
-          textColor={tableEditingData.textColor}
-          textAlign={tableEditingData.textAlign}
-          onTextChange={tableEditingData.onTextChange}
-          onRichTextChange={tableEditingData.onRichTextChange}
-          onFinishEditing={tableEditingData.onFinishEditing}
-          onCancelEditing={tableEditingData.onCancelEditing}
+          isEditing={richTextEditingData.isEditing}
+          cellPosition={richTextEditingData.cellPosition}
+          cellText={richTextEditingData.cellText}
+          richTextSegments={richTextEditingData.richTextSegments}
+          fontSize={richTextEditingData.fontSize}
+          fontFamily={richTextEditingData.fontFamily}
+          textColor={richTextEditingData.textColor}
+          textAlign={richTextEditingData.textAlign}
+          onTextChange={richTextEditingData.onTextChange}
+          onRichTextChange={richTextEditingData.onRichTextChange}
+          onFinishEditing={richTextEditingData.onFinishEditing}
+          onCancelEditing={richTextEditingData.onCancelEditing}
         />
       )}
 
-      {/* New Floating Text Toolbar */}
-      {editingElement && (
-        <FloatingTextToolbar
-          element={{
-            id: editingElement.id,
-            x: editingElement.x,
-            y: editingElement.y,
-            width: editingElement.width,
-            height: editingElement.height
-          }}
-          isVisible={showFormatMenu}
-          format={previewFormat}
-          onFormatChange={handleFormattingChange}
-          onDone={handleEditingDone}
-          onCancel={handleEditingCancel}
-          stageRef={stageRef}
-        />
-      )}
     </div>
   );
 };

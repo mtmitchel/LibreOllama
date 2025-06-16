@@ -3,7 +3,9 @@ import React, { useRef, useCallback } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../../stores/konvaCanvasStore';
+import type { RichTextSegment } from '../../types/richText';
 import { designSystem, getStickyNoteColors } from '../../styles/designSystem';
+import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
 
 interface StickyNoteElementProps {
   element: CanvasElement;
@@ -95,9 +97,20 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
     onDragEnd(e);
   }, [onDragEnd]);
 
-  // Determine if we should show placeholder text
-  const hasContent = element.text && element.text.trim() !== '';
-  const displayText = hasContent ? element.text : '';
+  // Rich text rendering logic
+  const hasRichTextSegments = element.richTextSegments && element.richTextSegments.length > 0;
+  const hasBasicText = element.text && element.text.trim() !== '';
+  const hasContent = hasRichTextSegments || hasBasicText;
+  
+  // Get display text - prioritize rich text segments, fallback to basic text
+  const getDisplayText = () => {
+    if (hasRichTextSegments) {
+      return richTextManager.segmentsToPlainText(element.richTextSegments!);
+    }
+    return hasBasicText ? element.text! : '';
+  };
+  
+  const displayText = getDisplayText();
 
   return (
     <Group
@@ -147,8 +160,40 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
         listening={false}
       />
 
-      {/* Text content */}
-      {hasContent && (
+      {/* Rich text content rendering */}
+      {hasContent && hasRichTextSegments && (
+        element.richTextSegments!.map((segment, index) => {
+          // Calculate text positioning for each segment
+          // For now, render segments sequentially. In a full implementation,
+          // you might want to calculate exact positioning based on text flow
+          const segmentY = 20 + (index * (segment.fontSize || 14) * 1.4);
+          
+          return (
+            <Text
+              key={index}
+              x={16}
+              y={segmentY}
+              width={width - 32}
+              height={height - 40}
+              text={segment.text}
+              fontSize={segment.fontSize || element.fontSize || 14}
+              fontFamily={segment.fontFamily || element.fontFamily || designSystem.typography.fontFamily.sans}
+              fill={segment.fill || element.textColor || designSystem.colors.secondary[900]}
+              fontStyle={segment.fontStyle || element.fontStyle || 'normal'}
+              fontWeight={segment.fontWeight || 'normal'}
+              textDecoration={segment.textDecoration || element.textDecoration || 'none'}
+              align={element.textAlign || 'left'}
+              verticalAlign="top"
+              wrap="word"
+              lineHeight={1.4}
+              listening={false}
+            />
+          );
+        })
+      )}
+
+      {/* Fallback to basic text if no rich text segments */}
+      {hasContent && !hasRichTextSegments && (
         <Text
           x={16}
           y={20}
@@ -160,6 +205,26 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
           fill={element.textColor || designSystem.colors.secondary[900]}
           fontStyle={element.fontStyle || 'normal'}
           textDecoration={element.textDecoration || 'none'}
+          align={element.textAlign || 'left'}
+          verticalAlign="top"
+          wrap="word"
+          lineHeight={1.4}
+          listening={false}
+        />
+      )}
+
+      {/* Placeholder text when no content */}
+      {!hasContent && (
+        <Text
+          x={16}
+          y={20}
+          width={width - 32}
+          height={height - 40}
+          text="Double-click to add text"
+          fontSize={14}
+          fontFamily={designSystem.typography.fontFamily.sans}
+          fill="rgba(0, 0, 0, 0.4)"
+          fontStyle="italic"
           align="left"
           verticalAlign="top"
           wrap="word"

@@ -1,0 +1,175 @@
+components/canvas/backup/EnhancedTableElement_fixed.tsx(4,52): error TS2307: Cannot find module '../../stores/konvaCanvasStore' or its corresponding type declarations.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(5,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(6,29): error TS2307: Cannot find module './TableCellEditor' or its corresponding type declarations.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(70,43): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(70,48): error TS7006: Parameter 'col' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(71,41): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(71,46): error TS7006: Parameter 'row' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(101,61): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(101,66): error TS7006: Parameter 'c' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(102,58): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(102,63): error TS7006: Parameter 'r' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(119,59): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(119,64): error TS7006: Parameter 'c' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(120,56): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(120,61): error TS7006: Parameter 'r' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(190,62): error TS7006: Parameter 'col' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(206,56): error TS7006: Parameter 'row' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(271,63): error TS7006: Parameter 'col' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(280,57): error TS7006: Parameter 'row' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(459,27): error TS7006: Parameter 'row' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(459,32): error TS7006: Parameter 'rowIndex' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(460,25): error TS7006: Parameter 'col' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(460,30): error TS7006: Parameter 'colIndex' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(462,63): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(462,68): error TS7006: Parameter 'c' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(463,60): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(463,65): error TS7006: Parameter 'r' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(526,78): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(526,83): error TS7006: Parameter 'row' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(542,81): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+components/canvas/backup/EnhancedTableElement_fixed.tsx(542,86): error TS7006: Parameter 'col' implicitly has an 'any' type.
+components/canvas/CanvasSidebar.tsx(2,10): error TS6133: 'ChevronLeft' is declared but its value is never read.
+components/canvas/CanvasSidebar.tsx(2,23): error TS6133: 'ChevronRight' is declared but its value is never read.
+components/canvas/CanvasSidebar.tsx(21,64): error TS6133: 'onToggle' is declared but its value is never read.
+components/canvas/CanvasSidebar.tsx(29,31): error TS6133: 'exportCanvas' is declared but its value is never read.
+components/canvas/CanvasSidebar.tsx(29,45): error TS6133: 'importCanvas' is declared but its value is never read.
+components/canvas/FloatingTextToolbar.tsx(8,3): error TS6133: 'ToolbarNumberInput' is declared but its value is never read.
+components/canvas/FloatingTextToolbar.tsx(10,3): error TS6133: 'ToolbarSpacer' is declared but its value is never read.
+components/canvas/FloatingTextToolbar.tsx(14,3): error TS6133: 'STYLE_PRESETS' is declared but its value is never read.
+components/canvas/FloatingTextToolbar.tsx(15,3): error TS6133: 'FONT_SIZE_OPTIONS' is declared but its value is never read.
+components/canvas/FloatingTextToolbar.tsx(16,3): error TS6133: 'ALIGNMENT_OPTIONS' is declared but its value is never read.
+components/canvas/FloatingTextToolbar.tsx(19,1): error TS6133: 'StandardTextFormat' is declared but its value is never read.
+components/canvas/FloatingTextToolbar.tsx(57,3): error TS6133: 'onCancel' is declared but its value is never read.
+components/canvas/ImprovedTableElement.tsx(217,35): error TS2339: Property 'accent' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(296,47): error TS2339: Property 'border' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(298,45): error TS2339: Property 'background' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(309,45): error TS2339: Property 'text' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(379,39): error TS2339: Property 'accent' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(391,39): error TS2339: Property 'accent' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(430,13): error TS2304: Cannot find name 'setResizeType'.
+components/canvas/ImprovedTableElement.tsx(438,13): error TS2304: Cannot find name 'setResizeType'.
+components/canvas/ImprovedTableElement.tsx(448,13): error TS2304: Cannot find name 'setResizeType'.
+components/canvas/ImprovedTableElement.tsx(456,13): error TS2304: Cannot find name 'setResizeType'.
+components/canvas/ImprovedTableElement.tsx(466,13): error TS2304: Cannot find name 'setResizeType'.
+components/canvas/ImprovedTableElement.tsx(475,13): error TS2304: Cannot find name 'setResizeType'.
+components/canvas/ImprovedTableElement.tsx(486,41): error TS2339: Property 'accent' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(525,56): error TS2339: Property 'accent' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(527,47): error TS2339: Property 'background' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/ImprovedTableElement.tsx(528,42): error TS2339: Property 'text' does not exist on type '{ primary: { 50: string; 100: string; 200: string; 300: string; 400: string; 500: string; 600: string; 700: string; 800: string; 900: string; }; secondary: { 50: string; 100: string; 200: string; 300: string; 400: string; ... 4 more ...; 900: string; }; success: { ...; }; warning: { ...; }; error: { ...; }; stickyNo...'.
+components/canvas/KonvaApp.tsx(4,1): error TS6192: All imports in import declaration are unused.
+components/canvas/RichTextCellEditor.tsx(10,3): error TS6133: 'DEFAULT_TEXT_FORMAT' is declared but its value is never read.
+components/canvas/RichTextCellEditor.tsx(11,3): error TS6133: 'DEFAULT_STYLE_PRESETS' is declared but its value is never read.
+components/canvas/RichTextCellEditor.tsx(14,1): error TS6133: 'validateTextFormat' is declared but its value is never read.
+components/canvas/RichTextCellEditor.tsx(70,7): error TS6133: 'segmentsToPlainText' is declared but its value is never read.
+components/canvas/RichTextRenderer.tsx(70,31): error TS6133: 'e' is declared but its value is never read.
+components/canvas/RichTextRenderer.tsx(85,34): error TS6133: 'e' is declared but its value is never read.
+components/canvas/RichTextSystem/UnifiedRichTextManager.tsx(11,3): error TS6133: 'TextSelection' is declared but its value is never read.
+components/canvas/RichTextSystem/UnifiedRichTextManager.tsx(14,3): error TS6133: 'RichTextContext' is declared but its value is never read.
+components/canvas/RichTextSystem/UnifiedRichTextManager.tsx(22,3): error TS6133: 'validateTextFormat' is declared but its value is never read.
+components/canvas/SectionElement.tsx(133,11): error TS6133: 'newPosition' is declared but its value is never read.
+components/canvas/TableCellEditor.tsx(88,9): error TS6133: 'focusAndSelectText' is declared but its value is never read.
+components/CanvasDiagnostic.tsx(17,31): error TS2339: Property 'Canvas' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+components/CanvasDiagnostic.tsx(26,29): error TS2339: Property 'IText' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+components/CanvasDiagnostic.tsx(36,29): error TS2339: Property 'Rect' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+components/CanvasDiagnostic.tsx(48,31): error TS2339: Property 'Circle' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+components/CanvasDiagnostic.tsx(59,29): error TS2339: Property 'Line' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+components/CanvasDiagnostic.tsx(68,40): error TS7006: Parameter 'obj' implicitly has an 'any' type.
+components/Toolbar/KonvaToolbar.tsx(3,1): error TS6133: 'Konva' is declared but its value is never read.
+components/Toolbar/KonvaToolbar.tsx(17,3): error TS6133: 'Zap' is declared but its value is never read.
+components/Toolbar/KonvaToolbar.tsx(52,7): error TS6133: 'shapeToolIds' is declared but its value is never read.
+components/Toolbar/ShapesDropdown.tsx(10,3): error TS6133: 'Zap' is declared but its value is never read.
+hooks/canvas/useCanvasEvents.ts(2,31): error TS6133: 'CanvasElement' is declared but its value is never read.
+hooks/canvas/useCanvasEvents.ts(32,62): error TS2551: Property 'selectElement' does not exist on type 'CanvasState'. Did you mean 'selectedElementId'?
+hooks/canvas/useCanvasEvents.ts(33,63): error TS2339: Property 'clearSelection' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(34,55): error TS2339: Property 'setPan' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(35,56): error TS2339: Property 'setZoom' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(36,61): error TS2339: Property 'setDragState' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(37,61): error TS2339: Property 'setIsDrawing' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(38,64): error TS2339: Property 'setPreviewState' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(39,65): error TS2551: Property 'setIsEditingText' does not exist on type 'CanvasState'. Did you mean 'setEditingTextId'?
+hooks/canvas/useCanvasEvents.ts(40,71): error TS2339: Property 'setTextFormattingState' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(41,70): error TS2339: Property 'setTextSelectionState' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(43,71): error TS2339: Property 'updateMultipleElements' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(54,40): error TS2339: Property 'activeTool' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(54,71): error TS2339: Property 'isEditingText' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(69,47): error TS2353: Object literal may only specify known properties, and 'content' does not exist in type 'Partial<CanvasElement>'.
+hooks/canvas/useCanvasEvents.ts(70,11): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(87,56): error TS2551: Property 'selectedElementIds' does not exist on type 'CanvasState'. Did you mean 'selectedElementId'?
+hooks/canvas/useCanvasEvents.ts(106,27): error TS2551: Property 'isEditingText' does not exist on type 'CanvasState'. Did you mean 'editingTextId'?
+hooks/canvas/useCanvasEvents.ts(111,27): error TS2339: Property 'pendingDoubleClick' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(130,7): error TS2339: Property 'activeTool' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(131,7): error TS2339: Property 'isDragging' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(132,7): error TS2339: Property 'isDrawing' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(133,7): error TS2339: Property 'previewElement' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(144,31): error TS2551: Property 'isEditingText' does not exist on type 'CanvasState'. Did you mean 'editingTextId'?
+hooks/canvas/useCanvasEvents.ts(144,73): error TS2551: Property 'isEditingText' does not exist on type 'CanvasState'. Did you mean 'editingTextId'?
+hooks/canvas/useCanvasEvents.ts(147,45): error TS2551: Property 'isEditingText' does not exist on type 'CanvasState'. Did you mean 'editingTextId'?
+hooks/canvas/useCanvasEvents.ts(147,62): error TS2353: Object literal may only specify known properties, and 'content' does not exist in type 'Partial<CanvasElement>'.
+hooks/canvas/useCanvasEvents.ts(148,13): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(173,31): error TS2552: Cannot find name 'FabricCanvasElement'. Did you mean 'CanvasElement'?
+hooks/canvas/useCanvasEvents.ts(175,11): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(180,28): error TS2552: Cannot find name 'FabricCanvasElement'. Did you mean 'CanvasElement'?
+hooks/canvas/useCanvasEvents.ts(193,9): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(199,31): error TS2552: Cannot find name 'FabricCanvasElement'. Did you mean 'CanvasElement'?
+hooks/canvas/useCanvasEvents.ts(201,40): error TS2552: Cannot find name 'FabricCanvasElement'. Did you mean 'CanvasElement'?
+hooks/canvas/useCanvasEvents.ts(219,11): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(228,7): error TS2339: Property 'isDragging' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(229,7): error TS2339: Property 'isDrawing' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(230,7): error TS2339: Property 'dragStartPos' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(231,7): error TS2339: Property 'dragStartElementPositions' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(232,7): error TS2339: Property 'previewElement' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(233,7): error TS2339: Property 'selectedElementIds' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(241,50): error TS2304: Cannot find name 'FabricCanvasElement'.
+hooks/canvas/useCanvasEvents.ts(267,7): error TS2339: Property 'isDragging' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(268,7): error TS2339: Property 'isDrawing' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(269,7): error TS2339: Property 'previewElement' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(274,7): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(276,27): error TS2304: Cannot find name 'FabricCanvasElement'.
+hooks/canvas/useCanvasEvents.ts(278,7): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(288,13): error TS2339: Property 'selectedElementIds' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(288,53): error TS2339: Property 'isEditingText' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(294,9): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(298,45): error TS2353: Object literal may only specify known properties, and 'content' does not exist in type 'Partial<CanvasElement>'.
+hooks/canvas/useCanvasEvents.ts(299,11): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(306,45): error TS2353: Object literal may only specify known properties, and 'content' does not exist in type 'Partial<CanvasElement>'.
+hooks/canvas/useCanvasEvents.ts(307,11): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(317,13): error TS2339: Property 'zoom' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(317,32): error TS2339: Property 'pan' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(337,13): error TS2339: Property 'selectedElementIds' does not exist on type 'CanvasState'.
+hooks/canvas/useCanvasEvents.ts(347,7): error TS2554: Expected 1 arguments, but got 0.
+hooks/canvas/useCanvasEvents.ts(351,26): error TS2551: Property 'selectedElementIds' does not exist on type 'CanvasState'. Did you mean 'selectedElementId'?
+hooks/useViewportCulling.ts(26,43): error TS2339: Property 'x2' does not exist on type 'CanvasElement'.
+hooks/useViewportCulling.ts(27,42): error TS2339: Property 'y2' does not exist on type 'CanvasElement'.
+hooks/useViewportCulling.ts(28,44): error TS2339: Property 'x2' does not exist on type 'CanvasElement'.
+hooks/useViewportCulling.ts(29,45): error TS2339: Property 'y2' does not exist on type 'CanvasElement'.
+hooks/useViewportCulling.ts(31,10): error TS2678: Type '"drawing"' is not comparable to type '"image" | "text" | "table" | "circle" | "triangle" | "section" | "line" | "connector" | "arrow" | "sticky-note" | "rectangle" | "pen" | "star" | "rich-text"'.
+hooks/useViewportCulling.ts(35,36): error TS2339: Property 'x' does not exist on type 'number'.
+hooks/useViewportCulling.ts(35,64): error TS2339: Property 'x' does not exist on type 'number'.
+hooks/useViewportCulling.ts(36,36): error TS2339: Property 'y' does not exist on type 'number'.
+hooks/useViewportCulling.ts(36,64): error TS2339: Property 'y' does not exist on type 'number'.
+hooks/useViewportCulling.ts(38,33): error TS2339: Property 'x' does not exist on type 'number'.
+hooks/useViewportCulling.ts(39,33): error TS2339: Property 'x' does not exist on type 'number'.
+hooks/useViewportCulling.ts(40,33): error TS2339: Property 'y' does not exist on type 'number'.
+hooks/useViewportCulling.ts(41,33): error TS2339: Property 'y' does not exist on type 'number'.
+lib/ConnectionManager.ts(106,83): error TS6133: 'handle' is declared but its value is never read.
+lib/ConnectionManager.ts(129,44): error TS6133: 'e' is declared but its value is never read.
+lib/ConnectionManager.ts(179,58): error TS6133: 'e' is declared but its value is never read.
+tests/canvas-sections-advanced-tests.ts(85,15): error TS6133: 'newSection' is declared but its value is never read.
+tests/canvas-sections-advanced-tests.ts(199,13): error TS6133: 'element1' is declared but its value is never read.
+tests/canvas-sections-advanced-tests.ts(210,13): error TS6133: 'element2' is declared but its value is never read.
+tests/canvas-sections-advanced-tests.ts(301,13): error TS6133: 'element' is declared but its value is never read.
+tests/canvas-sections-advanced-tests.ts(421,13): error TS6133: 'elements' is declared but its value is never read.
+tests/canvas-sections-advanced-tests.ts(462,13): error TS6133: 'elementsAsFree' is declared but its value is never read.
+tests/canvas-sections-validation.ts(451,13): error TS6133: 'section' is declared but its value is never read.
+tests/canvas-sections-validation.ts(792,13): error TS6133: 'section' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(173,11): error TS6133: 'resultEmoji' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(191,31): error TS6133: 'index' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(192,13): error TS6133: 'suiteStatus' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(193,13): error TS6133: 'passedCount' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(202,30): error TS6133: 'test' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(212,38): error TS6133: 'issue' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(212,45): error TS6133: 'index' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(221,39): error TS6133: 'recommendation' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(221,55): error TS6133: 'index' is declared but its value is never read.
+tests/run-canvas-sections-tests.ts(271,13): error TS6133: 'statusEmoji' is declared but its value is never read.

@@ -59,6 +59,8 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
         fontStyle: combinedFontStyle,
         textDecoration: segment.textDecoration || '',
         fill: segment.fill || element.fill || designSystem.colors.secondary[700],
+        align: element.textAlign || 'left',
+        width: element.width
       });
 
       if (segment.url) {
@@ -139,6 +141,7 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
       fontSize: element.fontSize || designSystem.typography.fontSize.base,
       fontFamily: element.fontFamily || designSystem.typography.fontFamily.sans,
       fill: element.fill || designSystem.colors.secondary[700],
+      textAlign: element.textAlign
     };
 
     return (

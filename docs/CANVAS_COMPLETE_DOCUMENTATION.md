@@ -1,12 +1,12 @@
 # LibreOllama Canvas - Complete Documentation
 
-> **Status**: Production Ready | **Last Updated**: January 2025  
+> **Status**: Functional with Active Development | **Last Updated**: June 2025  
 > **Framework**: Konva.js + React-Konva + Zustand + TypeScript  
 > **Route**: `/canvas`
 
-## 🎯 Canvas is Production Ready!
+## 🎯 Canvas System Overview
 
-Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professional tools implemented using Konva.js + React-Konva.
+Navigate to `/canvas` to access the KonvaCanvas with professional whiteboard tools implemented using Konva.js + React-Konva. The system is functional but continues to receive active development and improvements.
 
 ## 🔧 Recent Updates (June 2025)
 
@@ -18,6 +18,15 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
 5. **Context Menu Enhancements** – Persistent formatting menu with active state indicators
 6. **Instant Tool Switching** – Removed setTimeout delays for improved responsiveness
 7. **Dragging Logic** – Dragging disabled during text editing for better UX
+
+### ✅ TypeScript & Performance Optimizations
+8. **Enhanced Table Performance** – Optimized `EnhancedTableElement.tsx` with proper ref usage to prevent unnecessary re-renders during resize operations
+9. **Code Quality Improvements** – Resolved TypeScript errors including unused variables and missing definitions
+10. **Memory Optimization** – Replaced state variables with refs for resize operations to improve performance
+11. **Clean Code Standards** – Removed unused imports and variables, improved code maintainability
+12. **Table Resize System** – Functional 8-handle resize system with custom blue dot handles, live visual feedback, and improved state persistence
+
+> **📋 For detailed table functionality, see [Canvas Tables Documentation](CANVAS_TABLES.md)**
 
 ## 🚀 Quick Start
 
@@ -52,13 +61,18 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
   - Calculate screen coordinates properly using container rect and stage transformation
   - Scale cell dimensions according to current zoom level
 
-#### 3. ✅ **Fixed Resize Functionality**
-- **Problem**: Table resize was buggy with inconsistent coordinate systems
+#### 3. ✅ **COMPLETED: Table Resize Functionality**
+- **Problem**: Table resize was buggy with inconsistent coordinate systems and conflicting resize controls
 - **Solution**:
-  - Fixed coordinate system consistency by using stage pointer position throughout
-  - Properly update table data structure without overwriting the entire object
-  - Calculate mouse deltas using consistent stage-relative coordinates
-  - Maintain proportional scaling of all columns and rows
+  - **Fixed coordinate system consistency** by using stage pointer position throughout
+  - **Properly update table data structure** without overwriting the entire object
+  - **Calculate mouse deltas** using consistent stage-relative coordinates
+  - **Maintain proportional scaling** of all columns and rows
+  - **Implemented custom 8-handle resize system** with blue dot handles for all directions (corners and edges)
+  - **Fixed resize state persistence** using refs to prevent stale closure issues
+  - **Disabled conflicting Konva Transformer** for tables to provide clean resize experience
+  - **Optimized performance** by removing excessive debug logging and unnecessary re-renders
+- **Status**: ✅ **PRODUCTION READY** - All 8 resize handles (north, south, east, west, northeast, northwest, southeast, southwest) are fully functional with live visual feedback and proper state persistence
 
 #### 4. ✅ **Fixed Table Duplication Issue**
 - **Problem**: Tables were being created twice when clicking the table tool
