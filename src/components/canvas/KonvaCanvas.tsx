@@ -9,6 +9,7 @@ import ImageElement from './ImageElement';
 import ConnectorRenderer from './ConnectorRenderer';
 import TextEditingOverlay from './TextEditingOverlay';
 import FloatingTextToolbar from './FloatingTextToolbar';
+import { RichTextCellEditor } from './RichTextCellEditor';
 import SectionElement from './SectionElement';
 import StickyNoteElement from './StickyNoteElement';
 import { EnhancedTableElement } from '../canvas/EnhancedTableElement'; // Using enhanced table implementation
@@ -56,6 +57,22 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   const [showFormatMenu, setShowFormatMenu] = useState(false);
   const [textareaPosition, setTextareaPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  
+  // State for table cell editing - completely separate from Konva
+  const [tableEditingData, setTableEditingData] = useState<{
+    isEditing: boolean;
+    cellPosition: { x: number; y: number; width: number; height: number };
+    cellText: string;
+    richTextSegments: any[];
+    fontSize?: number;
+    fontFamily?: string;
+    textColor?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    onTextChange: (text: string) => void;
+    onRichTextChange?: (segments: any[]) => void;
+    onFinishEditing: () => void;
+    onCancelEditing: () => void;
+  } | null>(null);
   const [previewFormat, setPreviewFormat] = useState<{
     bold: boolean;
     italic: boolean;
@@ -698,25 +715,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
   const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     // Handle table tool - use enhanced table creation from store
-    if (selectedTool === 'table') {
-      const stage = e.target.getStage();
-      if (!stage) return;
-      
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
-      const transform = stage.getAbsoluteTransform().copy();
-      transform.invert();
-      const pos = transform.point(pointer);
-      
-      // Use the enhanced table creation system
-      const { createEnhancedTable } = useKonvaCanvasStore.getState();
-      const tableId = createEnhancedTable(pos.x, pos.y, 3, 3);
-      setSelectedElement(tableId);
-      
-      // Switch back to select tool
-      setSelectedTool('select');
-      return;
-    }
+    // Table creation is handled by KonvaToolbar.tsx, not here
+    // This prevents duplicate table creation when clicking on canvas
 
     // Handle section tool
     if (selectedTool === 'section') {
@@ -1060,12 +1060,18 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
     const stage = e.target.getStage();
     
+    // Check if clicked on a table element or table-related component
+    const clickedTable = e.target.findAncestor?.('.konva-table') || 
+                        e.target.hasName?.('table-element') ||
+                        e.target.getClassName?.() === 'Rect' && e.target.getParent?.()?.hasName?.('table-element');
+    
     // Check if clicked on empty space
     const clickedOnEmpty = e.target === stage;
     console.log('🎯 [STAGE CLICK DEBUG] Clicked on empty space:', clickedOnEmpty);
+    console.log('🎯 [STAGE CLICK DEBUG] Clicked on table:', clickedTable);
     console.log('🎯 [STAGE CLICK DEBUG] Event target type:', e.target.getType?.());
     
-    if (clickedOnEmpty) {
+    if (clickedOnEmpty && !clickedTable) {
       console.log('🎯 [STAGE CLICK DEBUG] Deselecting current element:', selectedElementId);
       // ONLY deselect on empty clicks - NEVER create elements here
       setSelectedElement(null);
@@ -1485,6 +1491,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             }}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
             stageRef={stageRef}
+            onEditingStateChange={setTableEditingData}
           />
         );
       default:
@@ -1727,6 +1734,24 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           onCancel={handleEditingCancel}
           onDone={handleEditingDone}
           stageRef={stageRef}
+        />
+      )}
+
+      {/* Table cell editing overlay - completely outside Konva */}
+      {tableEditingData && (
+        <RichTextCellEditor
+          isEditing={tableEditingData.isEditing}
+          cellPosition={tableEditingData.cellPosition}
+          cellText={tableEditingData.cellText}
+          richTextSegments={tableEditingData.richTextSegments}
+          fontSize={tableEditingData.fontSize}
+          fontFamily={tableEditingData.fontFamily}
+          textColor={tableEditingData.textColor}
+          textAlign={tableEditingData.textAlign}
+          onTextChange={tableEditingData.onTextChange}
+          onRichTextChange={tableEditingData.onRichTextChange}
+          onFinishEditing={tableEditingData.onFinishEditing}
+          onCancelEditing={tableEditingData.onCancelEditing}
         />
       )}
 

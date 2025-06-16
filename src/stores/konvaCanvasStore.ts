@@ -208,6 +208,9 @@ interface CanvasState {
   historyIndex: number;
   maxHistorySize: number;
   
+  // Resize debouncing
+  resizeTimeout?: NodeJS.Timeout;
+  
   // Actions
   addElement: (element: CanvasElement) => void;
   updateElement: (id: string, updates: Partial<CanvasElement>) => void;
@@ -1330,6 +1333,28 @@ export const useKonvaCanvasStore = create<CanvasState>()(
       });
       
       get().addToHistory('Resize table column');
+    },
+
+    resizeTable: (tableId: string, newWidth: number, newHeight: number) => {
+      set((state) => {
+        const element = state.elements[tableId];
+        if (!element || element.type !== 'table' || !element.enhancedTableData) return;
+        
+        element.width = newWidth;
+        element.height = newHeight;
+        
+        // Prevent multiple history entries during resize with debouncing
+        if (state.resizeTimeout) {
+          clearTimeout(state.resizeTimeout);
+        }
+        
+        state.resizeTimeout = setTimeout(() => {
+          get().addToHistory('Resize table');
+          set((state) => {
+            state.resizeTimeout = undefined;
+          });
+        }, 300);
+      });
     },
 
     setTableSelection: (tableId: string, selection: TableSelection | null) => {

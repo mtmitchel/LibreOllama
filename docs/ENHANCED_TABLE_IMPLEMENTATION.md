@@ -4,6 +4,8 @@
 
 This document describes the enhanced table component for LibreOllama's canvas system, implementing the recommendations for improved usability and functionality.
 
+> **Recent Fix**: Table duplication issues have been resolved. See [Table Duplication Fix](TABLE_DUPLICATION_FIX.md) for technical details.
+
 ## Key Improvements
 
 ### 1. **Larger, More Accessible Add/Delete Handles**

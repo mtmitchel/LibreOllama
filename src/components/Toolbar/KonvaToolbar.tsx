@@ -1,5 +1,5 @@
 // src/components/Toolbar/KonvaToolbar.tsx
-import React from 'react';
+import React, { useRef } from 'react';
 import Konva from 'konva'; // Import Konva for Stage type if needed by zoom functions
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
@@ -68,6 +68,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   sidebarOpen,
   onToggleSidebar
 }) => {
+  const tableCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { 
     selectedTool, 
     setSelectedTool, 
@@ -127,8 +128,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     console.log('🔧 Tool selected:', toolId);
     setSelectedTool(toolId);
     
-    // For drawing tools (not select/connect), create element immediately
-    if (toolId !== 'select' && toolId !== 'connect' && toolId !== 'pan') {
+    // For drawing tools (not select/connect/pan/section), create element immediately
+    // Section tools should be placed by clicking on canvas
+    if (toolId !== 'select' && toolId !== 'connect' && toolId !== 'pan' && 
+        toolId !== 'section') {
       createElementForTool(toolId);
     }
   };
@@ -276,10 +279,17 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           return;
           
         case 'table':
-          // Use the enhanced table creation method
-          const { createEnhancedTable } = useKonvaCanvasStore.getState();
-          const tableId = createEnhancedTable(centerX - 180, centerY - 75, 3, 3);
-          setSelectedElement(tableId);
+          // Debounce table creation to prevent duplicates
+          if (tableCreationTimeoutRef.current) {
+            clearTimeout(tableCreationTimeoutRef.current);
+          }
+          
+          tableCreationTimeoutRef.current = setTimeout(() => {
+            const { createEnhancedTable } = useKonvaCanvasStore.getState();
+            const tableId = createEnhancedTable(centerX - 180, centerY - 75, 3, 3);
+            setSelectedElement(tableId);
+            tableCreationTimeoutRef.current = null;
+          }, 100);
           return;
       }
       

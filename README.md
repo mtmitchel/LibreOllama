@@ -137,14 +137,16 @@ libreollama/
 LibreOllama includes comprehensive documentation to help you get started quickly and contribute effectively.
 
 ### **Quick Start Guides**
-- **[Canvas Documentation](./docs/CANVAS_DOCUMENTATION.md)** - Complete canvas documentation including user guide, architecture, and development information
+- **[Canvas Documentation](./docs/CANVAS_COMPLETE_DOCUMENTATION.md)** - Complete canvas documentation including user guide, architecture, and development information
 - **[Styles Organization](./src/styles/README.md)** - CSS organization, import hierarchy, and design system documentation
 
 ### **Detailed Documentation**
 - **[Documentation Index](./docs/README.md)** - Complete guide to all available documentation
 - **[Development Setup](./docs/development/DEV-STARTUP-GUIDE.md)** - Environment setup and development workflow
-- **[Canvas Implementation](./docs/CANVAS_IMPLEMENTATION_FINAL.md)** - Technical details of the Konva.js canvas system
-- **[UI Implementation](./docs/UI_IMPLEMENTATION_COMPLETE.md)** - Complete UI/UX design system and component documentation
+- **[Canvas Complete Documentation](./docs/CANVAS_COMPLETE_DOCUMENTATION.md)** - Technical details of the Konva.js canvas system
+- **[Table Duplication Fix](./docs/TABLE_DUPLICATION_FIX.md)** - Technical analysis and solution for table creation issues
+- **[Enhanced Tables Documentation](./docs/ENHANCED_TABLES_DOCUMENTATION.md)** - FigJam-style table system implementation
+- **[UI Implementation](./docs/completed-phases/UI_IMPLEMENTATION_COMPLETE.md)** - Complete UI/UX design system and component documentation
 
 ### **Developer Resources**
 - **[Rust Development Setup](./docs/development/RUST_DEVELOPMENT_SETUP.md)** - Backend development with Tauri

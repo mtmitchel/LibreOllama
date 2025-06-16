@@ -140,19 +140,20 @@
 /* Table Cell Editor Overlay */
 .table-cell-editor {
   position: absolute;
-  background: var(--bg-surface);
+  background-color: var(--bg-surface);
   border: 2px solid var(--accent-primary);
   border-radius: var(--radius-md);
-  font-family: Inter, system-ui, sans-serif;
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
   color: var(--text-primary);
   padding: var(--space-2);
+  box-shadow: var(--shadow-lg);
+  z-index: 1001;
   outline: none;
   resize: none;
-  box-sizing: border-box;
-  z-index: 1000;
-  line-height: 1.4;
   overflow: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .table-cell-editor:focus {

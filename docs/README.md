@@ -17,6 +17,7 @@ Our professional-grade whiteboard is powered by Konva.js for high performance an
 - [Canvas Complete Documentation](CANVAS_COMPLETE_DOCUMENTATION.md) - Comprehensive canvas system overview with section system, advanced text editing, and implementation details
 - [Enhanced Tables Documentation](ENHANCED_TABLES_DOCUMENTATION.md) - FigJam-style table system with rich interactions
 - [Enhanced Table Implementation](ENHANCED_TABLE_IMPLEMENTATION.md) - Technical implementation details for canvas tables
+- [Table Duplication Fix](TABLE_DUPLICATION_FIX.md) - Technical analysis and solution for table creation duplication issues
 
 
 ### **🎨 UI/UX Design System**
@@ -55,9 +56,9 @@ The [`../archives/`](../archives/) folder contains:
 
 ## 📋 Documentation Organization
 
-### **Current Active Documentation** (6 files)
+### **Current Active Documentation** (7 files)
 
-- 3 Canvas/Whiteboard guides (Complete docs, Enhanced tables, Implementation)
+- 4 Canvas/Whiteboard guides (Complete docs, Enhanced tables, Implementation, Table duplication fix)
 - 1 Notes/Rich text guide
 - 1 Dashboard testing guide
 - 1 Design system guide (2 files in design-system/)

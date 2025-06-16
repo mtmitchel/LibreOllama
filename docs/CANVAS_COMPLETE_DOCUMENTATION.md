@@ -60,6 +60,16 @@ Navigate to `/canvas` to access the fully-featured KonvaCanvas with all professi
   - Calculate mouse deltas using consistent stage-relative coordinates
   - Maintain proportional scaling of all columns and rows
 
+#### 4. ✅ **Fixed Table Duplication Issue**
+- **Problem**: Tables were being created twice when clicking the table tool
+- **Root Cause**: Duplicate table creation logic existed in both `KonvaToolbar.tsx` and `KonvaCanvas.tsx`
+- **Solution**:
+  - Removed table creation logic from `KonvaCanvas.tsx` to eliminate duplication
+  - Tables are now created exclusively through `KonvaToolbar.tsx`
+  - Added debouncing mechanism in toolbar to prevent rapid clicks
+  - Enhanced stage click handling to avoid interference with table operations
+- **Documentation**: See `TABLE_DUPLICATION_FIX.md` for detailed technical analysis
+
 ## Overview
 
 The LibreOllama Canvas is a sophisticated 2D graphics editing system built with Konva.js and React-Konva. It provides professional drawing tools, rich text editing, shape creation, section organization, and collaborative features with desktop integration via Tauri.

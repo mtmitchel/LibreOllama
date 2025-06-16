@@ -8,6 +8,8 @@
 
 The Enhanced Tables system provides professional-grade table editing within the LibreOllama Canvas, featuring FigJam-style interactions, inline text editing, dynamic structure management, and drag-and-drop support for rich content.
 
+> **Recent Fix**: Table duplication issues have been resolved. See [Table Duplication Fix](TABLE_DUPLICATION_FIX.md) for technical details.
+
 ## Key Features
 
 ### ✨ **Professional Interaction Model**
