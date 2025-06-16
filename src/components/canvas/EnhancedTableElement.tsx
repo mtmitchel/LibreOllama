@@ -63,6 +63,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   const [resizeHandle, setResizeHandle] = useState<'se' | 'e' | 's' | null>(null);
   const [resizeStartPos, setResizeStartPos] = useState<{ x: number; y: number } | null>(null);
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
+  const [liveSize, setLiveSize] = useState<{ width: number, height: number } | null>(null);
 
   // Hover timeout refs to prevent flicker
   const cellHoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -96,6 +97,10 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   const totalWidth = tableColumns.reduce((sum, col) => sum + (col?.width || 100), 0);
   const totalHeight = tableRows.reduce((sum, row) => sum + (row?.height || 40), 0);
 
+  // Display variables for resize optimization
+  const displayWidth = liveSize?.width ?? totalWidth;
+  const displayHeight = liveSize?.height ?? totalHeight;
+
   // Handle drag end
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     try {
@@ -108,7 +113,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         onDragEnd(e);
       }
     } catch (error) {
-      // Silent error handling
+      console.error("An error occurred in EnhancedTableElement:", error);
     }
   };
 
@@ -121,48 +126,53 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   // Handle cell double-click for editing
   const handleCellDoubleClick = (rowIndex: number, colIndex: number) => {
     try {
+      // Validate stageRef and container existence
       if (!stageRef?.current) {
+        console.error("An error occurred in EnhancedTableElement:", "stageRef is missing");
         return;
       }
       
       const stage = stageRef.current;
       const container = stage.container();
       if (!container) {
+        console.error("An error occurred in EnhancedTableElement:", "container is missing");
         return;
       }
       
-      const containerRect = container.getBoundingClientRect();
-      
-      // Validate indices
-      if (rowIndex < 0 || rowIndex >= tableRows.length || colIndex < 0 || colIndex >= tableColumns.length) {
+      // Validate indices against tableRows and tableColumns
+      if (rowIndex < 0 || rowIndex >= tableRows.length) {
+        console.error("An error occurred in EnhancedTableElement:", `Invalid row index: ${rowIndex}, tableRows length: ${tableRows.length}`);
+        return;
+      }
+      if (colIndex < 0 || colIndex >= tableColumns.length) {
+        console.error("An error occurred in EnhancedTableElement:", `Invalid column index: ${colIndex}, tableColumns length: ${tableColumns.length}`);
         return;
       }
       
-      // Calculate cell position in canvas coordinates
+      // Compute cellX, cellY by summing widths/heights
       const cellX = tableColumns.slice(0, colIndex).reduce((sum, c) => sum + (c?.width || 100), 0);
       const cellY = tableRows.slice(0, rowIndex).reduce((sum, r) => sum + (r?.height || 40), 0);
       
-      // Get absolute table position (accounting for sections)
-      let tableCanvasPoint = { x: element.x || 0, y: element.y || 0 };
-      
-      if (element.sectionId && sections && sections[element.sectionId]) {
-        const section = sections[element.sectionId];
-        tableCanvasPoint = {
-          x: (section.x || 0) + (element.x || 0),
-          y: (section.y || 0) + (element.y || 0)
-        };
+      // Locate the Konva group by element.id
+      const konvaGroup = stage.findOne(`#${element.id}`);
+      if (!konvaGroup) {
+        console.error("An error occurred in EnhancedTableElement:", `Konva group not found for element ID: ${element.id}`);
+        return;
       }
       
-      // Transform canvas coordinates to screen coordinates
-      const stageTransform = stage.getAbsoluteTransform();
-      const canvasPoint = {
-        x: tableCanvasPoint.x + cellX,
-        y: tableCanvasPoint.y + cellY
+      // Get absolute table position and derive cellAbsolutePos
+      const tableAbsolutePos = konvaGroup.getAbsolutePosition();
+      const cellAbsolutePos = {
+        x: tableAbsolutePos.x + cellX,
+        y: tableAbsolutePos.y + cellY
       };
       
-      const screenPoint = stageTransform.point(canvasPoint);
+      // Convert to screen coordinates via getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect();
+      const stageTransform = stage.getAbsoluteTransform();
+      const screenPoint = stageTransform.point(cellAbsolutePos);
       
-      // Set editing state
+      // Call setEditingCell and setEditingCellPosition with { x, y, width, height }
       setEditingCell({ row: rowIndex, col: colIndex });
       setEditingCellPosition({
         x: containerRect.left + screenPoint.x,
@@ -171,7 +181,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         height: tableRows[rowIndex]?.height || 40
       });
     } catch (error) {
-      // Silent error handling
+      console.error("An error occurred in EnhancedTableElement:", error);
     }
   };
 
@@ -212,7 +222,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         }
       }
     } catch (error) {
-      // Silent error handling
+      console.error("An error occurred in EnhancedTableElement:", error);
     }
   };
 
@@ -243,12 +253,17 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
           newHeight = Math.max(MIN_TABLE_HEIGHT, Math.min(800, resizeStartSize.height + deltaY));
         }
 
-        // Calculate scale ratios
-        const widthRatio = newWidth / resizeStartSize.width;
-        const heightRatio = newHeight / resizeStartSize.height;
+        // Only update liveSize during drag (no expensive calculations)
+        setLiveSize({ width: newWidth, height: newHeight });
+      }, 16); // 60fps throttling (16ms)
 
-        // Update table dimensions and column/row sizes proportionally
-        if (enhancedTableData) {
+      const handleMouseUp = () => {
+        // Perform final expensive proportional calculations using liveSize and resizeStartSize
+        if (liveSize && resizeStartSize && enhancedTableData) {
+          const widthRatio = liveSize.width / resizeStartSize.width;
+          const heightRatio = liveSize.height / resizeStartSize.height;
+
+          // Update columns and rows with the ratios applied to their dimensions
           const updatedColumns = enhancedTableData.columns.map(col => ({
             ...col,
             width: Math.max(MIN_CELL_WIDTH, Math.min(MAX_CELL_WIDTH, col.width * widthRatio))
@@ -259,8 +274,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
             height: Math.max(MIN_CELL_HEIGHT, Math.min(MAX_CELL_HEIGHT, row.height * heightRatio))
           }));
           
-          // Update everything in one go to avoid partial updates
-          updateElement(element.id, {
+          // Call onUpdate with the final calculated values
+          onUpdate({
             enhancedTableData: {
               ...enhancedTableData,
               columns: updatedColumns,
@@ -268,13 +283,13 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
             }
           });
         }
-      }, 16); // 60fps throttling (16ms)
 
-      const handleMouseUp = () => {
+        // Reset all resize-related state including setLiveSize(null)
         setIsResizing(false);
         setResizeHandle(null);
         setResizeStartPos(null);
         setResizeStartSize(null);
+        setLiveSize(null);
       };
 
       document.addEventListener('mousemove', handleMouseMove);
@@ -285,7 +300,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizing, resizeHandle, resizeStartPos, resizeStartSize, enhancedTableData, element.id, updateElement, stageRef]);
+  }, [isResizing, resizeHandle, resizeStartPos, resizeStartSize, liveSize, enhancedTableData, element.id, onUpdate, stageRef]);
 
   // Handle table mouse leave with delay
   const handleTableMouseLeave = () => {
@@ -297,7 +312,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         setHoveredCell(null);
       }, 100);
     } catch (error) {
-      // Silent error handling
+      console.error("An error occurred in EnhancedTableElement:", error);
     }
   };
 
@@ -376,7 +391,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         })
       ).flat();
     } catch (error) {
-      // Silent error handling
+      console.error("An error occurred in EnhancedTableElement:", error);
       return [];
     }
   };
@@ -384,6 +399,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   return (
     <>
       <Group
+        id={element.id}
         x={element.x}
         y={element.y}
         draggable={!isResizing}
@@ -394,8 +410,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         <Rect
           x={0}
           y={0}
-          width={totalWidth}
-          height={totalHeight}
+          width={displayWidth}
+          height={displayHeight}
           fill="white"
           stroke={isSelected ? designSystem.colors.primary[500] : designSystem.colors.secondary[200]}
           strokeWidth={isSelected ? 2 : 1}
@@ -412,8 +428,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
           <>
             {/* Bottom-right resize handle */}
             <Circle
-              x={totalWidth}
-              y={totalHeight}
+              x={displayWidth}
+              y={displayHeight}
               radius={RESIZE_HANDLE_SIZE}
               fill={designSystem.colors.primary[500]}
               stroke="white"
@@ -434,8 +450,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
 
             {/* Right resize handle */}
             <Circle
-              x={totalWidth}
-              y={totalHeight / 2}
+              x={displayWidth}
+              y={displayHeight / 2}
               radius={RESIZE_HANDLE_SIZE}
               fill={designSystem.colors.primary[500]}
               stroke="white"
@@ -456,8 +472,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
 
             {/* Bottom resize handle */}
             <Circle
-              x={totalWidth / 2}
-              y={totalHeight}
+              x={displayWidth / 2}
+              y={displayHeight}
               radius={RESIZE_HANDLE_SIZE}
               fill={designSystem.colors.primary[500]}
               stroke="white"
@@ -481,8 +497,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         {/* Simple add row button at bottom */}
         {isSelected && (
           <Circle
-            x={totalWidth / 2}
-            y={totalHeight + 20}
+            x={displayWidth / 2}
+            y={displayHeight + 20}
             radius={HANDLE_SIZE}
             fill={designSystem.colors.primary[500]}
             stroke="white"
@@ -505,8 +521,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         {/* Simple add column button at right */}
         {isSelected && (
           <Circle
-            x={totalWidth + 20}
-            y={totalHeight / 2}
+            x={displayWidth + 20}
+            y={displayHeight / 2}
             radius={HANDLE_SIZE}
             fill={designSystem.colors.primary[500]}
             stroke="white"
@@ -530,8 +546,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
         {isSelected && (
           <>
             <Text
-              x={totalWidth / 2}
-              y={totalHeight + 20}
+              x={displayWidth / 2}
+              y={displayHeight + 20}
               text="+"
               fontSize={18}
               fontFamily={designSystem.typography.fontFamily.sans}
@@ -543,8 +559,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
               listening={false}
             />
             <Text
-              x={totalWidth + 20}
-              y={totalHeight / 2}
+              x={displayWidth + 20}
+              y={displayHeight / 2}
               text="+"
               fontSize={18}
               fontFamily={designSystem.typography.fontFamily.sans}

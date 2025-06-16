@@ -113,6 +113,7 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
     if (element.type === 'sticky-note') {
       return (
         <Group
+          id={element.id}
           x={element.x}
           y={element.y}
           onDragEnd={(e) => {
@@ -188,6 +189,7 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
       // Regular text element
       return (
         <Group
+          id={element.id}
           x={element.x}
           y={element.y}
           onDragEnd={(e) => {

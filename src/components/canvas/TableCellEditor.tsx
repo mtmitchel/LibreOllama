@@ -1,11 +1,18 @@
 // src/components/canvas/TableCellEditor.tsx
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { designSystem } from '../../styles/designSystem';
 
+interface CellPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface TableCellEditorProps {
   isEditing: boolean;
-  cellPosition: { x: number; y: number; width: number; height: number };
+  cellPosition: CellPosition;
   cellText: string;
   onTextChange: (text: string) => void;
   onFinishEditing: () => void;
@@ -15,6 +22,34 @@ interface TableCellEditorProps {
   textColor?: string;
   textAlign?: 'left' | 'center' | 'right';
 }
+
+// Debug logging utility
+const logDebug = (message: string, data?: any) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[TableCellEditor] ${message}`, data || '');
+  }
+};
+
+// Validation utility for cell position
+const validateCellPosition = (position: CellPosition): boolean => {
+  if (!position || typeof position !== 'object') {
+    logDebug('Invalid position: not an object', position);
+    return false;
+  }
+  
+  const { x, y, width, height } = position;
+  const isValid =
+    typeof x === 'number' && isFinite(x) &&
+    typeof y === 'number' && isFinite(y) &&
+    typeof width === 'number' && isFinite(width) && width > 0 &&
+    typeof height === 'number' && isFinite(height) && height > 0;
+    
+  if (!isValid) {
+    logDebug('Invalid position values', { x, y, width, height });
+  }
+  
+  return isValid;
+};
 
 export const TableCellEditor: React.FC<TableCellEditorProps> = ({
   isEditing,
@@ -30,112 +65,265 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localText, setLocalText] = useState(cellText);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
+  // Validate props on mount and when they change
+  useEffect(() => {
+    if (isEditing && !validateCellPosition(cellPosition)) {
+      logDebug('TableCellEditor received invalid cellPosition, editor will not render');
+      onCancelEditing();
+      return;
+    }
+  }, [isEditing, cellPosition, onCancelEditing]);
 
   // Sync local text with prop changes
   useEffect(() => {
-    setLocalText(cellText);
-  }, [cellText]);
+    if (cellText !== localText) {
+      logDebug('Syncing local text with prop change', { from: localText, to: cellText });
+      setLocalText(cellText);
+    }
+  }, [cellText, localText]);
+
+  // Enhanced focus management with error handling
+  const focusAndSelectText = useCallback(() => {
+    if (!textareaRef.current) {
+      logDebug('Focus attempt failed: textarea ref is null');
+      return false;
+    }
+    
+    try {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+      logDebug('Successfully focused and selected text');
+      return true;
+    } catch (error) {
+      logDebug('Error during focus/select operation', error);
+      return false;
+    }
+  }, []);
 
   // Auto-focus and select text when editing starts
   useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.select();
+    if (isEditing && !hasInitialized) {
+      logDebug('Initializing editor focus');
+      
+      // Use requestAnimationFrame for more reliable focus timing
+      const focusTimeout = setTimeout(() => {
+        const focused = focusAndSelectText();
+        if (focused) {
+          setHasInitialized(true);
+        } else {
+          // Retry focus after a short delay
+          setTimeout(() => {
+            const retryFocused = focusAndSelectText();
+            if (retryFocused) {
+              setHasInitialized(true);
+            } else {
+              logDebug('Failed to focus after retry, canceling edit');
+              onCancelEditing();
+            }
+          }, 50);
         }
-      }, 10);
+      }, 16); // One frame delay
+      
+      return () => clearTimeout(focusTimeout);
+    } else if (!isEditing) {
+      setHasInitialized(false);
     }
-  }, [isEditing]);
+  }, [isEditing, hasInitialized, focusAndSelectText, onCancelEditing]);
+
+  // Enhanced keyboard event handling with error boundaries
+  const handleSave = useCallback(() => {
+    try {
+      logDebug('Saving cell text', { text: localText });
+      onTextChange(localText);
+      onFinishEditing();
+    } catch (error) {
+      logDebug('Error during save operation', error);
+      // Fallback: still try to finish editing
+      onFinishEditing();
+    }
+  }, [localText, onTextChange, onFinishEditing]);
+
+  const handleCancel = useCallback(() => {
+    try {
+      logDebug('Canceling edit, reverting text', { from: localText, to: cellText });
+      setLocalText(cellText);
+      onCancelEditing();
+    } catch (error) {
+      logDebug('Error during cancel operation', error);
+      // Fallback: still try to cancel editing
+      onCancelEditing();
+    }
+  }, [localText, cellText, onCancelEditing]);
 
   // Handle keyboard events
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isEditing) return;
 
-      switch (e.key) {
-        case 'Enter':
-          if (!e.shiftKey) {
+      try {
+        switch (e.key) {
+          case 'Enter':
+            if (!e.shiftKey) {
+              e.preventDefault();
+              logDebug('Enter key pressed, saving');
+              handleSave();
+            }
+            break;
+          case 'Escape':
             e.preventDefault();
-            onTextChange(localText);
-            onFinishEditing();
-          }
-          break;
-        case 'Escape':
-          e.preventDefault();
-          setLocalText(cellText); // Reset to original text
-          onCancelEditing();
-          break;
-        case 'Tab':
-          e.preventDefault();
-          onTextChange(localText);
-          onFinishEditing();
-          break;
+            logDebug('Escape key pressed, canceling');
+            handleCancel();
+            break;
+          case 'Tab':
+            e.preventDefault();
+            logDebug('Tab key pressed, saving and moving');
+            handleSave();
+            break;
+        }
+      } catch (error) {
+        logDebug('Error in keyboard event handler', error);
+        // Failsafe: cancel editing on any error
+        handleCancel();
       }
     };
 
     if (isEditing) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      document.addEventListener('keydown', handleKeyDown, { passive: false });
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+        logDebug('Keyboard event listener cleaned up');
+      };
     }
-  }, [isEditing, localText, cellText, onTextChange, onFinishEditing, onCancelEditing]);
+  }, [isEditing, handleSave, handleCancel]);
 
   // Handle clicks outside to finish editing
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (isEditing && textareaRef.current && !textareaRef.current.contains(e.target as Node)) {
-        onTextChange(localText);
-        onFinishEditing();
+      if (!isEditing || !textareaRef.current) return;
+      
+      try {
+        const target = e.target as Node;
+        if (target && !textareaRef.current.contains(target)) {
+          logDebug('Click outside detected, saving');
+          handleSave();
+        }
+      } catch (error) {
+        logDebug('Error in click outside handler', error);
+        // Failsafe: still try to save
+        handleSave();
       }
     };
 
     if (isEditing) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      // Use capture phase to handle clicks before other handlers
+      document.addEventListener('mousedown', handleClickOutside, { capture: true });
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside, { capture: true });
+        logDebug('Click outside event listener cleaned up');
+      };
     }
-  }, [isEditing, localText, onTextChange, onFinishEditing]);
+  }, [isEditing, handleSave]);
 
+  // Early return if not editing
   if (!isEditing) {
+    logDebug('Not editing, returning null');
     return null;
   }
 
-  const textareaStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: cellPosition.x,
-    top: cellPosition.y,
-    width: cellPosition.width,
-    height: cellPosition.height,
-    border: `2px solid ${designSystem.colors.primary[500]}`,
-    borderRadius: '4px',
-    padding: '8px',
-    fontSize: `${fontSize}px`,
-    fontFamily: fontFamily,
-    color: textColor,
-    backgroundColor: designSystem.canvasStyles.background,
-    resize: 'none',
-    outline: 'none',
-    overflow: 'hidden',
-    textAlign: textAlign,
-    zIndex: 1000,
-    boxShadow: `0 4px 12px rgba(0, 0, 0, 0.15)`,
-    lineHeight: '1.4'
+  // Validate position before rendering
+  if (!validateCellPosition(cellPosition)) {
+    logDebug('Invalid cell position, cannot render editor');
+    return null;
+  }
+
+  // Enhanced textarea change handler with validation
+  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    try {
+      const newText = e.target.value;
+      logDebug('Text changed', { from: localText, to: newText });
+      setLocalText(newText);
+    } catch (error) {
+      logDebug('Error handling text change', error);
+    }
+  }, [localText]);
+
+  // Enhanced blur handler with error handling
+  const handleBlur = useCallback(() => {
+    try {
+      logDebug('Textarea blurred, saving text');
+      handleSave();
+    } catch (error) {
+      logDebug('Error in blur handler', error);
+      // Fallback to cancel on error
+      handleCancel();
+    }
+  }, [handleSave, handleCancel]);
+
+  // Create enhanced textarea style with validation
+  const createTextareaStyle = (): React.CSSProperties => {
+    const baseStyle: React.CSSProperties = {
+      position: 'absolute',
+      left: Math.max(0, cellPosition.x),
+      top: Math.max(0, cellPosition.y),
+      width: Math.max(50, cellPosition.width), // Minimum width
+      height: Math.max(20, cellPosition.height), // Minimum height
+      border: `2px solid ${designSystem.colors.primary[500]}`,
+      borderRadius: '4px',
+      padding: '8px',
+      fontSize: `${Math.max(10, Math.min(24, fontSize))}px`, // Clamp font size
+      fontFamily: fontFamily || designSystem.typography.fontFamily.sans,
+      color: textColor || designSystem.colors.secondary[800],
+      backgroundColor: designSystem.canvasStyles.background,
+      resize: 'none' as const,
+      outline: 'none',
+      overflow: 'hidden' as const,
+      textAlign: textAlign || 'left',
+      zIndex: 1000,
+      boxShadow: `0 4px 12px rgba(0, 0, 0, 0.15)`,
+      lineHeight: '1.4',
+      // Additional robustness properties
+      boxSizing: 'border-box' as const,
+      wordWrap: 'break-word' as const,
+      whiteSpace: 'pre-wrap' as const,
+    };
+
+    logDebug('Created textarea style', baseStyle);
+    return baseStyle;
   };
 
-  return createPortal(
-    <textarea
-      ref={textareaRef}
-      style={textareaStyle}
-      value={localText}
-      onChange={(e) => setLocalText(e.target.value)}
-      onBlur={() => {
-        onTextChange(localText);
-        onFinishEditing();
-      }}
-      placeholder="Type here..."
-      spellCheck={false}
-    />,
-    document.body
-  );
+  // Ensure portal target exists
+  const portalTarget = document.body;
+  if (!portalTarget) {
+    logDebug('Portal target (document.body) not available');
+    return null;
+  }
+
+  try {
+    const textareaStyle = createTextareaStyle();
+    
+    return createPortal(
+      <textarea
+        ref={textareaRef}
+        style={textareaStyle}
+        value={localText}
+        onChange={handleTextChange}
+        onBlur={handleBlur}
+        placeholder="Type here..."
+        spellCheck={false}
+        autoComplete="off"
+        data-testid="table-cell-editor"
+        aria-label="Edit cell text"
+      />,
+      portalTarget
+    );
+  } catch (error) {
+    logDebug('Error rendering TableCellEditor', error);
+    // Graceful fallback - cancel editing if render fails
+    setTimeout(() => handleCancel(), 0);
+    return null;
+  }
 };
 
 export default TableCellEditor;
