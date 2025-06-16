@@ -135,23 +135,27 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
   const toolbarPosition = useMemo(() => {
     if (!isVisible) return { x: 0, y: 0 };
     
-    // Try to get stage from multiple sources for better compatibility
+    // More reliable stage detection - prioritize stageRef
     let stage = null;
     if (stageRef?.current) {
       stage = stageRef.current;
     } else {
-      // Fallback: find stage from DOM
+      // Improved fallback: search for stage through Konva's API
       const canvasContainer = document.querySelector('.konva-canvas-container canvas');
       if (canvasContainer) {
-        const konvaStage = (canvasContainer as any).__konvaStage;
+        // Try multiple methods to get the stage
+        const konvaStage = (canvasContainer as any).stage ||
+                          (canvasContainer as any).__konvaStage ||
+                          (canvasContainer as any)._konvaStage;
         if (konvaStage) stage = konvaStage;
       }
     }
     
     if (!stage) {
-      // Fallback positioning - place toolbar at a reasonable screen position
+      // Enhanced fallback positioning with viewport awareness
+      console.warn('[FloatingTextToolbar] Stage not found, using fallback positioning');
       return {
-        x: Math.max(20, element.x),
+        x: Math.max(20, Math.min(element.x, window.innerWidth - 570)),
         y: Math.max(60, element.y - 60),
         width: 550,
         height: 48
@@ -159,8 +163,17 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
     }
     
     const stageContainer = stage.container();
+    if (!stageContainer) {
+      console.warn('[FloatingTextToolbar] Stage container not found');
+      return { x: 20, y: 60, width: 550, height: 48 };
+    }
+    
     const stageBox = stageContainer.getBoundingClientRect();
     const stageTransform = stage.getAbsoluteTransform();
+    
+    // Account for page scroll offset
+    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
     
     // Convert element position to screen coordinates
     const elementScreenPos = stageTransform.point({
@@ -172,24 +185,33 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
     const toolbarWidth = Math.min(650, Math.max(550, (element.width || 200) * 2));
     const toolbarHeight = 48;
     
-    // Special handling for table cell editing (element id is 'table-cell')
-    const isTableCell = element.id === 'table-cell';
+    // Unified positioning logic for all element types
+    const gap = element.id === 'table-cell' ? 8 : 20;
     
-    let toolbarX, toolbarY;
-    if (isTableCell) {
-      // Center toolbar above the table cell with a small gap
-      toolbarX = stageBox.left + elementScreenPos.x + ((element.width || 200) / 2) - (toolbarWidth / 2);
-      toolbarY = stageBox.top + elementScreenPos.y - toolbarHeight - 8; // 8px gap above the table
-    } else {
-      // Regular text element positioning
-      const gap = 20;
-      toolbarX = stageBox.left + elementScreenPos.x + ((element.width || 200) / 2) - (toolbarWidth / 2);
-      toolbarY = stageBox.top + elementScreenPos.y - toolbarHeight - gap;
-    }
+    // Calculate base position
+    const baseX = stageBox.left + elementScreenPos.x + ((element.width || 200) / 2) - (toolbarWidth / 2);
+    const baseY = stageBox.top + elementScreenPos.y - toolbarHeight - gap;
     
-    // Ensure toolbar stays within viewport
-    const clampedX = Math.max(20, Math.min(toolbarX, window.innerWidth - toolbarWidth - 20));
-    const clampedY = Math.max(20, toolbarY);
+    // Apply scroll compensation for fixed positioning
+    const toolbarX = baseX + scrollX;
+    const toolbarY = baseY + scrollY;
+    
+    // Enhanced viewport clamping with margin for safety
+    const margin = 20;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    const clampedX = Math.max(margin, Math.min(toolbarX, viewportWidth - toolbarWidth - margin));
+    const clampedY = Math.max(margin, Math.min(toolbarY, viewportHeight - toolbarHeight - margin));
+    
+    console.debug('[FloatingTextToolbar] Position calculated:', {
+      element: { x: element.x, y: element.y, width: element.width, height: element.height },
+      elementScreenPos,
+      stageBox: { left: stageBox.left, top: stageBox.top },
+      scroll: { x: scrollX, y: scrollY },
+      base: { x: baseX, y: baseY },
+      final: { x: clampedX, y: clampedY }
+    });
     
     return {
       x: clampedX,

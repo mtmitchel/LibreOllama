@@ -182,6 +182,20 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
               // Calculate text positioning for each segment
               const segmentY = 12 + (index * (segment.fontSize || 14) * 1.4);
               
+              // FIXED: Properly combine fontStyle and fontWeight for Konva
+              let konvaFontStyle = segment.fontStyle || 'normal';
+              if (segment.fontWeight === 'bold') {
+                konvaFontStyle = konvaFontStyle === 'italic' ? 'bold italic' : 'bold';
+              }
+
+              console.log(`[UNIFIED TEXT STICKY DEBUG] Rendering segment ${index}:`, {
+                text: segment.text,
+                fontSize: segment.fontSize || element.fontSize || 14,
+                fontStyle: konvaFontStyle,
+                fill: segment.fill || element.textColor || designSystem.colors.secondary[900],
+                textDecoration: segment.textDecoration || element.textDecoration || 'none'
+              });
+              
               return (
                 <Text
                   key={index}
@@ -193,8 +207,7 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
                   fontSize={segment.fontSize || element.fontSize || 14}
                   fontFamily={segment.fontFamily || element.fontFamily || 'Inter, sans-serif'}
                   fill={segment.fill || element.textColor || designSystem.colors.secondary[900]}
-                  fontStyle={segment.fontStyle || element.fontStyle || 'normal'}
-                  fontWeight={segment.fontWeight || 'normal'}
+                  fontStyle={konvaFontStyle}
                   textDecoration={segment.textDecoration || element.textDecoration || 'none'}
                   align={element.textAlign || 'left'}
                   verticalAlign="top"
@@ -277,6 +290,20 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
               // Calculate text positioning for each segment
               const segmentY = index * (segment.fontSize || 16) * 1.4;
               
+              // FIXED: Properly combine fontStyle and fontWeight for Konva
+              let konvaFontStyle = segment.fontStyle || 'normal';
+              if (segment.fontWeight === 'bold') {
+                konvaFontStyle = konvaFontStyle === 'italic' ? 'bold italic' : 'bold';
+              }
+
+              console.log(`[UNIFIED TEXT DEBUG] Rendering segment ${index}:`, {
+                text: segment.text,
+                fontSize: segment.fontSize || element.fontSize || 16,
+                fontStyle: konvaFontStyle,
+                fill: segment.fill || element.fill || element.textColor || '#3b82f6',
+                textDecoration: segment.textDecoration || element.textDecoration || 'none'
+              });
+              
               return (
                 <Text
                   key={index}
@@ -288,8 +315,7 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
                   fontSize={segment.fontSize || element.fontSize || 16}
                   fontFamily={segment.fontFamily || element.fontFamily || 'Inter, sans-serif'}
                   fill={segment.fill || element.fill || element.textColor || '#3b82f6'}
-                  fontStyle={segment.fontStyle || element.fontStyle || 'normal'}
-                  fontWeight={segment.fontWeight || 'normal'}
+                  fontStyle={konvaFontStyle}
                   textDecoration={segment.textDecoration || element.textDecoration || 'none'}
                   align={element.textAlign || 'left'}
                   verticalAlign="top"

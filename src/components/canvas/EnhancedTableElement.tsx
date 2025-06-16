@@ -796,10 +796,19 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
                     for (let segmentIndex = 0; segmentIndex < cellData.richTextSegments.length; segmentIndex++) {
                       const segment = cellData.richTextSegments[segmentIndex];
                       
+                      // FIXED: Properly combine fontStyle and fontWeight for Konva
                       let konvaFontStyle = segment.fontStyle || 'normal';
                       if (segment.fontWeight === 'bold') {
                         konvaFontStyle = konvaFontStyle === 'italic' ? 'bold italic' : 'bold';
                       }
+
+                      console.log(`[TABLE CELL DEBUG] Rendering segment ${segmentIndex}:`, {
+                        text: segment.text,
+                        fontSize: segment.fontSize || cellData.fontSize || 14,
+                        fontStyle: konvaFontStyle,
+                        fill: segment.fill || cellData.textColor || designSystem.colors.secondary[800],
+                        textDecoration: segment.textDecoration || ''
+                      });
 
                       // @ts-ignore - listType may not be on the base segment type yet
                       if (segment.listType === 'bullet' && segmentIndex === 0) {
@@ -812,6 +821,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
                             fontSize={segment.fontSize || cellData.fontSize || 14}
                             fontFamily={segment.fontFamily || cellData.fontFamily || designSystem.typography.fontFamily.sans}
                             fill={segment.fill || cellData.textColor || designSystem.colors.secondary[800]}
+                            fontStyle={konvaFontStyle}
                             listening={false}
                             verticalAlign="top"
                           />
@@ -819,6 +829,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
                         currentX += 15;
                       }
                       
+                      // FIXED: Create text node with proper font properties for width calculation
                       const textNode = new Konva.Text({
                         text: segment.text,
                         fontSize: segment.fontSize || cellData.fontSize || 14,
@@ -853,6 +864,18 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
                   } else if (cellData.textAlign === 'right') {
                     groupX = cellWidth - totalTextWidth - 8;
                   }
+
+                  // FIXED: Force layer redraw after rendering rich text segments
+                  setTimeout(() => {
+                    const stage = stageRef?.current;
+                    if (stage) {
+                      const layer = stage.getLayers()[0]; // Get the first layer
+                      if (layer) {
+                        layer.batchDraw();
+                        console.log('[TABLE CELL DEBUG] Layer redrawn after rich text segments render');
+                      }
+                    }
+                  }, 0);
 
                   return (
                     <Group x={groupX} y={0} width={cellWidth} clipFunc={(ctx) => { ctx.rect(0, 0, cellWidth, row?.height || 40); }}>
