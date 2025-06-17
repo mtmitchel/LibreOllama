@@ -1,6 +1,7 @@
 // src/components/Canvas/ImageElement.tsx
 import React from 'react';
 import { Image } from 'react-konva';
+import Konva from 'konva';
 import useImage from 'use-image';
 
 interface ImageElementProps {
@@ -12,19 +13,24 @@ interface ImageElementProps {
   konvaProps: any;
 }
 
-const ImageElement: React.FC<ImageElementProps> = ({ element, konvaProps }) => {
-  const [image] = useImage(element.imageUrl || '');
-  
-  if (!image) return null;
-  
-  return (
-    <Image
-      {...konvaProps}
-      image={image}
-      width={element.width}
-      height={element.height}
-    />
-  );
-};
+const ImageElement = React.forwardRef<Konva.Image, ImageElementProps>(
+  ({ element, konvaProps }, ref) => {
+    const [image] = useImage(element.imageUrl || '');
+    
+    if (!image) return null;
+    
+    return (
+      <Image
+        ref={ref}
+        {...konvaProps}
+        image={image}
+        width={element.width}
+        height={element.height}
+      />
+    );
+  }
+);
+
+ImageElement.displayName = 'ImageElement';
 
 export default ImageElement;

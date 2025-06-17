@@ -1,6 +1,7 @@
 // src/components/Canvas/UnifiedTextElement.tsx
 import React, { useRef, useCallback } from 'react';
 import { Text, Group, Rect } from 'react-konva';
+import Konva from 'konva';
 import { designSystem } from '../../styles/designSystem';
 import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
 import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
@@ -40,15 +41,8 @@ export interface UnifiedTextElementProps {
   konvaProps?: any;
 }
 
-const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
-  element,
-  isSelected,
-  isEditing = false, // Default to false if not provided
-  onUpdate,
-  onSelect,
-  onStartEdit,
-  konvaProps
-}) => {
+const UnifiedTextElement = React.forwardRef<Konva.Group, UnifiedTextElementProps>(
+  ({ element, isSelected, isEditing = false, onUpdate, onSelect, onStartEdit, konvaProps }, ref) => {
   const textRef = useRef<any>(null);
   
   // Store methods for canvas redraw registration
@@ -143,6 +137,7 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
     if (element.type === 'sticky-note') {
       return (
         <Group
+          ref={ref}
           id={element.id}
           x={element.x}
           y={element.y}
@@ -265,6 +260,7 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
       // Regular text element
       return (
         <Group
+          ref={ref}
           id={element.id}
           x={element.x}
           y={element.y}
@@ -380,6 +376,8 @@ const UnifiedTextElement: React.FC<UnifiedTextElementProps> = ({
 
   // Return ONLY Konva components - no HTML elements
   return renderKonvaElements();
-};
+});
+
+UnifiedTextElement.displayName = 'UnifiedTextElement';
 
 export default UnifiedTextElement;

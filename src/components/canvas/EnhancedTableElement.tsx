@@ -67,15 +67,8 @@ const getTableDataKey = (tableData: any) => {
   ).join('||');
 };
 
-export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
-  element,
-  isSelected,
-  onSelect,
-  onUpdate,
-  onDragEnd,
-  stageRef,
-  onEditingStateChange
-}) => {
+export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableElementProps>(
+  ({ element, isSelected, onSelect, onUpdate, onDragEnd, stageRef, onEditingStateChange }, ref) => {
   // State for hover interactions and controls
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
@@ -911,6 +904,7 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
 
   const tableContent = (
     <Group
+        ref={ref}
         key={`${element.id}-${getTableDataKey(enhancedTableData)}`}
         id={element.id}
         x={element.x}
@@ -1449,6 +1443,8 @@ export const EnhancedTableElement: React.FC<EnhancedTableElementProps> = ({
   }, [registerStageRef, unregisterStageRef]);
 
   return tableContent;
-};
+});
+
+EnhancedTableElement.displayName = 'EnhancedTableElement';
 
 export default EnhancedTableElement;

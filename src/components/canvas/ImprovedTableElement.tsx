@@ -27,19 +27,13 @@ interface ImprovedTableElementProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
 }
 
-const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
-  id,
-  x,
-  y,
-  rows,
-  cols,
-  cellWidth,
-  cellHeight,
-  tableData,
-  isSelected,
-  onSelect,
-  stageRef,
-}) => {  // State management
+const ImprovedTableElement = React.forwardRef<Konva.Group, ImprovedTableElementProps>(
+  ({ id, x, y, rows, cols, cellWidth, cellHeight, tableData, isSelected, onSelect, stageRef }, ref) => {
+  // State management
+  const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [isResizing, setIsResizing] = useState(false);
+  
   const [hoveredBoundary, setHoveredBoundary] = useState<{
     type: 'row' | 'col' | null;
     index: number;
@@ -51,10 +45,6 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
     index: number;
     position: { x: number; y: number };
   }>({ type: null, index: -1, position: { x: 0, y: 0 } });
-
-  const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [isResizing, setIsResizing] = useState(false);
 
   // Refs for managing hover timeouts and editor
   const boundaryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -214,7 +204,7 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
         x={x}
         y={y}
         radius={HANDLE_SIZE / 2}
-        fill={designSystem.colors.accent.primary}
+        fill={designSystem.colors.primary[500]}
         stroke="white"
         strokeWidth={2}
         draggable
@@ -268,6 +258,7 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
   return (
     <>
       <Group
+        ref={ref}
         x={x}
         y={y}
         draggable={!isResizing}
@@ -293,9 +284,9 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
                   y={cellY}
                   width={cellWidth}
                   height={cellHeight}
-                  stroke={designSystem.colors.border.default}
+                  stroke={designSystem.colors.secondary[300]}
                   strokeWidth={1}
-                  fill={designSystem.colors.background.surface}
+                  fill={designSystem.colors.secondary[50]}
                   onDblClick={() => handleCellDoubleClick(rowIndex, colIndex)}
                 />
                 <Text
@@ -306,7 +297,7 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
                   height={cellHeight - 16}
                   fontSize={14}
                   fontFamily="Inter, system-ui, sans-serif"
-                  fill={designSystem.colors.text.primary}
+                  fill={designSystem.colors.secondary[900]}
                   verticalAlign="top"
                   wrap="char"
                   ellipsis
@@ -376,7 +367,7 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
             x={hoveredBoundary.position.x}
             y={hoveredBoundary.position.y}
             radius={HANDLE_SIZE / 2}
-            fill={designSystem.colors.accent.primary}
+            fill={designSystem.colors.primary[500]}
             stroke="white"
             strokeWidth={2}
             onClick={() => handleAddRow(hoveredBoundary.index - 1)}
@@ -388,7 +379,7 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
             x={hoveredBoundary.position.x}
             y={hoveredBoundary.position.y}
             radius={HANDLE_SIZE / 2}
-            fill={designSystem.colors.accent.primary}
+            fill={designSystem.colors.primary[500]}
             stroke="white"
             strokeWidth={2}
             onClick={() => handleAddCol(hoveredBoundary.index - 1)}
@@ -427,7 +418,6 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
           type="horizontal"
           onDragStart={() => {
             setIsResizing(true);
-            setResizeType('width');
           }}
           onDragMove={(e) => {
             const newWidth = cellWidth + (e.target.x() - tableWidth) / cols;
@@ -435,7 +425,6 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
           }}
           onDragEnd={() => {
             setIsResizing(false);
-            setResizeType(null);
           }}
         />
 
@@ -445,7 +434,6 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
           type="vertical"
           onDragStart={() => {
             setIsResizing(true);
-            setResizeType('height');
           }}
           onDragMove={(e) => {
             const newHeight = cellHeight + (e.target.y() - tableHeight) / rows;
@@ -453,7 +441,6 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
           }}
           onDragEnd={() => {
             setIsResizing(false);
-            setResizeType(null);
           }}
         />
 
@@ -463,7 +450,6 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
           type="corner"
           onDragStart={() => {
             setIsResizing(true);
-            setResizeType('both');
           }}
           onDragMove={(e) => {
             const newWidth = cellWidth + (e.target.x() - tableWidth) / cols;
@@ -472,7 +458,6 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
           }}
           onDragEnd={() => {
             setIsResizing(false);
-            setResizeType(null);
           }}
         />
 
@@ -483,7 +468,7 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
             y={-2}
             width={tableWidth + 4}
             height={tableHeight + 4}
-            stroke={designSystem.colors.accent.primary}
+            stroke={designSystem.colors.primary[500]}
             strokeWidth={2}
             fill="transparent"
             dash={[8, 4]}
@@ -522,10 +507,10 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
             style={{
               width: '100%',
               height: '100%',
-              border: `2px solid ${designSystem.colors.accent.primary}`,
+              border: `2px solid ${designSystem.colors.primary[500]}`,
               borderRadius: '6px',
-              background: designSystem.colors.background.surface,
-              color: designSystem.colors.text.primary,
+              background: designSystem.colors.secondary[50],
+              color: designSystem.colors.secondary[900],
               fontSize: '14px',
               fontFamily: 'Inter, system-ui, sans-serif',
               padding: '8px',
@@ -538,6 +523,8 @@ const ImprovedTableElement: React.FC<ImprovedTableElementProps> = ({
       )}
     </>
   );
-};
+});
+
+ImprovedTableElement.displayName = 'ImprovedTableElement';
 
 export default ImprovedTableElement;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Line, Arrow } from 'react-konva';
+import Konva from 'konva';
 import { CanvasElement } from '../../stores/konvaCanvasStore';
 import { SectionElement } from '../../types/section';
 import { calculateConnectorPath } from '../../types/connector';
@@ -12,13 +13,8 @@ interface ConnectorRendererProps {
   sections?: Record<string, SectionElement>; // Sections for coordinate conversion
 }
 
-export const ConnectorRenderer: React.FC<ConnectorRendererProps> = ({
-  element,
-  isSelected,
-  onSelect,
-  elements,
-  sections = {}
-}) => {
+export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, ConnectorRendererProps>(
+  ({ element, isSelected, onSelect, elements, sections = {} }, ref) => {
   // Only render if this is a connector element
   if (element.type !== 'connector' || !element.startPoint || !element.endPoint || !element.connectorStyle) {
     return null;
@@ -111,6 +107,7 @@ export const ConnectorRenderer: React.FC<ConnectorRendererProps> = ({
   if (element.subType === 'arrow' && element.connectorStyle.hasEndArrow) {
     return (
       <Arrow
+        ref={ref as React.RefObject<Konva.Arrow>}
         {...commonProps}
         fill={element.connectorStyle.strokeColor}
         pointerLength={element.connectorStyle.arrowSize || 10}
@@ -120,7 +117,9 @@ export const ConnectorRenderer: React.FC<ConnectorRendererProps> = ({
   }
   
   // Default to line
-  return <Line {...commonProps} />;
-};
+  return <Line ref={ref as React.RefObject<Konva.Line>} {...commonProps} />;
+});
+
+ConnectorRenderer.displayName = 'ConnectorRenderer';
 
 export default ConnectorRenderer;

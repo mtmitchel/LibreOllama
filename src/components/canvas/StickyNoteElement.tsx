@@ -18,28 +18,17 @@ interface StickyNoteElementProps {
   onDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>) => void;
 }
 
-const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
-  element,
-  isSelected,
-  isEditing = false,
-  isDraggable = true,
-  onSelect,
-  onDragEnd,
-  onDoubleClick,
-}) => {
-  const groupRef = useRef<Konva.Group>(null);
-  
+const StickyNoteElement = React.forwardRef<Konva.Group, StickyNoteElementProps>(  ({ element, isSelected, isEditing = false, isDraggable = true, onSelect, onDragEnd, onDoubleClick }, ref) => {
   // Store methods for canvas redraw registration
   const registerStageRef = useKonvaCanvasStore(state => state.registerStageRef);
   const unregisterStageRef = useKonvaCanvasStore(state => state.unregisterStageRef);
   
   // Create a ref to the stage for redraw registration
   const stageRef = useRef<any>(null);
-  
-  // Update stage ref when component mounts/updates
+    // Update stage ref when component mounts/updates
   React.useEffect(() => {
-    if (groupRef.current) {
-      const stage = groupRef.current.getStage();
+    if (ref && typeof ref === 'object' && ref.current) {
+      const stage = ref.current.getStage();
       if (stage && stage !== stageRef.current) {
         stageRef.current = stage;
         registerStageRef({ current: stage });
@@ -51,7 +40,7 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
         unregisterStageRef({ current: stageRef.current });
       }
     };
-  }, [registerStageRef, unregisterStageRef]);
+  }, [registerStageRef, unregisterStageRef, ref]);
 
   // Default size if not specified
   const width = element.width || 200;
@@ -142,10 +131,9 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   if (isEditing) {
     return null; // KonvaCanvas will handle rendering the editor
   }
-
   return (
     <Group
-      ref={groupRef}
+      ref={ref}
       id={element.id}
       x={element.x}
       y={element.y}
@@ -290,12 +278,13 @@ const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
           stroke={designSystem.colors.primary[500]}
           strokeWidth={2}
           cornerRadius={designSystem.borderRadius.md}
-          listening={false}
-          dash={[8, 4]}
+          listening={false}          dash={[8, 4]}
         />
       )}
     </Group>
   );
-};
+});
+
+StickyNoteElement.displayName = 'StickyNoteElement';
 
 export default StickyNoteElement;

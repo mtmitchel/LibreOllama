@@ -16,20 +16,11 @@ interface SectionElementProps {
   renderElement: (element: any) => React.ReactNode;
 }
 
-const SectionElement: React.FC<SectionElementProps> = ({
-  section,
-  isSelected,
-  onUpdate,
-  onSelect,
-  onDragEnd,
-  isDraggable,
-  elements,
-  renderElement
-}) => {
+const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(
+  ({ section, isSelected, onUpdate, onSelect, onDragEnd, isDraggable, elements, renderElement }, ref) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(section.title || '');
   const titleTextRef = useRef<Konva.Text>(null);
-  const groupRef = useRef<Konva.Group>(null);
 
   const titleBarHeight = section.titleBarHeight || 40;
   const titleFontSize = section.titleFontSize || 14;
@@ -129,9 +120,6 @@ const SectionElement: React.FC<SectionElementProps> = ({
     const node = e.target;
     node.opacity(section.opacity || 1);
     
-    // Get the new position from the dragged Group
-    const newPosition = { x: node.x(), y: node.y() };
-    
     // Call the drag end handler with the section ID and new position
     onDragEnd(e, section.id);
   };
@@ -168,7 +156,7 @@ const SectionElement: React.FC<SectionElementProps> = ({
 
   return (
     <Group
-      ref={groupRef}
+      ref={ref}
       id={section.id}
       x={section.x}
       y={section.y}
@@ -332,6 +320,8 @@ const SectionElement: React.FC<SectionElementProps> = ({
       })}
     </Group>
   );
-};
+});
+
+SectionElement.displayName = 'SectionElement';
 
 export default SectionElement;
