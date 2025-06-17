@@ -19,7 +19,7 @@ export const ToolbarButton: React.FC<ButtonProps> = ({
   const baseStyle: React.CSSProperties = {
     backgroundColor: 'transparent',
     border: 'none',
-    color: '#ffffff',
+    color: '#1F2937', // Dark gray text for visibility on white background
     cursor: 'pointer',
     padding: '6px 8px',
     borderRadius: '6px',
@@ -51,6 +51,16 @@ export const ToolbarButton: React.FC<ButtonProps> = ({
       onMouseDown={(e) => {
         e.stopPropagation();
       }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.backgroundColor = '#F3F4F6'; // Light gray hover
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }
+      }}
       title={title}
       data-floating-toolbar="true"
       data-toolbar-button="true"
@@ -68,7 +78,7 @@ export const ToolbarSeparator: React.FC<SeparatorProps> = ({ style = {} }) => {
   const separatorStyle: React.CSSProperties = {
     width: '1px',
     height: '20px',
-    backgroundColor: '#444',
+    backgroundColor: '#E5E7EB', // Light gray for visibility on white background
     margin: '0 2px',
     ...style
   };
@@ -184,7 +194,7 @@ export const ToolbarColorPicker: React.FC<ColorPickerProps> = ({
         style={{
           width: '28px',
           height: '28px',
-          border: '2px solid #444',
+          border: '2px solid #D1D5DB',
           borderRadius: '50%', // Make it circular
           cursor: 'pointer',
           backgroundColor: 'transparent',
@@ -204,7 +214,7 @@ export const ToolbarColorPicker: React.FC<ColorPickerProps> = ({
           borderRadius: '50%',
           backgroundColor: displayValue,
           pointerEvents: 'none',
-          border: '1px solid rgba(255, 255, 255, 0.3)'
+          border: '1px solid rgba(0, 0, 0, 0.1)'
         }}
       />
     </div>
@@ -317,10 +327,10 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
           e.stopPropagation();
         }}
         style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          border: '1px solid #444',
+          backgroundColor: '#ffffff',
+          border: '1px solid #D1D5DB',
           borderRadius: '4px',
-          color: '#ffffff',
+          color: '#1F2937',
           padding: '6px 8px',
           fontSize: '12px',
           cursor: 'pointer',
@@ -333,10 +343,10 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
         }}
         title="Font Size"
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+          e.currentTarget.style.backgroundColor = '#F3F4F6';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.backgroundColor = '#ffffff';
         }}
       >
         <span>{value}px</span>
@@ -352,10 +362,10 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
             top: '100%',
             left: '0',
             width: '180px',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #444',
+            backgroundColor: '#ffffff',
+            border: '1px solid #D1D5DB',
             borderRadius: '6px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
             zIndex: 10001,
             padding: '4px 0',
             marginTop: '2px'
@@ -367,7 +377,7 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
               onClick={() => handleSizeChange(size.value)}
               style={{
                 padding: '8px 12px',
-                color: value === size.value ? '#3B82F6' : '#ffffff',
+                color: value === size.value ? '#3B82F6' : '#1F2937',
                 cursor: 'pointer',
                 fontSize: '13px',
                 display: 'flex',
@@ -377,7 +387,7 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
               }}
               onMouseEnter={(e) => {
                 if (value !== size.value) {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.backgroundColor = '#F3F4F6';
                 }
               }}
               onMouseLeave={(e) => {
@@ -391,7 +401,7 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
             </div>
           ))}
           
-          <div style={{ borderTop: '1px solid #333', margin: '4px 0' }} />
+          <div style={{ borderTop: '1px solid #E5E7EB', margin: '4px 0' }} />
           
           <div style={{ padding: '8px 12px' }}>
             <input
@@ -405,21 +415,21 @@ export const FontSizeDropdown: React.FC<FontSizeDropdownProps> = ({
               style={{
                 width: '100%',
                 padding: '5px 8px',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid #555',
+                backgroundColor: '#F9FAFB',
+                border: '1px solid #D1D5DB',
                 borderRadius: '4px',
-                color: '#ffffff',
+                color: '#1F2937',
                 fontSize: '12px',
                 outline: 'none',
                 transition: 'border-color 0.15s ease'
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = '#3B82F6';
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)';
+                e.currentTarget.style.backgroundColor = '#ffffff';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#555';
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.borderColor = '#D1D5DB';
+                e.currentTarget.style.backgroundColor = '#F9FAFB';
               }}
             />
           </div>
@@ -743,10 +753,10 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
           e.stopPropagation();
         }}
         style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          border: '1px solid #444',
+          backgroundColor: '#ffffff',
+          border: '1px solid #D1D5DB',
           borderRadius: '4px',
-          color: '#ffffff',
+          color: '#1F2937',
           padding: '6px 8px',
           fontSize: '12px',
           cursor: 'pointer',
@@ -760,10 +770,10 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
         }}
         title="Text Alignment"
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+          e.currentTarget.style.backgroundColor = '#F3F4F6';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.backgroundColor = '#ffffff';
         }}
       >
         <span>{currentAlignment.icon}</span>
@@ -789,10 +799,10 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
                 }
             ),
             width: '140px',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #444',
+            backgroundColor: '#ffffff',
+            border: '1px solid #D1D5DB',
             borderRadius: '6px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
             zIndex: 10001,
             padding: '4px 0',
             marginTop: '2px'
@@ -804,7 +814,7 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
               onClick={() => handleAlignmentChange(option.value)}
               style={{
                 padding: '8px 12px',
-                color: value === option.value ? '#3B82F6' : '#ffffff',
+                color: value === option.value ? '#3B82F6' : '#1F2937',
                 cursor: 'pointer',
                 fontSize: '13px',
                 display: 'flex',
@@ -815,7 +825,7 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
               }}
               onMouseEnter={(e) => {
                 if (value !== option.value) {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.backgroundColor = '#F3F4F6';
                 }
               }}
               onMouseLeave={(e) => {

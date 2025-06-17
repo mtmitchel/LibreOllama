@@ -494,6 +494,9 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     resize: 'none',
     lineHeight: 1.5, // Use fixed value as designSystem.typography.lineHeights is not available
     backgroundColor: 'transparent', 
+    color: designSystem.colors.secondary[900], // Dark text for better visibility
+    fontSize: '14px',
+    fontFamily: designSystem.typography.fontFamily.sans,
     boxSizing: 'border-box',
     whiteSpace: 'pre-wrap', // Important for newlines and spaces
     overflowWrap: 'break-word', // Ensure long words wrap
@@ -507,15 +510,15 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       const textareaRect = textareaRef.current.getBoundingClientRect();
       // Toolbar positioning relative to the viewport, as it's portal'd to document.body
       
-      const toolbarHeightEstimate = 40; // Estimate toolbar height for better positioning
-      let top = textareaRect.top - toolbarHeightEstimate - 5; // Position above textarea
+      const toolbarHeightEstimate = 50; // Increased height estimate for better spacing
+      let top = textareaRect.top - toolbarHeightEstimate - 10; // More space above textarea
       let left = textareaRect.left;
 
       // Adjust if toolbar would go off-screen (viewport relative)
-      if (top < 5) { // If too close to top of viewport
-        top = textareaRect.bottom + 5; // Position below
+      if (top < 10) { // If too close to top of viewport
+        top = textareaRect.bottom + 10; // Position below with more space
       }
-      if (left < 5) left = 5;
+      if (left < 10) left = 10;
       
       // Consider toolbar width if it can be determined or estimated
       // const toolbarWidthEstimate = 200; 
@@ -544,7 +547,7 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       {showToolbar && toolbarPosition && textareaRef.current && (
         <FloatingTextToolbar
           targetRef={textareaRef} // Pass targetRef for positioning
-          // style={{ position: 'absolute', top: `${toolbarPosition.top}px`, left: `${toolbarPosition.left}px` }} // Remove direct style
+          style={{ position: 'absolute', top: `${toolbarPosition.top}px`, left: `${toolbarPosition.left}px` }} // Add style prop back for correct positioning
           onCommand={handleFormattingChange}
           currentFormat={currentFormat}
         />

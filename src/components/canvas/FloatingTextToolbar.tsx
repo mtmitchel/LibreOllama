@@ -65,13 +65,14 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
         position: 'absolute', // Will be positioned by parent via `style` prop
         display: 'flex',
         alignItems: 'center',
-        padding: designSystem.spacing.xs,
-        backgroundColor: designSystem.colors.secondary[100], // Use secondary colors
-        border: `1px solid ${designSystem.colors.secondary[300]}`,
+        padding: designSystem.spacing.sm,
+        backgroundColor: '#FFFFFF', // Pure white background for maximum visibility
+        border: `2px solid ${designSystem.colors.primary[500]}`, // Stronger blue border
         borderRadius: designSystem.borderRadius.md,
-        boxShadow: designSystem.shadows.md,
-        zIndex: 1100, // Ensure it's above the editor
+        boxShadow: designSystem.shadows.xl, // Much stronger shadow
+        zIndex: 9999, // Very high z-index to ensure it's on top of everything
         gap: designSystem.spacing.xs,
+        minHeight: '40px', // Ensure minimum height for visibility
         ...style, // Apply positioning styles from props
       }}
       onClick={(e) => e.stopPropagation()} // Prevent clicks inside toolbar from propagating

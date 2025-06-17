@@ -4,6 +4,7 @@ import Konva from 'konva';
 import { CanvasElement, useKonvaCanvasStore, RichTextSegment } from '../../stores/konvaCanvasStore';
 import { designSystem } from '../../styles/designSystem';
 import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
+import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
 
 // Constants for improved UX
 const MIN_CELL_WIDTH = 80; // Increased from 60px
@@ -1405,7 +1406,29 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
         isEditing: true,
         cellPosition: editingCellPosition,
         cellText: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.text || '',
-        richTextSegments: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.richTextSegments || [],
+        richTextSegments: (() => {
+          const existingSegments = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.richTextSegments;
+          if (existingSegments && existingSegments.length > 0) {
+            return existingSegments;
+          }
+          // Convert plain text to rich text segments to ensure the rich text editor is always triggered
+          const cellText = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.text || '';
+          const defaultFormat = {
+            fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize || 14,
+            fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily || designSystem.typography.fontFamily.sans,
+            textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor || designSystem.colors.secondary[800],
+            textAlign: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textAlign || 'left',
+            bold: false,
+            italic: false,
+            underline: false,
+            strikethrough: false,
+            listType: 'none' as const,
+            isHyperlink: false,
+            hyperlinkUrl: '',
+            textStyle: 'default' as const,
+          };
+          return richTextManager.plainTextToSegments(cellText, defaultFormat);
+        })(),
         fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize,
         fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily,
         textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor,
