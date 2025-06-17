@@ -1,6 +1,7 @@
 // src/components/canvas/KonvaCanvas.tsx
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Stage, Layer, Transformer, Rect, Circle, Line, Star, Arrow } from 'react-konva';
+import { Html } from 'react-konva-utils';
 import Konva from 'konva';
 import { useKonvaCanvasStore, CanvasElement, RichTextSegment } from '../../stores/konvaCanvasStore';
 import RichTextRenderer, { RichTextElementType } from './RichTextRenderer';
@@ -81,7 +82,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     elementType?: 'text' | 'sticky-note' | 'table-cell';
   } | null>(null);
 
-  // Debug effect to monitor rich text editing data changes
+  // Stabilized debug effect to monitor rich text editing data changes
   useEffect(() => {
     console.log('🎯 [RICH TEXT EDITING DEBUG] === RICH TEXT EDITING DATA CHANGE ===');
     console.log('🎯 [RICH TEXT EDITING DEBUG] Rich text editing data updated:', richTextEditingData);
@@ -99,6 +100,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     } else {
       console.log('🎯 [RICH TEXT EDITING DEBUG] Rich text editing data is null');
     }
+  }, [richTextEditingData]);
+
+  // Prevent unwanted state resets during render cycles
+  const richTextEditingDataRef = useRef(richTextEditingData);
+  useEffect(() => {
+    richTextEditingDataRef.current = richTextEditingData;
   }, [richTextEditingData]);
 
   const [previewFormat] = useState<{
@@ -314,22 +321,35 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // Add virtualization for large numbers of elements
   const MAX_VISIBLE_ELEMENTS = 1000;
 
-  // Handler for starting text editing from UnifiedTextElement
+  // Handler for starting text editing from UnifiedTextElement - stabilized to prevent state resets
   const handleStartTextEdit = useCallback((elementId: string) => {
     console.log('🐛 [DEBUG] KonvaCanvas handleStartTextEdit called for element:', elementId);
+    
+    // Prevent double-triggering if already editing this element
+    if (richTextEditingDataRef.current?.elementId === elementId && richTextEditingDataRef.current?.isEditing) {
+      console.log('🐛 [DEBUG] Already editing this element, skipping:', elementId);
+      return;
+    }
     
     const element = elements[elementId];
     if (!element) return;
 
-    if (element.type === 'text' || element.type === 'sticky-note') {
-      console.log('🐛 [DEBUG] KonvaCanvas - Setting up rich text editing for text/sticky-note element');
+    if (element.type === 'text' || element.type === 'sticky-note' || element.type === 'rich-text') {
+      console.log('🐛 [DEBUG] KonvaCanvas - Setting up rich text editing for element type:', element.type);
       
       setEditingTextId(elementId);
       
-      // Calculate positions for rich text editor
+      // Calculate positions for rich text editor with improved accuracy
       if (internalStageRef.current) {
         const stage = internalStageRef.current;
         const container = stage.container();
+        
+        // Safety check for container
+        if (!container) {
+          console.warn('KonvaCanvas: Stage container not found');
+          return;
+        }
+        
         const containerRect = container.getBoundingClientRect();
         
         // Enhanced position calculation using proper stage-to-screen coordinate conversion
@@ -355,15 +375,37 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         const elementScreenPoint = stageTransform.point(elementCanvasPoint);
         
         // Calculate editing position - position exactly where text element appears
-        const editingX = containerRect.left + elementScreenPoint.x;
-        const editingY = containerRect.top + elementScreenPoint.y;
+        // Add safety margins and ensure minimum sizes
+        const editingX = Math.max(0, containerRect.left + elementScreenPoint.x);
+        const editingY = Math.max(0, containerRect.top + elementScreenPoint.y);
         const editingWidth = Math.max(200, (element.width || 200) * stageScale);
-        const editingHeight = Math.max(100, (element.height || 100) * stageScale);
+        const editingHeight = Math.max(50, (element.height || 100) * stageScale);
         
-        const editingPosition = { x: editingX, y: editingY, width: editingWidth, height: editingHeight };
+        // Ensure editor doesn't go off-screen
+        const maxX = window.innerWidth - editingWidth - 20;
+        const maxY = window.innerHeight - editingHeight - 20;
+        const finalX = Math.min(editingX, maxX);
+        const finalY = Math.min(editingY, maxY);
         
-        // Set up rich text editing data
-        setRichTextEditingData({
+        const editingPosition = { 
+          x: finalX, 
+          y: finalY, 
+          width: editingWidth, 
+          height: editingHeight 
+        };
+        
+        console.log('🎯 [POSITION DEBUG] Editor positioning:', {
+          element: { x: element.x, y: element.y, width: element.width, height: element.height },
+          elementCanvasPoint,
+          elementScreenPoint,
+          containerRect: { left: containerRect.left, top: containerRect.top },
+          stageScale,
+          editingPosition
+        });
+        
+        // FIXED: Remove setTimeout debouncing to prevent race conditions
+        // Set state immediately to prevent unwanted resets
+        const newRichTextEditingData = {
           isEditing: true,
           cellPosition: editingPosition,
           cellText: element.text || '',
@@ -373,7 +415,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           textColor: element.textColor || element.fill,
           textAlign: element.textAlign || 'left',
           elementId: elementId,
-          elementType: element.type as 'text' | 'sticky-note',
+          elementType: (element.type === 'rich-text' ? 'text' : element.type) as 'text' | 'sticky-note',
           onTextChange: (newText: string) => {
             updateElement(elementId, { text: newText });
           },
@@ -381,97 +423,43 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             updateElement(elementId, { ...element, richTextSegments: segments } as any);
           },
           onFinishEditing: (finalSegments: RichTextSegment[]) => {
-            console.log('🎯 [RICH TEXT EDITING DEBUG] onFinishEditing called for text/sticky-note element:', elementId);
+            console.log('🎯 [RICH TEXT EDITING DEBUG] onFinishEditing called for element:', elementId);
             // Update the element with the final segments
             updateElement(elementId, { ...element, richTextSegments: finalSegments } as any);
             setEditingTextId(null);
             setRichTextEditingData(null);
           },
           onCancelEditing: () => {
-            console.log('🎯 [RICH TEXT EDITING DEBUG] onCancelEditing called for text/sticky-note element:', elementId);
+            console.log('🎯 [RICH TEXT EDITING DEBUG] onCancelEditing called for element:', elementId);
             setEditingTextId(null);
             setRichTextEditingData(null);
           }
-        });
-      }
-    } else if (element.type === 'rich-text') {
-      // Rich-text elements should also use the unified rich text editor
-      console.log('🐛 [DEBUG] KonvaCanvas - Setting up rich text editing for rich-text element');
-      
-      setEditingTextId(elementId);
-      
-      // Calculate positions for rich text editor (same logic as text/sticky-note)
-      if (internalStageRef.current) {
-        const stage = internalStageRef.current;
-        const container = stage.container();
-        const containerRect = container.getBoundingClientRect();
-        
-        const stageScale = stage.scaleX();
-        const stageTransform = stage.getAbsoluteTransform();
-        
-        let elementCanvasPoint: { x: number; y: number };
-        
-        if (element.sectionId && sections[element.sectionId]) {
-          const section = sections[element.sectionId];
-          elementCanvasPoint = {
-            x: section.x + element.x,
-            y: section.y + element.y
-          };
-        } else {
-          elementCanvasPoint = { x: element.x, y: element.y };
-        }
-        
-        const elementScreenPoint = stageTransform.point(elementCanvasPoint);
-        
-        const editingX = containerRect.left + elementScreenPoint.x;
-        const editingY = containerRect.top + elementScreenPoint.y;
-        const editingWidth = Math.max(200, (element.width || 200) * stageScale);
-        const editingHeight = Math.max(100, (element.height || 100) * stageScale);
-        
-        const editingPosition = { x: editingX, y: editingY, width: editingWidth, height: editingHeight };
-        
-        // Set up rich text editing data for rich-text elements
-        setRichTextEditingData({
-          isEditing: true,
-          cellPosition: editingPosition,
-          cellText: element.text || '',
-          richTextSegments: (element as any).richTextSegments || [],
-          fontSize: element.fontSize,
-          fontFamily: element.fontFamily,
-          textColor: element.textColor || element.fill,
-          textAlign: element.textAlign || 'left',
-          elementId: elementId,
-          elementType: 'text', // Treat rich-text as text for editing purposes
-          onTextChange: (newText: string) => {
-            updateElement(elementId, { text: newText });
-          },
-          onRichTextChange: (segments: any[]) => {
-            updateElement(elementId, { ...element, richTextSegments: segments } as any);
-          },
-          onFinishEditing: (finalSegments: RichTextSegment[]) => {
-            // Update the element with the final segments
-            updateElement(elementId, { ...element, richTextSegments: finalSegments } as any);
-            setEditingTextId(null);
-            setRichTextEditingData(null);
-          },
-          onCancelEditing: () => {
-            setEditingTextId(null);
-            setRichTextEditingData(null);
-          }
-        });
+        };
+
+        // Set states atomically to prevent race conditions
+        setRichTextEditingData(newRichTextEditingData);
       }
     }
-  }, [elements, setEditingTextId, internalStageRef]);
+  }, [elements, sections, setEditingTextId, internalStageRef, updateElement]);
 
   const handleTextUpdate = useCallback((elementId: string, newText: string) => {
     updateElementText(elementId, newText);
   }, [updateElementText]);
 
   const handleEditingCancel = useCallback(() => {
-    setEditingTextId(null);
-    setEditText('');
-    setRichTextEditingData(null); // Clear rich text editing data
-  }, [setEditingTextId]);
+    // FIXED: More robust cancel logic to prevent race conditions
+    console.log('🔍 [CANCEL DEBUG] handleEditingCancel called', {
+      editingTextId,
+      hasRichTextEditingData: !!richTextEditingDataRef.current
+    });
+    
+    // Clear all editing state atomically
+    if (editingTextId || richTextEditingDataRef.current) {
+      setEditingTextId(null);
+      setEditText('');
+      setRichTextEditingData(null);
+    }
+  }, [editingTextId, setEditingTextId]);
 
   // Find the editing element based on editingTextId
   const editingElement = editingTextId ? elements[editingTextId] : null;
@@ -682,6 +670,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   };
 
   const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Prevent text selection conflicts when not in text editing mode
+    if (!editingTextId && !richTextEditingData) {
+      e.evt.preventDefault();
+    }
+    
     // Handle table tool - use enhanced table creation from store
     // Table creation is handled by KonvaToolbar.tsx, not here
     // This prevents duplicate table creation when clicking on canvas
@@ -1488,18 +1481,25 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     }
   }, [selectedElementId, editingTextId, selectedTool, applyTextFormat, designSystem, setSelectedElement, updateElement, onElementSelect, handleFormatChange, handleStartTextEdit, handleTextUpdate, handleEditingCancel]);
 
-  // Keyboard event handling
+  // Keyboard event handling with improved rich text editing support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       console.log('🎯 [KEYBOARD DEBUG] Key pressed:', e.key, {
         selectedElementId,
         editingTextId,
         isDrawingConnector,
+        hasRichTextEditingData: !!richTextEditingDataRef.current?.isEditing,
         target: e.target
       });
       
+      // Don't interfere with rich text editing
+      if (richTextEditingDataRef.current?.isEditing) {
+        console.log('🎯 [KEYBOARD DEBUG] Rich text editing active, skipping global keyboard handling');
+        return;
+      }
+      
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedElementId && !editingTextId) {
+        if (selectedElementId && !editingTextId && !richTextEditingDataRef.current?.isEditing) {
           console.log('🎯 [KEYBOARD DEBUG] Deleting element:', selectedElementId);
           const { deleteElement } = useKonvaCanvasStore.getState();
           deleteElement(selectedElementId);
@@ -1515,13 +1515,15 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           setConnectorEnd(null);
           return;
         }
-        console.log('🎯 [KEYBOARD DEBUG] Clearing selection and editing state');
-        setSelectedElement(null);
-        if (editingTextId) {
-          // Call the store action to cancel editing
-          console.log('🎯 [KEYBOARD DEBUG] Clearing editing text ID:', editingTextId);
-          setEditingTextId(null);
-          setRichTextEditingData(null); // Also clear rich text editing data
+        
+        // Clear selection on Escape, but only if not editing text
+        if (selectedElementId && !editingTextId && !richTextEditingDataRef.current?.isEditing) {
+          console.log('🎯 [KEYBOARD DEBUG] Clearing selection on Escape');
+          setSelectedElement(null);
+        } else if (editingTextId || richTextEditingDataRef.current?.isEditing) {
+          // Cancel text editing
+          console.log('🎯 [KEYBOARD DEBUG] Canceling text editing on Escape');
+          handleEditingCancel();
         }
       }
     };
@@ -1530,7 +1532,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedElementId, editingTextId, setSelectedElement, setEditingTextId, isDrawingConnector]);
+  }, [selectedElementId, editingTextId, setSelectedElement, handleEditingCancel, isDrawingConnector]);
 
   return (
     <div className="konva-canvas-container">
@@ -1553,7 +1555,9 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         style={{
           display: 'block',
           backgroundColor: designSystem.canvasStyles.background,
-          cursor: selectedTool === 'pan' ? 'grab' : (selectedTool.startsWith('connector-') ? 'crosshair' : 'default')
+          cursor: selectedTool === 'pan' ? 'grab' : (selectedTool.startsWith('connector-') ? 'crosshair' : 'default'),
+          userSelect: editingTextId || richTextEditingData ? 'text' : 'none', // Prevent text selection when not editing
+          WebkitUserSelect: editingTextId || richTextEditingData ? 'text' : 'none',
         }}
       >
         {/* Connector Tool for drawing connectors */}
@@ -1700,50 +1704,79 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             shadowBlur={12}
             shadowOffset={{ x: 0, y: 4 }}
             shadowOpacity={0.5}
-          /></Layer></Stage>
+          />
+        </Layer>
 
-      {/* Text editing overlay - completely outside Konva */}
-      {editingElement && textareaPosition && (
-        <TextEditingOverlay
-          position={textareaPosition}
-          text={editText}
-          onTextChange={setEditText}
-          onBlur={handleEditingDone}
-          fontSize={editingElement.fontSize || 16}
-          fontFamily={editingElement.fontFamily || 'Inter'}
-          color={editingElement.textColor || editingElement.fill || '#000000'}
-          align={editingElement.textAlign || 'left'}
-          maxWidth={editingElement.width}
-          rotation={editingElement.rotation || 0}
-          scale={1}
-        />
-      )}
+        {/* Text editing overlay - now properly portaled using Html */}
+        {editingElement && textareaPosition && (
+          <Html divProps={{
+            style: {
+              position: 'absolute',
+              left: `${textareaPosition.x}px`,
+              top: `${textareaPosition.y}px`,
+              transform: `rotate(${editingElement.rotation || 0}deg) scale(${panZoomState.scale})`,
+              transformOrigin: 'left top',
+              zIndex: 1000,
+              pointerEvents: 'auto'
+            }
+          }}>
+            <TextEditingOverlay
+              position={{ x: 0, y: 0, width: textareaPosition.width, height: textareaPosition.height }}
+              text={editText}
+              onTextChange={setEditText}
+              onBlur={handleEditingDone}
+              fontSize={editingElement.fontSize || 16}
+              fontFamily={editingElement.fontFamily || 'Inter'}
+              color={editingElement.textColor || editingElement.fill || '#000000'}
+              align={editingElement.textAlign || 'left'}
+              maxWidth={editingElement.width}
+              rotation={0} // Rotation handled by Html wrapper
+              scale={1} // Scale handled by Html wrapper
+            />
+          </Html>
+        )}
 
-      {/* Unified rich text editing overlay for ALL text editing (text, sticky notes, AND table cells) */}
-      {richTextEditingData && (
-        <RichTextCellEditor
-          isEditing={richTextEditingData.isEditing}
-          cellPosition={richTextEditingData.cellPosition}
-          initialSegments={richTextEditingData.richTextSegments}
-          onRichTextChange={richTextEditingData.onRichTextChange || (() => {})}
-          onFinishEditing={richTextEditingData.onFinishEditing}
-          onCancelEditing={richTextEditingData.onCancelEditing}
-          defaultFormat={{
-            fontSize: richTextEditingData.fontSize || 14,
-            fontFamily: richTextEditingData.fontFamily || designSystem.typography.fontFamily.sans,
-            textColor: richTextEditingData.textColor || designSystem.colors.secondary[800],
-            textAlign: richTextEditingData.textAlign || 'left',
-            bold: false,
-            italic: false,
-            underline: false,
-            strikethrough: false,
-            listType: 'none',
-            isHyperlink: false,
-            hyperlinkUrl: '',
-            textStyle: 'default',
-          }}
-        />
-      )}
+        {/* Unified rich text editing overlay for ALL text editing (text, sticky notes, AND table cells) */}
+        {richTextEditingData && richTextEditingData.isEditing && richTextEditingData.cellPosition && (
+          <Html divProps={{
+            style: {
+              position: 'absolute',
+              left: `${richTextEditingData.cellPosition.x}px`,
+              top: `${richTextEditingData.cellPosition.y}px`,
+              transform: `scale(${panZoomState.scale})`,
+              transformOrigin: 'left top',
+              zIndex: 1000,
+              pointerEvents: 'auto'
+            }
+          }}>
+            <KonvaErrorBoundary fallback={null}>
+              <RichTextCellEditor
+                isEditing={richTextEditingData.isEditing}
+                cellPosition={{ x: 0, y: 0, width: richTextEditingData.cellPosition.width, height: richTextEditingData.cellPosition.height }}
+                initialSegments={richTextEditingData.richTextSegments}
+                onRichTextChange={richTextEditingData.onRichTextChange || (() => {})}
+                onFinishEditing={richTextEditingData.onFinishEditing}
+                onCancelEditing={richTextEditingData.onCancelEditing}
+                defaultFormat={{
+                  fontSize: richTextEditingData.fontSize || 14,
+                  fontFamily: richTextEditingData.fontFamily || designSystem.typography.fontFamily.sans,
+                  textColor: richTextEditingData.textColor || designSystem.colors.secondary[800],
+                  textAlign: richTextEditingData.textAlign || 'left',
+                  bold: false,
+                  italic: false,
+                  underline: false,
+                  strikethrough: false,
+                  listType: 'none',
+                  isHyperlink: false,
+                  hyperlinkUrl: '',
+                  textStyle: 'default',
+                }}
+              />
+            </KonvaErrorBoundary>
+          </Html>
+        )}
+
+      </Stage>
 
     </div>
   );

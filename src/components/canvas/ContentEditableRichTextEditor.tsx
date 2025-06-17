@@ -186,9 +186,7 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       const html = richTextManager.segmentsToHtml(initialSegments);
       editorRef.current.innerHTML = html;
     }
-  }, [initialSegments]);
-
-  // Handle content changes - use onBlur instead of onInput to prevent text reversal
+  }, [initialSegments]);  // Handle content changes - use onBlur instead of onInput to prevent text reversal
   const handleContentChange = useCallback(() => {
     if (!editorRef.current) return;
 
@@ -198,6 +196,11 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     // Get the current content
     const textContent = editorRef.current.textContent || '';
     const htmlContent = editorRef.current.innerHTML;
+
+    // Prevent removal during editing mode
+    if (isTypingRef.current && !textContent.trim()) {
+      return; // Don't update empty content while typing
+    }
     
     // For simple text (no HTML tags), create a basic segment
     if (textContent && htmlContent === textContent) {
@@ -341,7 +344,14 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     overflowWrap: 'break-word',
     boxSizing: 'border-box',
     ...style
-  };  // Clean up on unmount
+  };  // Prevent text selection conflicts
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleSelectStart = useCallback((e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  }, []);  // Clean up on unmount
   useEffect(() => {
     return () => {
       if (pendingUpdateRef.current) {
@@ -349,7 +359,6 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       }
     };
   }, []);
-
   return (
     <div
       ref={combinedRef}
@@ -359,7 +368,12 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       onBlur={handleContentChange}
       onSelect={handleSelectionChange}
       onKeyUp={handleSelectionChange}
-      onMouseUp={handleSelectionChange}      onKeyDown={(e) => {
+      onMouseUp={handleSelectionChange}
+      onMouseDown={(e) => {
+        e.stopPropagation(); // Prevent canvas interactions
+        handleMouseDown(e);
+      }}
+      onKeyDown={(e) => {
         // Stop propagation to prevent global keyboard shortcuts from interfering with text editing
         e.stopPropagation();
         

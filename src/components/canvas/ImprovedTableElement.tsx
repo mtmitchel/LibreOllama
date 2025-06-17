@@ -124,18 +124,62 @@ const ImprovedTableElement = React.forwardRef<Konva.Group, ImprovedTableElementP
     });
   };
 
-  // Cell editing functionality
+  // Cell editing functionality with improved positioning
   const handleCellDoubleClick = (rowIndex: number, colIndex: number) => {
     if (!stageRef?.current) return;
     
     setEditingCell({ row: rowIndex, col: colIndex });
     setEditValue(tableData[rowIndex]?.[colIndex] || '');
     
-    // Position editor over the cell
+    // Calculate accurate cell position relative to stage container
+    const stage = stageRef.current;
+    const container = stage.container();
+    const containerRect = container.getBoundingClientRect();
+    
+    // Get stage transformation
+    const stageScale = stage.scaleX();
+    const stageTransform = stage.getAbsoluteTransform();
+    
+    // Calculate cell position in canvas coordinates
+    const cellCanvasX = x + (colIndex * cellWidth);
+    const cellCanvasY = y + (rowIndex * cellHeight);
+    
+    // Convert to screen coordinates
+    const cellScreenPoint = stageTransform.point({ x: cellCanvasX, y: cellCanvasY });
+    
+    // Calculate absolute position for editor
+    const editorX = containerRect.left + cellScreenPoint.x;
+    const editorY = containerRect.top + cellScreenPoint.y;
+    const editorWidth = cellWidth * stageScale;
+    const editorHeight = cellHeight * stageScale;
+    
+    // Store position for editor positioning
+    const editorPosition = { 
+      x: editorX, 
+      y: editorY, 
+      width: editorWidth, 
+      height: editorHeight 
+    };
+    
+    // Position editor over the cell with slight delay for DOM updates
     setTimeout(() => {
       if (editorRef.current) {
-        editorRef.current.focus();
-        editorRef.current.select();
+        // Position the editor
+        const editor = editorRef.current;
+        editor.style.position = 'absolute';
+        editor.style.left = `${editorPosition.x}px`;
+        editor.style.top = `${editorPosition.y}px`;
+        editor.style.width = `${editorPosition.width}px`;
+        editor.style.height = `${editorPosition.height}px`;
+        editor.style.zIndex = '1000';
+        editor.style.border = '2px solid #0066cc';
+        editor.style.background = 'white';
+        editor.style.padding = '4px';
+        editor.style.fontSize = '14px';
+        editor.style.fontFamily = 'Inter, sans-serif';
+        
+        editor.focus();
+        editor.select();
       }
     }, 10);
   };

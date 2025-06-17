@@ -310,3 +310,21 @@ export function isValidPosition(containerElement: HTMLElement, position: number)
   const textLength = getTextLength(containerElement);
   return position >= 0 && position <= textLength;
 }
+
+// Prevent text element removal during editing
+export const isTextEditingInProgress = (elementId: string): boolean => {
+  // Check if element is currently being edited
+  const editingElements = document.querySelectorAll('[data-editing-element-id]');
+  return Array.from(editingElements).some(el => 
+    el.getAttribute('data-editing-element-id') === elementId
+  );
+};
+
+// Debounced text cleanup to prevent accidental deletion
+export const debouncedTextCleanup = (callback: () => void, delay: number = 1000) => {
+  let timeoutId: NodeJS.Timeout;
+  return () => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(callback, delay);
+  };
+};

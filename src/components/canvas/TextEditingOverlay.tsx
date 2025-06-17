@@ -25,13 +25,14 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
   color,
   align,
   maxWidth,
-  rotation,
-  scale,
+  rotation: _, // Unused when positioned via Html wrapper
+  scale: __, // Unused when positioned via Html wrapper
 }) => {
   const [localText, setLocalText] = useState(text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasPlaceholderBeenCleared, setHasPlaceholderBeenCleared] = useState(false);
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect if the text is placeholder text that should be cleared
   const isPlaceholderText = (text: string) => {
@@ -43,7 +44,9 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
       'Enter text...',
       'Type your text...'
     ];
-    return placeholderTexts.includes(text.trim());
+    // Also check for table header patterns like "Header 1", "Header 2", etc.
+    const headerPattern = /^Header \d+$/;
+    return placeholderTexts.includes(text.trim()) || headerPattern.test(text.trim());
   };
 
   useEffect(() => {
@@ -92,7 +95,21 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
   };
 
   const handleBlur = () => {
-    onBlur();
+    // Debounce blur to prevent immediate element removal
+    // This allows users to click back into the textarea if needed
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+    
+    blurTimeoutRef.current = setTimeout(() => {
+      // Only call onBlur if text is not empty or is placeholder text
+      if (localText.trim() || isPlaceholderText(localText)) {
+        onBlur();
+      } else {
+        // Empty text - still call onBlur but with a longer delay to prevent accidental deletion
+        setTimeout(onBlur, 1000);
+      }
+    }, 100);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -111,29 +128,49 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
       }
     }
     
+    // Handle Enter and Escape keys
     if (e.key === 'Escape') {
       e.preventDefault();
+      // Cancel any pending blur timeout
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
       onBlur();
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      // Cancel any pending blur timeout
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
       onBlur();
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div
       ref={containerRef}
       style={{
-        position: 'absolute',
+        position: 'relative', // Changed from 'absolute' to 'relative' for Html wrapper compatibility
         zIndex: 1000,
         pointerEvents: 'auto',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: position.x ? `${position.x}px` : '0px',
+        top: position.y ? `${position.y}px` : '0px',
         width: position.width ? `${position.width}px` : 'auto',
         height: position.height ? `${position.height}px` : 'auto',
-        transform: `rotate(${rotation}deg) scale(${scale})`,
-        transformOrigin: 'left top',
+        // Remove transform as it's now handled by the Html wrapper
       }}
+      onMouseDown={(e) => e.stopPropagation()} // Prevent canvas interactions
     >
       <textarea
         ref={textareaRef}
@@ -162,7 +199,9 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
           textAlign: align as any,
           maxWidth: maxWidth ? `${maxWidth}px` : undefined,
           boxSizing: 'border-box',
+          userSelect: 'text', // Ensure text selection works within textarea
         }}
+        onMouseDown={(e) => e.stopPropagation()} // Allow text selection in textarea
       />
     </div>
   );

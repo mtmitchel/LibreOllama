@@ -71,6 +71,7 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
   },
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const finishTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Centralized state for segments
   const [currentSegments, setCurrentSegments] = useState<RichTextSegment[]>(initialSegments);
@@ -90,20 +91,26 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       return richTextManager.getFormattingAtPosition(initialSegments, 0);
     }
     return defaultFormat;
-  });
-
-  // Validate props on mount and when they change
+  });  // Validate props on mount and when they change - with improved debouncing
+  const [isValidated, setIsValidated] = useState(false);
+  
   useEffect(() => {
-    if (isEditing && !validateCellPosition(cellPosition)) {
-      logError('RichTextCellEditor received invalid cellPosition, editor will not render');
-      onCancelEditing();
-      return;
-    }
+    const validateProps = () => {
+      if (isEditing && !validateCellPosition(cellPosition)) {
+        logError('RichTextCellEditor received invalid cellPosition, editor will not render');
+        onCancelEditing();
+        return false;
+      }
+      return true;
+    };
+
+    // FIXED: Remove unnecessary debouncing that was causing state issues
+    const valid = validateProps();
+    setIsValidated(valid);
   }, [isEditing, cellPosition, onCancelEditing]);
-
-  // Initialize local state when editing starts
+  // Initialize local state when editing starts - improved stability
   useEffect(() => {
-    if (isEditing && !hasInitialized) {
+    if (isEditing && !hasInitialized && isValidated) {
       const startingSegments = initialSegments && initialSegments.length > 0 
         ? initialSegments 
         : richTextManager.plainTextToSegments('', defaultFormat);
@@ -115,28 +122,39 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
         : defaultFormat;
       setCurrentFormat(formatAtStart);
 
-      const focusTimeout = setTimeout(() => {
-        if (editorRef.current) {
-          try {
-            editorRef.current.focus();
-            setHasInitialized(true);
-            setShowToolbar(true);
-          } catch (error) {
-            logError('ERROR during focus operation', error);
-            onCancelEditing();
-          }
-        } else {
-          logError('ERROR: Editor ref not available, canceling edit');
+      // FIXED: Remove setTimeout to prevent race conditions
+      if (editorRef.current) {
+        try {
+          editorRef.current.focus();
+          setHasInitialized(true);
+          setShowToolbar(true);
+        } catch (error) {
+          logError('ERROR during focus operation', error);
           onCancelEditing();
         }
-      }, 10);
-
-      return () => clearTimeout(focusTimeout);
+      } else {
+        // Retry focus on next frame if ref not ready
+        requestAnimationFrame(() => {
+          if (editorRef.current) {
+            try {
+              editorRef.current.focus();
+              setHasInitialized(true);
+              setShowToolbar(true);
+            } catch (error) {
+              logError('ERROR during delayed focus operation', error);
+              onCancelEditing();
+            }
+          } else {
+            logError('ERROR: Editor ref not available after retry, canceling edit');
+            onCancelEditing();
+          }
+        });
+      }
     } else if (!isEditing) {
       setHasInitialized(false);
       setShowToolbar(false);
     }
-  }, [isEditing, hasInitialized, onCancelEditing, initialSegments, defaultFormat]);
+  }, [isEditing, hasInitialized, isValidated, onCancelEditing, initialSegments, defaultFormat]);
 
   // Effect to update internal state if initialSegments prop changes while not actively editing
   useEffect(() => {
@@ -161,8 +179,13 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     setCurrentFormat(format);
     setShowToolbar(true);
   }, []);
-
   const handleSave = useCallback(() => {
+    // Clear any pending timeout
+    if (finishTimeoutRef.current) {
+      clearTimeout(finishTimeoutRef.current);
+      finishTimeoutRef.current = null;
+    }
+    
     try {
       onFinishEditing(segmentsRef.current);
     } catch (error) {
@@ -172,6 +195,12 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
   }, [onFinishEditing]);
 
   const handleCancel = useCallback(() => {
+    // Clear any pending timeout
+    if (finishTimeoutRef.current) {
+      clearTimeout(finishTimeoutRef.current);
+      finishTimeoutRef.current = null;
+    }
+    
     try {
       onCancelEditing();
     } catch (error) {
@@ -180,7 +209,23 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     }
   }, [onCancelEditing]);
 
-  // Handle clicks outside to finish editing
+  // Debounced finish editing for empty text
+  const handleDebouncedFinish = useCallback(() => {
+    // Check if text is empty
+    const plainText = richTextManager.segmentsToPlainText(segmentsRef.current);
+    if (!plainText.trim()) {
+      // Debounce the finish to prevent accidental deletion
+      if (finishTimeoutRef.current) {
+        clearTimeout(finishTimeoutRef.current);
+      }
+      finishTimeoutRef.current = setTimeout(() => {
+        handleSave();
+      }, 1000); // 1 second delay for empty text
+    } else {
+      handleSave();
+    }
+  }, [handleSave]);
+  // Handle clicks outside to finish editing with debouncing
   useEffect(() => {
     if (!isEditing) return;
 
@@ -194,7 +239,7 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
             '[data-floating-toolbar], [data-toolbar-button], [data-dropdown-content], [data-dropdown-container]'
           );
           if (!isToolbarClick) {
-            handleSave();
+            handleDebouncedFinish();
           }
         }
       } catch (error) {
@@ -205,13 +250,15 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
 
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside, true);
-    }, 0);
-
-    return () => {
+    }, 0);    return () => {
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside, true);
+      // Cleanup timeout on unmount
+      if (finishTimeoutRef.current) {
+        clearTimeout(finishTimeoutRef.current);
+      }
     };
-  }, [isEditing, handleSave]);
+  }, [isEditing, handleDebouncedFinish]);
 
   // Handle formatting commands from toolbar
   const handleFormattingChange = useCallback((command: string, value?: any) => {
@@ -286,12 +333,11 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
   }, [handleSave, handleCancel]);
 
   if (!isEditing) return null;
-
-  // Editor positioning based on cell position
+  // Editor positioning based on cell position - relative for Html wrapper compatibility
   const editorStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: cellPosition.y,
-    left: cellPosition.x,
+    position: 'relative', // Changed from 'absolute' to 'relative' for Html wrapper
+    top: 0,
+    left: 0,
     width: cellPosition.width,
     height: cellPosition.height,
     zIndex: 1000,
@@ -322,37 +368,45 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     } else {
       setToolbarPosition(null);
     }
-  }, [showToolbar, cellPosition]);
-
-  return createPortal(
-    <div style={editorStyle} data-rich-text-editor role="dialog" aria-modal="true">
-      {showToolbar && toolbarPosition && (
-        <FloatingTextToolbar
-          targetRef={editorRef}
-          style={{ 
-            position: 'absolute', 
-            top: `${toolbarPosition.top}px`, 
-            left: `${toolbarPosition.left}px` 
+  }, [showToolbar, cellPosition]);  return (
+    // FIXED: Enhanced portal isolation with safer rendering approach
+    isEditing && isValidated ? createPortal(
+      <div 
+        style={editorStyle} 
+        data-rich-text-editor 
+        data-portal-isolated="true"
+        role="dialog" 
+        aria-modal="true"
+      >
+        {showToolbar && toolbarPosition && (
+          <FloatingTextToolbar
+            targetRef={editorRef}
+            style={{ 
+              position: 'absolute', 
+              top: `${toolbarPosition.top}px`, 
+              left: `${toolbarPosition.left}px` 
+            }}
+            onCommand={handleFormattingChange}
+            currentFormat={currentFormat}
+          />
+        )}
+        <ContentEditableRichTextEditor
+          ref={editorRef}
+          initialSegments={currentSegments}
+          onSegmentsChange={handleSegmentsChange}
+          onSelectionChange={handleSelectionChange}
+          style={{
+            width: '100%',
+            height: '100%',
+            minHeight: '100px',
           }}
-          onCommand={handleFormattingChange}
-          currentFormat={currentFormat}
+          placeholder="Enter text..."
+          onKeyDown={handleKeyDown}
         />
-      )}
-      <ContentEditableRichTextEditor
-        ref={editorRef}
-        initialSegments={currentSegments}
-        onSegmentsChange={handleSegmentsChange}
-        onSelectionChange={handleSelectionChange}
-        style={{
-          width: '100%',
-          height: '100%',
-          minHeight: '100px',
-        }}
-        placeholder="Enter text..."
-        onKeyDown={handleKeyDown}
-      />
-    </div>,
-    document.body 
+      </div>,
+      // FIXED: Ensure we always render to document.body to avoid any Konva tree interference
+      document.body 
+    ) : null
   );
 };
 
