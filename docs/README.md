@@ -14,13 +14,13 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 ### **🎨 Canvas/Whiteboard System**
 Our professional-grade whiteboard is powered by Konva.js for high performance and rich interactions. Features **FigJam-style sections** for hierarchical organization, advanced rich text editing with floating toolbar, and comprehensive visual feedback systems.
 
-**Current Status**: Canvas system is functional with active development. Table functionality includes 8-handle resize system, optimized performance, and improved code quality.
+**Current Status**: Canvas system is functional with active development. **Recent fixes (June 16, 2025)**: Critical text input issues resolved including letter reversal bugs, cursor position problems, and selection behavior issues. Table functionality includes 8-handle resize system, optimized performance, and improved code quality.
 
-- [Canvas Complete Documentation](CANVAS_COMPLETE_DOCUMENTATION.md) - Main canvas system overview with section system, advanced text editing, and implementation details
-- [Canvas Tables Documentation](CANVAS_TABLES.md) - Consolidated table functionality, implementation details, and fixes
-- [Canvas Architecture Analysis](CANVAS_ARCHITECTURE_ANALYSIS.md) - Technical architecture details
+- [Canvas Complete Documentation](CANVAS_COMPLETE_DOCUMENTATION.md) - Main canvas system overview with section system, advanced text editing, implementation details, and recent bug fixes
+- [Canvas Tables Documentation](CANVAS_TABLES.md) - Consolidated table functionality, implementation details, and technical specifications
+- [Canvas Architecture Analysis](CANVAS_ARCHITECTURE_ANALYSIS.md) - Technical architecture details and component structure
 
-> **Note**: Previous separate table documentation files have been consolidated into `CANVAS_TABLES.md` and archived in `../archives/consolidated_canvas_archive_2025/`
+> **Note**: Previous redundant table documentation files have been consolidated and archived in `../archives/consolidated_canvas_archive_2025/redundant_table_docs/`
 
 
 ### **🎨 UI/UX Design System**

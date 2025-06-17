@@ -62,7 +62,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // State for text editing overlays - completely separate from Konva
   const [editingElement, setEditingElement] = useState<CanvasElement | null>(null);
   const [editText, setEditText] = useState('');
-  const [textareaPosition, setTextareaPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
   // Unified rich text editing data for ALL text editing (text, sticky notes, AND table cells)
   const [richTextEditingData, setRichTextEditingData] = useState<{
@@ -472,7 +471,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     setEditingTextId(null);
     setEditingElement(null);
     setEditText('');
-    setTextareaPosition(null);
     setRichTextEditingData(null); // Clear rich text editing data
   }, [setEditingTextId]);
 
@@ -1267,7 +1265,49 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
   // Removed duplicate handleTransformEnd - now handled in useEffect above
 
-  // ...existing code...
+  // Memoize textareaPosition calculation to prevent remounting on every keystroke
+  const textareaPosition = useMemo(() => {
+    if (!editingElement || !internalStageRef.current) return null;
+    
+    const stage = internalStageRef.current;
+    const container = stage.container();
+    const containerRect = container.getBoundingClientRect();
+    
+    const stageScale = stage.scaleX();
+    const stageTransform = stage.getAbsoluteTransform();
+    
+    let elementCanvasPoint: { x: number; y: number };
+    
+    if (editingElement.sectionId && sections[editingElement.sectionId]) {
+      const section = sections[editingElement.sectionId];
+      elementCanvasPoint = {
+        x: section.x + editingElement.x,
+        y: section.y + editingElement.y
+      };
+    } else {
+      elementCanvasPoint = { x: editingElement.x, y: editingElement.y };
+    }
+    
+    const elementScreenPoint = stageTransform.point(elementCanvasPoint);
+    
+    return {
+      x: containerRect.left + elementScreenPoint.x,
+      y: containerRect.top + elementScreenPoint.y,
+      width: Math.max(200, (editingElement.width || 200) * stageScale),
+      height: Math.max(100, (editingElement.height || 100) * stageScale)
+    };
+  }, [
+    editingElement?.id,
+    editingElement?.x,
+    editingElement?.y,
+    editingElement?.width,
+    editingElement?.height,
+    editingElement?.sectionId,
+    sections,
+    panZoomState.scale,
+    panZoomState.position.x,
+    panZoomState.position.y
+  ]);
 
   // Render individual canvas elements based on their type
   const renderElement = useCallback((element: CanvasElement): React.ReactNode => {

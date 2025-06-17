@@ -26,6 +26,19 @@ Navigate to `/canvas` to access the KonvaCanvas with professional whiteboard too
 11. **Clean Code Standards** – Removed unused imports and variables, improved code maintainability
 12. **Table Resize System** – Functional 8-handle resize system with custom blue dot handles, live visual feedback, and improved state persistence
 
+### ✅ Critical Text Input Fixes (June 16, 2025)
+13. **Letter Reversal Bug Fixed** – Resolved issue where typing "Test" would appear as "eT" due to textarea remounting on every keystroke
+14. **Cursor Position Preservation** – Fixed cursor reset issue by implementing proper memoization of `textareaPosition` calculation
+15. **Selection Behavior Restored** – Fixed Backspace clearing entire text instead of just selection through local state management
+16. **Controlled Input Optimization** – Implemented local state in `TextEditingOverlay` to prevent global re-renders during typing
+17. **Runtime Error Resolution** – Removed invalid `setTextareaPosition` calls that were breaking text editing functionality
+18. **Text Editing Reliability** – Text input now maintains proper cursor position and native selection behavior
+
+### ✅ Documentation Consolidation
+19. **Reduced Documentation Redundancy** – Consolidated multiple table documentation files into single source of truth
+20. **Accurate Status Reporting** – Replaced overstated "Production Ready" claims with realistic development status
+21. **Archive Organization** – Moved redundant documentation to archives for cleaner maintenance
+
 > **📋 For detailed table functionality, see [Canvas Tables Documentation](CANVAS_TABLES.md)**
 
 ## 🚀 Quick Start

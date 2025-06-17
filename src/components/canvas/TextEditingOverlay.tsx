@@ -1,5 +1,5 @@
 // src/components/canvas/TextEditingOverlay.tsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TextEditingOverlayProps {
@@ -36,6 +36,28 @@ export const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
   onDone
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // LOCAL STATE: Use local state for textarea value to prevent global updates on every keystroke
+  const [localText, setLocalText] = useState(editText);
+  
+  // Sync local state with prop changes when editing starts
+  useEffect(() => {
+    if (isEditing) {
+      setLocalText(editText);
+    }
+  }, [isEditing, editText]);
+  
+  // Function to commit changes to global state
+  const commitChanges = () => {
+    onEditTextChange(localText);
+    onDone();
+  };
+  
+  // Function to cancel changes
+  const cancelChanges = () => {
+    setLocalText(editText); // Reset to original
+    onCancel();
+  };
   
   // Inject styles for FigJam-style textarea
   useEffect(() => {
@@ -83,13 +105,13 @@ export const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
-          if (editText.trim() !== '') {
+          if (localText.trim() !== '') {
             textareaRef.current.select();
           }
         }
       }, 10);
     }
-  }, [isEditing, textareaPosition]); // Remove editText dependency to prevent re-focus on each keystroke
+  }, [isEditing, textareaPosition]); // Deliberately exclude localText to prevent re-focus on each keystroke
 
   if (!isEditing || !textareaPosition) {
     console.log('🔍 [OVERLAY DEBUG] TextEditingOverlay early return:', {
@@ -105,7 +127,7 @@ export const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
     elementId: element.id,
     elementType: element.type,
     textareaPosition,
-    editText: editText.substring(0, 50) + '...'
+    localText: localText.substring(0, 50) + '...'
   });
 
   return (
@@ -114,16 +136,17 @@ export const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
       {createPortal(
         <textarea
           ref={textareaRef}
-          value={editText}
+          value={localText}
           onChange={(e) => {
             e.stopPropagation(); // Prevent event bubbling that might cause re-renders
             console.log('🔍 [INPUT DEBUG] Textarea onChange triggered:', {
-              currentValue: editText,
+              currentValue: localText,
               newValue: e.target.value,
               inputLength: e.target.value.length,
               timestamp: Date.now()
             });
-            onEditTextChange(e.target.value);
+            // Update local state only, no global state update
+            setLocalText(e.target.value);
           }}
           placeholder="Add text"
           onKeyDown={(e) => {
@@ -131,12 +154,16 @@ export const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               console.log('🔍 [TEXTAREA DEBUG] Enter key pressed - auto-saving');
-              onDone();
+              commitChanges();
             } else if (e.key === 'Escape') {
               e.preventDefault();
               console.log('🔍 [TEXTAREA DEBUG] Escape key pressed - canceling');
-              onCancel();
+              cancelChanges();
             }
+          }}
+          onBlur={() => {
+            // Commit changes when focus is lost
+            commitChanges();
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
