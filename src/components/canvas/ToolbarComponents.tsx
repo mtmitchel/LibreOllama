@@ -862,3 +862,186 @@ export const TextAlignmentDropdown: React.FC<TextAlignmentDropdownProps> = ({
     </div>
   );
 };
+
+// Text Style Dropdown (Heading, Subheading, Body)
+interface TextStyleDropdownProps {
+  value: 'default' | 'heading' | 'subheading';
+  onChange: (style: 'default' | 'heading' | 'subheading') => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
+}
+
+export const TextStyleDropdown: React.FC<TextStyleDropdownProps> = ({
+  value,
+  onChange,
+  isOpen: externalIsOpen,
+  onToggle
+}) => {
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = onToggle || setInternalIsOpen;
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const styleOptions = [
+    { value: 'default', label: 'Body Text', fontSize: '14px' },
+    { value: 'heading', label: 'Heading', fontSize: '24px' },
+    { value: 'subheading', label: 'Subheading', fontSize: '18px' }
+  ] as const;
+
+  const handleStyleChange = (style: 'default' | 'heading' | 'subheading') => {
+    onChange(style);
+    if (onToggle) {
+      onToggle(); // Close dropdown when external control is used
+    } else {
+      setIsOpen(false);
+    }
+  };
+
+  const currentStyle = styleOptions.find(option => option.value === value) || styleOptions[0];
+
+  return (
+    <div ref={dropdownRef} data-dropdown-container style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        data-dropdown-button
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onToggle ? onToggle() : setIsOpen(!isOpen);
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
+        style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid #D1D5DB',
+          borderRadius: '4px',
+          color: '#1F2937',
+          padding: '6px 8px',
+          fontSize: '12px',
+          cursor: 'pointer',
+          minWidth: '100px',
+          maxWidth: '120px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transition: 'all 0.2s ease'
+        }}
+        title="Text Style"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#F3F4F6';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#ffffff';
+        }}
+      >
+        <span>{currentStyle.label}</span>
+        <span style={{ marginLeft: '4px', fontSize: '10px' }}>▼</span>
+      </button>
+      
+      {isOpen && (
+        <div
+          data-dropdown-content
+          data-dropdown-container
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: '0',
+            width: '160px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #D1D5DB',
+            borderRadius: '6px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+            zIndex: 10001,
+            padding: '4px 0',
+            marginTop: '2px'
+          }}
+        >
+          {styleOptions.map(option => (
+            <div
+              key={option.value}
+              onClick={() => handleStyleChange(option.value)}
+              style={{
+                padding: '8px 12px',
+                color: value === option.value ? '#3B82F6' : '#1F2937',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: value === option.value ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (value !== option.value) {
+                  e.currentTarget.style.backgroundColor = '#F3F4F6';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (value !== option.value) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <div>
+                {value === option.value && <span style={{ marginRight: '10px', color: '#3B82F6' }}>✓</span>}
+                <span style={{ 
+                  fontWeight: option.value === 'heading' ? 'bold' : (value === option.value ? '500' : '400'),
+                  fontSize: option.fontSize
+                }}>
+                  {option.label}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// List Controls (Bullet, Numbered, None)
+interface ListControlsProps {
+  value: 'none' | 'bullet' | 'numbered';
+  onChange: (listType: 'none' | 'bullet' | 'numbered') => void;
+}
+
+export const ListControls: React.FC<ListControlsProps> = ({
+  value,
+  onChange
+}) => {
+  return (
+    <div style={{ display: 'flex', gap: '2px' }}>
+      {/* Bullet List Button */}
+      <ToolbarButton
+        title="Bullet List"
+        active={value === 'bullet'}
+        onClick={() => onChange(value === 'bullet' ? 'none' : 'bullet')}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="3" cy="4" r="1"/>
+          <rect x="6" y="3" width="8" height="2" rx="0.5"/>
+          <circle cx="3" cy="8" r="1"/>
+          <rect x="6" y="7" width="8" height="2" rx="0.5"/>
+          <circle cx="3" cy="12" r="1"/>
+          <rect x="6" y="11" width="8" height="2" rx="0.5"/>
+        </svg>
+      </ToolbarButton>
+      
+      {/* Numbered List Button */}
+      <ToolbarButton
+        title="Numbered List"
+        active={value === 'numbered'}
+        onClick={() => onChange(value === 'numbered' ? 'none' : 'numbered')}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <text x="1" y="6" fontSize="8" fontFamily="monospace">1.</text>
+          <rect x="6" y="3" width="8" height="2" rx="0.5"/>
+          <text x="1" y="10" fontSize="8" fontFamily="monospace">2.</text>
+          <rect x="6" y="7" width="8" height="2" rx="0.5"/>
+          <text x="1" y="14" fontSize="8" fontFamily="monospace">3.</text>
+          <rect x="6" y="11" width="8" height="2" rx="0.5"/>
+        </svg>
+      </ToolbarButton>
+    </div>
+  );
+};

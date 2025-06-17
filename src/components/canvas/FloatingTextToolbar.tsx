@@ -8,6 +8,8 @@ import {
   ToolbarColorPicker,
   FontSizeDropdown,
   TextAlignmentDropdown,
+  TextStyleDropdown,
+  ListControls,
 } from './ToolbarComponents';
 import type { StandardTextFormat } from '../../types/richText';
 
@@ -113,6 +115,27 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
 
       <ToolbarSeparator />
 
+      {/* Text Style Dropdown */}
+      <TextStyleDropdown
+        value={currentFormat.textStyle || 'default'}
+        onChange={(style: 'default' | 'heading' | 'subheading') => {
+          // Apply both text style and corresponding font size
+          handleCommand('textStyle', style);
+          // Apply corresponding font size
+          if (style === 'heading') {
+            handleCommand('fontSize', 24);
+          } else if (style === 'subheading') {
+            handleCommand('fontSize', 18);
+          } else {
+            handleCommand('fontSize', 14);
+          }
+        }}
+        isOpen={openDropdown === 'textStyle'}
+        onToggle={() => setOpenDropdown(openDropdown === 'textStyle' ? null : 'textStyle')}
+      />
+
+      <ToolbarSeparator />
+
       {/* Font Size Dropdown */}
       <FontSizeDropdown
         value={currentFormat.fontSize || 14}
@@ -139,6 +162,14 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
         onChange={(align: string) => handleCommand('textAlign', align as 'left' | 'center' | 'right')} // Cast align to specific type
         isOpen={openDropdown === 'textAlign'}
         onToggle={() => setOpenDropdown(openDropdown === 'textAlign' ? null : 'textAlign')}
+      />
+
+      <ToolbarSeparator />
+
+      {/* List Controls */}
+      <ListControls
+        value={currentFormat.listType || 'none'}
+        onChange={(listType: 'none' | 'bullet' | 'numbered') => handleCommand('listType', listType)}
       />
 
     </div>,

@@ -255,6 +255,8 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
 
   // Handle format change from FloatingTextToolbar
   const handleFormattingChange = useCallback((command: string, value?: any) => {
+    console.log(`[RICH TEXT] Received command: ${command}, value:`, value);
+    
     if (!textareaRef.current) return;
 
     const selection: TextSelection = {
@@ -278,39 +280,49 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       case 'italic': cmdValue = toggleIfNeeded('italic'); break;
       case 'underline': cmdValue = toggleIfNeeded('underline'); break;
       case 'strikethrough': cmdValue = toggleIfNeeded('strikethrough'); break;
-      case 'color': cmdString = 'textColor'; cmdValue = value; break; // `value` should be color string
-      case 'align': cmdString = 'textAlign'; cmdValue = value; break; // `value` should be 'left', 'center', 'right'
+      // Handle both legacy and direct command names for compatibility
+      case 'color': 
+      case 'textColor': 
+        cmdString = 'textColor'; 
+        cmdValue = value; 
+        break;
+      case 'align': 
+      case 'textAlign': 
+        cmdString = 'textAlign'; 
+        cmdValue = value; 
+        break;
       // Direct assignment for other commands
       case 'fontSize':
       case 'fontFamily':
-      case 'textColor': // Handles direct textColor set
-      case 'textAlign': // Handles direct textAlign set
       case 'listType':
       case 'isHyperlink':
       case 'hyperlinkUrl':
       case 'textStyle':
+        cmdString = command;
         cmdValue = value;
         break;
       default:
         // Check if it's a valid StandardTextFormat key before warning
         if (!(command in ({} as StandardTextFormat))) {
            logError(`Unknown or unhandled command: ${command}`);
+           return;
         } else {
           // If it's a known key but not handled above, it might be a direct assignment
-          cmdString = command; // Ensure cmdString is set
+          cmdString = command;
           cmdValue = value;
-        }
-        // If still not a valid key after mapping, return
-        if (!(cmdString in ({} as StandardTextFormat))) {
-          return;
         }
         break;
     }
     
+    // Validate that cmdString is a valid StandardTextFormat key
     if (!(cmdString in ({} as StandardTextFormat))) {
         logError(`Mapped command '${cmdString}' is not a valid StandardTextFormat key.`);
         return;
     }
+
+    console.log(`[RICH TEXT] Applying command: ${cmdString} = ${cmdValue}`);
+    console.log(`[RICH TEXT] Current segments before:`, segmentsRef.current);
+    console.log(`[RICH TEXT] Selection:`, selection);
 
     // Use segmentsRef.current for the most up-to-date segments
     const newSegments = richTextManager.applyFormattingToSegments(
@@ -319,6 +331,8 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       selection // Selection range
     );
 
+    console.log(`[RICH TEXT] New segments after formatting:`, newSegments);
+
     if (newSegments) {
       setCurrentSegments(newSegments); // Update state
       const newPlainText = richTextManager.segmentsToPlainText(newSegments);
@@ -326,11 +340,14 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
 
       onRichTextChange(newSegments); // Notify parent of change
       
+      console.log(`[RICH TEXT] Updated segments state and notified parent`);
+      
       // Update currentFormat based on the new state at the cursor
       // Need to wait for textarea to re-render if selection changes due to formatting
       requestAnimationFrame(() => {
         if (textareaRef.current) {
           const formatAtCursor = richTextManager.getFormattingAtPosition(newSegments, textareaRef.current.selectionStart);
+          console.log(`[RICH TEXT] Format at cursor after formatting:`, formatAtCursor);
           setCurrentFormat(prev => ({ ...prev, ...formatAtCursor }));
           textareaRef.current.focus(); // Re-focus
         }
@@ -355,38 +372,127 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     const selectionStart = textareaRef.current.selectionStart;
     const selectionEnd = textareaRef.current.selectionEnd;
 
-    // Determine the base format for the new/changed text.
-    // This should ideally come from the character *before* the change,
-    // or the surrounding selection's format if replacing text.
-    // For simplicity, using currentFormat at the start of the selection.
-    // UnifiedRichTextManager could offer more sophisticated logic here.
-    const formatForChange = richTextManager.getFormattingAtPosition(
-      segmentsRef.current, // Use ref
-      selectionStart > 0 ? selectionStart -1 : 0 // Format of char before cursor or start
-    );
-    
-    // A more robust approach would involve diffing old and new plain text
-    // and applying changes segment by segment, or using a more advanced
-    // text-to-segments conversion in UnifiedRichTextManager that can handle partial updates.
-    // For now, re-convert the whole text with the format at the cursor.
-    // This is a simplification and might lose some formatting fidelity on complex edits.
-    const newSegments = richTextManager.plainTextToSegments(newRawText, formatForChange);
+    // Calculate what text was added/removed
+    const oldText = plainText;
+    const oldLength = oldText.length;
+    const newLength = newRawText.length;
+    const lengthDiff = newLength - oldLength;
 
-    setCurrentSegments(newSegments);
-    setPlainText(newRawText);
-    onRichTextChange(newSegments);
+    // For now, implement a simple but more robust approach:
+    // If text was only added at the cursor position (common case), preserve existing segments
+    // and insert new text with the current format at that position
+    
+    // Simple heuristic: if the difference in length equals the selection range and
+    // everything before selectionStart is the same, then text was inserted/replaced at cursor
+    const beforeCursor = newRawText.substring(0, selectionStart - lengthDiff);
+    const wasProbablyInsertionAtCursor = 
+      lengthDiff >= 0 && // Text was added or stayed same
+      beforeCursor === oldText.substring(0, selectionStart - lengthDiff) &&
+      selectionStart >= lengthDiff; // Cursor position makes sense
+
+    if (wasProbablyInsertionAtCursor && lengthDiff > 0) {
+      // Text was likely inserted at cursor - preserve existing formatting
+      const insertionPoint = selectionStart - lengthDiff;
+      const insertedText = newRawText.substring(insertionPoint, selectionStart);
+      
+      // Get the format at the insertion point
+      const formatAtInsertion = richTextManager.getFormattingAtPosition(
+        segmentsRef.current,
+        insertionPoint > 0 ? insertionPoint - 1 : 0
+      );
+      
+      // Create new segments by inserting text with proper formatting
+      // This is a simplified approach - split the segments at insertion point and insert new segment
+      let newSegmentsList: RichTextSegment[] = [];
+      let currentPos = 0;
+      let hasInserted = false;
+      
+      for (const segment of segmentsRef.current) {
+        const segmentEnd = currentPos + segment.text.length;
+        
+        if (currentPos <= insertionPoint && insertionPoint <= segmentEnd && !hasInserted) {
+          // Split this segment and insert new text
+          const beforeInsert = segment.text.substring(0, insertionPoint - currentPos);
+          const afterInsert = segment.text.substring(insertionPoint - currentPos);
+          
+          if (beforeInsert) {
+            newSegmentsList.push({ ...segment, text: beforeInsert });
+          }
+          
+          // Insert new text with current format
+          if (insertedText) {
+            newSegmentsList.push({ 
+              text: insertedText,
+              fontSize: formatAtInsertion.fontSize || currentFormat.fontSize,
+              fontFamily: formatAtInsertion.fontFamily || currentFormat.fontFamily,
+              fontStyle: (formatAtInsertion.italic || currentFormat.italic) ? 'italic' : 'normal',
+              fontWeight: (formatAtInsertion.bold || currentFormat.bold) ? 'bold' : 'normal',
+              textDecoration: (() => {
+                const decorations = [];
+                if (formatAtInsertion.underline || currentFormat.underline) decorations.push('underline');
+                if (formatAtInsertion.strikethrough || currentFormat.strikethrough) decorations.push('line-through');
+                return decorations.length > 0 ? decorations.join(' ') : 'none';
+              })(),
+              fill: formatAtInsertion.textColor || currentFormat.textColor,
+            });
+          }
+          
+          if (afterInsert) {
+            newSegmentsList.push({ ...segment, text: afterInsert });
+          }
+          
+          hasInserted = true;
+        } else {
+          newSegmentsList.push({ ...segment });
+        }
+        
+        currentPos = segmentEnd;
+      }
+      
+      // If insertion point was at the very end, add new segment
+      if (!hasInserted && insertionPoint >= currentPos) {
+        newSegmentsList.push({ 
+          text: insertedText,
+          fontSize: formatAtInsertion.fontSize || currentFormat.fontSize,
+          fontFamily: formatAtInsertion.fontFamily || currentFormat.fontFamily,
+          fontStyle: (formatAtInsertion.italic || currentFormat.italic) ? 'italic' : 'normal',
+          fontWeight: (formatAtInsertion.bold || currentFormat.bold) ? 'bold' : 'normal',
+          textDecoration: (() => {
+            const decorations = [];
+            if (formatAtInsertion.underline || currentFormat.underline) decorations.push('underline');
+            if (formatAtInsertion.strikethrough || currentFormat.strikethrough) decorations.push('line-through');
+            return decorations.length > 0 ? decorations.join(' ') : 'none';
+          })(),
+          fill: formatAtInsertion.textColor || currentFormat.textColor,
+        });
+      }
+      
+      setCurrentSegments(newSegmentsList);
+      setPlainText(newRawText);
+      onRichTextChange(newSegmentsList);
+    } else {
+      // Fall back to full conversion for complex edits (deletion, replacement, etc.)
+      // Get format at the cursor position for the base format
+      const formatForChange = richTextManager.getFormattingAtPosition(
+        segmentsRef.current,
+        selectionStart > 0 ? selectionStart - 1 : 0
+      );
+      
+      const newSegments = richTextManager.plainTextToSegments(newRawText, formatForChange);
+      setCurrentSegments(newSegments);
+      setPlainText(newRawText);
+      onRichTextChange(newSegments);
+    }
 
     // Restore cursor position after state update and re-render
     requestAnimationFrame(() => {
       if (textareaRef.current) {
-        // If text was added/removed, selectionStart might be the new cursor pos
-        // If replacing, selectionEnd might be the same as selectionStart
         textareaRef.current.selectionStart = selectionStart;
         textareaRef.current.selectionEnd = selectionEnd; 
       }
     });
 
-  }, [onRichTextChange]); // Removed currentFormat, using segmentsRef and getFormattingAtPosition
+  }, [plainText, currentFormat, onRichTextChange]);
   
   // Update currentFormat when selection changes in textarea (e.g., arrow keys, mouse click)
   const handleSelectionChange = useCallback(() => {
