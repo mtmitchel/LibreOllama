@@ -245,7 +245,14 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       onSelect={handleSelectionChange}
       onKeyUp={handleSelectionChange}
       onMouseUp={handleSelectionChange}
-      onKeyDown={onKeyDown}
+      onKeyDown={(e) => {
+        // Stop propagation to prevent global keyboard shortcuts from interfering with text editing
+        e.stopPropagation();
+        // Call the provided onKeyDown handler if it exists
+        if (onKeyDown) {
+          onKeyDown(e);
+        }
+      }}
       data-placeholder={placeholder}
       suppressContentEditableWarning={true}
     />

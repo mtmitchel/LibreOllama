@@ -17,8 +17,12 @@ export const useKeyboardShortcuts = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent shortcuts when typing in inputs
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      // Prevent shortcuts when typing in inputs, textareas, or contentEditable elements
+      if (
+        e.target instanceof HTMLInputElement || 
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.contentEditable === 'true')
+      ) {
         return;
       }
 

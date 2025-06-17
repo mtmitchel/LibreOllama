@@ -271,9 +271,11 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       editor.applyFormatting(formatCommand);
     }
   }, [currentFormat]);
-
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Stop propagation to prevent global keyboard shortcuts from interfering
+    e.stopPropagation();
+    
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSave();

@@ -7,10 +7,10 @@ import RichTextRenderer, { RichTextElementType } from './RichTextRenderer';
 import UnifiedTextElement from './UnifiedTextElement';
 import ImageElement from './ImageElement';
 import ConnectorRenderer from './ConnectorRenderer';
-import TextEditingOverlay from './TextEditingOverlay';
 import { RichTextCellEditor } from './RichTextCellEditor';
 import SectionElement from './SectionElement';
 import StickyNoteElement from './StickyNoteElement';
+import TextEditingOverlay from './TextEditingOverlay';
 import { EnhancedTableElement } from '../canvas/EnhancedTableElement'; // Using enhanced table implementation
 import { designSystem } from '../../styles/designSystem';
 import '../../styles/konvaCanvas.css';
@@ -60,7 +60,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   const { elements, sections, selectedTool, selectedElementId, editingTextId, setSelectedElement, addElement, updateElement, applyTextFormat, setEditingTextId, updateElementText, setSelectedTool, createSection, updateSection, addElementToSection, removeElementFromSection, handleSectionDragEnd } = useKonvaCanvasStore();
 
   // State for text editing overlays - completely separate from Konva
-  const [editingElement, setEditingElement] = useState<CanvasElement | null>(null);
   const [editText, setEditText] = useState('');
   
   // Unified rich text editing data for ALL text editing (text, sticky notes, AND table cells)
@@ -101,7 +100,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     }
   }, [richTextEditingData]);
 
-  const [previewFormat] = useState<{
+  const [previewFormat, setPreviewFormat] = useState<{
     bold: boolean;
     italic: boolean;
     underline: boolean;
@@ -469,10 +468,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
   const handleEditingCancel = useCallback(() => {
     setEditingTextId(null);
-    setEditingElement(null);
     setEditText('');
     setRichTextEditingData(null); // Clear rich text editing data
   }, [setEditingTextId]);
+
+  // Find the editing element based on editingTextId
+  const editingElement = editingTextId ? elements[editingTextId] : null;
 
   const handleEditingDone = useCallback(() => {
     console.log('🔍 [SAVE DEBUG] handleEditingDone called with:', {
@@ -1737,27 +1738,17 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       {/* Text editing overlay - completely outside Konva */}
       {editingElement && textareaPosition && (
         <TextEditingOverlay
-          isEditing={true}
-          element={{
-            id: editingElement.id,
-            x: editingElement.x,
-            y: editingElement.y,
-            width: editingElement.width,
-            height: editingElement.height,
-            text: editingElement.text || '',
-            fontSize: editingElement.fontSize,
-            fontFamily: editingElement.fontFamily,
-            textColor: editingElement.textColor,
-            fill: editingElement.fill,
-            backgroundColor: editingElement.backgroundColor,
-            type: editingElement.type as 'text' | 'sticky-note'
-          }}
-          editText={editText}
-          onEditTextChange={setEditText}
-          textareaPosition={textareaPosition}
-          onCancel={handleEditingCancel}
-          onDone={handleEditingDone}
-          stageRef={internalStageRef}
+          position={textareaPosition}
+          text={editText}
+          onTextChange={setEditText}
+          onBlur={handleEditingDone}
+          fontSize={editingElement.fontSize || 16}
+          fontFamily={editingElement.fontFamily || 'Inter'}
+          color={editingElement.textColor || editingElement.fill || '#000000'}
+          align={editingElement.textAlign || 'left'}
+          maxWidth={editingElement.width}
+          rotation={editingElement.rotation || 0}
+          scale={1}
         />
       )}
 

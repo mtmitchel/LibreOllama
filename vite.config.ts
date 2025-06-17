@@ -14,7 +14,7 @@ export default defineConfig(async () => ({
 
   optimizeDeps: {
     include: [
-      'fabric',
+      // 'fabric',
       // Fabric.js for canvas functionality
     ],
     exclude: [
@@ -27,7 +27,7 @@ export default defineConfig(async () => ({
   },
   
   ssr: {
-    noExternal: ['fabric']
+    noExternal: [] // Remove 'fabric' from noExternal
   },
 
   // Add path alias configuration
