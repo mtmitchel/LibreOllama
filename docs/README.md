@@ -24,6 +24,8 @@ Our professional-grade whiteboard powered by Konva.js provides rich visual think
 **Primary Documentation**:
 - [Canvas Complete Guide](./CANVAS_COMPLETE_GUIDE.md)  
   Master reference for all Canvas features, usage patterns, and technical architecture.
+- **[Canvas Text Editing Update](./CANVAS_TEXT_EDITING_UPDATE.md)** ⭐ **NEW**  
+  Detailed technical summary of recent text editing system improvements (June 17, 2025).
 
 **Historical & Archived Content**:  
 All legacy or specialized Canvas docs (e.g., table deep-dives, implementation variants) have been consolidated and archived:  

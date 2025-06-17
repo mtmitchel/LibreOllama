@@ -39,7 +39,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors. Features **rich text editing** with floating toolbars, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Includes advanced functionality like element-to-element connections, multi-select operations, keyboard shortcuts, and local persistence. Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
+| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors. Features **unified rich text editing** with context-aware floating toolbars, **seamless table cell editing**, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Recent improvements include **DOM portal-based text overlays** for reliable editing, **mount-time blur prevention**, and **consistent positioning** across all text elements. Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -142,6 +142,27 @@ LibreOllama includes comprehensive documentation to help you get started quickly
 - **[Development Setup](./docs/development/DEV-STARTUP-GUIDE.md)** - Environment setup and development workflow
 - **[Canvas Development](./docs/development/CANVAS_DEVELOPMENT.md)** - In-depth Canvas technical guides
 - **[UI Implementation](./docs/completed-phases/UI_IMPLEMENTATION_COMPLETE.md)** - UI/UX design system and component documentation
+
+## Recent Updates
+
+### ✨ Text Editing System Overhaul (June 17, 2025)
+
+**Major improvements to Canvas text editing functionality:**
+
+- **🎯 Fixed Rich Text Toolbar Positioning**: Toolbar now appears correctly positioned relative to selected text instead of in the bottom-left corner
+- **📝 Unified Table Cell Editing**: Table cells now use the same rich text editing system as other text elements
+- **🔧 DOM Portal Integration**: Implemented proper DOM portal pattern using `react-konva-utils` for reliable text overlay rendering
+- **⚡ Mount-Time Blur Prevention**: Added intelligent mounting state to prevent immediate text editor dismissal
+- **🔗 Consistent Text Editing**: All text elements (text, sticky notes, table cells) now use unified editing interface
+- **🎨 Context-Aware Positioning**: Smart toolbar placement that adapts to available space above/below text
+
+**Technical Improvements:**
+- Enhanced `TextEditingOverlay` component with proper state initialization
+- Extended `handleStartTextEdit` to support table cell virtual elements
+- Fixed coordinate system mismatches between canvas and screen positioning
+- Improved error handling and debugging for text editing workflows
+
+---
 
 ## Contributing
 

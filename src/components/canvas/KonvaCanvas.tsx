@@ -2,7 +2,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Stage, Layer, Transformer, Rect, Circle, Line, Star, Arrow } from 'react-konva';
 import Konva from 'konva';
-import React19CompatiblePortal from './React19CompatiblePortal';
 import { useKonvaCanvasStore, CanvasElement, RichTextSegment } from '../../stores/konvaCanvasStore';
 import RichTextRenderer, { RichTextElementType } from './RichTextRenderer';
 import UnifiedTextElement from './UnifiedTextElement';
@@ -12,6 +11,7 @@ import { RichTextCellEditor } from './RichTextCellEditor';
 import SectionElement from './SectionElement';
 import StickyNoteElement from './StickyNoteElement';
 import TextEditingOverlay from './TextEditingOverlay';
+import { Html } from 'react-konva-utils';
 import { EnhancedTableElement } from '../canvas/EnhancedTableElement'; // Using enhanced table implementation
 import KonvaErrorBoundary from './KonvaErrorBoundary';
 import { designSystem } from '../../styles/designSystem';
@@ -331,6 +331,106 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       return;
     }
     
+    // FIXED: Handle table cell editing
+    if (elementId.includes('-cell-')) {
+      // Parse table cell ID: "tableId-cell-rowIndex-colIndex"
+      const parts = elementId.split('-cell-');
+      const tableId = parts[0];
+      const [rowIndex, colIndex] = parts[1].split('-').map(Number);
+      
+      const tableElement = elements[tableId];
+      if (!tableElement || tableElement.type !== 'table') {
+        console.error('Table not found for cell:', elementId);
+        return;
+      }
+      
+      console.log('🐛 [DEBUG] KonvaCanvas - Setting up table cell editing:', { tableId, rowIndex, colIndex });
+      
+      // Calculate cell position and set up rich text editing
+      if (internalStageRef.current) {
+        const stage = internalStageRef.current;
+        const cellNode = stage.findOne(`#${elementId}`);
+        
+        if (cellNode) {
+          const cellPosition = cellNode.getAbsolutePosition();
+          const cellAttrs = cellNode.getAttrs();
+               // Get cell text from table data
+      const enhancedTableData = tableElement.enhancedTableData;
+      const cellData = enhancedTableData?.cells?.[rowIndex]?.[colIndex] || { text: '' };
+      const cellText = cellData?.text || '';
+          
+          const editingPosition = {
+            x: cellPosition.x,
+            y: cellPosition.y,
+            width: cellAttrs.width || 100,
+            height: cellAttrs.height || 40
+          };
+          
+          console.log('🎯 [POSITION DEBUG] Table cell editor positioning:', {
+            tableElement: { x: tableElement.x, y: tableElement.y },
+            cellPosition,
+            editingPosition
+          });
+          
+          // Set up rich text editing data for table cell
+          const newRichTextEditingData = {
+            isEditing: true,
+            cellPosition: editingPosition,
+            cellText: cellText,
+            richTextSegments: [], // Table cells start with simple text
+            fontSize: 14,
+            fontFamily: 'Inter',
+            textColor: '#000000',
+            elementId: elementId,
+            elementType: 'table-cell' as const,
+            onTextChange: (text: string) => {
+              console.log('🔍 [TABLE CELL] Text change:', text);
+            },
+            onRichTextChange: (segments: RichTextSegment[]) => {
+              console.log('🔍 [TABLE CELL] Rich text change:', segments);
+            },
+            onFinishEditing: (finalSegments: RichTextSegment[]) => {
+              console.log('🔍 [TABLE CELL] Finish editing:', finalSegments);
+              // Convert segments back to plain text for table cells
+              const newText = finalSegments.map(seg => seg.text).join('');
+              
+              // Update table cell data
+              if (enhancedTableData) {
+                const newEnhancedTableData = { 
+                  ...enhancedTableData,
+                  cells: [...(enhancedTableData.cells || [])],
+                  rows: enhancedTableData.rows || [],
+                  columns: enhancedTableData.columns || []
+                };
+                
+                // Ensure row exists
+                if (!newEnhancedTableData.cells[rowIndex]) {
+                  newEnhancedTableData.cells[rowIndex] = [];
+                }
+                
+                // Update cell text
+                newEnhancedTableData.cells[rowIndex][colIndex] = { 
+                  ...newEnhancedTableData.cells[rowIndex][colIndex], 
+                  text: newText 
+                };
+                
+                updateElement(tableId, { enhancedTableData: newEnhancedTableData });
+              }
+              setRichTextEditingData(null);
+            },
+            onCancelEditing: () => {
+              console.log('🔍 [TABLE CELL] Cancel editing');
+              setRichTextEditingData(null);
+            }
+          };
+          
+          richTextEditingDataRef.current = newRichTextEditingData;
+          setRichTextEditingData(newRichTextEditingData);
+        }
+      }
+      return;
+    }
+    
     const element = elements[elementId];
     if (!element) return;
 
@@ -338,70 +438,39 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       console.log('🐛 [DEBUG] KonvaCanvas - Setting up rich text editing for element type:', element.type);
       
       setEditingTextId(elementId);
-      
-      // Calculate positions for rich text editor with improved accuracy
-      if (internalStageRef.current) {
-        const stage = internalStageRef.current;
-        const container = stage.container();
-        
-        // Safety check for container
-        if (!container) {
-          console.warn('KonvaCanvas: Stage container not found');
-          return;
-        }
-        
-        const containerRect = container.getBoundingClientRect();
-        
-        // Enhanced position calculation using proper stage-to-screen coordinate conversion
-        const stageScale = stage.scaleX();
-        const stageTransform = stage.getAbsoluteTransform();
-        
-        // CRITICAL FIX: For elements in sections, we need absolute coordinates
-        // Check if element has a sectionId (new coordinate system)
-        let elementCanvasPoint: { x: number; y: number };
-        
-        if (element.sectionId && sections[element.sectionId]) {
-          // Element is in a section - convert relative to absolute coordinates
-          const section = sections[element.sectionId];
-          elementCanvasPoint = {
-            x: section.x + element.x,
-            y: section.y + element.y
+      // CRITICAL FIX: Initialize editText with the element's actual text content
+      setEditText(element.text || '');        // Calculate positions for rich text editor with improved accuracy
+        if (internalStageRef.current) {
+          // For rich text editing, we need stage coordinates, not screen coordinates
+          // The Html component will handle the screen positioning automatically
+          
+          let elementCanvasPoint: { x: number; y: number };
+          
+          if (element.sectionId && sections[element.sectionId]) {
+            // Element is in a section - convert relative to absolute coordinates
+            const section = sections[element.sectionId];
+            elementCanvasPoint = {
+              x: section.x + element.x,
+              y: section.y + element.y
+            };
+          } else {
+            // Element is on main stage - use coordinates directly
+            elementCanvasPoint = { x: element.x, y: element.y };
+          }
+          
+          // Calculate editing position using stage coordinates
+          const editingPosition = { 
+            x: elementCanvasPoint.x, 
+            y: elementCanvasPoint.y, 
+            width: Math.max(200, element.width || 200), 
+            height: Math.max(50, element.height || 100) 
           };
-        } else {
-          // Element is on main stage - use coordinates directly
-          elementCanvasPoint = { x: element.x, y: element.y };
-        }
-        
-        const elementScreenPoint = stageTransform.point(elementCanvasPoint);
-        
-        // Calculate editing position - position exactly where text element appears
-        // Add safety margins and ensure minimum sizes
-        const editingX = Math.max(0, containerRect.left + elementScreenPoint.x);
-        const editingY = Math.max(0, containerRect.top + elementScreenPoint.y);
-        const editingWidth = Math.max(200, (element.width || 200) * stageScale);
-        const editingHeight = Math.max(50, (element.height || 100) * stageScale);
-        
-        // Ensure editor doesn't go off-screen
-        const maxX = window.innerWidth - editingWidth - 20;
-        const maxY = window.innerHeight - editingHeight - 20;
-        const finalX = Math.min(editingX, maxX);
-        const finalY = Math.min(editingY, maxY);
-        
-        const editingPosition = { 
-          x: finalX, 
-          y: finalY, 
-          width: editingWidth, 
-          height: editingHeight 
-        };
-        
-        console.log('🎯 [POSITION DEBUG] Editor positioning:', {
-          element: { x: element.x, y: element.y, width: element.width, height: element.height },
-          elementCanvasPoint,
-          elementScreenPoint,
-          containerRect: { left: containerRect.left, top: containerRect.top },
-          stageScale,
-          editingPosition
-        });
+          
+          console.log('🎯 [POSITION DEBUG] Rich text editor positioning:', {
+            element: { x: element.x, y: element.y, width: element.width, height: element.height },
+            elementCanvasPoint,
+            editingPosition
+          });
         
         // FIXED: Remove setTimeout debouncing to prevent race conditions
         // Set state immediately to prevent unwanted resets
@@ -1226,12 +1295,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   const textareaPosition = useMemo(() => {
     if (!editingElement || !internalStageRef.current) return null;
     
-    const stage = internalStageRef.current;
-    const container = stage.container();
-    const containerRect = container.getBoundingClientRect();
-    
-    const stageScale = stage.scaleX();
-    const stageTransform = stage.getAbsoluteTransform();
+    // For TextEditingOverlay, we need stage coordinates, not screen coordinates
+    // The Html component from react-konva-utils handles the screen positioning automatically
     
     let elementCanvasPoint: { x: number; y: number };
     
@@ -1245,13 +1310,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       elementCanvasPoint = { x: editingElement.x, y: editingElement.y };
     }
     
-    const elementScreenPoint = stageTransform.point(elementCanvasPoint);
-    
+    // Return stage coordinates directly - Html component will handle screen positioning
     return {
-      x: containerRect.left + elementScreenPoint.x,
-      y: containerRect.top + elementScreenPoint.y,
-      width: Math.max(200, (editingElement.width || 200) * stageScale),
-      height: Math.max(100, (editingElement.height || 100) * stageScale)
+      x: elementCanvasPoint.x,
+      y: elementCanvasPoint.y,
+      width: Math.max(200, editingElement.width || 200),
+      height: Math.max(100, editingElement.height || 100)
     };
   }, [
     editingElement?.id,
@@ -1260,10 +1324,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     editingElement?.width,
     editingElement?.height,
     editingElement?.sectionId,
-    sections,
-    panZoomState.scale,
-    panZoomState.position.x,
-    panZoomState.position.y
+    sections
   ]);
 
   // Render individual canvas elements based on their type
@@ -1472,6 +1533,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
               }}
               onDragEnd={(e) => handleDragEnd(e, element.id)}
               stageRef={internalStageRef}
+              onStartTextEdit={handleStartTextEdit}
             />
           </KonvaErrorBoundary>
         );
@@ -1705,25 +1767,16 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             shadowOffset={{ x: 0, y: 4 }}
             shadowOpacity={0.5}
           />
-        </Layer>
 
-        {/* Text editing overlay - now properly portaled using React19CompatiblePortal */}
-        {editingElement && textareaPosition && (
-          <React19CompatiblePortal 
-            stage={internalStageRef.current}
-            divProps={{
-              style: {
-                position: 'absolute',
-                left: `${textareaPosition.x}px`,
-                top: `${textareaPosition.y}px`,
-                transform: `rotate(${editingElement.rotation || 0}deg) scale(${panZoomState.scale})`,
-                transformOrigin: 'left top',
-                zIndex: 1000,
-                pointerEvents: 'auto'
-              }
-            }}>
+          {/* Text editing overlay - now using Html component from react-konva-utils */}
+          {editingElement && textareaPosition && (
             <TextEditingOverlay
-              position={{ x: 0, y: 0, width: textareaPosition.width, height: textareaPosition.height }}
+              position={{ 
+                x: textareaPosition.x, 
+                y: textareaPosition.y, 
+                width: textareaPosition.width, 
+                height: textareaPosition.height 
+              }}
               text={editText}
               onTextChange={setEditText}
               onBlur={handleEditingDone}
@@ -1732,53 +1785,61 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
               color={editingElement.textColor || editingElement.fill || '#000000'}
               align={editingElement.textAlign || 'left'}
               maxWidth={editingElement.width}
-              rotation={0} // Rotation handled by portal wrapper
-              scale={1} // Scale handled by portal wrapper
             />
-          </React19CompatiblePortal>
-        )}
+          )}
 
-        {/* Unified rich text editing overlay for ALL text editing (text, sticky notes, AND table cells) */}
-        {richTextEditingData && richTextEditingData.isEditing && richTextEditingData.cellPosition && (
-          <React19CompatiblePortal 
-            stage={internalStageRef.current}
-            divProps={{
-              style: {
-                position: 'absolute',
-                left: `${richTextEditingData.cellPosition.x}px`,
-                top: `${richTextEditingData.cellPosition.y}px`,
-                transform: `scale(${panZoomState.scale})`,
-                transformOrigin: 'left top',
-                zIndex: 1000,
-                pointerEvents: 'auto'
-              }
-            }}>
-            <KonvaErrorBoundary fallback={null}>
-              <RichTextCellEditor
-                isEditing={richTextEditingData.isEditing}
-                cellPosition={{ x: 0, y: 0, width: richTextEditingData.cellPosition.width, height: richTextEditingData.cellPosition.height }}
-                initialSegments={richTextEditingData.richTextSegments}
-                onRichTextChange={richTextEditingData.onRichTextChange || (() => {})}
-                onFinishEditing={richTextEditingData.onFinishEditing}
-                onCancelEditing={richTextEditingData.onCancelEditing}
-                defaultFormat={{
-                  fontSize: richTextEditingData.fontSize || 14,
-                  fontFamily: richTextEditingData.fontFamily || designSystem.typography.fontFamily.sans,
-                  textColor: richTextEditingData.textColor || designSystem.colors.secondary[800],
-                  textAlign: richTextEditingData.textAlign || 'left',
-                  bold: false,
-                  italic: false,
-                  underline: false,
-                  strikethrough: false,
-                  listType: 'none',
-                  isHyperlink: false,
-                  hyperlinkUrl: '',
-                  textStyle: 'default',
-                }}
-              />
-            </KonvaErrorBoundary>
-          </React19CompatiblePortal>
-        )}
+          {/* Unified rich text editing overlay for ALL text editing (text, sticky notes, AND table cells) */}
+          {richTextEditingData && richTextEditingData.isEditing && richTextEditingData.cellPosition && (
+            <Html
+              divProps={{
+                ['data-portal-isolated']: 'true',
+                style: {
+                  position: 'absolute',
+                  zIndex: 1000,
+                  pointerEvents: 'auto',
+                  width: `${richTextEditingData.cellPosition.width}px`,
+                  height: `${richTextEditingData.cellPosition.height}px`,
+                }
+              } as any}
+              // Use stage coordinates for proper positioning
+              transformFunc={(attrs: any) => {
+                return {
+                  ...attrs,
+                  x: richTextEditingData.cellPosition.x,
+                  y: richTextEditingData.cellPosition.y,
+                  // Let the Html component handle scaling automatically
+                };
+              }}
+            >
+              <KonvaErrorBoundary fallback={null}>
+                <RichTextCellEditor
+                  isEditing={richTextEditingData.isEditing}
+                  cellPosition={{ x: 0, y: 0, width: richTextEditingData.cellPosition.width, height: richTextEditingData.cellPosition.height }}
+                  initialSegments={richTextEditingData.richTextSegments}
+                  onRichTextChange={richTextEditingData.onRichTextChange || (() => {})}
+                  onFinishEditing={richTextEditingData.onFinishEditing}
+                  onCancelEditing={richTextEditingData.onCancelEditing}
+                  defaultFormat={{
+                    fontSize: richTextEditingData.fontSize || 14,
+                    fontFamily: richTextEditingData.fontFamily || 'Inter',
+                    textColor: richTextEditingData.textColor || '#1E293B',
+                    textAlign: richTextEditingData.textAlign || 'left',
+                    bold: false,
+                    italic: false,
+                    underline: false,
+                    strikethrough: false,
+                    listType: 'none',
+                    isHyperlink: false,
+                    hyperlinkUrl: '',
+                    textStyle: 'default',
+                  }}
+                />
+              </KonvaErrorBoundary>
+            </Html>
+          )}
+        </Layer>
+
+        {/* Remove the old portal-based text editing overlays */}
 
       </Stage>
 

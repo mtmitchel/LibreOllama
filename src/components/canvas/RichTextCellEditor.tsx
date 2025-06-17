@@ -349,26 +349,26 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
   };
 
   // Toolbar positioning logic
-  const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null);
-
-  useEffect(() => {
+  const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null);  useEffect(() => {
     if (showToolbar && editorRef.current && cellPosition) {
-      const editorRect = editorRef.current.getBoundingClientRect();
-      
+      // FIXED: Use relative positioning within the editor container
+      // Since the toolbar is rendered inside the editor div, we can use simple relative positioning
       const toolbarHeightEstimate = 50;
-      let top = editorRect.top - toolbarHeightEstimate - 10;
-      let left = editorRect.left;
-
-      if (top < 10) {
-        top = editorRect.bottom + 10;
+      
+      // Position above the editor by default
+      let top = -toolbarHeightEstimate - 10;
+      let left = 0;
+      
+      // If there's not enough space above, position below
+      if (cellPosition.y < toolbarHeightEstimate + 20) {
+        top = cellPosition.height + 10;
       }
-      if (left < 10) left = 10;
-
+      
       setToolbarPosition({ top, left });
     } else {
       setToolbarPosition(null);
     }
-  }, [showToolbar, cellPosition]);  return (
+  }, [showToolbar, cellPosition]);return (
     // FIXED: Enhanced portal isolation with safer rendering approach
     isEditing && isValidated ? createPortal(
       <div 

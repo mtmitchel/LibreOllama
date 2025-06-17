@@ -43,6 +43,7 @@ interface EnhancedTableElementProps {
   onUpdate: (updates: Partial<CanvasElement>) => void;
   onDragEnd?: (e: Konva.KonvaEventObject<DragEvent>) => void;
   stageRef: React.RefObject<Konva.Stage | null>;
+  onStartTextEdit?: (elementId: string) => void; // Added for unified text editing
 }
 
 // Helper function to generate a stable key from table data
@@ -54,7 +55,7 @@ const getTableDataKey = (tableData: any) => {
 };
 
 export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableElementProps>(
-  ({ element, isSelected, onSelect, onUpdate, onDragEnd, stageRef }, ref) => {
+  ({ element, isSelected, onSelect, onUpdate, onDragEnd, stageRef, onStartTextEdit }, ref) => {
   // State for hover interactions and controls
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
@@ -221,64 +222,14 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
   // Handle cell double-click for editing
   const handleCellDoubleClick = (rowIndex: number, colIndex: number) => {
     try {
-      // Validate stageRef and container existence
-      if (!stageRef?.current) {
-        console.error("ERROR: stageRef is missing");
-        return;
+      // FIXED: Use unified text editing system instead of separate table cell editor
+      if (onStartTextEdit) {
+        // Create a virtual cell element ID for the unified system
+        const cellElementId = `${element.id}-cell-${rowIndex}-${colIndex}`;
+        onStartTextEdit(cellElementId);
+      } else {
+        console.warn('onStartTextEdit not provided to EnhancedTableElement');
       }
-      
-      const stage = stageRef.current;
-      const stageContainer = stage.container();
-      if (!stageContainer) {
-        console.error("ERROR: stageContainer is missing");
-        return;
-      }
-      
-      // Validate indices against tableRows and tableColumns
-      if (rowIndex < 0 || rowIndex >= tableRows.length) {
-        console.error("ERROR: Invalid row index:", rowIndex, "length:", tableRows.length);
-        return;
-      }
-      if (colIndex < 0 || colIndex >= tableColumns.length) {
-        console.error("ERROR: Invalid column index:", colIndex, "length:", tableColumns.length);
-        return;
-      }
-      
-      // Use simplified approach with findOne for reliable cell lookup
-      const cellId = `${element.id}-cell-${rowIndex}-${colIndex}`;
-      const cellNode = stage.findOne(`#${cellId}`);
-      if (!cellNode) {
-        console.error("ERROR: Cell node not found for ID:", cellId);
-        return;
-      }
-      
-      // Get cell's absolute position using Konva's built-in methods
-      const cellPosition = cellNode.getAbsolutePosition();
-      const stageScale = stage.scaleX();
-      const stagePosition = stage.position();
-      const stageRect = stageContainer.getBoundingClientRect();
-      
-      // Calculate position accounting for stage transform (pan + zoom)
-      // Convert from Konva world coordinates to DOM viewport coordinates
-      const worldX = cellPosition.x;
-      const worldY = cellPosition.y;
-      
-      // Apply stage transform: scale first, then translate
-      const screenX = (worldX * stageScale) + stagePosition.x;
-      const screenY = (worldY * stageScale) + stagePosition.y;
-      
-      // Convert to viewport coordinates for portal positioning
-      // Since RichTextCellEditor uses a portal to document.body with position: 'absolute',
-      // we need coordinates relative to the viewport
-      const editingPosition = {
-        x: stageRect.left + screenX,
-        y: stageRect.top + screenY,
-        width: (tableColumns[colIndex]?.width || 100) * stageScale,
-        height: (tableRows[rowIndex]?.height || 40) * stageScale
-      };
-      
-      setEditingCell({ row: rowIndex, col: colIndex });
-      setEditingCellPosition(editingPosition);
     } catch (error) {
       console.error("ERROR in handleCellDoubleClick:", error);
     }

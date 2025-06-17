@@ -1,5 +1,6 @@
 // src/components/canvas/TextEditingOverlay.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Html } from 'react-konva-utils';
 
 interface TextEditingOverlayProps {
   position: { x: number; y: number; width?: number; height?: number };
@@ -11,8 +12,6 @@ interface TextEditingOverlayProps {
   color: string;
   align: string;
   maxWidth?: number;
-  rotation: number;
-  scale: number;
 }
 
 const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
@@ -25,14 +24,13 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
   color,
   align,
   maxWidth,
-  rotation: _, // Unused when positioned via Html wrapper
-  scale: __, // Unused when positioned via Html wrapper
 }) => {
   const [localText, setLocalText] = useState(text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasPlaceholderBeenCleared, setHasPlaceholderBeenCleared] = useState(false);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isMounting, setIsMounting] = useState(true);
 
   // Detect if the text is placeholder text that should be cleared
   const isPlaceholderText = (text: string) => {
@@ -63,6 +61,13 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
       
       adjustTextareaHeight();
     }
+    
+    // Allow blur handling after a short delay to prevent immediate blur on mount
+    const mountTimer = setTimeout(() => {
+      setIsMounting(false);
+    }, 150);
+    
+    return () => clearTimeout(mountTimer);
   }, []);
 
   useEffect(() => {
@@ -95,6 +100,12 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
   };
 
   const handleBlur = () => {
+    // Prevent blur handling during the initial mount process
+    if (isMounting) {
+      console.log('🚫 [BLUR DEBUG] Ignoring blur during mount process');
+      return;
+    }
+    
     // Debounce blur to prevent immediate element removal
     // This allows users to click back into the textarea if needed
     if (blurTimeoutRef.current) {
@@ -158,52 +169,68 @@ const TextEditingOverlay: React.FC<TextEditingOverlayProps> = ({
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'relative', // Changed from 'absolute' to 'relative' for Html wrapper compatibility
-        zIndex: 1000,
-        pointerEvents: 'auto',
-        left: position.x ? `${position.x}px` : '0px',
-        top: position.y ? `${position.y}px` : '0px',
-        width: position.width ? `${position.width}px` : 'auto',
-        height: position.height ? `${position.height}px` : 'auto',
-        // Remove transform as it's now handled by the Html wrapper
+    <Html
+      divProps={{
+        style: {
+          position: 'absolute',
+          zIndex: 1000,
+          pointerEvents: 'auto',
+          width: position.width ? `${position.width}px` : 'auto',
+          height: position.height ? `${position.height}px` : 'auto',
+        }
       }}
-      onMouseDown={(e) => e.stopPropagation()} // Prevent canvas interactions
+      // Use stage coordinates, not screen coordinates
+      transformFunc={(attrs) => {
+        return {
+          ...attrs,
+          x: position.x,
+          y: position.y,
+        };
+      }}
     >
-      <textarea
-        ref={textareaRef}
-        value={localText}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        placeholder="Enter text..."
-        autoFocus
+      <div
+        ref={containerRef}
+        data-portal-isolated="true"
         style={{
-          border: '2px solid #0066cc',
-          outline: 'none',
-          background: 'white',
-          padding: '4px 8px',
-          resize: 'none',
-          overflow: 'hidden',
-          lineHeight: '1.2',
-          minWidth: '100px',
-          minHeight: '1.2em',
+          position: 'relative',
           width: '100%',
           height: '100%',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          fontSize: `${fontSize}px`,
-          fontFamily: fontFamily,
-          color: color,
-          textAlign: align as any,
-          maxWidth: maxWidth ? `${maxWidth}px` : undefined,
-          boxSizing: 'border-box',
-          userSelect: 'text', // Ensure text selection works within textarea
         }}
-        onMouseDown={(e) => e.stopPropagation()} // Allow text selection in textarea
-      />
-    </div>
+        onMouseDown={(e) => e.stopPropagation()} // Prevent canvas interactions
+      >
+        <textarea
+          ref={textareaRef}
+          value={localText}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter text..."
+          autoFocus
+          style={{
+            border: '2px solid #0066cc',
+            outline: 'none',
+            background: 'white',
+            padding: '4px 8px',
+            resize: 'none',
+            overflow: 'hidden',
+            lineHeight: '1.2',
+            minWidth: '100px',
+            minHeight: '1.2em',
+            width: '100%',
+            height: '100%',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            fontSize: `${fontSize}px`,
+            fontFamily: fontFamily,
+            color: color,
+            textAlign: align as any,
+            maxWidth: maxWidth ? `${maxWidth}px` : undefined,
+            boxSizing: 'border-box',
+            userSelect: 'text', // Ensure text selection works within textarea
+          }}
+          onMouseDown={(e) => e.stopPropagation()} // Allow text selection in textarea
+        />
+      </div>
+    </Html>
   );
 };
 

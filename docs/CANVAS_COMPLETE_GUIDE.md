@@ -11,7 +11,9 @@ LibreOllama Canvas is a professional-grade, infinite whiteboard system built wit
 ### Key Capabilities
 - **15+ Element Types**: Text, shapes, tables, sticky notes, images, connectors, sections
 - **Advanced Tables**: Excel-like functionality with rich text, resizing, dynamic structure
-- **Rich Text Editing**: Real-time formatting with floating toolbars
+- **Unified Rich Text Editing**: Consistent text editing across all element types with DOM portal integration
+- **Smart Toolbar Positioning**: Context-aware floating toolbars that position relative to selected content
+- **Seamless Table Cell Editing**: Direct table cell editing through unified rich text system
 - **Section Organization**: Group elements with visual containers
 - **Pan & Zoom**: Smooth navigation with touch and keyboard support
 - **Persistence**: Local storage with multiple canvas management
@@ -30,9 +32,33 @@ KonvaApp.tsx                    # Main canvas application
     ├── EnhancedTableElement   # Advanced table functionality
     ├── StickyNoteElement      # Sticky note implementation
     ├── SectionElement         # Section containers
-    ├── TextEditingOverlay     # Rich text editing
+    ├── TextEditingOverlay     # Unified text editing with DOM portals
+    ├── RichTextCellEditor     # Rich text editing component
     └── Various shape/connector renderers
 ```
+
+### Text Editing System
+
+**Architecture**: DOM Portal-based text editing with unified interface
+
+**Components**:
+- **`TextEditingOverlay`**: Handles simple text editing with DOM portals via `react-konva-utils`
+- **`RichTextCellEditor`**: Rich text editing for complex formatting and table cells
+- **`handleStartTextEdit`**: Unified entry point supporting text elements, sticky notes, and table cells
+
+**Key Features**:
+- **DOM Portal Integration**: Proper separation between Konva canvas and DOM text editing
+- **Smart Positioning**: Context-aware toolbar placement relative to selected content
+- **Mount-Time Protection**: Prevents immediate text editor dismissal on component mount
+- **Unified Interface**: Consistent editing experience across all text element types
+- **Coordinate System Handling**: Proper conversion between stage and screen coordinates
+
+**Recent Improvements (June 17, 2025)**:
+- Fixed toolbar positioning issues (toolbar appearing in wrong location)
+- Connected table cell editing to unified rich text system
+- Implemented proper DOM portal pattern using `react-konva-utils`
+- Added mount-time blur prevention for reliable editor behavior
+- Enhanced error handling and debugging capabilities
 
 ### State Management
 
@@ -112,6 +138,91 @@ interface EnhancedTableData {
   styling: TableStyling;      // Global table appearance
 }
 ```
+
+## 🔧 Text Editing Technical Implementation
+
+### DOM Portal Architecture
+
+The Canvas text editing system uses a unified approach with DOM portals for reliable text input:
+
+#### **Core Components**
+- **`TextEditingOverlay`**: Simple text editing with DOM portals via `react-konva-utils`
+- **`RichTextCellEditor`**: Advanced formatting for complex text and table cells
+- **`handleStartTextEdit`**: Unified entry point for all text editing scenarios
+
+#### **DOM Portal Pattern**
+```typescript
+// Proper DOM integration using react-konva-utils
+import { Html } from 'react-konva-utils';
+
+<Html transformFunc={(attrs) => ({ ...attrs, x: position.x, y: position.y })}>
+  <div data-portal-isolated="true">
+    <textarea ref={textareaRef} autoFocus />
+  </div>
+</Html>
+```
+
+#### **Mount-Time Protection**
+```typescript
+// Prevent immediate blur during component mounting
+const [isMounting, setIsMounting] = useState(true);
+
+useEffect(() => {
+  const mountTimer = setTimeout(() => setIsMounting(false), 150);
+  return () => clearTimeout(mountTimer);
+}, []);
+
+const handleBlur = () => {
+  if (isMounting) return; // Ignore blur during mount
+  // ... normal blur handling
+};
+```
+
+#### **Table Cell Integration**
+```typescript
+// Virtual cell element pattern
+const cellElementId = `${tableId}-cell-${rowIndex}-${colIndex}`;
+
+// Unified handling in handleStartTextEdit
+if (elementId.includes('-cell-')) {
+  const [tableId, rowIndex, colIndex] = parseTableCellId(elementId);
+  // Connect table cell to rich text editing system
+}
+```
+
+#### **Smart Toolbar Positioning**
+```typescript
+// Context-aware toolbar placement
+const calculateToolbarPosition = (cellPosition: CellPosition) => {
+  const toolbarHeight = 50;
+  
+  // Position above by default
+  let top = -toolbarHeight - 10;
+  let left = 0;
+  
+  // Move below if insufficient space above
+  if (cellPosition.y < toolbarHeight + 20) {
+    top = cellPosition.height + 10;
+  }
+  
+  return { top, left };
+};
+```
+
+### Recent Fixes (June 17, 2025)
+
+#### **Issues Resolved**
+- ✅ **Toolbar Positioning**: Fixed rich text toolbar appearing in bottom-left corner
+- ✅ **Table Cell Editing**: Connected table cells to unified rich text system
+- ✅ **DOM Portal Integration**: Proper portal usage preventing Konva reconciler conflicts
+- ✅ **Mount Timing**: Eliminated immediate text editor dismissal on component mount
+- ✅ **Coordinate Systems**: Consistent handling between stage and screen coordinates
+
+#### **Technical Improvements**
+- Enhanced error handling and debugging capabilities
+- Improved state initialization for text editing components
+- Unified text editing interface across all element types
+- Better event handling and propagation management
 
 ## 🎨 Rich Text System
 
@@ -237,12 +348,15 @@ src/hooks/
 ### ✅ Completed Features
 - Core canvas functionality with 15+ element types
 - Advanced table system with Excel-like features
-- Rich text editing with real-time formatting
+- **Unified text editing system with DOM portal integration**
+- **Smart toolbar positioning and mount-time protection**
+- **Seamless table cell editing through unified interface**
 - Section-based organization system
 - Pan/zoom with smooth interactions
 - Undo/redo history management
 - Multi-canvas support with persistence
 - Performance optimizations and memory management
+- **Recent text editing reliability improvements (June 17, 2025)**
 
 ### 🔄 Active Development
 - Enhanced connector routing algorithms
