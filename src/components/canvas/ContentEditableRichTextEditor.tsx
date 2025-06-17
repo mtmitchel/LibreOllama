@@ -39,13 +39,21 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     segmentsRef.current = currentSegments;
   }, [currentSegments]);  // Track if we're currently typing to prevent DOM updates
   const isTypingRef = useRef(false);
+  const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCursorPositionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   
   // Update editor content when segments change externally (but not when typing)
   useEffect(() => {
     if (editorRef.current && !isTypingRef.current) {
       const html = richTextManager.segmentsToHtml(currentSegments);
       if (editorRef.current.innerHTML !== html) {
+        // Store cursor position before update
+        storeCursorPosition();
         editorRef.current.innerHTML = html;
+        // Restore cursor position after update
+        requestAnimationFrame(() => {
+          restoreCursorPosition();
+        });
       }
     }
   }, [currentSegments]);
@@ -56,12 +64,35 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       const html = richTextManager.segmentsToHtml(initialSegments);
       editorRef.current.innerHTML = html;
     }
-  }, [initialSegments]);  // Handle content changes - prevent DOM updates during typing
-  const handleInput = useCallback(() => {
+  }, [initialSegments]);
+
+  // Store current cursor position
+  const storeCursorPosition = useCallback(() => {
+    if (!editorRef.current) return;
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const start = getPlainTextPosition(range.startContainer, range.startOffset);
+      const end = getPlainTextPosition(range.endContainer, range.endOffset);
+      lastCursorPositionRef.current = { start, end };
+    }
+  }, []);
+
+  // Restore cursor position
+  const restoreCursorPosition = useCallback(() => {
+    if (!editorRef.current) return;
+    
+    const { start, end } = lastCursorPositionRef.current;
+    restoreSelection(start, end);
+  }, []);
+
+  // Handle content changes - use onBlur instead of onInput to prevent text reversal
+  const handleContentChange = useCallback(() => {
     if (!editorRef.current) return;
 
-    // Set typing flag to prevent HTML updates
-    isTypingRef.current = true;
+    // Store cursor position before processing
+    storeCursorPosition();
 
     // Get the current content
     const textContent = editorRef.current.textContent || '';
@@ -84,12 +115,26 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       setCurrentSegments(newSegments);
       onSegmentsChange(newSegments);
     }
+  }, [onSegmentsChange, storeCursorPosition]);
 
-    // Reset typing flag after input is processed
-    setTimeout(() => {
+  // Handle typing input - minimal processing to prevent text reversal
+  const handleInput = useCallback(() => {
+    if (!editorRef.current) return;
+
+    // Set typing flag to prevent external HTML updates
+    isTypingRef.current = true;
+    
+    // Clear any pending updates
+    if (pendingUpdateRef.current) {
+      clearTimeout(pendingUpdateRef.current);
+    }
+
+    // Schedule content processing after user stops typing
+    pendingUpdateRef.current = setTimeout(() => {
       isTypingRef.current = false;
-    }, 100);
-  }, [onSegmentsChange]);
+      handleContentChange();
+    }, 300); // Wait 300ms after last keystroke
+  }, [handleContentChange]);
 
   // Handle selection changes to update current format
   const handleSelectionChange = useCallback(() => {
@@ -106,13 +151,16 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     // Get formatting at cursor position
     const format = richTextManager.getFormattingAtPosition(segmentsRef.current, position);
     onSelectionChange(format);
-  }, [onSelectionChange]);
-  // Apply formatting command to selected text
+  }, [onSelectionChange]);  // Apply formatting command to selected text
   const applyFormatting = useCallback((formatCommand: Partial<StandardTextFormat>) => {
     if (!editorRef.current) return;
 
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
+
+    // Store current typing state and temporarily disable updates
+    const wasTyping = isTypingRef.current;
+    isTypingRef.current = true;
 
     // Get current selection range in plain text coordinates
     const range = selection.getRangeAt(0);
@@ -137,10 +185,20 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     setCurrentSegments(newSegments);
     onSegmentsChange(newSegments);
 
-    // Update HTML content
-    const html = richTextManager.segmentsToHtml(newSegments);
-    editorRef.current.innerHTML = html;    // Restore selection
-    restoreSelection(selectionStart, selectionEnd);
+    // Update HTML content using requestAnimationFrame for smooth updates
+    requestAnimationFrame(() => {
+      if (editorRef.current) {
+        const html = richTextManager.segmentsToHtml(newSegments);
+        editorRef.current.innerHTML = html;
+        
+        // Restore selection after DOM update
+        requestAnimationFrame(() => {
+          restoreSelection(selectionStart, selectionEnd);
+          // Restore previous typing state
+          isTypingRef.current = wasTyping;
+        });
+      }
+    });
   }, []);
 
   // Helper to get plain text position from DOM position
@@ -235,13 +293,22 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     overflowWrap: 'break-word',
     boxSizing: 'border-box',
     ...style
-  };
+  };  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingUpdateRef.current) {
+        clearTimeout(pendingUpdateRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div
       ref={combinedRef}
       contentEditable
       style={defaultStyle}
       onInput={handleInput}
+      onBlur={handleContentChange}
       onSelect={handleSelectionChange}
       onKeyUp={handleSelectionChange}
       onMouseUp={handleSelectionChange}

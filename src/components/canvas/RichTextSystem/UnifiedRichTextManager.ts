@@ -54,13 +54,16 @@ class UnifiedRichTextManager {
       // Add segments in order
       if (beforeText) {
         result.push({ ...segment, text: beforeText });
-      }
-
-      if (selectedText) {
+      }      if (selectedText) {
+        // Enhanced formatting merge: preserve existing formatting and merge with new formatting
+        const existingFormat = this.segmentAttributesToFormat(segment);
+        const mergedFormat = this.mergeFormats(existingFormat, format);
+        const newSegmentAttributes = this.formatToSegmentAttributes(mergedFormat);
+        
         result.push({
           ...segment,
           text: selectedText,
-          ...this.formatToSegmentAttributes(format)
+          ...newSegmentAttributes
         });
       }
 
@@ -439,6 +442,26 @@ class UnifiedRichTextManager {
           break;
       }
     }
+  }
+  // Helper method to merge formatting options intelligently
+  private mergeFormats(existingFormat: Partial<StandardTextFormat>, newFormat: Partial<StandardTextFormat>): Partial<StandardTextFormat> {
+    const merged: Partial<StandardTextFormat> = { ...existingFormat };
+
+    // Handle each formatting property individually
+    if (newFormat.bold !== undefined) merged.bold = newFormat.bold;
+    if (newFormat.italic !== undefined) merged.italic = newFormat.italic;
+    if (newFormat.underline !== undefined) merged.underline = newFormat.underline;
+    if (newFormat.strikethrough !== undefined) merged.strikethrough = newFormat.strikethrough;
+    if (newFormat.fontSize !== undefined) merged.fontSize = newFormat.fontSize;
+    if (newFormat.fontFamily !== undefined) merged.fontFamily = newFormat.fontFamily;
+    if (newFormat.textColor !== undefined) merged.textColor = newFormat.textColor;
+    if (newFormat.textAlign !== undefined) merged.textAlign = newFormat.textAlign;
+    if (newFormat.listType !== undefined) merged.listType = newFormat.listType;
+    if (newFormat.textStyle !== undefined) merged.textStyle = newFormat.textStyle;
+    if (newFormat.isHyperlink !== undefined) merged.isHyperlink = newFormat.isHyperlink;
+    if (newFormat.hyperlinkUrl !== undefined) merged.hyperlinkUrl = newFormat.hyperlinkUrl;
+
+    return merged;
   }
 }
 
