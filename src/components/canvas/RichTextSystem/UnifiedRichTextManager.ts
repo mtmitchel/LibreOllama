@@ -201,6 +201,245 @@ class UnifiedRichTextManager {
 
     return keysToCompare.every(key => a[key] === b[key]);
   }
+  // Convert RichTextSegments to HTML for contentEditable display
+  segmentsToHtml(segments: RichTextSegment[]): string {
+    if (!segments || segments.length === 0) {
+      return '';
+    }
+
+    let html = '';
+    let currentListType: string | null = null;
+
+    for (const segment of segments) {
+      const text = segment.text || '';
+      if (!text) continue;
+
+      // Handle list transitions
+      const segmentListType = segment.listType || 'none';
+      
+      // Close previous list if changing list type
+      if (currentListType && currentListType !== 'none' && segmentListType !== currentListType) {
+        html += currentListType === 'numbered' ? '</ol>' : '</ul>';
+        currentListType = null;
+      }
+
+      // Open new list if needed
+      if (segmentListType !== 'none' && segmentListType !== currentListType) {
+        const listTag = segmentListType === 'numbered' ? 'ol' : 'ul';
+        html += `<${listTag}>`;
+        currentListType = segmentListType;
+      }
+
+      // Close list if switching to non-list
+      if (currentListType && segmentListType === 'none') {
+        html += currentListType === 'numbered' ? '</ol>' : '</ul>';
+        currentListType = null;
+      }
+
+      // Build inline styles
+      const styles: string[] = [];
+      
+      if (segment.fontSize && segment.fontSize !== 14) {
+        styles.push(`font-size: ${segment.fontSize}px`);
+      }
+      if (segment.fontFamily) {
+        styles.push(`font-family: ${segment.fontFamily}`);
+      }
+      if (segment.fill) {
+        styles.push(`color: ${segment.fill}`);
+      }
+
+      const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+
+      // Format text with inline formatting
+      let formattedText = text;
+      
+      if (segment.fontWeight === 'bold') {
+        formattedText = `<strong>${formattedText}</strong>`;
+      }
+      if (segment.fontStyle === 'italic') {
+        formattedText = `<em>${formattedText}</em>`;
+      }
+      if (segment.textDecoration?.includes('underline')) {
+        formattedText = `<u>${formattedText}</u>`;
+      }
+      if (segment.textDecoration?.includes('line-through')) {
+        formattedText = `<s>${formattedText}</s>`;
+      }
+
+      // Handle hyperlinks
+      if (segment.url) {
+        formattedText = `<a href="${segment.url}"${styleAttr}>${formattedText}</a>`;
+      } else if (styleAttr) {
+        formattedText = `<span${styleAttr}>${formattedText}</span>`;
+      }
+
+      // Wrap in list item if needed
+      if (currentListType && segmentListType !== 'none') {
+        html += `<li>${formattedText}</li>`;
+      } else {
+        html += formattedText;
+      }
+    }
+
+    // Close any open lists
+    if (currentListType && currentListType !== 'none') {
+      html += currentListType === 'numbered' ? '</ol>' : '</ul>';
+    }
+
+    return html;
+  }
+  // Convert HTML from contentEditable back to RichTextSegments
+  htmlToSegments(html: string): RichTextSegment[] {
+    if (!html || typeof html !== 'string') {
+      return [];
+    }
+
+    const segments: RichTextSegment[] = [];
+    
+    // Create a temporary DOM element to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    const defaultSegment: Partial<RichTextSegment> = {
+      fontSize: 14,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fill: '#374151',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      textDecoration: '',
+      textAlign: 'left',
+      listType: 'none'
+    };
+
+    this.parseNodeToSegments(tempDiv, segments, defaultSegment);
+    
+    return segments;
+  }
+
+  // Helper method to recursively parse DOM nodes into segments
+  private parseNodeToSegments(
+    node: Node, 
+    segments: RichTextSegment[], 
+    currentFormat: Partial<RichTextSegment>,
+    listType: 'none' | 'bullet' | 'numbered' = 'none'
+  ): void {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      if (text.trim()) {
+        segments.push({
+          text,
+          ...currentFormat,
+          listType
+        } as RichTextSegment);
+      }
+      return;
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element;
+      const tagName = element.tagName.toLowerCase();
+      
+      // Create new format based on current format and element
+      const newFormat = { ...currentFormat };
+      let newListType = listType;
+
+      // Handle formatting tags
+      switch (tagName) {
+        case 'strong':
+        case 'b':
+          newFormat.fontWeight = 'bold';
+          break;
+        case 'em':
+        case 'i':
+          newFormat.fontStyle = 'italic';
+          break;
+        case 'u':
+          newFormat.textDecoration = (newFormat.textDecoration || '') + ' underline';
+          break;
+        case 's':
+        case 'strike':
+          newFormat.textDecoration = (newFormat.textDecoration || '') + ' line-through';
+          break;
+        case 'h1':
+          newFormat.fontSize = 24;
+          newFormat.fontWeight = 'bold';
+          break;
+        case 'h2':
+          newFormat.fontSize = 20;
+          newFormat.fontWeight = 'bold';
+          break;
+        case 'h3':
+          newFormat.fontSize = 18;
+          newFormat.fontWeight = 'bold';
+          break;
+        case 'a':
+          const href = element.getAttribute('href');
+          if (href) {
+            newFormat.url = href;
+          }
+          break;
+        case 'ol':
+          newListType = 'numbered';
+          break;
+        case 'ul':
+          newListType = 'bullet';
+          break;
+        case 'li':
+          // List item inherits the list type from parent
+          break;
+      }
+
+      // Handle style attribute
+      const style = element.getAttribute('style');
+      if (style) {
+        this.parseStyleToSegment(style, newFormat);
+      }
+
+      // Recursively process child nodes
+      for (let i = 0; i < node.childNodes.length; i++) {
+        this.parseNodeToSegments(node.childNodes[i], segments, newFormat, newListType);
+      }
+    }
+  }
+
+  // Helper to parse CSS style string into segment format
+  private parseStyleToSegment(style: string, segment: Partial<RichTextSegment>): void {
+    const styles = style.split(';').map(s => s.trim()).filter(s => s);
+    
+    for (const styleRule of styles) {
+      const [property, value] = styleRule.split(':').map(s => s.trim());
+      
+      switch (property) {
+        case 'font-size':
+          const fontSize = parseInt(value.replace('px', ''));
+          if (!isNaN(fontSize)) segment.fontSize = fontSize;
+          break;
+        case 'font-family':
+          segment.fontFamily = value.replace(/['"]/g, '');
+          break;
+        case 'color':
+          segment.fill = value;
+          break;
+        case 'font-weight':
+          if (value === 'bold' || parseInt(value) >= 600) {
+            segment.fontWeight = 'bold';
+          }
+          break;
+        case 'font-style':
+          if (value === 'italic') {
+            segment.fontStyle = 'italic';
+          }
+          break;
+        case 'text-decoration':
+          segment.textDecoration = value;
+          break;
+        case 'text-align':
+          segment.textAlign = value as any;
+          break;
+      }
+    }
+  }
 }
 
 export const richTextManager = new UnifiedRichTextManager();
