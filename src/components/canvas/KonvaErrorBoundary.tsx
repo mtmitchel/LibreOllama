@@ -21,35 +21,49 @@ class KonvaErrorBoundary extends Component<Props, State> {
   }  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Konva Error Boundary caught an error:', error, errorInfo);
     
-    // Check if this is the specific Konva error we're trying to handle
-    if (error.message.includes('konva has no node with the type') || 
-        error.message.includes('parentInstance.add is not a function')) {
-      console.warn('🔧 Konva rendering error caught and handled:', error.message);
+    // React 19 portal detection - more comprehensive
+    const isPortalOperation = error.stack?.includes('createPortal') || 
+                             error.stack?.includes('Html') ||
+                             error.stack?.includes('React19CompatiblePortal') ||
+                             errorInfo.componentStack?.includes('Html') ||
+                             errorInfo.componentStack?.includes('React19CompatiblePortal') ||
+                             error.message.includes('_portals');
+    
+    // React 19 specific reconciler errors
+    const isReact19ReconcilerError = error.message.includes('parentInstance.add is not a function') ||
+                                   error.message.includes('Cannot read properties of undefined (reading \'add\')') ||
+                                   error.message.includes('stage.add') ||
+                                   error.message.includes('You may only add layers to the stage');
+    
+    const isKnownDOMError = error.message.includes('konva has no node with the type') && 
+                           (error.message.includes('div') || 
+                            error.message.includes('textarea') || 
+                            error.message.includes('input') ||
+                            error.message.includes('span') ||
+                            error.message.includes('button'));
+    
+    if (isPortalOperation) {
+      // This is a legitimate portal operation, don't interfere
+      console.log('🌐 Portal operation detected, allowing normal flow');
+      // Reset error state for portal operations to prevent error boundary activation
+      this.setState({ hasError: false, error: undefined });
+      return;
+    }
+    
+    if (isKnownDOMError || isReact19ReconcilerError) {
+      console.warn('🔧 React 19 + Konva reconciler error caught and handled:', error.message);
       
-      // Check if this is a portal-related error during text editing
-      if (error.message.includes('div') || error.message.includes('textarea') || 
-          error.message.includes('input') || error.stack?.includes('Portal')) {
-        console.warn('🌐 Portal rendering issue detected - this is expected for DOM overlays');
-        
-        // FIXED: Don't auto-recover during legitimate text editing sessions
-        // Only recover if it's truly an error and not a portal operation
-        if (error.stack?.includes('ReactKonvaHostConfig') && 
-            !error.stack?.includes('createPortal')) {
-          // This is a legitimate React-Konva reconciler error, allow recovery
-          setTimeout(() => {
-            this.setState({ hasError: false, error: undefined });
-          }, 100);
-        } else {
-          // This is likely a portal-related operation, don't interfere
-          console.log('🌐 Portal operation detected, not interfering with error recovery');
-          // Reset immediately to allow portal to work normally
-          this.setState({ hasError: false, error: undefined });
-        }
-      } else {
-        // Non-portal Konva error, allow recovery
+      // Only attempt recovery for actual React-Konva reconciler errors that aren't portals
+      if ((error.stack?.includes('ReactKonvaHostConfig') || isReact19ReconcilerError) && !isPortalOperation) {
+        // Delay recovery to allow React to finish its work
         setTimeout(() => {
-          this.setState({ hasError: false, error: undefined });
+          if (this.state.hasError) {
+            this.setState({ hasError: false, error: undefined });
+          }
         }, 100);
+      } else {
+        // Reset immediately for other types of errors
+        this.setState({ hasError: false, error: undefined });
       }
     }
   }

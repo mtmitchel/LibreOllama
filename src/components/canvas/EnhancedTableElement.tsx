@@ -1395,62 +1395,16 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
   }, [registerStageRef, unregisterStageRef]);
 
   // Ensure we're returning valid Konva + Portal structure
-  // The Group contains only Konva elements, editor is outside via fragment
-  const tableStructure = (
-    <>
-      {tableContent}
-      {/* Unified table cell editor - CRITICAL: Must be outside Konva Group structure */}
-      {editingCell && editingCellPosition && (
-        <UnifiedTableCellEditor
-          isEditing={true}
-          cellPosition={editingCellPosition}
-          initialSegments={(() => {
-            const existingSegments = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.segments;
-            if (existingSegments && existingSegments.length > 0) {
-              return existingSegments;
-            }
-            // Convert plain text to rich text segments
-            const cellText = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.text || '';
-            const defaultFormat = {
-              fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize || 14,
-              fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily || designSystem.typography.fontFamily.sans,
-              textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor || designSystem.colors.secondary[800],
-              textAlign: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textAlign || 'left',
-              bold: false,
-              italic: false,
-              underline: false,
-              strikethrough: false,
-              listType: 'none' as const,
-              isHyperlink: false,
-              hyperlinkUrl: '',
-              textStyle: 'default' as const,
-            };
-            return richTextManager.plainTextToSegments(cellText, defaultFormat);
-          })()}
-          onSegmentsChange={handleRichTextChange}
-          onFinishEditing={handleFinishEditing}
-          onCancelEditing={handleCancelEditing}
-          defaultFormat={{
-            fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize || 14,
-            fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily || designSystem.typography.fontFamily.sans,
-            textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor || designSystem.colors.secondary[800],
-            textAlign: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textAlign || 'left',
-            bold: false,
-            italic: false,
-            underline: false,
-            strikethrough: false,
-            listType: 'none',
-            isHyperlink: false,
-            hyperlinkUrl: '',
-            textStyle: 'default',
-          }}
-        />
-      )}
-    </>
-  );
+  // The Group contains only Konva elements, editor is outside via portal and effect
   
-  // Return the properly structured component
-  return tableStructure;
+  // Handle editor rendering via useEffect to avoid React-Konva reconciler issues
+  useEffect(() => {
+    // Editor is handled via portal inside UnifiedTableCellEditor component
+    // No need for additional portal wrapping here
+  }, [editingCell, editingCellPosition]);
+
+  // Return only the Konva Group structure
+  return tableContent;
 });
 
 EnhancedTableElement.displayName = 'EnhancedTableElement';

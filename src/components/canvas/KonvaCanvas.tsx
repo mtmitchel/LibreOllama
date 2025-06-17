@@ -1,8 +1,8 @@
 // src/components/canvas/KonvaCanvas.tsx
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Stage, Layer, Transformer, Rect, Circle, Line, Star, Arrow } from 'react-konva';
-import { Html } from 'react-konva-utils';
 import Konva from 'konva';
+import React19CompatiblePortal from './React19CompatiblePortal';
 import { useKonvaCanvasStore, CanvasElement, RichTextSegment } from '../../stores/konvaCanvasStore';
 import RichTextRenderer, { RichTextElementType } from './RichTextRenderer';
 import UnifiedTextElement from './UnifiedTextElement';
@@ -1707,19 +1707,21 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           />
         </Layer>
 
-        {/* Text editing overlay - now properly portaled using Html */}
+        {/* Text editing overlay - now properly portaled using React19CompatiblePortal */}
         {editingElement && textareaPosition && (
-          <Html divProps={{
-            style: {
-              position: 'absolute',
-              left: `${textareaPosition.x}px`,
-              top: `${textareaPosition.y}px`,
-              transform: `rotate(${editingElement.rotation || 0}deg) scale(${panZoomState.scale})`,
-              transformOrigin: 'left top',
-              zIndex: 1000,
-              pointerEvents: 'auto'
-            }
-          }}>
+          <React19CompatiblePortal 
+            stage={internalStageRef.current}
+            divProps={{
+              style: {
+                position: 'absolute',
+                left: `${textareaPosition.x}px`,
+                top: `${textareaPosition.y}px`,
+                transform: `rotate(${editingElement.rotation || 0}deg) scale(${panZoomState.scale})`,
+                transformOrigin: 'left top',
+                zIndex: 1000,
+                pointerEvents: 'auto'
+              }
+            }}>
             <TextEditingOverlay
               position={{ x: 0, y: 0, width: textareaPosition.width, height: textareaPosition.height }}
               text={editText}
@@ -1730,25 +1732,27 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
               color={editingElement.textColor || editingElement.fill || '#000000'}
               align={editingElement.textAlign || 'left'}
               maxWidth={editingElement.width}
-              rotation={0} // Rotation handled by Html wrapper
-              scale={1} // Scale handled by Html wrapper
+              rotation={0} // Rotation handled by portal wrapper
+              scale={1} // Scale handled by portal wrapper
             />
-          </Html>
+          </React19CompatiblePortal>
         )}
 
         {/* Unified rich text editing overlay for ALL text editing (text, sticky notes, AND table cells) */}
         {richTextEditingData && richTextEditingData.isEditing && richTextEditingData.cellPosition && (
-          <Html divProps={{
-            style: {
-              position: 'absolute',
-              left: `${richTextEditingData.cellPosition.x}px`,
-              top: `${richTextEditingData.cellPosition.y}px`,
-              transform: `scale(${panZoomState.scale})`,
-              transformOrigin: 'left top',
-              zIndex: 1000,
-              pointerEvents: 'auto'
-            }
-          }}>
+          <React19CompatiblePortal 
+            stage={internalStageRef.current}
+            divProps={{
+              style: {
+                position: 'absolute',
+                left: `${richTextEditingData.cellPosition.x}px`,
+                top: `${richTextEditingData.cellPosition.y}px`,
+                transform: `scale(${panZoomState.scale})`,
+                transformOrigin: 'left top',
+                zIndex: 1000,
+                pointerEvents: 'auto'
+              }
+            }}>
             <KonvaErrorBoundary fallback={null}>
               <RichTextCellEditor
                 isEditing={richTextEditingData.isEditing}
@@ -1773,7 +1777,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
                 }}
               />
             </KonvaErrorBoundary>
-          </Html>
+          </React19CompatiblePortal>
         )}
 
       </Stage>
