@@ -2,7 +2,7 @@
 
 import { StandardTextFormat, RichTextSegment } from '../../../types/richText';
 
-class UnifiedRichTextManager {
+export class UnifiedRichTextManager {
   // Method to apply formatting to segments of text
   applyFormattingToSegments(
     segments: RichTextSegment[], 

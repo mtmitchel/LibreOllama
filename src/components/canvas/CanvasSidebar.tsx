@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, MoreVertical, Trash2, Edit2, Copy, Search } from 'lucide-react';
-import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
-import { designSystem } from '../../styles/designSystem';
-import './CanvasSidebar.css';
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  MoreVertical,
+  Trash2,
+  Edit2,
+  Copy,
+  Search,
+} from "lucide-react";
+import { useKonvaCanvasStore } from "../../stores/konvaCanvasStore";
+import { designSystem } from "../../styles/designSystem";
+import "./CanvasSidebar.css";
 
 interface CanvasItem {
   id: string;
@@ -18,15 +25,16 @@ interface CanvasSidebarProps {
   onToggle: () => void;
 }
 
-const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
+const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
   const [canvases, setCanvases] = useState<CanvasItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedCanvasId, setSelectedCanvasId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
+  const [editingName, setEditingName] = useState("");
 
-  const { elements, sections, exportCanvas, importCanvas, clearCanvas } = useKonvaCanvasStore();
+  const { elements, sections, clearCanvas } =
+    useKonvaCanvasStore();
 
   // Load canvases from localStorage on mount
   useEffect(() => {
@@ -35,36 +43,38 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
 
   // TEMPORARY: Function to clear all canvas localStorage data
   const clearAllCanvasData = () => {
-    const confirmed = window.confirm('This will permanently delete ALL canvas data. Are you sure?');
+    const confirmed = window.confirm(
+      "This will permanently delete ALL canvas data. Are you sure?"
+    );
     if (!confirmed) return;
-    
+
     // Clear all libreollama canvas keys from localStorage
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('libreollama_canvas')) {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("libreollama_canvas")) {
         localStorage.removeItem(key);
       }
     });
-    
+
     // Reset state
     setCanvases([]);
     setSelectedCanvasId(null);
     clearCanvas();
-    
+
     // Create fresh canvas
     const initialCanvas = createNewCanvas();
     setCanvases([initialCanvas]);
     setSelectedCanvasId(initialCanvas.id);
     loadCanvas(initialCanvas.id);
-    
-    alert('All canvas data cleared! You now have a fresh canvas.');
+
+    alert("All canvas data cleared! You now have a fresh canvas.");
   };
 
   const loadCanvasesFromStorage = () => {
-    const storedCanvases = localStorage.getItem('libreollama_canvases');
+    const storedCanvases = localStorage.getItem("libreollama_canvases");
     if (storedCanvases) {
       const parsed = JSON.parse(storedCanvases);
       setCanvases(parsed);
-      
+
       // Set the first canvas as selected if none selected
       if (parsed.length > 0 && !selectedCanvasId) {
         setSelectedCanvasId(parsed[0].id);
@@ -79,7 +89,10 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   };
 
   const saveCanvasesToStorage = (updatedCanvases: CanvasItem[]) => {
-    localStorage.setItem('libreollama_canvases', JSON.stringify(updatedCanvases));
+    localStorage.setItem(
+      "libreollama_canvases",
+      JSON.stringify(updatedCanvases)
+    );
   };
 
   const createNewCanvas = (): CanvasItem => {
@@ -89,7 +102,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
       name: `Canvas ${canvasNumber}`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      elementCount: 0
+      elementCount: 0,
     };
   };
 
@@ -99,19 +112,22 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
     // Export current canvas data
     const canvasData = {
       elements: elements,
-      sections: sections
+      sections: sections,
     };
 
     // Save to localStorage with canvas ID
-    localStorage.setItem(`libreollama_canvas_${selectedCanvasId}`, JSON.stringify(canvasData));
+    localStorage.setItem(
+      `libreollama_canvas_${selectedCanvasId}`,
+      JSON.stringify(canvasData)
+    );
 
     // Update canvas metadata
-    const updatedCanvases = canvases.map(canvas => {
+    const updatedCanvases = canvases.map((canvas) => {
       if (canvas.id === selectedCanvasId) {
         return {
           ...canvas,
           updatedAt: Date.now(),
-          elementCount: Object.keys(elements).length
+          elementCount: Object.keys(elements).length,
         };
       }
       return canvas;
@@ -132,14 +148,14 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
     if (canvasData) {
       const parsed = JSON.parse(canvasData);
       clearCanvas();
-      
+
       // Import elements
       if (parsed.elements) {
         Object.values(parsed.elements).forEach((element: any) => {
           useKonvaCanvasStore.getState().addElement(element);
         });
       }
-      
+
       // Import sections
       if (parsed.sections) {
         Object.values(parsed.sections).forEach((section: any) => {
@@ -169,14 +185,16 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
       return;
     }
 
-    const confirmed = window.confirm('Are you sure you want to delete this canvas?');
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this canvas?"
+    );
     if (!confirmed) return;
 
     // Remove from localStorage
     localStorage.removeItem(`libreollama_canvas_${canvasId}`);
 
     // Update canvases list
-    const updatedCanvases = canvases.filter(c => c.id !== canvasId);
+    const updatedCanvases = canvases.filter((c) => c.id !== canvasId);
     setCanvases(updatedCanvases);
     saveCanvasesToStorage(updatedCanvases);
 
@@ -189,12 +207,12 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   };
 
   const handleDuplicateCanvas = (canvasId: string) => {
-    const canvasToDuplicate = canvases.find(c => c.id === canvasId);
+    const canvasToDuplicate = canvases.find((c) => c.id === canvasId);
     if (!canvasToDuplicate) return;
 
     const newCanvas: CanvasItem = {
       ...createNewCanvas(),
-      name: `${canvasToDuplicate.name} (Copy)`
+      name: `${canvasToDuplicate.name} (Copy)`,
     };
 
     // Copy canvas data
@@ -210,7 +228,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   };
 
   const handleRenameCanvas = (canvasId: string) => {
-    const canvas = canvases.find(c => c.id === canvasId);
+    const canvas = canvases.find((c) => c.id === canvasId);
     if (!canvas) return;
 
     setEditingId(canvasId);
@@ -221,7 +239,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   const handleSaveRename = () => {
     if (!editingId || !editingName.trim()) return;
 
-    const updatedCanvases = canvases.map(canvas => {
+    const updatedCanvases = canvases.map((canvas) => {
       if (canvas.id === editingId) {
         return { ...canvas, name: editingName.trim() };
       }
@@ -231,7 +249,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
     setCanvases(updatedCanvases);
     saveCanvasesToStorage(updatedCanvases);
     setEditingId(null);
-    setEditingName('');
+    setEditingName("");
   };
 
   const formatDate = (timestamp: number) => {
@@ -240,88 +258,114 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 1) {
-      return 'Just now';
+      return "Just now";
     } else if (diffInHours < 24) {
       return `${Math.floor(diffInHours)}h ago`;
     } else if (diffInHours < 48) {
-      return 'Yesterday';
+      return "Yesterday";
     } else {
       return date.toLocaleDateString();
     }
   };
 
-  const filteredCanvases = canvases.filter(canvas =>
+  const filteredCanvases = canvases.filter((canvas) =>
     canvas.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <>
       {/* Sidebar */}
-      <div 
-        className={`canvas-sidebar ${isOpen ? 'open' : ''}`}
+      <div
+        className={`canvas-sidebar ${isOpen ? "open" : ""}`}
         style={{
           backgroundColor: designSystem.colors.secondary[50],
           borderRight: `1px solid ${designSystem.colors.secondary[200]}`,
-          position: 'relative' // Ensure proper positioning context
+          position: "relative", // Ensure proper positioning context
         }}
       >
         {/* Header */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: `${designSystem.spacing.md}px ${designSystem.spacing.lg}px`,
-          borderBottom: `1px solid ${designSystem.colors.secondary[200]}`
-        }}>
-          <h2 style={{
-            fontSize: designSystem.typography.fontSize.lg,
-            fontWeight: designSystem.typography.fontWeight.semibold,
-            color: designSystem.colors.secondary[700]
-          }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: `${designSystem.spacing.md}px ${designSystem.spacing.lg}px`,
+            borderBottom: `1px solid ${designSystem.colors.secondary[200]}`,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: designSystem.typography.fontSize.lg,
+              fontWeight: designSystem.typography.fontWeight.semibold,
+              color: designSystem.colors.secondary[700],
+            }}
+          >
             Canvases
           </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: designSystem.spacing.sm }}>
-            <button 
-              onClick={handleCreateCanvas} 
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: designSystem.spacing.sm,
+            }}
+          >
+            <button
+              onClick={handleCreateCanvas}
               style={{
                 background: designSystem.colors.primary[500],
-                color: 'white',
-                border: 'none',
+                color: "white",
+                border: "none",
                 padding: `${designSystem.spacing.xs}px ${designSystem.spacing.sm}px`,
                 borderRadius: designSystem.borderRadius.md,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
                 gap: designSystem.spacing.xs,
-                transition: 'background-color 0.2s ease'
+                transition: "background-color 0.2s ease",
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.primary[600]}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.primary[500]}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  designSystem.colors.primary[600])
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  designSystem.colors.primary[500])
+              }
             >
               <Plus size={16} />
-              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>New</span>
+              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>
+                New
+              </span>
             </button>
             <button
               className="canvas-sidebar-new-btn"
               onClick={clearAllCanvasData}
               style={{
                 backgroundColor: designSystem.colors.error[600],
-                color: '#ffffff',
+                color: "#ffffff",
                 fontWeight: designSystem.typography.fontWeight.medium,
                 padding: `${designSystem.spacing.xs}px ${designSystem.spacing.sm}px`,
                 borderRadius: designSystem.borderRadius.md,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
                 gap: designSystem.spacing.xs,
-                transition: 'background-color 0.2s ease',
-                marginLeft: '8px'
+                transition: "background-color 0.2s ease",
+                marginLeft: "8px",
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.error[700]}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.error[600]}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  designSystem.colors.error[700])
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  designSystem.colors.error[600])
+              }
             >
               <Trash2 size={16} />
-              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>Clear All</span>
+              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>
+                Clear All
+              </span>
             </button>
           </div>
         </div>
@@ -336,22 +380,25 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               fontFamily: designSystem.typography.fontFamily.sans,
-              fontSize: designSystem.typography.fontSize.sm
+              fontSize: designSystem.typography.fontSize.sm,
             }}
           />
         </div>
 
         {/* Canvas List */}
         <div className="canvas-sidebar-list">
-          {filteredCanvases.map(canvas => (
+          {filteredCanvases.map((canvas) => (
             <div
               key={canvas.id}
-              className={`canvas-sidebar-item ${selectedCanvasId === canvas.id ? 'selected' : ''}`}
+              className={`canvas-sidebar-item ${
+                selectedCanvasId === canvas.id ? "selected" : ""
+              }`}
               onClick={() => loadCanvas(canvas.id)}
               style={{
-                backgroundColor: selectedCanvasId === canvas.id 
-                  ? designSystem.colors.primary[100]
-                  : 'transparent'
+                backgroundColor:
+                  selectedCanvasId === canvas.id
+                    ? designSystem.colors.primary[100]
+                    : "transparent",
               }}
             >
               {/* Thumbnail or placeholder */}
@@ -379,10 +426,10 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
                     onChange={(e) => setEditingName(e.target.value)}
                     onBlur={handleSaveRename}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveRename();
-                      if (e.key === 'Escape') {
+                      if (e.key === "Enter") handleSaveRename();
+                      if (e.key === "Escape") {
                         setEditingId(null);
-                        setEditingName('');
+                        setEditingName("");
                       }
                     }}
                     autoFocus
@@ -421,7 +468,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
                       <Copy size={14} />
                       Duplicate
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteCanvas(canvas.id)}
                       className="danger"
                     >

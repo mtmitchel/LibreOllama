@@ -39,14 +39,34 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [hasPlaceholderBeenCleared, setHasPlaceholderBeenCleared] = useState(false);
 
+  // Detect if the text is placeholder text that should be cleared
+  const isPlaceholderText = (text: string) => {
+    if (!text) return false;
+    const placeholderTexts = [
+      'Double-click to edit',
+      'Double-click to add text',
+      'Click to edit',
+      'Enter text...',
+      'Type your text...'
+    ];
+    return placeholderTexts.includes(text.trim());
+  };
   // Auto-focus and select text when editing starts
   useEffect(() => {
     if (isEditing && !hasInitialized && textareaRef.current) {
       const focusTimeout = setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
-          textareaRef.current.select();
+          
+          // If the initial text is placeholder text, select it all for easy replacement
+          if (isPlaceholderText(editText)) {
+            textareaRef.current.select();
+          } else {
+            textareaRef.current.select();
+          }
+          
           setHasInitialized(true);
         }
       }, 10);
@@ -54,8 +74,9 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
       return () => clearTimeout(focusTimeout);
     } else if (!isEditing) {
       setHasInitialized(false);
+      setHasPlaceholderBeenCleared(false); // Reset when not editing
     }
-  }, [isEditing, hasInitialized]);
+  }, [isEditing, hasInitialized, editText]);
 
   // Handle text selection for formatting
   const handleTextSelection = useCallback(() => {
@@ -70,11 +91,22 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
       onTextSelection(null);
     }
   }, [onTextSelection]);
-
   // Handle keyboard events
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isEditing) return;
+
+      // Handle placeholder text clearing on first meaningful keypress
+      if (!hasPlaceholderBeenCleared && textareaRef.current) {
+        const currentText = textareaRef.current.value;
+        // Check if this is a content-producing key (not navigation keys)
+        const isContentKey = !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Tab', 'Escape', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'].includes(e.key) && !e.ctrlKey && !e.metaKey;
+        
+        if (isContentKey && isPlaceholderText(currentText)) {
+          // Mark that we'll clear placeholder on the next input
+          setHasPlaceholderBeenCleared(true);
+        }
+      }
 
       switch (e.key) {
         case 'Enter':
@@ -98,7 +130,7 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
       document.addEventListener('keydown', handleKeyDown, { passive: false });
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isEditing, onFinishEditing, onCancelEditing]);
+  }, [isEditing, onFinishEditing, onCancelEditing, hasPlaceholderBeenCleared]);
 
   // Handle clicks outside to finish editing
   useEffect(() => {
@@ -170,12 +202,22 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
   if (!portalTarget) return null;
 
   return createPortal(
-    <div style={{ position: 'absolute', pointerEvents: 'auto', zIndex: 2000 }}>
-      <textarea
+    <div style={{ position: 'absolute', pointerEvents: 'auto', zIndex: 2000 }}>      <textarea
         ref={textareaRef}
         style={textareaStyle}
         value={editText}
-        onChange={(e) => onTextChange(e.target.value)}
+        onChange={(e) => {
+          const newText = e.target.value;
+          
+          // If this is the first input and we haven't cleared placeholder yet
+          if (!hasPlaceholderBeenCleared && isPlaceholderText(editText)) {
+            // Clear placeholder and start fresh with the new input
+            setHasPlaceholderBeenCleared(true);
+            onTextChange(newText);
+          } else {
+            onTextChange(newText);
+          }
+        }}
         onSelect={handleTextSelection}
         onMouseUp={handleTextSelection}
         onKeyUp={handleTextSelection}

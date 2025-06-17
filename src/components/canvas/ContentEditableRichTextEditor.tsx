@@ -19,10 +19,25 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
   style,
   placeholder = "Type your text...",
   onKeyDown
-}, ref) => {
-  const editorRef = useRef<HTMLDivElement>(null);
+}, ref) => {  const editorRef = useRef<HTMLDivElement>(null);
   const [currentSegments, setCurrentSegments] = useState<RichTextSegment[]>(initialSegments);
   const segmentsRef = useRef(currentSegments);
+
+  // Detect if the initial text is placeholder text that should be cleared
+  const isPlaceholderText = useCallback((text: string) => {
+    if (!text) return false;
+    const placeholderTexts = [
+      'Double-click to edit',
+      'Double-click to add text',
+      'Click to edit',
+      'Enter text...',
+      'Type your text...'
+    ];
+    return placeholderTexts.includes(text.trim());
+  }, []);
+
+  // State to track if we've cleared placeholder text
+  const [hasPlaceholderBeenCleared, setHasPlaceholderBeenCleared] = useState(false);
 
   // Combine internal ref with forwarded ref
   const combinedRef = useCallback((node: HTMLDivElement | null) => {
@@ -116,7 +131,6 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       onSegmentsChange(newSegments);
     }
   }, [onSegmentsChange, storeCursorPosition]);
-
   // Handle typing input - minimal processing to prevent text reversal
   const handleInput = useCallback(() => {
     if (!editorRef.current) return;
@@ -127,6 +141,19 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     // Clear any pending updates
     if (pendingUpdateRef.current) {
       clearTimeout(pendingUpdateRef.current);
+    }
+
+    // Check if we need to clear placeholder text on first input
+    if (!hasPlaceholderBeenCleared && editorRef.current.textContent) {
+      const currentText = editorRef.current.textContent;
+      if (isPlaceholderText(currentText)) {
+        // Clear the placeholder text and start fresh
+        editorRef.current.innerHTML = '';
+        setHasPlaceholderBeenCleared(true);
+        
+        // Let the user's input continue normally
+        return;
+      }
     }
 
     // Schedule content processing after user stops typing
@@ -311,10 +338,28 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       onBlur={handleContentChange}
       onSelect={handleSelectionChange}
       onKeyUp={handleSelectionChange}
-      onMouseUp={handleSelectionChange}
-      onKeyDown={(e) => {
+      onMouseUp={handleSelectionChange}      onKeyDown={(e) => {
         // Stop propagation to prevent global keyboard shortcuts from interfering with text editing
         e.stopPropagation();
+        
+        // Handle placeholder text clearing on first meaningful keypress
+        if (!hasPlaceholderBeenCleared && editorRef.current && editorRef.current.textContent) {
+          const currentText = editorRef.current.textContent;
+          // Check if this is a content-producing key (not navigation keys)
+          const isContentKey = !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Tab', 'Escape', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'].includes(e.key) && !e.ctrlKey && !e.metaKey;
+          
+          if (isContentKey && isPlaceholderText(currentText)) {
+            // Clear placeholder text immediately
+            editorRef.current.innerHTML = '';
+            setHasPlaceholderBeenCleared(true);
+            
+            // Create empty segments to replace placeholder
+            const emptySegments: RichTextSegment[] = [];
+            setCurrentSegments(emptySegments);
+            onSegmentsChange(emptySegments);
+          }
+        }
+        
         // Call the provided onKeyDown handler if it exists
         if (onKeyDown) {
           onKeyDown(e);

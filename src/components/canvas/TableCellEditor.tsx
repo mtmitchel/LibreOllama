@@ -66,6 +66,20 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localText, setLocalText] = useState(cellText);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [hasPlaceholderBeenCleared, setHasPlaceholderBeenCleared] = useState(false);
+  
+  // Detect if the text is placeholder text that should be cleared
+  const isPlaceholderText = (text: string) => {
+    if (!text) return false;
+    const placeholderTexts = [
+      'Double-click to edit',
+      'Double-click to add text',
+      'Click to edit',
+      'Enter text...',
+      'Type your text...'
+    ];
+    return placeholderTexts.includes(text.trim());
+  };
   
   // Validate props on mount and when they change
   useEffect(() => {
@@ -84,24 +98,6 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
     }
   }, [cellText, localText]);
 
-  // Enhanced focus management with error handling
-  const focusAndSelectText = useCallback(() => {
-    if (!textareaRef.current) {
-      logDebug('Focus attempt failed: textarea ref is null');
-      return false;
-    }
-    
-    try {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-      logDebug('Successfully focused and selected text');
-      return true;
-    } catch (error) {
-      logDebug('Error during focus/select operation', error);
-      return false;
-    }
-  }, []);
-
   // Auto-focus and select text when editing starts
   useEffect(() => {
     if (isEditing && !hasInitialized) {
@@ -112,7 +108,14 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
         if (textareaRef.current) {
           try {
             textareaRef.current.focus();
-            textareaRef.current.select(); // Select all text for better UX
+            
+            // If the initial text is placeholder text, select it all for easy replacement
+            if (isPlaceholderText(cellText)) {
+              textareaRef.current.select();
+            } else {
+              textareaRef.current.select(); // Select all text for better UX
+            }
+            
             setHasInitialized(true);
             logDebug('Successfully focused and selected text');
           } catch (error) {
@@ -128,8 +131,9 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
       return () => clearTimeout(focusTimeout);
     } else if (!isEditing) {
       setHasInitialized(false);
+      setHasPlaceholderBeenCleared(false); // Reset when not editing
     }
-  }, [isEditing, hasInitialized, onCancelEditing]);
+  }, [isEditing, hasInitialized, onCancelEditing, cellText]);
 
   // Enhanced keyboard event handling with error boundaries
   const handleSave = useCallback(() => {
@@ -162,6 +166,18 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
       if (!isEditing) return;
 
       try {
+        // Handle placeholder text clearing on first meaningful keypress
+        if (!hasPlaceholderBeenCleared && textareaRef.current) {
+          const currentText = textareaRef.current.value;
+          // Check if this is a content-producing key (not navigation keys)
+          const isContentKey = !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Tab', 'Escape', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'].includes(e.key) && !e.ctrlKey && !e.metaKey;
+          
+          if (isContentKey && isPlaceholderText(currentText)) {
+            // Mark that we'll clear placeholder on the next input
+            setHasPlaceholderBeenCleared(true);
+          }
+        }
+
         switch (e.key) {
           case 'Enter':
             if (!e.shiftKey) {
@@ -241,12 +257,21 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
   const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     try {
       const newText = e.target.value;
-      logDebug('Text changed', { from: localText, to: newText });
-      setLocalText(newText);
+      
+      // If this is the first input and we haven't cleared placeholder yet
+      if (!hasPlaceholderBeenCleared && isPlaceholderText(localText)) {
+        // Clear placeholder and start fresh with the new input
+        setHasPlaceholderBeenCleared(true);
+        setLocalText(newText);
+        logDebug('Cleared placeholder text and set new text', { from: localText, to: newText });
+      } else {
+        setLocalText(newText);
+        logDebug('Text changed', { from: localText, to: newText });
+      }
     } catch (error) {
       logDebug('Error handling text change', error);
     }
-  }, [localText]);
+  }, [localText, hasPlaceholderBeenCleared]);
 
   // Enhanced blur handler with error handling
   const handleBlur = useCallback(() => {
