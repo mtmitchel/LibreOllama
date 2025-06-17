@@ -3,8 +3,8 @@ import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, useKonvaCanvasStore, RichTextSegment } from '../../stores/konvaCanvasStore';
 import { designSystem } from '../../styles/designSystem';
-import { triggerLayerRedraw } from '../../utils/canvasRedrawUtils';
 import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
+import UnifiedTableCellEditor from './UnifiedTableCellEditor';
 
 // Constants for improved UX
 const MIN_CELL_WIDTH = 80; // Increased from 60px
@@ -35,20 +35,6 @@ const throttle = <T extends (...args: any[]) => void>(func: T, delay: number): T
   }) as T;
 };
 
-interface TableEditingData {
-  isEditing: boolean;
-  cellPosition: { x: number; y: number; width: number; height: number };
-  cellText: string;
-  richTextSegments: RichTextSegment[];
-  fontSize?: number;
-  fontFamily?: string;
-  textColor?: string;
-  textAlign?: 'left' | 'center' | 'right';
-  onTextChange: (text: string) => void;
-  onRichTextChange?: (segments: RichTextSegment[]) => void;
-  onFinishEditing: () => void;
-  onCancelEditing: () => void;
-}
 
 interface EnhancedTableElementProps {
   element: CanvasElement;
@@ -57,7 +43,6 @@ interface EnhancedTableElementProps {
   onUpdate: (updates: Partial<CanvasElement>) => void;
   onDragEnd?: (e: Konva.KonvaEventObject<DragEvent>) => void;
   stageRef: React.RefObject<Konva.Stage | null>;
-  onEditingStateChange?: (editingData: TableEditingData | null) => void;
 }
 
 // Helper function to generate a stable key from table data
@@ -69,7 +54,7 @@ const getTableDataKey = (tableData: any) => {
 };
 
 export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableElementProps>(
-  ({ element, isSelected, onSelect, onUpdate, onDragEnd, stageRef, onEditingStateChange }, ref) => {
+  ({ element, isSelected, onSelect, onUpdate, onDragEnd, stageRef }, ref) => {
   // State for hover interactions and controls
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
@@ -150,7 +135,7 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
 
   // Debug log the display dimensions
   if (liveSize) {
-    console.log('🔧 [RESIZE DEBUG] Using live size for display:', { displayWidth, displayHeight, liveSize, totalWidth, totalHeight });
+    // console.log('🔧 [RESIZE DEBUG] Using live size for display:', { displayWidth, displayHeight, liveSize, totalWidth, totalHeight });
   }
 
   // Handle drag end - memoized to prevent render loops
@@ -299,18 +284,11 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
     }
   };
 
-  // Handle text change during editing
-  const handleTextChange = useCallback((newText: string) => {
-    if (editingCell) {
-      updateTableCell(element.id, editingCell.row, editingCell.col, { text: newText });
-    }
-  }, [editingCell, element.id, updateTableCell]);
-
   // Handle rich text change during editing
   const handleRichTextChange = useCallback((segments: RichTextSegment[]) => {
     if (editingCell) {
       updateTableCell(element.id, editingCell.row, editingCell.col, { 
-        richTextSegments: segments,
+        segments: segments, // Use standardized segments property
         text: segments.map(s => s.text).join('') // Keep plain text in sync
       });
     }
@@ -424,15 +402,15 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
 
   // Direct resize event handling without useEffect to prevent duplication
   const startResizeOperation = useCallback((handle: 'se' | 'e' | 's' | 'nw' | 'n' | 'ne' | 'w' | 'sw' | 'col' | 'row', startPos: { x: number; y: number }, startSize: { width: number; height: number }, columnIndex?: number, rowIndex?: number) => {
-    console.log('🔧 [RESIZE DEBUG] startResizeOperation called with handle:', handle);
+    // console.log('🔧 [RESIZE DEBUG] startResizeOperation called with handle:', handle);
     
     if (!stageRef?.current) {
-      console.log('❌ [RESIZE DEBUG] No stage reference found!');
+      // console.log('❌ [RESIZE DEBUG] No stage reference found!');
       return;
     }
     
     const stage = stageRef.current;
-    console.log('✅ [RESIZE DEBUG] Stage reference found, attaching event handlers');
+    // console.log('✅ [RESIZE DEBUG] Stage reference found, attaching event handlers');
     
     // Clean up any existing handlers
     if (mouseMoveHandlerRef.current) {
@@ -452,11 +430,11 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
     if (handle === 'col' && columnIndex !== undefined) {
       resizingColumnIndexRef.current = columnIndex;
       columnStartWidthRef.current = tableColumns[columnIndex]?.width || 100;
-      console.log('🔧 [RESIZE DEBUG] Column resize setup:', { columnIndex, startWidth: columnStartWidthRef.current });
+      // console.log('🔧 [RESIZE DEBUG] Column resize setup:', { columnIndex, startWidth: columnStartWidthRef.current });
     } else if (handle === 'row' && rowIndex !== undefined) {
       resizingRowIndexRef.current = rowIndex;
       rowStartHeightRef.current = tableRows[rowIndex]?.height || 40;
-      console.log('🔧 [RESIZE DEBUG] Row resize setup:', { rowIndex, startHeight: rowStartHeightRef.current });
+      // console.log('🔧 [RESIZE DEBUG] Row resize setup:', { rowIndex, startHeight: rowStartHeightRef.current });
     }
     
     // Create new event handlers
@@ -470,12 +448,12 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
       if (resizeHandleRef.current === 'col' && resizingColumnIndexRef.current !== null && columnStartWidthRef.current !== null) {
         // Individual column resize using throttled store function
         const newWidth = Math.max(MIN_CELL_WIDTH, Math.min(MAX_CELL_WIDTH, columnStartWidthRef.current + deltaX));
-        console.log('🔧 [RESIZE DEBUG] Column resize:', { columnIndex: resizingColumnIndexRef.current, newWidth, deltaX });
+        // console.log('🔧 [RESIZE DEBUG] Column resize:', { columnIndex: resizingColumnIndexRef.current, newWidth, deltaX });
         throttledColumnResize(element.id, resizingColumnIndexRef.current, newWidth);
       } else if (resizeHandleRef.current === 'row' && resizingRowIndexRef.current !== null && rowStartHeightRef.current !== null) {
         // Individual row resize using throttled store function
         const newHeight = Math.max(MIN_CELL_HEIGHT, Math.min(MAX_CELL_HEIGHT, rowStartHeightRef.current + deltaY));
-        console.log('🔧 [RESIZE DEBUG] Row resize:', { rowIndex: resizingRowIndexRef.current, newHeight, deltaY, startHeight: rowStartHeightRef.current });
+        // console.log('🔧 [RESIZE DEBUG] Row resize:', { rowIndex: resizingRowIndexRef.current, newHeight, deltaY, startHeight: rowStartHeightRef.current });
         throttledRowResize(element.id, resizingRowIndexRef.current, newHeight);
         throttledRowResize(element.id, resizingRowIndexRef.current, newHeight);
       } else {
@@ -511,10 +489,10 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
     };
 
     const handleMouseUp = () => {
-      console.log('🔧 [RESIZE DEBUG] Mouse up during resize');
-      console.log('🔧 [RESIZE DEBUG] Current handle:', resizeHandleRef.current);
-      console.log('🔧 [RESIZE DEBUG] Live size from ref:', liveSizeRef.current);
-      console.log('🔧 [RESIZE DEBUG] Live size from state:', liveSize);
+      // console.log('🔧 [RESIZE DEBUG] Mouse up during resize');
+      // console.log('🔧 [RESIZE DEBUG] Current handle:', resizeHandleRef.current);
+      // console.log('🔧 [RESIZE DEBUG] Live size from ref:', liveSizeRef.current);
+      // console.log('🔧 [RESIZE DEBUG] Live size from state:', liveSize);
       
       if (resizeHandleRef.current === 'col' || resizeHandleRef.current === 'row') {
         // Individual column/row resize cleanup
@@ -523,7 +501,7 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
         columnStartWidthRef.current = null;
         rowStartHeightRef.current = null;
       } else if (liveSizeRef.current && resizeHandleRef.current) {
-        console.log('🔧 [RESIZE DEBUG] Applying final table resize with live size:', liveSizeRef.current);
+        // console.log('🔧 [RESIZE DEBUG] Applying final table resize with live size:', liveSizeRef.current);
         // Table-wide resize final update
         const { updateElement } = useKonvaCanvasStore.getState();
         const currentElement = useKonvaCanvasStore.getState().elements[element.id];
@@ -782,16 +760,16 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
               )}
 
               {/* Cell text - render rich text segments if available, otherwise plain text */}
-              {cellData?.richTextSegments && cellData.richTextSegments.length > 0 ? (
+              {cellData?.segments && cellData.segments.length > 0 ? (
                 // Render rich text segments with proper positioning
                 (() => {
                   let currentX = 0;
                   const segmentsToRender = [];
                   const cellWidth = col?.width || 100;
                   
-                  if (cellData.richTextSegments) {
-                    for (let segmentIndex = 0; segmentIndex < cellData.richTextSegments.length; segmentIndex++) {
-                      const segment = cellData.richTextSegments[segmentIndex];
+                  if (cellData.segments) {
+                    for (let segmentIndex = 0; segmentIndex < cellData.segments.length; segmentIndex++) {
+                      const segment = cellData.segments[segmentIndex];
                       
                       // FIXED: Properly combine fontStyle and fontWeight for Konva
                       let konvaFontStyle = segment.fontStyle || 'normal';
@@ -799,13 +777,13 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
                         konvaFontStyle = konvaFontStyle === 'italic' ? 'bold italic' : 'bold';
                       }
 
-                      console.log(`[TABLE CELL DEBUG] Rendering segment ${segmentIndex}:`, {
-                        text: segment.text,
-                        fontSize: segment.fontSize || cellData.fontSize || 14,
-                        fontStyle: konvaFontStyle,
-                        fill: segment.fill || cellData.textColor || designSystem.colors.secondary[800],
-                        textDecoration: segment.textDecoration || ''
-                      });
+                      // console.log(`[TABLE CELL DEBUG] Rendering segment ${segmentIndex}:`, {
+                      //   text: segment.text,
+                      //   fontSize: segment.fontSize || cellData.fontSize || 14,
+                      //   fontStyle: konvaFontStyle,
+                      //   fill: segment.fill || cellData.textColor || designSystem.colors.secondary[800],
+                      //   textDecoration: segment.textDecoration || ''
+                      // });
 
                       // @ts-ignore - listType may not be on the base segment type yet
                       if (segment.listType === 'bullet' && segmentIndex === 0) {
@@ -860,11 +838,6 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
                     groupX = (cellWidth - totalTextWidth) / 2;
                   } else if (cellData.textAlign === 'right') {
                     groupX = cellWidth - totalTextWidth - 8;
-                  }
-
-                  // FIXED: Immediate layer redraw after rendering rich text segments
-                  if (triggerLayerRedraw(stageRef, { immediate: true, debug: true })) {
-                    console.log('[TABLE CELL DEBUG] Layer redrawn immediately after rich text segments render');
                   }
 
                   return (
@@ -1399,50 +1372,6 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
       </Group>
   );
 
-  // Notify parent about editing state changes
-  useEffect(() => {
-    if (onEditingStateChange) {
-      const editingData = editingCell && editingCellPosition ? {
-        isEditing: true,
-        cellPosition: editingCellPosition,
-        cellText: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.text || '',
-        richTextSegments: (() => {
-          const existingSegments = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.richTextSegments;
-          if (existingSegments && existingSegments.length > 0) {
-            return existingSegments;
-          }
-          // Convert plain text to rich text segments to ensure the rich text editor is always triggered
-          const cellText = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.text || '';
-          const defaultFormat = {
-            fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize || 14,
-            fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily || designSystem.typography.fontFamily.sans,
-            textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor || designSystem.colors.secondary[800],
-            textAlign: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textAlign || 'left',
-            bold: false,
-            italic: false,
-            underline: false,
-            strikethrough: false,
-            listType: 'none' as const,
-            isHyperlink: false,
-            hyperlinkUrl: '',
-            textStyle: 'default' as const,
-          };
-          return richTextManager.plainTextToSegments(cellText, defaultFormat);
-        })(),
-        fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize,
-        fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily,
-        textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor,
-        textAlign: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textAlign,
-        onTextChange: handleTextChange,
-        onRichTextChange: handleRichTextChange,
-        onFinishEditing: handleFinishEditing,
-        onCancelEditing: handleCancelEditing
-      } : null;
-      
-      onEditingStateChange(editingData);
-    }
-  }, [editingCell, editingCellPosition, enhancedTableData, onEditingStateChange, handleTextChange, handleRichTextChange, handleFinishEditing, handleCancelEditing]);
-
   // Register stage ref and clean up timeouts on unmount
   useEffect(() => {
     if (stageRef?.current) {
@@ -1465,7 +1394,63 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
     };
   }, [registerStageRef, unregisterStageRef]);
 
-  return tableContent;
+  // Ensure we're returning valid Konva + Portal structure
+  // The Group contains only Konva elements, editor is outside via fragment
+  const tableStructure = (
+    <>
+      {tableContent}
+      {/* Unified table cell editor - CRITICAL: Must be outside Konva Group structure */}
+      {editingCell && editingCellPosition && (
+        <UnifiedTableCellEditor
+          isEditing={true}
+          cellPosition={editingCellPosition}
+          initialSegments={(() => {
+            const existingSegments = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.segments;
+            if (existingSegments && existingSegments.length > 0) {
+              return existingSegments;
+            }
+            // Convert plain text to rich text segments
+            const cellText = enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.text || '';
+            const defaultFormat = {
+              fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize || 14,
+              fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily || designSystem.typography.fontFamily.sans,
+              textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor || designSystem.colors.secondary[800],
+              textAlign: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textAlign || 'left',
+              bold: false,
+              italic: false,
+              underline: false,
+              strikethrough: false,
+              listType: 'none' as const,
+              isHyperlink: false,
+              hyperlinkUrl: '',
+              textStyle: 'default' as const,
+            };
+            return richTextManager.plainTextToSegments(cellText, defaultFormat);
+          })()}
+          onSegmentsChange={handleRichTextChange}
+          onFinishEditing={handleFinishEditing}
+          onCancelEditing={handleCancelEditing}
+          defaultFormat={{
+            fontSize: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontSize || 14,
+            fontFamily: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.fontFamily || designSystem.typography.fontFamily.sans,
+            textColor: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textColor || designSystem.colors.secondary[800],
+            textAlign: enhancedTableData?.cells?.[editingCell.row]?.[editingCell.col]?.textAlign || 'left',
+            bold: false,
+            italic: false,
+            underline: false,
+            strikethrough: false,
+            listType: 'none',
+            isHyperlink: false,
+            hyperlinkUrl: '',
+            textStyle: 'default',
+          }}
+        />
+      )}
+    </>
+  );
+  
+  // Return the properly structured component
+  return tableStructure;
 });
 
 EnhancedTableElement.displayName = 'EnhancedTableElement';

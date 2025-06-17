@@ -12,6 +12,7 @@ import SectionElement from './SectionElement';
 import StickyNoteElement from './StickyNoteElement';
 import TextEditingOverlay from './TextEditingOverlay';
 import { EnhancedTableElement } from '../canvas/EnhancedTableElement'; // Using enhanced table implementation
+import KonvaErrorBoundary from './KonvaErrorBoundary';
 import { designSystem } from '../../styles/designSystem';
 import '../../styles/konvaCanvas.css';
 import '../../styles/canvas-enhancements.css';
@@ -100,7 +101,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     }
   }, [richTextEditingData]);
 
-  const [previewFormat, setPreviewFormat] = useState<{
+  const [previewFormat] = useState<{
     bold: boolean;
     italic: boolean;
     underline: boolean;
@@ -550,44 +551,6 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   const handleFormatChange = useCallback((elementId: string, format: Partial<RichTextSegment>, selection: { start: number; end: number }) => {
     applyTextFormat(elementId, format, selection);
   }, [applyTextFormat]);
-
-  // Handler for table cell editing - this connects EnhancedTableElement to RichTextCellEditor
-  const handleTableEditingStateChange = useCallback((editingData: any) => {
-    console.log('🎯 [TABLE EDITING DEBUG] === TABLE EDITING STATE CHANGE ===');
-    console.log('🎯 [TABLE EDITING DEBUG] Editing data received:', editingData);
-    
-    if (editingData && editingData.isEditing) {
-      console.log('🎯 [TABLE EDITING DEBUG] Setting up rich text editing for table cell');
-      
-      // Convert table editing data to rich text editing format
-      setRichTextEditingData({
-        isEditing: true,
-        cellPosition: editingData.cellPosition,
-        cellText: editingData.cellText,
-        richTextSegments: editingData.richTextSegments || [],
-        fontSize: editingData.fontSize,
-        fontFamily: editingData.fontFamily,
-        textColor: editingData.textColor,
-        textAlign: editingData.textAlign,
-        elementType: 'table-cell', // Mark as table cell
-        onTextChange: editingData.onTextChange,
-        onRichTextChange: editingData.onRichTextChange,
-        onFinishEditing: () => {
-          console.log('🎯 [TABLE EDITING DEBUG] Table cell editing finished');
-          setRichTextEditingData(null);
-          editingData.onFinishEditing();
-        },
-        onCancelEditing: () => {
-          console.log('🎯 [TABLE EDITING DEBUG] Table cell editing cancelled');
-          setRichTextEditingData(null);
-          editingData.onCancelEditing();
-        }
-      });
-    } else {
-      console.log('🎯 [TABLE EDITING DEBUG] Clearing table editing state');
-      setRichTextEditingData(null);
-    }
-  }, []);
 
   const visibleElements = useMemo(() => {
     // Separate free elements (no sectionId) and sectioned elements
@@ -1502,21 +1465,22 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         );
       case 'table':
         return (
-          <EnhancedTableElement // Using enhanced table implementation
-            key={element.id}
-            element={element}
-            isSelected={isSelected}
-            onSelect={(element) => {
-              setSelectedElement(element.id);
-            }}
-            onUpdate={(updates) => {
-              console.log('🔍 [CANVAS DEBUG] Table update:', updates);
-              updateElement(element.id, updates);
-            }}
-            onDragEnd={(e) => handleDragEnd(e, element.id)}
-            stageRef={internalStageRef}
-            onEditingStateChange={handleTableEditingStateChange}
-          />
+          <KonvaErrorBoundary key={`${element.id}-error-boundary`}>
+            <EnhancedTableElement // Using enhanced table implementation
+              key={element.id}
+              element={element}
+              isSelected={isSelected}
+              onSelect={(element) => {
+                setSelectedElement(element.id);
+              }}
+              onUpdate={(updates) => {
+                console.log('🔍 [CANVAS DEBUG] Table update:', updates);
+                updateElement(element.id, updates);
+              }}
+              onDragEnd={(e) => handleDragEnd(e, element.id)}
+              stageRef={internalStageRef}
+            />
+          </KonvaErrorBoundary>
         );
       default:
         console.warn('Unhandled element type in renderElement:', element.type);
@@ -1593,7 +1557,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         }}
       >
         {/* Connector Tool for drawing connectors */}
-        <Layer ref={layerRef}>{visibleElements.map(element => renderElement(element))}
+        <Layer ref={layerRef}>
+          {/* CRITICAL: Only Konva elements should be direct children of Layer */}
+          {visibleElements.map(element => renderElement(element))}
+          
           {/* Preview line during pen drawing */}
           {isDrawing && currentPath.length > 0 && selectedTool === 'pen' && (
             <Line

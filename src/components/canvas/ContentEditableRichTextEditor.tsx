@@ -22,7 +22,6 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
 }, ref) => {  const editorRef = useRef<HTMLDivElement>(null);
   const [currentSegments, setCurrentSegments] = useState<RichTextSegment[]>(initialSegments);
   const segmentsRef = useRef(currentSegments);
-
   // Detect if the initial text is placeholder text that should be cleared
   const isPlaceholderText = useCallback((text: string) => {
     if (!text) return false;
@@ -33,7 +32,9 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       'Enter text...',
       'Type your text...'
     ];
-    return placeholderTexts.includes(text.trim());
+    // Also check for table header patterns like "Header 1", "Header 2", etc.
+    const headerPattern = /^Header \d+$/;
+    return placeholderTexts.includes(text.trim()) || headerPattern.test(text.trim());
   }, []);
 
   // State to track if we've cleared placeholder text
@@ -57,30 +58,89 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
   const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
   const lastCursorPositionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
   
-  // Update editor content when segments change externally (but not when typing)
-  useEffect(() => {
-    if (editorRef.current && !isTypingRef.current) {
-      const html = richTextManager.segmentsToHtml(currentSegments);
-      if (editorRef.current.innerHTML !== html) {
-        // Store cursor position before update
-        storeCursorPosition();
-        editorRef.current.innerHTML = html;
-        // Restore cursor position after update
-        requestAnimationFrame(() => {
-          restoreCursorPosition();
-        });
+  // Helper to get plain text position from DOM position
+  const getPlainTextPosition = useCallback((node: Node, offset: number): number => {
+    if (!editorRef.current || !editorRef.current.isConnected || !(editorRef.current instanceof HTMLElement)) {
+      console.warn('ContentEditableRichTextEditor: Invalid editor ref for getPlainTextPosition');
+      return 0;
+    }
+
+    try {
+      const walker = document.createTreeWalker(
+        editorRef.current,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+
+      let position = 0;
+      let currentNode;
+
+      while (currentNode = walker.nextNode()) {
+        if (currentNode === node) {
+          return position + offset;
+        }
+        position += currentNode.textContent?.length || 0;
       }
-    }
-  }, [currentSegments]);
 
-  // Initialize content
-  useEffect(() => {
-    if (editorRef.current && initialSegments.length > 0) {
-      const html = richTextManager.segmentsToHtml(initialSegments);
-      editorRef.current.innerHTML = html;
+      return position;
+    } catch (error) {
+      console.error('ContentEditableRichTextEditor: Error in getPlainTextPosition:', error);
+      return 0;
     }
-  }, [initialSegments]);
+  }, []);
+  
+  // Helper to restore selection after content update
+  const restoreSelection = useCallback((start: number, end: number) => {
+    if (!editorRef.current || !editorRef.current.isConnected || !(editorRef.current instanceof HTMLElement)) {
+      console.warn('ContentEditableRichTextEditor: Invalid editor ref for restoreSelection');
+      return;
+    }
 
+    try {
+      const walker = document.createTreeWalker(
+        editorRef.current,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+
+      let position = 0;
+      let currentNode;
+      let startNode: Node | null = null;
+      let endNode: Node | null = null;
+      let startOffset = 0;
+      let endOffset = 0;      while (currentNode = walker.nextNode()) {
+        const nodeLength = currentNode.textContent?.length || 0;
+        
+        if (!startNode && position + nodeLength >= start) {
+          startNode = currentNode;
+          startOffset = start - position;
+        }
+        
+        if (!endNode && position + nodeLength >= end) {
+          endNode = currentNode;
+          endOffset = end - position;
+          break;
+        }
+        
+        position += nodeLength;
+      }
+
+      if (startNode && endNode) {
+        const range = document.createRange();
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+        
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    } catch (error) {
+      console.error('ContentEditableRichTextEditor: Error in restoreSelection:', error);
+    }
+  }, []);
+  
   // Store current cursor position
   const storeCursorPosition = useCallback(() => {
     if (!editorRef.current) return;
@@ -92,7 +152,7 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       const end = getPlainTextPosition(range.endContainer, range.endOffset);
       lastCursorPositionRef.current = { start, end };
     }
-  }, []);
+  }, [getPlainTextPosition]);
 
   // Restore cursor position
   const restoreCursorPosition = useCallback(() => {
@@ -100,7 +160,33 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
     
     const { start, end } = lastCursorPositionRef.current;
     restoreSelection(start, end);
-  }, []);
+  }, [restoreSelection]);
+
+  // Update editor content when segments change externally (but not when typing)
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.isConnected && !isTypingRef.current) {
+      const html = richTextManager.segmentsToHtml(currentSegments);
+      if (editorRef.current.innerHTML !== html) {
+        // Store cursor position before update
+        storeCursorPosition();
+        editorRef.current.innerHTML = html;
+        // Restore cursor position after update
+        requestAnimationFrame(() => {
+          if (editorRef.current && editorRef.current.isConnected) {
+            restoreCursorPosition();
+          }
+        });
+      }
+    }
+  }, [currentSegments, storeCursorPosition, restoreCursorPosition]);
+
+  // Initialize content
+  useEffect(() => {
+    if (editorRef.current && initialSegments.length > 0) {
+      const html = richTextManager.segmentsToHtml(initialSegments);
+      editorRef.current.innerHTML = html;
+    }
+  }, [initialSegments]);
 
   // Handle content changes - use onBlur instead of onInput to prevent text reversal
   const handleContentChange = useCallback(() => {
@@ -161,7 +247,7 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
       isTypingRef.current = false;
       handleContentChange();
     }, 300); // Wait 300ms after last keystroke
-  }, [handleContentChange]);
+  }, [handleContentChange, isPlaceholderText, hasPlaceholderBeenCleared]);
 
   // Handle selection changes to update current format
   const handleSelectionChange = useCallback(() => {
@@ -214,89 +300,24 @@ export const ContentEditableRichTextEditor = React.forwardRef<HTMLDivElement, Co
 
     // Update HTML content using requestAnimationFrame for smooth updates
     requestAnimationFrame(() => {
-      if (editorRef.current) {
+      if (editorRef.current && editorRef.current.isConnected) {
         const html = richTextManager.segmentsToHtml(newSegments);
         editorRef.current.innerHTML = html;
         
         // Restore selection after DOM update
         requestAnimationFrame(() => {
-          restoreSelection(selectionStart, selectionEnd);
-          // Restore previous typing state
-          isTypingRef.current = wasTyping;
+          if (editorRef.current && editorRef.current.isConnected) {
+            restoreSelection(selectionStart, selectionEnd);
+            // Restore previous typing state
+            isTypingRef.current = wasTyping;
+          }
         });
+      } else {
+        // Handle cases where ref is no longer valid (e.g., component unmounted)
+        isTypingRef.current = wasTyping; // Still restore typing state
       }
     });
-  }, []);
-
-  // Helper to get plain text position from DOM position
-  const getPlainTextPosition = useCallback((node: Node, offset: number): number => {
-    if (!editorRef.current) return 0;
-
-    const walker = document.createTreeWalker(
-      editorRef.current,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
-
-    let position = 0;
-    let currentNode;
-
-    while (currentNode = walker.nextNode()) {
-      if (currentNode === node) {
-        return position + offset;
-      }
-      position += currentNode.textContent?.length || 0;
-    }
-
-    return position;
-  }, []);
-
-  // Helper to restore selection after content update
-  const restoreSelection = useCallback((start: number, end: number) => {
-    if (!editorRef.current) return;
-
-    const walker = document.createTreeWalker(
-      editorRef.current,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
-
-    let position = 0;
-    let currentNode;
-    let startNode: Node | null = null;
-    let endNode: Node | null = null;
-    let startOffset = 0;
-    let endOffset = 0;
-
-    while (currentNode = walker.nextNode()) {
-      const nodeLength = currentNode.textContent?.length || 0;
-      
-      if (!startNode && position + nodeLength >= start) {
-        startNode = currentNode;
-        startOffset = start - position;
-      }
-      
-      if (!endNode && position + nodeLength >= end) {
-        endNode = currentNode;
-        endOffset = end - position;
-        break;
-      }
-      
-      position += nodeLength;
-    }
-
-    if (startNode && endNode) {
-      const range = document.createRange();
-      range.setStart(startNode, startOffset);
-      range.setEnd(endNode, endOffset);
-      
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-    }
-  }, []);
+  }, [onSegmentsChange, getPlainTextPosition, restoreSelection]);
 
   // Expose applyFormatting method to parent
   useEffect(() => {

@@ -1,5 +1,5 @@
 // src/components/canvas/TableCellEditor.tsx
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { designSystem } from '../../styles/designSystem';
 
@@ -78,7 +78,9 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
       'Enter text...',
       'Type your text...'
     ];
-    return placeholderTexts.includes(text.trim());
+    // Also check for table header patterns like "Header 1", "Header 2", etc.
+    const headerPattern = /^Header \d+$/;
+    return placeholderTexts.includes(text.trim()) || headerPattern.test(text.trim());
   };
   
   // Validate props on mount and when they change

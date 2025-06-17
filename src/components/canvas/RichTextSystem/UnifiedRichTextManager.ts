@@ -2,14 +2,24 @@
 
 import { StandardTextFormat, RichTextSegment } from '../../../types/richText';
 
-export class UnifiedRichTextManager {
-  // Method to apply formatting to segments of text
+export class UnifiedRichTextManager {  // Method to apply formatting to segments of text
   applyFormattingToSegments(
     segments: RichTextSegment[], 
     format: Partial<StandardTextFormat>, 
     selection: { start: number; end: number }
   ): RichTextSegment[] {
-    if (!segments.length || selection.start >= selection.end) {
+    // Add fallback for undefined or malformed inputs
+    if (!segments || !Array.isArray(segments) || segments.length === 0) {
+      return [];
+    }
+    
+    if (!format || typeof format !== 'object') {
+      return segments;
+    }
+    
+    if (!selection || typeof selection !== 'object' || 
+        typeof selection.start !== 'number' || typeof selection.end !== 'number' ||
+        selection.start >= selection.end) {
       return segments;
     }
 
@@ -58,13 +68,45 @@ export class UnifiedRichTextManager {
         // Enhanced formatting merge: preserve existing formatting and merge with new formatting
         const existingFormat = this.segmentAttributesToFormat(segment);
         const mergedFormat = this.mergeFormats(existingFormat, format);
-        const newSegmentAttributes = this.formatToSegmentAttributes(mergedFormat);
         
-        result.push({
-          ...segment,
-          text: selectedText,
-          ...newSegmentAttributes
-        });
+        // Start with existing segment to preserve all attributes
+        const newSegment = { ...segment };
+        newSegment.text = selectedText;
+        
+        // Apply merged formatting, but only update attributes that have changed
+        if (mergedFormat.fontSize !== undefined) newSegment.fontSize = mergedFormat.fontSize;
+        if (mergedFormat.fontFamily !== undefined) newSegment.fontFamily = mergedFormat.fontFamily;
+        if (mergedFormat.textColor !== undefined) newSegment.fill = mergedFormat.textColor;
+        if (mergedFormat.textAlign !== undefined) newSegment.textAlign = mergedFormat.textAlign;
+        if (mergedFormat.listType !== undefined) newSegment.listType = mergedFormat.listType;
+        
+        // Handle font style and weight
+        if (mergedFormat.bold !== undefined) {
+          newSegment.fontWeight = mergedFormat.bold ? 'bold' : 'normal';
+        }
+        if (mergedFormat.italic !== undefined) {
+          newSegment.fontStyle = mergedFormat.italic ? 'italic' : 'normal';
+        }
+        
+        // Handle text decoration with proper merging
+        if (mergedFormat.underline !== undefined || mergedFormat.strikethrough !== undefined) {
+          newSegment.textDecoration = this.mergeTextDecorations(
+            segment.textDecoration, 
+            mergedFormat.underline, 
+            mergedFormat.strikethrough
+          );
+        }
+        
+        // Handle hyperlinks
+        if (mergedFormat.isHyperlink !== undefined) {
+          if (mergedFormat.isHyperlink && mergedFormat.hyperlinkUrl) {
+            newSegment.url = mergedFormat.hyperlinkUrl;
+          } else if (!mergedFormat.isHyperlink) {
+            delete newSegment.url;
+          }
+        }
+        
+        result.push(newSegment);
       }
 
       if (afterText) {
@@ -105,57 +147,64 @@ export class UnifiedRichTextManager {
   segmentsToPlainText(segments: RichTextSegment[]): string {
     if (!Array.isArray(segments)) return '';
     return segments.map(segment => segment.text || '').join('');
-  }
-
-  // Helper method to convert StandardTextFormat to RichTextSegment attributes
+  }  // Helper method to convert StandardTextFormat to RichTextSegment attributes
   private formatToSegmentAttributes(format: Partial<StandardTextFormat>): Partial<RichTextSegment> {
     const attributes: Partial<RichTextSegment> = {};
 
-    if (format.fontSize) attributes.fontSize = format.fontSize;
-    if (format.fontFamily) attributes.fontFamily = format.fontFamily;
-    if (format.textColor) attributes.fill = format.textColor;
-    if (format.textAlign) attributes.textAlign = format.textAlign;
-    if (format.listType) attributes.listType = format.listType;
+    if (format.fontSize !== undefined) attributes.fontSize = format.fontSize;
+    if (format.fontFamily !== undefined) attributes.fontFamily = format.fontFamily;
+    if (format.textColor !== undefined) attributes.fill = format.textColor;
+    if (format.textAlign !== undefined) attributes.textAlign = format.textAlign;
+    if (format.listType !== undefined) attributes.listType = format.listType;
 
-    // Handle font style and weight
-    let fontStyle = 'normal';
-    let fontWeight = 'normal';
-    
-    if (format.bold) fontWeight = 'bold';
-    if (format.italic) fontStyle = 'italic';
-    
-    attributes.fontStyle = fontStyle;
-    attributes.fontWeight = fontWeight;
+    // Handle font style and weight - only set if explicitly defined
+    if (format.bold !== undefined) {
+      attributes.fontWeight = format.bold ? 'bold' : 'normal';
+    }
+    if (format.italic !== undefined) {
+      attributes.fontStyle = format.italic ? 'italic' : 'normal';
+    }
 
-    // Handle text decoration
-    const decorations: string[] = [];
-    if (format.underline) decorations.push('underline');
-    if (format.strikethrough) decorations.push('line-through');
-    attributes.textDecoration = decorations.length > 0 ? decorations.join(' ') : 'none';
+    // Handle text decoration - only modify if explicitly defined
+    if (format.underline !== undefined || format.strikethrough !== undefined) {
+      const decorations: string[] = [];
+      if (format.underline) decorations.push('underline');
+      if (format.strikethrough) decorations.push('line-through');
+      attributes.textDecoration = decorations.length > 0 ? decorations.join(' ') : '';
+    }
 
     // Handle hyperlinks
-    if (format.isHyperlink && format.hyperlinkUrl) {
-      attributes.url = format.hyperlinkUrl;
+    if (format.isHyperlink !== undefined) {
+      if (format.isHyperlink && format.hyperlinkUrl) {
+        attributes.url = format.hyperlinkUrl;
+      } else if (!format.isHyperlink) {
+        // Clear URL if hyperlink is disabled
+        attributes.url = undefined;
+      }
     }
 
     return attributes;
   }
-
   // Helper method to convert RichTextSegment attributes to StandardTextFormat
   private segmentAttributesToFormat(segment: RichTextSegment): Partial<StandardTextFormat> {
+    // Add fallback for undefined or malformed segment objects
+    if (!segment || typeof segment !== 'object') {
+      return {};
+    }
+    
     const format: Partial<StandardTextFormat> = {};
 
-    if (segment.fontSize) format.fontSize = segment.fontSize;
-    if (segment.fontFamily) format.fontFamily = segment.fontFamily;
-    if (segment.fill) format.textColor = segment.fill;
-    if (segment.textAlign) format.textAlign = segment.textAlign;
-    if (segment.listType) format.listType = segment.listType;
+    if (segment.fontSize !== undefined) format.fontSize = segment.fontSize;
+    if (segment.fontFamily !== undefined) format.fontFamily = segment.fontFamily;
+    if (segment.fill !== undefined) format.textColor = segment.fill;
+    if (segment.textAlign !== undefined) format.textAlign = segment.textAlign;
+    if (segment.listType !== undefined) format.listType = segment.listType;
 
-    // Parse font style and weight
+    // Parse font style and weight with safe defaults
     format.bold = segment.fontWeight === 'bold';
     format.italic = segment.fontStyle === 'italic';
 
-    // Parse text decoration
+    // Parse text decoration with safe string handling
     const decoration = segment.textDecoration || '';
     format.underline = decoration.includes('underline');
     format.strikethrough = decoration.includes('line-through');
@@ -442,26 +491,64 @@ export class UnifiedRichTextManager {
           break;
       }
     }
-  }
-  // Helper method to merge formatting options intelligently
+  }  // Helper method to merge formatting options intelligently
   private mergeFormats(existingFormat: Partial<StandardTextFormat>, newFormat: Partial<StandardTextFormat>): Partial<StandardTextFormat> {
-    const merged: Partial<StandardTextFormat> = { ...existingFormat };
+    // Add fallback for undefined or malformed formatting objects
+    const safeExistingFormat = existingFormat || {};
+    const safeNewFormat = newFormat || {};
+    
+    const merged: Partial<StandardTextFormat> = { ...safeExistingFormat };
 
     // Handle each formatting property individually
-    if (newFormat.bold !== undefined) merged.bold = newFormat.bold;
-    if (newFormat.italic !== undefined) merged.italic = newFormat.italic;
-    if (newFormat.underline !== undefined) merged.underline = newFormat.underline;
-    if (newFormat.strikethrough !== undefined) merged.strikethrough = newFormat.strikethrough;
-    if (newFormat.fontSize !== undefined) merged.fontSize = newFormat.fontSize;
-    if (newFormat.fontFamily !== undefined) merged.fontFamily = newFormat.fontFamily;
-    if (newFormat.textColor !== undefined) merged.textColor = newFormat.textColor;
-    if (newFormat.textAlign !== undefined) merged.textAlign = newFormat.textAlign;
-    if (newFormat.listType !== undefined) merged.listType = newFormat.listType;
-    if (newFormat.textStyle !== undefined) merged.textStyle = newFormat.textStyle;
-    if (newFormat.isHyperlink !== undefined) merged.isHyperlink = newFormat.isHyperlink;
-    if (newFormat.hyperlinkUrl !== undefined) merged.hyperlinkUrl = newFormat.hyperlinkUrl;
+    // Only override if the new format explicitly defines the property
+    if (safeNewFormat.bold !== undefined) merged.bold = safeNewFormat.bold;
+    if (safeNewFormat.italic !== undefined) merged.italic = safeNewFormat.italic;
+    if (safeNewFormat.underline !== undefined) merged.underline = safeNewFormat.underline;
+    if (safeNewFormat.strikethrough !== undefined) merged.strikethrough = safeNewFormat.strikethrough;
+    if (safeNewFormat.fontSize !== undefined) merged.fontSize = safeNewFormat.fontSize;
+    if (safeNewFormat.fontFamily !== undefined) merged.fontFamily = safeNewFormat.fontFamily;
+    if (safeNewFormat.textColor !== undefined) merged.textColor = safeNewFormat.textColor;
+    if (safeNewFormat.textAlign !== undefined) merged.textAlign = safeNewFormat.textAlign;
+    if (safeNewFormat.listType !== undefined) merged.listType = safeNewFormat.listType;
+    if (safeNewFormat.textStyle !== undefined) merged.textStyle = safeNewFormat.textStyle;
+    if (safeNewFormat.isHyperlink !== undefined) merged.isHyperlink = safeNewFormat.isHyperlink;
+    if (safeNewFormat.hyperlinkUrl !== undefined) merged.hyperlinkUrl = safeNewFormat.hyperlinkUrl;
 
     return merged;
+  }
+
+  // Helper method to merge text decorations properly
+  private mergeTextDecorations(existing: string | undefined, underline?: boolean, strikethrough?: boolean): string {
+    const decorations = new Set<string>();
+    
+    // Parse existing decorations
+    if (existing && existing !== 'none' && existing !== '') {
+      existing.split(' ').forEach(decoration => {
+        const trimmed = decoration.trim();
+        if (trimmed) decorations.add(trimmed);
+      });
+    }
+    
+    // Apply changes for underline
+    if (underline !== undefined) {
+      if (underline) {
+        decorations.add('underline');
+      } else {
+        decorations.delete('underline');
+      }
+    }
+    
+    // Apply changes for strikethrough
+    if (strikethrough !== undefined) {
+      if (strikethrough) {
+        decorations.add('line-through');
+      } else {
+        decorations.delete('line-through');
+      }
+    }
+    
+    // Return the merged decorations
+    return decorations.size > 0 ? Array.from(decorations).join(' ') : '';
   }
 }
 

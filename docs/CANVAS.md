@@ -1,3 +1,7 @@
+# ⚠️ Archived: Canvas Documentation
+
+This document has been deprecated and is retained only for historical reference. Please refer to the **[Canvas Complete Guide](./CANVAS_COMPLETE_GUIDE.md)** for the authoritative and up-to-date Canvas documentation.
+
 # LibreOllama Canvas System
 
 > **Status**: Production Ready | **Last Updated**: June 2025  

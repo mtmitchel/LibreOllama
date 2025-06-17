@@ -12,16 +12,22 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 ## 📚 Core Feature Documentation
 
 ### **🎨 Canvas/Whiteboard System**
-Our professional-grade whiteboard is powered by Konva.js for high performance and rich interactions. Features **FigJam-style sections** for hierarchical organization, advanced rich text editing with floating toolbar, and comprehensive visual feedback systems.
+Our professional-grade whiteboard powered by Konva.js provides rich visual thinking tools:
+  - FigJam-style sections for organization
+  - Advanced rich text editing with floating toolbars
+  - Enhanced table operations with 8-handle resizing
+  - Pan/zoom navigation and high-performance rendering
+  - Multi-selection, connectors, and 50-state undo/redo
 
-**Current Status**: Canvas system is functional with active development. **Recent fixes (June 16, 2025)**: Critical text input issues resolved including letter reversal bugs, cursor position problems, and selection behavior issues. Table functionality includes 8-handle resize system, optimized performance, and improved code quality.
+**Current Status**: Functional and production-ready. See details below.
 
-- [Canvas Complete Documentation](CANVAS_COMPLETE_DOCUMENTATION.md) - Main canvas system overview with section system, advanced text editing, implementation details, and recent bug fixes
-- [Canvas Tables Documentation](CANVAS_TABLES.md) - Consolidated table functionality, implementation details, and technical specifications
-- [Canvas Architecture Analysis](CANVAS_ARCHITECTURE_ANALYSIS.md) - Technical architecture details and component structure
+**Primary Documentation**:
+- [Canvas Complete Guide](./CANVAS_COMPLETE_GUIDE.md)  
+  Master reference for all Canvas features, usage patterns, and technical architecture.
 
-> **Note**: Previous redundant table documentation files have been consolidated and archived in `../archives/consolidated_canvas_archive_2025/redundant_table_docs/`
-
+**Historical & Archived Content**:  
+All legacy or specialized Canvas docs (e.g., table deep-dives, implementation variants) have been consolidated and archived:  
+`archives/consolidated_canvas_archive_2025/`
 
 ### **🎨 UI/UX Design System**
 Comprehensive documentation of our design system, components, and user experience improvements.

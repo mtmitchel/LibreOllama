@@ -1,4 +1,4 @@
-# LibreOllama: The Privacy-First, ADHD-Optimized AI Workspace
+# LibreOllama: The AI-Powered All-in-One Productivity Suite
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/mtmitchel/libreollama/main/src-tauri/icons/icon.png?raw=true" alt="LibreOllama Logo" width="128">
@@ -7,7 +7,7 @@
 <h1 align="center">LibreOllama</h1>
 
 <p align="center">
-  <strong>Your private, local-first, all-in-one productivity suite, built for focus and clarity.</strong>
+  <strong>Your integrated AI-powered workspace for thinking, creating, and organizing.</strong>
 </p>
 
 <p align="center">
@@ -15,21 +15,19 @@
   [![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-blueviolet)](https://tauri.app/)
   [![UI: React](https://img.shields.io/badge/UI-React-61DAFB)](https://reactjs.org/)
   [![Backend: Rust](https://img.shields.io/badge/Backend-Rust-dea584)](https://www.rust-lang.org/)
-  [![ADHD-Optimized](https://img.shields.io/badge/ADHD-Optimized-brightgreen)](#)
 </p>
 
 ---
 
-**LibreOllama** is more than just a collection of tools; it's an integrated, privacy-first desktop application designed to be your single workspace for thinking, creating, and organizing. By harnessing the power of local AI through Ollama and a user experience crafted for neurodivergent minds, LibreOllama provides a calm, focused, and powerful environment to get work done without compromising your data.
+**LibreOllama** is more than just a collection of tools; it's an integrated, desktop application designed to be your single workspace for thinking, creating, and organizing. By harnessing the power of local AI through Ollama and a user experience crafted for neurodivergent minds, LibreOllama provides a calm, focused, and powerful environment to get work done without compromising your data.
 
 Built with **Tauri**, **React**, and **Rust**, it's a cross-platform application that runs securely on your machine.
 
 ## Core Philosophy
 
-* **Privacy First**: Your data is yours. Period. Everything is stored locally on your machine in an encrypted database. The application is designed to be fully functional offline. There is **zero telemetry** or data collection.
-* **ADHD-Optimized UX**: We believe software should adapt to the user, not the other way around. Every feature is designed to reduce cognitive load, minimize distractions, and support executive function, without sacrificing power or professional capabilities.
-* **Local AI Empowerment**: Unleash the power of large language models without sending your data to the cloud. LibreOllama integrates seamlessly with your local Ollama instance, giving you a powerful AI assistant that respects your privacy.
-* **All-in-One Workspace**: Stop the context-switching. Chat, Projects, Tasks, Notes, and a professional-grade Canvas (Whiteboard) are all included in a single, cohesive interface.
+* **AI-Powered Productivity**: Leveraging AI to enhance your workflow and creativity.
+* **Extensible Integrations**: Future integration with Google Calendar & Tasks APIs and upcoming support for various LLM APIs (e.g., OpenAI, Anthropic).
+* **All-in-One Workspace**: Chat, Projects, Tasks, Notes, and a professional-grade Canvas in a single, cohesive interface.
 
 ## Features
 
@@ -41,7 +39,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with 15 element types including text, shapes, sticky notes, enhanced tables, and smart connectors. Features **rich text editing**, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and 50-state undo/redo. Built for visual thinking, diagramming, and collaborative brainstorming with professional-grade interactions and performance. |
+| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors. Features **rich text editing** with floating toolbars, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Includes advanced functionality like element-to-element connections, multi-select operations, keyboard shortcuts, and local persistence. Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -132,25 +130,19 @@ libreollama/
 └── README.md                  # This file
 ```
 
-## Documentation
+## Documentation & Roadmap
 
 LibreOllama includes comprehensive documentation to help you get started quickly and contribute effectively.
 
 ### **Quick Start Guides**
-- **[Canvas Documentation](./docs/CANVAS_COMPLETE_DOCUMENTATION.md)** - Complete canvas documentation including user guide, architecture, and development information
-- **[Styles Organization](./src/styles/README.md)** - CSS organization, import hierarchy, and design system documentation
+- **[Canvas Complete Guide](./docs/CANVAS_COMPLETE_GUIDE.md)** - Master document for Canvas features and usage
 
 ### **Detailed Documentation**
-- **[Documentation Index](./docs/README.md)** - Complete guide to all available documentation
+- **[Documentation Index](./docs/README.md)** - Guide to all available project documentation
 - **[Development Setup](./docs/development/DEV-STARTUP-GUIDE.md)** - Environment setup and development workflow
-- **[Canvas Complete Documentation](./docs/CANVAS_COMPLETE_DOCUMENTATION.md)** - Technical details of the Konva.js canvas system
-- **[Canvas Tables Documentation](./docs/CANVAS_TABLES.md)** - Consolidated table functionality and implementation details
-- **[UI Implementation](./docs/completed-phases/UI_IMPLEMENTATION_COMPLETE.md)** - Complete UI/UX design system and component documentation
+- **[Canvas Development](./docs/development/CANVAS_DEVELOPMENT.md)** - In-depth Canvas technical guides
+- **[UI Implementation](./docs/completed-phases/UI_IMPLEMENTATION_COMPLETE.md)** - UI/UX design system and component documentation
 
-### **Developer Resources**
-- **[Rust Development Setup](./docs/development/RUST_DEVELOPMENT_SETUP.md)** - Backend development with Tauri
-- **[Database Setup](./docs/development/DATABASE_SETUP.md)** - Local database configuration and management
-- **[Design System](./docs/design-system/)** - UI components and design guidelines
 ## Contributing
 
 We welcome contributions of all kinds! Whether you're fixing a bug, adding a new feature, or improving documentation, your help is appreciated.
@@ -162,3 +154,9 @@ All contributors are expected to adhere to our **[Code of Conduct](./.github/COD
 ## License
 
 This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.
+
+---
+## Roadmap
+
+- **Calendar & Tasks**: Planned integration with Google Calendar and Tasks APIs for seamless scheduling and to-do management.
+- **LLM API Support**: Upcoming support for popular LLM APIs (OpenAI, Anthropic, Cohere) to extend AI capabilities beyond local models.

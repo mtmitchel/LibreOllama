@@ -7,7 +7,7 @@
 export interface CanvasRedrawOptions {
   immediate?: boolean;
   forceUpdate?: boolean;
-  debug?: boolean;
+  debug?: boolean; // Kept for potential future use, even if not currently read
 }
 
 /**
@@ -19,43 +19,43 @@ export const triggerLayerRedraw = (
   stageRef: React.RefObject<any> | null, 
   options: CanvasRedrawOptions = {}
 ): boolean => {
-  const { immediate = true, forceUpdate = false, debug = false } = options;
+  const { immediate = true, forceUpdate = false } = options; // Removed debug from destructuring
   
   try {
     if (!stageRef?.current) {
-      if (debug) console.warn('[CANVAS REDRAW] No stage reference available');
+      // if (options.debug) console.warn('[CANVAS REDRAW] No stage reference available');
       return false;
     }
 
     const stage = stageRef.current;
     
     if (!stage.getLayers) {
-      if (debug) console.warn('[CANVAS REDRAW] Stage missing getLayers method');
+      // if (options.debug) console.warn('[CANVAS REDRAW] Stage missing getLayers method');
       return false;
     }
 
     const layers = stage.getLayers();
     
     if (!layers || layers.length === 0) {
-      if (debug) console.warn('[CANVAS REDRAW] No layers found on stage');
+      // if (options.debug) console.warn('[CANVAS REDRAW] No layers found on stage');
       return false;
     }
 
     if (immediate) {
       // Immediate synchronous redraw
-      layers.forEach((layer: any, index: number) => {
+      layers.forEach((layer: any) => { // Removed unused index
         if (layer && typeof layer.batchDraw === 'function') {
           layer.batchDraw();
-          if (debug) console.log(`[CANVAS REDRAW] Layer ${index} redrawn immediately`);
+          // if (options.debug) console.log(`[CANVAS REDRAW] Layer redrawn immediately`);
         }
       });
     } else {
       // Use requestAnimationFrame for next frame
       requestAnimationFrame(() => {
-        layers.forEach((layer: any, index: number) => {
+        layers.forEach((layer: any) => { // Removed unused index
           if (layer && typeof layer.batchDraw === 'function') {
             layer.batchDraw();
-            if (debug) console.log(`[CANVAS REDRAW] Layer ${index} redrawn on next frame`);
+            // if (options.debug) console.log(`[CANVAS REDRAW] Layer redrawn on next frame`);
           }
         });
       });
@@ -63,12 +63,12 @@ export const triggerLayerRedraw = (
 
     if (forceUpdate && stage.draw) {
       stage.draw();
-      if (debug) console.log('[CANVAS REDRAW] Stage force-redrawn');
+      // if (options.debug) console.log('[CANVAS REDRAW] Stage force-redrawn');
     }
 
     return true;
   } catch (error) {
-    if (debug) console.error('[CANVAS REDRAW] Error during redraw:', error);
+    // if (options.debug) console.error('[CANVAS REDRAW] Error during redraw:', error);
     return false;
   }
 };
