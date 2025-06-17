@@ -33,6 +33,32 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
     loadCanvasesFromStorage();
   }, []);
 
+  // TEMPORARY: Function to clear all canvas localStorage data
+  const clearAllCanvasData = () => {
+    const confirmed = window.confirm('This will permanently delete ALL canvas data. Are you sure?');
+    if (!confirmed) return;
+    
+    // Clear all libreollama canvas keys from localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('libreollama_canvas')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Reset state
+    setCanvases([]);
+    setSelectedCanvasId(null);
+    clearCanvas();
+    
+    // Create fresh canvas
+    const initialCanvas = createNewCanvas();
+    setCanvases([initialCanvas]);
+    setSelectedCanvasId(initialCanvas.id);
+    loadCanvas(initialCanvas.id);
+    
+    alert('All canvas data cleared! You now have a fresh canvas.');
+  };
+
   const loadCanvasesFromStorage = () => {
     const storedCanvases = localStorage.getItem('libreollama_canvases');
     if (storedCanvases) {
@@ -274,6 +300,28 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
             >
               <Plus size={16} />
               <span style={{ fontSize: designSystem.typography.fontSize.sm }}>New</span>
+            </button>
+            <button
+              className="canvas-sidebar-new-btn"
+              onClick={clearAllCanvasData}
+              style={{
+                backgroundColor: designSystem.colors.error[600],
+                color: '#ffffff',
+                fontWeight: designSystem.typography.fontWeight.medium,
+                padding: `${designSystem.spacing.xs}px ${designSystem.spacing.sm}px`,
+                borderRadius: designSystem.borderRadius.md,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: designSystem.spacing.xs,
+                transition: 'background-color 0.2s ease',
+                marginLeft: '8px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.error[700]}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = designSystem.colors.error[600]}
+            >
+              <Trash2 size={16} />
+              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>Clear All</span>
             </button>
           </div>
         </div>
