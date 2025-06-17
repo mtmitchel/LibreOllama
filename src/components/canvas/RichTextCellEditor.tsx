@@ -219,40 +219,21 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
 
   // Handle clicks outside to finish editing
   useEffect(() => {
+    if (!isEditing) return;
+
     const handleClickOutside = (e: MouseEvent) => {
-      if (!isEditing || !textareaRef.current) return;
-      
       try {
         const target = e.target as Node;
         const targetElement = target as HTMLElement;
         
-        // console.log('🔍 [CLICK OUTSIDE DEBUG] Click detected', {
-        //   target: target,
-        //   targetTagName: targetElement?.tagName,
-        //   targetClassName: targetElement?.className,
-        //   // Lines referencing toolbarRef removed as it's no longer used here
-        //   containsInTextarea: textareaRef.current.contains(target),
-        //   toolbarData: targetElement?.dataset?.floatingToolbar,
-        //   toolbarButton: targetElement?.dataset?.toolbarButton,
-        //   dropdownButton: targetElement?.dataset?.dropdownButton
-        // });
-        
-        const isInsideToolbar = targetElement?.closest('[data-floating-toolbar]') ||
-                               targetElement?.closest('[data-toolbar-button]') ||
-                               targetElement?.closest('[data-dropdown-button]') ||
-                               targetElement?.closest('[data-dropdown-content]') ||
-                               targetElement?.closest('[data-dropdown-container]');
-        
-        // console.log('🔍 [CLICK OUTSIDE DEBUG] Final decision', {
-        //   isInsideToolbar: !!isInsideToolbar,
-        //   willSave: !isInsideToolbar && textareaRef.current && !textareaRef.current.contains(target)
-        // });
-        
-        if (target &&
-            textareaRef.current && !textareaRef.current.contains(target) && 
-            !isInsideToolbar) {
-          
-          handleSave();
+        // Check if the click is outside the editor and any associated toolbar/dropdown
+        if (textareaRef.current && !textareaRef.current.contains(target)) {
+          const isToolbarClick = targetElement?.closest(
+            '[data-floating-toolbar], [data-toolbar-button], [data-dropdown-content], [data-dropdown-container]'
+          );
+          if (!isToolbarClick) {
+            handleSave();
+          }
         }
       } catch (error) {
         logError('ERROR in click outside handler', error);
@@ -260,10 +241,16 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
       }
     };
 
-    if (isEditing) {
-      document.addEventListener('mousedown', handleClickOutside, { capture: true });
-      return () => document.removeEventListener('mousedown', handleClickOutside, { capture: true });
-    }
+    // CRITICAL FIX: Attach the event listener on the next event loop cycle.
+    // This prevents it from capturing the same click that opened the editor.
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside, true);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+    };
   }, [isEditing, handleSave]);
 
   // Handle format change from FloatingTextToolbar
@@ -542,6 +529,15 @@ export const RichTextCellEditor: React.FC<RichTextCellEditorProps> = ({
     }
   }, [showToolbar, cellPosition]); // Removed getStageRef as toolbar is body-relative
 
+  // Add debug logging for toolbar visibility
+  console.log('[Toolbar Debug]', {
+    isEditing,
+    showToolbar,
+    toolbarPosition,
+    textareaRefExists: !!textareaRef.current,
+    cellPosition,
+    currentFormat
+  });
 
   return createPortal(
     <div style={editorStyle} data-rich-text-editor role="dialog" aria-modal="true">

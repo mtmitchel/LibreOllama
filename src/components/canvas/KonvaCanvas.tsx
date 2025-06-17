@@ -32,7 +32,7 @@ interface KonvaCanvasProps {
   height: number;
   onElementSelect?: (element: CanvasElement) => void;
   panZoomState: PanZoomState;
-  stageRef: React.RefObject<Konva.Stage | null>;
+  stageRef: React.MutableRefObject<Konva.Stage | null>;
   onWheelHandler: (e: Konva.KonvaEventObject<WheelEvent>) => void;
   onTouchMoveHandler?: (e: Konva.KonvaEventObject<TouchEvent>) => void;
   onTouchEndHandler?: (e: Konva.KonvaEventObject<TouchEvent>) => void;
@@ -43,11 +43,20 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   height,
   onElementSelect,
   panZoomState,
-  stageRef, // Use this passed-in ref
+  stageRef: externalStageRef, // Rename to avoid confusion
   onWheelHandler,
   onTouchMoveHandler,
   onTouchEndHandler
 }) => {
+  // Create internal ref to avoid React strict mode issues
+  const internalStageRef = useRef<Konva.Stage | null>(null);
+  
+  // Sync internal ref with external ref
+  useEffect(() => {
+    if (externalStageRef && internalStageRef.current) {
+      externalStageRef.current = internalStageRef.current;
+    }
+  }, [externalStageRef]);
   const { elements, sections, selectedTool, selectedElementId, editingTextId, setSelectedElement, addElement, updateElement, applyTextFormat, setEditingTextId, updateElementText, setSelectedTool, createSection, updateSection, addElementToSection, removeElementFromSection, handleSectionDragEnd } = useKonvaCanvasStore();
 
   // State for text editing overlays - completely separate from Konva
@@ -319,8 +328,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       setEditingTextId(elementId);
       
       // Calculate positions for rich text editor
-      if (stageRef.current) {
-        const stage = stageRef.current;
+      if (internalStageRef.current) {
+        const stage = internalStageRef.current;
         const container = stage.container();
         const containerRect = container.getBoundingClientRect();
         
@@ -393,8 +402,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       setEditingTextId(elementId);
       
       // Calculate positions for rich text editor (same logic as text/sticky-note)
-      if (stageRef.current) {
-        const stage = stageRef.current;
+      if (internalStageRef.current) {
+        const stage = internalStageRef.current;
         const container = stage.container();
         const containerRect = container.getBoundingClientRect();
         
@@ -453,7 +462,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         });
       }
     }
-  }, [elements, setEditingTextId, stageRef]);
+  }, [elements, setEditingTextId, internalStageRef]);
 
   const handleTextUpdate = useCallback((elementId: string, newText: string) => {
     updateElementText(elementId, newText);
@@ -598,8 +607,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     const viewportBounds = {
       x: -panZoomState.position.x / panZoomState.scale,
       y: -panZoomState.position.y / panZoomState.scale,
-      width: (stageRef.current?.width() || window.innerWidth) / panZoomState.scale,
-      height: (stageRef.current?.height() || window.innerHeight) / panZoomState.scale
+      width: (internalStageRef.current?.width() || window.innerWidth) / panZoomState.scale,
+      height: (internalStageRef.current?.height() || window.innerHeight) / panZoomState.scale
     };
     
     return topLevelElements.filter(element => {
@@ -1464,7 +1473,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
               updateElement(element.id, updates);
             }}
             onDragEnd={(e) => handleDragEnd(e, element.id)}
-            stageRef={stageRef}
+            stageRef={internalStageRef}
             onEditingStateChange={handleTableEditingStateChange}
           />
         );
@@ -1518,21 +1527,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     };
   }, [selectedElementId, editingTextId, setSelectedElement, setEditingTextId, isDrawingConnector]);
 
-  // Safe ref callback to avoid read-only ref issues
-  const handleStageRef = useCallback((stage: Konva.Stage | null) => {
-    if (stageRef && typeof stageRef === 'object' && 'current' in stageRef) {
-      try {
-        (stageRef as React.MutableRefObject<Konva.Stage | null>).current = stage;
-      } catch (error) {
-        console.warn('Could not assign to stageRef:', error);
-      }
-    }
-  }, [stageRef]);
-
   return (
     <div className="konva-canvas-container">
       <Stage
-        ref={handleStageRef}
+        ref={internalStageRef}
         width={width}
         height={height}
         onMouseDown={handleMouseDown}
@@ -1719,7 +1717,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           textareaPosition={textareaPosition}
           onCancel={handleEditingCancel}
           onDone={handleEditingDone}
-          stageRef={stageRef}
+          stageRef={internalStageRef}
         />
       )}
 
