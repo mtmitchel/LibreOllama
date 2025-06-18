@@ -3,8 +3,8 @@
  * Tests for section templates, locking, visibility, and performance
  */
 
-import { CanvasElement } from '../stores/konvaCanvasStore';
-import { SectionElement, sectionTemplates } from '../types/section';
+import { CanvasElement } from '../features/canvas/stores/konvaCanvasStore';
+import { SectionElement, sectionTemplates } from '../../types/section';
 import { CoordinateService } from '../utils/coordinateService';
 
 interface TestResult {

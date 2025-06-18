@@ -1,13 +1,12 @@
 // src/hooks/useTauriCanvas.ts
 import { invoke } from '@tauri-apps/api/core';
-import { useKonvaCanvasStore } from '../stores/konvaCanvasStore';
+import { useCanvasElements } from '../features/canvas/stores/canvasStore';
 
 export const useTauriCanvas = () => {
-  const { exportCanvas, importCanvas } = useKonvaCanvasStore();
-
+  const { exportElements, importElements } = useCanvasElements();
   const saveToFile = async (filename: string) => {
     try {
-      const elements = exportCanvas();
+      const elements = exportElements();
       const data = JSON.stringify(elements);
       await invoke('save_canvas_data', { data, filename });
       console.log('Canvas saved successfully');
@@ -20,7 +19,7 @@ export const useTauriCanvas = () => {
     try {
       const data = await invoke('load_canvas_data', { filename });
       const elements = JSON.parse(data as string);
-      importCanvas(elements);
+      importElements(elements);
       console.log('Canvas loaded successfully');
     } catch (error) {
       console.error('Error loading canvas:', error);

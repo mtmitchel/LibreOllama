@@ -28,10 +28,10 @@ export type {
   RichTextContext,
   StylePreset,
   TextValidationResult
-} from '../types/richText';
+} from '../../types/richText';
 
 export {
   DEFAULT_TEXT_FORMAT,
   DEFAULT_STYLE_PRESETS,
   COMMAND_MAPPINGS
-} from '../types/richText';
+} from '../../types/richText';

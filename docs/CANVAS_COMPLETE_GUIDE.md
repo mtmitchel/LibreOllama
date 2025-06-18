@@ -23,18 +23,30 @@ LibreOllama Canvas is a professional-grade, infinite whiteboard system built wit
 
 ### Core Components
 
+**Updated Architecture (Post Phase 3 Enhancement)**
+
 ```
 KonvaApp.tsx                    # Main canvas application
 ├── KonvaToolbar.tsx           # Tool selection and canvas controls
 ├── CanvasSidebar.tsx          # Canvas management and properties
-├── KonvaCanvas.tsx            # Core rendering with Konva.js
-└── Element Components/
-    ├── EnhancedTableElement   # Advanced table functionality
-    ├── StickyNoteElement      # Sticky note implementation
-    ├── SectionElement         # Section containers
-    ├── TextEditingOverlay     # Unified text editing with DOM portals
-    ├── RichTextCellEditor     # Rich text editing component
-    └── Various shape/connector renderers
+├── KonvaCanvas.tsx            # Core rendering coordinator (300 lines)
+└── Canvas Architecture/
+    ├── layers/                # Multi-layer performance architecture
+    │   ├── CanvasLayerManager.tsx  # Layer coordination
+    │   ├── BackgroundLayer.tsx     # Static elements (grid, background)
+    │   ├── MainLayer.tsx          # Interactive shapes and elements
+    │   ├── ConnectorLayer.tsx     # Lines and connections
+    │   └── UILayer.tsx            # Selection and transform UI
+    ├── shapes/                # Modular shape components
+    │   ├── EditableNode.tsx       # Reusable interaction wrapper
+    │   ├── RectangleNode.tsx      # Rectangle shapes
+    │   ├── TextNode.tsx           # Text elements
+    │   ├── StickyNoteNode.tsx     # Sticky notes
+    │   ├── TableNode.tsx          # Enhanced tables
+    │   └── ConnectorNode.tsx      # Line connectors
+    └── editing/               # Text editing system
+        ├── TextEditingOverlay     # DOM portal text editing
+        └── RichTextCellEditor     # Rich text editing component
 ```
 
 ### Text Editing System
@@ -48,17 +60,26 @@ KonvaApp.tsx                    # Main canvas application
 
 **Key Features**:
 - **DOM Portal Integration**: Proper separation between Konva canvas and DOM text editing
-- **Smart Positioning**: Context-aware toolbar placement relative to selected content
-- **Mount-Time Protection**: Prevents immediate text editor dismissal on component mount
-- **Unified Interface**: Consistent editing experience across all text element types
-- **Coordinate System Handling**: Proper conversion between stage and screen coordinates
 
-**Recent Improvements (June 17, 2025)**:
-- Fixed toolbar positioning issues (toolbar appearing in wrong location)
-- Connected table cell editing to unified rich text system
-- Implemented proper DOM portal pattern using `react-konva-utils`
-- Added mount-time blur prevention for reliable editor behavior
-- Enhanced error handling and debugging capabilities
+## 🚀 Performance Architecture
+
+**Multi-Layer Canvas System**: The canvas uses a sophisticated layer architecture for optimal performance:
+
+- **BackgroundLayer**: Static elements with `listening={false}` for performance
+- **MainLayer**: Primary interactive shapes and elements  
+- **ConnectorLayer**: Lines and connections isolated for performance
+- **UILayer**: Selection rectangles and transform controls
+
+**Component Optimization**:
+- **React.memo**: All shape components are memoized to prevent unnecessary re-renders
+- **Granular State**: Components subscribe only to the specific data they need
+- **Event Delegation**: Single event listeners on parent layers for efficiency
+- **Shape Caching**: Complex shapes are cached as bitmaps for faster rendering
+
+**State Management**: 
+- **Modular Store Architecture**: Zustand store split into focused slices (elements, selection, UI state, text editing)
+- **Performance Monitoring**: Built-in performance tracking and optimization recommendations
+- **Type Safety**: Strict TypeScript configuration eliminates runtime errors
 
 ### State Management
 
@@ -345,11 +366,17 @@ src/hooks/
 
 ## 🎯 Development Status
 
+> **Note**: For detailed implementation progress, roadmap, and technical debt, see the **[Canvas Development Roadmap](./CANVAS_DEVELOPMENT_ROADMAP.md)**
+
+### Current Status: Production Ready with Ongoing Optimizations
+
+All user-facing Canvas features are complete and functional. The Canvas is undergoing architectural optimizations to achieve professional-grade performance and maintainability.
+
 ### ✅ Completed Features
 - Core canvas functionality with 15+ element types
 - Advanced table system with Excel-like features
 - **Unified text editing system with DOM portal integration**
-- **Smart toolbar positioning and mount-time protection**
+- **Smart toolbar positioning and mount-time protection**  
 - **Seamless table cell editing through unified interface**
 - Section-based organization system
 - Pan/zoom with smooth interactions
@@ -359,11 +386,11 @@ src/hooks/
 - **Recent text editing reliability improvements (June 17, 2025)**
 
 ### 🔄 Active Development
-- Enhanced connector routing algorithms
-- Advanced selection tools (multi-select, lasso)
-- Template system for common layouts
-- Collaboration features preparation
-- Additional export formats
+- **Phase 3A**: Architectural refactoring for performance optimization
+- **Store Modularization**: Splitting monolithic store into focused slices
+- **Advanced Performance**: Systematic caching and viewport optimizations
+
+For complete implementation timeline, technical debt items, and success metrics, refer to the [Canvas Development Roadmap](./CANVAS_DEVELOPMENT_ROADMAP.md).
 
 ### 🎨 Design Philosophy
 - **Privacy-First**: All data stored locally

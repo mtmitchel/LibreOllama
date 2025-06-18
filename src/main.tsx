@@ -5,7 +5,6 @@ import App from "./App";
 import { ThemeProvider } from "./components/ThemeProvider";
 import "./styles/design-system.css";
 import "./styles/App.css";
-import "./styles/canvas-fixes.css";
 
 // Enable Immer MapSet plugin to support Map and Set data structures
 enableMapSet();

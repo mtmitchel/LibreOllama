@@ -99,10 +99,9 @@ export const designSystem = {
       medium: 500,
       semibold: 600,
       bold: 700
-    },
-    fontFamily: {
-      sans: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
-      mono: "'JetBrains Mono', 'Courier New', monospace"
+    },    fontFamily: {
+      sans: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
+      mono: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace"
     }
   },
   

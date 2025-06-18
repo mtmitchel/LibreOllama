@@ -1,5 +1,5 @@
 // src/lib/snappingUtils.ts
-import { CanvasElement } from '../stores/konvaCanvasStore';
+import { CanvasElement } from '../features/canvas/stores/konvaCanvasStore';
 
 export interface SnapPoint {
   x: number;

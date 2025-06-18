@@ -1,7 +1,6 @@
 // src/components/Toolbar/KonvaToolbar.tsx
 import React, { useRef } from 'react';
-import Konva from 'konva'; // Import Konva for Stage type if needed by zoom functions
-import { useKonvaCanvasStore } from '../../stores/konvaCanvasStore';
+import { useCanvasElements, useCanvasUI, useCanvasHistory, useSelection, useTextEditing, useSections, useCanvasStore } from '../../features/canvas/stores/canvasStore';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
 import { 
   MousePointer2, 
@@ -9,12 +8,10 @@ import {
   StickyNote, 
   Pen, 
   Trash2,
-  RotateCcw,
   Download,
   Upload,
   Save,
   FolderOpen,
-  Zap,
   Undo2,
   Redo2,
   ZoomIn,
@@ -25,10 +22,11 @@ import {
   Layout,
   Table,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RotateCcw
 } from 'lucide-react';
 import './KonvaToolbar.css';
-import ColorPicker from '../canvas/ColorPicker';
+import ColorPicker from '../../features/canvas/components/ColorPicker';
 import ShapesDropdown from './ShapesDropdown';
 
 const basicTools = [
@@ -48,9 +46,6 @@ const drawingTools = [
   { id: 'image', name: 'Image', icon: Image }
 ];
 
-// Shape tools are now handled by ShapesDropdown component
-const shapeToolIds = ['rectangle', 'circle', 'connector-line', 'connector-arrow', 'triangle', 'star'];
-
 interface KonvaToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -58,6 +53,11 @@ interface KonvaToolbarProps {
   onZoomToFit: () => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  panZoomState?: {
+    scale: number;
+    position: { x: number; y: number };
+  };
+  canvasSize?: { width: number; height: number };
 }
 
 const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
@@ -66,25 +66,21 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   onResetZoom,
   onZoomToFit,
   sidebarOpen,
-  onToggleSidebar
+  onToggleSidebar,
+  panZoomState,
+  canvasSize
 }) => {
   const tableCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { 
-    selectedTool, 
-    setSelectedTool, 
-    clearCanvas, 
-    exportCanvas, 
-    importCanvas, 
-    selectedElementId, 
-    deleteElement,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    elements,
-    updateElement
-  } = useKonvaCanvasStore();
   
+  // Migrated to modular store
+  const { elements, updateElement, deleteElement, addElement, clearAllElements, exportElements, importElements } = useCanvasElements();
+  const { selectedTool, setSelectedTool } = useCanvasUI();
+  const { undo, redo, canUndo, canRedo } = useCanvasHistory();
+  const { selectedElementIds, selectElement } = useSelection();
+  const { setEditingTextId } = useTextEditing();
+  const { sections, addElementToSection } = useSections();
+  
+  const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
   const selectedElement = selectedElementId ? elements[selectedElementId] : null;
   const { saveToFile, loadFromFile } = useTauriCanvas();
 
@@ -100,7 +96,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   const handleZoomToFit = () => onZoomToFit();
 
   const exportCanvasData = () => {
-    const elements = exportCanvas();
+    const elements = exportElements();
     const dataStr = JSON.stringify(elements, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
@@ -117,7 +113,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       reader.onload = (e) => {
         try {
           const elements = JSON.parse(e.target?.result as string);
-          importCanvas(elements);
+          importElements(elements);
         } catch (error) {
           console.error('Error importing canvas:', error);
         }
@@ -128,21 +124,48 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     console.log('🔧 Tool selected:', toolId);
     setSelectedTool(toolId);
     
-    // For drawing tools (not select/connect/pan/section), create element immediately
-    // Section tools should be placed by clicking on canvas
-    if (toolId !== 'select' && toolId !== 'connect' && toolId !== 'pan' && 
-        toolId !== 'section') {
+    // Tools that activate drawing/interaction modes instead of creating elements immediately
+    const drawingModeTools = [
+      'select', 'pan', 'section', 
+      'pen', 'connector-line', 'connector-arrow'
+    ];
+    
+    // For most tools, create element immediately
+    // Drawing mode tools just change the active tool state
+    if (!drawingModeTools.includes(toolId)) {
       createElementForTool(toolId);
+    } else {
+      console.log(`🎨 [TOOLBAR] ${toolId} tool activated - drawing/interaction mode enabled`);
     }
   };
   
   const createElementForTool = (toolId: string) => {
-    const { addElement, setSelectedElement } = useKonvaCanvasStore.getState();
+    console.log('🔧 [TOOLBAR] Creating element for tool:', toolId);
     const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Calculate center position of visible canvas area
-    const centerX = 400;
-    const centerY = 300;
+    // Calculate center position of visible canvas area accounting for pan/zoom
+    // This fixes the "element jumps out of section on first add" issue
+    let centerX = 400;
+    let centerY = 300;
+    
+    // Convert screen coordinates to canvas world coordinates
+    if (panZoomState && canvasSize) {
+      // Get the center of the visible canvas area
+      const screenCenterX = canvasSize.width / 2;
+      const screenCenterY = canvasSize.height / 2;
+      
+      // Convert to world coordinates accounting for pan and zoom
+      centerX = (screenCenterX - panZoomState.position.x) / panZoomState.scale;
+      centerY = (screenCenterY - panZoomState.position.y) / panZoomState.scale;
+      
+      console.log('📍 [TOOLBAR] Viewport-aware positioning:', {
+        screenCenter: { x: screenCenterX, y: screenCenterY },
+        worldCenter: { x: centerX, y: centerY },
+        panZoom: panZoomState
+      });
+    } else {
+      console.warn('⚠️ [TOOLBAR] No viewport state available, using fallback coordinates');
+    }
     
     let newElement: any = null;
     
@@ -157,8 +180,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           fontSize: 18,
           fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
           fill: '#1E293B',
-          width: 200
+          width: 200,
+          sectionId: null as string | null // Initialize as null, will be set if in a section
         };
+        console.log('📝 [TOOLBAR] Created text element:', newElement);
         break;
           
         case 'sticky-note':
@@ -173,8 +198,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             backgroundColor: '#FFEB3B',
             textColor: '#1E293B',
             fontSize: 14,
-            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif"
+            fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
+            sectionId: null as string | null // Initialize as null, will be set if in a section
           };
+          console.log('📝 [TOOLBAR] Created sticky note element:', newElement);
           break;
           
         case 'rectangle':
@@ -187,8 +214,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             height: 100,
             fill: '#DBEAFE',
             stroke: '#3B82F6',
-            strokeWidth: 2
+            strokeWidth: 2,
+            sectionId: null as string | null // Initialize as null, will be set if in a section
           };
+          console.log('🟦 [TOOLBAR] Created rectangle element:', newElement);
           break;
           
         case 'circle':
@@ -200,8 +229,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             radius: 60,
             fill: '#DCFCE7',
             stroke: '#22C55E',
-            strokeWidth: 2
+            strokeWidth: 2,
+            sectionId: null as string | null // Initialize as null, will be set if in a section
           };
+          console.log('🟢 [TOOLBAR] Created circle element:', newElement);
           break;
           
         case 'connector-line':
@@ -230,10 +261,33 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
                     y: centerY - img.height / 4,
                     width: img.width / 2,
                     height: img.height / 2,
-                    imageUrl
+                    imageUrl,
+                    sectionId: null as string | null // Initialize as null, will be set if in a section
                   };
+                  
+                  // Check if the image should be placed in a section
+                  const targetSectionId = useCanvasStore.getState().findSectionAtPoint({ x: imageElement.x, y: imageElement.y });
+                  const targetSection = targetSectionId ? sections[targetSectionId] : null;
+                  
+                  if (targetSection) {
+                    // Convert world coordinates to section-relative coordinates
+                    const relativeX = imageElement.x - targetSection.x;
+                    const relativeY = imageElement.y - targetSection.y;
+                    
+                    // Update element with relative coordinates and section ID
+                    imageElement.x = relativeX;
+                    imageElement.y = relativeY;
+                    imageElement.sectionId = targetSection.id;
+                  }
+                  
                   addElement(imageElement);
-                  setSelectedElement(imageElement.id);
+                  
+                  // If image is in a section, also add it to the section's element list
+                  if (targetSection) {
+                    addElementToSection(imageElement.id, targetSection.id);
+                  }
+                  
+                  selectElement(imageElement.id);
                   setTimeout(() => setSelectedTool('select'), 100);
                 };
                 img.src = imageUrl;
@@ -243,7 +297,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           };
           input.click();
           return; // Don't continue with normal element creation
-          break;
           
         case 'triangle':
           newElement = {
@@ -255,8 +308,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             height: 80,
             fill: '#FEF3C7',
             stroke: '#F59E0B',
-            strokeWidth: 2
+            strokeWidth: 2,
+            sectionId: null as string | null // Initialize as null, will be set if in a section
           };
+          console.log('🔺 [TOOLBAR] Created triangle element:', newElement);
           break;
           
         case 'star':
@@ -270,12 +325,21 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             radius: 60,
             fill: '#E1BEE7',
             stroke: '#9C27B0',
-            strokeWidth: 2
+            strokeWidth: 2,
+            sectionId: null as string | null // Initialize as null, will be set if in a section
           };
+          console.log('⭐ [TOOLBAR] Created star element:', newElement);
           break;
+          
+        case 'pen':
+          // Pen tool activates drawing mode, doesn't create element immediately
+          // The actual pen path will be created during drawing interaction
+          console.log('✏️ [TOOLBAR] Pen tool activated - drawing mode enabled');
+          return;
           
         case 'section':
           // Section tool activates drawing mode, doesn't create element immediately
+          console.log('📦 [TOOLBAR] Section tool activated - drawing mode enabled');
           return;
           
         case 'table':
@@ -285,26 +349,138 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           }
           
           tableCreationTimeoutRef.current = setTimeout(() => {
-            const { createEnhancedTable } = useKonvaCanvasStore.getState();
-            const tableId = createEnhancedTable(centerX - 180, centerY - 75, 3, 3);
-            setSelectedElement(tableId);
+            // Create a table element with proper enhanced table data structure
+            const rows = 3;
+            const cols = 3;
+            const cellWidth = 120;
+            const cellHeight = 50;
+            
+            // Create enhanced table data structure
+            const enhancedTableData = {
+              rows: Array(rows).fill(0).map((_, rowIndex) => ({
+                id: `row-${rowIndex}`,
+                height: cellHeight,
+                minHeight: 30,
+                maxHeight: 200,
+                isResizable: true,
+                isHeader: rowIndex === 0
+              })),
+              columns: Array(cols).fill(0).map((_, colIndex) => ({
+                id: `col-${colIndex}`,
+                width: cellWidth,
+                minWidth: 60,
+                maxWidth: 300,
+                isResizable: true,
+                textAlign: 'left' as const
+              })),
+              cells: Array(rows).fill(0).map(() => 
+                Array(cols).fill(0).map(() => ({
+                  id: generateId(),
+                  text: '',
+                  segments: [],
+                  backgroundColor: '#ffffff',
+                  textColor: '#000000',
+                  fontSize: 14,
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 'normal',
+                  fontStyle: 'normal',
+                  textAlign: 'left' as const,
+                  textDecoration: 'none',
+                  borderColor: '#e0e0e0',
+                  borderWidth: 1,
+                  padding: 8,
+                  isHeader: false,
+                  isSelected: false,
+                  containedElementIds: [],
+                  rowSpan: 1,
+                  colSpan: 1
+                }))
+              )
+            };
+            
+            const tableElement: any = {
+              id: generateId(),
+              type: 'table' as const,
+              x: centerX - 180,
+              y: centerY - 75,
+              width: cellWidth * cols,
+              height: cellHeight * rows,
+              enhancedTableData,
+              sectionId: null as string | null // Initialize as null, will be set if in a section
+            };
+            
+            // Check if the table should be placed in a section
+            const targetSectionId = useCanvasStore.getState().findSectionAtPoint({ x: tableElement.x, y: tableElement.y });
+            const targetSection = targetSectionId ? sections[targetSectionId] : null;
+            
+            if (targetSection) {
+              // Convert world coordinates to section-relative coordinates
+              const relativeX = tableElement.x - targetSection.x;
+              const relativeY = tableElement.y - targetSection.y;
+              
+              // Update element with relative coordinates and section ID
+              tableElement.x = relativeX;
+              tableElement.y = relativeY;
+              tableElement.sectionId = targetSection.id;
+              
+              console.log('� [TOOLBAR] Table will be placed in section:', targetSection.id);
+            }
+            
+            console.log('�🔧 [TOOLBAR] Creating table element:', tableElement);
+            addElement(tableElement);
+            
+            // If table is in a section, also add it to the section's element list
+            if (targetSection) {
+              addElementToSection(tableElement.id, targetSection.id);
+            }
+            
+            selectElement(tableElement.id);
             tableCreationTimeoutRef.current = null;
           }, 100);
           return;
       }
       
       if (newElement) {
+        console.log('✅ [TOOLBAR] Creating element:', newElement);
+        
+        // Check if the element should be placed in a section BEFORE adding to store
+        const targetSectionId = useCanvasStore.getState().findSectionAtPoint({ x: newElement.x, y: newElement.y });
+        const targetSection = targetSectionId ? sections[targetSectionId] : null;
+        
+        if (targetSection) {
+          // Convert world coordinates to section-relative coordinates
+          const relativeX = newElement.x - targetSection.x;
+          const relativeY = newElement.y - targetSection.y;
+          
+          // Update element with relative coordinates and section ID before storing
+          newElement.x = relativeX;
+          newElement.y = relativeY;
+          newElement.sectionId = targetSection.id;
+          
+          console.log('📦 [TOOLBAR] Element will be placed in section:', targetSection.id);
+          console.log('📦 [TOOLBAR] Converted to relative coordinates:', { x: relativeX, y: relativeY });
+        }
+        
+        // Add element to store with correct coordinates from the start
         addElement(newElement);
-        setSelectedElement(newElement.id);
+        
+        // AFTER adding to store, add to section if needed
+        if (targetSection) {
+          addElementToSection(newElement.id, targetSection.id);
+        }
+        
+        console.log('📌 [TOOLBAR] Selecting element:', newElement.id);
+        selectElement(newElement.id);
         
         // For text elements, immediately enter edit mode for FigJam-style behavior
         if (newElement.type === 'text') {
-          const { setEditingTextId } = useKonvaCanvasStore.getState();
           setEditingTextId(newElement.id);
         }
         
         // After creating element, switch to select tool immediately
         setTimeout(() => setSelectedTool('select'), 100);
+      } else {
+        console.warn('⚠️ [TOOLBAR] No element created for tool:', toolId);
       }
   };
   
@@ -394,7 +570,9 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       {canShowColorPicker && (
         <div className="konva-toolbar-group">
           <ColorPicker
-            selectedColor={selectedElement?.fill || selectedElement?.backgroundColor}
+            {...(((selectedElement?.fill || selectedElement?.backgroundColor) && { 
+              selectedColor: selectedElement?.fill || selectedElement?.backgroundColor 
+            }) || {})}
             onColorChange={(color) => handleColorChange(color, 
               selectedElement?.type === 'sticky-note' ? 'backgroundColor' : 'fill'
             )}
@@ -469,7 +647,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
         
         {/* Clear Canvas */}
         <button
-          onClick={clearCanvas}
+          onClick={clearAllElements}
           className="konva-toolbar-action-btn danger"
           title="Clear all elements from canvas"
         >

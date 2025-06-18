@@ -1,0 +1,413 @@
+/* KonvaToolbar.css - Modern Canvas Toolbar with Enhanced UI/UX */
+/* Follows LibreOllama Design System with modern polish */
+
+.konva-toolbar {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar {
+    background: rgba(31, 41, 55, 0.9);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.konva-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-group {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.konva-toolbar-group:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-group:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Enhanced button styles with modern hover effects */
+.konva-toolbar-btn,
+.konva-toolbar-tool-btn,
+.konva-toolbar-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 36px;
+  height: 36px;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-btn,
+  .konva-toolbar-tool-btn,
+  .konva-toolbar-action-btn {
+    color: #94A3B8;
+  }
+}
+
+/* Ripple effect on click */
+.konva-toolbar-btn::before,
+.konva-toolbar-tool-btn::before,
+.konva-toolbar-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.konva-toolbar-btn:active::before,
+.konva-toolbar-tool-btn:active::before,
+.konva-toolbar-action-btn:active::before {
+  width: 100%;
+  height: 100%;
+}
+
+/* Modern hover state */
+.konva-toolbar-btn:hover,
+.konva-toolbar-tool-btn:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: #3B82F6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-btn:hover,
+  .konva-toolbar-tool-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Active state with glow effect */
+.konva-toolbar-btn.active,
+.konva-toolbar-tool-btn.active {
+  background: #3B82F6;
+  color: white;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 2px 8px rgba(59, 130, 246, 0.3);
+  transform: scale(1.02);
+}
+
+/* Disabled state */
+.konva-toolbar-btn:disabled,
+.konva-toolbar-tool-btn:disabled,
+.konva-toolbar-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Action buttons with enhanced styles */
+.konva-toolbar-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.konva-toolbar-action-btn {
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.04);
+  color: #1E293B;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-action-btn {
+    background: rgba(255, 255, 255, 0.04);
+    color: #F1F5F9;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.konva-toolbar-action-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Primary action button */
+.konva-toolbar-action-btn.primary {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.konva-toolbar-action-btn.primary:hover {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Danger action button */
+.konva-toolbar-action-btn.danger {
+  background: transparent;
+  color: #EF4444;
+  border-color: #FCA5A5;
+}
+
+.konva-toolbar-action-btn.danger:hover {
+  background: #EF4444;
+  color: white;
+  border-color: #EF4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+/* Secondary action button */
+.konva-toolbar-action-btn.secondary {
+  background: white;
+  color: #1E293B;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-action-btn.secondary {
+    background: #1F2937;
+    color: #F1F5F9;
+    border-color: #374151;
+  }
+}
+
+.konva-toolbar-action-btn.secondary:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-action-btn.secondary:hover {
+    background: #374151;
+    border-color: #4B5563;
+  }
+}
+
+/* Zoom controls with modern styling */
+.konva-toolbar-zoom-controls {
+  background: rgba(0, 0, 0, 0.03);
+  padding: 2px;
+  border-radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-zoom-controls {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.konva-toolbar-zoom-controls .konva-toolbar-action-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  min-width: 32px;
+}
+
+.konva-toolbar-zoom-controls .konva-toolbar-action-btn:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: #3B82F6;
+}
+
+/* Enhanced tooltips */
+.konva-toolbar-btn[title],
+.konva-toolbar-tool-btn[title],
+.konva-toolbar-action-btn[title] {
+  position: relative;
+}
+
+.konva-toolbar-btn[title]:hover::after,
+.konva-toolbar-tool-btn[title]:hover::after,
+.konva-toolbar-action-btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1E293B;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  animation: tooltipFadeIn 0.3s ease forwards;
+  animation-delay: 0.5s;
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-btn[title]:hover::after,
+  .konva-toolbar-tool-btn[title]:hover::after,
+  .konva-toolbar-action-btn[title]:hover::after {
+    background: #F1F5F9;
+    color: #1E293B;
+  }
+}
+
+@keyframes tooltipFadeIn {
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(2px);
+  }
+}
+
+/* Focus states for accessibility */
+.konva-toolbar-btn:focus-visible,
+.konva-toolbar-tool-btn:focus-visible,
+.konva-toolbar-action-btn:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .konva-toolbar {
+    padding: 6px 12px;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .konva-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .konva-toolbar-group {
+    flex-shrink: 0;
+  }
+  
+  .konva-toolbar-action-group {
+    margin-left: 8px;
+    flex-shrink: 0;
+  }
+  
+  /* Hide text on mobile, show only icons */
+  .konva-toolbar-action-btn span:not([class*="icon"]) {
+    display: none;
+  }
+}
+
+/* Smooth scrolling for mobile */
+@media (max-width: 768px) {
+  .konva-toolbar {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Loading state animation */
+.konva-toolbar-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.konva-toolbar-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  to {
+    left: 100%;
+  }
+}
+
+/* Enhanced visual separator */
+.konva-toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.1), transparent);
+  margin: 0 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-separator {
+    background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1), transparent);
+  }
+}
+
+/* Color picker integration with smooth animations */
+.konva-toolbar-group .color-picker {
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

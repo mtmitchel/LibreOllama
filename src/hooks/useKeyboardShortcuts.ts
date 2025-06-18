@@ -1,19 +1,14 @@
 // src/hooks/useKeyboardShortcuts.ts
 import { useEffect } from 'react';
-import { useKonvaCanvasStore } from '../stores/konvaCanvasStore';
+import { useCanvasHistory, useCanvasElements, useSelection, useCanvasUI } from '../features/canvas/stores/canvasStore';
 
 export const useKeyboardShortcuts = () => {
-  const { 
-    undo, 
-    redo, 
-    canUndo, 
-    canRedo, 
-    selectedElementId, 
-    deleteElement,
-    duplicateElement,
-    setSelectedTool,
-    setSelectedElement
-  } = useKonvaCanvasStore();
+  const { undo, redo, canUndo, canRedo } = useCanvasHistory();
+  const { deleteElement, duplicateElement } = useCanvasElements();
+  const { selectedElementIds, clearSelection } = useSelection();
+  const { setSelectedTool } = useCanvasUI();
+  
+  const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -85,7 +80,7 @@ export const useKeyboardShortcuts = () => {
             break;
           case 'Escape':
             e.preventDefault();
-            setSelectedElement(null);
+            clearSelection();
             break;
           // Tool shortcuts
           case 'v':
@@ -132,5 +127,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, canUndo, canRedo, selectedElementId, deleteElement, duplicateElement, setSelectedTool, setSelectedElement]);
+  }, [undo, redo, canUndo, canRedo, selectedElementId, deleteElement, duplicateElement, setSelectedTool, clearSelection]);
 };

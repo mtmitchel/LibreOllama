@@ -170,7 +170,7 @@ export class CanvasSectionsTestExecutor {
     // console.log(`❌ Failed: ${report.failedTests}`);
     // console.log(`🎯 Success Rate: ${((report.passedTests / report.totalTests) * 100).toFixed(1)}%`);
     
-    const resultEmoji = report.overallResult === 'PASSED' ? '🟢' : '🔴';
+    // const resultEmoji = report.overallResult === 'PASSED' ? '🟢' : '🔴';
     // console.log(`\n${resultEmoji} OVERALL RESULT: ${report.overallResult}`);
     
     // Core tests summary
@@ -187,23 +187,23 @@ export class CanvasSectionsTestExecutor {
     // console.log('\n📝 DETAILED RESULTS BY SUITE:');
     // console.log('-'.repeat(50));
     
-    const allSuites = [...report.coreTests.suites, ...report.advancedTests.suites];
-    allSuites.forEach((suite, index) => {
-      const suiteStatus = suite.overallPassed ? '✅' : '❌';
-      const passedCount = suite.results.filter((r: any) => r.passed).length;
-      
-      // console.log(`\n${index + 1}. ${suiteStatus} ${suite.suiteName}`);
-      // console.log(`   Tests: ${passedCount}/${suite.results.length} passed`);
-      
-      // Show failed tests
-      const failedTests = suite.results.filter((r: any) => !r.passed);
-      if (failedTests.length > 0) {
-        // console.log('   Failed Tests:');
-        failedTests.forEach((test: any) => {
-          // console.log(`   ❌ ${test.testName}: ${test.details}`);
-        });
-      }
-    });
+    // const allSuites = [...report.coreTests.suites, ...report.advancedTests.suites];
+    // allSuites.forEach((suite, index) => {
+    //   const suiteStatus = suite.overallPassed ? '✅' : '❌';
+    //   const passedCount = suite.results.filter((r: any) => r.passed).length;
+    //
+    //   // console.log(`\n${index + 1}. ${suiteStatus} ${suite.suiteName}`);
+    //   // console.log(`   Tests: ${passedCount}/${suite.results.length} passed`);
+    //
+    //   // Show failed tests
+    //   const failedTests = suite.results.filter((r: any) => !r.passed);
+    //   if (failedTests.length > 0) {
+    //     // console.log('   Failed Tests:');
+    //     failedTests.forEach((test: any) => {
+    //       // console.log(`   ❌ ${test.testName}: ${test.details}`);
+    //     });
+    //   }
+    // });
     
     // Critical issues
     if (report.criticalIssues.length > 0) {
@@ -267,28 +267,28 @@ export class CanvasSectionsTestExecutor {
       }
     ];
     
-    compatibilityFactors.forEach(factor => {
-      const statusEmoji = factor.status === 'IMPLEMENTED' || factor.status === 'OPTIMIZED' ? '✅' : 
-                          factor.status === 'NEEDS_WORK' ? '⚠️' : '❌';
-      // console.log(`${statusEmoji} ${factor.name}: ${factor.status}`);
-      // console.log(`   ${factor.description}`);
-    });
+    // compatibilityFactors.forEach(factor => {
+    //   const statusEmoji = factor.status === 'IMPLEMENTED' || factor.status === 'OPTIMIZED' ? '✅' :
+    //                       factor.status === 'NEEDS_WORK' ? '⚠️' : '❌';
+    //   // console.log(`${statusEmoji} ${factor.name}: ${factor.status}`);
+    //   // console.log(`   ${factor.description}`);
+    // });
     
-    const implementedCount = compatibilityFactors.filter(f => 
-      f.status === 'IMPLEMENTED' || f.status === 'OPTIMIZED'
-    ).length;
-    
-    const compatibilityPercentage = (implementedCount / compatibilityFactors.length) * 100;
+    // const implementedCount = compatibilityFactors.filter(f =>
+    //   f.status === 'IMPLEMENTED' || f.status === 'OPTIMIZED'
+    // ).length;
+    //
+    // const compatibilityPercentage = (implementedCount / compatibilityFactors.length) * 100;
     
     // console.log(`\n🎯 FigJam Compatibility: ${compatibilityPercentage.toFixed(1)}%`);
     
-    if (compatibilityPercentage >= 90) {
-      // console.log('🟢 Excellent FigJam-style implementation!');
-    } else if (compatibilityPercentage >= 75) {
-      // console.log('🟡 Good implementation with minor improvements needed');
-    } else {
-      // console.log('🔴 Significant work needed to achieve FigJam-style behavior');
-    }
+    // if (compatibilityPercentage >= 90) {
+    //   // console.log('🟢 Excellent FigJam-style implementation!');
+    // } else if (compatibilityPercentage >= 75) {
+    //   // console.log('🟡 Good implementation with minor improvements needed');
+    // } else {
+    //   // console.log('🔴 Significant work needed to achieve FigJam-style behavior');
+    // }
   }
 }
 

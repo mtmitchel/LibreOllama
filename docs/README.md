@@ -6,7 +6,7 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 
 **New to LibreOllama?** Start here:
 - **[Main README](../README.md)** - Project overview, tech stack, and development setup
-- **[Canvas Documentation](./CANVAS_COMPLETE_DOCUMENTATION.md)** - Complete canvas documentation and user guide
+- **[Canvas Complete Guide](./CANVAS_COMPLETE_GUIDE.md)** - Complete canvas documentation and user guide
 - **[Development Startup Guide](./development/DEV-STARTUP-GUIDE.md)** - Set up your development environment
 
 ## 📚 Core Feature Documentation
@@ -19,17 +19,15 @@ Our professional-grade whiteboard powered by Konva.js provides rich visual think
   - Pan/zoom navigation and high-performance rendering
   - Multi-selection, connectors, and 50-state undo/redo
 
-**Current Status**: Functional and production-ready. See details below.
+**Current Status**: Production-ready with ongoing architectural optimizations for 60fps performance.
 
-**Primary Documentation**:
-- [Canvas Complete Guide](./CANVAS_COMPLETE_GUIDE.md)  
+**Complete Documentation**:
+- **[Canvas Complete Guide](./CANVAS_COMPLETE_GUIDE.md)**  
   Master reference for all Canvas features, usage patterns, and technical architecture.
-- **[Canvas Text Editing Update](./CANVAS_TEXT_EDITING_UPDATE.md)** ⭐ **NEW**  
-  Detailed technical summary of recent text editing system improvements (June 17, 2025).
+- **[Canvas Development Roadmap](./CANVAS_DEVELOPMENT_ROADMAP.md)** *(NEW)*  
+  Development roadmap, implementation timeline, architectural refactoring plans, and performance optimization strategies.
 
-**Historical & Archived Content**:  
-All legacy or specialized Canvas docs (e.g., table deep-dives, implementation variants) have been consolidated and archived:  
-`archives/consolidated_canvas_archive_2025/`
+*Note: All legacy Canvas documentation has been consolidated into these two comprehensive guides and archived.*
 
 ### **🎨 UI/UX Design System**
 Comprehensive documentation of our design system, components, and user experience improvements.

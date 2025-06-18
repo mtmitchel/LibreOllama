@@ -1,8 +1,5 @@
 /* App.css - Essential custom styles only */
 
-/* Import canvas-specific fixes */
-@import './canvas-fixes.css';
-
 /* Custom scrollbar for dark theme */
 .dark *::-webkit-scrollbar {
   width: 6px;

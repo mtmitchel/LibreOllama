@@ -12,9 +12,9 @@
  * as the Group transform automatically positions child elements correctly.
  */
 
-import { CanvasElement } from '../stores/konvaCanvasStore';
+import { CanvasElement } from '../features/canvas/stores/konvaCanvasStore';
 import { SectionElement } from '../types/section';
-import { Coordinates, BoundingBox } from '../types';
+import { Coordinates, BoundingBox } from '../types/index';
 
 export class CoordinateService {
   /**
@@ -104,7 +104,7 @@ export class CoordinateService {
     
     for (let i = sectionArray.length - 1; i >= 0; i--) {
       const section = sectionArray[i];
-      if (point.x >= section.x &&
+      if (section && point.x >= section.x &&
           point.x <= section.x + section.width &&
           point.y >= section.y &&
           point.y <= section.y + section.height) {

@@ -1,36 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import path from "path";
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [react()],
-
-  optimizeDeps: {
-    include: [
-      // 'fabric',
-      // Fabric.js for canvas functionality
-    ],
-    exclude: [
-      // Prevent pre-bundling issues with Fabric.js
-    ],
-    esbuildOptions: {
-      // Ensure Fabric.js is treated as a module
-      target: 'es2020',
-    }
-  },
-  
-  ssr: {
-    noExternal: [] // Remove 'fabric' from noExternal
-  },
-
-  // Add path alias configuration
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -43,14 +19,14 @@ export default defineConfig(async () => ({
   clearScreen: false,
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
-    port: 1422, // Changed port from 1420 to 1422
+    port: 1420,
     strictPort: true,
-    host: host || "127.0.0.1",
+    host: host ? host : "0.0.0.0",
     hmr: host
       ? {
           protocol: "ws",
-          host,
-          port: 1423, // Changed HMR port from 1421 to 1423
+          host: host,
+          port: 5183,
         }
       : undefined,
     watch: {
@@ -58,4 +34,4 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-}));
+});

@@ -103,7 +103,7 @@ export class ConnectionManager {
     });
   }
 
-  private startConnection(sourceShape: Konva.Shape, sourcePoint: ConnectionPoint, handle: Konva.Circle) {
+  private startConnection(sourceShape: Konva.Shape, sourcePoint: ConnectionPoint, _handle: Konva.Circle) {
     this.isDrawing = true;
     this.sourceShape = sourceShape;
     
@@ -126,12 +126,14 @@ export class ConnectionManager {
     this.connectionLayer.batchDraw();
 
     // Add stage mouse move listener
-    this.stage.on('mousemove.connection', (e) => {
+    this.stage.on('mousemove.connection', (_e) => {
       if (this.currentConnection && this.isDrawing) {
         const pos = this.stage.getPointerPosition();
         if (pos) {
           const points = this.currentConnection.points();
-          this.currentConnection.points([points[0], points[1], pos.x, pos.y]);
+          const startX = points[0] ?? 0;
+          const startY = points[1] ?? 0;
+          this.currentConnection.points([startX, startY, pos.x, pos.y]);
           this.connectionLayer.batchDraw();
         }
       }
@@ -176,7 +178,7 @@ export class ConnectionManager {
     return null;
   }
 
-  private findNearestConnectionPoint(shape: Konva.Shape, e: Konva.KonvaEventObject<MouseEvent>): ConnectionPoint | null {
+  private findNearestConnectionPoint(shape: Konva.Shape, _e: Konva.KonvaEventObject<MouseEvent>): ConnectionPoint | null {
     const points = this.connectionPoints.get(shape._id);
     if (!points) return null;
 

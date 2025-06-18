@@ -1,0 +1,523 @@
+src/components/canvas/KonvaCanvas.tsx(432,19): error TS2375: Type '{ id: string; text: string; segments: RichTextSegment[]; richTextSegments?: RichTextSegment[]; backgroundColor?: string; textColor?: string; fontSize?: number; fontFamily?: string; fontWeight?: string; ... 10 more ...; colSpan?: number; }' is not assignable to type 'TableCell' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'containedElementIds' is optional in type '{ id: string; text: string; segments: RichTextSegment[]; richTextSegments?: RichTextSegment[]; backgroundColor?: string; textColor?: string; fontSize?: number; ... 12 more ...; colSpan?: number; }' but required in type 'TableCell'.
+src/components/canvas/KonvaCanvas.tsx(1399,12): error TS2375: Type '{ width: number; height: number; fill: string; cornerRadius: number; stroke: string | undefined; shadowColor: string | undefined; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<...>) => void; ... 6 more ...; key: string; }' is not assignable to type 'RectConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'stroke' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string | CanvasGradient'.
+      Type 'undefined' is not assignable to type 'string | CanvasGradient'.
+src/components/canvas/KonvaCanvas.tsx(1412,12): error TS2375: Type '{ radius: number; fill: string; shadowColor: string | undefined; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<NodeConfig>>) => void; ... 7 more ...; key: string; }' is not assignable to type 'CircleConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'stroke' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string | CanvasGradient'.
+      Type 'undefined' is not assignable to type 'string | CanvasGradient'.
+src/components/canvas/KonvaCanvas.tsx(1477,12): error TS2375: Type '{ points: number[]; stroke: string; strokeWidth: number; lineCap: "round"; lineJoin: "round"; tension: number; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<...>>) => void; ... 6 more ...; key: string; }' is not assignable to type 'LineConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/canvas/KonvaCanvas.tsx(1490,12): error TS2375: Type '{ numPoints: number; innerRadius: number; outerRadius: number; fill: string; stroke: string; strokeWidth: number; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<...>>) => void; ... 6 more ...; key: string; }' is not assignable to type 'StarConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/canvas/KonvaCanvas.tsx(1503,12): error TS2375: Type '{ points: number[]; closed: true; fill: string; stroke: string; strokeWidth: number; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<NodeConfig>>) => void; ... 6 more ...; key: string; }' is not assignable to type 'LineConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/canvas/KonvaCanvas.tsx(1639,8): error TS2375: Type '{ children: Element; ref: RefObject<Stage | null>; width: number; height: number; onMouseDown: (e: KonvaEventObject<MouseEvent, Node<NodeConfig>>) => void; ... 11 more ...; style: { ...; }; }' is not assignable to type 'StageProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'onTouchMove' are incompatible.
+    Type '((e: KonvaEventObject<TouchEvent, Node<NodeConfig>>) => void) | undefined' is not assignable to type '(evt: KonvaEventObject<TouchEvent, Node<NodeConfig>>) => void'.
+      Type 'undefined' is not assignable to type '(evt: KonvaEventObject<TouchEvent, Node<NodeConfig>>) => void'.
+src/components/canvas/KonvaDebugPanel.tsx(3,37): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/components/canvas/KonvaErrorBoundary.tsx(14,10): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'Component<Props, State, any>'.
+src/components/canvas/KonvaErrorBoundary.tsx(21,13): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'Component<Props, State, any>'.
+src/components/canvas/KonvaErrorBoundary.tsx(49,21): error TS2345: Argument of type '{ hasError: false; error: undefined; }' is not assignable to parameter of type 'State | ((prevState: Readonly<State>, props: Readonly<Props>) => State | Pick<State, "error" | "hasError"> | null) | Pick<...> | null'.
+  Type '{ hasError: false; error: undefined; }' is not assignable to type 'Pick<State, "error" | "hasError">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'error' are incompatible.
+      Type 'undefined' is not assignable to type 'Error'.
+src/components/canvas/KonvaErrorBoundary.tsx(61,27): error TS2345: Argument of type '{ hasError: false; error: undefined; }' is not assignable to parameter of type 'State | ((prevState: Readonly<State>, props: Readonly<Props>) => State | Pick<State, "error" | "hasError"> | null) | Pick<...> | null'.
+  Type '{ hasError: false; error: undefined; }' is not assignable to type 'Pick<State, "error" | "hasError">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'error' are incompatible.
+      Type 'undefined' is not assignable to type 'Error'.
+src/components/canvas/KonvaErrorBoundary.tsx(66,23): error TS2345: Argument of type '{ hasError: false; error: undefined; }' is not assignable to parameter of type 'State | ((prevState: Readonly<State>, props: Readonly<Props>) => State | Pick<State, "error" | "hasError"> | null) | Pick<...> | null'.
+  Type '{ hasError: false; error: undefined; }' is not assignable to type 'Pick<State, "error" | "hasError">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'error' are incompatible.
+      Type 'undefined' is not assignable to type 'Error'.
+src/components/canvas/KonvaErrorBoundary.tsx(71,10): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'Component<Props, State, any>'.
+src/components/canvas/layers/BackgroundLayer.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/layers/BackgroundLayer.tsx(18,65): error TS6198: All destructured elements are unused.
+src/components/canvas/layers/CanvasLayerManager.tsx(10,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/layers/CanvasLayerManager.tsx(11,27): error TS2307: Cannot find module '../../types/konva.types' or its corresponding type declarations.
+src/components/canvas/layers/CanvasLayerManager.tsx(35,3): error TS6133: 'onElementSelect' is declared but its value is never read.
+src/components/canvas/layers/ConnectorLayer.tsx(5,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/layers/ConnectorLayer.tsx(6,31): error TS2307: Cannot find module '../components/ConnectorRenderer' or its corresponding type declarations.
+src/components/canvas/layers/MainLayer.tsx(5,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/layers/MainLayer.tsx(7,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/components/canvas/layers/MainLayer.tsx(12,8): error TS2307: Cannot find module '../utils/events' or its corresponding type declarations.
+src/components/canvas/layers/UILayer.tsx(5,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/PortalSafeEditor.tsx(24,13): error TS7030: Not all code paths return a value.
+src/components/canvas/React19CompatiblePortal.tsx(51,27): error TS2532: Object is possibly 'undefined'.
+src/components/canvas/RichTextCellEditor.new.tsx(105,13): error TS7030: Not all code paths return a value.
+src/components/canvas/RichTextRenderer.tsx(5,48): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/components/canvas/RichTextRenderer.tsx(43,31): error TS7006: Parameter 'segment' implicitly has an 'any' type.
+src/components/canvas/RichTextRenderer.tsx(70,31): error TS6133: 'e' is declared but its value is never read.
+src/components/canvas/RichTextRenderer.tsx(85,34): error TS6133: 'e' is declared but its value is never read.
+src/components/canvas/RichTextRenderer.tsx(136,45): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/components/canvas/RichTextSystem/index.ts(32,8): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/components/canvas/RichTextSystem/index.ts(39,8): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/components/canvas/RichTextSystem/TextFormatValidator.tsx(14,8): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/components/canvas/RichTextSystem/TextFormatValidator.tsx(159,27): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/components/canvas/RichTextSystem/TextFormatValidator.tsx(162,29): error TS7006: Parameter 'warning' implicitly has an 'any' type.
+src/components/canvas/RichTextSystem/UnifiedRichTextManager.ts(3,53): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/components/canvas/RichTextSystem/UnifiedRichTextManager.ts(453,34): error TS2345: Argument of type 'ChildNode | undefined' is not assignable to parameter of type 'Node'.
+  Type 'undefined' is not assignable to type 'Node'.
+src/components/canvas/RichTextSystem/UnifiedRichTextManager.ts(467,37): error TS18048: 'value' is possibly 'undefined'.
+src/components/canvas/RichTextSystem/UnifiedRichTextManager.ts(471,32): error TS18048: 'value' is possibly 'undefined'.
+src/components/canvas/RichTextSystem/UnifiedRichTextManager.ts(477,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/canvas/SectionElement.tsx(44,13): error TS7030: Not all code paths return a value.
+src/components/canvas/shapes/CachedShape.tsx(12,33): error TS2307: Cannot find module '../../../hooks/canvas/useShapeCaching' or its corresponding type declarations.
+src/components/canvas/shapes/CachedShape.tsx(13,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/shapes/CachedShape.tsx(65,5): error TS6133: 'applyCaching' is declared but its value is never read.
+src/components/canvas/shapes/CachedShape.tsx(66,5): error TS6133: 'clearCaching' is declared but its value is never read.
+src/components/canvas/shapes/CachedTableShape.tsx(12,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/shapes/CachedTableShape.tsx(13,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/components/canvas/shapes/CircleShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/shapes/CircleShape.tsx(5,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(7,1): error TS6133: 'TextShape' is declared but its value is never read.
+src/components/canvas/shapes/EditableNode.tsx(8,1): error TS6133: 'ImageShape' is declared but its value is never read.
+src/components/canvas/shapes/EditableNode.tsx(9,32): error TS2307: Cannot find module '../components/UnifiedTextElement' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(10,31): error TS2307: Cannot find module '../components/StickyNoteElement' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(11,30): error TS2307: Cannot find module '../components/RichTextRenderer' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(12,38): error TS2307: Cannot find module '../components/EnhancedTableElement' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(13,28): error TS2307: Cannot find module '../components/SectionElement' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(14,26): error TS2307: Cannot find module '../components/ImageElement' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(15,31): error TS2307: Cannot find module '../components/ConnectorRenderer' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(17,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/components/canvas/shapes/EditableNode.tsx(127,22): error TS7006: Parameter '_' implicitly has an 'any' type.
+src/components/canvas/shapes/EditableNode.tsx(127,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/canvas/shapes/EditableNode.tsx(128,23): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/canvas/shapes/EditableNode.tsx(129,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/canvas/shapes/EditableNode.tsx(222,22): error TS7006: Parameter 'element' implicitly has an 'any' type.
+src/components/canvas/shapes/EditableNode.tsx(223,22): error TS7006: Parameter 'updates' implicitly has an 'any' type.
+src/components/canvas/shapes/EditableNode.tsx(224,23): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/components/canvas/shapes/ImageShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/shapes/ImageShape.tsx(20,3): error TS6133: 'isSelected' is declared but its value is never read.
+src/components/canvas/shapes/ImageShape.tsx(22,3): error TS6133: 'onUpdate' is declared but its value is never read.
+src/components/canvas/shapes/MemoryOptimizedShape.tsx(14,8): error TS2307: Cannot find module '../../features/canvas/hooks/canvas/useCanvasPerformance' or its corresponding type declarations.
+src/components/canvas/shapes/RectangleShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/shapes/RectangleShape.tsx(5,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/components/canvas/shapes/TextShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/components/canvas/shapes/TextShape.tsx(5,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/components/canvas/shapes/TextShape.tsx(21,3): error TS6133: 'isSelected' is declared but its value is never read.
+src/components/canvas/shapes/TextShape.tsx(23,3): error TS6133: 'onUpdate' is declared but its value is never read.
+src/components/canvas/StickyNoteElement.tsx(5,52): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/components/canvas/StickyNoteElement.tsx(9,36): error TS2307: Cannot find module '../utils/canvas/redrawUtils' or its corresponding type declarations.
+src/components/canvas/StickyNoteElement.tsx(23,48): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/components/canvas/StickyNoteElement.tsx(24,50): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/components/canvas/StickyNoteElement.tsx(184,40): error TS7006: Parameter 'segment' implicitly has an 'any' type.
+src/components/canvas/StickyNoteElement.tsx(184,49): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/canvas/TableCellEditor.tsx(104,13): error TS7030: Not all code paths return a value.
+src/components/canvas/TableCellEditor.tsx(166,13): error TS7030: Not all code paths return a value.
+src/components/canvas/TableCellEditor.tsx(219,13): error TS7030: Not all code paths return a value.
+src/components/canvas/ToolbarComponents.tsx(531,16): error TS18048: 'currentPreset' is possibly 'undefined'.
+src/components/canvas/ToolbarComponents.tsx(779,16): error TS18048: 'currentAlignment' is possibly 'undefined'.
+src/components/canvas/UnifiedTableCellEditor.tsx(58,13): error TS7030: Not all code paths return a value.
+src/components/canvas/UnifiedTextEditor.tsx(57,13): error TS7030: Not all code paths return a value.
+src/components/canvas/UnifiedTextEditor.tsx(95,13): error TS7030: Not all code paths return a value.
+src/components/canvas/UnifiedTextEditor.tsx(136,13): error TS7030: Not all code paths return a value.
+src/components/canvas/UnifiedTextElement.tsx(6,36): error TS2307: Cannot find module '../utils/canvas/redrawUtils' or its corresponding type declarations.
+src/components/canvas/UnifiedTextElement.tsx(7,37): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/components/canvas/UnifiedTextElement.tsx(49,48): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/components/canvas/UnifiedTextElement.tsx(50,50): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/components/canvas/UnifiedTextElement.tsx(306,18): error TS2375: Type '{ key: number; ref: RefObject<any> | undefined; y: number; width: number; height: number | undefined; text: string; fontSize: number; fontFamily: string; fill: string; fontStyle: string; ... 5 more ...; onTap: (e: any) => void; }' is not assignable to type 'TextConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'height' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+src/components/canvas/UnifiedTextElement.tsx(330,14): error TS2375: Type '{ ref: RefObject<any>; width: number; height: number | undefined; text: string; fontSize: number; fontFamily: string; fill: string; fontStyle: string; textDecoration: string; align: "left" | ... 1 more ... | "right"; verticalAlign: string; wrap: string; onClick: (e: any) => void; onTap: (e: any) => void; }' is not assignable to type 'TextConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'height' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+src/components/canvas/UnifiedTextElement.tsx(350,14): error TS2375: Type '{ width: number; height: number | undefined; text: string; fontSize: number; fontFamily: string; fill: string; align: string; verticalAlign: string; fontStyle: string; opacity: number; }' is not assignable to type 'TextConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'height' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.
+src/components/CanvasDiagnostic.tsx(17,31): error TS2339: Property 'Canvas' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+src/components/CanvasDiagnostic.tsx(26,29): error TS2339: Property 'IText' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+src/components/CanvasDiagnostic.tsx(36,29): error TS2339: Property 'Rect' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+src/components/CanvasDiagnostic.tsx(48,31): error TS2339: Property 'Circle' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+src/components/CanvasDiagnostic.tsx(59,29): error TS2339: Property 'Line' does not exist on type 'typeof import("C:/Projects/LibreOllama/src/types/fabric")'.
+src/components/CanvasDiagnostic.tsx(68,40): error TS7006: Parameter 'obj' implicitly has an 'any' type.
+src/components/CommandPalette.tsx(125,5): error TS2532: Object is possibly 'undefined'.
+src/components/CommandPalette.tsx(162,13): error TS7030: Not all code paths return a value.
+src/components/dashboard/WidgetErrorBoundary.tsx(25,3): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'Component<Props, State, any>'.
+src/components/dashboard/WidgetErrorBoundary.tsx(30,19): error TS2345: Argument of type '{ hasError: false; error: undefined; }' is not assignable to parameter of type 'State | ((prevState: Readonly<State>, props: Readonly<Props>) => State | Pick<State, "error" | "hasError"> | null) | Pick<...> | null'.
+  Type '{ hasError: false; error: undefined; }' is not assignable to type 'Pick<State, "error" | "hasError">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'error' are incompatible.
+      Type 'undefined' is not assignable to type 'Error'.
+src/components/dashboard/WidgetErrorBoundary.tsx(33,3): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'Component<Props, State, any>'.
+src/components/debug/MemoryMonitorDashboard.tsx(8,10): error TS2305: Module '"../../features/canvas/hooks/canvas/useCanvasPerformance"' has no exported member 'useCanvasMemoryStats'.
+src/components/debug/MemoryMonitorDashboard.tsx(8,32): error TS2305: Module '"../../features/canvas/hooks/canvas/useCanvasPerformance"' has no exported member 'useMemoryAlerts'.
+src/components/debug/MemoryMonitorDashboard.tsx(28,72): error TS7006: Parameter 'alert' implicitly has an 'any' type.
+src/components/debug/MemoryMonitorDashboard.tsx(171,43): error TS7006: Parameter 'suggestion' implicitly has an 'any' type.
+src/components/debug/MemoryMonitorDashboard.tsx(171,55): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/Toolbar/KonvaToolbar.tsx(3,1): error TS6133: 'Konva' is declared but its value is never read.
+src/components/Toolbar/KonvaToolbar.tsx(4,37): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/components/Toolbar/KonvaToolbar.tsx(17,3): error TS6133: 'Zap' is declared but its value is never read.
+src/components/Toolbar/KonvaToolbar.tsx(31,25): error TS2307: Cannot find module '../../components/Toolbar/ColorPicker' or its corresponding type declarations.
+src/components/Toolbar/KonvaToolbar.tsx(52,7): error TS6133: 'shapeToolIds' is declared but its value is never read.
+src/components/Toolbar/KonvaToolbar.tsx(246,11): error TS7027: Unreachable code detected.
+src/components/Toolbar/KonvaToolbar.tsx(398,29): error TS7006: Parameter 'color' implicitly has an 'any' type.
+src/components/Toolbar/KonvaToolbarEnhanced.tsx(3,37): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/components/Toolbar/ShapesDropdown.tsx(10,3): error TS6133: 'Zap' is declared but its value is never read.
+src/components/Toolbar/ShapesDropdown.tsx(12,37): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/components/Toolbar/ShapesDropdown.tsx(35,23): error TS18048: 'currentShapeTool' is possibly 'undefined'.
+src/components/Toolbar/ShapesDropdown.tsx(65,27): error TS18048: 'currentShapeTool' is possibly 'undefined'.
+src/components/ui/DropdownMenu.tsx(21,13): error TS7030: Not all code paths return a value.
+src/features/canvas/components/CanvasContainer.tsx(11,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/components/CanvasContainer.tsx(12,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/components/CanvasContainer.tsx(44,26): error TS6133: 'setConnectorStart' is declared but its value is never read.
+src/features/canvas/components/CanvasContainer.tsx(45,24): error TS6133: 'setConnectorEnd' is declared but its value is never read.
+src/features/canvas/components/CanvasContainer.tsx(47,26): error TS6133: 'setPreviewSection' is declared but its value is never read.
+src/features/canvas/components/CanvasContainer.tsx(51,39): error TS6133: 'resetViewport' is declared but its value is never read.
+src/features/canvas/components/CanvasContainer.tsx(128,40): error TS6133: 'e' is declared but its value is never read.
+src/features/canvas/components/CanvasContainer.tsx(142,40): error TS6133: 'e' is declared but its value is never read.
+src/features/canvas/components/CanvasContainer.tsx(186,36): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/features/canvas/components/ConnectorRenderer.tsx(5,32): error TS2307: Cannot find module '../../types/section' or its corresponding type declarations.
+src/features/canvas/components/ConnectorRenderer.tsx(6,40): error TS2307: Cannot find module '../../types/connector' or its corresponding type declarations.
+src/features/canvas/components/ConnectorRenderer.tsx(109,8): error TS2375: Type '{ fill: any; pointerLength: any; pointerWidth: any; points: any; stroke: any; strokeWidth: any; dash: any; onClick: () => void; onTap: () => void; listening: boolean; shadowColor: string | undefined; shadowBlur: number; shadowOpacity: number; ref: RefObject<...>; }' is not assignable to type 'ArrowConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/canvas/components/ConnectorRenderer.tsx(120,11): error TS2375: Type '{ points: any; stroke: any; strokeWidth: any; dash: any; onClick: () => void; onTap: () => void; listening: boolean; shadowColor: string | undefined; shadowBlur: number; shadowOpacity: number; ref: RefObject<Line<...>>; }' is not assignable to type 'LineConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/canvas/components/ImprovedTable.tsx(6,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/components/ImprovedTable.tsx(15,7): error TS6133: 'RESIZE_THROTTLE_MS' is declared but its value is never read.
+src/features/canvas/components/ImprovedTable.tsx(65,9): error TS6133: 'lastResizeTimeRef' is declared but its value is never read.
+src/features/canvas/components/ImprovedTable.tsx(159,5): error TS2532: Object is possibly 'undefined'.
+src/features/canvas/components/KonvaApp.tsx(5,26): error TS2307: Cannot find module '../../components/Toolbar/KonvaToolbar' or its corresponding type declarations.
+src/features/canvas/components/KonvaApp.tsx(8,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/components/KonvaApp.tsx(9,10): error TS2305: Module '"../hooks/canvas/useViewportControls"' has no exported member 'usePanZoom'.
+src/features/canvas/components/KonvaCanvas.tsx(7,55): error TS2307: Cannot find module '../../components/canvas/RichTextRenderer' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(8,32): error TS2307: Cannot find module '../../components/canvas/UnifiedTextElement' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(9,26): error TS2307: Cannot find module '../../components/canvas/ImageElement' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(10,31): error TS2307: Cannot find module '../../components/canvas/ConnectorRenderer' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(11,36): error TS2307: Cannot find module '../../components/canvas/RichTextCellEditor' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(12,28): error TS2307: Cannot find module '../../components/canvas/SectionElement' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(13,31): error TS2307: Cannot find module '../../components/canvas/StickyNoteElement' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(14,32): error TS2307: Cannot find module '../../components/canvas/TextEditingOverlay' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(17,32): error TS2307: Cannot find module '../../components/canvas/KonvaErrorBoundary' or its corresponding type declarations.
+src/features/canvas/components/KonvaCanvas.tsx(65,11): error TS6133: 'selectedElementIds' is declared but its value is never read.
+src/features/canvas/components/KonvaCanvas.tsx(66,11): error TS2339: Property 'currentTool' does not exist on type '{ selectedTool: string; availableTools: string[]; toolGroups: Record<string, string[]>; leftSidebarOpen: boolean; rightSidebarOpen: boolean; bottomPanelOpen: boolean; propertiesPanelOpen: boolean; ... 50 more ...; resetUIMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(66,24): error TS2339: Property 'setCurrentTool' does not exist on type '{ selectedTool: string; availableTools: string[]; toolGroups: Record<string, string[]>; leftSidebarOpen: boolean; rightSidebarOpen: boolean; bottomPanelOpen: boolean; propertiesPanelOpen: boolean; ... 50 more ...; resetUIMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(67,11): error TS2339: Property 'activeElementId' does not exist on type '{ editingTextId: string | null; isEditingText: string | null; textSelection: { elementId: string | null; start: number; end: number; direction: "none" | "forward" | "backward"; } | null; ... 18 more ...; resetTextEditingMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(67,28): error TS2339: Property 'isEditing' does not exist on type '{ editingTextId: string | null; isEditingText: string | null; textSelection: { elementId: string | null; start: number; end: number; direction: "none" | "forward" | "backward"; } | null; ... 18 more ...; resetTextEditingMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(67,28): error TS6133: 'isEditing' is declared but its value is never read.
+src/features/canvas/components/KonvaCanvas.tsx(67,39): error TS2339: Property 'startTextEditing' does not exist on type '{ editingTextId: string | null; isEditingText: string | null; textSelection: { elementId: string | null; start: number; end: number; direction: "none" | "forward" | "backward"; } | null; ... 18 more ...; resetTextEditingMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(67,57): error TS2339: Property 'stopTextEditing' does not exist on type '{ editingTextId: string | null; isEditingText: string | null; textSelection: { elementId: string | null; start: number; end: number; direction: "none" | "forward" | "backward"; } | null; ... 18 more ...; resetTextEditingMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(67,57): error TS6133: 'stopTextEditing' is declared but its value is never read.
+src/features/canvas/components/KonvaCanvas.tsx(67,74): error TS2339: Property 'updateText' does not exist on type '{ editingTextId: string | null; isEditingText: string | null; textSelection: { elementId: string | null; start: number; end: number; direction: "none" | "forward" | "backward"; } | null; ... 18 more ...; resetTextEditingMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(67,86): error TS2339: Property 'formatText' does not exist on type '{ editingTextId: string | null; isEditingText: string | null; textSelection: { elementId: string | null; start: number; end: number; direction: "none" | "forward" | "backward"; } | null; ... 18 more ...; resetTextEditingMetrics: () => void; }'.
+src/features/canvas/components/KonvaCanvas.tsx(242,27): error TS2554: Expected 0 arguments, but got 2.
+src/features/canvas/components/KonvaCanvas.tsx(245,49): error TS7006: Parameter 'childId' implicitly has an 'any' type.
+src/features/canvas/components/KonvaCanvas.tsx(382,51): error TS2538: Type 'undefined' cannot be used as an index type.
+src/features/canvas/components/KonvaCanvas.tsx(430,49): error TS2538: Type 'undefined' cannot be used as an index type.
+src/features/canvas/components/KonvaCanvas.tsx(431,46): error TS2538: Type 'undefined' cannot be used as an index type.
+src/features/canvas/components/KonvaCanvas.tsx(435,44): error TS2538: Type 'undefined' cannot be used as an index type.
+src/features/canvas/components/KonvaCanvas.tsx(436,49): error TS2538: Type 'undefined' cannot be used as an index type.
+src/features/canvas/components/KonvaCanvas.tsx(1007,23): error TS2554: Expected 0 arguments, but got 1.
+src/features/canvas/components/KonvaCanvas.tsx(1190,28): error TS2554: Expected 0 arguments, but got 2.
+src/features/canvas/components/KonvaCanvas.tsx(1231,34): error TS2554: Expected 0 arguments, but got 1.
+src/features/canvas/components/KonvaCanvas.tsx(1234,27): error TS2554: Expected 0 arguments, but got 2.
+src/features/canvas/components/KonvaCanvas.tsx(1251,32): error TS2554: Expected 0 arguments, but got 1.
+src/features/canvas/components/KonvaCanvas.tsx(1403,12): error TS2375: Type '{ width: number; height: number; fill: string; cornerRadius: number; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<NodeConfig>>) => void; ... 8 more ...; key: string; }' is not assignable to type 'RectConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'stroke' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string | CanvasGradient'.
+      Type 'undefined' is not assignable to type 'string | CanvasGradient'.
+src/features/canvas/components/KonvaCanvas.tsx(1414,12): error TS2375: Type '{ radius: number; fill: string; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<NodeConfig>>) => void; ... 8 more ...; key: string; }' is not assignable to type 'CircleConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'stroke' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string | CanvasGradient'.
+      Type 'undefined' is not assignable to type 'string | CanvasGradient'.
+src/features/canvas/components/KonvaCanvas.tsx(1478,12): error TS2375: Type '{ points: number[]; stroke: string; strokeWidth: number; lineCap: "round"; lineJoin: "round"; tension: number; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<...>>) => void; ... 6 more ...; key: string; }' is not assignable to type 'LineConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/canvas/components/KonvaCanvas.tsx(1491,12): error TS2375: Type '{ numPoints: number; innerRadius: number; outerRadius: number; fill: string; stroke: string; strokeWidth: number; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<...>>) => void; ... 6 more ...; key: string; }' is not assignable to type 'StarConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/canvas/components/KonvaCanvas.tsx(1504,12): error TS2375: Type '{ points: number[]; closed: true; fill: string; stroke: string; strokeWidth: number; id: string; x: number; y: number; draggable: boolean; onClick: (e: KonvaEventObject<MouseEvent, Node<NodeConfig>>) => void; ... 6 more ...; key: string; }' is not assignable to type 'LineConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'shadowColor' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/canvas/components/RichTextCellEditor.tsx(3,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/components/RichTextCellEditor.tsx(4,33): error TS2307: Cannot find module './RichTextSystem/UnifiedRichTextManager' or its corresponding type declarations.
+src/features/canvas/components/RichTextCellEditor.tsx(5,53): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/features/canvas/components/RichTextCellEditor.tsx(6,33): error TS2307: Cannot find module './FloatingTextToolbar' or its corresponding type declarations.
+src/features/canvas/components/RichTextCellEditor.tsx(7,43): error TS2307: Cannot find module './ContentEditableRichTextEditor' or its corresponding type declarations.
+src/features/canvas/components/UnifiedTextEditor.tsx(4,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/components/UnifiedTextEditor.tsx(57,13): error TS7030: Not all code paths return a value.
+src/features/canvas/components/UnifiedTextEditor.tsx(95,13): error TS7030: Not all code paths return a value.
+src/features/canvas/components/UnifiedTextEditor.tsx(136,13): error TS7030: Not all code paths return a value.
+src/features/canvas/hooks/canvas/useCanvasEvents.ts(39,9): error TS6133: 'setSelectedTool' is declared but its value is never read.
+src/features/canvas/hooks/canvas/useCanvasEvents.ts(42,9): error TS6133: 'updateMultipleElements' is declared but its value is never read.
+src/features/canvas/hooks/canvas/useCanvasEvents.ts(81,13): error TS6133: 'startDragWorldCoords' is declared but its value is never read.
+src/features/canvas/hooks/canvas/useCanvasEvents.ts(189,46): error TS6133: 'e' is declared but its value is never read.
+src/features/canvas/hooks/canvas/useCanvasEvents.ts(282,13): error TS7030: Not all code paths return a value.
+src/features/canvas/hooks/canvas/useCanvasHistory.ts(3,53): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/features/canvas/hooks/canvas/useCanvasHistory.ts(79,40): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/features/canvas/hooks/canvas/useCanvasHistory.ts(129,43): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/features/canvas/hooks/canvas/useCanvasHistory.ts(129,50): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/features/canvas/hooks/canvas/useSelectionManager.ts(3,30): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/features/canvas/hooks/canvas/useSelectionManager.ts(130,32): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/features/canvas/hooks/canvas/useShapeCaching.ts(12,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/hooks/canvas/useViewportControls.ts(3,23): error TS6133: 'useKonvaCanvasStore' is declared but its value is never read.
+src/features/canvas/hooks/canvas/useViewportControls.ts(3,50): error TS2307: Cannot find module '../stores/konvaCanvasStore' or its corresponding type declarations.
+src/features/canvas/hooks/canvas/useViewportControls.ts(28,55): error TS6133: 'point' is declared but its value is never read.
+src/features/canvas/hooks/useViewportCulling.ts(128,9): error TS6133: 'groupCache' is declared but its value is never read.
+src/features/canvas/hooks/useViewportCulling.ts(129,9): error TS6133: 'intersectionObserver' is declared but its value is never read.
+src/features/canvas/index.tsx(35,1): error TS2308: Module './stores' has already exported a member named 'useCanvasHistory'. Consider explicitly re-exporting to resolve the ambiguity.
+src/features/canvas/layers/BackgroundLayer.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/layers/BackgroundLayer.tsx(18,65): error TS6198: All destructured elements are unused.
+src/features/canvas/layers/CanvasLayerManager.tsx(10,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/layers/CanvasLayerManager.tsx(11,27): error TS2307: Cannot find module '../../types/konva.types' or its corresponding type declarations.
+src/features/canvas/layers/CanvasLayerManager.tsx(35,3): error TS6133: 'onElementSelect' is declared but its value is never read.
+src/features/canvas/layers/ConnectorLayer.tsx(5,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/layers/MainLayer.tsx(5,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/layers/MainLayer.tsx(7,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/layers/UILayer.tsx(5,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/CachedShape.tsx(12,33): error TS2307: Cannot find module '../../../hooks/canvas/useShapeCaching' or its corresponding type declarations.
+src/features/canvas/shapes/CachedShape.tsx(13,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/CachedShape.tsx(65,5): error TS6133: 'applyCaching' is declared but its value is never read.
+src/features/canvas/shapes/CachedShape.tsx(66,5): error TS6133: 'clearCaching' is declared but its value is never read.
+src/features/canvas/shapes/CachedTableShape.tsx(12,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/CachedTableShape.tsx(13,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/shapes/CircleShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/CircleShape.tsx(5,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(7,1): error TS6133: 'TextShape' is declared but its value is never read.
+src/features/canvas/shapes/EditableNode.tsx(8,1): error TS6133: 'ImageShape' is declared but its value is never read.
+src/features/canvas/shapes/EditableNode.tsx(9,32): error TS2307: Cannot find module '../components/UnifiedTextElement' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(10,31): error TS2307: Cannot find module '../components/StickyNoteElement' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(11,30): error TS2307: Cannot find module '../components/RichTextRenderer' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(13,28): error TS2307: Cannot find module '../components/SectionElement' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(14,26): error TS2307: Cannot find module '../components/ImageElement' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(17,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/shapes/EditableNode.tsx(127,22): error TS7006: Parameter '_' implicitly has an 'any' type.
+src/features/canvas/shapes/EditableNode.tsx(127,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/features/canvas/shapes/EditableNode.tsx(128,23): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/features/canvas/shapes/EditableNode.tsx(129,27): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/features/canvas/shapes/ImageShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/ImageShape.tsx(20,3): error TS6133: 'isSelected' is declared but its value is never read.
+src/features/canvas/shapes/ImageShape.tsx(22,3): error TS6133: 'onUpdate' is declared but its value is never read.
+src/features/canvas/shapes/MemoryOptimizedShape.tsx(14,8): error TS2307: Cannot find module '../../features/canvas/hooks/canvas/useCanvasPerformance' or its corresponding type declarations.
+src/features/canvas/shapes/RectangleShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/RectangleShape.tsx(5,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/shapes/TextShape.tsx(4,31): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/shapes/TextShape.tsx(5,30): error TS2307: Cannot find module '../../styles/designSystem' or its corresponding type declarations.
+src/features/canvas/shapes/TextShape.tsx(21,3): error TS6133: 'isSelected' is declared but its value is never read.
+src/features/canvas/shapes/TextShape.tsx(23,3): error TS6133: 'onUpdate' is declared but its value is never read.
+src/features/canvas/stores/canvasStore.ts(31,38): error TS2345: Argument of type '{ (nextStateOrUpdater: CanvasStoreState | Partial<CanvasStoreState> | ((state: WritableDraft<CanvasStoreState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasStoreState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }' is not assignable to parameter of type '{ (nextStateOrUpdater: CanvasElementsState | Partial<CanvasElementsState> | ((state: WritableDraft<CanvasElementsState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasElementsState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }'.
+  Types of parameters 'nextStateOrUpdater' and 'nextStateOrUpdater' are incompatible.
+    Type 'CanvasElementsState | ((state: WritableDraft<CanvasElementsState>) => void)' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+      Type 'CanvasElementsState' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+        Type 'CanvasElementsState' is missing the following properties from type 'CanvasStoreState': editingTextId, isEditingText, textSelection, currentTextFormat, and 153 more.
+src/features/canvas/stores/canvasStore.ts(32,35): error TS2345: Argument of type '{ (nextStateOrUpdater: CanvasStoreState | Partial<CanvasStoreState> | ((state: WritableDraft<CanvasStoreState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasStoreState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }' is not assignable to parameter of type '{ (nextStateOrUpdater: TextEditingState | Partial<TextEditingState> | ((state: WritableDraft<TextEditingState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: TextEditingState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }'.
+  Types of parameters 'nextStateOrUpdater' and 'nextStateOrUpdater' are incompatible.
+    Type 'TextEditingState | ((state: WritableDraft<TextEditingState>) => void)' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+      Type 'TextEditingState' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+        Type 'TextEditingState' is missing the following properties from type 'CanvasStoreState': elements, elementOrder, addElement, updateElement, and 148 more.
+src/features/canvas/stores/canvasStore.ts(33,33): error TS2345: Argument of type '{ (nextStateOrUpdater: CanvasStoreState | Partial<CanvasStoreState> | ((state: WritableDraft<CanvasStoreState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasStoreState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }' is not assignable to parameter of type '{ (nextStateOrUpdater: SelectionState | Partial<SelectionState> | ((state: WritableDraft<SelectionState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: SelectionState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }'.
+  Types of parameters 'nextStateOrUpdater' and 'nextStateOrUpdater' are incompatible.
+    Type 'SelectionState | ((state: WritableDraft<SelectionState>) => void)' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+      Type 'SelectionState' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+        Type 'SelectionState' is missing the following properties from type 'CanvasStoreState': elements, elementOrder, addElement, updateElement, and 146 more.
+src/features/canvas/stores/canvasStore.ts(34,32): error TS2345: Argument of type '{ (nextStateOrUpdater: CanvasStoreState | Partial<CanvasStoreState> | ((state: WritableDraft<CanvasStoreState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasStoreState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }' is not assignable to parameter of type '{ (nextStateOrUpdater: ViewportState | Partial<ViewportState> | ((state: WritableDraft<ViewportState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: ViewportState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }'.
+  Types of parameters 'nextStateOrUpdater' and 'nextStateOrUpdater' are incompatible.
+    Type 'ViewportState | ((state: WritableDraft<ViewportState>) => void)' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+      Type 'ViewportState' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+        Type 'ViewportState' is missing the following properties from type 'CanvasStoreState': elements, elementOrder, addElement, updateElement, and 145 more.
+src/features/canvas/stores/canvasStore.ts(35,32): error TS2345: Argument of type '{ (nextStateOrUpdater: CanvasStoreState | Partial<CanvasStoreState> | ((state: WritableDraft<CanvasStoreState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasStoreState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }' is not assignable to parameter of type '{ (nextStateOrUpdater: CanvasUIState | Partial<CanvasUIState> | ((state: WritableDraft<CanvasUIState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasUIState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }'.
+  Types of parameters 'nextStateOrUpdater' and 'nextStateOrUpdater' are incompatible.
+    Type 'CanvasUIState | ((state: WritableDraft<CanvasUIState>) => void)' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+      Type 'CanvasUIState' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+        Type 'CanvasUIState' is missing the following properties from type 'CanvasStoreState': elements, elementOrder, addElement, updateElement, and 113 more.
+src/features/canvas/stores/canvasStore.ts(36,37): error TS2345: Argument of type '{ (nextStateOrUpdater: CanvasStoreState | Partial<CanvasStoreState> | ((state: WritableDraft<CanvasStoreState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasStoreState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }' is not assignable to parameter of type '{ (nextStateOrUpdater: CanvasHistoryState | Partial<CanvasHistoryState> | ((state: WritableDraft<CanvasHistoryState>) => void), shouldReplace?: false | undefined): void; (nextStateOrUpdater: CanvasHistoryState | ((state: WritableDraft<...>) => void), shouldReplace: true): void; }'.
+  Types of parameters 'nextStateOrUpdater' and 'nextStateOrUpdater' are incompatible.
+    Type 'CanvasHistoryState | ((state: WritableDraft<CanvasHistoryState>) => void)' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+      Type 'CanvasHistoryState' is not assignable to type 'CanvasStoreState | ((state: WritableDraft<CanvasStoreState>) => void)'.
+        Type 'CanvasHistoryState' is missing the following properties from type 'CanvasStoreState': elements, elementOrder, addElement, updateElement, and 141 more.
+src/features/canvas/stores/canvasStore.ts(57,31): error TS2551: Property 'getElementsBySection' does not exist on type 'CanvasStoreState'. Did you mean 'getElementById'?
+src/features/canvas/stores/canvasStore.ts(58,27): error TS2551: Property 'getElementBounds' does not exist on type 'CanvasStoreState'. Did you mean 'getElementById'?
+src/features/canvas/stores/canvasStore.ts(89,25): error TS2339: Property 'lastSelectedId' does not exist on type 'CanvasStoreState'.
+src/features/canvas/stores/canvasStore.ts(90,26): error TS2339: Property 'selectionBounds' does not exist on type 'CanvasStoreState'.
+src/features/canvas/stores/canvasStore.ts(91,24): error TS2339: Property 'isMultiSelect' does not exist on type 'CanvasStoreState'.
+src/features/canvas/stores/canvasStore.ts(97,20): error TS2339: Property 'selectAll' does not exist on type 'CanvasStoreState'.
+src/features/canvas/stores/canvasStore.ts(98,30): error TS2551: Property 'getSelectedElements' does not exist on type 'CanvasStoreState'. Did you mean 'getSelectedElementIds'?
+src/features/canvas/stores/canvasStore.ts(99,32): error TS2339: Property 'updateSelectionBounds' does not exist on type 'CanvasStoreState'.
+src/features/canvas/stores/canvasStore.ts(111,20): error TS2551: Property 'resetZoom' does not exist on type 'CanvasStoreState'. Did you mean 'setZoom'?
+src/features/canvas/stores/canvasStore.ts(113,24): error TS2339: Property 'zoomToElement' does not exist on type 'CanvasStoreState'.
+src/features/canvas/stores/canvasStore.ts(114,23): error TS2339: Property 'panToElement' does not exist on type 'CanvasStoreState'.
+src/features/canvas/stores/index.ts(11,1): error TS2308: Module './canvasStore' has already exported a member named 'useCanvasElements'. Consider explicitly re-exporting to resolve the ambiguity.
+src/features/canvas/stores/konvaCanvasStore.ts(4,1): error TS6192: All imports in import declaration are unused.
+src/features/canvas/stores/konvaCanvasStore.ts(7,10): error TS6133: 'TableCellData' is declared but its value is never read.
+src/features/canvas/stores/konvaCanvasStore.ts(7,25): error TS6133: 'TableRowData' is declared but its value is never read.
+src/features/canvas/stores/konvaCanvasStore.ts(7,39): error TS6133: 'TableColumnData' is declared but its value is never read.
+src/features/canvas/stores/konvaCanvasStore.ts(7,56): error TS6133: 'TableDataModel' is declared but its value is never read.
+src/features/canvas/stores/slices/canvasHistoryStore.ts(9,17): error TS6133: 'applyPatches' is declared but its value is never read.
+src/features/canvas/stores/slices/selectionStore.old.ts(143,34): error TS2339: Property 'delete' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(154,119): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(159,49): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(184,36): error TS2339: Property 'clear' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(188,36): error TS2339: Property 'add' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(199,97): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(204,49): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(213,37): error TS2339: Property 'has' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(221,37): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(225,37): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(237,54): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(241,34): error TS2339: Property 'clear' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(262,34): error TS2339: Property 'clear' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(264,36): error TS2339: Property 'add' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(275,92): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(295,33): error TS2339: Property 'has' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(300,9): error TS2740: Type 'Set<string>' is missing the following properties from type 'string[]': length, pop, push, concat, and 24 more.
+src/features/canvas/stores/slices/selectionStore.old.ts(309,89): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(312,66): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(447,9): error TS2740: Type 'Set<string>' is missing the following properties from type 'string[]': length, pop, push, concat, and 24 more.
+src/features/canvas/stores/slices/selectionStore.old.ts(459,45): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/stores/slices/selectionStore.old.ts(459,77): error TS2339: Property 'size' does not exist on type 'string[]'.
+src/features/canvas/types.ts(83,11): error TS2304: Cannot find name 'BoundingBox'.
+src/features/canvas/utils/canvas/CacheManager.ts(8,50): error TS2307: Cannot find module '../performance' or its corresponding type declarations.
+src/features/canvas/utils/canvas/CacheManager.ts(9,36): error TS2307: Cannot find module '../performance/MemoryUsageMonitor' or its corresponding type declarations.
+src/features/canvas/utils/canvas/CacheManager.ts(10,36): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/utils/canvas/EventOptimizer.ts(8,50): error TS2307: Cannot find module '../performance' or its corresponding type declarations.
+src/features/canvas/utils/canvas/EventOptimizer.ts(342,29): error TS6133: 'event' is declared but its value is never read.
+src/features/canvas/utils/canvas/EventOptimizer.ts(466,28): error TS6133: 'event' is declared but its value is never read.
+src/features/canvas/utils/canvas/RenderOptimizer.ts(8,50): error TS2307: Cannot find module '../performance' or its corresponding type declarations.
+src/features/canvas/utils/canvas/RenderOptimizer.ts(9,36): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/utils/coordinateService.ts(16,32): error TS2307: Cannot find module '../../types/section' or its corresponding type declarations.
+src/features/canvas/utils/coordinateService.ts(17,42): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/features/canvas/utils/events/delegation.ts(10,1): error TS6133: 'KonvaNode' is declared but its value is never read.
+src/features/canvas/utils/events/delegation.ts(10,27): error TS2307: Cannot find module '../../types/konva.types' or its corresponding type declarations.
+src/features/canvas/utils/viewport/viewportCuller.ts(1,27): error TS2307: Cannot find module '../../types/konva.types' or its corresponding type declarations.
+src/hooks/useViewportCulling.ts(128,9): error TS6133: 'groupCache' is declared but its value is never read.
+src/hooks/useViewportCulling.ts(129,9): error TS6133: 'intersectionObserver' is declared but its value is never read.
+src/hooks/useWidgetData.ts(74,13): error TS7030: Not all code paths return a value.
+src/lib/canvas-layers.ts(97,39): error TS18048: 'layerToDelete' is possibly 'undefined'.
+src/lib/canvas-layers.ts(191,5): error TS2322: Type '(CanvasElement | undefined)[]' is not assignable to type 'CanvasElement[]'.
+  Type 'CanvasElement | undefined' is not assignable to type 'CanvasElement'.
+    Type 'undefined' is not assignable to type 'CanvasElement'.
+src/lib/ConnectionManager.ts(106,83): error TS6133: 'handle' is declared but its value is never read.
+src/lib/ConnectionManager.ts(129,44): error TS6133: 'e' is declared but its value is never read.
+src/lib/ConnectionManager.ts(134,42): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/lib/ConnectionManager.ts(134,53): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/lib/ConnectionManager.ts(179,58): error TS6133: 'e' is declared but its value is never read.
+src/lib/snappingUtils.ts(115,42): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/lib/snappingUtils.ts(124,40): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/lib/theme-utils.ts(12,17): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/theme-utils.ts(13,17): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/theme-utils.ts(14,17): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/types.ts(31,8): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/lib/types.ts(37,8): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/models/tableDataModel.ts(17,53): error TS2307: Cannot find module '../../types/richText' or its corresponding type declarations.
+src/models/tableDataModel.ts(18,33): error TS2307: Cannot find module '../features/canvas/components/RichTextSystem/UnifiedRichTextManager' or its corresponding type declarations.
+src/pages/Agents.tsx(97,20): error TS2379: Argument of type '{ title: string; primaryAction: { label: string; onClick: () => void; icon: JSX.Element; }; secondaryActions: undefined; breadcrumb: undefined; viewSwitcher: undefined; }' is not assignable to parameter of type 'HeaderProps' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'breadcrumb' are incompatible.
+    Type 'undefined' is not assignable to type 'BreadcrumbItem[]'.
+src/pages/Notes.tsx(180,24): error TS2532: Object is possibly 'undefined'.
+src/pages/Notes.tsx(420,21): error TS2532: Object is possibly 'undefined'.
+src/pages/Notes.tsx(570,40): error TS2345: Argument of type 'Block | undefined' is not assignable to parameter of type 'Block'.
+  Type 'undefined' is not assignable to type 'Block'.
+src/pages/Notes.tsx(589,35): error TS2532: Object is possibly 'undefined'.
+src/pages/Notes.tsx(591,21): error TS2532: Object is possibly 'undefined'.
+src/pages/Projects.tsx(238,74): error TS2345: Argument of type 'Project | undefined' is not assignable to parameter of type 'Project | (() => Project | null) | null'.
+  Type 'undefined' is not assignable to type 'Project | (() => Project | null) | null'.
+src/pages/Projects.tsx(264,13): error TS7030: Not all code paths return a value.
+src/stores/slices/viewportStore.ts(9,50): error TS2307: Cannot find module '../utils/performance' or its corresponding type declarations.
+src/tests/canvas-sections-advanced-tests.ts(7,50): error TS2307: Cannot find module '../../types/section' or its corresponding type declarations.
+src/tests/canvas-sections-advanced-tests.ts(85,15): error TS6133: 'newSection' is declared but its value is never read.
+src/tests/canvas-sections-advanced-tests.ts(90,18): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(91,19): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(92,18): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(93,28): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(94,24): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(105,9): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(129,39): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(130,39): error TS18046: 'template' is of type 'unknown'.
+src/tests/canvas-sections-advanced-tests.ts(199,13): error TS6133: 'element1' is declared but its value is never read.
+src/tests/canvas-sections-advanced-tests.ts(210,13): error TS6133: 'element2' is declared but its value is never read.
+src/tests/canvas-sections-advanced-tests.ts(301,13): error TS6133: 'element' is declared but its value is never read.
+src/tests/canvas-sections-advanced-tests.ts(421,13): error TS6133: 'elements' is declared but its value is never read.
+src/tests/canvas-sections-advanced-tests.ts(462,13): error TS6133: 'elementsAsFree' is declared but its value is never read.
+src/tests/canvas-sections-validation.ts(10,32): error TS2307: Cannot find module '../../types/section' or its corresponding type declarations.
+src/tests/canvas-sections-validation.ts(12,29): error TS2307: Cannot find module './types' or its corresponding type declarations.
+src/tests/canvas-sections-validation.ts(149,59): error TS2345: Argument of type 'CanvasElement | undefined' is not assignable to parameter of type 'CanvasElement'.
+  Type 'undefined' is not assignable to type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(151,25): error TS18048: 'freeElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(152,25): error TS18048: 'freeElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(154,53): error TS18048: 'freeElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(154,71): error TS18048: 'freeElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(164,35): error TS18048: 'freeElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(164,53): error TS18048: 'freeElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(196,59): error TS2345: Argument of type 'CanvasElement | undefined' is not assignable to parameter of type 'CanvasElement'.
+  Type 'undefined' is not assignable to type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(198,37): error TS18048: 'sectionedElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(199,37): error TS18048: 'sectionedElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(202,54): error TS18048: 'sectionedElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(202,77): error TS18048: 'sectionedElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(213,48): error TS18048: 'sectionedElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(213,71): error TS18048: 'sectionedElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(258,9): error TS2379: Argument of type '{ x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 44 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 44 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(304,60): error TS2379: Argument of type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 46 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; x?: number; ... 45 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(321,56): error TS2379: Argument of type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 46 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; x?: number; ... 45 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(396,11): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/tests/canvas-sections-validation.ts(396,29): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/tests/canvas-sections-validation.ts(410,56): error TS2379: Argument of type '{ sectionId: any; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ sectionId: any; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(414,59): error TS18048: 'freeElement.x' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(415,59): error TS18048: 'freeElement.y' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(451,13): error TS6133: 'section' is declared but its value is never read.
+src/tests/canvas-sections-validation.ts(454,60): error TS2379: Argument of type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 46 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; x?: number; ... 45 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(469,56): error TS2379: Argument of type '{ sectionId: null; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ sectionId: null; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(514,56): error TS2379: Argument of type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 46 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; x?: number; ... 45 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(532,56): error TS2379: Argument of type '{ sectionId: any; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ sectionId: any; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(576,60): error TS2379: Argument of type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 46 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; x?: number; ... 45 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(582,61): error TS2379: Argument of type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 46 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; x?: number; ... 45 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(594,57): error TS2379: Argument of type '{ sectionId: null; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ sectionId: null; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(607,55): error TS2379: Argument of type '{ sectionId: any; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' is not assignable to parameter of type 'CanvasElement' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Property 'id' is optional in type '{ sectionId: any; x: number; y: number; id?: string; type?: "text" | "rectangle" | "circle" | "line" | "arrow" | "pen" | "triangle" | "star" | "sticky-note" | "rich-text" | "image" | "connector" | "section" | "table"; ... 43 more ...; enhancedTableData?: EnhancedTableData; }' but required in type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(679,60): error TS2345: Argument of type 'CanvasElement | undefined' is not assignable to parameter of type 'CanvasElement'.
+  Type 'undefined' is not assignable to type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(681,63): error TS18048: 'textElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(681,81): error TS18048: 'textElement' is possibly 'undefined'.
+src/tests/canvas-sections-validation.ts(792,13): error TS6133: 'section' is declared but its value is never read.
+src/tests/canvas-sections-validation.ts(799,62): error TS2345: Argument of type 'CanvasElement | undefined' is not assignable to parameter of type 'CanvasElement'.
+  Type 'undefined' is not assignable to type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(855,60): error TS2345: Argument of type 'CanvasElement | undefined' is not assignable to parameter of type 'CanvasElement'.
+  Type 'undefined' is not assignable to type 'CanvasElement'.
+src/tests/canvas-sections-validation.ts(860,56): error TS2345: Argument of type 'CanvasElement | undefined' is not assignable to parameter of type 'CanvasElement'.
+  Type 'undefined' is not assignable to type 'CanvasElement'.
+src/tests/run-canvas-sections-tests.ts(212,38): error TS6133: 'issue' is declared but its value is never read.
+src/tests/run-canvas-sections-tests.ts(212,45): error TS6133: 'index' is declared but its value is never read.
+src/tests/run-canvas-sections-tests.ts(221,39): error TS6133: 'recommendation' is declared but its value is never read.
+src/tests/run-canvas-sections-tests.ts(221,55): error TS6133: 'index' is declared but its value is never read.
+src/tests/run-canvas-sections-tests.ts(237,11): error TS6133: 'compatibilityFactors' is declared but its value is never read.

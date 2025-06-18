@@ -3,7 +3,7 @@
  * Provides z-ordering, grouping, and layer-based operations
  */
 
-import { CanvasElement } from '@/stores/konvaCanvasStore';
+import { CanvasElement } from '../features/canvas/stores/konvaCanvasStore';
 
 export interface Layer {
   id: string;

@@ -6,7 +6,7 @@ export interface ConnectorEndpoint {
   // Optional: connection to another element
   connectedElementId?: string;
   // Optional: anchor point on the connected element (e.g., 'top', 'bottom', 'left', 'right', 'center')
-  anchorPoint?: 'top' | 'bottom' | 'left' | 'right' | 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  anchorPoint?: 'top' | 'bottom' | 'left' | 'right' | 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | undefined;
 }
 
 export interface ConnectorStyle {

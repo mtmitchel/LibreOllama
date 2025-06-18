@@ -6,10 +6,10 @@
  * including coordinate system, element-section interactions, text editing, and advanced features.
  */
 
-import { CanvasElement } from '../stores/konvaCanvasStore';
-import { SectionElement } from '../types/section';
+import { CanvasElement } from '../features/canvas/stores/konvaCanvasStore';
+import { SectionElement } from '../../types/section';
 import { CoordinateService } from '../utils/coordinateService';
-import { Coordinates } from '../types';
+import { Coordinates } from '../layers/types';
 
 // Test data structures
 interface TestResult {

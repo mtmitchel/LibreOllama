@@ -15,7 +15,7 @@
  */
 
 import { RichTextSegment, StandardTextFormat } from '../types/richText';
-import { richTextManager } from '../components/canvas/RichTextSystem/UnifiedRichTextManager';
+import { richTextManager } from '../features/canvas/components/RichTextSystem/UnifiedRichTextManager';
 
 /**
  * Enhanced TableCell interface with standardized rich text segments support
