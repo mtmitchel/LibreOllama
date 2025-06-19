@@ -12,7 +12,7 @@
  * as the Group transform automatically positions child elements correctly.
  */
 
-import { CanvasElement } from '../features/canvas/stores/konvaCanvasStore';
+import { CanvasElement } from '../features/canvas/stores/types';
 import { SectionElement } from '../types/section';
 import { Coordinates, BoundingBox } from '../types/index';
 

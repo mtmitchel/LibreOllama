@@ -49,7 +49,7 @@ Migration from monolithic `konvaCanvasStore.ts` (1866 lines) to modular slices.
 4. **Legacy Code Removal**: Cleaned up stage registration and unused functions
 
 ## Next Phase: Legacy Store Cleanup
-- [ ] Remove `konvaCanvasStore.ts` once final validation complete
+- [x] Remove `konvaCanvasStore.ts` once final validation complete ✅ **COMPLETED**
 - [ ] Update remaining type imports 
 - [ ] Performance optimization (Phase 3)
 - Better performance (granular subscriptions)

@@ -44,7 +44,8 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
         {connectorElements.map(element => {
           const isSelected = selectedElementIds.includes(element.id);
           
-          return (            <ConnectorRenderer
+          return (
+            <ConnectorRenderer
               key={element.id}
               element={element}
               isSelected={isSelected}
@@ -78,11 +79,9 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
                 stroke="#3B82F6"
                 strokeWidth={2}
                 opacity={0.7}
-                dash={[5, 5]}
-                listening={false}
+                dash={[5, 5]}                listening={false}
               />
             )}
-            
             {/* Snap indicators */}
             {connectorStart.elementId && (
               <Circle

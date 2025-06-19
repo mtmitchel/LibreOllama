@@ -1,7 +1,7 @@
 import { useMemo, useRef, useCallback } from 'react';
 import { PanZoom, Size, ViewportBounds } from '../types';
 // Import CanvasElement from the correct store location
-import type { CanvasElement } from '../stores/konvaCanvasStore';
+import type { CanvasElement } from '../types';
 import { PerformanceMonitor, recordMetric } from '../../../utils/performance';
 
 export interface UseViewportCullingProps {

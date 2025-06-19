@@ -1,6 +1,6 @@
 // src/hooks/canvas/useCanvasHistory.ts
 import { useCallback } from 'react';
-import { useCanvasHistory as useHistoryStore } from '../stores/konvaCanvasStore';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
 
 /**
  * useCanvasHistory - Undo/redo operations from history store
@@ -9,18 +9,16 @@ import { useCanvasHistory as useHistoryStore } from '../stores/konvaCanvasStore'
  * - Handles history grouping and performance tracking
  */
 export const useCanvasHistory = () => {
-  const {
-    history,
-    currentIndex,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-    addHistoryEntry,
-    clearHistory,
-    getHistoryLength
-  } = useHistoryStore();
-
+  // Use unified store selectors for history functionality
+  const history = useCanvasStore((state) => state.history);
+  const currentIndex = useCanvasStore((state) => state.currentIndex);
+  const canUndo = useCanvasStore((state) => state.canUndo);
+  const canRedo = useCanvasStore((state) => state.canRedo);
+  const undo = useCanvasStore((state) => state.undo);
+  const redo = useCanvasStore((state) => state.redo);
+  const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
+  const clearHistory = useCanvasStore((state) => state.clearHistory);
+  const getHistoryLength = useCanvasStore((state) => state.getHistoryLength);
   // Perform undo operation
   const performUndo = useCallback(() => {
     if (canUndo()) {
@@ -138,7 +136,6 @@ export const useCanvasHistory = () => {
       averageEntrySize: history.length > 0 ? Math.round(estimatedSize / history.length) : 0
     };
   }, [history]);
-
   return {
     // State
     history,

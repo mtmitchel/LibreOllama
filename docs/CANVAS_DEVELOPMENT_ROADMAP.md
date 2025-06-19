@@ -7,9 +7,15 @@
 
 ## 📋 Executive Summary
 
-**MAJOR PROGRESS UPDATE (June 19, 2025)**: Completed Phase 2C.1 of the Singleton Transformer Pattern implementation, Phase 2C.2 Connector and Section Enhancement, and Phase 2C.3 UX Improvements including automatic tool switching. Successfully fixed connector rendering, improved section containment logic, and enhanced user experience with automatic tool transitions.
+**MAJOR PROGRESS UPDATE (June 19, 2025)**: Completed Phase 2C.1 of the Singleton Transformer Pattern implementation, Phase 2C.2 Connector and Section Enhancement, Phase 2C.3 UX Improvements including automatic tool switching, and Phase 2B.5 Dynamic Connection System. Successfully implemented dynamic connections that move with their connected elements, enhanced connector rendering with performance optimization, and improved section containment logic.
 
 **Recent Achievements**:
+- ✅ **Phase 2B.5 COMPLETED**: Dynamic Connection System Implementation
+- ✅ **Dynamic Connection Movement**: Connections now automatically move with their connected elements
+- ✅ **Connection Anchor Point Updates**: Real-time recalculation of connection endpoints when elements are repositioned
+- ✅ **Enhanced ConnectorRenderer**: Improved performance with memoization and better error handling
+- ✅ **Section-Aware Connections**: Connections properly handle elements within sections with coordinate conversion
+- ✅ **Connection Validation**: Graceful handling of deleted connected elements with automatic cleanup
 - ✅ **Phase 2B.4 COMPLETED**: Section and Connector Bug Fixes successfully implemented
 - ✅ **Section Element Repositioning Fixed**: Elements can now be properly repositioned within sections
 - ✅ **Section Content Resizing Fixed**: Eliminated race conditions between section dimension updates and child scaling
@@ -37,7 +43,7 @@
 - ✅ **React-Konva Portal Integration**: Resolved reconciler conflicts with proper DOM portal separation
 - ✅ **Store Migration Complete**: Fully migrated from legacy konvaCanvasStore to modular Zustand store
 
-**Remaining Integration Gaps**: With table and text editing systems complete, singleton transformer architecture implemented, connector/section issues resolved, and connector snapping implemented, the primary remaining integration issues are advanced section templates, image upload edge cases, and any remaining drawing tool integrations.
+**Remaining Integration Gaps**: With table and text editing systems complete, singleton transformer architecture implemented, connector/section issues resolved, connector snapping implemented, and dynamic connection movement completed, the primary remaining integration issues are advanced section templates, image upload edge cases, and any remaining drawing tool integrations.
 
 **Strategic Approach**: Continue with **"Make it work, then make it fast"** - complete remaining feature integration, then stabilize the codebase, and only then optimize performance. The successful completion of table and text editing demonstrates this approach is highly effective.
 
@@ -241,6 +247,24 @@
 - Comprehensive logging system for debugging containment operations
 - Enhanced section visual styling with subtle background color and border
 
+**Dynamic Connection System** ✅ (100% Complete - June 19, 2025)
+- ✅ **COMPLETED**: Connections automatically move with their connected elements when repositioned
+- ✅ **COMPLETED**: Real-time anchor point recalculation for dynamic element positioning
+- ✅ **COMPLETED**: Enhanced ConnectorRenderer with memoization for performance optimization
+- ✅ **COMPLETED**: Section-aware coordinate conversion for connections in grouped elements
+- ✅ **COMPLETED**: Connection validation with graceful handling of deleted connected elements
+- ✅ **COMPLETED**: Improved connection tracking with simplified store management
+- ✅ **COMPLETED**: FigJam-style dynamic connection experience for professional diagramming
+
+**Technical Achievements (Dynamic Connections)**:
+- Enhanced ConnectorRenderer component with useMemo optimization for endpoint calculations
+- Implemented getElementAnchorPoint helper function with section coordinate support
+- Added connection validation to handle deleted elements without breaking connections
+- Updated MainLayer and ConnectorLayer to pass onUpdate functionality to connectors
+- Added getConnectorsByElement method for efficient connection lookup
+- Integrated proper error handling and logging for connection operations
+- Optimized re-rendering through memoization and dependency tracking
+
 #### ❌ Missing or Broken Features
 
 **Drawing Tool (Pen)** (20% Complete)
@@ -254,10 +278,16 @@
 - ❌ **CRITICAL**: Not integrated with SimpleTextEditor
 - ❌ Floating toolbar positioning fixed but not in use
 
-**Connectors** (30% Complete)
-- ✅ ConnectorLayer exists
-- ❌ **CRITICAL**: Drawing state for connectors not properly managed
-- ❌ Arrow/line types defined but creation broken
+**Connectors** ✅ (95% Complete)
+- ✅ ConnectorLayer exists and renders properly
+- ✅ **NEW - COMPLETED**: Dynamic connection movement - connections follow their connected elements
+- ✅ **NEW - COMPLETED**: Real-time anchor point calculation for element positioning
+- ✅ **NEW - COMPLETED**: Enhanced ConnectorRenderer with performance optimization
+- ✅ **NEW - COMPLETED**: Section-aware coordinate handling for connections
+- ✅ **NEW - COMPLETED**: Connection validation and cleanup for deleted elements
+- ✅ **NEW - COMPLETED**: Drawing state for connectors properly managed with snapping
+- ✅ Arrow/line types defined and creation working with snap-to-element functionality
+- ❌ Advanced connector routing algorithms (orthogonal/curved paths)
 
 **Image Uploads** (10% Complete)
 - ✅ ImageShape component exists

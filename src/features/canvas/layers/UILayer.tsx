@@ -54,7 +54,7 @@ export const UILayer: React.FC<UILayerProps> = ({
 
     if (selectedElementIds.length > 0) {
       const selectedNodes: Konva.Node[] = [];
-      
+
       selectedElementIds.forEach(elementId => {
         const node = stageRef.current?.findOne(`#${elementId}`);
         if (node) {
@@ -72,10 +72,10 @@ export const UILayer: React.FC<UILayerProps> = ({
   // Determine transformer configuration based on selected elements
   const getTransformerConfig = React.useCallback(() => {
     if (selectedElementIds.length === 0) return { enabledAnchors: [] };
-    
+
     const firstSelectedId = selectedElementIds[0];
     if (!firstSelectedId) return { enabledAnchors: [] };
-    
+
     const selectedElement = elements[firstSelectedId] || sections[firstSelectedId];
     if (!selectedElement) return { enabledAnchors: [] };    switch (selectedElement.type) {
       case 'text':
@@ -118,7 +118,7 @@ export const UILayer: React.FC<UILayerProps> = ({
 
     const transformer = transformerRef.current;
     if (!transformer) return;
-    
+
     const nodes = transformer.nodes();
 
     nodes.forEach((node) => {
@@ -152,11 +152,12 @@ export const UILayer: React.FC<UILayerProps> = ({
         case 'rectangle':
           updates.width = Math.max(5, (element.width || 100) * scaleX);
           updates.height = Math.max(5, (element.height || 100) * scaleY);
-          break;        case 'circle':
+          break;
+        case 'circle':
           // For circles, use the larger scale to maintain aspect ratio
           const newRadius = Math.max(5, (element.radius || 50) * Math.max(scaleX, scaleY));
           updates.radius = newRadius;
-          
+
           // Handle circle positioning: store coordinates are top-left corner based
           // but during transform, Konva treats circle x,y as center
           // Convert from center position back to top-left corner
@@ -181,7 +182,7 @@ export const UILayer: React.FC<UILayerProps> = ({
           if (element.innerRadius) {
             updates.innerRadius = element.innerRadius * Math.max(scaleX, scaleY);
           }
-          
+
           // Handle star positioning: store coordinates are top-left corner based
           // but during transform, Konva treats star x,y as center
           // Convert from center position back to top-left corner
@@ -265,7 +266,7 @@ export const UILayer: React.FC<UILayerProps> = ({
         }}
         onTransformEnd={handleTransformEnd}
       />
-      
+
       {/* Section preview during drawing */}
       {isDrawingSection && previewSection && (
         <Rect

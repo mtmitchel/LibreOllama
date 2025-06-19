@@ -1,6 +1,6 @@
 // src/hooks/canvas/useSelectionManager.ts
 import { useCallback } from 'react';
-import { useSelection } from '../stores/konvaCanvasStore';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
 
 /**
  * useSelectionManager - Selection logic from selection store
@@ -9,19 +9,18 @@ import { useSelection } from '../stores/konvaCanvasStore';
  * - Handles multi-selection and selection rectangle logic
  */
 export const useSelectionManager = () => {
-  const {
-    selectedElementIds,
-    lastSelectedElementId,
-    selectionRectangle,
-    selectElement,
-    deselectElement,
-    toggleElementSelection,
-    selectMultipleElements,
-    clearSelection,
-    isElementSelected,
-    getSelectedElementIds,
-    hasSelection
-  } = useSelection();
+  // Get selection state and actions from unified store
+  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
+  const lastSelectedElementId = useCanvasStore((state) => state.lastSelectedElementId);
+  const selectionRectangle = useCanvasStore((state) => state.selectionRectangle);
+  const selectElement = useCanvasStore((state) => state.selectElement);
+  const deselectElement = useCanvasStore((state) => state.deselectElement);
+  const toggleElementSelection = useCanvasStore((state) => state.toggleElementSelection);
+  const selectMultipleElements = useCanvasStore((state) => state.selectMultipleElements);
+  const clearSelection = useCanvasStore((state) => state.clearSelection);
+  const isElementSelected = useCanvasStore((state) => state.isElementSelected);
+  const getSelectedElementIds = useCanvasStore((state) => state.getSelectedElementIds);
+  const hasSelection = useCanvasStore((state) => state.hasSelection);
 
   // Select a single element, optionally adding to current selection
   const selectSingle = useCallback((elementId: string, addToSelection: boolean = false) => {
@@ -127,7 +126,7 @@ export const useSelectionManager = () => {
     let maxX = -Infinity;
     let maxY = -Infinity;
 
-    selectedElementIds.forEach(id => {
+    selectedElementIds.forEach((id: string) => {
       const pos = elementPositions[id];
       if (pos) {
         minX = Math.min(minX, pos.x);

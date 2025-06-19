@@ -28,7 +28,9 @@ interface MainLayerProps {
   selectedElementIds: string[];
   selectedTool: string;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
+  onElementDragStart?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
   onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
+  onElementDragMove?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
   onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
   onStartTextEdit: (elementId: string) => void;
   onSectionResize?: (sectionId: string, newWidth: number, newHeight: number) => void;
@@ -51,7 +53,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   selectedElementIds,
   selectedTool,
   onElementClick,
+  onElementDragStart,
   onElementDragEnd,
+  onElementDragMove,
   onElementUpdate,
   onStartTextEdit,
   onSectionResize,
@@ -86,12 +90,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       // Calculate element bounds
       const elementWidth = element.width || 0;
       const elementHeight = element.height || 0;
-      
+
       // For elements in sections, the pos comes as absolute coordinates
       // but we need to constrain relative to the section
       const relativeX = pos.x - section.x;
       const relativeY = pos.y - section.y - (section.titleBarHeight || 32);
-      
+
       // Constrain to section boundaries with some padding
       const padding = 5;
       const minX = padding;
@@ -144,20 +148,22 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       listening: true,
       name: name || 'main-layer' // Ensure name is always a string
     }, true), [name]
-  );
-
-  // Render individual elements with comprehensive type handling
+  );  // Render individual elements with comprehensive type handling
   const renderElement = useCallback((element: CanvasElement) => {
     const isSelected = selectedElementIds.includes(element.id);
-    const isEditing = false; // This will be handled by text editing overlay    // Elements should be draggable when select tool is active or when the element is selected
+    const isEditing = false; // This will be handled by text editing overlay
+
+    // Elements should be draggable when select tool is active or when the element is selected
     const isDraggable = !isEditing &&
       selectedTool === 'select' && // Only draggable in select mode for better UX
       !(element as any).isLocked &&
-      !(element.sectionId && selectedElementIds.includes(element.sectionId));// Calculate rendering position based on section membership
+      !(element.sectionId && selectedElementIds.includes(element.sectionId));
+
+    // Calculate rendering position based on section membership
     const section = element.sectionId ? sections[element.sectionId] : null;
     const renderX = section ? section.x + element.x : element.x;
     const renderY = section ? section.y + element.y : element.y;
-    
+
     // Common props for Konva shapes
     const konvaElementProps = {
       id: element.id,
@@ -175,29 +181,30 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       shadowOpacity: isSelected ? 0.7 : 0,
       perfectDrawEnabled: false,
     };
-    
+
     // For basic shapes (rectangle, circle), use EditableNode wrapper pattern
     if (['rectangle', 'circle'].includes(element.type)) {
-      console.log('🔧 [MAIN LAYER] Rendering EditableNode for:', element.type, element.id);
       return (
         <KonvaErrorBoundary key={`${element.id}-editable-boundary`}>
           <EditableNode
-            key={element.id}            element={element}
+            key={element.id}
+            element={element}
             isSelected={isSelected}
             selectedTool={selectedTool}
             onElementClick={onElementClick}
             onElementDragEnd={onElementDragEnd}
             onElementUpdate={onElementUpdate}
             onStartTextEdit={onStartTextEdit}
+            {...(onElementDragStart && { onElementDragStart })}
+            {...(onElementDragMove && { onElementDragMove })}
           />
         </KonvaErrorBoundary>
       );
     }
-    
+
     // For complex shapes, use existing individual shape components
     switch (element.type) {
-      case 'text':        console.log('🔧 [MAIN LAYER] Rendering TextShape for:', element.id);
-        return (
+      case 'text':        return (
           <KonvaErrorBoundary key={`${element.id}-text-boundary`}>
             <TextShape
               key={element.id}
@@ -208,17 +215,15 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             />
           </KonvaErrorBoundary>
         );
-      
-      case 'sticky-note':        console.log('🔧 [MAIN LAYER] Rendering StickyNoteShape for:', element.id);
-        return (
+
+      case 'sticky-note':        return (
           <KonvaErrorBoundary key={`${element.id}-sticky-boundary`}>
             <StickyNoteShape
               key={element.id}
               element={element}
               konvaProps={konvaElementProps}
               onUpdate={onElementUpdate}
-              stageRef={stageRef}
-            />
+              stageRef={stageRef}            />
           </KonvaErrorBoundary>
         );case 'rich-text':
         return (
@@ -230,16 +235,17 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             stageRef={stageRef}
           />
         );
-      
+
       case 'pen':
-        console.log('🖊️ [MAIN LAYER] Rendering pen element:', element.id, 'points:', element.points);        return (
+        console.log('🖊️ [MAIN LAYER] Rendering pen element:', element.id, 'points:', element.points);
+        return (
           <PenShape
             key={element.id}
             element={element}
             konvaProps={konvaElementProps}
           />
         );
-      
+
       case 'star':
         return (
           <StarShape
@@ -248,7 +254,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             konvaProps={konvaElementProps}
           />
         );
-      
+
       case 'triangle':
         return (
           <TriangleShape
@@ -257,17 +263,16 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             konvaProps={konvaElementProps}
           />
         );
-      case 'image':        return (
+      case 'image':
+        return (
           <ImageShape
             key={element.id}
             element={element}
-            konvaProps={konvaElementProps}
-          />
+            konvaProps={konvaElementProps}          />
         );        case 'connector':
-        console.log('🔧 [MAIN LAYER] Rendering connector element:', element.id);
         // Create a proper elements map for ConnectorRenderer
         const elementsMap = elements.reduce((acc, el) => ({ ...acc, [el.id]: el }), {});
-        
+
         return (
           <KonvaErrorBoundary key={`${element.id}-connector-boundary`}>
             <ConnectorRenderer
@@ -293,21 +298,21 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             // Get the new section position
             const newSectionX = e.target.x();
             const newSectionY = e.target.y();
-            
+
             // Update section position
             onElementUpdate(element.id, {
               x: newSectionX,
               y: newSectionY
             });
-            
+
             // Note: Child elements maintain their relative positions automatically
             // since they're positioned relative to the section in renderX/renderY calculation
-            
+
             // Call original drag end handler for any additional processing
             onElementDragEnd(e, element.id);
           }
         };
-        
+
         return (
           <SectionShape
             key={element.id}
@@ -320,33 +325,33 @@ export const MainLayer: React.FC<MainLayerProps> = ({
           >
             {sectionChildren.map(childElement => {
               const childIsSelected = selectedElementIds.includes(childElement.id);
-              
+
               // Create specialized event handlers for child elements
               const handleChildClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
                 e.cancelBubble = true; // Prevent section selection
                 onElementClick(e, childElement);
               };              const handleChildDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
                 e.cancelBubble = true; // Prevent section drag
-                
+
                 // Get the new position from Konva (absolute coordinates since elements are positioned absolutely in render)
                 const newAbsoluteX = e.target.x();
                 const newAbsoluteY = e.target.y();
-                
+
                 // Convert to section-relative coordinates
                 const section = sections[element.id];
                 if (section) {
                   // Convert from absolute position back to relative coordinates for storage
                   const relativeX = newAbsoluteX - section.x;
                   const relativeY = newAbsoluteY - section.y - (section.titleBarHeight || 32);
-                  
+
                   // Ensure coordinates are within section bounds with some padding
                   const padding = 5;
                   const maxX = section.width - (childElement.width || 50) - padding;
                   const maxY = section.height - (section.titleBarHeight || 32) - (childElement.height || 30) - padding;
-                  
+
                   const constrainedX = Math.max(padding, Math.min(maxX, relativeX));
                   const constrainedY = Math.max(padding, Math.min(maxY, relativeY));
-                  
+
                   // Update element with constrained relative coordinates
                   onElementUpdate(childElement.id, {
                     x: constrainedX,
@@ -359,19 +364,19 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                     y: newAbsoluteY
                   });
                 }
-                
+
                 // Call the original handler for any additional processing
                 onElementDragEnd(e, childElement.id);
               };
-              
+
               const handleChildUpdate = (id: string, updates: Partial<CanvasElement>) => {
                 // Ensure updates don't include absolute positioning that would break section containment
                 const safeUpdates = { ...updates };
-                
+
                 // For resize operations, keep coordinates relative to section
                 if ('x' in updates || 'y' in updates) {                  // Coordinates are already relative, just pass them through
                 }
-                
+
                 onElementUpdate(id, safeUpdates);
               };
 
@@ -391,8 +396,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                 perfectDrawEnabled: false,
               };
                 // Render child element with the same logic as main elements
-              if (['rectangle', 'circle'].includes(childElement.type)) {
-                return (
+              if (['rectangle', 'circle'].includes(childElement.type)) {                return (
                   <KonvaErrorBoundary key={`${childElement.id}-child-editable-boundary`}>
                     <EditableNode
                       key={childElement.id}
@@ -403,13 +407,17 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                       onElementDragEnd={handleChildDragEnd}
                       onElementUpdate={handleChildUpdate}
                       onStartTextEdit={onStartTextEdit}
+                      {...(onElementDragStart && { onElementDragStart })}
+                      {...(onElementDragMove && { onElementDragMove })}
                     />
                   </KonvaErrorBoundary>
                 );
               }
-              
+
               // Handle other child element types based on type
-              switch (childElement.type) {                case 'text':                  return (
+              switch (childElement.type) {
+                case 'text':
+                  return (
                     <KonvaErrorBoundary key={`${childElement.id}-child-text-boundary`}>
                       <TextShape
                         key={childElement.id}
@@ -419,9 +427,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                         stageRef={stageRef}
                       />
                     </KonvaErrorBoundary>
-                  );
-                case 'sticky-note':
-                  return (                    <KonvaErrorBoundary key={`${childElement.id}-child-sticky-boundary`}>
+                  );                case 'sticky-note':
+                  return (
+                    <KonvaErrorBoundary key={`${childElement.id}-child-sticky-boundary`}>
                       <StickyNoteShape
                         key={childElement.id}
                         element={childElement}
@@ -454,10 +462,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             })}
           </SectionShape>
         );
-      
-      case 'table':
-        console.log('🔧 [MAIN LAYER] Rendering table element:', element.id, element);
-        return (
+
+      case 'table':        return (
           <KonvaErrorBoundary key={`${element.id}-error-boundary`}>
             <EnhancedTableElement
               key={element.id}
@@ -485,23 +491,34 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     if (onLayerDraw) {
       onLayerDraw();
     }
-  }, [elements.length, onLayerDraw]);
+  }, [elements.length, onLayerDraw]);  // Use robust rendering pattern to eliminate whitespace issues
+  const validElements = elements.filter(Boolean); // Filter out any undefined elements first
   
+  const elementNodes = validElements.map(renderElement);
+  
+  // Drawing line component for active drawing state - add key to prevent React warning
+  const drawingLine = isDrawing && currentPath.length > 0 ? (
+    <Line
+      key="drawing-line"
+      points={currentPath}
+      stroke={designSystem.colors.primary[500]}
+      strokeWidth={3}
+      lineCap="round"
+      lineJoin="round"
+      listening={false}
+    />
+  ) : null;
+
+  // Combine all nodes into single array, filtering out any null values
+  const allNodes = elementNodes.filter(Boolean);
+  if (drawingLine) {
+    allNodes.push(drawingLine);
+  }
+
   return (
     <Layer {...delegatedProps} {...optimizedProps}>
       <KonvaErrorBoundary>
-        {/* Render all elements */}
-        {elements.map(renderElement)}
-        {isDrawing && currentPath.length > 0 && (
-          <Line
-            points={currentPath}
-            stroke={designSystem.colors.primary[500]}
-            strokeWidth={3}
-            lineCap="round"
-            lineJoin="round"
-            listening={false}
-          />
-        )}
+        {allNodes}
       </KonvaErrorBoundary>
     </Layer>
   );

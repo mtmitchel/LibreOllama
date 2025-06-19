@@ -19,7 +19,9 @@ interface EditableNodeProps {
   isSelected: boolean;
   selectedTool: string;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
+  onElementDragStart?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
   onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
+  onElementDragMove?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
   onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
   onStartTextEdit: (elementId: string) => void;
 }
@@ -35,21 +37,21 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
   isSelected,
   selectedTool,
   onElementClick,
+  onElementDragStart,
   onElementDragEnd,
+  onElementDragMove,
   onElementUpdate,
   onStartTextEdit
-}) => {  // Determine if element should be draggable
+}) => {// Determine if element should be draggable
   const isDraggable = React.useMemo(() => {
     return (
       (selectedTool === 'select' || selectedTool === element.type) &&
       !(element as any).isLocked
       // Allow dragging of selected elements in sections - that's the whole point!
     );
-  }, [selectedTool, element.type]);
-
-  // Common props for all shape types
+  }, [selectedTool, element.type]);  // Common props for all shape types
   const commonProps = React.useMemo(() => {
-    const baseProps = {
+    const baseProps: any = {
       id: element.id,
       x: element.x,
       y: element.y,
@@ -62,6 +64,14 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       perfectDrawEnabled: false, // Performance optimization
     };
 
+    // Add optional drag handlers only if they exist
+    if (onElementDragStart) {
+      baseProps.onDragStart = (e: Konva.KonvaEventObject<DragEvent>) => onElementDragStart(e, element.id);
+    }
+    if (onElementDragMove) {
+      baseProps.onDragMove = (e: Konva.KonvaEventObject<DragEvent>) => onElementDragMove(e, element.id);
+    }
+
     // Add shadow properties only if selected to avoid undefined issues
     if (isSelected) {
       return {
@@ -73,7 +83,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
     }
 
     return baseProps;
-  }, [element, isSelected, isDraggable, onElementClick, onElementDragEnd]);
+  }, [element, isSelected, isDraggable, onElementClick, onElementDragStart, onElementDragEnd, onElementDragMove]);
 
   // Render appropriate shape component based on element type
   switch (element.type) {
@@ -165,7 +175,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       // Store coordinates represent top-left corner, but Star needs center coordinates
       const starCenterX = (commonProps.x || 0) + starRadius;
       const starCenterY = (commonProps.y || 0) + starRadius;
-      
+
       return (
         <Star
           {...commonProps}
@@ -188,7 +198,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
         triangleWidth, triangleHeight,  // Bottom right
         0, triangleHeight   // Bottom left
       ];
-      
+
       return (
         <Line 
           {...commonProps}

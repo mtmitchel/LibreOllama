@@ -61,16 +61,16 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
 
       const containerRect = stageContainer.getBoundingClientRect();
       const transform = stage.getAbsoluteTransform();
-      
+
       // Get stage scale
       const scale = stage.scaleX();
-      
+
       // Calculate screen coordinates using the transform matrix
       const point = transform.point({
         x: textPos.x,
         y: textPos.y
       });
-      
+
       const screenX = containerRect.left + point.x;
       const screenY = containerRect.top + point.y;
       const screenWidth = Math.max((element.width || 250) * scale, 150);
@@ -114,10 +114,10 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
     // Listen for canvas transformations
     const stage = stageRef.current;
     const handleTransform = () => updatePosition();
-    
+
     // Add event listeners for all transform events
     stage.on('transform dragmove wheel scalechange dragend transformend', handleTransform);
-    
+
     // Also listen for window resize/scroll
     const handleWindowChange = () => updatePosition();
     window.addEventListener('resize', handleWindowChange);
@@ -129,7 +129,7 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
         cleanupRef.current();
         cleanupRef.current = null;
       }
-      
+
       stage.off('transform dragmove wheel scalechange dragend transformend', handleTransform);
       window.removeEventListener('resize', handleWindowChange);
       window.removeEventListener('scroll', handleWindowChange);    };

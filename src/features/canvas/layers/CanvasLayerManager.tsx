@@ -13,7 +13,9 @@ interface CanvasLayerManagerProps {
   stageHeight: number;
   stageRef: React.MutableRefObject<Konva.Stage | null>;
   onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
+  onElementDragStart?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
   onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
+  onElementDragMove?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
   onStartTextEdit: (elementId: string) => void;
   onSectionResize?: (sectionId: string, newWidth: number, newHeight: number) => void;
@@ -31,7 +33,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   stageHeight,
   stageRef,
   onElementUpdate,
+  onElementDragStart,
   onElementDragEnd,
+  onElementDragMove,
   onElementClick,
   onStartTextEdit,
   onSectionResize,
@@ -42,7 +46,8 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   connectorEnd,
   isDrawingSection = false,
   previewSection
-}) => {  const { 
+}) => {
+  const { 
     elements: elementsMap, 
     sections: sectionsMap,
     selectedElementIds, 
@@ -57,21 +62,20 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     const regularElements = Object.values(elementsMap);
     const sectionElements = Object.values(sectionsMap);
     return [...regularElements, ...sectionElements];
-  }, [elementsMap, sectionsMap]);  const { mainElements, connectorElements, sectionElements, elementsBySection } = useMemo(() => {
+  }, [elementsMap, sectionsMap]);
+
+  const { mainElements, connectorElements, sectionElements, elementsBySection } = useMemo(() => {
     const main: CanvasElement[] = [];
     const connectors: CanvasElement[] = [];
     const sections: CanvasElement[] = [];
     const elementsBySection: Record<string, CanvasElement[]> = {};
-    
+
     // First, collect all section elements and initialize their element arrays
     allElementsArray.forEach((el: any) => {
       if (el.type === 'section') {
-        sections.push(el);
-        elementsBySection[el.id] = [];
+        sections.push(el);        elementsBySection[el.id] = [];
       }
-    });
-    
-    // Separate elements into different categories for proper layering
+    });    // Separate elements into different categories for proper layering
     allElementsArray.forEach((el: any) => {
       if (el.type === 'section') {
         // Sections are already added above
@@ -85,10 +89,10 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         main.push(el);
       }
     });
-    
-    return { 
+
+    return {
       mainElements: main, 
-      connectorElements: connectors, 
+      connectorElements: connectors,
       sectionElements: sections,
       elementsBySection: elementsBySection
     };
@@ -132,72 +136,78 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         height: el.height,
       });
       return Konva.Util.haveIntersection(box.getClientRect(), elBox.getClientRect());
-    });
-    selectMultipleElements(selected.map(el => el.id));
-  };  return (
-    <>
-      <BackgroundLayer
-        key="background"
-        width={stageWidth}
-        height={stageHeight}
-        elements={[]}
-      />
-      {/* Render sections with their contained elements */}
-      <MainLayer
-        key="sections-with-children"
-        elements={sectionElements}
-        selectedElementIds={selectedElementIds}
-        selectedTool={selectedTool}
-        onElementClick={onElementClick}
-        onElementDragEnd={onElementDragEnd}        onElementUpdate={onElementUpdate}
-        onStartTextEdit={onStartTextEdit}
-        {...(onSectionResize && { onSectionResize })}
-        stageRef={stageRef}
-        isDrawing={isDrawing}
-        currentPath={currentPath}
-        elementsBySection={elementsBySection}
-      />
-      {/* Render free elements */}
-      <MainLayer
-        key="main"
-        name="main-layer"
-        elements={mainElements}
-        selectedElementIds={selectedElementIds}
-        selectedTool={selectedTool}
-        onElementClick={onElementClick}
-        onElementDragEnd={onElementDragEnd}        onElementUpdate={onElementUpdate}
-        onStartTextEdit={onStartTextEdit}
-        {...(onSectionResize && { onSectionResize })}
-        stageRef={stageRef}
-        isDrawing={isDrawing}
-        currentPath={currentPath}
-      />
-      <ConnectorLayer
-        key="connector"
-        elements={connectorElements}
-        selectedElementIds={selectedElementIds}
-        onElementClick={onElementClick}        isDrawingConnector={isDrawingConnector}
-        connectorStart={connectorStart ?? null}
-        connectorEnd={connectorEnd ?? null}
-        selectedTool={selectedTool}
-      />
-      <UILayer
-        key="ui"
-        stageRef={stageRef}
-        selectedElementIds={selectedElementIds}
-        elements={elementsMap}
-        sections={sectionElements}
-        isDrawingSection={isDrawingSection}
-        previewSection={previewSection ?? null}
-        selectionBox={selectionBox}
-        hoveredSnapPoint={hoveredSnapPoint}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onElementUpdate={onElementUpdate}
-      />
-    </>
-  );
+    });    selectMultipleElements(selected.map(el => el.id));
+  };
+  // Use robust array-based rendering to eliminate whitespace issues
+  const layers = [
+    <BackgroundLayer
+      key="background"
+      width={stageWidth}
+      height={stageHeight}
+      elements={[]}
+    />,
+    <MainLayer
+      key="sections-with-children"
+      elements={sectionElements}
+      selectedElementIds={selectedElementIds}
+      selectedTool={selectedTool}
+      onElementClick={onElementClick}
+      onElementDragEnd={onElementDragEnd}
+      onElementUpdate={onElementUpdate}
+      onStartTextEdit={onStartTextEdit}
+      stageRef={stageRef}
+      isDrawing={isDrawing}
+      currentPath={currentPath}
+      elementsBySection={elementsBySection}
+      {...(onElementDragStart && { onElementDragStart })}
+      {...(onElementDragMove && { onElementDragMove })}
+      {...(onSectionResize && { onSectionResize })}
+    />,
+    <MainLayer
+      key="main"
+      name="main-layer"
+      elements={mainElements}
+      selectedElementIds={selectedElementIds}
+      selectedTool={selectedTool}
+      onElementClick={onElementClick}
+      onElementDragEnd={onElementDragEnd}
+      onElementUpdate={onElementUpdate}
+      onStartTextEdit={onStartTextEdit}
+      stageRef={stageRef}
+      isDrawing={isDrawing}
+      currentPath={currentPath}
+      {...(onElementDragStart && { onElementDragStart })}
+      {...(onElementDragMove && { onElementDragMove })}
+      {...(onSectionResize && { onSectionResize })}
+    />,
+    <ConnectorLayer
+      key="connector"
+      elements={connectorElements}
+      selectedElementIds={selectedElementIds}
+      onElementClick={onElementClick}
+      isDrawingConnector={isDrawingConnector}
+      connectorStart={connectorStart ?? null}
+      connectorEnd={connectorEnd ?? null}
+      selectedTool={selectedTool}
+    />,
+    <UILayer
+      key="ui"
+      stageRef={stageRef}
+      selectedElementIds={selectedElementIds}
+      elements={elementsMap}
+      sections={sectionElements}
+      isDrawingSection={isDrawingSection}
+      previewSection={previewSection ?? null}
+      selectionBox={selectionBox}
+      hoveredSnapPoint={hoveredSnapPoint}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onElementUpdate={onElementUpdate}
+    />
+  ];
+
+  return <>{layers}</>;
 };
 
 CanvasLayerManager.displayName = 'CanvasLayerManager';

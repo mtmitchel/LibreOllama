@@ -1,7 +1,7 @@
 // src/components/Toolbar/KonvaToolbar.tsx
 import React, { useRef } from 'react';
-import { useCanvasElements, useCanvasUI, useCanvasHistory, useSelection, useTextEditing, useSections, useCanvasStore } from '../../features/canvas/stores/canvasStore';
-import { useTauriCanvas } from '../../hooks/useTauriCanvas';
+import { useCanvasStore } from '../../features/canvas/stores/canvasStore.enhanced';
+import { useTauriCanvas } from '../../features/canvas/hooks/useTauriCanvas';
 import { 
   MousePointer2, 
   Type, 
@@ -72,13 +72,30 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
 }) => {
   const tableCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Migrated to modular store
-  const { elements, updateElement, deleteElement, addElement, clearAllElements, exportElements, importElements } = useCanvasElements();
-  const { selectedTool, setSelectedTool } = useCanvasUI();
-  const { undo, redo, canUndo, canRedo } = useCanvasHistory();
-  const { selectedElementIds, selectElement } = useSelection();
-  const { setEditingTextId } = useTextEditing();
-  const { sections, addElementToSection } = useSections();
+  // Use unified canvas store with selectors
+  const elements = useCanvasStore((state) => state.elements);
+  const updateElement = useCanvasStore((state) => state.updateElement);
+  const deleteElement = useCanvasStore((state) => state.deleteElement);
+  const addElement = useCanvasStore((state) => state.addElement);
+  const clearAllElements = useCanvasStore((state) => state.clearAllElements);
+  const exportElements = useCanvasStore((state) => state.exportElements);
+  const importElements = useCanvasStore((state) => state.importElements);
+  
+  const selectedTool = useCanvasStore((state) => state.selectedTool);
+  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
+  
+  const undo = useCanvasStore((state) => state.undo);
+  const redo = useCanvasStore((state) => state.redo);
+  const canUndo = useCanvasStore((state) => state.canUndo);
+  const canRedo = useCanvasStore((state) => state.canRedo);
+  
+  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
+  const selectElement = useCanvasStore((state) => state.selectElement);
+  
+  const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
+  
+  const sections = useCanvasStore((state) => state.sections);
+  const addElementToSection = useCanvasStore((state) => state.addElementToSection);
   
   const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
   const selectedElement = selectedElementId ? elements[selectedElementId] : null;

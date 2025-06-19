@@ -51,7 +51,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
       stroke: isSelected ? designSystem.colors.primary[500] : sectionStyles.borderColor,
       strokeWidth: isSelected ? sectionStyles.borderWidth + 1 : sectionStyles.borderWidth,
     };
-    
+
     if (isSelected) {
       return {
         ...baseStyle,
@@ -60,7 +60,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
         shadowOpacity: 0.3,
       };
     }
-    
+
     return baseStyle;
   }, [isSelected, sectionStyles]);
 
@@ -72,7 +72,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
   };  // Handle resize operations
   const handleResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, direction: string) => {
     e.cancelBubble = true;
-    
+
     const stage = e.target.getStage();
     if (!stage) return;
 
@@ -82,7 +82,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
 
     const handleMouseMove = () => {
       if (!stage) return;
-      
+
       const pos = stage.getPointerPosition();
       if (!pos) return;      let newWidth = startWidth;
       let newHeight = startHeight;
@@ -126,11 +126,11 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
     };    const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      
+
       // The final state is already set by the last onSectionResize call during drag
       console.log('🎯 [SECTION RESIZE] Resize operation completed for section:', element.id);
     };
-    
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
@@ -171,7 +171,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
         cornerRadius={sectionStyles.cornerRadius}
         {...selectionStyle}
       />
-      
+
       {/* Title bar */}
       <Rect
         x={0}
@@ -254,7 +254,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
           </Group>
         </Group>
       )}
-      
+
       {/* Lock indicator on title bar */}
       {element.isLocked && (
         <Text
@@ -293,7 +293,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
               if (container) container.style.cursor = 'default';
             }}
           />
-          
+
           <Circle
             x={sectionStyles.width + 8}
             y={-8}
@@ -313,7 +313,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
               if (container) container.style.cursor = 'default';
             }}
           />
-          
+
           <Circle
             x={-8}
             y={sectionStyles.height + 8}
@@ -333,7 +333,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
               if (container) container.style.cursor = 'default';
             }}
           />
-          
+
           <Circle
             x={sectionStyles.width + 8}
             y={sectionStyles.height + 8}
@@ -372,7 +372,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
               if (container) container.style.cursor = 'default';
             }}
           />
-          
+
           <Circle
             x={sectionStyles.width + 8}
             y={sectionStyles.height / 2}
@@ -390,7 +390,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
               if (container) container.style.cursor = 'default';
             }}
           />
-          
+
           <Circle
             x={sectionStyles.width / 2}
             y={sectionStyles.height + 8}
@@ -408,7 +408,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
               if (container) container.style.cursor = 'default';
             }}
           />
-          
+
           <Circle
             x={-8}
             y={sectionStyles.height / 2}

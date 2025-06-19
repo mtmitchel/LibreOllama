@@ -1,16 +1,29 @@
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useMemo } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
+import { useShallow } from 'zustand/react/shallow';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
-import { findNearestConnectionPoint } from '../../../lib/snappingUtils';
+import { findNearestConnectionPoint } from '../utils/snappingUtils';
 import type { CanvasElement } from '../types';
 import '../../../styles/konvaCanvas.css';
+import '../../../styles/multiDrag.css';
 
 // Local interfaces
 interface PanZoomState {
   scale: number;
   position: { x: number; y: number };
+}
+
+interface MultiDragState {
+  pointerPos: { x: number; y: number };
+  elementStates: Record<string, {
+    initialPos: { x: number; y: number };
+    parentSection?: string | undefined;
+    isInSection: boolean;
+  }>;
+  dragStartTime: number;
+  totalElementCount: number;
 }
 
 interface KonvaCanvasProps {
@@ -36,15 +49,25 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 }) => {
   // Internal stage ref to avoid React strict mode issues
   const internalStageRef = useRef<Konva.Stage | null>(null);
-    // Sync internal ref with external ref
+
+  // Multi-drag state for enhanced multi-element dragging
+  const multiDragState = useRef<MultiDragState | null>(null);
+  const dragAnimationFrame = useRef<number | null>(null);
+
+  // Sync internal ref with external ref
   useEffect(() => {
     if (externalStageRef && internalStageRef.current) {
       externalStageRef.current = internalStageRef.current;
-    }  }, [externalStageRef]);  // Store subscriptions using enhanced store (single source of truth)
-  const { 
+    }
+  }, [externalStageRef]);
+
+  // Optimized store subscriptions using useShallow for better performance
+  const {
+    elements,
+    sections,
+    selectedElementIds,
     updateElement, 
     addElement, 
-    elements, 
     updateMultipleElements,
     clearSelection, 
     selectElement,
@@ -53,21 +76,49 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     setSelectedTool,
     isDrawing, 
     currentPath, 
-    startDrawing,    updateDrawing, 
+    startDrawing,    
+    updateDrawing, 
     finishDrawing,
-    // Section and enhanced operations
     handleElementDrop, 
     captureElementsAfterSectionCreation,
-    sections,
     createSection,
     captureElementsInSection,
     handleSectionDragEnd,
     resizeSection,
     findSectionAtPoint,
-    // UI state for snapping
     setHoveredSnapPoint
-  } = useEnhancedStore();
-  
+  } = useEnhancedStore(
+    useShallow((state) => ({
+      elements: state.elements,
+      sections: state.sections,
+      selectedElementIds: state.selectedElementIds,
+      updateElement: state.updateElement,
+      addElement: state.addElement,
+      updateMultipleElements: state.updateMultipleElements,
+      clearSelection: state.clearSelection,
+      selectElement: state.selectElement,
+      setEditingTextId: state.setEditingTextId,
+      selectedTool: state.selectedTool,
+      setSelectedTool: state.setSelectedTool,
+      isDrawing: state.isDrawing,
+      currentPath: state.currentPath,
+      startDrawing: state.startDrawing,
+      updateDrawing: state.updateDrawing,
+      finishDrawing: state.finishDrawing,
+      handleElementDrop: state.handleElementDrop,
+      captureElementsAfterSectionCreation: state.captureElementsAfterSectionCreation,
+      createSection: state.createSection,
+      captureElementsInSection: state.captureElementsInSection,
+      handleSectionDragEnd: state.handleSectionDragEnd,
+      resizeSection: state.resizeSection,
+      findSectionAtPoint: state.findSectionAtPoint,
+      setHoveredSnapPoint: state.setHoveredSnapPoint,
+    }))
+  );
+
+  // Memoized combined elements map for performance
+  const allElements = useMemo(() => ({ ...elements, ...sections }), [elements, sections]);
+
   // Connector drawing state
   const [isDrawingConnector, setIsDrawingConnector] = React.useState(false);
   const [connectorStart, setConnectorStart] = React.useState<{ x: number; y: number; elementId?: string; anchor?: string } | null>(null);
@@ -84,69 +135,253 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
     const stage = e.target.getStage();
     const clickedOnEmpty = e.target === stage;
-    
+
     if (clickedOnEmpty) {
       clearSelection();
     }  }, [clearSelection]);
   const handleElementClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => {
     // Prevent event bubbling to stage
     e.cancelBubble = true;
-    
+
     // Select the element in the store
     selectElement(element.id);
-    
+
     if (onElementSelect) {
       onElementSelect(element);
     }
   }, [onElementSelect, selectElement]);
 
-  const handleElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
-    const node = e.target;
-    const allElementsMap = { ...elements, ...sections };
-    const element = allElementsMap[elementId];
-    if (!element) return;
+  // Enhanced multi-element drag start handler
+  const handleElementDragStart = useCallback((_e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
+    const stage = internalStageRef.current;
+    if (!stage) return;
 
-    // Get the absolute position directly from the Konva node.
-    // This is more reliable than manual calculation, especially when leaving sections.
-    let newPos = node.absolutePosition();
-
-    // Now normalize for shape-specific positioning differences
-    if (element.type === 'circle') {
-      const radius = element.radius || 50;
-      // Circles use center positioning in Konva, convert to top-left corner
-      newPos = {
-        x: newPos.x - radius,
-        y: newPos.y - radius
-      };
-    } else if (element.type === 'star') {
-      const radius = element.radius || (element.width || 100) / 2;
-      // Stars use center positioning in Konva, convert to top-left corner
-      newPos = {
-        x: newPos.x - radius,
-        y: newPos.y - radius
-      };
+    // Performance optimization: cancel any pending animation frames
+    if (dragAnimationFrame.current) {
+      cancelAnimationFrame(dragAnimationFrame.current);
     }
-    // All other element types use Group containers with top-left corner positioning
 
-    if (element.type === 'section') {
-      // Section drag handling
-      const result = handleSectionDragEnd(elementId, newPos.x, newPos.y);
-      console.log('📦 [KONVA CANVAS] Section moved:', {
-        sectionId: elementId,
-        newPosition: newPos,
-        containedElements: result?.containedElementIds?.length || 0
-      });
-    } else {
-      // Regular element drag - pass normalized absolute position to handleElementDrop
-      console.log('🎯 [KONVA CANVAS] Calling handleElementDrop with normalized position:', {
-        elementId,
-        elementType: element.type,
-        normalizedAbsolutePosition: newPos,
-        currentSectionId: 'sectionId' in element ? element.sectionId : 'N/A (section)' 
-      });
-      handleElementDrop(elementId, newPos); 
+    console.log('🚀 [MULTI-DRAG] Starting drag for element:', elementId, 'Current selection:', selectedElementIds);
+
+    // Enhanced selection logic with immediate state access
+    const currentSelection = selectedElementIds.includes(elementId) 
+      ? selectedElementIds 
+      : [elementId];
+
+    // If dragged element not in selection, update selection immediately
+    if (!selectedElementIds.includes(elementId)) {
+      clearSelection();
+      selectElement(elementId);
     }
-  }, [elements, sections, handleSectionDragEnd, handleElementDrop]);
+
+    // Capture initial state for all selected elements
+    const elementStates: Record<string, MultiDragState['elementStates'][string]> = {};
+    const pointerPos = stage.getPointerPosition() || { x: 0, y: 0 };
+
+    currentSelection.forEach(id => {
+      const element = allElements[id];
+      if (element) {
+        // Check if element is within a section for coordinate conversion
+        const parentSection = ('sectionId' in element ? element.sectionId : null) || findSectionAtPoint({ x: element.x, y: element.y });
+
+        elementStates[id] = {
+          initialPos: { x: element.x, y: element.y },
+          parentSection: parentSection || undefined,
+          isInSection: !!parentSection,
+        };
+      }
+    });
+
+    multiDragState.current = {
+      pointerPos,
+      elementStates,
+      dragStartTime: performance.now(),
+      totalElementCount: currentSelection.length,
+    };
+
+    // Visual feedback for multi-selection drag
+    if (currentSelection.length > 1) {
+      // Add visual indicator class to stage for CSS styling
+      stage.container().classList.add('multi-drag-active');
+    }
+
+    console.log(`✨ [MULTI-DRAG] Started: ${currentSelection.length} elements`, {
+      elementIds: currentSelection,
+      sectionsInvolved: Object.values(elementStates).filter(s => s.isInSection).length,
+    });
+
+  }, [selectedElementIds, allElements, clearSelection, selectElement, findSectionAtPoint, dragAnimationFrame]);
+
+  // Enhanced multi-element drag end handler
+  const handleElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, _elementId: string) => {
+    const stage = internalStageRef.current;
+    if (!stage || !multiDragState.current) {
+      // Fallback to original single-element drag handling
+      const node = e.target;
+      const allElementsMap = { ...elements, ...sections };
+      const element = allElementsMap[_elementId];
+      if (!element) return;
+
+      // Get the absolute position directly from the Konva node.
+      let newPos = node.absolutePosition();
+
+      // Normalize for shape-specific positioning differences
+      if (element.type === 'circle') {
+        const radius = element.radius || 50;
+        newPos = {
+          x: newPos.x - radius,
+          y: newPos.y - radius
+        };
+      } else if (element.type === 'star') {
+        const radius = element.radius || (element.width || 100) / 2;
+        newPos = {
+          x: newPos.x - radius,
+          y: newPos.y - radius
+        };
+      }
+
+      if (element.type === 'section') {
+        const result = handleSectionDragEnd(_elementId, newPos.x, newPos.y);
+        console.log('📦 [KONVA CANVAS] Section moved:', {
+          sectionId: _elementId,
+          newPosition: newPos,
+          containedElements: result?.containedElementIds?.length || 0
+        });
+      } else {
+        console.log('🎯 [KONVA CANVAS] Single element drag - calling handleElementDrop:', {
+          elementId: _elementId,
+          elementType: element.type,
+          normalizedAbsolutePosition: newPos,
+        });
+        handleElementDrop(_elementId, newPos); 
+      }
+      return;
+    }
+
+    // Performance monitoring
+    const dragDuration = performance.now() - multiDragState.current.dragStartTime;
+
+    try {
+      const { pointerPos: startPointerPos, elementStates } = multiDragState.current;
+      const endPointerPos = stage.getPointerPosition() || { x: 0, y: 0 };
+
+      const deltaX = endPointerPos.x - startPointerPos.x;
+      const deltaY = endPointerPos.y - startPointerPos.y;
+
+      // Early exit for minimal movement (avoids unnecessary updates)
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
+        console.log('💫 [MULTI-DRAG] Minimal movement detected, skipping update');
+        return;
+      }
+
+      const updates: Record<string, Partial<CanvasElement>> = {};
+      const sectionUpdates: Record<string, string[]> = {}; // track section reassignments
+
+      // Calculate new positions with section awareness
+      Object.entries(elementStates).forEach(([id, state]) => {
+        const element = allElements[id];
+        if (!element) return;
+
+        const newX = state.initialPos.x + deltaX;
+        const newY = state.initialPos.y + deltaY;
+
+        // Check for section reassignment
+        const newParentSection = findSectionAtPoint({ x: newX, y: newY });
+
+        updates[id] = {
+          x: newX,
+          y: newY,
+          // Update parent section if changed for elements that support it
+          ...(newParentSection !== state.parentSection && 'sectionId' in element && { sectionId: newParentSection }),
+        };
+
+        // Track section changes for connection updates
+        if (newParentSection !== state.parentSection) {
+          if (newParentSection) {
+            sectionUpdates[newParentSection] = sectionUpdates[newParentSection] || [];
+            sectionUpdates[newParentSection].push(id);
+          }
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        // Single atomic update for optimal performance and undo/redo
+        updateMultipleElements(updates);
+
+        console.log(`✅ [MULTI-DRAG] Completed: ${Object.keys(updates).length} elements moved`, {
+          deltaX: deltaX.toFixed(2),
+          deltaY: deltaY.toFixed(2),
+          duration: `${dragDuration.toFixed(2)}ms`,
+          sectionChanges: Object.keys(sectionUpdates).length,
+        });
+
+        // Optional: Handle section re-parenting with drop logic for each moved element
+        if (Object.keys(sectionUpdates).length > 0) {
+          Object.entries(sectionUpdates).forEach(([_sectionId, elementIds]) => {
+            elementIds.forEach(elementId => {
+              const elementUpdate = updates[elementId];
+              if (elementUpdate && elementUpdate.x !== undefined && elementUpdate.y !== undefined) {
+                handleElementDrop(elementId, { x: elementUpdate.x, y: elementUpdate.y });
+              }
+            });
+          });
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ [MULTI-DRAG] Error during drag end:', error);
+      // Graceful error recovery - could trigger state validation here
+    } finally {
+      // Cleanup
+      multiDragState.current = null;
+      stage.container().classList.remove('multi-drag-active');
+
+      // Cancel any pending animation frames
+      if (dragAnimationFrame.current) {
+        cancelAnimationFrame(dragAnimationFrame.current);
+        dragAnimationFrame.current = null;
+      }
+    }
+  }, [elements, sections, handleSectionDragEnd, handleElementDrop, updateMultipleElements, findSectionAtPoint, allElements, dragAnimationFrame, multiDragState]);
+
+  // Enhanced real-time drag update for smooth visual feedback
+  const handleElementDragMove = useCallback((_e: Konva.KonvaEventObject<DragEvent>, _elementId: string) => {
+    if (!multiDragState.current || multiDragState.current.totalElementCount <= 1) return;
+
+    // Throttle updates using animation frames for smooth performance
+    if (dragAnimationFrame.current) return;
+
+    dragAnimationFrame.current = requestAnimationFrame(() => {
+      const stage = internalStageRef.current;
+      if (!stage || !multiDragState.current) return;
+
+      const { pointerPos: startPointerPos } = multiDragState.current;
+      const currentPointerPos = stage.getPointerPosition() || { x: 0, y: 0 };
+
+      const deltaX = currentPointerPos.x - startPointerPos.x;
+      const deltaY = currentPointerPos.y - startPointerPos.y;
+
+      // Provide visual preview updates for large selections (future enhancement)
+      if (multiDragState.current.totalElementCount > 5) {
+        // Could add visual preview updates here for better UX
+        console.log('🔄 [MULTI-DRAG] Large selection drag in progress:', {
+          elements: multiDragState.current.totalElementCount,
+          delta: { x: deltaX.toFixed(1), y: deltaY.toFixed(1) }
+        });
+      }
+
+      dragAnimationFrame.current = null;
+    });
+  }, []);
+
+  // Cleanup effect for animation frames
+  useEffect(() => {
+    return () => {
+      if (dragAnimationFrame.current) {
+        cancelAnimationFrame(dragAnimationFrame.current);
+      }
+    };
+  }, []);
 
   const handleElementUpdate = useCallback((id: string, updates: Partial<CanvasElement>) => {
     updateElement(id, updates);
@@ -169,7 +404,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       console.log('🔗 [CONNECTOR] Connector tool detected!', selectedTool);
       console.log('🔗 [CONNECTOR] Current drawing state:', isDrawingConnector);
       console.log('🔗 [CONNECTOR] Current start point:', connectorStart);
-      
+
       // Find the nearest connection point for the current cursor position
       const allElements = { ...elements, ...sections };
       const connectionResult = findNearestConnectionPoint(pos.x, pos.y, allElements);
@@ -192,7 +427,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         // Finish connector
         setConnectorEnd(snapPoint);
         console.log('🔗 [CONNECTOR] Finishing connector at:', snapPoint);
-        
+
         if (connectorStart) {
           // Create connector element with proper structure for ConnectorRenderer
           const connectorElement: CanvasElement = {
@@ -233,7 +468,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             strokeWidth: 2,
             fill: ''
           };
-          
+
           // Add the connector using the store
           addElement(connectorElement);
           console.log('✅ [CONNECTOR] Created connector element with snapping:', {
@@ -241,7 +476,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
             startSnap: connectorStart.elementId ? `${connectorStart.elementId}:${connectorStart.anchor}` : 'none',
             endSnap: snapPoint.elementId ? `${snapPoint.elementId}:${snapPoint.anchor}` : 'none'
           });
-          
+
           // Automatically switch to select tool after connector creation
           setSelectedTool('select');
           console.log('🔧 [CONNECTOR] Automatically switched to select tool after connector creation');
@@ -253,7 +488,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       }    } else if (selectedTool === 'section') {
       console.log('📦 [SECTION] Section tool detected!');
       console.log('📦 [SECTION] Current drawing state:', isDrawingSection);
-      
+
       // Handle section creation
       if (!isDrawingSection) {
         // Start section drawing
@@ -300,7 +535,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       });
 
       layer.add(newNode);
-      
+
       // Update the store AFTER the node is on the canvas
       addElement(newElement);
       selectElement(newElement.id);
@@ -319,10 +554,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           previewSection.width,
           previewSection.height,
           'Untitled Section'        );
-        
+
         // Use enhanced store method to capture elements in the new section
         captureElementsAfterSectionCreation(sectionId);
-        
+
         // Automatically switch to select tool after section creation
         setSelectedTool('select');
         console.log('🔧 [SECTION] Automatically switched to select tool after section creation');
@@ -353,7 +588,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       // Handle snap point detection for connector tools
       const allElements = { ...elements, ...sections };
       const connectionResult = findNearestConnectionPoint(pos.x, pos.y, allElements);
-      
+
       if (connectionResult) {
         // Show snap point indicator
         setHoveredSnapPoint({
@@ -383,11 +618,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     const scaleY = newHeight / oldHeight;
 
     const result = resizeSection(sectionId, newWidth, newHeight);
-    
+
     // Scale all contained elements proportionally based on their EXISTING relative coordinates
     if (result && result.containedElementIds.length > 0) {
       const updates: Record<string, Partial<CanvasElement>> = {};
-      
+
       result.containedElementIds.forEach((containedId: string) => {
         const containedElement = elements[containedId];
         if (containedElement) {
@@ -401,7 +636,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           };
         }
       });
-      
+
       if (Object.keys(updates).length > 0) {
         updateMultipleElements(updates);
         console.log('✅ [KONVA CANVAS] Proportionally scaled', Object.keys(updates).length, 'contained elements:', {
@@ -437,14 +672,17 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           stageHeight={height}
           stageRef={internalStageRef}
           onElementUpdate={handleElementUpdate}
+          onElementDragStart={handleElementDragStart}
           onElementDragEnd={handleElementDragEnd}
+          onElementDragMove={handleElementDragMove}
           onElementClick={handleElementClick}
           onStartTextEdit={handleStartTextEdit}
           isDrawing={isDrawing}
           currentPath={currentPath}
           isDrawingConnector={isDrawingConnector}
           connectorStart={connectorStart}
-          connectorEnd={connectorEnd}          isDrawingSection={isDrawingSection}
+          connectorEnd={connectorEnd}
+          isDrawingSection={isDrawingSection}
           previewSection={previewSection}
           onSectionResize={handleSectionResize}
         />

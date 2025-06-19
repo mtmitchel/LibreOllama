@@ -4,4 +4,4 @@
  */
 
 // Main canvas store - exports all hooks and types
-export * from './canvasStore';
+export * from './canvasStore.enhanced';

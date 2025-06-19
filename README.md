@@ -39,7 +39,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors. Features **unified rich text editing** with context-aware floating toolbars, **seamless table cell editing**, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Recent improvements include **DOM portal-based text overlays** for reliable editing, **mount-time blur prevention**, **consistent positioning** across all text elements, and **automatic tool switching** for enhanced workflow productivity (sections and connectors automatically switch to select tool after creation). Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
+| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors with **dynamic connection movement** that automatically follows connected elements. Features **unified rich text editing** with context-aware floating toolbars, **seamless table cell editing**, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Recent improvements include **DOM portal-based text overlays** for reliable editing, **mount-time blur prevention**, **consistent positioning** across all text elements, **automatic tool switching** for enhanced workflow productivity (sections and connectors automatically switch to select tool after creation), and **real-time dynamic connections** that maintain their anchor points when elements are repositioned. Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -107,7 +107,7 @@ libreollama/
 │   └── archive/              #   Historical documentation and completed phases
 ├── src/                       # React Frontend
 │   ├── components/            #   Shared UI components & page-specific components
-│   │   └── canvas/            #     Professional whiteboard with 18 organized components
+│   │   └── canvas/            #     Professional whiteboard with 18+ organized components including dynamic connections
 │   │       └── backup/        #       Legacy components for reference
 │   ├── contexts/              #   React Context providers for global state
 │   ├── hooks/                 #   Custom React hooks
@@ -177,6 +177,29 @@ LibreOllama includes comprehensive documentation to help you get started quickly
 - Extended `handleStartTextEdit` to support table cell virtual elements
 - Fixed coordinate system mismatches between canvas and screen positioning
 - Improved error handling and debugging for text editing workflows
+
+### ✨ Dynamic Connection System (June 19, 2025)
+
+**Revolutionary connection functionality for professional diagramming:**
+
+- **🔗 Dynamic Connection Movement**: Connections automatically follow their connected elements when repositioned, maintaining visual relationships
+- **📍 Real-Time Anchor Point Updates**: Connection endpoints recalculate dynamically based on element position, size, and anchor points
+- **🎯 Enhanced ConnectorRenderer**: Improved performance with memoization and optimized re-rendering for smooth connection updates
+- **📦 Section-Aware Connections**: Connections properly handle elements within sections, converting coordinates seamlessly
+- **🛡️ Connection Validation**: Graceful handling of deleted connected elements with automatic cleanup and error prevention
+- **⚡ Performance Optimization**: Efficient connection tracking and updates without impacting overall canvas performance
+
+**Professional-Grade Features:**
+- FigJam-style dynamic connections that maintain relationships during element manipulation
+- Intelligent anchor point calculation for different element types (rectangles, circles, text, sections)
+- Robust error handling for edge cases like deleted elements or invalid connections
+- Optimized rendering pipeline with minimal re-calculation overhead
+
+**Technical Implementation:**
+- Enhanced `ConnectorRenderer` component with `useMemo` optimization for endpoint calculations
+- Added `getElementAnchorPoint` helper function with section coordinate support
+- Implemented connection validation to handle deleted elements without breaking UI
+- Updated layer components to pass update functionality for real-time connection management
 
 ---
 

@@ -1,6 +1,6 @@
 // src/hooks/canvas/useViewportControls.ts
 import { useCallback } from 'react';
-import { useViewport } from '../../stores/canvasStore';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
 
 /**
  * useViewportControls - Zoom/pan controls from the main canvas store
@@ -9,11 +9,18 @@ import { useViewport } from '../../stores/canvasStore';
  * - Handles coordinate transformations
  */
 export const useViewportControls = () => {
-  // Use the modular viewport store
-  const {
-    zoom, pan, viewportSize, setZoom, setPan, zoomIn, zoomOut, 
-    zoomToFit, resetViewport, screenToCanvas, canvasToScreen
-  } = useViewport();
+  // Use the unified canvas store with selectors
+  const zoom = useCanvasStore((state) => state.zoom);
+  const pan = useCanvasStore((state) => state.pan);
+  const viewportSize = useCanvasStore((state) => state.viewportSize);
+  const setZoom = useCanvasStore((state) => state.setZoom);
+  const setPan = useCanvasStore((state) => state.setPan);
+  const zoomIn = useCanvasStore((state) => state.zoomIn);
+  const zoomOut = useCanvasStore((state) => state.zoomOut);
+  const zoomToFit = useCanvasStore((state) => state.zoomToFit);
+  const resetViewport = useCanvasStore((state) => state.resetViewport);
+  const screenToCanvas = useCanvasStore((state) => state.screenToCanvas);
+  const canvasToScreen = useCanvasStore((state) => state.canvasToScreen);
 
   // Zoom to a specific point on the canvas
   const zoomToPoint = useCallback((zoomLevel: number, point: { x: number; y: number }) => {

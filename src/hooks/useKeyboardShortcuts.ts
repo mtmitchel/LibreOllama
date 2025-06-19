@@ -1,12 +1,18 @@
 // src/hooks/useKeyboardShortcuts.ts
 import { useEffect } from 'react';
-import { useCanvasHistory, useCanvasElements, useSelection, useCanvasUI } from '../features/canvas/stores/canvasStore';
+import { useCanvasStore } from '../features/canvas/stores';
 
 export const useKeyboardShortcuts = () => {
-  const { undo, redo, canUndo, canRedo } = useCanvasHistory();
-  const { deleteElement, duplicateElement } = useCanvasElements();
-  const { selectedElementIds, clearSelection } = useSelection();
-  const { setSelectedTool } = useCanvasUI();
+  // Use unified canvas store with selectors
+  const undo = useCanvasStore((state) => state.undo);
+  const redo = useCanvasStore((state) => state.redo);
+  const canUndo = useCanvasStore((state) => state.canUndo);
+  const canRedo = useCanvasStore((state) => state.canRedo);
+  const deleteElement = useCanvasStore((state) => state.deleteElement);
+  const duplicateElement = useCanvasStore((state) => state.duplicateElement);
+  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
+  const clearSelection = useCanvasStore((state) => state.clearSelection);
+  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
   
   const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
 

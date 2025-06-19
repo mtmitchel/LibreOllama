@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { useCanvasStore } from '../../stores/canvasStore';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
 import type { CanvasElement } from '../../../../types';
 
 interface UseCanvasEventsProps {

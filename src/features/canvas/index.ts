@@ -34,7 +34,7 @@ export type {
 } from './layers/types';
 
 // Canvas Stores
-export { useKonvaCanvasStore } from './stores/konvaCanvasStore';
+export { useCanvasStore as useKonvaCanvasStore } from './stores/canvasStore.enhanced';
 export type { CanvasState } from './hooks/useGranularSelectors';
 
 // Granular Selectors (Phase 2 Optimization)
@@ -89,7 +89,7 @@ export {
 } from './utils/logger';
 
 // Core Components
-export { EditableNode } from './components/EditableNode';
+export { EditableNode } from './shapes/EditableNode';
 export { ConnectorRenderer } from './components/ConnectorRenderer';
 
 // Layer Components

@@ -7,37 +7,11 @@
 // Re-export the main canvas store and its hooks from the feature module
 export {
   useCanvasStore,
-  useCanvasElements,
-  useTextEditing,
-  useSelection,
-  useViewport,
-  useCanvasUI,
-  useCanvasHistory,
   type CanvasStoreState
-} from '../features/canvas/stores/canvasStore';
+} from '../features/canvas/stores';
 
 // Import for local use
-import { useCanvasStore, type CanvasStoreState } from '../features/canvas/stores/canvasStore';
-
-// Re-export individual store slices for direct access if needed
-export {
-  createCanvasElementsStore,
-  createTextEditingStore,
-  createSelectionStore,
-  createViewportStore,
-  createCanvasUIStore,
-  createCanvasHistoryStore
-} from '../features/canvas/stores';
-
-// Type exports
-export type {
-  CanvasElementsState,
-  TextEditingState,
-  SelectionState,
-  ViewportState,
-  CanvasUIState,
-  CanvasHistoryState
-} from '../features/canvas/stores';
+import { useCanvasStore, type CanvasStoreState } from '../features/canvas/stores';
 
 // Legacy compatibility interface
 export interface LibreOllamaCanvasStore extends CanvasStoreState {}

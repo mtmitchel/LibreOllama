@@ -1,0 +1,288 @@
+/* FigJam Canvas Application Styles */
+
+/* Global styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Canvas specific styles */
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #f8fafc;
+  cursor: default;
+}
+
+.canvas-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Toolbar styles */
+.toolbar {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.toolbar-floating {
+  position: fixed;
+  z-index: 1000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Selection and interaction styles */
+.selection-box {
+  pointer-events: none;
+  stroke: #0066ff;
+  stroke-width: 1;
+  fill: rgba(0, 102, 255, 0.1);
+  stroke-dasharray: 5, 5;
+}
+
+.resize-handle {
+  cursor: pointer;
+  stroke: #0066ff;
+  stroke-width: 1;
+  fill: white;
+}
+
+.resize-handle:hover {
+  stroke-width: 2;
+  fill: #0066ff;
+}
+
+.connection-point {
+  cursor: crosshair;
+  stroke: #0066ff;
+  stroke-width: 2;
+  fill: white;
+}
+
+.connection-point:hover {
+  fill: #0066ff;
+  stroke-width: 3;
+}
+
+/* Grid styles */
+.grid-line {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+.grid-dot {
+  fill: #e2e8f0;
+  opacity: 0.5;
+}
+
+/* Guide lines */
+.guide-line {
+  stroke: #f59e0b;
+  stroke-width: 1;
+  stroke-dasharray: 3, 3;
+  pointer-events: none;
+}
+
+.snap-guide {
+  stroke: #10b981;
+  stroke-width: 2;
+  stroke-dasharray: 5, 5;
+  pointer-events: none;
+}
+
+/* Text editing styles */
+.text-editor {
+  position: absolute;
+  z-index: 100;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  font-style: inherit;
+  text-decoration: inherit;
+}
+
+.text-editor:focus {
+  background: rgba(255, 255, 255, 0.8);
+  outline: 2px solid #0066ff;
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Performance optimizations */
+.canvas-element {
+  transform-origin: center;
+  will-change: transform;
+}
+
+.canvas-element.dragging {
+  will-change: transform;
+}
+
+.canvas-element.selected {
+  filter: drop-shadow(0 0 0 2px #0066ff);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .canvas-container {
+    background: #1e293b;
+  }
+  
+  .grid-line {
+    stroke: #475569;
+  }
+  
+  .grid-dot {
+    fill: #475569;
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .toolbar {
+    transform: scale(0.9);
+  }
+  
+  .property-panel {
+    width: 100%;
+    max-width: 300px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .canvas-stage {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Custom scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus styles */
+.focus-visible:focus {
+  outline: 2px solid #0066ff;
+  outline-offset: 2px;
+}
+
+/* Disable text selection on UI elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Print styles */
+@media print {
+  .toolbar,
+  .property-panel,
+  .floating-toolbar {
+    display: none !important;
+  }
+  
+  .canvas-container {
+    background: white;
+    box-shadow: none;
+  }
+}

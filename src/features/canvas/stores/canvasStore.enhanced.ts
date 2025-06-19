@@ -349,8 +349,53 @@ export const useCanvasStore = create<CanvasStoreState>()(
   )
 );
 
-// Export the same selectors as before
-export { useCanvasElements, useDrawing, useTextEditing, useSelection, useViewport, useCanvasUI, useCanvasHistory, useSections } from './canvasStore';
+// Export individual selectors for convenience
+export const useCanvasElements = () => useCanvasStore(state => ({
+  elements: state.elements,
+  addElement: state.addElement,
+  updateElement: state.updateElement,
+  deleteElement: state.deleteElement,
+  duplicateElement: state.duplicateElement
+}));
+
+export const useSelection = () => useCanvasStore(state => ({
+  selectedElementIds: state.selectedElementIds,
+  selectElement: state.selectElement,
+  selectMultipleElements: state.selectMultipleElements,
+  clearSelection: state.clearSelection
+}));
+
+export const useTextEditing = () => useCanvasStore(state => ({
+  editingTextId: state.editingTextId
+}));
+
+export const useCanvasUI = () => useCanvasStore(state => ({
+  selectedTool: state.selectedTool,
+  setSelectedTool: state.setSelectedTool
+}));
+
+export const useViewport = () => useCanvasStore(state => ({
+  viewportBounds: state.viewportBounds
+}));
+
+export const useCanvasHistory = () => useCanvasStore(state => ({
+  undo: state.undo,
+  redo: state.redo,
+  canUndo: state.canUndo,
+  canRedo: state.canRedo
+}));
+
+export const useSections = () => useCanvasStore(state => ({
+  sections: state.sections,
+  createSection: state.createSection,
+  updateSection: state.updateSection,
+  deleteSection: state.deleteSection
+}));
+
+export const useDrawing = () => useCanvasStore(state => ({
+  isDrawing: state.isDrawing,
+  currentPath: state.currentPath
+}));
 
 // Setup text debugging monitoring
 if (process.env.NODE_ENV === 'development') {

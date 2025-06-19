@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Square, 
-  Circle, 
-  Minus, 
+  Circle,   Minus, 
   Triangle, 
   Star,
   ArrowRight,
   ChevronDown
 } from 'lucide-react';
-import { useCanvasUI } from '../../features/canvas/stores/canvasStore';
+import { useCanvasStore } from '../../features/canvas/stores';
 import './ShapesDropdown.css';
 
 const shapeTools = [
@@ -28,8 +27,8 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // Use modular store hook
-  const { selectedTool } = useCanvasUI();
+  // Use unified store with selector
+  const selectedTool = useCanvasStore((state) => state.selectedTool);
   
   // Find the currently selected shape tool, default to rectangle
   const currentShapeTool = shapeTools.find(tool => tool.id === selectedTool) || shapeTools[0]!;

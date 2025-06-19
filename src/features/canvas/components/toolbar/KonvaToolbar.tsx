@@ -1,7 +1,7 @@
 // src/features/canvas/components/toolbar/KonvaToolbar.tsx
 import React, { useRef } from 'react';
 import { useCanvasStore as useEnhancedStore } from '../../stores/canvasStore.enhanced';
-import { useTauriCanvas } from '../../../../hooks/useTauriCanvas';
+import { useTauriCanvas } from '../../hooks/useTauriCanvas';
 import { 
   MousePointer2, 
   Type, 
@@ -76,12 +76,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     selectedTool, 
     setSelectedTool,
     undo, 
-    redo, 
-    canUndo, 
+    redo,    canUndo, 
     canRedo,
     selectedElementIds, 
     selectElement,
-    setEditingTextId,
     pan, 
     zoom,
     findSectionAtPoint,
@@ -326,14 +324,15 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       case 'section':
         // Section tool activates drawing mode, doesn't create element immediately
         return;
-          
-      case 'table':
+            case 'table':
+        console.log('🔧 [TOOLBAR] Table tool clicked - creating table element');
         // Debounce table creation to prevent duplicates
         if (tableCreationTimeoutRef.current) {
           clearTimeout(tableCreationTimeoutRef.current);
         }
         
         tableCreationTimeoutRef.current = setTimeout(() => {
+          console.log('🔧 [TOOLBAR] Executing table creation after timeout');
           // Create a table element with proper enhanced table data structure
           const rows = 3;
           const cols = 3;
@@ -386,7 +385,9 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
                 colSpan: 1
               }))
             )
-          };            const tableElement: any = {
+          };
+
+          const tableElement: any = {
             id: generateId(),
             type: 'table' as const,
             x: targetSection ? tableTopLeftX - targetSection.x : tableTopLeftX,
@@ -397,13 +398,19 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             sectionId: targetSectionId
           };
 
+          console.log('🔧 [TOOLBAR] Created table element:', tableElement);
+          console.log('🔧 [TOOLBAR] About to call addElement with table');
           // **TARGETED FIX**: Toolbar elements default to canvas (not auto-assigned to sections)
           addElement(tableElement);
+          console.log('🔧 [TOOLBAR] addElement called successfully');
+          
           if (targetSectionId && addElementToSection) {
             addElementToSection(tableElement.id, targetSectionId);
+            console.log('🔧 [TOOLBAR] Added table to section:', targetSectionId);
           }
           
           selectElement(tableElement.id);
+          console.log('🔧 [TOOLBAR] Table creation completed');
           tableCreationTimeoutRef.current = null;
         }, 100);
         return;
