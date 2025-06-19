@@ -156,8 +156,8 @@ export const useCanvasStore = create<CanvasStoreState>()(
             const capturedElementIds: string[] = [];
             
             Object.entries(elements).forEach(([elementId, element]) => {
-              // Skip if element is already in a section
-              if (element.sectionId) return;
+              // Skip if element is already in a section or is a text element
+              if (element.sectionId || element.type === 'text') return;
               
               // Check if element is within section bounds
               const elementBounds = {

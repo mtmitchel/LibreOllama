@@ -1,5 +1,5 @@
 // src/components/canvas/shapes/TextShape.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../stores/types';
@@ -33,7 +33,6 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
 }) => {
   const textNodeRef = useRef<Konva.Text>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
-  const [isReadyToRender, setIsReadyToRender] = useState(false);
 
   const { editingTextId, setEditingTextId } = useCanvasStore();
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -142,32 +141,23 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
     };
   }, [editingTextId, element.id, element.text, element.width, element.fontSize, element.fontFamily, onUpdate, setEditingTextId, stageRef]);
 
-  // Delay rendering to prevent race conditions with Konva props
-  useEffect(() => {
-    // This effect ensures we don't render the Konva Text node on the very first pass,
-    // which seems to be where an invalid prop might be passed.
-    // By setting state and re-rendering, we ensure all props are stable.
-    if (!isReadyToRender) {
-      setIsReadyToRender(true);
-    }
-  }, [isReadyToRender]);
-
   useEffect(() => {
     if (isSelected && transformerRef.current && textNodeRef.current) {
-      // Attach the transformer to the text node
-      transformerRef.current.nodes([textNodeRef.current]);
-      transformerRef.current.getLayer()?.batchDraw();
+      // Defer attachment to the next tick to ensure the node is mounted.
+      const timer = setTimeout(() => {
+        if (transformerRef.current && textNodeRef.current) {
+          transformerRef.current.nodes([textNodeRef.current]);
+          transformerRef.current.getLayer()?.batchDraw();
+        }
+      }, 0);
+
+      return () => clearTimeout(timer); // Cleanup the timeout
     } else if (!isSelected && transformerRef.current) {
-      // Deselecting, so we remove the transformer
+      // No need to defer detaching
       transformerRef.current.nodes([]);
       transformerRef.current.getLayer()?.batchDraw();
     }
-  }, [isSelected]);
-
-
-  if (!isReadyToRender) {
-    return null; // Avoid rendering on the first pass to prevent prop-related race conditions
-  }
+  }, [isSelected, element.id]); // Add element.id to dependencies
 
   // FINAL SAFETY NET: Ensure we never pass an empty or whitespace-only string to Konva
   const safeText = (element.text && element.text.trim().length > 0) ? element.text : 'Text';

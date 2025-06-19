@@ -162,6 +162,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       {/* Render free elements */}
       <MainLayer
         key="main"
+        name="main-layer"
         elements={mainElements}
         selectedElementIds={selectedElementIds}
         selectedTool={selectedTool}

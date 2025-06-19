@@ -60,7 +60,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     createSection,
     captureElementsInSection,
     handleSectionDragEnd,
-    resizeSection
+    resizeSection,
+    findSectionAtPoint
   } = useEnhancedStore();
   
   // Connector drawing state
@@ -93,39 +94,17 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     if (onElementSelect) {
       onElementSelect(element);
     }
-  }, [onElementSelect, selectElement]);  const handleElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
+  }, [onElementSelect, selectElement]);
+
+  const handleElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
     const node = e.target;
     const allElementsMap = { ...elements, ...sections };
     const element = allElementsMap[elementId];
     if (!element) return;
 
-    // Get the raw position from Konva node
-    let newPos = { x: node.x(), y: node.y() };
-      console.log('🎯 [KONVA CANVAS] Raw drag end position:', {
-      elementId,
-      elementType: element.type,
-      rawPosition: newPos,
-      elementCurrentPos: { x: element.x, y: element.y },
-      elementSectionId: 'sectionId' in element ? element.sectionId : 'N/A (section)'
-    });
-
-    // For elements inside sections, Konva gives us relative coordinates within the section
-    // But handleElementDrop expects absolute canvas coordinates
-    // So we need to convert relative to absolute if the element is in a section
-    if ('sectionId' in element && element.sectionId) {
-      const section = sections[element.sectionId];
-      if (section) {
-        // Convert relative position to absolute canvas position
-        newPos = {
-          x: newPos.x + section.x,
-          y: newPos.y + section.y
-        };
-        console.log('📐 [KONVA CANVAS] Converted relative to absolute:', {
-          sectionPosition: { x: section.x, y: section.y },
-          absolutePosition: newPos
-        });
-      }
-    }
+    // Get the absolute position directly from the Konva node.
+    // This is more reliable than manual calculation, especially when leaving sections.
+    let newPos = node.absolutePosition();
 
     // Now normalize for shape-specific positioning differences
     if (element.type === 'circle') {
@@ -174,7 +153,9 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // Drawing event handlers
   const handleStageMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e.target.getStage()?.getPointerPosition();
-    if (!pos) return;    if (selectedTool === 'pen' || selectedTool === 'pencil') {
+    if (!pos) return;
+
+    if (selectedTool === 'pen' || selectedTool === 'pencil') {
       console.log('🖊️ [KONVA CANVAS] Starting drawing at:', pos);
       console.log('🖊️ [KONVA CANVAS] Selected tool:', selectedTool);
       startDrawing(pos.x, pos.y, selectedTool as 'pen' | 'pencil');
@@ -221,7 +202,50 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         console.log('📦 [SECTION] Starting section at:', pos);
       }
       // Section completion moved to mouse up handler
-    }  }, [selectedTool, startDrawing, isDrawingConnector, connectorStart, addElement, createSection]);
+    } else if (selectedTool === 'text') {
+      const stage = internalStageRef.current;
+      if (!stage) return;
+
+      const layer = stage.findOne('.main-layer') as Konva.Layer;
+      if (!layer) {
+        console.error("Could not find main layer for imperative creation.");
+        return;
+      }
+
+      const newElement: CanvasElement = {
+        id: `text-${Date.now()}`,
+        type: 'text',
+        x: pos.x,
+        y: pos.y,
+        text: 'New Text',
+        fontSize: 24,
+        fontFamily: 'Arial',
+        fill: '#000000',
+        width: 200,
+        height: 30,
+      };
+
+      const newNode = new Konva.Text({
+        id: newElement.id,
+        x: newElement.x,
+        y: newElement.y,
+        text: newElement.text || 'Text', // Ensure text is always a string
+        fontSize: newElement.fontSize,
+        fontFamily: newElement.fontFamily,
+        fill: newElement.fill,
+        width: newElement.width,
+        height: newElement.height,
+        draggable: true,
+      });
+
+      layer.add(newNode);
+      
+      // Update the store AFTER the node is on the canvas
+      addElement(newElement);
+      selectElement(newElement.id);
+    }
+  }, [selectedTool, startDrawing, isDrawingConnector, connectorStart, addElement, createSection, findSectionAtPoint, selectElement]);
+
   const handleStageMouseUp = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isDrawing) {
       finishDrawing();

@@ -1,6 +1,6 @@
 // src/features/canvas/layers/MainLayer.tsx
 import React, { useMemo, useCallback } from 'react';
-import { Layer, Group, Line } from 'react-konva';
+import { Layer, Line } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../stores/types';
 import { designSystem } from '../../../styles/designSystem';
@@ -22,6 +22,7 @@ import {
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 
 interface MainLayerProps {
+  name?: string;
   elements: CanvasElement[];
   selectedElementIds: string[];
   selectedTool: string;
@@ -44,6 +45,7 @@ interface MainLayerProps {
  * - Performance optimized rendering with event delegation
  */
 export const MainLayer: React.FC<MainLayerProps> = ({
+  name,
   elements,
   selectedElementIds,
   selectedTool,
@@ -60,6 +62,11 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 }) => {
   // Get section store access for boundary calculations
   const { getSectionById, getSectionForElement, sections } = useEnhancedStore();
+
+  const handleTransformEnd = useCallback((_element: CanvasElement, updates: Partial<CanvasElement>) => {
+    // The element object from the transformer is stale, so we only use the updates.
+    onElementUpdate(updates.id!, updates);
+  }, [onElementUpdate]);
 
   // Create drag boundary function for elements inside sections
   const createDragBoundFunc = useCallback((element: CanvasElement) => {
@@ -110,7 +117,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   );
 
   // Create event delegation for the layer
-  const layerEventHandlers = useMemo(() => {
+  const delegatedProps = useMemo(() => {
     return createEventDelegation(
       {
         enableClick: true,
@@ -132,11 +139,11 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   }, [elements, onElementClick, throttledDragEnd]);
 
   // Optimize layer props for performance
-  const layerProps = useMemo(() => 
+  const optimizedProps = useMemo(() => 
     optimizeLayerProps({
       listening: true,
-      name: "main-layer"
-    }, true), []
+      name: name // Pass name to optimizer
+    }, true), [name]
   );
 
   // Render individual elements with comprehensive type handling
@@ -200,6 +207,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               konvaProps={konvaElementProps}
               onUpdate={onElementUpdate}
               stageRef={stageRef}
+              onTransformEnd={handleTransformEnd}
             />
           </KonvaErrorBoundary>
         );
@@ -227,6 +235,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             konvaProps={konvaElementProps}
             onUpdate={onElementUpdate}
             stageRef={stageRef}
+            onTransformEnd={handleTransformEnd}
           />
         );
       
@@ -342,6 +351,10 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                 onElementUpdate(id, safeUpdates);
               };
               
+              const handleChildTransformEnd = (child: CanvasElement, updates: Partial<CanvasElement>) => {
+                handleChildUpdate(child.id, updates);
+              };
+
               const childKonvaProps = {
                 id: childElement.id,
                 x: childElement.x, // Use relative coordinates stored in the element
@@ -384,7 +397,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                         element={childElement}
                         isSelected={childIsSelected}
                         konvaProps={childKonvaProps}
-                        onUpdate={onElementUpdate}
+                        onUpdate={handleChildUpdate}
+                        onTransformEnd={handleChildTransformEnd}
+                        stageRef={stageRef}
                       />
                     </KonvaErrorBoundary>
                   );                case 'sticky-note':
@@ -395,7 +410,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                         element={childElement}
                         isSelected={childIsSelected}
                         konvaProps={childKonvaProps}
-                        onUpdate={onElementUpdate}
+                        onUpdate={handleChildUpdate}
+                        stageRef={stageRef}
                       />
                     </KonvaErrorBoundary>
                   );
@@ -450,7 +466,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
         console.warn('Unhandled element type in MainLayer:', element.type);
         return null;
     }
-  }, [selectedElementIds, selectedTool, onElementClick, onElementDragEnd, onElementUpdate, onStartTextEdit]);
+  }, [selectedElementIds, selectedTool, onElementClick, onElementDragEnd, onElementUpdate, onStartTextEdit, sections, elementsBySection, getSectionById, getSectionForElement, handleTransformEnd, stageRef]);
 
   // Effect to trigger layer redraw when needed
   React.useEffect(() => {
@@ -460,28 +476,21 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   }, [elements.length, onLayerDraw]);
   
   return (
-    <Layer listening={true} name="main-layer">
-      <Group 
-        {...layerProps}
-        {...layerEventHandlers}
-      >
-        {/* Render all main elements */}
+    <Layer {...delegatedProps} {...optimizedProps}>
+      <KonvaErrorBoundary>
+        {/* Render all elements */}
         {elements.map(renderElement)}
-        
-        {/* Preview line during pen drawing */}
-        {isDrawing && currentPath.length > 0 && selectedTool === 'pen' && (
+        {isDrawing && currentPath.length > 0 && (
           <Line
             points={currentPath}
-            stroke={designSystem.colors.secondary[800]}
+            stroke={designSystem.colors.primary[500]}
             strokeWidth={3}
             lineCap="round"
             lineJoin="round"
-            tension={0.5}
-            opacity={0.7}
             listening={false}
           />
         )}
-      </Group>
+      </KonvaErrorBoundary>
     </Layer>
   );
 };
