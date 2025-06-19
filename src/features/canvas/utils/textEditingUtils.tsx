@@ -77,12 +77,13 @@ export const createTextEditor = (options: TextEditorOptions): (() => void) => {
 
   const handleBlur = () => {
     handleSave();
-  };
-
-  const handleSave = () => {
+  };  const handleSave = () => {
     const value = 'value' in inputElement ? inputElement.value : '';
     cleanup();
-    onSave(value);
+    
+    // Prevent saving empty or whitespace-only text
+    const newText = value.trim().length === 0 ? 'Text' : value;
+    onSave(newText);
   };
 
   const handleCancel = () => {

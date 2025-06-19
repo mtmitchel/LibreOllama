@@ -1,9 +1,9 @@
 // src/components/canvas/shapes/TextShape.tsx
-import React, { useEffect, useRef } from 'react';
-import { Text } from 'react-konva';
+import React, { useEffect, useRef, useState } from 'react';
+import { Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../stores/types';
-import { useTextEditing } from '../stores/canvasStore';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import { designSystem } from '../../../styles/designSystem';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
@@ -14,21 +14,28 @@ interface TextShapeProps {
   konvaProps: any;
   onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
+  onTransformEnd: (element: CanvasElement, props: Partial<CanvasElement>) => void;
 }
 
 /**
  * TextShape - Optimized text component with portal-based inline editing
  * - Performance-optimized with React.memo
  * - Uses portal-based editing that stays aligned during canvas transformations
+ * - Includes a safety net to prevent React-Konva from crashing on empty/whitespace text
  */
 export const TextShape: React.FC<TextShapeProps> = React.memo(({
   element,
-  isSelected: _isSelected,
+  isSelected,
   konvaProps,
   onUpdate,
-  stageRef
+  stageRef,
+  onTransformEnd,
 }) => {
-  const { editingTextId, setEditingTextId } = useTextEditing();
+  const textNodeRef = useRef<Konva.Text>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const [isReadyToRender, setIsReadyToRender] = useState(false);
+
+  const { editingTextId, setEditingTextId } = useCanvasStore();
   const cleanupRef = useRef<(() => void) | null>(null);
 
   // Ensure fonts are loaded for better text rendering
@@ -80,8 +87,7 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
         cleanupRef.current();
         cleanupRef.current = null;
       }
-
-      // Create the text editor
+      // Create the text editor with enhanced logging
       cleanupRef.current = createTextEditor({
         position: {
           left: Math.round(screenX),
@@ -91,14 +97,17 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
         },
         initialText: element.text || '',
         onSave: (text: string) => {
-          onUpdate(element.id, { text });
+          // Prevent saving whitespace-only text
+          const newText = text.trim().length === 0 ? 'Text' : text;
+          onUpdate(element.id, { text: newText });
           setEditingTextId(null);
           cleanupRef.current = null;
         },
         onCancel: () => {
           setEditingTextId(null);
           cleanupRef.current = null;
-        },        placeholder: 'Enter text...',
+        },
+        placeholder: 'Enter text...',
         fontSize: Math.max(12, Math.min(18, (element.fontSize || designSystem.typography.fontSize.xl) * scale * 0.7)),
         fontFamily: getAvailableFontFamily(),
         multiline: true
@@ -113,12 +122,7 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
     const handleTransform = () => updatePosition();
     
     // Add event listeners for all transform events
-    stage.on('transform', handleTransform);
-    stage.on('dragmove', handleTransform);
-    stage.on('wheel', handleTransform);
-    stage.on('scalechange', handleTransform);
-    stage.on('dragend', handleTransform);
-    stage.on('transformend', handleTransform);
+    stage.on('transform dragmove wheel scalechange dragend transformend', handleTransform);
     
     // Also listen for window resize/scroll
     const handleWindowChange = () => updatePosition();
@@ -132,30 +136,93 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
         cleanupRef.current = null;
       }
       
-      stage.off('transform', handleTransform);
-      stage.off('dragmove', handleTransform);
-      stage.off('wheel', handleTransform);
-      stage.off('scalechange', handleTransform);
-      stage.off('dragend', handleTransform);
-      stage.off('transformend', handleTransform);
-        window.removeEventListener('resize', handleWindowChange);
+      stage.off('transform dragmove wheel scalechange dragend transformend', handleTransform);
+      window.removeEventListener('resize', handleWindowChange);
       window.removeEventListener('scroll', handleWindowChange);
     };
-  }, [editingTextId, element.id, element.text, element.width, element.fontSize, element.fontFamily, onUpdate, setEditingTextId, stageRef]);  const hasContent = element.text && element.text.trim().length > 0;  const displayText = hasContent ? element.text : 'Double-click to edit';
+  }, [editingTextId, element.id, element.text, element.width, element.fontSize, element.fontFamily, onUpdate, setEditingTextId, stageRef]);
+
+  // Delay rendering to prevent race conditions with Konva props
+  useEffect(() => {
+    // This effect ensures we don't render the Konva Text node on the very first pass,
+    // which seems to be where an invalid prop might be passed.
+    // By setting state and re-rendering, we ensure all props are stable.
+    if (!isReadyToRender) {
+      setIsReadyToRender(true);
+    }
+  }, [isReadyToRender]);
+
+  useEffect(() => {
+    if (isSelected && transformerRef.current && textNodeRef.current) {
+      // Attach the transformer to the text node
+      transformerRef.current.nodes([textNodeRef.current]);
+      transformerRef.current.getLayer()?.batchDraw();
+    } else if (!isSelected && transformerRef.current) {
+      // Deselecting, so we remove the transformer
+      transformerRef.current.nodes([]);
+      transformerRef.current.getLayer()?.batchDraw();
+    }
+  }, [isSelected]);
+
+
+  if (!isReadyToRender) {
+    return null; // Avoid rendering on the first pass to prevent prop-related race conditions
+  }
+
+  // FINAL SAFETY NET: Ensure we never pass an empty or whitespace-only string to Konva
+  const safeText = (element.text && element.text.trim().length > 0) ? element.text : 'Text';
+  const hasContent = element.text && element.text.trim().length > 0;
   const textColor = '#000000'; // Always black
-  
+
   return (
-    <Text
-      {...konvaProps}
-      id={element.id}
-      text={displayText}
-      fontSize={element.fontSize || designSystem.typography.fontSize.xl}
-      fontFamily={getAvailableFontFamily()}
-      fill={textColor}
-      width={element.width || 250}
-      fontStyle={hasContent ? (element.fontStyle || 'normal') : 'italic'}
-      onDblClick={handleDoubleClick}
-    />
+    <>
+      <Text
+        {...konvaProps}
+        id={element.id}
+        text={safeText}
+        fontSize={element.fontSize || designSystem.typography.fontSize.xl}
+        fontFamily={getAvailableFontFamily()}
+        fill={textColor}
+        width={element.width || 250}
+        fontStyle={hasContent ? (element.fontStyle || 'normal') : 'italic'}
+        onDblClick={handleDoubleClick}
+        ref={textNodeRef}
+      />
+      {isSelected && (
+        <Transformer
+          ref={transformerRef}
+          boundBoxFunc={(oldBox, newBox) => {
+            // Prevent scaling below a certain size
+            if (newBox.width < 10 || newBox.height < 10) {
+              return oldBox;
+            }
+            return newBox;
+          }}
+          onTransformEnd={() => {
+            const node = textNodeRef.current;
+            if (!node) return;
+            
+            const scaleX = node.scaleX();
+            const scaleY = node.scaleY();
+            
+            // Reset scale before getting the new width/height
+            node.scaleX(1);
+            node.scaleY(1);
+            
+            const newWidth = Math.max(10, node.width() * scaleX);
+            const newHeight = Math.max(10, node.height() * scaleY);
+            
+            onTransformEnd(element, {
+              width: newWidth,
+              height: newHeight,
+              x: node.x(),
+              y: node.y(),
+              rotation: node.rotation(),
+            });
+          }}
+        />
+      )}
+    </>
   );
 });
 

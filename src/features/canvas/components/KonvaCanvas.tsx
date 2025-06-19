@@ -1,11 +1,10 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
-import { useCanvasElements, useSelection, useTextEditing, useDrawing, useCanvasUI, useSections, useEnhancedStore } from '../stores/canvasStore';
+import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import type { CanvasElement } from '../types';
 import '../../../styles/konvaCanvas.css';
-import { designSystem } from '../../../styles/designSystem';
 
 // Local interfaces
 interface PanZoomState {
@@ -40,24 +39,29 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   useEffect(() => {
     if (externalStageRef && internalStageRef.current) {
       externalStageRef.current = internalStageRef.current;
-    }
-  }, [externalStageRef]);
-  // Store subscriptions using modular store hooks
-  const { updateElement, addElement, elements, updateMultipleElements } = useCanvasElements();
-  const { clearSelection, selectElement } = useSelection();
-  const { setEditingTextId } = useTextEditing();
-  const { selectedTool } = useCanvasUI();
-  const { isDrawing, currentPath, startDrawing, updateDrawing, finishDrawing } = useDrawing();  // Section operations from modular section store
-  const {
+    }  }, [externalStageRef]);  // Store subscriptions using enhanced store (single source of truth)
+  const { 
+    updateElement, 
+    addElement, 
+    elements, 
+    updateMultipleElements,
+    clearSelection, 
+    selectElement,
+    setEditingTextId,
+    selectedTool,
+    isDrawing, 
+    currentPath, 
+    startDrawing,    updateDrawing, 
+    finishDrawing,
+    // Section and enhanced operations
+    handleElementDrop, 
+    captureElementsAfterSectionCreation,
     sections,
     createSection,
     captureElementsInSection,
     handleSectionDragEnd,
     resizeSection
-  } = useSections();
-  
-  // Enhanced cross-slice operations
-  const { handleElementDrop } = useEnhancedStore();
+  } = useEnhancedStore();
   
   // Connector drawing state
   const [isDrawingConnector, setIsDrawingConnector] = React.useState(false);
@@ -95,42 +99,71 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     const element = allElementsMap[elementId];
     if (!element) return;
 
-    const newPos = { x: node.x(), y: node.y() };
+    // Get the raw position from Konva node
+    let newPos = { x: node.x(), y: node.y() };
+      console.log('🎯 [KONVA CANVAS] Raw drag end position:', {
+      elementId,
+      elementType: element.type,
+      rawPosition: newPos,
+      elementCurrentPos: { x: element.x, y: element.y },
+      elementSectionId: 'sectionId' in element ? element.sectionId : 'N/A (section)'
+    });
+
+    // For elements inside sections, Konva gives us relative coordinates within the section
+    // But handleElementDrop expects absolute canvas coordinates
+    // So we need to convert relative to absolute if the element is in a section
+    if ('sectionId' in element && element.sectionId) {
+      const section = sections[element.sectionId];
+      if (section) {
+        // Convert relative position to absolute canvas position
+        newPos = {
+          x: newPos.x + section.x,
+          y: newPos.y + section.y
+        };
+        console.log('📐 [KONVA CANVAS] Converted relative to absolute:', {
+          sectionPosition: { x: section.x, y: section.y },
+          absolutePosition: newPos
+        });
+      }
+    }
+
+    // Now normalize for shape-specific positioning differences
+    if (element.type === 'circle') {
+      const radius = element.radius || 50;
+      // Circles use center positioning in Konva, convert to top-left corner
+      newPos = {
+        x: newPos.x - radius,
+        y: newPos.y - radius
+      };
+    } else if (element.type === 'star') {
+      const radius = element.radius || (element.width || 100) / 2;
+      // Stars use center positioning in Konva, convert to top-left corner
+      newPos = {
+        x: newPos.x - radius,
+        y: newPos.y - radius
+      };
+    }
+    // All other element types use Group containers with top-left corner positioning
 
     if (element.type === 'section') {
-      // Section drag - use proper store method that maintains relative coordinates
+      // Section drag handling
       const result = handleSectionDragEnd(elementId, newPos.x, newPos.y);
-      
-      // If section moved, update all contained elements
-      if (result && result.containedElementIds.length > 0) {
-        const updates: Record<string, Partial<CanvasElement>> = {};
-        result.containedElementIds.forEach((containedId: string) => {
-          const containedElement = elements[containedId];
-          if (containedElement) {
-            updates[containedId] = {
-              x: containedElement.x + result.deltaX,
-              y: containedElement.y + result.deltaY
-            };
-          }
-        });
-        
-        if (Object.keys(updates).length > 0) {
-          updateMultipleElements(updates);
-          console.log('✅ [KONVA CANVAS] Updated', Object.keys(updates).length, 'contained elements after section move');
-        }
-      }
-    } else {
-      // Regular element drag - use enhanced store's handleElementDrop for proper coordinate handling
-      console.log('🎯 [KONVA CANVAS] Element drag end, calling handleElementDrop:', {
-        elementId,
-        position: newPos,
-        absolutePosition: node.absolutePosition()
+      console.log('📦 [KONVA CANVAS] Section moved:', {
+        sectionId: elementId,
+        newPosition: newPos,
+        containedElements: result?.containedElementIds?.length || 0
       });
-      
-      // Use the enhanced store's handleElementDrop which properly handles coordinate transformations
-      handleElementDrop(elementId, node.absolutePosition());
+    } else {
+      // Regular element drag - pass normalized absolute position to handleElementDrop
+      console.log('🎯 [KONVA CANVAS] Calling handleElementDrop with normalized position:', {
+        elementId,
+        elementType: element.type,
+        normalizedAbsolutePosition: newPos,
+        currentSectionId: 'sectionId' in element ? element.sectionId : 'N/A (section)' 
+      });
+      handleElementDrop(elementId, newPos); 
     }
-  }, [elements, sections, updateMultipleElements, handleSectionDragEnd, handleElementDrop]);
+  }, [elements, sections, handleSectionDragEnd, handleElementDrop]);
 
   const handleElementUpdate = useCallback((id: string, updates: Partial<CanvasElement>) => {
     updateElement(id, updates);
@@ -200,30 +233,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           previewSection.y,
           previewSection.width,
           previewSection.height,
-          'Untitled Section'
-        );
+          'Untitled Section'        );
         
-        // Capture existing elements within the section bounds
-        const capturedElementIds = captureElementsInSection(sectionId, elements);
-        
-        // Convert captured elements to section-relative coordinates and assign sectionId
-        if (capturedElementIds.length > 0) {
-          const elementUpdates: Record<string, Partial<CanvasElement>> = {};
-          capturedElementIds.forEach(elementId => {
-            const element = elements[elementId];
-            if (element) {
-              elementUpdates[elementId] = {
-                sectionId: sectionId,
-                x: element.x - previewSection.x, // Convert to section-relative coordinates
-                y: element.y - previewSection.y
-              };
-            }
-          });
-          
-          // Update all captured elements
-          updateMultipleElements(elementUpdates);
-          console.log('✅ [KONVA CANVAS] Updated', capturedElementIds.length, 'captured elements with section assignment');
-        }
+        // Use enhanced store method to capture elements in the new section
+        captureElementsAfterSectionCreation(sectionId);
       }
       // Reset section drawing state
       setIsDrawingSection(false);
@@ -250,75 +263,48 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     }
   }, [isDrawing, selectedTool, updateDrawing, isDrawingSection, sectionStart]);
 
-  // Drag and drop functionality for adding elements from sidebar
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Necessary to allow dropping
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const stage = internalStageRef.current;
-    if (!stage) return;
-
-    const type = e.dataTransfer.getData('application/reactflow');
-    const elementData = JSON.parse(e.dataTransfer.getData('element'));
-
-    if (type) {
-      const pos = stage.getPointerPosition();
-      if (!pos) return;
-
-      const newElement: CanvasElement = {
-        id: `${type}-${Date.now()}`,
-        type: type as any,
-        x: pos.x,
-        y: pos.y,
-        width: elementData.width || 100,
-        height: elementData.height || 100,
-        fill: elementData.fill || designSystem.colors.primary[500],
-        stroke: elementData.stroke || designSystem.colors.primary[700],
-        strokeWidth: elementData.strokeWidth || 2,
-      };
-      addElement(newElement);
-    }
-  }, [addElement]);
-
-  // Handle section resize with proportional scaling of contained elements
+  // **CHANGE 3**: Handle section resize with proportional scaling of contained elements
   const handleSectionResize = useCallback((sectionId: string, newWidth: number, newHeight: number) => {
+    const section = sections[sectionId];
+    if (!section) return;
+
+    const oldWidth = section.width;
+    const oldHeight = section.height;
+    const scaleX = newWidth / oldWidth;
+    const scaleY = newHeight / oldHeight;
+
     const result = resizeSection(sectionId, newWidth, newHeight);
     
-    // If section resized, scale all contained elements proportionally
+    // Scale all contained elements proportionally based on their EXISTING relative coordinates
     if (result && result.containedElementIds.length > 0) {
       const updates: Record<string, Partial<CanvasElement>> = {};
-      const section = sections[sectionId];
       
       result.containedElementIds.forEach((containedId: string) => {
         const containedElement = elements[containedId];
-        if (containedElement && section) {
-          // Calculate relative position within section
-          const relativeX = containedElement.x - section.x;
-          const relativeY = containedElement.y - section.y;
-          
-          // Scale position and size proportionally
+        if (containedElement) {
+          // Use the element's existing relative coordinates within the section
+          // Scale both position and size proportionally
           updates[containedId] = {
-            x: section.x + (relativeX * result.scaleX),
-            y: section.y + (relativeY * result.scaleY),
-            width: (containedElement.width || 100) * result.scaleX,
-            height: (containedElement.height || 100) * result.scaleY
+            x: containedElement.x * scaleX, // Scale relative X position
+            y: containedElement.y * scaleY, // Scale relative Y position
+            width: (containedElement.width || 100) * scaleX,
+            height: (containedElement.height || 100) * scaleY
           };
         }
       });
       
       if (Object.keys(updates).length > 0) {
         updateMultipleElements(updates);
-        console.log('✅ [KONVA CANVAS] Proportionally resized', Object.keys(updates).length, 'contained elements');
+        console.log('✅ [KONVA CANVAS] Proportionally scaled', Object.keys(updates).length, 'contained elements:', {
+          sectionId,
+          scale: { x: scaleX, y: scaleY },
+          elementsUpdated: Object.keys(updates)
+        });
       }
     }
   }, [resizeSection, sections, elements, updateMultipleElements]);
-
   return (
     <div
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
       style={{ width, height, position: 'relative' }}
     >
       <Stage

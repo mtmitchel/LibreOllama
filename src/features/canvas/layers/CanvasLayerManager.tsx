@@ -5,7 +5,7 @@ import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
 import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
-import { useCanvasElements, useSelection, useCanvasUI, useSections } from '../stores/canvasStore';
+import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { CanvasElement } from '../stores/types';
 
 interface CanvasLayerManagerProps {
@@ -42,32 +42,32 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   connectorEnd,
   isDrawingSection = false,
   previewSection
-}) => {const { elements: elementsMap } = useCanvasElements();
-  const { sections: sectionsMap } = useSections();
-  const { selectedElementIds, clearSelection, selectMultipleElements } = useSelection();
-  const { selectedTool } = useCanvasUI();
+}) => {
+  const { 
+    elements: elementsMap, 
+    sections: sectionsMap,
+    selectedElementIds, 
+    clearSelection, 
+    selectMultipleElements,
+    selectedTool 
+  } = useEnhancedStore();
   const [selectionBox, setSelectionBox] = React.useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
 
   const allElementsArray = useMemo(() => {
     const regularElements = Object.values(elementsMap);
     const sectionElements = Object.values(sectionsMap);
     return [...regularElements, ...sectionElements];
-  }, [elementsMap, sectionsMap]);  const { mainElements, connectorElements, sectionElements, containedElements } = useMemo(() => {
+  }, [elementsMap, sectionsMap]);  const { mainElements, connectorElements, sectionElements, elementsBySection } = useMemo(() => {
     const main: CanvasElement[] = [];
     const connectors: CanvasElement[] = [];
     const sections: CanvasElement[] = [];
-    const contained: CanvasElement[] = [];
-    const inSections = new Set<string>();
+    const elementsBySection: Record<string, CanvasElement[]> = {};
     
-    // First, collect all section IDs and mark elements that belong to sections
+    // First, collect all section elements and initialize their element arrays
     allElementsArray.forEach((el: any) => {
       if (el.type === 'section') {
         sections.push(el);
-        if (el.containedElementIds) {
-          el.containedElementIds.forEach((childId: string) => {
-            inSections.add(childId);
-          });
-        }
+        elementsBySection[el.id] = [];
       }
     });
     
@@ -78,9 +78,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         return;
       } else if (el.type === 'connector') {
         connectors.push(el);
-      } else if (inSections.has(el.id)) {
-        // Elements that belong to sections - render on top
-        contained.push(el);
+      } else if (el.sectionId && elementsBySection[el.sectionId]) {
+        // Elements that belong to sections - group by section
+        elementsBySection[el.sectionId].push(el);
       } else {
         // Free elements - render in main layer
         main.push(el);
@@ -91,7 +91,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       mainElements: main, 
       connectorElements: connectors, 
       sectionElements: sections,
-      containedElements: contained
+      elementsBySection: elementsBySection
     };
   }, [allElementsArray]);
 
@@ -143,9 +143,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         height={stageHeight}
         elements={[]}
       />
-      {/* Render sections first (background layer) */}
+      {/* Render sections with their contained elements */}
       <MainLayer
-        key="sections"
+        key="sections-with-children"
         elements={sectionElements}
         selectedElementIds={selectedElementIds}
         selectedTool={selectedTool}
@@ -157,26 +157,12 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         stageRef={stageRef}
         isDrawing={isDrawing}
         currentPath={currentPath}
+        elementsBySection={elementsBySection}
       />
-      {/* Render free elements (middle layer) */}
+      {/* Render free elements */}
       <MainLayer
         key="main"
         elements={mainElements}
-        selectedElementIds={selectedElementIds}
-        selectedTool={selectedTool}
-        onElementClick={onElementClick}
-        onElementDragEnd={onElementDragEnd}
-        onElementUpdate={onElementUpdate}
-        onStartTextEdit={onStartTextEdit}
-        onSectionResize={onSectionResize}
-        stageRef={stageRef}
-        isDrawing={isDrawing}
-        currentPath={currentPath}
-      />
-      {/* Render contained elements on top (foreground layer) */}
-      <MainLayer
-        key="contained"
-        elements={containedElements}
         selectedElementIds={selectedElementIds}
         selectedTool={selectedTool}
         onElementClick={onElementClick}

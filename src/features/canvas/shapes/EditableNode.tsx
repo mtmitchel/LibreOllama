@@ -1,7 +1,7 @@
 // src/components/canvas/shapes/EditableNode.tsx
 import React from 'react';
 import Konva from 'konva';
-import { CanvasElement } from '../layers/types';
+import { CanvasElement } from '../stores/types';
 import { RectangleShape } from './RectangleShape';
 import { CircleShape } from './CircleShape';
 import { TextShape } from './TextShape';
@@ -40,15 +40,14 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
   onElementDragEnd,
   onElementUpdate,
   onStartTextEdit
-}) => {
-  // Determine if element should be draggable
+}) => {  // Determine if element should be draggable
   const isDraggable = React.useMemo(() => {
     return (
       (selectedTool === 'select' || selectedTool === element.type) &&
-      !(element as any).isLocked &&
-      !(element.sectionId && isSelected) // Don't drag if parent section is selected
+      !(element as any).isLocked
+      // Allow dragging of selected elements in sections - that's the whole point!
     );
-  }, [selectedTool, element.type, element.sectionId, isSelected]);
+  }, [selectedTool, element.type]);
 
   // Common props for all shape types
   const commonProps = React.useMemo(() => {
@@ -161,30 +160,39 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           lineJoin="round"
           tension={0.5}
         />
-      );
-
-    case 'star':
+      );    case 'star':
+      const starRadius = element.radius || (element.width || 100) / 2;
+      // Normalize star positioning to top-left corner like rectangles
+      // Store coordinates represent top-left corner, but Star needs center coordinates
+      const starCenterX = (commonProps.x || 0) + starRadius;
+      const starCenterY = (commonProps.y || 0) + starRadius;
+      
       return (
         <Star
           {...commonProps}
+          x={starCenterX}
+          y={starCenterY}
           numPoints={element.sides || 5}
           innerRadius={element.innerRadius || (element.width || 100) / 4}
-          outerRadius={element.radius || (element.width || 100) / 2}
+          outerRadius={starRadius}
           fill={element.fill || designSystem.colors.warning[500]}
           stroke={element.stroke || designSystem.colors.warning[600]}
           strokeWidth={element.strokeWidth || 2}
         />
-      );
-
-    case 'triangle':
+      );case 'triangle':
+      // Calculate triangle points based on current position and dimensions
+      const triangleWidth = element.width || 100;
+      const triangleHeight = element.height || 60;
+      const trianglePoints = [
+        triangleWidth / 2, 0,  // Top point
+        triangleWidth, triangleHeight,  // Bottom right
+        0, triangleHeight   // Bottom left
+      ];
+      
       return (
         <Line 
           {...commonProps}
-          points={element.points || [
-            0, -(element.height || 60) / 2, 
-            (element.width || 100) / 2, (element.height || 60) / 2, 
-            -(element.width || 100) / 2, (element.height || 60) / 2, 
-          ]}
+          points={trianglePoints}
           closed
           fill={element.fill || designSystem.colors.success[500]}
           stroke={element.stroke || designSystem.colors.success[500]}
@@ -212,9 +220,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           elements={{}} // Will be passed from parent
           renderElement={() => null} // Will be handled by layer manager
         />
-      );
-
-    case 'table':
+      );    case 'table':
       return (
         <EnhancedTableElement
           element={element}
@@ -223,7 +229,6 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           onUpdate={(updates) => onElementUpdate(element.id, updates)}
           onDragEnd={(e) => onElementDragEnd(e, element.id)}
           stageRef={{ current: null }} // Will be passed from parent
-          onStartTextEdit={onStartTextEdit}
         />
       );
 

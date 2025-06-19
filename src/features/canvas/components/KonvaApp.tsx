@@ -5,7 +5,6 @@ import KonvaCanvas from './KonvaCanvas';
 import KonvaToolbar from './toolbar/KonvaToolbar';
 import CanvasSidebar from './CanvasSidebar';
 // import { SimpleTextEditor } from './SimpleTextEditor'; // Temporarily disabled
-import { useCanvasElements, useSelection } from '../stores/canvasStore';
 import { designSystem } from '../../../styles/designSystem';
 import { useViewportControls } from '../hooks/canvas/useViewportControls';
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts';
@@ -26,11 +25,8 @@ const KonvaApp: React.FC = () => {
   // Enable keyboard shortcuts for pan/zoom and other canvas actions
   useKeyboardShortcuts();
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-    // Store integration
-  const { elements: canvasElements } = useCanvasElements();
-  const { selectedElementIds } = useSelection();
-  const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
+  const [sidebarOpen, setSidebarOpen] = useState(true);  // Keyboard shortcuts enabled
+  useKeyboardShortcuts();
 
   useEffect(() => {
     const updateCanvasSize = () => {

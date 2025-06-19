@@ -10,9 +10,9 @@ import { immer } from 'zustand/middleware/immer';
 import { useShallow } from 'zustand/react/shallow';
 import { CoordinateService } from '../utils/coordinateService';
 
-// Import the fixed store slices
-import { createCanvasElementsStore, type CanvasElementsState } from './slices/canvasElementsStore';
-import { createSectionStore, type SectionState } from './slices/sectionStore';
+// Import the FIXED store slices for element containment
+import { createCanvasElementsStore, type CanvasElementsState } from './slices/canvasElementsStore.fixed';
+import { createSectionStore, type SectionState } from './slices/sectionStore.fixed';
 // Import other slices as before
 import { createTextEditingStore, type TextEditingState } from './slices/textEditingStore';
 import { createSelectionStore, type SelectionState } from './slices/selectionStore';

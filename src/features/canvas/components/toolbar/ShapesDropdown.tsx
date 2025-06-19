@@ -8,7 +8,7 @@ import {
   ArrowRight,
   ChevronDown
 } from 'lucide-react';
-import { useCanvasUI } from '../../stores/canvasStore';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
 import './ShapesDropdown.css';
 
 const shapeTools = [
@@ -29,7 +29,7 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Fixed: Use modular store hook
-  const { selectedTool } = useCanvasUI();
+  const { selectedTool } = useCanvasStore();
   
   // Find the currently selected shape tool, default to rectangle
   const currentShapeTool = shapeTools.find(tool => tool.id === selectedTool) || shapeTools[0]!;

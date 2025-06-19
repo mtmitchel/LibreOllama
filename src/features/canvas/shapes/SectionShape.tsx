@@ -1,5 +1,5 @@
 // src/features/canvas/shapes/SectionShape.tsx
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { SectionElement } from '../../../types/section';
@@ -12,6 +12,7 @@ interface SectionShapeProps {
   onUpdate?: (id: string, updates: Partial<SectionElement>) => void;
   onStartTextEdit?: (elementId: string) => void;
   onSectionResize?: (sectionId: string, newWidth: number, newHeight: number) => void;
+  children?: React.ReactNode;
 }
 
 /**
@@ -25,11 +26,10 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
   isSelected,
   konvaProps,
   onUpdate,
-  onStartTextEdit,
-  onSectionResize
+  onStartTextEdit,  onSectionResize,
+  children,
 }) => {
   const titleTextRef = useRef<any>(null);
-  const [isResizing, setIsResizing] = useState(false);
 
   // Calculate derived styles
   const sectionStyles = useMemo(() => ({
@@ -70,11 +70,9 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
       onStartTextEdit(element.id);
     }
   };
-
   // Handle resize operations
   const handleResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, direction: string) => {
     e.cancelBubble = true;
-    setIsResizing(true);
     
     const stage = e.target.getStage();
     if (!stage) return;
@@ -146,13 +144,10 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
           y: newY,
         });
       }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
+    };    const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-        if (onSectionResize) {
+      if (onSectionResize) {
         onSectionResize(element.id, sectionStyles.width, sectionStyles.height);
       }
     };
@@ -455,7 +450,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
         </>
       )}
 
-      {/* Note: Contained elements are rendered separately in MainLayer to avoid React-Konva reconciler issues */}
+      {children}
     </Group>
   );
 });

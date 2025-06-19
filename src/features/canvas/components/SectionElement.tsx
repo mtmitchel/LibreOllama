@@ -193,27 +193,33 @@ const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(
         listening={false}
       />
 
-      {/* Main body background */}
+      {/* Main body background - Enhanced styling for better distinction */}
       <Rect
         x={0}
         y={0}
         width={section.width}
         height={section.height}
-        fill={designSystem.colors.secondary[50]}
-        stroke={isSelected ? designSystem.colors.primary[500] : 'transparent'}
-        strokeWidth={isSelected ? 2 : 0}
+        fill="rgba(248, 250, 252, 0.6)" // Very subtle background tint (slate-50 with opacity)
+        stroke={isSelected ? designSystem.colors.primary[500] : designSystem.colors.secondary[300]}
+        strokeWidth={isSelected ? 2 : 1}
         cornerRadius={designSystem.borderRadius.lg}
         listening={true}
         name="section-background"
+        shadowColor={designSystem.colors.secondary[400]}
+        shadowBlur={8}
+        shadowOffset={{ x: 0, y: 2 }}
+        shadowOpacity={0.1}
       />
 
-      {/* Header bar background */}
+      {/* Header bar background - More distinct styling */}
       <Rect
         x={0}
         y={0}
         width={section.width}
         height={titleBarHeight}
-        fill={designSystem.colors.secondary[100]}
+        fill="rgba(241, 245, 249, 0.8)" // Slightly darker than background (slate-100 with opacity)
+        stroke={designSystem.colors.secondary[200]}
+        strokeWidth={1}
         cornerRadius={[designSystem.borderRadius.lg, designSystem.borderRadius.lg, 0, 0]}
         listening={true}
         name="section-header"
@@ -304,7 +310,8 @@ const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(
       {section.containedElementIds.map((elementId: string) => {
         const element = elements[elementId];
         if (!element) {
-          console.log('🔍 [SECTION DEBUG] Missing element in section:', elementId, 'from section:', section.id);
+          console.warn('🔍 [SECTION DEBUG] Missing element in section:', elementId, 'from section:', section.id);
+          console.warn('🔍 [SECTION DEBUG] Available elements:', Object.keys(elements));
           return null;
         }
         
@@ -313,12 +320,26 @@ const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(
           elementType: element.type,
           elementPosition: { x: element.x, y: element.y },
           elementSectionId: element.sectionId,
-          sectionId: section.id
+          sectionId: section.id,
+          sectionPosition: { x: section.x, y: section.y }
         });
         
-        // With the new coordinate system, elements with sectionId already use relative coordinates
-        // No conversion needed - just render them directly
-        return renderElement(element);
+        // Ensure element has sectionId set correctly
+        if (element.sectionId !== section.id) {
+          console.warn('🔍 [SECTION DEBUG] Element sectionId mismatch:', {
+            elementId,
+            elementSectionId: element.sectionId,
+            actualSectionId: section.id
+          });
+        }
+        
+        // Render element - it should already have relative coordinates
+        try {
+          return renderElement(element);
+        } catch (error) {
+          console.error('🔍 [SECTION DEBUG] Error rendering element:', elementId, error);
+          return null;
+        }
       })}
     </Group>
   );

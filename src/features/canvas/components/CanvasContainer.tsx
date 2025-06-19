@@ -8,7 +8,7 @@ import { useViewportControls } from '../hooks/canvas/useViewportControls';
 import { useSelectionManager } from '../hooks/canvas/useSelectionManager';
 import { useCanvasHistory } from '../hooks/canvas/useCanvasHistory';
 // FIXED: Use the new modular store consistently
-import { useCanvasStore } from '../stores/canvasStore';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import type { CanvasElement } from '../stores/types';
 import { designSystem } from '../../../styles/designSystem';
 

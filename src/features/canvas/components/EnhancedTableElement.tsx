@@ -5,10 +5,8 @@ import { CanvasElement } from '../stores/types';
 import { TableCell } from '../types';
 import { designSystem } from '../../../styles/designSystem';
 import { 
-  useCanvasElements,
-  useCanvasUI,
-  useCanvasStore 
-} from '../stores/canvasStore';
+  useCanvasStore
+} from '../stores/canvasStore.enhanced';
 
 // Constants for improved UX
 const MIN_CELL_WIDTH = 80; // Increased from 60px
@@ -128,9 +126,9 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
     removeTableColumn, 
     resizeTableRow, 
     resizeTableColumn, 
-    updateElement 
-  } = useCanvasElements();
-  const { selectedTool } = useCanvasUI();
+    updateElement,
+    selectedTool 
+  } = useCanvasStore();
 
   console.log('🔧 [TABLE ELEMENT] Rendered with:', {
     isSelected,

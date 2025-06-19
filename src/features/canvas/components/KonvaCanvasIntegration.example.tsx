@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import Konva from 'konva';
 import { Stage, Layer, Group, Rect, Text } from 'react-konva';
 import { KonvaEventObject } from 'konva/lib/Node';
-import { useCanvasStore } from '../stores/canvasStore';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
 
 /**
  * Example integration showing how to use the fixed stores with Konva

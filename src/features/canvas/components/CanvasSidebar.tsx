@@ -7,7 +7,7 @@ import {
   Copy,
   Search,
 } from "lucide-react";
-import { useCanvasElements, useSections } from '../stores/canvasStore';
+import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { designSystem } from '../../../styles/designSystem';
 import "./CanvasSidebar.css";
 
@@ -34,8 +34,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
   const [editingName, setEditingName] = useState("");
 
   // Fixed: Use specific selectors to prevent infinite re-renders
-  const { elements, clearCanvas, addElement } = useCanvasElements();
-  const { createSection } = useSections();
+  const { elements, clearCanvas, addElement, createSection } = useEnhancedStore();
 
   // Load canvases from localStorage on mount
   useEffect(() => {

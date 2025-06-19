@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { KonvaEventObject } from 'konva/lib/Node';
-import { useCanvasElements } from '../stores/canvasStore';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import { designSystem } from '../../../styles/designSystem';
 import { throttleRAF } from '../utils/events';
 import '../../styles/enhanced-table.css';
@@ -65,7 +65,7 @@ const ImprovedTable: React.FC<ImprovedTableProps> = ({
   const lastResizeTimeRef = useRef<number>(0);
 
   // Store integration - Fixed: Use specific selector to prevent infinite re-renders
-  const { updateElement } = useCanvasElements();
+  const { updateElement } = useCanvasStore();
 
   // Calculate table dimensions
   const tableWidth = cols * cellWidth;

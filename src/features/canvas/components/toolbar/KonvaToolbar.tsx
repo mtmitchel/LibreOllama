@@ -1,8 +1,7 @@
 // src/features/canvas/components/toolbar/KonvaToolbar.tsx
 import React, { useRef } from 'react';
-import { useCanvasElements, useCanvasUI, useCanvasHistory, useSelection, useTextEditing, useSections, useViewport } from '../../stores/canvasStore';
+import { useCanvasStore as useEnhancedStore } from '../../stores/canvasStore.enhanced';
 import { useTauriCanvas } from '../../../../hooks/useTauriCanvas';
-import { CoordinateService } from '../../utils/coordinateService';
 import { 
   MousePointer2, 
   Type, 
@@ -65,14 +64,30 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   onToggleSidebar
 }) => {
   const tableCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    // Migrated to modular store
-  const { elements, updateElement, deleteElement, addElement, clearAllElements, exportElements, importElements } = useCanvasElements();
-  const { selectedTool, setSelectedTool } = useCanvasUI();
-  const { undo, redo, canUndo, canRedo } = useCanvasHistory();
-  const { selectedElementIds, selectElement } = useSelection();
-  const { setEditingTextId } = useTextEditing();
-  const { sections, addElementToSection } = useSections();
-  const { pan, zoom } = useViewport();
+  // Use enhanced store as single source of truth
+  const { 
+    elements, 
+    updateElement, 
+    deleteElement, 
+    addElement, 
+    clearAllElements, 
+    exportElements, 
+    importElements,
+    selectedTool, 
+    setSelectedTool,
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo,
+    selectedElementIds, 
+    selectElement,
+    setEditingTextId,
+    pan, 
+    zoom,
+    findSectionAtPoint,
+    sections,
+    addElementToSection
+  } = useEnhancedStore();
   
   const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
   const selectedElement = selectedElementId ? elements[selectedElementId] : null;
@@ -115,7 +130,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       reader.readAsText(file);
     }
   };  const handleToolClick = (toolId: string) => {
-    console.log('🔧 Tool selected:', toolId);
     setSelectedTool(toolId);
     
     // Tools that activate drawing/interaction modes instead of creating elements immediately
@@ -128,14 +142,12 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     // Drawing mode tools just change the active tool state
     if (!drawingModeTools.includes(toolId)) {
       createElementForTool(toolId);
-    } else {
-      console.log(`🎨 [TOOLBAR] ${toolId} tool activated - drawing/interaction mode enabled`);
     }
   };
-    const createElementForTool = (toolId: string) => {
-    console.log('🔧 [TOOLBAR] Creating element for tool:', toolId);
+
+  const createElementForTool = (toolId: string) => {
     const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      // Calculate center position of visible canvas area considering viewport
+    // Calculate center position of visible canvas area considering viewport
     // Calculate positioning for new elements - always use viewport center
     let elementX: number;
     let elementY: number;
@@ -153,321 +165,271 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     // Convert screen coordinates to world coordinates considering pan/zoom
     elementX = (screenCenterX - (pan?.x || 0)) / (zoom || 1);
     elementY = (screenCenterY - (pan?.y || 0)) / (zoom || 1);
-      console.log('🎯 [TOOLBAR] Positioning element at viewport center:', {
-      screenCenter: { x: screenCenterX, y: screenCenterY },
-      worldCenter: { x: elementX, y: elementY },
-      pan: pan,
-      zoom: zoom
-    });
+
+    const targetSectionId = findSectionAtPoint && findSectionAtPoint({ x: elementX, y: elementY });
+    const targetSection = targetSectionId && sections ? sections[targetSectionId] : null;
 
     let newElement: any = null;
-      switch (toolId) {
+
+    switch (toolId) {
       case 'text':
+        const textWidth = 200;
         newElement = {
           id: generateId(),
           type: 'text',
-          x: elementX,
-          y: elementY,
-          text: '', // Empty text for FigJam-style placeholder behavior
+          x: targetSection ? elementX - targetSection.x : elementX,
+          y: targetSection ? elementY - targetSection.y : elementY,
+          text: 'Text', // Non-empty default text to prevent React-Konva rendering issues
           fontSize: 18,
           fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
           fill: '#1E293B',
-          width: 200,
-          sectionId: null // Will be set if placed in a section
+          width: textWidth,
+          sectionId: targetSectionId
         };
-        console.log('📝 [TOOLBAR] Created text element:', newElement);
-        break;        case 'sticky-note':
+        break;
+
+      case 'sticky-note':
+        const noteWidth = 150;
+        const noteHeight = 100;
+        const noteTopLeftX = elementX - noteWidth / 2;
+        const noteTopLeftY = elementY - noteHeight / 2;
         newElement = {
           id: generateId(),
           type: 'sticky-note',
-          x: elementX - 75,
-          y: elementY - 50,
-          width: 150,
-          height: 100,
+          x: targetSection ? noteTopLeftX - targetSection.x : noteTopLeftX,
+          y: targetSection ? noteTopLeftY - targetSection.y : noteTopLeftY,
+          width: noteWidth,
+          height: noteHeight,
           text: 'New note',
           backgroundColor: '#FFEB3B',
           textColor: '#1E293B',
           fontSize: 14,
           fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
-          sectionId: null // Will be set if placed in a section
+          sectionId: targetSectionId
         };
-        console.log('📝 [TOOLBAR] Created sticky note element:', newElement);
-        break;        case 'rectangle':
+        break;
+
+      case 'rectangle':
+        const rectWidth = 150;
+        const rectHeight = 100;
+        const rectTopLeftX = elementX - rectWidth / 2;
+        const rectTopLeftY = elementY - rectHeight / 2;
         newElement = {
           id: generateId(),
           type: 'rectangle',
-          x: elementX - 75,
-          y: elementY - 50,
-          width: 150,
-          height: 100,
+          x: targetSection ? rectTopLeftX - targetSection.x : rectTopLeftX,
+          y: targetSection ? rectTopLeftY - targetSection.y : rectTopLeftY,
+          width: rectWidth,
+          height: rectHeight,
           fill: '#DBEAFE',
           stroke: '#3B82F6',
           strokeWidth: 2,
-          sectionId: null // Will be set if placed in a section
+          sectionId: targetSectionId
         };
-        console.log('🟦 [TOOLBAR] Created rectangle element:', newElement);
-        break;        case 'circle':
+        break;
+
+      case 'circle':
         newElement = {
           id: generateId(),
           type: 'circle',
-          x: elementX,
-          y: elementY,
+          x: targetSection ? elementX - targetSection.x : elementX,
+          y: targetSection ? elementY - targetSection.y : elementY,
           radius: 60,
           fill: '#DCFCE7',
           stroke: '#22C55E',
           strokeWidth: 2,
-          sectionId: null // Will be set if placed in a section
+          sectionId: targetSectionId
         };
-          console.log('🟢 [TOOLBAR] Created circle element:', newElement);
-          break;
+        break;
           
-        case 'connector-line':
-        case 'connector-arrow':
-          // Connector tools don't create elements immediately
-          // They activate the drawing mode instead
-          return;
+      case 'connector-line':
+      case 'connector-arrow':
+        // Connector tools don't create elements immediately
+        // They activate the drawing mode instead
+        return;
           
-        case 'image':
-          // For image tool, trigger file input
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/*';
-          input.onchange = (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const imageUrl = event.target?.result as string;
-                const img = new window.Image();
-                img.onload = () => {                  const imageElement = {
-                    id: generateId(),
-                    type: 'image' as const,
-                    x: elementX - img.width / 4,
-                    y: elementY - img.height / 4,
-                    width: img.width / 2,
-                    height: img.height / 2,
-                    imageUrl
-                  };
-                  addElement(imageElement);
-                  selectElement(imageElement.id);
-                  setTimeout(() => setSelectedTool('select'), 100);
+      case 'image':
+        // For image tool, trigger file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const imageUrl = event.target?.result as string;
+              const img = new window.Image();                img.onload = () => {
+                const imageElement = {
+                  id: generateId(),
+                  type: 'image' as const,
+                  x: targetSection ? (elementX - img.width / 4) - targetSection.x : elementX - img.width / 4,
+                  y: targetSection ? (elementY - img.height / 4) - targetSection.y : elementY - img.height / 4,
+                  width: img.width / 2,
+                  height: img.height / 2,
+                  imageUrl,
+                  sectionId: targetSectionId
                 };
-                img.src = imageUrl;
+
+                // **TARGETED FIX**: Toolbar elements default to canvas (not auto-assigned to sections)
+                addElement(imageElement);
+                if (targetSectionId && addElementToSection) {
+                  addElementToSection(imageElement.id, targetSectionId);
+                }
+                
+                selectElement(imageElement.id);
+                setTimeout(() => setSelectedTool('select'), 100);
               };
-              reader.readAsDataURL(file);
-            }
-          };          input.click();
-          return; // Don't continue with normal element creation
+              img.src = imageUrl;
+            };
+            reader.readAsDataURL(file);
+          }
+        };          input.click();
+        return; // Don't continue with normal element creation
         
-        case 'triangle':
-          newElement = {
+      case 'triangle':
+        newElement = {
+          id: generateId(),
+          type: 'triangle',
+          x: targetSection ? elementX - targetSection.x : elementX,
+          y: targetSection ? elementY - targetSection.y : elementY,
+          width: 100,
+          height: 80,
+          fill: '#FEF3C7',
+          stroke: '#F59E0B',
+          strokeWidth: 2,
+          sectionId: targetSectionId
+        };
+        break;
+
+      case 'star':
+        newElement = {
+          id: generateId(),
+          type: 'star',
+          x: targetSection ? elementX - targetSection.x : elementX,
+          y: targetSection ? elementY - targetSection.y : elementY,
+          numPoints: 5,
+          innerRadius: 30,
+          radius: 60,
+          fill: '#E1BEE7',
+          stroke: '#9C27B0',
+          strokeWidth: 2,
+          sectionId: targetSectionId
+        };
+        break;
+          
+      case 'pen':
+        // Pen tool activates drawing mode, doesn't create element immediately
+        // The actual pen path will be created during drawing interaction
+        return;
+          
+      case 'section':
+        // Section tool activates drawing mode, doesn't create element immediately
+        return;
+          
+      case 'table':
+        // Debounce table creation to prevent duplicates
+        if (tableCreationTimeoutRef.current) {
+          clearTimeout(tableCreationTimeoutRef.current);
+        }
+        
+        tableCreationTimeoutRef.current = setTimeout(() => {
+          // Create a table element with proper enhanced table data structure
+          const rows = 3;
+          const cols = 3;
+          const cellWidth = 120;
+          const cellHeight = 50;
+          
+          const tableWidth = cellWidth * cols;
+          const tableHeight = cellHeight * rows;
+          const tableTopLeftX = elementX - tableWidth / 2;
+          const tableTopLeftY = elementY - tableHeight / 2;
+
+          // Create enhanced table data structure
+          const enhancedTableData = {
+            rows: Array(rows).fill(0).map((_, rowIndex) => ({
+              id: `row-${rowIndex}`,
+              height: cellHeight,
+              minHeight: 30,
+              maxHeight: 200,
+              isResizable: true,
+              isHeader: rowIndex === 0
+            })),
+            columns: Array(cols).fill(0).map((_, colIndex) => ({
+              id: `col-${colIndex}`,
+              width: cellWidth,
+              minWidth: 60,
+              maxWidth: 300,
+              isResizable: true,
+              textAlign: 'left' as const
+            })),
+            cells: Array(rows).fill(0).map(() => 
+              Array(cols).fill(0).map(() => ({
+                id: generateId(),
+                text: '',
+                segments: [],
+                backgroundColor: '#ffffff',
+                textColor: '#000000',
+                fontSize: 14,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 'normal',
+                fontStyle: 'normal',
+                textAlign: 'left' as const,
+                textDecoration: 'none',
+                borderColor: '#e0e0e0',
+                borderWidth: 1,
+                padding: 8,
+                isHeader: false,
+                isSelected: false,
+                containedElementIds: [],
+                rowSpan: 1,
+                colSpan: 1
+              }))
+            )
+          };            const tableElement: any = {
             id: generateId(),
-            type: 'triangle',
-            x: elementX,
-            y: elementY,
-            width: 100,
-            height: 80,
-            fill: '#FEF3C7',
-            stroke: '#F59E0B',
-            strokeWidth: 2,
-            sectionId: null // Will be set if placed in a section
+            type: 'table' as const,
+            x: targetSection ? tableTopLeftX - targetSection.x : tableTopLeftX,
+            y: targetSection ? tableTopLeftY - targetSection.y : tableTopLeftY,
+            width: tableWidth,
+            height: tableHeight,
+            enhancedTableData,
+            sectionId: targetSectionId
           };
-          console.log('🔺 [TOOLBAR] Created triangle element:', newElement);
-          break;        case 'star':
-          newElement = {
-            id: generateId(),
-            type: 'star',
-            x: elementX,
-            y: elementY,
-            numPoints: 5,
-            innerRadius: 30,
-            radius: 60,
-            fill: '#E1BEE7',
-            stroke: '#9C27B0',
-            strokeWidth: 2,
-            sectionId: null // Will be set if placed in a section
-          };
-          console.log('⭐ [TOOLBAR] Created star element:', newElement);
-          break;
-          
-        case 'pen':
-          // Pen tool activates drawing mode, doesn't create element immediately
-          // The actual pen path will be created during drawing interaction
-          console.log('✏️ [TOOLBAR] Pen tool activated - drawing mode enabled');
-          return;
-          
-        case 'section':
-          // Section tool activates drawing mode, doesn't create element immediately
-          console.log('📦 [TOOLBAR] Section tool activated - drawing mode enabled');
-          return;
-          
-        case 'table':
-          // Debounce table creation to prevent duplicates
-          if (tableCreationTimeoutRef.current) {
-            clearTimeout(tableCreationTimeoutRef.current);
+
+          // **TARGETED FIX**: Toolbar elements default to canvas (not auto-assigned to sections)
+          addElement(tableElement);
+          if (targetSectionId && addElementToSection) {
+            addElementToSection(tableElement.id, targetSectionId);
           }
           
-          tableCreationTimeoutRef.current = setTimeout(() => {
-            // Create a table element with proper enhanced table data structure
-            const rows = 3;
-            const cols = 3;
-            const cellWidth = 120;
-            const cellHeight = 50;
-            
-            // Create enhanced table data structure
-            const enhancedTableData = {
-              rows: Array(rows).fill(0).map((_, rowIndex) => ({
-                id: `row-${rowIndex}`,
-                height: cellHeight,
-                minHeight: 30,
-                maxHeight: 200,
-                isResizable: true,
-                isHeader: rowIndex === 0
-              })),
-              columns: Array(cols).fill(0).map((_, colIndex) => ({
-                id: `col-${colIndex}`,
-                width: cellWidth,
-                minWidth: 60,
-                maxWidth: 300,
-                isResizable: true,
-                textAlign: 'left' as const
-              })),
-              cells: Array(rows).fill(0).map(() => 
-                Array(cols).fill(0).map(() => ({
-                  id: generateId(),
-                  text: '',
-                  segments: [],
-                  backgroundColor: '#ffffff',
-                  textColor: '#000000',
-                  fontSize: 14,
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 'normal',
-                  fontStyle: 'normal',
-                  textAlign: 'left' as const,
-                  textDecoration: 'none',
-                  borderColor: '#e0e0e0',
-                  borderWidth: 1,
-                  padding: 8,
-                  isHeader: false,
-                  isSelected: false,
-                  containedElementIds: [],
-                  rowSpan: 1,
-                  colSpan: 1
-                }))
-              )
-            };            const tableElement: any = {
-              id: generateId(),
-              type: 'table' as const,
-              x: elementX - 180,
-              y: elementY - 75,
-              width: cellWidth * cols,
-              height: cellHeight * rows,
-              enhancedTableData,
-              sectionId: null // Will be set if placed in a section
-            };
-              console.log('🔧 [TOOLBAR] Creating table element:', tableElement);
-            
-            // Check if the table should be placed in a section
-            const targetSectionForTable = CoordinateService.findSectionAtPoint(
-              { x: tableElement.x, y: tableElement.y },
-              sections
-            );
-            
-            if (targetSectionForTable) {
-              // Convert world coordinates to section-relative coordinates
-              const relativeX = tableElement.x - targetSectionForTable.x;
-              const relativeY = tableElement.y - targetSectionForTable.y;
-              
-              // Update element with relative coordinates and section ID
-              tableElement.x = relativeX;
-              tableElement.y = relativeY;
-              tableElement.sectionId = targetSectionForTable.id;
-              
-              console.log('� [TOOLBAR] Table will be placed in section:', targetSectionForTable.id);
-            }
-            
-            addElement(tableElement);
-            
-            // If table is in a section, also add it to the section's element list
-            if (targetSectionForTable) {
-              addElementToSection(tableElement.id, targetSectionForTable.id);
-            }
-            
-            selectElement(tableElement.id);
-            tableCreationTimeoutRef.current = null;
-          }, 100);
-          return;
-      }        if (newElement) {        console.log('✅ [TOOLBAR] Adding element to store:', newElement);
-        console.log('🔍 [TOOLBAR] Available sections:', sections);
-        console.log('🔍 [TOOLBAR] Section count:', Object.keys(sections).length);
-        console.log('🔍 [TOOLBAR] Section IDs:', Object.keys(sections));
-          // Log detailed section data
-        Object.entries(sections).forEach(([id, section]) => {
-          console.log(`🔍 [TOOLBAR] Section ${id}:`, {
-            x: section.x,
-            y: section.y,
-            width: section.width,
-            height: section.height,
-            bounds: `(${section.x}, ${section.y}) to (${section.x + section.width}, ${section.y + section.height})`
-          });
-          console.log(`🔍 [TOOLBAR] Section ${id} RAW:`, section);
-        });
-        
-        // Try to find which section the element should be placed in
-        const worldPosition = { x: newElement.x, y: newElement.y };
-        console.log('🎯 [TOOLBAR] Checking world position for section:', worldPosition);
-        console.log('🎯 [TOOLBAR] Element position details:', {
-          x: newElement.x,
-          y: newElement.y,
-          type: newElement.type
-        });
-        
-        // Check if the element should be placed in a section
-        const targetSection = CoordinateService.findSectionAtPoint(worldPosition, sections);
-        console.log('🎯 [TOOLBAR] Target section found:', targetSection);
-        
-        if (targetSection) {
-          // Convert world coordinates to section-relative coordinates
-          const relativeX = newElement.x - targetSection.x;
-          const relativeY = newElement.y - targetSection.y;
-          
-          console.log('📐 [TOOLBAR] Coordinate conversion:', {
-            elementWorld: { x: newElement.x, y: newElement.y },
-            sectionPos: { x: targetSection.x, y: targetSection.y },
-            relative: { x: relativeX, y: relativeY }
-          });
-          
-          // Update element with relative coordinates and section ID
-          newElement.x = relativeX;
-          newElement.y = relativeY;
-          newElement.sectionId = targetSection.id;
-          
-          console.log('📦 [TOOLBAR] Element will be placed in section:', targetSection.id);
-          console.log('📦 [TOOLBAR] Final element:', newElement);
-        } else {
-          console.log('⚠️ [TOOLBAR] No section found at position:', { x: newElement.x, y: newElement.y });
-        }
-        
-        addElement(newElement);
-        
-        // If element is in a section, also add it to the section's element list
-        if (targetSection) {
-          addElementToSection(newElement.id, targetSection.id);
-        }
-        
-        console.log('📌 [TOOLBAR] Selecting element:', newElement.id);
-        selectElement(newElement.id);
-        
-        // For text elements, immediately enter edit mode for FigJam-style behavior
-        if (newElement.type === 'text') {
-          setEditingTextId(newElement.id);
-        }
-        
-        // After creating element, switch to select tool immediately
-        setTimeout(() => setSelectedTool('select'), 100);
-      } else {
-        console.warn('⚠️ [TOOLBAR] No element created for tool:', toolId);
+          selectElement(tableElement.id);
+          tableCreationTimeoutRef.current = null;
+        }, 100);
+        return;
+    }
+
+    if (newElement) {
+      // Add element to store
+      addElement(newElement);
+      
+      // AFTER adding to store, add to section if needed
+      if (newElement.sectionId && addElementToSection) {
+        addElementToSection(newElement.id, newElement.sectionId);
       }
+
+      selectElement(newElement.id);
+
+      // For text elements, immediately enter edit mode for FigJam-style behavior
+      // TEMPORARILY DISABLED: The auto-editing is causing the 12-space issue
+      // TODO: Re-enable once we fix the root cause in text editing initialization
+      // if (newElement.type === 'text') {
+      //   setEditingTextId(newElement.id);
+      // }
+      
+      // After creating element, switch to select tool immediately
+      setTimeout(() => setSelectedTool('select'), 100);
+    }
   };
   
   const handleColorChange = (color: string, type: 'fill' | 'stroke' | 'backgroundColor') => {

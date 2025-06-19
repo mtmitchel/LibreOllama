@@ -111,13 +111,22 @@ export const createCanvasElementsStore: StateCreator<
       console.log('🔧 [ELEMENTS STORE] Current elements in store:', Object.keys(get().elements));
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[id];
-        if (!element) {
+        const element = state.elements[id];        if (!element) {
           console.warn('🔧 [ELEMENTS STORE] Element not found for update:', id);
           console.warn('🔧 [ELEMENTS STORE] Available elements:', Object.keys(state.elements));
           return;
         }
-          // Apply updates
+        
+        // Prevent storing empty or whitespace-only text (React-Konva issue)
+        if (updates.text !== undefined) {
+          const trimmedText = updates.text.trim();
+          if (trimmedText.length === 0) {
+            console.warn('🔧 [ELEMENTS STORE] Preventing whitespace-only text update for element:', id);
+            updates.text = 'Text'; // Use default text instead
+          }
+        }
+        
+        // Apply updates
         if (state.elements[id]) {
           Object.assign(state.elements[id], updates);
         }

@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { KonvaEventObject } from 'konva/lib/Node';
 import { Stage } from 'konva/lib/Stage';
 import { Line, Arrow, Circle } from 'react-konva';
-import { useCanvasElements, useCanvasUI } from '../stores/canvasStore';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import { debug } from '../utils/debug';
 import type { CanvasElement } from '../types';
 
@@ -80,9 +80,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   stageRef,
   isActive,
   connectorType
-}) => {
-  const { addElement, elements } = useCanvasElements();
-  const { setSelectedTool } = useCanvasUI();
+}) => {  const { addElement, elements, setSelectedTool } = useCanvasStore();
   
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,

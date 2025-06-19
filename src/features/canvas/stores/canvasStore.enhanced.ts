@@ -8,8 +8,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
-import { CoordinateService } from '../utils/coordinateService.fixed';
-import type { CanvasElement } from '../../../types';
+
 
 // Import the fixed store slices
 import { createCanvasElementsStore, type CanvasElementsState } from './slices/canvasElementsStore.fixed';
@@ -65,71 +64,155 @@ export const useCanvasStore = create<CanvasStoreState>()(
           
           // Enhanced cross-slice methods
           findSectionAtPoint: (point: { x: number; y: number }) => {
-            const sections = get().getAllSections();
-            const stage = get().stage;
-            return CoordinateService.findSectionAtPoint(point, sections, stage);
+            console.log('🔍 [ENHANCED STORE] findSectionAtPoint called with point:', point);
+            const sectionsRecord = get().sections;
+            const sectionsArray = Object.values(sectionsRecord);
+            console.log('🔍 [ENHANCED STORE] Available sections:', sectionsArray.length);
+            
+            // Simple geometric check - the point parameter should already be in the correct coordinate space
+            for (const section of sectionsArray) {
+              console.log(`🔍 [ENHANCED STORE] Checking section ${section.id}:`, {
+                bounds: { x: section.x, y: section.y, width: section.width, height: section.height },
+                point: point
+              });
+              
+              if (point.x >= section.x && 
+                  point.x <= section.x + section.width &&
+                  point.y >= section.y && 
+                  point.y <= section.y + section.height) {
+                console.log(`✅ [ENHANCED STORE] Point is inside section ${section.id}`);
+                return section.id;
+              }
+            }
+            
+            console.log('❌ [ENHANCED STORE] Point not inside any section');
+            return null;
           },
 
           handleElementDrop: (elementId: string, position: { x: number; y: number }) => {
             console.log('🎯 [CANVAS STORE] handleElementDrop called:', { elementId, position });
             
-            const targetSectionId = get().findSectionAtPoint(position);
+            // Get current state outside of set() to avoid stale reads
+            const currentState = get();
+            const element = currentState.elements[elementId];
             
+            if (!element) {
+              console.warn('❌ [CANVAS STORE] Element not found:', elementId);
+              console.log('🔍 [CANVAS STORE] Available elements:', Object.keys(currentState.elements));
+              return;
+            }
+            
+            // Simplified section detection: use the original simple point-based approach
+            // The complex bounds checking was causing issues
+            const targetSectionId = currentState.findSectionAtPoint(position);
+            const oldSectionId = element.sectionId;
+            
+            console.log('🔍 [CANVAS STORE] Element drop analysis:', {
+              elementId,
+              elementType: element.type,
+              oldSectionId,
+              targetSectionId,
+              position
+            });
+
+            // Atomic state update - all changes in one set() call
             set((state: Draft<CanvasStoreState>) => {
-              const element = state.elements[elementId];
-              if (!element) {
-                console.warn('❌ [CANVAS STORE] Element not found:', elementId);
+              const stateElement = state.elements[elementId];
+              if (!stateElement) {
+                console.warn('❌ [CANVAS STORE] Element not found in draft state:', elementId);
                 return;
               }
 
-              const oldSectionId = element.sectionId;
-              console.log('🔍 [CANVAS STORE] Element drop:', {
-                elementId,
-                oldSectionId,
-                targetSectionId,
-                position
-              });
-
-              if (oldSectionId === targetSectionId) {
-                console.log('ℹ️ [CANVAS STORE] Element staying in same section/canvas');
-                return;
-              }
-
-              // Convert to absolute coordinates from old parent
-              if (oldSectionId) {
-                const oldSection = state.sections[oldSectionId];
-                if (oldSection) {
-                  element.x += oldSection.x;
-                  element.y += oldSection.y;
-                  console.log('📐 [CANVAS STORE] Converted to absolute coords from section:', {
-                    oldSection: { x: oldSection.x, y: oldSection.y },
-                    newCoords: { x: element.x, y: element.y }
+              // Case 1: Element moved within the same section
+              if (oldSectionId === targetSectionId && targetSectionId) {
+                const section = state.sections[targetSectionId];
+                if (section) {
+                  // Convert absolute position to relative coordinates within the section
+                  stateElement.x = position.x - section.x;
+                  stateElement.y = position.y - section.y;
+                  console.log('🔄 [CANVAS STORE] Element moved within same section:', {
+                    section: { x: section.x, y: section.y },
+                    newRelativeCoords: { x: stateElement.x, y: stateElement.y }
                   });
                 }
+                return; // No containment changes needed
               }
 
+              // Case 2: Element moved on canvas (no section)
+              if (oldSectionId === targetSectionId && !targetSectionId) {
+                stateElement.x = position.x;
+                stateElement.y = position.y;
+                console.log('🔄 [CANVAS STORE] Element moved on canvas:', {
+                  newCoords: { x: stateElement.x, y: stateElement.y }
+                });
+                return; // No containment changes needed
+              }
+
+              // Case 3: Element moved between sections or from/to canvas
+              // Set new coordinates and section assignment
               if (targetSectionId) {
-                // Add to new section and convert to relative coordinates
                 const targetSection = state.sections[targetSectionId];
                 if (targetSection) {
-                  element.x -= targetSection.x;
-                  element.y -= targetSection.y;
-                  element.sectionId = targetSectionId;
-                  
-                  // Update section's contained elements
-                  get().addElementToSection(elementId, targetSectionId);
-                  
-                  console.log(`✅ [CANVAS STORE] Moved element ${elementId} to section ${targetSectionId}`, {
+                  // Convert absolute position to relative coordinates
+                  stateElement.x = position.x - targetSection.x;
+                  stateElement.y = position.y - targetSection.y;
+                  stateElement.sectionId = targetSectionId;
+                  console.log('📐 [CANVAS STORE] Converted to relative coords in new section:', {
                     targetSection: { x: targetSection.x, y: targetSection.y },
-                    relativeCoords: { x: element.x, y: element.y }
+                    relativeCoords: { x: stateElement.x, y: stateElement.y }
                   });
                 }
               } else {
-                // Dropped on canvas (no section)
-                element.sectionId = undefined;
-                if (oldSectionId) {
-                  get().removeElementFromSection(elementId, oldSectionId);
-                  console.log(`✅ [CANVAS STORE] Moved element ${elementId} from section ${oldSectionId} to canvas`);
+                // Element dropped on canvas
+                console.log('🔍 [CANVAS STORE] Before setting absolute coords:', {
+                  elementId: elementId,
+                  elementType: stateElement.type,
+                  oldText: stateElement.text,
+                  position: position
+                });
+                
+                stateElement.x = position.x;
+                stateElement.y = position.y;
+                stateElement.sectionId = null;
+                
+                // Ensure text elements maintain valid text during coordinate updates
+                if (stateElement.type === 'text' && (!stateElement.text || stateElement.text.trim().length === 0)) {
+                  stateElement.text = 'Text';
+                  console.warn('🛡️ [CANVAS STORE] Fixed text element during coordinate update');
+                }
+                
+                console.log('📐 [CANVAS STORE] Set absolute coords on canvas:', {
+                  coords: { x: stateElement.x, y: stateElement.y },
+                  newText: stateElement.text,
+                  textCharCodes: stateElement.text ? [...stateElement.text].map(c => c.charCodeAt(0)) : []
+                });
+              }
+
+              console.log('🔍 [CANVAS STORE] Element after position update:', {
+                elementId: elementId,
+                type: stateElement.type,
+                text: stateElement.text,
+                textLength: stateElement.text?.length,
+                textCharCodes: stateElement.text ? [...stateElement.text].map(c => c.charCodeAt(0)) : []
+              });
+
+              // Update section containment atomically
+              if (oldSectionId && oldSectionId !== targetSectionId) {
+                const oldSection = state.sections[oldSectionId];
+                if (oldSection) {
+                  const index = oldSection.containedElementIds.indexOf(elementId);
+                  if (index > -1) {
+                    oldSection.containedElementIds.splice(index, 1);
+                    console.log('✅ [CANVAS STORE] Removed element from old section:', { elementId, oldSectionId });
+                  }
+                }
+              }
+
+              if (targetSectionId && oldSectionId !== targetSectionId) {
+                const targetSection = state.sections[targetSectionId];
+                if (targetSection && !targetSection.containedElementIds.includes(elementId)) {
+                  targetSection.containedElementIds.push(elementId);
+                  console.log('✅ [CANVAS STORE] Added element to new section:', { elementId, targetSectionId });
                 }
               }
             });
@@ -215,7 +298,7 @@ export const useCanvasStore = create<CanvasStoreState>()(
               if (section) {
                 element.x += section.x;
                 element.y += section.y;
-                element.sectionId = undefined;
+                element.sectionId = null;
                 console.log('✅ [CANVAS STORE] Converted element to absolute coordinates:', elementId);
               }
             });
@@ -242,5 +325,16 @@ export const useCanvasStore = create<CanvasStoreState>()(
 
 // Export the same selectors as before
 export { useCanvasElements, useDrawing, useTextEditing, useSelection, useViewport, useCanvasUI, useCanvasHistory, useSections } from './canvasStore';
+
+// Setup text debugging monitoring
+if (process.env.NODE_ENV === 'development') {
+  
+}
+
+// Development debugging: expose store globally
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as any).useCanvasStore = useCanvasStore;
+  console.log('🔧 Canvas store exposed globally as window.useCanvasStore for debugging');
+}
 
 export default useCanvasStore;

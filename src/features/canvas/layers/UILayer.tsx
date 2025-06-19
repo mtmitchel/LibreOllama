@@ -15,6 +15,7 @@ interface UILayerProps {
   onMouseDown?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseMove?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseUp?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
+  onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -35,6 +36,7 @@ export const UILayer: React.FC<UILayerProps> = ({
   onMouseDown = () => {},
   onMouseMove = () => {},
   onMouseUp = () => {},
+  onElementUpdate,
 }) => {
   const transformerRef = React.useRef<Konva.Transformer>(null);
   const layerRef = React.useRef<Konva.Group>(null);
@@ -73,14 +75,26 @@ export const UILayer: React.FC<UILayerProps> = ({
     if (!firstSelectedId) return { enabledAnchors: [] };
     
     const selectedElement = elements[firstSelectedId] || sections[firstSelectedId];
-    if (!selectedElement) return { enabledAnchors: [] };
-
-    switch (selectedElement.type) {
+    if (!selectedElement) return { enabledAnchors: [] };    switch (selectedElement.type) {
       case 'text':
-        // Text elements: only horizontal resize
+      case 'rich-text':
+        // Text elements: only horizontal resize to maintain line height
         return { enabledAnchors: ['middle-left', 'middle-right'] };
+      case 'sticky-note':
+        // Sticky notes: full resize capability
+        return {
+          enabledAnchors: [
+            'top-left', 'top-center', 'top-right',
+            'middle-left', 'middle-right',
+            'bottom-left', 'bottom-center', 'bottom-right'
+          ]
+        };
       case 'table':
         // Table elements: disable transformer (use custom resize handles)
+        return { enabledAnchors: [] };
+      case 'pen':
+      case 'connector':
+        // Line-based elements: disable transformer (points-based positioning)
         return { enabledAnchors: [] };
       case 'section':
         // Sections: full resize capability
@@ -103,7 +117,116 @@ export const UILayer: React.FC<UILayerProps> = ({
     }
   }, [selectedElementIds, elements, sections]);
 
-  const transformerConfig = getTransformerConfig();
+  const transformerConfig = getTransformerConfig();  // Handle transform end - when user finishes resizing/rotating elements
+  const handleTransformEnd = React.useCallback(() => {
+    if (!onElementUpdate) return;
+
+    const transformer = transformerRef.current;
+    if (!transformer) return;
+    
+    const nodes = transformer.nodes();
+
+    nodes.forEach((node) => {
+      const elementId = node.id();
+      if (!elementId) return;
+
+      // Get the element from store
+      const element = elements[elementId] || sections[elementId];
+      if (!element) return;
+
+      // Get current transform values
+      const scaleX = node.scaleX();
+      const scaleY = node.scaleY();
+      const rotation = node.rotation();
+      const x = node.x();
+      const y = node.y();
+
+      // Reset scale after applying to dimensions
+      node.scaleX(1);
+      node.scaleY(1);
+
+      // Calculate new dimensions based on element type
+      const updates: Partial<CanvasElement> = {
+        x,
+        y,
+        rotation,
+      };
+
+      // Apply scale to dimensions based on element type
+      switch (element.type) {
+        case 'rectangle':
+          updates.width = Math.max(5, (element.width || 100) * scaleX);
+          updates.height = Math.max(5, (element.height || 100) * scaleY);
+          break;        case 'circle':
+          // For circles, use the larger scale to maintain aspect ratio
+          const newRadius = Math.max(5, (element.radius || 50) * Math.max(scaleX, scaleY));
+          updates.radius = newRadius;
+          
+          // Handle circle positioning: store coordinates are top-left corner based
+          // but during transform, Konva treats circle x,y as center
+          // Convert from center position back to top-left corner
+          updates.x = x - newRadius;
+          updates.y = y - newRadius;
+          break;        case 'text':
+        case 'sticky-note':
+        case 'rich-text':
+          updates.width = Math.max(20, (element.width || 120) * scaleX);
+          updates.height = Math.max(15, (element.height || 30) * scaleY);
+          break;
+        case 'table':
+          updates.width = Math.max(160, (element.width || 300) * scaleX);
+          updates.height = Math.max(80, (element.height || 200) * scaleY);
+          break;
+        case 'image':
+          updates.width = Math.max(20, (element.width || 100) * scaleX);
+          updates.height = Math.max(20, (element.height || 100) * scaleY);
+          break;case 'star':
+          const newStarRadius = Math.max(5, (element.radius || 50) * Math.max(scaleX, scaleY));
+          updates.radius = newStarRadius;
+          if (element.innerRadius) {
+            updates.innerRadius = element.innerRadius * Math.max(scaleX, scaleY);
+          }
+          
+          // Handle star positioning: store coordinates are top-left corner based
+          // but during transform, Konva treats star x,y as center
+          // Convert from center position back to top-left corner
+          updates.x = x - newStarRadius;
+          updates.y = y - newStarRadius;
+          break;        case 'triangle':
+          updates.width = Math.max(5, (element.width || 100) * scaleX);
+          updates.height = Math.max(5, (element.height || 60) * scaleY);
+          // Clear any old points array to force recalculation with new dimensions
+          delete (updates as any).points;
+          break;        case 'pen':
+        case 'connector':
+          // For line-based elements, scale the points array if it exists
+          if (element.points && Array.isArray(element.points)) {
+            const scaledPoints = element.points.map((point: number, index: number) => 
+              index % 2 === 0 ? point * scaleX : point * scaleY
+            );
+            updates.points = scaledPoints;
+          }
+          break;
+        case 'section':
+          updates.width = Math.max(100, (element.width || 200) * scaleX);
+          updates.height = Math.max(50, (element.height || 150) * scaleY);
+          break;
+        default:
+          // For other elements, apply scale to width/height if they exist
+          if (element.width !== undefined) {
+            updates.width = Math.max(5, element.width * scaleX);
+          }
+          if (element.height !== undefined) {
+            updates.height = Math.max(5, element.height * scaleY);
+          }
+          break;
+      }
+
+      // Update the element in the store
+      onElementUpdate(elementId, updates);
+    });
+  }, [onElementUpdate, elements, sections]);
+
   return (
     <Layer 
       listening={true}
@@ -146,6 +269,7 @@ export const UILayer: React.FC<UILayerProps> = ({
           }
           return newBox;
         }}
+        onTransformEnd={handleTransformEnd}
       />
       
       {/* Section preview during drawing */}
