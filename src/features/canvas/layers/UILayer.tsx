@@ -17,6 +17,8 @@ interface UILayerProps {
   onMouseMove?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseUp?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
+  // Add history function for atomic undo/redo
+  addHistoryEntry?: (action: string, patches: any[], inversePatches: any[], metadata?: any) => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export const UILayer: React.FC<UILayerProps> = ({
   onMouseMove = () => {},
   onMouseUp = () => {},
   onElementUpdate,
+  addHistoryEntry,
 }) => {
   const transformerRef = React.useRef<Konva.Transformer>(null);
   const layerRef = React.useRef<Konva.Group>(null);
@@ -114,37 +117,33 @@ export const UILayer: React.FC<UILayerProps> = ({
 
   const transformerConfig = getTransformerConfig();  // Handle transform end - when user finishes resizing/rotating elements
   const handleTransformEnd = React.useCallback(() => {
-    if (!onElementUpdate) return;
-
     const transformer = transformerRef.current;
-    if (!transformer) return;
+    if (!transformer || !onElementUpdate) return;
 
     const nodes = transformer.nodes();
+    if (nodes.length === 0) return;
 
     nodes.forEach((node) => {
       const elementId = node.id();
-      if (!elementId) return;
-
-      // Get the element from store
       const element = elements[elementId] || sections[elementId];
       if (!element) return;
 
-      // Get current transform values
+      // Get transform values
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
       const rotation = node.rotation();
       const x = node.x();
       const y = node.y();
 
-      // Reset scale after applying to dimensions
+      // Reset transform scale back to 1 to avoid compound scaling
       node.scaleX(1);
       node.scaleY(1);
+      node.rotation(0);
 
-      // Calculate new dimensions based on element type
       const updates: Partial<CanvasElement> = {
         x,
         y,
-        rotation,
+        rotation: rotation || 0
       };
 
       // Apply scale to dimensions based on element type
@@ -163,7 +162,8 @@ export const UILayer: React.FC<UILayerProps> = ({
           // Convert from center position back to top-left corner
           updates.x = x - newRadius;
           updates.y = y - newRadius;
-          break;        case 'text':
+          break;
+        case 'text':
         case 'sticky-note':
         case 'rich-text':
           updates.width = Math.max(20, (element.width || 120) * scaleX);
@@ -176,7 +176,8 @@ export const UILayer: React.FC<UILayerProps> = ({
         case 'image':
           updates.width = Math.max(20, (element.width || 100) * scaleX);
           updates.height = Math.max(20, (element.height || 100) * scaleY);
-          break;case 'star':
+          break;
+        case 'star':
           const newStarRadius = Math.max(5, (element.radius || 50) * Math.max(scaleX, scaleY));
           updates.radius = newStarRadius;
           if (element.innerRadius) {
@@ -188,12 +189,14 @@ export const UILayer: React.FC<UILayerProps> = ({
           // Convert from center position back to top-left corner
           updates.x = x - newStarRadius;
           updates.y = y - newStarRadius;
-          break;        case 'triangle':
+          break;
+        case 'triangle':
           updates.width = Math.max(5, (element.width || 100) * scaleX);
           updates.height = Math.max(5, (element.height || 60) * scaleY);
           // Clear any old points array to force recalculation with new dimensions
           delete (updates as any).points;
-          break;        case 'pen':
+          break;
+        case 'pen':
         case 'connector':
           // For line-based elements, scale the points array if it exists
           if (element.points && Array.isArray(element.points)) {
@@ -219,9 +222,22 @@ export const UILayer: React.FC<UILayerProps> = ({
       }
 
       // Update the element in the store
-      onElementUpdate(elementId, updates);
-    });
-  }, [onElementUpdate, elements, sections]);
+      onElementUpdate(elementId, updates);    });
+
+    // Task 4: Save atomic history entry after transform completion
+    if (addHistoryEntry) {
+      addHistoryEntry(
+        `Transform ${nodes.length} element${nodes.length > 1 ? 's' : ''}`,
+        [], // patches handled by onElementUpdate
+        [], // inverse patches handled by onElementUpdate
+        {
+          elementIds: nodes.map(n => n.id()),
+          operationType: 'update',
+          affectedCount: nodes.length
+        }
+      );
+    }
+  }, [onElementUpdate, elements, sections, addHistoryEntry]);
 
   return (
     <Layer 

@@ -125,6 +125,9 @@ export interface CanvasElement {
   isLocked?: boolean;
   isHidden?: boolean;
   
+  // Z-Index for proper layering
+  zIndex?: number;
+  
   // Table properties
   rows?: number;
   cols?: number;

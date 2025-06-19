@@ -86,9 +86,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     handleSectionDragEnd,
     resizeSection,
     findSectionAtPoint,
-    setHoveredSnapPoint
-  } = useEnhancedStore(
-    useShallow((state) => ({
+    setHoveredSnapPoint,
+    // Add history functions for atomic undo/redo
+    addHistoryEntry,
+    startHistoryGroup,
+    endHistoryGroup
+  } = useEnhancedStore(    useShallow((state) => ({
       elements: state.elements,
       sections: state.sections,
       selectedElementIds: state.selectedElementIds,
@@ -113,6 +116,10 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       resizeSection: state.resizeSection,
       findSectionAtPoint: state.findSectionAtPoint,
       setHoveredSnapPoint: state.setHoveredSnapPoint,
+      // Add history functions for atomic undo/redo
+      addHistoryEntry: state.addHistoryEntry,
+      startHistoryGroup: state.startHistoryGroup,
+      endHistoryGroup: state.endHistoryGroup,
     }))
   );
 
@@ -307,6 +314,18 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       if (Object.keys(updates).length > 0) {
         // Single atomic update for optimal performance and undo/redo
         updateMultipleElements(updates);
+
+        // Task 4: Save atomic history entry after drag completion
+        addHistoryEntry(
+          `Move ${Object.keys(updates).length} element${Object.keys(updates).length > 1 ? 's' : ''}`,
+          [], // patches will be handled by updateMultipleElements
+          [], // inverse patches will be handled by updateMultipleElements
+          {
+            elementIds: Object.keys(updates),
+            operationType: 'move',
+            affectedCount: Object.keys(updates).length
+          }
+        );
 
         console.log(`✅ [MULTI-DRAG] Completed: ${Object.keys(updates).length} elements moved`, {
           deltaX: deltaX.toFixed(2),
@@ -545,6 +564,16 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   const handleStageMouseUp = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isDrawing) {
       finishDrawing();
+      // Task 4: Save atomic history entry after drawing completion
+      addHistoryEntry(
+        'Draw pen stroke',
+        [], // patches handled by finishDrawing
+        [], // inverse patches handled by finishDrawing
+        {
+          operationType: 'create',
+          affectedCount: 1
+        }
+      );
     } else if (isDrawingSection && sectionStart && previewSection) {
       // Finalize section creation
       if (previewSection.width > 10 && previewSection.height > 10) {
@@ -553,10 +582,23 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           previewSection.y,
           previewSection.width,
           previewSection.height,
-          'Untitled Section'        );
+          'Untitled Section'
+        );
 
         // Use enhanced store method to capture elements in the new section
         captureElementsAfterSectionCreation(sectionId);
+
+        // Task 4: Save atomic history entry after section creation
+        addHistoryEntry(
+          'Create section',
+          [], // patches handled by createSection
+          [], // inverse patches handled by createSection
+          {
+            elementIds: [sectionId],
+            operationType: 'create',
+            affectedCount: 1
+          }
+        );
 
         // Automatically switch to select tool after section creation
         setSelectedTool('select');
@@ -567,7 +609,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       setSectionStart(null);
       setPreviewSection(null);
     }
-  }, [isDrawing, finishDrawing, isDrawingSection, sectionStart, previewSection, createSection, captureElementsInSection, elements, updateMultipleElements, setSelectedTool]);
+  }, [isDrawing, finishDrawing, isDrawingSection, sectionStart, previewSection, createSection, captureElementsInSection, elements, updateMultipleElements, setSelectedTool, addHistoryEntry]);
 
   const handleStageMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e.target.getStage()?.getPointerPosition();

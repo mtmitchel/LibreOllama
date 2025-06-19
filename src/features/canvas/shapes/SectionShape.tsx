@@ -4,6 +4,8 @@ import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
 import { SectionElement } from '../../../types/section';
 import { designSystem } from '../../../styles/designSystem';
+// Add performance optimization imports
+import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
 
 interface SectionShapeProps {
   element: SectionElement;
@@ -16,20 +18,40 @@ interface SectionShapeProps {
 }
 
 /**
- * SectionShape - Simple section container component
- * - Basic organizational containers
+ * SectionShape - Simple section container component with performance optimizations
+ * - Basic organizational containers with shape caching
  * - Supports titles, background colors, and corner radius
- * - Clean, minimal implementation
+ * - Clean, minimal implementation with Konva optimizations
  */
 export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
   element,
   isSelected,
   konvaProps,
   onUpdate,
-  onStartTextEdit,  onSectionResize,
+  onStartTextEdit,
+  onSectionResize,
   children,
 }) => {
   const titleTextRef = useRef<any>(null);
+
+  // Apply shape caching for large or complex sections
+  const { nodeRef } = useShapeCaching({
+    element,
+    cacheConfig: {
+      enabled: true,
+      complexityThreshold: 1, // Sections are always complex (container type)
+      sizeThreshold: 50000, // Cache large sections
+      forceCache: false
+    },
+    dependencies: [
+      element.width, 
+      element.height, 
+      element.backgroundColor, 
+      element.borderColor, 
+      element.title,
+      isSelected
+    ]
+  });
 
   // Calculate derived styles
   const sectionStyles = useMemo(() => ({
@@ -148,9 +170,9 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
     if (onUpdate) {
       onUpdate(element.id, { isHidden: !element.isHidden });
     }
-  };
-  return (
+  };  return (
     <Group
+      ref={nodeRef}
       {...konvaProps}
       id={element.id}
       opacity={sectionStyles.opacity}
@@ -170,17 +192,25 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
         fill={sectionStyles.backgroundColor}
         cornerRadius={sectionStyles.cornerRadius}
         {...selectionStyle}
+        // Konva performance optimizations
+        perfectDrawEnabled={false} // Disable perfect drawing for fill+stroke sections
+        shadowForStrokeEnabled={false} // Disable shadow for stroke to prevent extra rendering pass
       />
 
       {/* Title bar */}
       <Rect
         x={0}
-        y={0}        width={sectionStyles.width}
+        y={0}
+        width={sectionStyles.width}
         height={sectionStyles.titleBarHeight}
         fill="rgba(255, 255, 255, 0.8)"
         cornerRadius={[sectionStyles.cornerRadius, sectionStyles.cornerRadius, 0, 0]}
         stroke={selectionStyle.stroke}
         strokeWidth={0.5}
+        // Konva performance optimizations
+        perfectDrawEnabled={false}
+        shadowForStrokeEnabled={false}
+        listening={false} // Title bar doesn't need interaction
       />
 
       {/* Section title */}

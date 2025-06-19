@@ -7,6 +7,7 @@ import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { CanvasElement } from '../stores/types';
+import { useViewportCulling } from '../hooks/useViewportCulling';
 
 interface CanvasLayerManagerProps {
   stageWidth: number;
@@ -54,7 +55,11 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     clearSelection, 
     selectMultipleElements,
     selectedTool,
-    hoveredSnapPoint
+    hoveredSnapPoint,
+    zoom,
+    pan,
+    // Add history function for atomic undo/redo
+    addHistoryEntry
   } = useEnhancedStore();
   const [selectionBox, setSelectionBox] = React.useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
 
@@ -64,6 +69,24 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     return [...regularElements, ...sectionElements];
   }, [elementsMap, sectionsMap]);
 
+  const { visibleElements, cullingStats } = useViewportCulling({
+    elements: allElementsArray,
+    zoomLevel: zoom,
+    panOffset: pan,
+    canvasSize: { width: stageWidth, height: stageHeight }
+  });
+
+  React.useEffect(() => {
+    if (import.meta.env.DEV && cullingStats.totalElements > 100) {
+      console.log('[Canvas Performance - Viewport Culling]', {
+        total: cullingStats.totalElements,
+        visible: cullingStats.visibleElements,
+        culled: cullingStats.totalElements - cullingStats.visibleElements,
+        cullPercentage: Math.round((1 - cullingStats.visibleElements / cullingStats.totalElements) * 100) + '%'
+      });
+    }
+  }, [cullingStats]);
+
   const { mainElements, connectorElements, sectionElements, elementsBySection } = useMemo(() => {
     const main: CanvasElement[] = [];
     const connectors: CanvasElement[] = [];
@@ -71,12 +94,12 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     const elementsBySection: Record<string, CanvasElement[]> = {};
 
     // First, collect all section elements and initialize their element arrays
-    allElementsArray.forEach((el: any) => {
+    visibleElements.forEach((el: any) => {
       if (el.type === 'section') {
         sections.push(el);        elementsBySection[el.id] = [];
       }
     });    // Separate elements into different categories for proper layering
-    allElementsArray.forEach((el: any) => {
+    visibleElements.forEach((el: any) => {
       if (el.type === 'section') {
         // Sections are already added above
         return;
@@ -96,7 +119,29 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       sectionElements: sections,
       elementsBySection: elementsBySection
     };
-  }, [allElementsArray]);
+  }, [visibleElements]);
+
+  // Task 3: Implement Z-Index Sorting for proper layering
+  const sortedMainElements = useMemo(() => {
+    return [...mainElements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [mainElements]);
+
+  const sortedConnectorElements = useMemo(() => {
+    return [...connectorElements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [connectorElements]);
+
+  const sortedSectionElements = useMemo(() => {
+    return [...sectionElements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [sectionElements]);
+
+  // Sort elements within each section by zIndex
+  const sortedElementsBySection = useMemo(() => {
+    const sorted: Record<string, CanvasElement[]> = {};
+    Object.entries(elementsBySection).forEach(([sectionId, elements]) => {
+      sorted[sectionId] = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    });
+    return sorted;
+  }, [elementsBySection]);
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.target !== e.target.getStage() || selectedTool !== 'select') {
@@ -127,7 +172,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     setSelectionBox(prev => ({ ...prev, visible: false }));
 
     const box = new Konva.Rect(selectionBox);
-    const selected = mainElements.filter(el => {
+    const selected = sortedMainElements.filter(el => {
       if (!el.x || !el.y || !el.width || !el.height) return false;
       const elBox = new Konva.Rect({
         x: el.x,
@@ -148,7 +193,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     />,
     <MainLayer
       key="sections-with-children"
-      elements={sectionElements}
+      elements={sortedSectionElements}
       selectedElementIds={selectedElementIds}
       selectedTool={selectedTool}
       onElementClick={onElementClick}
@@ -158,7 +203,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       stageRef={stageRef}
       isDrawing={isDrawing}
       currentPath={currentPath}
-      elementsBySection={elementsBySection}
+      elementsBySection={sortedElementsBySection}
       {...(onElementDragStart && { onElementDragStart })}
       {...(onElementDragMove && { onElementDragMove })}
       {...(onSectionResize && { onSectionResize })}
@@ -166,7 +211,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     <MainLayer
       key="main"
       name="main-layer"
-      elements={mainElements}
+      elements={sortedMainElements}
       selectedElementIds={selectedElementIds}
       selectedTool={selectedTool}
       onElementClick={onElementClick}
@@ -182,7 +227,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     />,
     <ConnectorLayer
       key="connector"
-      elements={connectorElements}
+      elements={sortedConnectorElements}
       selectedElementIds={selectedElementIds}
       onElementClick={onElementClick}
       isDrawingConnector={isDrawingConnector}
@@ -195,7 +240,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       stageRef={stageRef}
       selectedElementIds={selectedElementIds}
       elements={elementsMap}
-      sections={sectionElements}
+      sections={sortedSectionElements}
       isDrawingSection={isDrawingSection}
       previewSection={previewSection ?? null}
       selectionBox={selectionBox}
@@ -204,6 +249,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onElementUpdate={onElementUpdate}
+      addHistoryEntry={addHistoryEntry}
     />
   ];
 
