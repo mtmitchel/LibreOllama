@@ -10,7 +10,6 @@ import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 
 interface StickyNoteShapeProps {
   element: CanvasElement;
-  isSelected: boolean;
   konvaProps: any;
   onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
@@ -23,7 +22,6 @@ interface StickyNoteShapeProps {
  */
 export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   element,
-  isSelected: _isSelected,
   konvaProps,
   onUpdate,
   stageRef

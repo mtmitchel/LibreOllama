@@ -6,9 +6,7 @@ import { designSystem } from '../../../styles/designSystem';
 
 interface PenShapeProps {
   element: CanvasElement;
-  isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -18,10 +16,8 @@ interface PenShapeProps {
  */
 export const PenShape: React.FC<PenShapeProps> = React.memo(({
   element,
-  isSelected,
   konvaProps,
-  onUpdate
-}) => {  return (
+}) => {return (
     <Line
       {...konvaProps}
       id={element.id}

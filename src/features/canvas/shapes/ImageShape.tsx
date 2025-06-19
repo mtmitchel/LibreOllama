@@ -5,9 +5,7 @@ import { CanvasElement } from '../layers/types';
 
 interface ImageShapeProps {
   element: CanvasElement;
-  isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -17,9 +15,7 @@ interface ImageShapeProps {
  */
 export const ImageShape: React.FC<ImageShapeProps> = React.memo(({
   element,
-  isSelected,
   konvaProps,
-  onUpdate
 }) => {
   const [image, setImage] = React.useState<HTMLImageElement | null>(null);
   React.useEffect(() => {

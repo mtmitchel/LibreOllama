@@ -1,6 +1,6 @@
 // src/components/canvas/shapes/TextShape.tsx
 import React, { useEffect, useRef } from 'react';
-import { Text, Transformer } from 'react-konva';
+import { Text } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../stores/types';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
@@ -10,11 +10,9 @@ import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 
 interface TextShapeProps {
   element: CanvasElement;
-  isSelected: boolean;
   konvaProps: any;
   onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
-  onTransformEnd: (element: CanvasElement, props: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -25,14 +23,11 @@ interface TextShapeProps {
  */
 export const TextShape: React.FC<TextShapeProps> = React.memo(({
   element,
-  isSelected,
   konvaProps,
   onUpdate,
   stageRef,
-  onTransformEnd,
 }) => {
   const textNodeRef = useRef<Konva.Text>(null);
-  const transformerRef = useRef<Konva.Transformer>(null);
 
   const { editingTextId, setEditingTextId } = useCanvasStore();
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -137,27 +132,8 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
       
       stage.off('transform dragmove wheel scalechange dragend transformend', handleTransform);
       window.removeEventListener('resize', handleWindowChange);
-      window.removeEventListener('scroll', handleWindowChange);
-    };
+      window.removeEventListener('scroll', handleWindowChange);    };
   }, [editingTextId, element.id, element.text, element.width, element.fontSize, element.fontFamily, onUpdate, setEditingTextId, stageRef]);
-
-  useEffect(() => {
-    if (isSelected && transformerRef.current && textNodeRef.current) {
-      // Defer attachment to the next tick to ensure the node is mounted.
-      const timer = setTimeout(() => {
-        if (transformerRef.current && textNodeRef.current) {
-          transformerRef.current.nodes([textNodeRef.current]);
-          transformerRef.current.getLayer()?.batchDraw();
-        }
-      }, 0);
-
-      return () => clearTimeout(timer); // Cleanup the timeout
-    } else if (!isSelected && transformerRef.current) {
-      // No need to defer detaching
-      transformerRef.current.nodes([]);
-      transformerRef.current.getLayer()?.batchDraw();
-    }
-  }, [isSelected, element.id]); // Add element.id to dependencies
 
   // FINAL SAFETY NET: Ensure we never pass an empty or whitespace-only string to Konva
   const safeText = (element.text && element.text.trim().length > 0) ? element.text : 'Text';
@@ -171,47 +147,12 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
         id={element.id}
         text={safeText}
         fontSize={element.fontSize || designSystem.typography.fontSize.xl}
-        fontFamily={getAvailableFontFamily()}
-        fill={textColor}
+        fontFamily={getAvailableFontFamily()}        fill={textColor}
         width={element.width || 250}
         fontStyle={hasContent ? (element.fontStyle || 'normal') : 'italic'}
         onDblClick={handleDoubleClick}
         ref={textNodeRef}
       />
-      {isSelected && (
-        <Transformer
-          ref={transformerRef}
-          boundBoxFunc={(oldBox, newBox) => {
-            // Prevent scaling below a certain size
-            if (newBox.width < 10 || newBox.height < 10) {
-              return oldBox;
-            }
-            return newBox;
-          }}
-          onTransformEnd={() => {
-            const node = textNodeRef.current;
-            if (!node) return;
-            
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-            
-            // Reset scale before getting the new width/height
-            node.scaleX(1);
-            node.scaleY(1);
-            
-            const newWidth = Math.max(10, node.width() * scaleX);
-            const newHeight = Math.max(10, node.height() * scaleY);
-            
-            onTransformEnd(element, {
-              width: newWidth,
-              height: newHeight,
-              x: node.x(),
-              y: node.y(),
-              rotation: node.rotation(),
-            });
-          }}
-        />
-      )}
     </>
   );
 });

@@ -49,6 +49,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     selectElement,
     setEditingTextId,
     selectedTool,
+    setSelectedTool,
     isDrawing, 
     currentPath, 
     startDrawing,    updateDrawing, 
@@ -155,44 +156,79 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
 
+    console.log('🖱️ [MOUSE DOWN] Tool:', selectedTool, 'Position:', pos);
+
     if (selectedTool === 'pen' || selectedTool === 'pencil') {
       console.log('🖊️ [KONVA CANVAS] Starting drawing at:', pos);
       console.log('🖊️ [KONVA CANVAS] Selected tool:', selectedTool);
       startDrawing(pos.x, pos.y, selectedTool as 'pen' | 'pencil');
     } else if (selectedTool === 'connector-line' || selectedTool === 'connector-arrow') {
+      console.log('🔗 [CONNECTOR] Connector tool detected!', selectedTool);
+      console.log('🔗 [CONNECTOR] Current drawing state:', isDrawingConnector);
+      console.log('🔗 [CONNECTOR] Current start point:', connectorStart);
+      
       // Handle connector creation
       if (!isDrawingConnector) {
         // Start connector
         setIsDrawingConnector(true);
         setConnectorStart({ x: pos.x, y: pos.y });
-        console.log('� [CONNECTOR] Starting connector at:', pos);
+        console.log('🔗 [CONNECTOR] Starting connector at:', pos);
       } else {
         // Finish connector
         setConnectorEnd({ x: pos.x, y: pos.y });
         console.log('🔗 [CONNECTOR] Finishing connector at:', pos);
         
         if (connectorStart) {
-          // Create connector element
-          const connectorElement = {
+          // Create connector element with proper structure for ConnectorRenderer
+          const connectorElement: CanvasElement = {
             id: `connector-${Date.now()}`,
             type: 'connector' as const,
-            x: connectorStart.x,
-            y: connectorStart.y,
+            subType: selectedTool === 'connector-arrow' ? 'arrow' : 'line',
+            x: 0, // Connectors use startPoint/endPoint for positioning
+            y: 0,
+            startPoint: {
+              x: connectorStart.x,
+              y: connectorStart.y,
+              connectedElementId: connectorStart.elementId,
+              anchorPoint: connectorStart.anchor as any
+            },
+            endPoint: {
+              x: pos.x,
+              y: pos.y,
+              connectedElementId: undefined, // TODO: Implement element snapping
+              anchorPoint: undefined
+            },
+            connectorStyle: {
+              strokeColor: '#000000',
+              strokeWidth: 2,
+              strokeDashArray: undefined,
+              hasStartArrow: false,
+              hasEndArrow: selectedTool === 'connector-arrow',
+              arrowSize: 10
+            },
+            // Legacy properties for backward compatibility
             points: [connectorStart.x, connectorStart.y, pos.x, pos.y],
             stroke: '#000000',
             strokeWidth: 2,
-            fill: '',
-            connectorType: selectedTool === 'connector-arrow' ? 'arrow' : 'line'
+            fill: ''
           };
-            // Add the connector using the store
+          
+          // Add the connector using the store
           addElement(connectorElement);
           console.log('✅ [CONNECTOR] Created connector element:', connectorElement.id);
+          
+          // Automatically switch to select tool after connector creation
+          setSelectedTool('select');
+          console.log('🔧 [CONNECTOR] Automatically switched to select tool after connector creation');
         }
           // Reset connector state
         setIsDrawingConnector(false);
         setConnectorStart(null);
         setConnectorEnd(null);
       }    } else if (selectedTool === 'section') {
+      console.log('📦 [SECTION] Section tool detected!');
+      console.log('📦 [SECTION] Current drawing state:', isDrawingSection);
+      
       // Handle section creation
       if (!isDrawingSection) {
         // Start section drawing
@@ -230,11 +266,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         x: newElement.x,
         y: newElement.y,
         text: newElement.text || 'Text', // Ensure text is always a string
-        fontSize: newElement.fontSize,
-        fontFamily: newElement.fontFamily,
-        fill: newElement.fill,
-        width: newElement.width,
-        height: newElement.height,
+        fontSize: newElement.fontSize || 24,
+        fontFamily: newElement.fontFamily || 'Arial',
+        fill: newElement.fill || '#000000',
+        width: newElement.width || 200,
+        height: newElement.height || 30,
         draggable: true,
       });
 
@@ -244,7 +280,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       addElement(newElement);
       selectElement(newElement.id);
     }
-  }, [selectedTool, startDrawing, isDrawingConnector, connectorStart, addElement, createSection, findSectionAtPoint, selectElement]);
+  }, [selectedTool, startDrawing, isDrawingConnector, connectorStart, addElement, createSection, findSectionAtPoint, selectElement, setSelectedTool]);
 
   const handleStageMouseUp = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isDrawing) {
@@ -261,13 +297,17 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         
         // Use enhanced store method to capture elements in the new section
         captureElementsAfterSectionCreation(sectionId);
+        
+        // Automatically switch to select tool after section creation
+        setSelectedTool('select');
+        console.log('🔧 [SECTION] Automatically switched to select tool after section creation');
       }
       // Reset section drawing state
       setIsDrawingSection(false);
       setSectionStart(null);
       setPreviewSection(null);
     }
-  }, [isDrawing, finishDrawing, isDrawingSection, sectionStart, previewSection, createSection, captureElementsInSection, elements, updateMultipleElements]);
+  }, [isDrawing, finishDrawing, isDrawingSection, sectionStart, previewSection, createSection, captureElementsInSection, elements, updateMultipleElements, setSelectedTool]);
 
   const handleStageMouseMove = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     const pos = e.target.getStage()?.getPointerPosition();

@@ -39,7 +39,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors. Features **unified rich text editing** with context-aware floating toolbars, **seamless table cell editing**, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Recent improvements include **DOM portal-based text overlays** for reliable editing, **mount-time blur prevention**, and **consistent positioning** across all text elements. Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
+| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors. Features **unified rich text editing** with context-aware floating toolbars, **seamless table cell editing**, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Recent improvements include **DOM portal-based text overlays** for reliable editing, **mount-time blur prevention**, **consistent positioning** across all text elements, and **automatic tool switching** for enhanced workflow productivity (sections and connectors automatically switch to select tool after creation). Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -144,6 +144,22 @@ LibreOllama includes comprehensive documentation to help you get started quickly
 - **[UI Implementation](./docs/completed-phases/UI_IMPLEMENTATION_COMPLETE.md)** - UI/UX design system and component documentation
 
 ## Recent Updates
+
+### ✨ UX Enhancement: Automatic Tool Switching (June 19, 2025)
+
+**Professional workflow improvements for Canvas drawing tools:**
+
+- **🔧 Automatic Section Tool Switching**: After drawing a section, the tool automatically switches to select for immediate manipulation
+- **🔗 Automatic Connector Tool Switching**: After drawing connectors (line/arrow), the tool automatically switches to select
+- **🎯 Enhanced Productivity**: Eliminates manual tool switching, creating seamless draw-then-manipulate workflows
+- **✨ Professional UX**: Matches behavior patterns from industry-standard design tools like Figma and FigJam
+- **⚡ Seamless Workflow**: Users can now draw elements and immediately interact with them without interruption
+
+**Technical Implementation:**
+- Integrated `setSelectedTool` function from enhanced store in KonvaCanvas component
+- Added automatic tool switching in `handleStageMouseUp` for section creation completion
+- Added automatic tool switching in `handleStageClick` for connector creation completion
+- Enhanced user experience with comprehensive logging for debugging tool transitions
 
 ### ✨ Text Editing System Overhaul (June 17, 2025)
 

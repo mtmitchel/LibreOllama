@@ -5,6 +5,7 @@
  */
 
 import type { RichTextSegment } from '../../../types/richText';
+import type { ConnectorEndpoint, ConnectorStyle } from '../../../types/connector';
 
 export interface TableCell {
   id: string;
@@ -110,12 +111,11 @@ export interface CanvasElement {
   arrowEnd?: boolean;
   color?: string;
   rotation?: number;
-  
-  // Connector properties
+    // Connector properties
   subType?: 'line' | 'arrow';
-  startPoint?: any; // ConnectorEndpoint
-  endPoint?: any; // ConnectorEndpoint
-  connectorStyle?: any; // ConnectorStyle
+  startPoint?: ConnectorEndpoint;
+  endPoint?: ConnectorEndpoint;
+  connectorStyle?: ConnectorStyle;
   pathPoints?: number[];
   
   // Section properties

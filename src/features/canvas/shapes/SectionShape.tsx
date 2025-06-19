@@ -69,8 +69,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
     if (onStartTextEdit && !element.isLocked) {
       onStartTextEdit(element.id);
     }
-  };
-  // Handle resize operations
+  };  // Handle resize operations
   const handleResizeStart = (e: Konva.KonvaEventObject<MouseEvent>, direction: string) => {
     e.cancelBubble = true;
     
@@ -84,6 +83,10 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
     const startHeight = sectionStyles.height;
     const startX = element.x;
     const startY = element.y;
+    
+    // Store the final dimensions to be set in onMouseUp
+    let finalWidth = startWidth;
+    let finalHeight = startHeight;
 
     const handleMouseMove = () => {
       if (!stage) return;
@@ -136,6 +139,10 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
           break;
       }
 
+      // Store final values for onMouseUp
+      finalWidth = newWidth;
+      finalHeight = newHeight;
+
       if (onUpdate) {
         onUpdate(element.id, {
           width: newWidth,
@@ -147,8 +154,10 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
     };    const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      
+      // Call onSectionResize with final dimensions
       if (onSectionResize) {
-        onSectionResize(element.id, sectionStyles.width, sectionStyles.height);
+        onSectionResize(element.id, finalWidth, finalHeight);
       }
     };
     

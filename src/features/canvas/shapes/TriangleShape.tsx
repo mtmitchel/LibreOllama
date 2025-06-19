@@ -6,9 +6,7 @@ import { designSystem } from '../../../styles/designSystem';
 
 interface TriangleShapeProps {
   element: CanvasElement;
-  isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -18,9 +16,7 @@ interface TriangleShapeProps {
  */
 export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
   element,
-  isSelected,
   konvaProps,
-  onUpdate
 }) => {
   const width = element.width || 100;
   const height = element.height || 60;

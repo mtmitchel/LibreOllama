@@ -6,9 +6,7 @@ import { designSystem } from '../../../styles/designSystem';
 
 interface StarShapeProps {
   element: CanvasElement;
-  isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -18,9 +16,7 @@ interface StarShapeProps {
  */
 export const StarShape: React.FC<StarShapeProps> = React.memo(({
   element,
-  isSelected,
   konvaProps,
-  onUpdate
 }) => {
   return (
     <Star

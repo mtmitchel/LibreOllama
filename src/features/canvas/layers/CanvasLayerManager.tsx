@@ -184,8 +184,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         connectorStart={connectorStart ?? null}
         connectorEnd={connectorEnd ?? null}
         selectedTool={selectedTool}
-      />
-      <UILayer
+      />      <UILayer
         key="ui"
         stageRef={stageRef}
         selectedElementIds={selectedElementIds}
@@ -197,6 +196,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onElementUpdate={onElementUpdate}
       />
     </>
   );

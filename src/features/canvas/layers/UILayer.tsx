@@ -95,16 +95,9 @@ export const UILayer: React.FC<UILayerProps> = ({
       case 'pen':
       case 'connector':
         // Line-based elements: disable transformer (points-based positioning)
+        return { enabledAnchors: [] };      case 'section':
+        // Sections: disable transformer (use custom resize handles in SectionShape)
         return { enabledAnchors: [] };
-      case 'section':
-        // Sections: full resize capability
-        return {
-          enabledAnchors: [
-            'top-left', 'top-center', 'top-right',
-            'middle-left', 'middle-right',
-            'bottom-left', 'bottom-center', 'bottom-right'
-          ]
-        };
       default:
         // Other elements: full resize capability
         return {

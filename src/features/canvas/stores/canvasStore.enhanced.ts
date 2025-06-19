@@ -317,6 +317,32 @@ export const useCanvasStore = create<CanvasStoreState>()(
               console.log('✅ [CANVAS STORE] Converted element to relative coordinates:', elementId);
             });
           },
+
+          // FIXED: Enhanced clearCanvas function that clears both elements AND sections
+          clearCanvas: () => {
+            console.log('🧹 [CANVAS STORE] Clearing entire canvas including sections');
+            
+            set((state: Draft<CanvasStoreState>) => {
+              // Clear all elements
+              state.elements = {};
+              state.elementOrder = [];
+              
+              // Clear all sections
+              state.sections = {};
+              state.sectionOrder = [];
+              
+              // Reset drawing state
+              state.isDrawing = false;
+              state.currentPath = [];
+              state.drawingTool = null;
+              
+              // Clear text editing state
+              state.editingTextId = null;
+              state.isEditingText = null;
+              
+              console.log('✅ [CANVAS STORE] Canvas fully cleared including sections');
+            });
+          },
         };
       }
     )

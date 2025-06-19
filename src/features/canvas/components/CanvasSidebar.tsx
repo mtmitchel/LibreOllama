@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   MoreVertical,
@@ -34,7 +34,10 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
   const [editingName, setEditingName] = useState("");
 
   // Fixed: Use specific selectors to prevent infinite re-renders
-  const { elements, clearCanvas, addElement, createSection } = useEnhancedStore();
+  const elements = useEnhancedStore((state) => state.elements);
+  const clearCanvas = useEnhancedStore((state) => state.clearCanvas);
+  const addElement = useEnhancedStore((state) => state.addElement);
+  const createSection = useEnhancedStore((state) => state.createSection);
 
   // Load canvases from localStorage on mount
   useEffect(() => {
@@ -69,18 +72,21 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
     alert("All canvas data cleared! You now have a fresh canvas.");
   };
 
-  const loadCanvasesFromStorage = () => {
+  const loadCanvasesFromStorage = useCallback(() => {
     const storedCanvases = localStorage.getItem("libreollama_canvases");
     if (storedCanvases) {
       const parsed = JSON.parse(storedCanvases);
       setCanvases(parsed);
 
-      // Set the first canvas as selected if none selected
+      // Set the first canvas as selected if none selected and no canvas is currently loading
       if (parsed.length > 0 && !selectedCanvasId) {
         const firstCanvas = parsed[0];
         if (firstCanvas) {
           setSelectedCanvasId(firstCanvas.id);
-          loadCanvas(firstCanvas.id);
+          // Use setTimeout to prevent infinite loop by deferring the load
+          setTimeout(() => {
+            loadCanvas(firstCanvas.id);
+          }, 0);
         }
       }
     } else {
@@ -88,8 +94,9 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
       const initialCanvas = createNewCanvas();
       setCanvases([initialCanvas]);
       setSelectedCanvasId(initialCanvas.id);
+      // No need to load since it's a new canvas
     }
-  };
+  }, [selectedCanvasId]);
 
   const saveCanvasesToStorage = (updatedCanvases: CanvasItem[]) => {
     localStorage.setItem(
@@ -109,7 +116,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
     };
   };
 
-  const saveCurrentCanvas = () => {
+  const saveCurrentCanvas = useCallback(() => {
     if (!selectedCanvasId) return;
 
     // Export current canvas data
@@ -137,11 +144,16 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
 
     setCanvases(updatedCanvases);
     saveCanvasesToStorage(updatedCanvases);
-  };
+  }, [selectedCanvasId, elements, canvases]);
 
-  const loadCanvas = (canvasId: string) => {
+  const loadCanvas = useCallback((canvasId: string) => {
+    // Prevent infinite loops by checking if we're already loading this canvas
+    if (selectedCanvasId === canvasId) {
+      return;
+    }
+
     // Save current canvas before switching
-    if (selectedCanvasId) {
+    if (selectedCanvasId && selectedCanvasId !== canvasId) {
       saveCurrentCanvas();
     }
 
@@ -149,9 +161,11 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
     const canvasData = localStorage.getItem(`libreollama_canvas_${canvasId}`);
     if (canvasData) {
       const parsed = JSON.parse(canvasData);
+      
+      // Clear canvas first
       clearCanvas();
 
-      // Import elements
+      // Batch the element additions to avoid multiple renders
       if (parsed.elements) {
         Object.values(parsed.elements).forEach((element: any) => {
           addElement(element);
@@ -170,7 +184,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
     }
 
     setSelectedCanvasId(canvasId);
-  };
+  }, [selectedCanvasId, saveCurrentCanvas, clearCanvas, addElement, createSection]);
 
   const handleCreateCanvas = () => {
     saveCurrentCanvas();
