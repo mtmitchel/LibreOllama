@@ -1,7 +1,7 @@
 // src/components/canvas/shapes/RectangleShape.tsx
 import React from 'react';
 import { Rect } from 'react-konva';
-import { CanvasElement } from '../layers/types';
+import { CanvasElement } from '../stores/types';
 import { designSystem } from '../../../styles/designSystem';
 
 interface RectangleShapeProps {

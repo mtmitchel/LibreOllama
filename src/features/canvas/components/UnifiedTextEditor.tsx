@@ -200,9 +200,9 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
 
   const portalTarget = getPortalTarget();
   if (!portalTarget) return null;
-
   return createPortal(
-    <div style={{ position: 'absolute', pointerEvents: 'auto', zIndex: 2000 }}>      <textarea
+    <div style={{ position: 'absolute', pointerEvents: 'auto', zIndex: 2000 }}>
+      <textarea
         ref={textareaRef}
         style={textareaStyle}
         value={editText}

@@ -60,6 +60,9 @@ export interface CanvasElementsState {
   // NEW: Element drop handler that will be connected at the store level
   // This is just a placeholder that will be overridden in the combined store
   handleElementDrop: (elementId: string, position: { x: number; y: number }) => void;
+
+  // Connection management
+  getConnectorsByElement: (elementId: string) => CanvasElement[];
 }
 
 export const createCanvasElementsStore: StateCreator<
@@ -120,7 +123,7 @@ export const createCanvasElementsStore: StateCreator<
         }
         
         // Apply updates
-        Object.assign(state.elements[id], updates);
+        Object.assign(element, updates);
         console.log('✅ [ELEMENTS STORE] Element updated successfully:', id);
       });
       
@@ -857,8 +860,23 @@ export const createCanvasElementsStore: StateCreator<
   },
 
   // Placeholder for handleElementDrop - will be overridden in combined store
-  handleElementDrop: (elementId: string, position: { x: number; y: number }) => {
+  handleElementDrop: (_elementId: string, _position: { x: number; y: number }) => {
     console.warn('🔧 [ELEMENTS STORE] handleElementDrop called but not implemented in slice');
     // This will be overridden in the combined store to avoid circular dependencies
+  },
+
+  // Simple connection lookup - finds all connectors that reference a given element
+  getConnectorsByElement: (elementId: string) => {
+    const elements = get().elements;
+    return Object.values(elements).filter(element => {
+      if (element.type !== 'connector' || !element.startPoint || !element.endPoint) {
+        return false;
+      }
+      
+      const isConnectedToStart = element.startPoint.connectedElementId === elementId;
+      const isConnectedToEnd = element.endPoint.connectedElementId === elementId;
+      
+      return isConnectedToStart || isConnectedToEnd;
+    });
   },
 });

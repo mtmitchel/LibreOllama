@@ -1,31 +1,35 @@
 // Connector types for FigJam-style line and arrow drawing
 
+export type AttachmentPoint = 'top' | 'right' | 'bottom' | 'left' | 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type ArrowStyle = 'none' | 'solid' | 'line' | 'triangle' | 'diamond';
+
 export interface ConnectorEndpoint {
   x: number;
   y: number;
-  // Optional: connection to another element
+  // Connection to another element
   connectedElementId?: string;
-  // Optional: anchor point on the connected element (e.g., 'top', 'bottom', 'left', 'right', 'center')
-  anchorPoint?: 'top' | 'bottom' | 'left' | 'right' | 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | undefined;
+  // Anchor point on the connected element
+  anchorPoint?: AttachmentPoint;
 }
 
 export interface ConnectorStyle {
   strokeColor: string;
   strokeWidth: number;
   strokeDashArray?: number[];
-  // For arrows
-  hasStartArrow?: boolean;
-  hasEndArrow?: boolean;
-  arrowSize?: number;
+  startArrow: ArrowStyle;
+  endArrow: ArrowStyle;
+  arrowSize: number;
+  text: string; // Text label on the connector
 }
 
 export interface ConnectorElement {
   id: string;
   type: 'connector';
-  subType: 'line' | 'arrow';
+  subType: 'straight' | 'bent' | 'curved';
   startPoint: ConnectorEndpoint;
   endPoint: ConnectorEndpoint;
-  style: ConnectorStyle;
+  intermediatePoints: { x: number; y: number }[]; // For bent/curved connectors
+  connectorStyle: ConnectorStyle;
   // Calculated path points (for rendering)
   pathPoints?: number[];
 }

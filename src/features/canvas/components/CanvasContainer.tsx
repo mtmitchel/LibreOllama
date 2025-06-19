@@ -291,11 +291,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           display: 'block',
           backgroundColor: designSystem.canvasStyles.background,
           cursor: selectedTool === 'pan' ? 'grab' : 
-                  selectedTool.startsWith('connector-') ? 'crosshair' : 'default',
-          userSelect: 'none',
+                  selectedTool.startsWith('connector-') ? 'crosshair' : 'default',          userSelect: 'none',
           WebkitUserSelect: 'none',
         }}
-      >        <CanvasLayerManager
+      >
+        <CanvasLayerManager
           stageWidth={width}
           stageHeight={height}
           stageRef={stageRef}

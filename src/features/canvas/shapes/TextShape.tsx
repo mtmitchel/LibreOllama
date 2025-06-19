@@ -144,10 +144,10 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
     <>
       <Text
         {...konvaProps}
-        id={element.id}
-        text={safeText}
+        id={element.id}        text={safeText}
         fontSize={element.fontSize || designSystem.typography.fontSize.xl}
-        fontFamily={getAvailableFontFamily()}        fill={textColor}
+        fontFamily={getAvailableFontFamily()}
+        fill={textColor}
         width={element.width || 250}
         fontStyle={hasContent ? (element.fontStyle || 'normal') : 'italic'}
         onDblClick={handleDoubleClick}

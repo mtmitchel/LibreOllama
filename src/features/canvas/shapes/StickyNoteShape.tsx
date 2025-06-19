@@ -162,12 +162,12 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
         fill="#ffeb3b"
         stroke="#fbc02d"
         strokeWidth={2}
-        cornerRadius={4}
-        shadowColor="rgba(0, 0, 0, 0.2)"
+        cornerRadius={4}        shadowColor="rgba(0, 0, 0, 0.2)"
         shadowBlur={5}
         shadowOffset={{ x: 2, y: 2 }}
         shadowOpacity={0.3}
-      />        {/* Text content */}
+      />
+      {/* Text content */}
       <Text
         x={10}
         y={10}

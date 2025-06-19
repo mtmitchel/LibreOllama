@@ -46,13 +46,14 @@ const KonvaApp: React.FC = () => {
   }, []);
 
   return (
-    <div 
-      className="app h-screen flex flex-col"
+    <div      className="app h-screen flex flex-col"
       style={{ 
         fontFamily: designSystem.typography.fontFamily.sans,
         backgroundColor: designSystem.colors.secondary[50] 
       }}
-    >      <KonvaToolbar        onZoomIn={() => zoomIn()}
+    >
+      <KonvaToolbar
+        onZoomIn={() => zoomIn()}
         onZoomOut={() => zoomOut()}
         onResetZoom={() => resetViewport()}
         onZoomToFit={() => zoomToFit([])}

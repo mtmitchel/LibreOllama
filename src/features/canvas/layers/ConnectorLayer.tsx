@@ -9,6 +9,7 @@ interface ConnectorLayerProps {
   elements: CanvasElement[];
   selectedElementIds: string[];
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
+  onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
   isDrawingConnector?: boolean;
   connectorStart?: { x: number; y: number; elementId?: string; anchor?: string } | null;
   connectorEnd?: { x: number; y: number; elementId?: string; anchor?: string } | null;
@@ -25,6 +26,7 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
   elements,
   selectedElementIds,
   onElementClick,
+  onElementUpdate,
   isDrawingConnector = false,
   connectorStart,
   connectorEnd,
@@ -42,12 +44,12 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
         {connectorElements.map(element => {
           const isSelected = selectedElementIds.includes(element.id);
           
-          return (
-            <ConnectorRenderer
+          return (            <ConnectorRenderer
               key={element.id}
               element={element}
               isSelected={isSelected}
               onSelect={() => onElementClick({} as any, element)}
+              onUpdate={onElementUpdate || (() => {})}
               elements={elements.reduce((acc, el) => ({ ...acc, [el.id]: el }), {})}
               sections={{}} // Sections would be passed here if needed
             />

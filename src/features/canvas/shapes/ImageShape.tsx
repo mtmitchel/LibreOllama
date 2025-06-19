@@ -1,7 +1,7 @@
 // src/components/canvas/shapes/ImageShape.tsx
 import React from 'react';
 import { Image } from 'react-konva';
-import { CanvasElement } from '../layers/types';
+import { CanvasElement } from '../stores/types';
 
 interface ImageShapeProps {
   element: CanvasElement;

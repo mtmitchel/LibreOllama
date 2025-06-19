@@ -101,10 +101,29 @@ export const useCanvasStore = create<CanvasStoreState>()(
                 oldSectionId,
                 targetSectionId,
                 position
-              });
+              });              // If moving within the same section, just update its relative coordinates
+              if (oldSectionId && oldSectionId === targetSectionId) {
+                const section = state.sections[oldSectionId];
+                if (section) {
+                  const relativeX = position.x - section.x;
+                  const relativeY = position.y - section.y;
+                  element.x = relativeX;
+                  element.y = relativeY;
+                  console.log(`✅ [CANVAS STORE] Updated element ${elementId} position within section ${oldSectionId}`, {
+                    sectionPosition: { x: section.x, y: section.y },
+                    newRelativePosition: { x: relativeX, y: relativeY }
+                  });
+                }
+                return; // Done
+              }
 
-              if (oldSectionId === targetSectionId) {
-                console.log('ℹ️ [CANVAS STORE] Element staying in same section/canvas');
+              // If moving within canvas (no sections), just update absolute coordinates
+              if (!oldSectionId && !targetSectionId) {
+                element.x = position.x;
+                element.y = position.y;
+                console.log(`✅ [CANVAS STORE] Updated element ${elementId} position on canvas`, {
+                  newPosition: { x: position.x, y: position.y }
+                });
                 return;
               }
 

@@ -42,14 +42,14 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   connectorEnd,
   isDrawingSection = false,
   previewSection
-}) => {
-  const { 
+}) => {  const { 
     elements: elementsMap, 
     sections: sectionsMap,
     selectedElementIds, 
     clearSelection, 
     selectMultipleElements,
-    selectedTool 
+    selectedTool,
+    hoveredSnapPoint
   } = useEnhancedStore();
   const [selectionBox, setSelectionBox] = React.useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
 
@@ -77,10 +77,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         // Sections are already added above
         return;
       } else if (el.type === 'connector') {
-        connectors.push(el);
-      } else if (el.sectionId && elementsBySection[el.sectionId]) {
+        connectors.push(el);      } else if (el.sectionId && elementsBySection[el.sectionId]) {
         // Elements that belong to sections - group by section
-        elementsBySection[el.sectionId].push(el);
+        elementsBySection[el.sectionId]!.push(el);
       } else {
         // Free elements - render in main layer
         main.push(el);
@@ -150,10 +149,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         selectedElementIds={selectedElementIds}
         selectedTool={selectedTool}
         onElementClick={onElementClick}
-        onElementDragEnd={onElementDragEnd}
-        onElementUpdate={onElementUpdate}
+        onElementDragEnd={onElementDragEnd}        onElementUpdate={onElementUpdate}
         onStartTextEdit={onStartTextEdit}
-        onSectionResize={onSectionResize}
+        {...(onSectionResize && { onSectionResize })}
         stageRef={stageRef}
         isDrawing={isDrawing}
         currentPath={currentPath}
@@ -167,10 +165,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         selectedElementIds={selectedElementIds}
         selectedTool={selectedTool}
         onElementClick={onElementClick}
-        onElementDragEnd={onElementDragEnd}
-        onElementUpdate={onElementUpdate}
+        onElementDragEnd={onElementDragEnd}        onElementUpdate={onElementUpdate}
         onStartTextEdit={onStartTextEdit}
-        onSectionResize={onSectionResize}
+        {...(onSectionResize && { onSectionResize })}
         stageRef={stageRef}
         isDrawing={isDrawing}
         currentPath={currentPath}
@@ -179,12 +176,12 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         key="connector"
         elements={connectorElements}
         selectedElementIds={selectedElementIds}
-        onElementClick={onElementClick}
-        isDrawingConnector={isDrawingConnector}
+        onElementClick={onElementClick}        isDrawingConnector={isDrawingConnector}
         connectorStart={connectorStart ?? null}
         connectorEnd={connectorEnd ?? null}
         selectedTool={selectedTool}
-      />      <UILayer
+      />
+      <UILayer
         key="ui"
         stageRef={stageRef}
         selectedElementIds={selectedElementIds}
@@ -193,6 +190,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         isDrawingSection={isDrawingSection}
         previewSection={previewSection ?? null}
         selectionBox={selectionBox}
+        hoveredSnapPoint={hoveredSnapPoint}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

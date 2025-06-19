@@ -104,6 +104,9 @@ export interface CanvasUIState {
     lastUIUpdate: number;
   };
   
+  // Connector snapping state
+  hoveredSnapPoint: { x: number; y: number; elementId?: string; anchor?: string } | null;
+  
   // Tool operations
   setSelectedTool: (tool: string) => void;
   getSelectedTool: () => string;
@@ -127,6 +130,7 @@ export interface CanvasUIState {
   setHoveredElement: (elementId: string | null) => void;
   setHoveredTool: (toolId: string | null) => void;
   setHoveredUIComponent: (componentId: string | null) => void;
+  setHoveredSnapPoint: (point: { x: number; y: number; elementId?: string; anchor?: string } | null) => void;
   clearAllHover: () => void;
   
   // Modal operations
@@ -231,6 +235,9 @@ export const createCanvasUIStore: StateCreator<
     modalOpens: 0,
     lastUIUpdate: 0
   },
+
+  // Connector snapping state
+  hoveredSnapPoint: null,
 
   // Tool operations
   setSelectedTool: (tool: string) => {
@@ -397,6 +404,12 @@ export const createCanvasUIStore: StateCreator<
   setHoveredUIComponent: (componentId: string | null) => {
     set((state: Draft<CanvasUIState>) => {
       state.hoveredUIComponent = componentId;
+    });
+  },
+
+  setHoveredSnapPoint: (point: { x: number; y: number; elementId?: string; anchor?: string } | null) => {
+    set((state: Draft<CanvasUIState>) => {
+      state.hoveredSnapPoint = point;
     });
   },
 
@@ -598,33 +611,21 @@ export const createCanvasUIStore: StateCreator<
       state.notifications.push(newNotification);
       
       // Auto-hide after duration
-      if (notification.duration !== 0) {
+      if (newNotification.duration) {
         setTimeout(() => {
           get().hideNotification(notificationId);
-        }, notification.duration || 5000);
+        }, newNotification.duration);
       }
     });
-    
-    PerformanceMonitor.recordMetric('notificationShow', 1, 'interaction', { type: notification.type });
-    console.log('🔔 [UI STORE] Notification shown:', notificationId, notification.type);
     
     return notificationId;
   },
 
   hideNotification: (notificationId: string) => {
     set((state: Draft<CanvasUIState>) => {
-      const index = state.notifications.findIndex(n => n.id === notificationId);
-      if (index !== -1) {
-        if (state.notifications[index]) {
-          state.notifications[index].isVisible = false;
-        }
-        
-        // Remove after animation
-        setTimeout(() => {
-          set((state: Draft<CanvasUIState>) => {
-            state.notifications = state.notifications.filter(n => n.id !== notificationId);
-          });
-        }, 300);
+      const notification = state.notifications.find(notif => notif.id === notificationId);
+      if (notification) {
+        notification.isVisible = false;
       }
     });
   },
@@ -633,18 +634,15 @@ export const createCanvasUIStore: StateCreator<
     set((state: Draft<CanvasUIState>) => {
       state.notifications = [];
     });
-    
-    console.log('🔔 [UI STORE] All notifications cleared');
   },
 
   // Performance utilities
   getUIPerformance: () => {
-    const { uiMetrics } = get();
-    
+    const metrics = get().uiMetrics;
     return {
-      toolSwitches: uiMetrics.toolSwitches,
-      panelToggles: uiMetrics.panelToggles,
-      modalOpens: uiMetrics.modalOpens
+      toolSwitches: metrics.toolSwitches,
+      panelToggles: metrics.panelToggles,
+      modalOpens: metrics.modalOpens
     };
   },
 
@@ -657,7 +655,5 @@ export const createCanvasUIStore: StateCreator<
         lastUIUpdate: 0
       };
     });
-    
-    console.log('🔧 [UI STORE] UI metrics reset');
   }
 });

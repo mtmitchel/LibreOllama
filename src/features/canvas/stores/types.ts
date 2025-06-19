@@ -110,11 +110,11 @@ export interface CanvasElement {
   arrowStart?: boolean;
   arrowEnd?: boolean;
   color?: string;
-  rotation?: number;
-    // Connector properties
-  subType?: 'line' | 'arrow';
+  rotation?: number;    // Connector properties
+  subType?: 'line' | 'arrow' | 'straight' | 'bent' | 'curved';
   startPoint?: ConnectorEndpoint;
   endPoint?: ConnectorEndpoint;
+  intermediatePoints?: { x: number; y: number }[];
   connectorStyle?: ConnectorStyle;
   pathPoints?: number[];
   

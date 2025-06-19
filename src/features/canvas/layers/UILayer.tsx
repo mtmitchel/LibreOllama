@@ -1,6 +1,6 @@
 // src/features/canvas/layers/UILayer.tsx
 import React from 'react';
-import { Layer, Group, Transformer, Rect } from 'react-konva';
+import { Layer, Group, Transformer, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../layers/types';
 
@@ -12,6 +12,7 @@ interface UILayerProps {
   previewSection?: { x: number; y: number; width: number; height: number } | null;
   stageRef: React.MutableRefObject<Konva.Stage | null>;
   selectionBox?: { x: number; y: number; width: number; height: number; visible: boolean; };
+  hoveredSnapPoint?: { x: number; y: number; elementId?: string; anchor?: string } | null;
   onMouseDown?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseMove?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseUp?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
@@ -33,6 +34,7 @@ export const UILayer: React.FC<UILayerProps> = ({
   previewSection,
   stageRef,
   selectionBox,
+  hoveredSnapPoint,
   onMouseDown = () => {},
   onMouseMove = () => {},
   onMouseUp = () => {},
@@ -229,10 +231,9 @@ export const UILayer: React.FC<UILayerProps> = ({
         ref={layerRef}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-      >
-      {/* Selection and transform controls */}
-      <Transformer
+        onMouseUp={onMouseUp}      >
+        {/* Selection and transform controls */}
+        <Transformer
         ref={transformerRef}
         rotateEnabled={true}
         enabledAnchors={transformerConfig.enabledAnchors}
@@ -277,8 +278,7 @@ export const UILayer: React.FC<UILayerProps> = ({
           strokeWidth={2}
           dash={[5, 5]}
           opacity={0.7}
-          listening={false}
-        />
+          listening={false}        />
       )}
       {/* Selection box for multi-select */}
       {selectionBox?.visible && (
@@ -286,11 +286,33 @@ export const UILayer: React.FC<UILayerProps> = ({
           x={selectionBox.x}
           y={selectionBox.y}
           width={selectionBox.width}
-          height={selectionBox.height}
-          fill="rgba(0, 161, 255, 0.2)"
-          stroke="rgba(0, 161, 255, 0.8)"          strokeWidth={1}
+          height={selectionBox.height}          fill="rgba(0, 161, 255, 0.2)"
+          stroke="rgba(0, 161, 255, 0.8)"
+          strokeWidth={1}
+          listening={false}        />
+      )}
+        {/* Snap point indicator */}
+        {hoveredSnapPoint && (
+        <Group
+          x={hoveredSnapPoint.x}
+          y={hoveredSnapPoint.y}
           listening={false}
-        />
+        >
+          {/* Outer glow circle */}
+          <Circle
+            radius={12}
+            fill="rgba(59, 130, 246, 0.2)"
+            stroke="rgba(59, 130, 246, 0.4)"
+            strokeWidth={2}
+          />
+          {/* Inner snap point */}
+          <Circle
+            radius={6}
+            fill="#3B82F6"
+            stroke="#FFFFFF"
+            strokeWidth={2}
+          />
+        </Group>
       )}
       </Group>
     </Layer>

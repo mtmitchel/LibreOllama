@@ -10,7 +10,7 @@ import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { Group } from 'react-konva';
 import Konva from 'konva';
 import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
-import { CanvasElement } from '../layers/types';
+import { CanvasElement } from '../stores/types';
 
 interface CachedShapeProps {
   /** The element data for caching decisions */

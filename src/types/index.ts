@@ -1,4 +1,5 @@
 import type { CanvasElement, EnhancedTableData, TableCell, TableRow, TableColumn } from '../features/canvas/stores/types';
+import type { ConnectorEndpoint, ConnectorStyle } from './connector';
 import type { RichTextSegment } from './richText';
 
 export interface PanZoom {
@@ -117,9 +118,11 @@ export interface ImageElement extends CanvasElement {
 
 export interface ConnectorElement extends CanvasElement {
   type: 'connector';
-  startPoint: any; // ConnectorEndpoint
-  endPoint: any; // ConnectorEndpoint
-  connectorStyle?: any; // ConnectorStyle
+  subType: 'straight' | 'bent' | 'curved';
+  startPoint: ConnectorEndpoint;
+  endPoint: ConnectorEndpoint;
+  intermediatePoints: { x: number; y: number }[];
+  connectorStyle: ConnectorStyle;
   pathPoints?: number[];
 }
 

@@ -1,8 +1,8 @@
 # LibreOllama Canvas - Development Roadmap
-### ✅ Phase 2B: Critical Integration Fixes - Text Editing Complete (75% Complete)
-### 🔄 Phase 2C: Singleton Transformer Pattern Implementation (30% Complete)
+### ✅ Phase 2B: Critical Integration Fixes - Text Editing Complete (80% Complete)
+### 🔄 Phase 2C: Singleton Transformer Pattern Implementation (35% Complete)
 > **Last Updated**: June 19, 2025  
-> **Status**: Phase 2B Complete, Phase 2C.1 Singleton Transformer Core Integration **COMPLETED**, Phase 2C.2 Connector and Section Enhancement **COMPLETED**, Phase 2C.3 UX Improvements **COMPLETED**
+> **Status**: Phase 2B Advancing, Phase 2C.1 Singleton Transformer Core Integration **COMPLETED**, Phase 2C.2 Connector and Section Enhancement **COMPLETED**, Phase 2C.3 UX Improvements **COMPLETED**, Phase 2B.4 Section and Connector Bug Fixes **COMPLETED**
 > **Architecture**: Konva.js + React-Konva + Zustand + TypeScript + React 19
 
 ## 📋 Executive Summary
@@ -10,6 +10,11 @@
 **MAJOR PROGRESS UPDATE (June 19, 2025)**: Completed Phase 2C.1 of the Singleton Transformer Pattern implementation, Phase 2C.2 Connector and Section Enhancement, and Phase 2C.3 UX Improvements including automatic tool switching. Successfully fixed connector rendering, improved section containment logic, and enhanced user experience with automatic tool transitions.
 
 **Recent Achievements**:
+- ✅ **Phase 2B.4 COMPLETED**: Section and Connector Bug Fixes successfully implemented
+- ✅ **Section Element Repositioning Fixed**: Elements can now be properly repositioned within sections
+- ✅ **Section Content Resizing Fixed**: Eliminated race conditions between section dimension updates and child scaling
+- ✅ **Connector Snapping Implemented**: Line and arrow connectors now snap to element anchor points for precise diagramming
+- ✅ **Enhanced Connector Creation**: Connectors automatically detect and connect to nearby element snap points
 - ✅ **Phase 2C.3 COMPLETED**: UX Improvements - Automatic Tool Switching successfully implemented
 - ✅ **Automatic Tool Switching**: Sections and connectors automatically switch to select tool after creation
 - ✅ **Improved User Experience**: Seamless workflow similar to professional design tools (Figma/FigJam)
@@ -32,7 +37,7 @@
 - ✅ **React-Konva Portal Integration**: Resolved reconciler conflicts with proper DOM portal separation
 - ✅ **Store Migration Complete**: Fully migrated from legacy konvaCanvasStore to modular Zustand store
 
-**Remaining Integration Gaps**: With table and text editing systems complete, singleton transformer architecture implemented, and connector/section issues resolved, the primary remaining integration issues are connector element snapping, advanced section resizing feedback, and any remaining image upload edge cases.
+**Remaining Integration Gaps**: With table and text editing systems complete, singleton transformer architecture implemented, connector/section issues resolved, and connector snapping implemented, the primary remaining integration issues are advanced section templates, image upload edge cases, and any remaining drawing tool integrations.
 
 **Strategic Approach**: Continue with **"Make it work, then make it fast"** - complete remaining feature integration, then stabilize the codebase, and only then optimize performance. The successful completion of table and text editing demonstrates this approach is highly effective.
 
@@ -127,7 +132,7 @@
 #### Phase 2C.1: Core Integration Fixes ✅ (COMPLETED)
 
 **✅ Analysis Complete**
-- ✅ **Infrastructure Assessment**: UILayer contains fully functional singleton transformer
+- ✅ **Infrastructure Assessment**: UILayer contains a fully functional singleton transformer
 - ✅ **Gap Identification**: Missing onElementUpdate prop connection and TextShape individual transformer conflict
 - ✅ **Architecture Validation**: Selection system properly connected to singleton transformer
 - ✅ **Implementation Plan**: Clear 4-phase approach with specific file changes identified

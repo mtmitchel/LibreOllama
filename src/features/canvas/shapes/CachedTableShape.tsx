@@ -9,7 +9,7 @@
 
 import React, { useMemo } from 'react';
 import { Group, Rect, Text } from 'react-konva';
-import { CanvasElement } from '../layers/types';
+import { CanvasElement } from '../stores/types';
 import { designSystem } from '../../../styles/designSystem';
 import { CachedShape } from './CachedShape';
 

@@ -263,8 +263,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             element={element}
             konvaProps={konvaElementProps}
           />
-        );
-        case 'connector':
+        );        case 'connector':
         console.log('🔧 [MAIN LAYER] Rendering connector element:', element.id);
         // Create a proper elements map for ConnectorRenderer
         const elementsMap = elements.reduce((acc, el) => ({ ...acc, [el.id]: el }), {});
@@ -279,6 +278,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
                 const fakeEvent = {} as Konva.KonvaEventObject<MouseEvent>;
                 onElementClick(fakeEvent, element);
               }}
+              onUpdate={onElementUpdate}
               elements={elementsMap}
               sections={sections}
             />

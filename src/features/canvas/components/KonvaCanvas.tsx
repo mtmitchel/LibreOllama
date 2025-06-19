@@ -3,6 +3,7 @@ import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
+import { findNearestConnectionPoint } from '../../../lib/snappingUtils';
 import type { CanvasElement } from '../types';
 import '../../../styles/konvaCanvas.css';
 
@@ -62,7 +63,9 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     captureElementsInSection,
     handleSectionDragEnd,
     resizeSection,
-    findSectionAtPoint
+    findSectionAtPoint,
+    // UI state for snapping
+    setHoveredSnapPoint
   } = useEnhancedStore();
   
   // Connector drawing state
@@ -167,47 +170,65 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       console.log('🔗 [CONNECTOR] Current drawing state:', isDrawingConnector);
       console.log('🔗 [CONNECTOR] Current start point:', connectorStart);
       
+      // Find the nearest connection point for the current cursor position
+      const allElements = { ...elements, ...sections };
+      const connectionResult = findNearestConnectionPoint(pos.x, pos.y, allElements);
+      const snapPoint = connectionResult ? 
+        { 
+          x: connectionResult.point.x, 
+          y: connectionResult.point.y, 
+          elementId: connectionResult.point.elementId, 
+          anchor: connectionResult.point.anchor 
+        } : 
+        { x: pos.x, y: pos.y };
+
       // Handle connector creation
       if (!isDrawingConnector) {
         // Start connector
         setIsDrawingConnector(true);
-        setConnectorStart({ x: pos.x, y: pos.y });
-        console.log('🔗 [CONNECTOR] Starting connector at:', pos);
+        setConnectorStart(snapPoint);
+        console.log('🔗 [CONNECTOR] Starting connector at:', snapPoint);
       } else {
         // Finish connector
-        setConnectorEnd({ x: pos.x, y: pos.y });
-        console.log('🔗 [CONNECTOR] Finishing connector at:', pos);
+        setConnectorEnd(snapPoint);
+        console.log('🔗 [CONNECTOR] Finishing connector at:', snapPoint);
         
         if (connectorStart) {
           // Create connector element with proper structure for ConnectorRenderer
           const connectorElement: CanvasElement = {
             id: `connector-${Date.now()}`,
             type: 'connector' as const,
-            subType: selectedTool === 'connector-arrow' ? 'arrow' : 'line',
+            subType: selectedTool === 'connector-arrow' ? 'straight' : 'straight', // Default to straight for now
             x: 0, // Connectors use startPoint/endPoint for positioning
             y: 0,
             startPoint: {
               x: connectorStart.x,
               y: connectorStart.y,
-              connectedElementId: connectorStart.elementId,
-              anchorPoint: connectorStart.anchor as any
+              ...(connectorStart.elementId && {
+                connectedElementId: connectorStart.elementId,
+                anchorPoint: connectorStart.anchor as any
+              })
             },
             endPoint: {
-              x: pos.x,
-              y: pos.y,
-              connectedElementId: undefined, // TODO: Implement element snapping
-              anchorPoint: undefined
+              x: snapPoint.x,
+              y: snapPoint.y,
+              ...(snapPoint.elementId && {
+                connectedElementId: snapPoint.elementId,
+                anchorPoint: snapPoint.anchor as any
+              })
             },
+            intermediatePoints: [], // Empty for straight connectors
             connectorStyle: {
               strokeColor: '#000000',
               strokeWidth: 2,
-              strokeDashArray: undefined,
-              hasStartArrow: false,
-              hasEndArrow: selectedTool === 'connector-arrow',
-              arrowSize: 10
+              strokeDashArray: [],
+              startArrow: 'none',
+              endArrow: selectedTool === 'connector-arrow' ? 'triangle' : 'none',
+              arrowSize: 10,
+              text: ''
             },
             // Legacy properties for backward compatibility
-            points: [connectorStart.x, connectorStart.y, pos.x, pos.y],
+            points: [connectorStart.x, connectorStart.y, snapPoint.x, snapPoint.y],
             stroke: '#000000',
             strokeWidth: 2,
             fill: ''
@@ -215,7 +236,11 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           
           // Add the connector using the store
           addElement(connectorElement);
-          console.log('✅ [CONNECTOR] Created connector element:', connectorElement.id);
+          console.log('✅ [CONNECTOR] Created connector element with snapping:', {
+            id: connectorElement.id,
+            startSnap: connectorStart.elementId ? `${connectorStart.elementId}:${connectorStart.anchor}` : 'none',
+            endSnap: snapPoint.elementId ? `${snapPoint.elementId}:${snapPoint.anchor}` : 'none'
+          });
           
           // Automatically switch to select tool after connector creation
           setSelectedTool('select');
@@ -324,8 +349,28 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         width: Math.abs(pos.x - sectionStart.x),
         height: Math.abs(pos.y - sectionStart.y)
       });
+    } else if (selectedTool === 'connector-line' || selectedTool === 'connector-arrow') {
+      // Handle snap point detection for connector tools
+      const allElements = { ...elements, ...sections };
+      const connectionResult = findNearestConnectionPoint(pos.x, pos.y, allElements);
+      
+      if (connectionResult) {
+        // Show snap point indicator
+        setHoveredSnapPoint({
+          x: connectionResult.point.x,
+          y: connectionResult.point.y,
+          elementId: connectionResult.point.elementId,
+          anchor: connectionResult.point.anchor
+        });
+      } else {
+        // Clear snap point indicator
+        setHoveredSnapPoint(null);
+      }
+    } else {
+      // Clear snap point indicator when not using connector tools
+      setHoveredSnapPoint(null);
     }
-  }, [isDrawing, selectedTool, updateDrawing, isDrawingSection, sectionStart]);
+  }, [isDrawing, selectedTool, updateDrawing, isDrawingSection, sectionStart, elements, sections, setHoveredSnapPoint]);
 
   // **CHANGE 3**: Handle section resize with proportional scaling of contained elements
   const handleSectionResize = useCallback((sectionId: string, newWidth: number, newHeight: number) => {
@@ -386,7 +431,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         y={panZoomState.position.y}
         scaleX={panZoomState.scale}
         scaleY={panZoomState.scale}
-      >        <CanvasLayerManager
+      >
+        <CanvasLayerManager
           stageWidth={width}
           stageHeight={height}
           stageRef={internalStageRef}

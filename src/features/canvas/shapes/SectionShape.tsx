@@ -77,27 +77,15 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
     if (!stage) return;
 
     const startPos = stage.getPointerPosition();
-    if (!startPos) return;
-
-    const startWidth = sectionStyles.width;
+    if (!startPos) return;    const startWidth = sectionStyles.width;
     const startHeight = sectionStyles.height;
-    const startX = element.x;
-    const startY = element.y;
-    
-    // Store the final dimensions to be set in onMouseUp
-    let finalWidth = startWidth;
-    let finalHeight = startHeight;
 
     const handleMouseMove = () => {
       if (!stage) return;
       
       const pos = stage.getPointerPosition();
-      if (!pos) return;
-
-      let newWidth = startWidth;
+      if (!pos) return;      let newWidth = startWidth;
       let newHeight = startHeight;
-      let newX = startX;
-      let newY = startY;
 
       const deltaX = pos.x - startPos.x;
       const deltaY = pos.y - startPos.y;
@@ -110,55 +98,37 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
         case 'sw': // Bottom-left
           newWidth = Math.max(100, startWidth - deltaX);
           newHeight = Math.max(80, startHeight + deltaY);
-          newX = startX + deltaX;
           break;
         case 'ne': // Top-right
           newWidth = Math.max(100, startWidth + deltaX);
           newHeight = Math.max(80, startHeight - deltaY);
-          newY = startY + deltaY;
           break;
         case 'nw': // Top-left
           newWidth = Math.max(100, startWidth - deltaX);
           newHeight = Math.max(80, startHeight - deltaY);
-          newX = startX + deltaX;
-          newY = startY + deltaY;
           break;
         case 'e': // Right
           newWidth = Math.max(100, startWidth + deltaX);
           break;
         case 'w': // Left
           newWidth = Math.max(100, startWidth - deltaX);
-          newX = startX + deltaX;
           break;
         case 's': // Bottom
           newHeight = Math.max(80, startHeight + deltaY);
           break;
         case 'n': // Top
           newHeight = Math.max(80, startHeight - deltaY);
-          newY = startY + deltaY;
           break;
-      }
-
-      // Store final values for onMouseUp
-      finalWidth = newWidth;
-      finalHeight = newHeight;
-
-      if (onUpdate) {
-        onUpdate(element.id, {
-          width: newWidth,
-          height: newHeight,
-          x: newX,
-          y: newY,
-        });
+      }      // ✅ Call onSectionResize directly during drag for real-time scaling
+      if (onSectionResize) {
+        onSectionResize(element.id, newWidth, newHeight);
       }
     };    const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       
-      // Call onSectionResize with final dimensions
-      if (onSectionResize) {
-        onSectionResize(element.id, finalWidth, finalHeight);
-      }
+      // The final state is already set by the last onSectionResize call during drag
+      console.log('🎯 [SECTION RESIZE] Resize operation completed for section:', element.id);
     };
     
     document.addEventListener('mousemove', handleMouseMove);
@@ -276,12 +246,12 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
               x={0}
               y={6}
               width={24}
-              height={12}
-              text={element.isHidden ? '👁‍🗨' : '👁'}
+              height={12}              text={element.isHidden ? '👁‍🗨' : '👁'}
               fontSize={10}
               align="center"
               fill="white"
-            />          </Group>
+            />
+          </Group>
         </Group>
       )}
       

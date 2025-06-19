@@ -4,8 +4,6 @@ import Konva from 'konva';
 import { CanvasElement } from '../stores/types';
 import { RectangleShape } from './RectangleShape';
 import { CircleShape } from './CircleShape';
-import { TextShape } from './TextShape';
-import { ImageShape } from './ImageShape';
 import UnifiedTextElement from '../components/UnifiedTextElement';
 import StickyNoteElement from '../components/StickyNoteElement';
 import RichTextRenderer from '../components/RichTextRenderer';
@@ -158,9 +156,10 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           strokeWidth={element.strokeWidth || 3}
           lineCap="round"
           lineJoin="round"
-          tension={0.5}
-        />
-      );    case 'star':
+          tension={0.5}        />
+      );
+
+    case 'star':
       const starRadius = element.radius || (element.width || 100) / 2;
       // Normalize star positioning to top-left corner like rectangles
       // Store coordinates represent top-left corner, but Star needs center coordinates
@@ -177,9 +176,10 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           outerRadius={starRadius}
           fill={element.fill || designSystem.colors.warning[500]}
           stroke={element.stroke || designSystem.colors.warning[600]}
-          strokeWidth={element.strokeWidth || 2}
-        />
-      );case 'triangle':
+          strokeWidth={element.strokeWidth || 2}        />
+      );
+
+    case 'triangle':
       // Calculate triangle points based on current position and dimensions
       const triangleWidth = element.width || 100;
       const triangleHeight = element.height || 60;
@@ -204,11 +204,8 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       return (
         <ImageElement
           element={element}
-          konvaProps={commonProps}
-        />
-      );
-
-    case 'section':
+          konvaProps={commonProps}        />
+      );    case 'section':
       return (
         <SectionElement
           section={element as any}
@@ -220,7 +217,9 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           elements={{}} // Will be passed from parent
           renderElement={() => null} // Will be handled by layer manager
         />
-      );    case 'table':
+      );
+
+    case 'table':
       return (
         <EnhancedTableElement
           element={element}
