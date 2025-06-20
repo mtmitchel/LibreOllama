@@ -13,7 +13,7 @@ export interface CanvasFeatureFlags {
 
 // Default feature flag configuration
 const DEFAULT_FLAGS: CanvasFeatureFlags = {
-  useRefactoredCanvas: false, // Start with legacy canvas
+  useRefactoredCanvas: true, // Enable refactored canvas by default for testing
   useEnhancedEventHandler: true, // Safe to enable immediately
   useOptimizedCoordinateService: true, // Safe to enable immediately
   useEnhancedCacheManager: true, // Safe to enable immediately
@@ -25,13 +25,22 @@ const getEnvironmentFlags = (): Partial<CanvasFeatureFlags> => {
   if (typeof window !== 'undefined') {
     // Check for URL parameters for testing
     const urlParams = new URLSearchParams(window.location.search);
-    return {
-      useRefactoredCanvas: urlParams.get('refactored-canvas') === 'true',
+    const flags = {
+      // Use refactored canvas by default, unless explicitly disabled
+      useRefactoredCanvas: urlParams.get('refactored-canvas') !== 'false',
       useEnhancedEventHandler: urlParams.get('enhanced-events') !== 'false',
       useOptimizedCoordinateService: urlParams.get('optimized-coords') !== 'false',
       useEnhancedCacheManager: urlParams.get('enhanced-cache') !== 'false',
       enablePerformanceMonitoring: urlParams.get('performance-monitoring') !== 'false',
     };
+    
+    console.log('🚀 Canvas Feature Flags:', {
+      urlParams: Object.fromEntries(urlParams.entries()),
+      resolvedFlags: flags,
+      useRefactored: flags.useRefactoredCanvas
+    });
+    
+    return flags;
   }
   return {};
 };

@@ -15,15 +15,20 @@ interface FeatureFlags {
  * while maintaining backward compatibility
  */
 export const useFeatureFlags = (): FeatureFlags => {
-  return useMemo(() => ({
-    // Phase 1 flags
-    'grouped-section-rendering': true, // Enable new section grouping
-    'centralized-transformer': true,   // Enable centralized transformer management
+  return useMemo(() => {
+    const flags = {
+      // Phase 1 flags - ENABLED to see new coordinate system fixes
+      'grouped-section-rendering': true,  // Enable SectionHandler component
+      'centralized-transformer': true,    // Enable centralized transformer
+      
+      // Phase 2 flags (for future implementation)
+      'shape-connector-grouping': false, // Not implemented yet
+      'unified-text-overlays': false,    // Not implemented yet
+    };
     
-    // Phase 2 flags (for future implementation)
-    'shape-connector-grouping': false, // Not implemented yet
-    'unified-text-overlays': false,    // Not implemented yet
-  }), []);
+    console.log('🏁 [useFeatureFlags] Feature flags loaded:', flags);
+    return flags;
+  }, []);
 };
 
 export const useFeatureFlag = (flag: keyof FeatureFlags): boolean => {

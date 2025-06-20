@@ -54,6 +54,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   };
   
   React.useEffect(() => {
+    console.log('🎨 KonvaCanvasRefactored: Component mounted with new coordinate system');
     setIsReady(true);
   }, []);
 

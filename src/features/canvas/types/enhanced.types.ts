@@ -114,10 +114,21 @@ export interface TableElement extends BaseElement {
   cols: number;
   width: number;
   height: number;
-  tableData?: string[][];
+  tableData?: TableCell[][];
   cellPadding?: number;
   borderWidth?: number;
   borderColor?: string;
+}
+
+export interface TableCell {
+  content: string;
+  width?: number;
+  height?: number;
+  backgroundColor?: string;
+  textColor?: string;
+  fontSize?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
 }
 
 export interface StickyNoteElement extends BaseElement {

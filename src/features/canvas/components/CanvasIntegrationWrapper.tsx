@@ -93,9 +93,15 @@ export const CanvasIntegrationWrapper: React.FC<CanvasWrapperProps> = (props) =>
   const CanvasComponent = useMemo(() => {
     // Always use legacy canvas if there's an error or feature flag is disabled
     if (hasError || !useRefactoredCanvas) {
+      console.log(`🔄 Canvas Integration: Using LEGACY canvas`, {
+        hasError,
+        useRefactoredCanvas,
+        reason: hasError ? 'error fallback' : 'feature flag disabled'
+      });
       return LegacyKonvaCanvas;
     }
     
+    console.log(`✨ Canvas Integration: Using REFACTORED canvas with new coordinate system`);
     return RefactoredKonvaCanvas;
   }, [useRefactoredCanvas, hasError]);
 

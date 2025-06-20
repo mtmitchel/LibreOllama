@@ -71,9 +71,112 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     pan,
     updateSection,
     // Add history function for atomic undo/redo
-    addHistoryEntry
+    addHistoryEntry,
+    // Element management functions
+    addElement,
+    addElementToSection,
+    selectElement,
+    setSelectedTool
   } = useEnhancedStore();
   const [selectionBox, setSelectionBox] = React.useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
+
+  // Handle canvas click to create elements
+  const handleCanvasElementCreation = (pos: { x: number; y: number }) => {
+    const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Find if click is within a section
+    const targetSection = Object.values(sectionsMap).find(section => {
+      return pos.x >= section.x &&
+             pos.x <= section.x + section.width &&
+             pos.y >= section.y &&
+             pos.y <= section.y + section.height;
+    });
+    
+    const targetSectionId = targetSection?.id || null;
+    const elementX = targetSection ? pos.x - targetSection.x : pos.x;
+    const elementY = targetSection ? pos.y - targetSection.y : pos.y;
+    
+    let newElement: any = null;
+    
+    switch (selectedTool) {
+      case 'rectangle':
+        newElement = {
+          id: generateId(),
+          type: 'rectangle',
+          x: elementX,
+          y: elementY,
+          width: 100,
+          height: 80,
+          fill: '#C7D2FE',
+          stroke: '#6366F1',
+          strokeWidth: 2,
+          sectionId: targetSectionId
+        };
+        break;
+        
+      case 'circle':
+        newElement = {
+          id: generateId(),
+          type: 'circle',
+          x: elementX,
+          y: elementY,
+          radius: 50,
+          fill: '#FED7D7',
+          stroke: '#E53E3E',
+          strokeWidth: 2,
+          sectionId: targetSectionId
+        };
+        break;
+        
+      case 'text':
+        newElement = {
+          id: generateId(),
+          type: 'text',
+          x: elementX,
+          y: elementY,
+          text: 'Double-click to edit',
+          fontSize: 16,
+          fontFamily: 'Inter, sans-serif',
+          fill: '#1F2937',
+          width: 200,
+          height: 24,
+          sectionId: targetSectionId
+        };
+        break;
+        
+      case 'sticky-note':
+        newElement = {
+          id: generateId(),
+          type: 'sticky-note',
+          x: elementX,
+          y: elementY,
+          width: 150,
+          height: 150,
+          backgroundColor: '#FEF3C7',
+          text: 'Type your note here...',
+          fontSize: 12,
+          fontFamily: 'Inter, sans-serif',
+          textColor: '#92400E',
+          sectionId: targetSectionId
+        };
+        break;
+    }
+    
+    if (newElement) {
+      console.log('🎯 [CanvasLayerManager] Creating element via canvas click:', newElement);
+      addElement(newElement);
+      
+      // Add to section if needed
+      if (newElement.sectionId && addElementToSection) {
+        addElementToSection(newElement.id, newElement.sectionId);
+      }
+      
+      selectElement(newElement.id);
+      
+      // Switch back to select tool after creation
+      setSelectedTool('select');
+    }
+  };
 
   const allElementsArray = useMemo(() => {
     const regularElements = Object.values(elementsMap);
@@ -166,14 +269,25 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   }, [elementsBySection]);
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.target !== e.target.getStage() || selectedTool !== 'select') {
+    if (e.target !== e.target.getStage()) {
       return;
     }
-    e.evt.preventDefault();
-    clearSelection();
+    
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
-    setSelectionBox({ x: pos.x, y: pos.y, width: 0, height: 0, visible: true });
+    
+    // Handle element creation for shape tools
+    if (['rectangle', 'circle', 'triangle', 'star', 'text', 'sticky-note'].includes(selectedTool)) {
+      handleCanvasElementCreation(pos);
+      return;
+    }
+    
+    // Handle selection mode
+    if (selectedTool === 'select') {
+      e.evt.preventDefault();
+      clearSelection();
+      setSelectionBox({ x: pos.x, y: pos.y, width: 0, height: 0, visible: true });
+    }
   };
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
