@@ -158,19 +158,99 @@ export const createCanvasElementsStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('deleteElement');
     
     try {
-      const element = get().elements[id];
+      const state = get();
+      const element = state.elements[id];
       if (!element) {
         console.warn('🔧 [ELEMENTS STORE] Element not found for deletion:', id);
         return;
       }
 
-      set((state: Draft<CanvasElementsState>) => {
-        delete state.elements[id];
-        state.elementOrder = state.elementOrder.filter(elementId => elementId !== id);
+      console.log('🗑️ [ELEMENTS STORE] Starting safe element deletion:', id, element.type);
+
+      set((draftState: Draft<CanvasElementsState>) => {
+        // 1. Handle connected connectors
+        const connectedConnectors = Object.values(draftState.elements)
+          .filter(el => 
+            el.type === 'connector' && 
+            (el.startPoint?.connectedElementId === id || el.endPoint?.connectedElementId === id)
+          ) as any[];
+
+        console.log('🗑️ [ELEMENTS STORE] Found connected connectors:', connectedConnectors.length);
+
+        connectedConnectors.forEach(connector => {
+          if (connector.startPoint?.connectedElementId === id && connector.endPoint?.connectedElementId === id) {
+            // Delete self-connected connector
+            console.log('🗑️ [ELEMENTS STORE] Deleting self-connected connector:', connector.id);
+            delete draftState.elements[connector.id];
+            draftState.elementOrder = draftState.elementOrder.filter(elementId => elementId !== connector.id);
+          } else {
+            // Convert to floating endpoint
+            console.log('🗑️ [ELEMENTS STORE] Converting connector to floating endpoint:', connector.id);
+            
+            if (connector.startPoint?.connectedElementId === id) {
+              connector.startPoint = { 
+                ...connector.startPoint, 
+                connectedElementId: undefined,
+                // Keep the visual position
+                x: connector.startPoint.x || element.x,
+                y: connector.startPoint.y || element.y
+              };
+            }
+            
+            if (connector.endPoint?.connectedElementId === id) {
+              connector.endPoint = { 
+                ...connector.endPoint, 
+                connectedElementId: undefined,
+                // Keep the visual position  
+                x: connector.endPoint.x || element.x,
+                y: connector.endPoint.y || element.y
+              };
+            }
+          }
+        });
+
+        // 2. Handle section children if deleting a section
+        if (element.type === 'section') {
+          const children = Object.values(draftState.elements)
+            .filter(el => el.sectionId === id);
+
+          console.log('🗑️ [ELEMENTS STORE] Moving section children to parent:', children.length);
+
+          children.forEach(child => {
+            // Move children to parent section or root with coordinate adjustment
+            const updatedChild = draftState.elements[child.id];
+            if (updatedChild) {
+              updatedChild.sectionId = element.sectionId || null;
+              // Adjust coordinates to maintain visual position
+              updatedChild.x = child.x + element.x;
+              updatedChild.y = child.y + element.y;
+              
+              console.log(`🗑️ [ELEMENTS STORE] Moving child ${child.id} from (${child.x}, ${child.y}) to (${updatedChild.x}, ${updatedChild.y})`);
+            }
+          });
+        }
+
+        // 3. Finally delete the element
+        delete draftState.elements[id];
+        draftState.elementOrder = draftState.elementOrder.filter(elementId => elementId !== id);
+      });
+
+      // Note: Text editing cancellation should be handled at the component level
+      // when the element being edited is deleted
+      
+      PerformanceMonitor.recordMetric('elementDeleted', 1, 'canvas', { 
+        elementType: element.type,
+        hadConnectors: Object.values(state.elements).some(el => 
+          el.type === 'connector' && 
+          (el.startPoint?.connectedElementId === id || el.endPoint?.connectedElementId === id)
+        ),
+        wasSection: element.type === 'section'
       });
       
-      PerformanceMonitor.recordMetric('elementDeleted', 1, 'canvas', { elementType: element.type });
-      console.log('✅ [ELEMENTS STORE] Element deleted successfully:', id);
+      console.log('✅ [ELEMENTS STORE] Element safely deleted:', id);
+    } catch (error) {
+      console.error('❌ [ELEMENTS STORE] Error during element deletion:', error);
+      // Don't throw - log error and continue
     } finally {
       endTiming();
     }

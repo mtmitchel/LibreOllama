@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
@@ -7,6 +7,10 @@ import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { findNearestConnectionPoint } from '../utils/snappingUtils';
 import { CoordinateService } from '../utils/coordinateService';
 import type { CanvasElement } from '../types';
+import { LoadingOverlay } from './ui/LoadingOverlay';
+import { useCursorManager } from '../utils/performance/cursorManager';
+import { KonvaPerformanceMonitor } from '../utils/performance/performanceMonitoring';
+import { useKonvaOptimization } from '../utils/performance/konvaOptimizer';
 import '../../../styles/konvaCanvas.css';
 import '../../../styles/multiDrag.css';
 
@@ -54,6 +58,25 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
   // Multi-drag state for enhanced multi-element dragging
   const multiDragState = useRef<MultiDragState | null>(null);
   const dragAnimationFrame = useRef<number | null>(null);
+
+  // Performance monitoring
+  const performanceMonitor = useRef<KonvaPerformanceMonitor | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
+
+  // Cursor management
+  const cursorManager = useCursorManager();
+
+  // Konva optimizations
+  const konvaOptimizer = useKonvaOptimization(internalStageRef.current);
+
+  // Initialize performance monitoring
+  useEffect(() => {
+    if (internalStageRef.current && !performanceMonitor.current) {
+      performanceMonitor.current = new KonvaPerformanceMonitor();
+    }
+  }, []);
 
   // Sync internal ref with external ref
   useEffect(() => {
@@ -123,6 +146,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       endHistoryGroup: state.endHistoryGroup,
     }))
   );
+
+  // Update cursor based on current tool and state
+  useEffect(() => {
+    if (selectedTool && cursorManager) {
+      cursorManager.updateForTool(selectedTool as any);
+    }
+  }, [selectedTool, cursorManager]);
 
   // Memoized combined elements map for performance
   const allElements = useMemo(() => ({ ...elements, ...sections }), [elements, sections]);
@@ -880,6 +910,15 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
     <div
       style={{ width, height, position: 'relative' }}
     >
+      {isLoading && (
+        <LoadingOverlay
+          state={{
+            isLoading,
+            progress: loadingProgress,
+            message: loadingMessage
+          }}
+        />
+      )}
       <Stage
         ref={internalStageRef}
         width={width}

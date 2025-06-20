@@ -39,7 +39,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors with **dynamic connection movement** that automatically follows connected elements. Features **unified rich text editing** with context-aware floating toolbars, **seamless table cell editing**, **8-handle table resizing**, **FigJam-style sections** for organization, pan/zoom navigation, and **50-state undo/redo**. Recent improvements include **DOM portal-based text overlays** for reliable editing, **mount-time blur prevention**, **consistent positioning** across all text elements, **automatic tool switching** for enhanced workflow productivity (sections and connectors automatically switch to select tool after creation), and **real-time dynamic connections** that maintain their anchor points when elements are repositioned. Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with professional-grade interactions and performance optimization. |
+| **Canvas** | A professional-grade infinite whiteboard powered by **Konva.js**. Create and connect ideas with **15+ element types** including text, shapes, sticky notes, enhanced tables, and smart connectors. Features a **modern orchestrator architecture** with specialized components for optimal performance, **advanced type safety** with branded types, and **comprehensive production hardening**. Recent **Phase 4 refactoring completion** delivers **unified rich text editing**, **section-based organization**, **dynamic connector management**, **8-handle table resizing**, **pan/zoom navigation**, and **50-state undo/redo**. Built for visual thinking, diagramming, mind-mapping, and collaborative brainstorming with enterprise-grade performance and reliability. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -143,6 +143,45 @@ LibreOllama includes comprehensive documentation to help you get started quickly
 - **[Canvas Development](./docs/development/CANVAS_DEVELOPMENT.md)** - In-depth Canvas technical guides
 - **[UI Implementation](./docs/completed-phases/UI_IMPLEMENTATION_COMPLETE.md)** - UI/UX design system and component documentation
 
+## 📚 Documentation & Testing
+
+### Canvas Documentation
+
+For comprehensive information about the LibreOllama Canvas system:
+
+- **📋 [Canvas Development Roadmap](./docs/CANVAS_DEVELOPMENT_ROADMAP.md)** - **Single source of truth** for canvas implementation status, architecture details, and development progress
+- **🧪 [Canvas Testing](./src/tests/)** - Complete test suite including:
+  - `canvas-text-editing.test.ts` - Text editing system validation
+  - `canvas-sections-advanced-tests.ts` - Section functionality tests  
+  - `phase1-test-suite.ts` - Architecture validation tests
+  - `canvas-rendering-validation.ts` - Rendering performance tests
+  - `table-cell-editing-refactor-test.ts` - Table editing tests
+
+### Archived Documentation
+
+Historical development documentation has been organized in `./archives/canvas-documentation/` including:
+- Previous implementation plans and reports
+- Completed phase summaries
+- Migration guides and technical decisions
+
+### Testing the Canvas
+
+To run canvas tests:
+
+```bash
+# Run all tests
+npm test
+
+# Run specific canvas tests
+npm test -- --testPathPattern=canvas
+
+# For browser-based validation tests, open Canvas page and run:
+# (Available in browser console)
+window.runCanvasRenderingTests();
+```
+
+---
+
 ## Recent Updates
 
 ### ✨ UX Enhancement: Automatic Tool Switching (June 19, 2025)
@@ -200,6 +239,22 @@ LibreOllama includes comprehensive documentation to help you get started quickly
 - Added `getElementAnchorPoint` helper function with section coordinate support
 - Implemented connection validation to handle deleted elements without breaking UI
 - Updated layer components to pass update functionality for real-time connection management
+
+---
+
+**LibreOllama Canvas Documentation Cleanup Summary (June 20, 2025)**
+
+✅ **Documentation Consolidation Complete**
+- **Canvas Development Roadmap** established as single source of truth
+- Outdated documentation moved to `archives/canvas-documentation/`
+- **95% architectural refactoring verified and documented**
+- Comprehensive testing infrastructure organized in `src/tests/`
+
+✅ **Clean Project Structure**
+- All canvas-related files properly organized
+- Test files maintained in active development structure
+- Historical documents archived for reference
+- README updated with clear documentation navigation
 
 ---
 

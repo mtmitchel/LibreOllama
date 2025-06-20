@@ -9,6 +9,8 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
 import { CoordinateService } from '../utils/coordinateService';
+import { queueCanvasOperation, canvasOperationQueue } from '../utils/performance/operationQueue';
+import { CanvasErrorHandler } from '../utils/performance/canvasErrorHandler';
 
 
 // Import the fixed store slices
