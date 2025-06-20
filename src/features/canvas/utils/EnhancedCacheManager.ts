@@ -52,7 +52,7 @@ export class EnhancedCacheManager {
 
     // Cache if element is complex or frequently rendered
     const complexityScore = this.calculateComplexity(element);
-    const renderCount = this.renderCounts.get(element.id) || 0;
+    const renderCount = this.renderCounts.get(element.id as ElementId) || 0;
     
     return (
       complexityScore > this.COMPLEXITY_THRESHOLD ||
@@ -133,9 +133,9 @@ export class EnhancedCacheManager {
       lastAccessed: Date.now()
     };
 
-    this.cache.set(element.id, cacheEntry);
+    this.cache.set(element.id as ElementId, cacheEntry);
     this.currentMemoryUsage += memorySize;
-    this.trackRender(element.id);
+    this.trackRender(element.id as ElementId);
   }
 
   /**

@@ -12,7 +12,7 @@ import Konva from 'konva';
 import { CanvasEventHandler } from './CanvasEventHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
-import { useCanvasSetup } from '../hooks/useCanvasSetup';
+// import { useCanvasSetup } from './useCanvasSetup';
 import { CanvasTool } from '../types/enhanced.types';
 import '../../../styles/konvaCanvas.css';
 import '../../../styles/multiDrag.css';
@@ -46,11 +46,24 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   const internalStageRef = useRef<Konva.Stage | null>(null);
   
   // Use the setup hook for initialization logic
-  const { viewport, isReady } = useCanvasSetup({ 
+  // Temporary inline setup - will be replaced with useCanvasSetup hook
+  const [isReady, setIsReady] = React.useState(false);
+  const viewport = {
+    scale: panZoomState?.scale || 1,
+    position: panZoomState?.position || { x: 0, y: 0 }
+  };
+  
+  React.useEffect(() => {
+    setIsReady(true);
+  }, []);
+
+  /* Future useCanvasSetup integration:
+  const { viewport, isReady } = useCanvasSetup({
     width, 
     height,
     stageRef: internalStageRef
   });
+  */
 
   // Get current tool and drawing state from store
   const currentTool = useCanvasStore(state => state.selectedTool) as CanvasTool;

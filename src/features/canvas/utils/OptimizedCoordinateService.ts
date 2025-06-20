@@ -114,7 +114,7 @@ export class OptimizedCoordinateService {
     sections: Map<SectionId, SectionElement>
   ): Coordinates {
     // Check cache first for immediate O(1) return
-    const cached = this.cache.get(element.id);
+    const cached = this.cache.get(element.id as ElementId);
     if (cached && this.validateCoordinates(cached)) {
       return cached;
     }
@@ -135,7 +135,7 @@ export class OptimizedCoordinateService {
     }
 
     // Cache the result for next time
-    this.cache.set(element.id, coords, element.sectionId || undefined);
+    this.cache.set(element.id as ElementId, coords, element.sectionId || undefined);
     return coords;
   }
 
