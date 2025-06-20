@@ -1,7 +1,7 @@
 // src/features/canvas/components/KonvaApp.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import Konva from 'konva';
-import KonvaCanvas from './KonvaCanvas';
+import CanvasIntegrationWrapper from './CanvasIntegrationWrapper';
 import KonvaToolbar from './toolbar/KonvaToolbar';
 import CanvasSidebar from './CanvasSidebar';
 // import { SimpleTextEditor } from './SimpleTextEditor'; // Temporarily disabled
@@ -76,11 +76,10 @@ const KonvaApp: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center'
           }}
-        >
-          <KonvaCanvas
+        >          <CanvasIntegrationWrapper
             width={canvasSize.width}
             height={canvasSize.height}
-            onElementSelect={(element) => {
+            onElementSelect={(element: any) => {
               console.log('Element selected:', element);
             }}
             stageRef={stageRef}
@@ -88,9 +87,11 @@ const KonvaApp: React.FC = () => {
               scale: zoom || 1,
               position: { x: pan?.x || 0, y: pan?.y || 0 }
             }}
-            onWheelHandler={(e) => {
+            onWheelHandler={(e: any) => {
               // Handle wheel events for zoom/pan
-              e.evt.preventDefault();            }}          />
+              e.evt.preventDefault();
+            }}
+          />
         </div>
       </div>      {/* Text Editor Overlay - Rendered outside Konva to avoid conflicts */}
       {/* <SimpleTextEditor stageRef={stageRef} /> */}
