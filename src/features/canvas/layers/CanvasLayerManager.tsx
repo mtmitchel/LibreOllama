@@ -9,6 +9,8 @@ import { UILayer } from './UILayer';
 // New imports for Phase 1 implementation
 import { GroupedSectionRenderer } from '../components/GroupedSectionRenderer2';
 import { TransformerManager } from '../components/TransformerManager';
+// Coordinate system fix components
+import { DrawingContainment } from '../components/drawing/DrawingContainment';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { CanvasElement } from '../stores/types';
@@ -76,8 +78,21 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     addElement,
     addElementToSection,
     selectElement,
-    setSelectedTool
+    setSelectedTool,
+    // Drawing state management
+    isDrawing: storeIsDrawing,
+    startDrawing,
+    updateDrawing,
+    finishDrawing
   } = useEnhancedStore();
+  
+  console.log(`[CanvasLayerManager] Selected tool:`, selectedTool);
+  console.log(`[CanvasLayerManager] Is drawing:`, storeIsDrawing);
+  console.log(`[CanvasLayerManager] Available drawing functions:`, { 
+    hasStartDrawing: !!startDrawing, 
+    hasUpdateDrawing: !!updateDrawing, 
+    hasFinishDrawing: !!finishDrawing 
+  });
   const [selectionBox, setSelectionBox] = React.useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
 
   // Handle canvas click to create elements
@@ -157,6 +172,54 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
           fontSize: 12,
           fontFamily: 'Inter, sans-serif',
           textColor: '#92400E',
+          sectionId: targetSectionId
+        };
+        break;
+        
+      case 'section':
+        newElement = {
+          id: generateId(),
+          type: 'section',
+          x: elementX,
+          y: elementY,
+          width: 300,
+          height: 200,
+          backgroundColor: '#F8FAFC',
+          borderColor: '#E2E8F0',
+          borderWidth: 2,
+          title: 'New Section',
+          titleFontSize: 16,
+          titleColor: '#334155'
+        };
+        break;
+        
+      case 'triangle':
+        newElement = {
+          id: generateId(),
+          type: 'triangle',
+          x: elementX,
+          y: elementY,
+          points: [0, -50, -50, 50, 50, 50],
+          fill: '#D4F6CC',
+          stroke: '#38A169',
+          strokeWidth: 2,
+          closed: true,
+          sectionId: targetSectionId
+        };
+        break;
+        
+      case 'star':
+        newElement = {
+          id: generateId(),
+          type: 'star',
+          x: elementX,
+          y: elementY,
+          numPoints: 5,
+          innerRadius: 30,
+          radius: 60,
+          fill: '#E1BEE7',
+          stroke: '#9C27B0',
+          strokeWidth: 2,
           sectionId: targetSectionId
         };
         break;
@@ -276,9 +339,27 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
     
+    console.log('🖱️ [CanvasLayerManager] Mouse down - Tool:', selectedTool, 'Position:', pos);
+    
     // Handle element creation for shape tools
-    if (['rectangle', 'circle', 'triangle', 'star', 'text', 'sticky-note'].includes(selectedTool)) {
+    if (['rectangle', 'circle', 'triangle', 'star', 'text', 'sticky-note', 'section'].includes(selectedTool)) {
+      console.log('🎯 [CanvasLayerManager] Creating shape:', selectedTool);
       handleCanvasElementCreation(pos);
+      return;
+    }
+    
+    // Handle pen tool - start drawing
+    if (selectedTool === 'pen' || selectedTool === 'pencil') {
+      console.log('🖊️ [CanvasLayerManager] Starting pen drawing at:', pos);
+      e.evt.preventDefault();
+      startDrawing(pos.x, pos.y, selectedTool as 'pen' | 'pencil');
+      return;
+    }
+    
+    // Handle connector tools
+    if (selectedTool === 'connector-line' || selectedTool === 'connector-arrow') {
+      console.log('🔗 [CanvasLayerManager] Starting connector drawing');
+      // TODO: Implement connector drawing logic
       return;
     }
     
@@ -291,16 +372,33 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   };
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    const pos = e.target.getStage()?.getPointerPosition();
+    if (!pos) return;
+    
+    // Handle pen drawing
+    if ((selectedTool === 'pen' || selectedTool === 'pencil') && storeIsDrawing) {
+      console.log('🖊️ [CanvasLayerManager] Updating pen drawing at:', pos);
+      updateDrawing(pos.x, pos.y);
+      return;
+    }
+    
+    // Handle selection box
     if (!selectionBox.visible) {
       return;
     }
     e.evt.preventDefault();
-    const pos = e.target.getStage()?.getPointerPosition();
-    if (!pos) return;
     setSelectionBox(prev => ({ ...prev, width: pos.x - prev.x, height: pos.y - prev.y }));
   };
 
   const handleMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Handle pen drawing completion
+    if ((selectedTool === 'pen' || selectedTool === 'pencil') && storeIsDrawing) {
+      console.log('🖊️ [CanvasLayerManager] Finishing pen drawing');
+      finishDrawing();
+      return;
+    }
+    
+    // Handle selection box
     if (!selectionBox.visible) {
       return;
     }
@@ -317,7 +415,8 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         height: el.height,
       });
       return Konva.Util.haveIntersection(box.getClientRect(), elBox.getClientRect());
-    });    selectMultipleElements(selected.map(el => el.id));
+    });
+    selectMultipleElements(selected.map(el => el.id));
   };
   // REFACTORED: Consolidated layer structure (3 layers max for optimal Konva performance)
   const layers = [
@@ -393,6 +492,13 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         connectorStart={connectorStart ?? null}
         connectorEnd={connectorEnd ?? null}
         selectedTool={selectedTool}
+      />
+      
+      {/* Drawing Containment for pen tool */}
+      <DrawingContainment
+        isDrawing={isDrawing}
+        currentTool={selectedTool}
+        stageRef={stageRef}
       />
     </Layer>,
     

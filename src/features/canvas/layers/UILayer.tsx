@@ -252,11 +252,13 @@ export const UILayer: React.FC<UILayerProps> = ({
     <Layer 
       listening={true}
       name="ui-layer"
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
     >
       <Group 
         ref={layerRef}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}        onMouseUp={onMouseUp}      >
+      >
         {/* Selection and transform controls - only render if centralized transformer is disabled */}
         {!useCentralizedTransformer && (
           <Transformer

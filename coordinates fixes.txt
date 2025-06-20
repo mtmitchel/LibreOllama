@@ -1,0 +1,378 @@
+Of course. I have analyzed the provided set of fixes and organized them into a clear, sequential, and comprehensive implementation guide. This document synthesizes all the provided code and explanations into a single, actionable plan for a developer to follow.
+
+LibreOllama Canvas: Coordinate System & Interaction Fixes
+1. Executive Summary
+
+This document provides a complete guide to implementing critical fixes for the LibreOllama canvas, addressing issues related to coordinate systems, parent-child relationships, and interactive elements. The core insight is a shift to a robust coordinate model where Konva's Group component automatically handles the transformation of child elements, eliminating manual calculations and "jumping" behavior.
+
+By following this guide, we will fix:
+
+Section Coordinate Jumping & Resizing: Sections will move and resize predictably without affecting the relative positions of their children.
+
+Connector Movement: Connectors will dynamically follow the elements they are attached to, even across sections.
+
+Table Cell Editing: A reliable text editing experience for table cells will be implemented.
+
+Drawing Containment: Pen strokes will be correctly contained within and move with their parent sections.
+
+2. The Core Principle: A Correct Coordinate System
+
+The root cause of most issues is the improper handling of coordinate systems. The correct, simplified approach is:
+
+Absolute Coordinates: Used for root-level elements and for positioning Section groups on the canvas.
+
+Relative Coordinates: Used for all child elements inside a Section. Their x and y are relative to the section's top-left corner.
+
+Automatic Transformation: A <Group x={section.x} y={section.y}> component handles all the complex math. We never manually add a section's coordinates to its children for rendering (child.x + section.x).
+
+3. Implementation Plan (Sequential)
+
+Follow these steps in order to correctly layer the fixes.
+
+Step 1: Fix Section Coordinate Jumping & Resizing (Priority 1)
+
+This is the most critical fix. We will create a SectionHandler component that properly manages section rendering, selection, and resizing.
+
+File: src/features/canvas/components/sections/SectionHandler.tsx (New)
+
+Generated typescript
+/**
+ * Section Handler - Fixes coordinate jumping and enables robust resizing.
+ * This component lets Konva's Group handle all coordinate transformations.
+ */
+import React, { useRef, useCallback, useEffect } from 'react';
+import { Group, Rect, Text, Transformer } from 'react-konva';
+import Konva from 'konva';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import type { SectionElement, ElementId } from '../../types';
+
+interface SectionHandlerProps {
+  section: SectionElement;
+  children: React.ReactNode;
+  isSelected: boolean;
+  onSelect: (id: ElementId) => void;
+}
+
+export const SectionHandler: React.FC<SectionHandlerProps> = ({ section, children, isSelected, onSelect }) => {
+  const groupRef = useRef<Konva.Group>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const updateElement = useCanvasStore(state => state.updateElement);
+
+  // When a section is dragged, only its own absolute position is updated.
+  // Children move with it automatically thanks to the <Group> transform.
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    updateElement(section.id, { x: e.target.x(), y: e.target.y() });
+  }, [section.id, updateElement]);
+
+  // When resizing, update the section's dimensions and reset the node's scale.
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
+    const node = e.target as Konva.Group;
+    updateElement(section.id, {
+      width: Math.max(50, section.width * node.scaleX()),
+      height: Math.max(50, section.height * node.scaleY()),
+    });
+    node.scaleX(1);
+    node.scaleY(1);
+  }, [section.id, section.width, section.height, updateElement]);
+
+  // Attach transformer for resizing when selected.
+  useEffect(() => {
+    if (isSelected && transformerRef.current && groupRef.current) {
+      transformerRef.current.nodes([groupRef.current]);
+      transformerRef.current.getLayer()?.batchDraw();
+    }
+  }, [isSelected]);
+
+  return (
+    <>
+      <Group
+        ref={groupRef}
+        x={section.x} // Section's absolute position
+        y={section.y}
+        draggable
+        onDragEnd={handleDragEnd}
+        onTransformEnd={handleTransformEnd}
+        onClick={(e) => {
+          if (e.target === e.currentTarget.get('.section-background')[0]) {
+            onSelect(section.id);
+            e.cancelBubble = true;
+          }
+        }}
+      >
+        {/* Section background */}
+        <Rect
+          name="section-background"
+          width={section.width}
+          height={section.height}
+          fill={section.backgroundColor || '#f0f0f0'}
+          stroke="#ddd"
+        />
+        {/* Children are rendered inside this group and automatically transformed */}
+        {children}
+      </Group>
+
+      {/* Transformer is placed outside the group and attached when needed */}
+      {isSelected && (
+        <Transformer
+          ref={transformerRef}
+          rotateEnabled={false}
+          boundBoxFunc={(oldBox, newBox) => {
+            return newBox.width < 50 || newBox.height < 50 ? oldBox : newBox;
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+Step 2: Fix Connector Movement & Containment (Priority 2)
+
+Create a ConnectorManager that subscribes to element movements and automatically updates connector paths.
+
+File: src/features/canvas/components/connectors/ConnectorManager.tsx (New)
+
+Generated typescript
+/**
+ * Connector Manager - Subscribes to element changes and keeps connectors updated.
+ */
+import React, { useEffect, useCallback } from 'react';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { ConnectorShape } from './ConnectorShape';
+import type { ConnectorElement, CanvasElement, Coordinates } from '../../types';
+
+export const ConnectorManager: React.FC<{ connectors: ConnectorElement[] }> = ({ connectors }) => {
+  const elements = useCanvasStore(state => state.elements);
+  const sections = useCanvasStore(state => state.sections);
+  const updateElement = useCanvasStore(state => state.updateElement);
+
+  const getElementAbsolutePosition = useCallback((element: CanvasElement): Coordinates => {
+    let pos = { x: element.x, y: element.y };
+    if (element.sectionId) {
+      const section = sections.get(element.sectionId);
+      if (section) {
+        const sectionPos = getElementAbsolutePosition(section); // Recursively find parent position
+        pos = { x: pos.x + sectionPos.x, y: pos.y + sectionPos.y };
+      }
+    }
+    return pos;
+  }, [sections]);
+  
+  const getConnectionPoint = useCallback(/* ... as provided ... */);
+
+  const updateConnectorPath = useCallback((connector: ConnectorElement) => {
+    // ... logic to calculate new start/end points as provided ...
+  }, [elements, sections, getConnectionPoint, updateElement]);
+
+  // Subscribe to element map changes and update all connectors.
+  useEffect(() => {
+    const unsubscribe = useCanvasStore.subscribe(
+      (state) => state.elements,
+      () => connectors.forEach(updateConnectorPath)
+    );
+    return unsubscribe;
+  }, [connectors, updateConnectorPath]);
+
+  return (
+    <>
+      {connectors.map(connector => (
+        <ConnectorShape key={connector.id} connector={connector} />
+      ))}
+    </>
+  );
+};
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+TypeScript
+IGNORE_WHEN_COPYING_END
+Step 3: Fix Table Cell Text Editing (Priority 3)
+
+Create a TableCellEditor component that uses an HTML overlay for a reliable editing experience.
+
+File: src/features/canvas/components/table/TableCellEditor.tsx (New)
+
+Generated typescript
+/**
+ * Table Cell Editor - Provides a reliable text editing overlay for table cells.
+ */
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Html } from 'react-konva';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import type { TableCell, TableElement } from '../../types';
+
+export const TableCellEditor: React.FC<{
+  tableElement: TableElement;
+  rowIndex: number;
+  colIndex: number;
+  cell: TableCell;
+  // ...other props
+}> = ({ tableElement, rowIndex, colIndex, cell, isEditing, onEndEdit, ...props }) => {
+  const [text, setText] = useState(typeof cell.content === 'string' ? cell.content : '');
+  const updateElement = useCanvasStore(state => state.updateElement);
+
+  const saveCell = useCallback(() => {
+    const newTableData = [...tableElement.tableData];
+    newTableData[rowIndex][colIndex] = { ...cell, content: text };
+    updateElement(tableElement.id, { tableData: newTableData });
+    onEndEdit();
+  }, [/* ...dependencies... */]);
+  
+  // When editing, render an HTML textarea overlay.
+  if (isEditing) {
+    return (
+      <Html>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={saveCell}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) saveCell();
+            if (e.key === 'Escape') onEndEdit();
+          }}
+          style={{ /* ...styling for overlay... */ }}
+        />
+      </Html>
+    );
+  }
+  
+  // Otherwise, render the Konva.Text.
+  return <Text text={text} /* ...props... */ />;
+};
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+TypeScript
+IGNORE_WHEN_COPYING_END
+Step 4: Fix Drawing Containment (Priority 4)
+
+Create a DrawingContainment component that ensures pen strokes are stored with coordinates relative to their containing section.
+
+File: src/features/canvas/components/drawing/DrawingContainment.tsx (New)
+
+Generated typescript
+/**
+ * Drawing Containment - Ensures pen strokes are correctly contained within sections.
+ */
+import React, { useCallback, useState, useEffect } from 'react';
+import { Line } from 'react-konva';
+import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import type { PenElement, ElementId, Coordinates } from '../../types';
+
+export const DrawingContainment: React.FC<{ stageRef, isDrawing, currentTool }> = ({ stageRef, isDrawing, currentTool }) => {
+  const [currentPath, setCurrentPath] = useState<number[]>([]);
+  const [drawingSectionId, setDrawingSectionId] = useState<ElementId | null>(null);
+  const sections = useCanvasStore(state => state.sections);
+  const addElement = useCanvasStore(state => state.addElement);
+
+  const getRelativePointerPosition = useCallback((): { pos: Coordinates; sectionId: ElementId | null } | null => {
+    // ... logic to get pointer position and find containing section ...
+  }, [stageRef, sections]);
+
+  const handleMouseDown = useCallback(() => {
+    if (!isDrawing || currentTool !== 'pen') return;
+    const info = getRelativePointerPosition();
+    if (info) {
+      setDrawingSectionId(info.sectionId);
+      setCurrentPath([info.pos.x, info.pos.y]);
+    }
+  }, [/* ... */]);
+
+  const handleMouseMove = useCallback(/* ... */);
+
+  const handleMouseUp = useCallback(() => {
+    // When the drawing is finished, create the PenElement.
+    // Its `sectionId` is set, and its `points` are already relative.
+    const penElement: Omit<PenElement, 'id'> = {
+      type: 'pen',
+      points: currentPath,
+      sectionId: drawingSectionId,
+      // ...other properties...
+    };
+    addElement(penElement);
+    // ...reset state...
+  }, [/* ... */]);
+  
+  useEffect(() => {
+    // ... attach/detach stage listeners for mousedown, mousemove, mouseup ...
+  }, [/* ... */]);
+
+  if (!isDrawing) return null;
+
+  // Render the live drawing path inside a Group positioned at the section's origin.
+  const section = drawingSectionId ? sections.get(drawingSectionId) : null;
+  return (
+    <Group x={section?.x || 0} y={section?.y || 0}>
+      <Line points={currentPath} stroke="black" strokeWidth={2} />
+    </Group>
+  );
+};
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+TypeScript
+IGNORE_WHEN_COPYING_END
+4. Main Canvas Integration
+
+Finally, integrate these new components and logic into your main canvas renderer.
+
+File: src/features/canvas/components/KonvaCanvas.tsx (Update)
+
+Generated typescript
+// ... imports for new components ...
+
+export const KonvaCanvas: React.FC<KonvaCanvasProps> = (props) => {
+  // ... existing setup ...
+
+  // Group elements for correct rendering order and containment
+  const { sections, connectors, elementsBySection } = useMemo(() => {
+    const sections: SectionElement[] = [];
+    const connectors: ConnectorElement[] = [];
+    const elementsBySection = new Map<ElementId | 'root', CanvasElement[]>();
+
+    elements.forEach(el => {
+      if (isSectionElement(el)) {
+        sections.push(el);
+      } else if (isConnectorElement(el)) {
+        connectors.push(el);
+      } else {
+        const key = el.sectionId || 'root';
+        if (!elementsBySection.has(key)) elementsBySection.set(key, []);
+        elementsBySection.get(key)!.push(el);
+      }
+    });
+    return { sections, connectors, elementsBySection };
+  }, [elements]);
+
+  return (
+    <Stage {...props}>
+      <Layer name="content">
+        {/* Render root-level elements */}
+        {(elementsBySection.get('root') || []).map(el => <ElementRenderer key={el.id} element={el} />)}
+
+        {/* Render sections, passing their children to the handler */}
+        {sections.map(section => (
+          <SectionHandler key={section.id} section={section} /* ...props... */>
+            {(elementsBySection.get(section.id) || []).map(el => <ElementRenderer key={el.id} element={el} />)}
+          </SectionHandler>
+        ))}
+
+        {/* Render connectors on top */}
+        <ConnectorManager connectors={connectors} />
+      </Layer>
+
+      <Layer name="ui">
+        {/* Render the live drawing tool overlay */}
+        <DrawingContainment stageRef={stageRef} isDrawing={isDrawing} currentTool={currentTool} />
+      </Layer>
+    </Stage>
+  );
+};
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+TypeScript
+IGNORE_WHEN_COPYING_END

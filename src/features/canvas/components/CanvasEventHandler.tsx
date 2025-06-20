@@ -9,6 +9,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import Konva from 'konva';
 import { CanvasTool } from '../types/enhanced.types';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
 
 interface CanvasEventHandlerProps {
   stageRef: React.RefObject<Konva.Stage>;
@@ -26,6 +27,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   const isPointerDownRef = useRef(false);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  // Access canvas store for drawing functions
+  const { startDrawing, updateDrawing, finishDrawing, addElement, selectElement, setSelectedTool } = useCanvasStore();
 
   // Build a map of handlers for the current tool
   const toolHandlers = useMemo(() => {
@@ -252,7 +256,26 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    dispatchCanvasEvent('tool:text:create', { position: pointer });
+    console.log('📝 [CanvasEventHandler] Creating text at:', pointer);
+    
+    const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const newText = {
+      id: generateId(),
+      type: 'text' as const,
+      x: pointer.x,
+      y: pointer.y,
+      text: 'Double-click to edit',
+      fontSize: 16,
+      fontFamily: 'Inter, sans-serif',
+      fill: '#1F2937',
+      width: 200,
+      height: 24
+    };
+    
+    console.log('📝 [CanvasEventHandler] Creating text element:', newText);
+    addElement(newText);
+    selectElement(newText.id);
+    setSelectedTool('select');
   }
 
   function handleShapeMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -265,52 +288,87 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const pointer = stage.getPointerPosition();
     if (pointer) {
       lastMousePosRef.current = pointer;
-      dispatchCanvasEvent('tool:shape:start', { 
-        type: currentTool, 
-        position: pointer 
-      });
+      console.log('🎯 [CanvasEventHandler] Starting shape creation:', currentTool, 'at:', pointer);
+      
+      // Create the shape immediately (click-to-place)
+      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      let newElement: any = null;
+      
+      switch (currentTool) {
+        case 'rectangle':
+          newElement = {
+            id: generateId(),
+            type: 'rectangle' as const,
+            x: pointer.x,
+            y: pointer.y,
+            width: 100,
+            height: 80,
+            fill: '#C7D2FE',
+            stroke: '#6366F1',
+            strokeWidth: 2
+          };
+          break;
+          
+        case 'circle':
+          newElement = {
+            id: generateId(),
+            type: 'circle' as const,
+            x: pointer.x,
+            y: pointer.y,
+            radius: 50,
+            fill: '#FED7D7',
+            stroke: '#E53E3E',
+            strokeWidth: 2
+          };
+          break;
+          
+        case 'triangle':
+          newElement = {
+            id: generateId(),
+            type: 'triangle' as const,
+            x: pointer.x,
+            y: pointer.y,
+            points: [0, 60, 50, 0, 100, 60],
+            fill: '#BBF7D0',
+            stroke: '#10B981',
+            strokeWidth: 2,
+            closed: true
+          };
+          break;
+          
+        case 'star':
+          newElement = {
+            id: generateId(),
+            type: 'star' as const,
+            x: pointer.x,
+            y: pointer.y,
+            numPoints: 5,
+            innerRadius: 30,
+            radius: 60,
+            fill: '#E1BEE7',
+            stroke: '#9C27B0',
+            strokeWidth: 2
+          };
+          break;
+      }
+      
+      if (newElement) {
+        console.log('🎯 [CanvasEventHandler] Creating element:', newElement);
+        addElement(newElement);
+        selectElement(newElement.id);
+        setSelectedTool('select');
+      }
     }
   }
   function handleShapeMouseMove(_e: Konva.KonvaEventObject<MouseEvent>) {
-    if (!isPointerDownRef.current || !lastMousePosRef.current) return;
-
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
-    // Throttle shape drawing
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    animationFrameRef.current = requestAnimationFrame(() => {
-      dispatchCanvasEvent('tool:shape:draw', {
-        type: currentTool,
-        start: lastMousePosRef.current!,
-        current: pointer
-      });
-    });
+    // For click-to-place shapes, we don't need mouse move handling
+    return;
   }
 
   function handleShapeMouseUp(_e: Konva.KonvaEventObject<MouseEvent>) {
-    if (!isPointerDownRef.current || !lastMousePosRef.current) return;
-
     isPointerDownRef.current = false;
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    const pointer = stage.getPointerPosition();
-    if (pointer) {
-      dispatchCanvasEvent('tool:shape:end', {
-        type: currentTool,
-        start: lastMousePosRef.current,
-        end: pointer
-      });
-    }
-
     lastMousePosRef.current = null;
+    
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -326,7 +384,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
     const pointer = stage.getPointerPosition();
     if (pointer) {
-      dispatchCanvasEvent('tool:pen:start', { position: pointer });
+      console.log('🖊️ [CanvasEventHandler] Starting pen drawing at:', pointer);
+      startDrawing(pointer.x, pointer.y, currentTool as 'pen' | 'pencil');
     }
   }
 
@@ -345,7 +404,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     }
 
     animationFrameRef.current = requestAnimationFrame(() => {
-      dispatchCanvasEvent('tool:pen:draw', { position: pointer });
+      console.log('🖊️ [CanvasEventHandler] Updating pen drawing at:', pointer);
+      updateDrawing(pointer.x, pointer.y);
     });
   }
 
@@ -357,7 +417,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       animationFrameRef.current = null;
     }
 
-    dispatchCanvasEvent('tool:pen:end', {});
+    console.log('🖊️ [CanvasEventHandler] Finishing pen drawing');
+    finishDrawing();
   }
 
   function handleConnectorMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -412,7 +473,27 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const pointer = stage.getPointerPosition();
     if (pointer) {
       lastMousePosRef.current = pointer;
-      dispatchCanvasEvent('tool:section:start', { position: pointer });
+      console.log('📦 [CanvasEventHandler] Creating section at:', pointer);
+      
+      // Create section immediately (click-to-place)
+      const generateId = () => `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newSection = {
+        id: generateId(),
+        type: 'section' as const,
+        x: pointer.x,
+        y: pointer.y,
+        width: 300,
+        height: 200,
+        backgroundColor: '#F9FAFB',
+        borderColor: '#D1D5DB',
+        borderWidth: 2,
+        title: 'New Section'
+      };
+      
+      console.log('📦 [CanvasEventHandler] Creating section element:', newSection);
+      addElement(newSection);
+      selectElement(newSection.id);
+      setSelectedTool('select');
     }
   }
 
@@ -467,7 +548,27 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    dispatchCanvasEvent('tool:sticky-note:create', { position: pointer });
+    console.log('🗒️ [CanvasEventHandler] Creating sticky note at:', pointer);
+    
+    const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const newStickyNote = {
+      id: generateId(),
+      type: 'sticky-note' as const,
+      x: pointer.x,
+      y: pointer.y,
+      width: 150,
+      height: 150,
+      backgroundColor: '#FEF3C7',
+      text: 'Type your note here...',
+      fontSize: 12,
+      fontFamily: 'Inter, sans-serif',
+      textColor: '#92400E'
+    };
+    
+    console.log('🗒️ [CanvasEventHandler] Creating sticky note element:', newStickyNote);
+    addElement(newStickyNote);
+    selectElement(newStickyNote.id);
+    setSelectedTool('select');
   }
 
   function handleImageClick(_e: Konva.KonvaEventObject<MouseEvent>) {
