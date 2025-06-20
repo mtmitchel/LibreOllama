@@ -1,10 +1,15 @@
 // src/features/canvas/layers/CanvasLayerManager.tsx
 import React, { useMemo } from 'react';
 import Konva from 'konva';
+import { Layer } from 'react-konva';
 import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
 import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
+// New imports for Phase 1 implementation
+import { GroupedSectionRenderer } from '../components/GroupedSectionRenderer2';
+import { TransformerManager } from '../components/TransformerManager';
+import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { CanvasElement } from '../stores/types';
 import { useViewportCulling } from '../hooks/useViewportCulling';
@@ -48,6 +53,12 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   isDrawingSection = false,
   previewSection
 }) => {
+  // Enable feature flags for new architecture
+  const useGroupedSections = useFeatureFlag('grouped-section-rendering');
+  const useCentralizedTransformer = useFeatureFlag('centralized-transformer');
+  
+  console.log(`[CanvasLayerManager] Feature flags:`, { useGroupedSections, useCentralizedTransformer });
+  
   const { 
     elements: elementsMap, 
     sections: sectionsMap,
@@ -58,6 +69,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     hoveredSnapPoint,
     zoom,
     pan,
+    updateSection,
     // Add history function for atomic undo/redo
     addHistoryEntry
   } = useEnhancedStore();
@@ -107,10 +119,20 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         connectors.push(el);      } else if (el.sectionId && elementsBySection[el.sectionId]) {
         // Elements that belong to sections - group by section
         elementsBySection[el.sectionId]!.push(el);
+        console.log(`[CanvasLayerManager] Element ${el.id} with sectionId ${el.sectionId} added to section group`);
       } else {
         // Free elements - render in main layer
         main.push(el);
+        console.log(`[CanvasLayerManager] Element ${el.id} (type: ${el.type}) added to main layer (no sectionId: ${!el.sectionId})`);
       }
+    });
+
+    console.log(`[CanvasLayerManager] Element separation:`, {
+      mainElements: main.length,
+      sections: sections.length,
+      elementsBySection: Object.entries(elementsBySection).map(([sectionId, els]) => 
+        `${sectionId}: ${els.length} elements`
+      )
     });
 
     return {
@@ -183,58 +205,84 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       return Konva.Util.haveIntersection(box.getClientRect(), elBox.getClientRect());
     });    selectMultipleElements(selected.map(el => el.id));
   };
-  // Use robust array-based rendering to eliminate whitespace issues
+  // REFACTORED: Consolidated layer structure (3 layers max for optimal Konva performance)
   const layers = [
-    <BackgroundLayer
-      key="background"
-      width={stageWidth}
-      height={stageHeight}
-      elements={[]}
-    />,
-    <MainLayer
-      key="sections-with-children"
-      elements={sortedSectionElements}
-      selectedElementIds={selectedElementIds}
-      selectedTool={selectedTool}
-      onElementClick={onElementClick}
-      onElementDragEnd={onElementDragEnd}
-      onElementUpdate={onElementUpdate}
-      onStartTextEdit={onStartTextEdit}
-      stageRef={stageRef}
-      isDrawing={isDrawing}
-      currentPath={currentPath}
-      elementsBySection={sortedElementsBySection}
-      {...(onElementDragStart && { onElementDragStart })}
-      {...(onElementDragMove && { onElementDragMove })}
-      {...(onSectionResize && { onSectionResize })}
-    />,
-    <MainLayer
-      key="main"
-      name="main-layer"
-      elements={sortedMainElements}
-      selectedElementIds={selectedElementIds}
-      selectedTool={selectedTool}
-      onElementClick={onElementClick}
-      onElementDragEnd={onElementDragEnd}
-      onElementUpdate={onElementUpdate}
-      onStartTextEdit={onStartTextEdit}
-      stageRef={stageRef}
-      isDrawing={isDrawing}
-      currentPath={currentPath}
-      {...(onElementDragStart && { onElementDragStart })}
-      {...(onElementDragMove && { onElementDragMove })}
-      {...(onSectionResize && { onSectionResize })}
-    />,
-    <ConnectorLayer
-      key="connector"
-      elements={sortedConnectorElements}
-      selectedElementIds={selectedElementIds}
-      onElementClick={onElementClick}
-      isDrawingConnector={isDrawingConnector}
-      connectorStart={connectorStart ?? null}
-      connectorEnd={connectorEnd ?? null}
-      selectedTool={selectedTool}
-    />,
+    // LAYER 1: Content Layer (background + all content elements)
+    <Layer key="content-layer">
+      {/* Background */}
+      <BackgroundLayer
+        width={stageWidth}
+        height={stageHeight}
+        elements={[]}
+      />
+      
+      {/* Sections with children elements */}
+      {useGroupedSections ? (
+        // NEW: Enhanced grouped section rendering
+        sortedSectionElements.map(section => (
+          <GroupedSectionRenderer
+            key={section.id}
+            section={section as any} // TODO: Fix type casting
+            children={sortedElementsBySection[section.id] || []}
+            isSelected={selectedElementIds.includes(section.id)}
+            onElementClick={onElementClick}
+            onElementDragEnd={onElementDragEnd}
+            onElementUpdate={onElementUpdate}
+            onSectionUpdate={updateSection}
+            onStartTextEdit={onStartTextEdit}
+            onSectionResize={onSectionResize || (() => {})}
+          />
+        ))
+      ) : (
+        // LEGACY: Original section rendering
+        <MainLayer
+          elements={sortedSectionElements}
+          selectedElementIds={selectedElementIds}
+          selectedTool={selectedTool}
+          onElementClick={onElementClick}
+          onElementDragEnd={onElementDragEnd}
+          onElementUpdate={onElementUpdate}
+          onStartTextEdit={onStartTextEdit}
+          stageRef={stageRef}
+          isDrawing={isDrawing}
+          currentPath={currentPath}
+          elementsBySection={sortedElementsBySection}
+          {...(onElementDragStart && { onElementDragStart })}
+          {...(onElementDragMove && { onElementDragMove })}
+          {...(onSectionResize && { onSectionResize })}
+        />
+      )}
+      
+      {/* Main layer elements (free elements not in sections) */}
+      <MainLayer
+        name="main-layer"
+        elements={sortedMainElements}
+        selectedElementIds={selectedElementIds}
+        selectedTool={selectedTool}
+        onElementClick={onElementClick}
+        onElementDragEnd={onElementDragEnd}
+        onElementUpdate={onElementUpdate}
+        onStartTextEdit={onStartTextEdit}
+        stageRef={stageRef}
+        isDrawing={isDrawing}
+        currentPath={currentPath}
+        {...(onElementDragStart && { onElementDragStart })}
+        {...(onElementDragMove && { onElementDragMove })}
+      />
+      
+      {/* Connectors (rendered in same layer for efficiency) */}
+      <ConnectorLayer
+        elements={sortedConnectorElements}
+        selectedElementIds={selectedElementIds}
+        onElementClick={onElementClick}
+        isDrawingConnector={isDrawingConnector}
+        connectorStart={connectorStart ?? null}
+        connectorEnd={connectorEnd ?? null}
+        selectedTool={selectedTool}
+      />
+    </Layer>,
+    
+    // LAYER 2: UI Layer (selection boxes, snap points, tools)
     <UILayer
       key="ui"
       stageRef={stageRef}
@@ -250,8 +298,17 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       onMouseUp={handleMouseUp}
       onElementUpdate={onElementUpdate}
       addHistoryEntry={addHistoryEntry}
-    />
+    />,
+    
+    // LAYER 3: Transformer Layer (only when centralized transformer is enabled)
+    ...(useCentralizedTransformer ? [
+      <Layer key="centralized-transformer">
+        <TransformerManager stageRef={stageRef} />
+      </Layer>
+    ] : [])
   ];
+
+  console.log(`[CanvasLayerManager] Layer count: ${layers.length} (target: 3-5, flags: grouped=${useGroupedSections}, transformer=${useCentralizedTransformer})`);
 
   return <>{layers}</>;
 };

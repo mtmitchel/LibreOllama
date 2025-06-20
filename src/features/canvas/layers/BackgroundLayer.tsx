@@ -1,6 +1,6 @@
 // src/features/canvas/layers/BackgroundLayer.tsx
 import React from 'react';
-import { Layer, Group } from 'react-konva';
+import { Group } from 'react-konva';
 import { CanvasElement } from '../stores/types';
 
 interface BackgroundLayerProps {
@@ -10,27 +10,25 @@ interface BackgroundLayerProps {
 }
 
 /**
- * BackgroundLayer - Renders static background elements
+ * BackgroundLayer - Renders static background elements as a Group
  * - Grid patterns, watermarks, background images
  * - Non-interactive elements (listening={false} for performance)
- * - Separate layer for performance isolation
+ * - Rendered as Group to avoid nested layers
  */
 export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   width: _width,
   height: _height,
   elements: _elements
 }) => {  return (
-    <Layer listening={false} name="background-layer">
-      <Group>
-        {/* Grid or background pattern could be rendered here */}
-        {/* For now, no background elements */}
-        
-        {/* Future implementation could include:
-            - Grid pattern
-            - Background images/watermarks
-            - Canvas rulers/guides
-        */}
-      </Group>
-    </Layer>
+    <Group listening={false} name="background-group">
+      {/* Grid or background pattern could be rendered here */}
+      {/* For now, no background elements */}
+      
+      {/* Future implementation could include:
+          - Grid pattern
+          - Background images/watermarks
+          - Canvas rulers/guides
+      */}
+    </Group>
   );
 };

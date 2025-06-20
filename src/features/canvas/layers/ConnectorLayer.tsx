@@ -1,6 +1,6 @@
 // src/features/canvas/layers/ConnectorLayer.tsx
 import React from 'react';
-import { Layer, Group, Line, Arrow, Circle } from 'react-konva';
+import { Group, Line, Arrow, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../stores/types';
 import ConnectorRenderer from '../components/ConnectorRenderer';
@@ -38,78 +38,76 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
     [elements]
   );
   return (
-    <Layer listening={true} name="connector-layer">
-      <Group>
-        {/* Render existing connectors */}
-        {connectorElements.map(element => {
-          const isSelected = selectedElementIds.includes(element.id);
-          
-          return (
-            <ConnectorRenderer
-              key={element.id}
-              element={element}
-              isSelected={isSelected}
-              onSelect={() => onElementClick({} as any, element)}
-              onUpdate={onElementUpdate || (() => {})}
-              elements={elements.reduce((acc, el) => ({ ...acc, [el.id]: el }), {})}
-              sections={{}} // Sections would be passed here if needed
-            />
-          );
-        })}
+    <Group listening={true} name="connector-group">
+      {/* Render existing connectors */}
+      {connectorElements.map(element => {
+        const isSelected = selectedElementIds.includes(element.id);
         
-        {/* Connector preview during drawing */}
-        {isDrawingConnector && connectorStart && connectorEnd && (
-          <>
-            {/* Preview connector line/arrow */}
-            {selectedTool === 'connector-arrow' ? (
-              <Arrow
-                points={[connectorStart.x, connectorStart.y, connectorEnd.x, connectorEnd.y]}
-                stroke="#3B82F6"
-                strokeWidth={2}
-                fill="#3B82F6"
-                pointerLength={10}
-                pointerWidth={10}
-                opacity={0.7}
-                dash={[5, 5]}
-                listening={false}
-              />
-            ) : (
-              <Line
-                points={[connectorStart.x, connectorStart.y, connectorEnd.x, connectorEnd.y]}
-                stroke="#3B82F6"
-                strokeWidth={2}
-                opacity={0.7}
-                dash={[5, 5]}                listening={false}
-              />
-            )}
-            {/* Snap indicators */}
-            {connectorStart.elementId && (
-              <Circle
-                x={connectorStart.x}
-                y={connectorStart.y}
-                radius={4}
-                fill="#3B82F6"
-                stroke="#1E40AF"
-                strokeWidth={2}
-                opacity={0.8}
-                listening={false}
-              />
-            )}
-            {connectorEnd.elementId && (
-              <Circle
-                x={connectorEnd.x}
-                y={connectorEnd.y}
-                radius={4}
-                fill="#3B82F6"
-                stroke="#1E40AF"
-                strokeWidth={2}
-                opacity={0.8}
-                listening={false}
-              />
-            )}
-          </>
-        )}
-      </Group>
-    </Layer>
+        return (
+          <ConnectorRenderer
+            key={element.id}
+            element={element}
+            isSelected={isSelected}
+            onSelect={() => onElementClick({} as any, element)}
+            onUpdate={onElementUpdate || (() => {})}
+            elements={elements.reduce((acc, el) => ({ ...acc, [el.id]: el }), {})}
+            sections={{}} // Sections would be passed here if needed
+          />
+        );
+      })}
+      
+      {/* Connector preview during drawing */}
+      {isDrawingConnector && connectorStart && connectorEnd && (
+        <>
+          {/* Preview connector line/arrow */}
+          {selectedTool === 'connector-arrow' ? (
+            <Arrow
+              points={[connectorStart.x, connectorStart.y, connectorEnd.x, connectorEnd.y]}
+              stroke="#3B82F6"
+              strokeWidth={2}
+              fill="#3B82F6"
+              pointerLength={10}
+              pointerWidth={10}
+              opacity={0.7}
+              dash={[5, 5]}
+              listening={false}
+            />
+          ) : (
+            <Line
+              points={[connectorStart.x, connectorStart.y, connectorEnd.x, connectorEnd.y]}
+              stroke="#3B82F6"
+              strokeWidth={2}
+              opacity={0.7}
+              dash={[5, 5]}                listening={false}
+            />
+          )}
+          {/* Snap indicators */}
+          {connectorStart.elementId && (
+            <Circle
+              x={connectorStart.x}
+              y={connectorStart.y}
+              radius={4}
+              fill="#3B82F6"
+              stroke="#1E40AF"
+              strokeWidth={2}
+              opacity={0.8}
+              listening={false}
+            />
+          )}
+          {connectorEnd.elementId && (
+            <Circle
+              x={connectorEnd.x}
+              y={connectorEnd.y}
+              radius={4}
+              fill="#3B82F6"
+              stroke="#1E40AF"
+              strokeWidth={2}
+              opacity={0.8}
+              listening={false}
+            />
+          )}
+        </>
+      )}
+    </Group>
   );
 };

@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
+import { CoordinateService } from '../utils/coordinateService';
 
 
 // Import the fixed store slices
@@ -101,121 +102,84 @@ export const useCanvasStore = create<CanvasStoreState>()(
               console.log('🔍 [CANVAS STORE] Available elements:', Object.keys(currentState.elements));
               return;
             }
-            
-            // Simplified section detection: use the original simple point-based approach
-            // The complex bounds checking was causing issues
-            const targetSectionId = currentState.findSectionAtPoint(position);
-            const oldSectionId = element.sectionId;
-            
-            console.log('🔍 [CANVAS STORE] Element drop analysis:', {
-              elementId,
-              elementType: element.type,
-              oldSectionId,
-              targetSectionId,
-              position
-            });
 
-            // Atomic state update - all changes in one set() call
-            set((state: Draft<CanvasStoreState>) => {
-              const stateElement = state.elements[elementId];
-              if (!stateElement) {
-                console.warn('❌ [CANVAS STORE] Element not found in draft state:', elementId);
+            // Validate input coordinates
+            if (!CoordinateService.validateCoordinates(position)) {
+              console.error('❌ [CANVAS STORE] Invalid coordinates provided:', position);
+              return;
+            }
+
+            // Use the enhanced coordinate conversion
+            const conversionResult = CoordinateService.convertDragCoordinates(
+              position,
+              element,
+              currentState.sections
+            );
+
+              // Only update if coordinates actually changed
+              if (!conversionResult.needsUpdate) {
+                console.log('⏭️ [CANVAS STORE] No coordinate update needed for element:', elementId);
                 return;
               }
 
-              // Case 1: Element moved within the same section
-              if (oldSectionId === targetSectionId && targetSectionId) {
-                const section = state.sections[targetSectionId];
-                if (section) {
-                  // Convert absolute position to relative coordinates within the section
-                  stateElement.x = position.x - section.x;
-                  stateElement.y = position.y - section.y;
-                  console.log('🔄 [CANVAS STORE] Element moved within same section:', {
-                    section: { x: section.x, y: section.y },
-                    newRelativeCoords: { x: stateElement.x, y: stateElement.y }
-                  });
-                }
-                return; // No containment changes needed
-              }
+              console.log('� [CANVAS STORE] Element drop analysis:', {
+                elementId,
+                elementType: element.type,
+                oldSectionId: element.sectionId,
+                newSectionId: conversionResult.sectionId,
+                finalCoordinates: conversionResult.coordinates,
+                needsUpdate: conversionResult.needsUpdate
+              });
 
-              // Case 2: Element moved on canvas (no section)
-              if (oldSectionId === targetSectionId && !targetSectionId) {
-                stateElement.x = position.x;
-                stateElement.y = position.y;
-                console.log('🔄 [CANVAS STORE] Element moved on canvas:', {
-                  newCoords: { x: stateElement.x, y: stateElement.y }
-                });
-                return; // No containment changes needed
-              }
-
-              // Case 3: Element moved between sections or from/to canvas
-              // Set new coordinates and section assignment
-              if (targetSectionId) {
-                const targetSection = state.sections[targetSectionId];
-                if (targetSection) {
-                  // Convert absolute position to relative coordinates
-                  stateElement.x = position.x - targetSection.x;
-                  stateElement.y = position.y - targetSection.y;
-                  stateElement.sectionId = targetSectionId;
-                  console.log('📐 [CANVAS STORE] Converted to relative coords in new section:', {
-                    targetSection: { x: targetSection.x, y: targetSection.y },
-                    relativeCoords: { x: stateElement.x, y: stateElement.y }
-                  });
+              // Atomic state update - all changes in one set() call
+              set((state: Draft<CanvasStoreState>) => {
+                const stateElement = state.elements[elementId];
+                if (!stateElement) {
+                  console.warn('❌ [CANVAS STORE] Element not found in draft state:', elementId);
+                  return;
                 }
-              } else {
-                // Element dropped on canvas
-                console.log('🔍 [CANVAS STORE] Before setting absolute coords:', {
-                  elementId: elementId,
-                  elementType: stateElement.type,
-                  oldText: stateElement.text,
-                  position: position
-                });
-                
-                stateElement.x = position.x;
-                stateElement.y = position.y;
-                stateElement.sectionId = null;
-                
+
+                const oldSectionId = stateElement.sectionId;
+                const newSectionId = conversionResult.sectionId;
+
+                // Update element coordinates and section assignment atomically
+                stateElement.x = conversionResult.coordinates.x;
+                stateElement.y = conversionResult.coordinates.y;
+                stateElement.sectionId = newSectionId;
+
                 // Ensure text elements maintain valid text during coordinate updates
                 if (stateElement.type === 'text' && (!stateElement.text || stateElement.text.trim().length === 0)) {
                   stateElement.text = 'Text';
                   console.warn('🛡️ [CANVAS STORE] Fixed text element during coordinate update');
                 }
-                
-                console.log('📐 [CANVAS STORE] Set absolute coords on canvas:', {
-                  coords: { x: stateElement.x, y: stateElement.y },
-                  newText: stateElement.text,
-                  textCharCodes: stateElement.text ? [...stateElement.text].map(c => c.charCodeAt(0)) : []
+
+                console.log('📐 [CANVAS STORE] Updated element coordinates:', {
+                  elementId,
+                  coordinates: conversionResult.coordinates,
+                  sectionId: newSectionId,
+                  type: stateElement.type
                 });
-              }
 
-              console.log('🔍 [CANVAS STORE] Element after position update:', {
-                elementId: elementId,
-                type: stateElement.type,
-                text: stateElement.text,
-                textLength: stateElement.text?.length,
-                textCharCodes: stateElement.text ? [...stateElement.text].map(c => c.charCodeAt(0)) : []
-              });
-
-              // Update section containment atomically
-              if (oldSectionId && oldSectionId !== targetSectionId) {
-                const oldSection = state.sections[oldSectionId];
-                if (oldSection) {
-                  const index = oldSection.containedElementIds.indexOf(elementId);
-                  if (index > -1) {
-                    oldSection.containedElementIds.splice(index, 1);
-                    console.log('✅ [CANVAS STORE] Removed element from old section:', { elementId, oldSectionId });
+                // Update section containment atomically
+                if (oldSectionId && oldSectionId !== newSectionId) {
+                  const oldSection = state.sections[oldSectionId];
+                  if (oldSection) {
+                    const index = oldSection.containedElementIds.indexOf(elementId);
+                    if (index > -1) {
+                      oldSection.containedElementIds.splice(index, 1);
+                      console.log('✅ [CANVAS STORE] Removed element from old section:', { elementId, oldSectionId });
+                    }
                   }
                 }
-              }
 
-              if (targetSectionId && oldSectionId !== targetSectionId) {
-                const targetSection = state.sections[targetSectionId];
-                if (targetSection && !targetSection.containedElementIds.includes(elementId)) {
-                  targetSection.containedElementIds.push(elementId);
-                  console.log('✅ [CANVAS STORE] Added element to new section:', { elementId, targetSectionId });
+                if (newSectionId && oldSectionId !== newSectionId) {
+                  const newSection = state.sections[newSectionId];
+                  if (newSection && !newSection.containedElementIds.includes(elementId)) {
+                    newSection.containedElementIds.push(elementId);
+                    console.log('✅ [CANVAS STORE] Added element to new section:', { elementId, newSectionId });
+                  }
                 }
-              }
-            });
+              });
           },
 
           captureElementsAfterSectionCreation: (sectionId: string) => {
@@ -311,10 +275,32 @@ export const useCanvasStore = create<CanvasStoreState>()(
               
               if (!element || !section) return;
               
-              element.x -= section.x;
-              element.y -= section.y;
+              // Calculate relative coordinates
+              const relativeX = element.x - section.x;
+              const relativeY = element.y - section.y;
+              
+              // Ensure element is positioned within section bounds with reasonable defaults
+              const elementWidth = element.width || 100;
+              const elementHeight = element.height || 50;
+              const padding = 20;
+              const titleBarHeight = section.titleBarHeight || 32;
+              
+              // Apply bounds checking to prevent negative coordinates or overflow
+              const constrainedX = Math.max(
+                padding,
+                Math.min(relativeX, (section.width || 300) - elementWidth - padding)
+              );
+              
+              const constrainedY = Math.max(
+                titleBarHeight + padding,
+                Math.min(relativeY, (section.height || 200) - elementHeight - padding)
+              );
+              
+              element.x = constrainedX;
+              element.y = constrainedY;
               element.sectionId = sectionId;
-              console.log('✅ [CANVAS STORE] Converted element to relative coordinates:', elementId);
+              
+              console.log(`✅ [CANVAS STORE] Converted element to relative coordinates: ${elementId} from (${relativeX}, ${relativeY}) to constrained (${constrainedX}, ${constrainedY})`);
             });
           },
 

@@ -3,6 +3,7 @@ import React from 'react';
 import { Layer, Group, Transformer, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../layers/types';
+import { useFeatureFlag } from '../hooks/useFeatureFlags';
 
 interface UILayerProps {
   selectedElementIds: string[];
@@ -43,11 +44,20 @@ export const UILayer: React.FC<UILayerProps> = ({
   onElementUpdate,
   addHistoryEntry,
 }) => {
+  // Check if centralized transformer is enabled
+  const useCentralizedTransformer = useFeatureFlag('centralized-transformer');
+  
   const transformerRef = React.useRef<Konva.Transformer>(null);
   const layerRef = React.useRef<Konva.Group>(null);
 
-  // Update transformer when selection changes
+  console.log(`[UILayer] Centralized transformer enabled: ${useCentralizedTransformer}, will ${useCentralizedTransformer ? 'SKIP' : 'RENDER'} local transformer`);
+
+  // Update transformer when selection changes (only if not using centralized transformer)
   React.useEffect(() => {
+    if (useCentralizedTransformer) {
+      // Skip transformer management - handled by TransformerManager
+      return;
+    }
     const transformer = transformerRef.current;
     const layer = layerRef.current;
     if (!transformer || !layer || !stageRef.current) return;
@@ -67,10 +77,9 @@ export const UILayer: React.FC<UILayerProps> = ({
 
       if (selectedNodes.length > 0) {
         transformer.nodes(selectedNodes);
-        transformer.getLayer()?.batchDraw();
-      }
+        transformer.getLayer()?.batchDraw();      }
     }
-  }, [selectedElementIds, stageRef]);
+  }, [selectedElementIds, stageRef, useCentralizedTransformer]);
 
   // Determine transformer configuration based on selected elements
   const getTransformerConfig = React.useCallback(() => {
@@ -247,41 +256,42 @@ export const UILayer: React.FC<UILayerProps> = ({
       <Group 
         ref={layerRef}
         onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}      >
-        {/* Selection and transform controls */}
-        <Transformer
-        ref={transformerRef}
-        rotateEnabled={true}
-        enabledAnchors={transformerConfig.enabledAnchors}
-        borderStroke="#3B82F6"
-        borderStrokeWidth={2}
-        borderDash={[8, 4]}
-        anchorFill="#FFFFFF"
-        anchorStroke="#3B82F6"
-        anchorStrokeWidth={2}
-        anchorSize={14}
-        anchorCornerRadius={7}
-        rotateAnchorOffset={35}
-        rotationSnapTolerance={5}
-        rotateAnchorSize={20}
-        rotateAnchorFill="#3B82F6"
-        rotateAnchorStroke="#FFFFFF"
-        rotateAnchorStrokeWidth={2}
-        padding={8}
-        shadowColor="rgba(59, 130, 246, 0.3)"
-        shadowBlur={12}
-        shadowOffset={{ x: 0, y: 4 }}
-        shadowOpacity={0.5}
-        boundBoxFunc={(oldBox, newBox) => {
-          // Limit resize to minimum size
-          if (newBox.width < 5 || newBox.height < 5) {
-            return oldBox;
-          }
-          return newBox;
-        }}
-        onTransformEnd={handleTransformEnd}
-      />
+        onMouseMove={onMouseMove}        onMouseUp={onMouseUp}      >
+        {/* Selection and transform controls - only render if centralized transformer is disabled */}
+        {!useCentralizedTransformer && (
+          <Transformer
+          ref={transformerRef}
+          rotateEnabled={true}
+          enabledAnchors={transformerConfig.enabledAnchors}
+          borderStroke="#3B82F6"
+          borderStrokeWidth={2}
+          borderDash={[8, 4]}
+          anchorFill="#FFFFFF"
+          anchorStroke="#3B82F6"
+          anchorStrokeWidth={2}
+          anchorSize={14}
+          anchorCornerRadius={7}
+          rotateAnchorOffset={35}
+          rotationSnapTolerance={5}
+          rotateAnchorSize={20}
+          rotateAnchorFill="#3B82F6"
+          rotateAnchorStroke="#FFFFFF"
+          rotateAnchorStrokeWidth={2}
+          padding={8}
+          shadowColor="rgba(59, 130, 246, 0.3)"
+          shadowBlur={12}
+          shadowOffset={{ x: 0, y: 4 }}
+          shadowOpacity={0.5}
+          boundBoxFunc={(oldBox, newBox) => {
+            // Limit resize to minimum size
+            if (newBox.width < 5 || newBox.height < 5) {
+              return oldBox;
+            }
+            return newBox;
+          }}
+          onTransformEnd={handleTransformEnd}
+        />
+        )}
 
       {/* Section preview during drawing */}
       {isDrawingSection && previewSection && (

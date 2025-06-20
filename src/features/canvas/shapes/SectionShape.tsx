@@ -182,8 +182,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
       clipY={0}
       clipWidth={sectionStyles.width}
       clipHeight={sectionStyles.height}
-    >
-      {/* Main section background */}
+    >      {/* Main section background */}
       <Rect
         x={0}
         y={0}
@@ -192,6 +191,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
         fill={sectionStyles.backgroundColor}
         cornerRadius={sectionStyles.cornerRadius}
         {...selectionStyle}
+        listening={false} // 👈 *** CRITICAL FIX: Allow selection box events to pass through ***
         // Konva performance optimizations
         perfectDrawEnabled={false} // Disable perfect drawing for fill+stroke sections
         shadowForStrokeEnabled={false} // Disable shadow for stroke to prevent extra rendering pass

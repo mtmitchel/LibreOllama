@@ -129,11 +129,11 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     }
   };  const handleToolClick = (toolId: string) => {
     setSelectedTool(toolId);
-    
-    // Tools that activate drawing/interaction modes instead of creating elements immediately
+      // Tools that activate drawing/interaction modes instead of creating elements immediately
     const drawingModeTools = [
       'select', 'pan', 'section', 
-      'pen', 'connector-line', 'connector-arrow'
+      'pen', 'connector-line', 'connector-arrow',
+      'rectangle', 'circle', 'triangle', 'star' // Shape tools should activate, not create immediately
     ];
     
     // For most tools, create element immediately

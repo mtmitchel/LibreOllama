@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri dev",
-    "tauri:build": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build"
+    "tauri:build": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build",
+    "test:phase1": "node phase1-test-runner.js",
+    "test:canvas": "node src/tests/phase1-test-suite.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",

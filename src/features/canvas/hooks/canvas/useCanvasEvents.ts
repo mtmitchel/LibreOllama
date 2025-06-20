@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import { CoordinateService } from '../../utils/coordinateService';
 import { useCanvasStore } from '../../stores/canvasStore.enhanced';
 import type { CanvasElement } from '../../../../types';
 
@@ -36,10 +37,8 @@ export const useCanvasEvents = ({
   const clearSelection = useCanvasStore((state) => state.clearSelection);
   const setPan = useCanvasStore((state) => state.setPan);
   const setZoom = useCanvasStore((state) => state.setZoom);
-  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
   const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
   const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
-  const updateMultipleElements = useCanvasStore((state) => state.updateMultipleElements);
 
   // Handle mouse down on individual elements
   const handleElementMouseDown = useCallback((pixiEvent: any, elementId: string) => {
@@ -78,8 +77,6 @@ export const useCanvasEvents = ({
       }
 
       // Prepare for dragging
-      const startDragWorldCoords = getCanvasCoordinates(pixiEvent.global.x, pixiEvent.global.y);
-      
       initialElementPositions.current = {};
       const { selectedElementIds } = useCanvasStore.getState();
       selectedElementIds.forEach((id: string) => {
@@ -88,7 +85,7 @@ export const useCanvasEvents = ({
         }
       });
       
-      if (selectedElementIds.includes(elementId) && !initialElementPositions.current[elementId]) {
+      if (initialElementPositions.current[elementId] === undefined) {
          initialElementPositions.current[elementId] = { x: element.x, y: element.y };
       }
 
@@ -124,6 +121,41 @@ export const useCanvasEvents = ({
     } = currentStoreState;
     
     const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
+    const sections = useCanvasStore.getState().sections;
+    let sectionId = CoordinateService.findSectionAtPoint({ x, y }, Object.values(sections));
+    
+    console.log('🎯 [CANVAS EVENTS] Click coordinates:', { x, y });
+    console.log('🎯 [CANVAS EVENTS] Found section:', sectionId);
+    
+    let relCoords = { x, y };
+    if (sectionId) {
+      const section = sections[sectionId];
+      if (section) {
+        console.log('🎯 [CANVAS EVENTS] Section details:', {
+          id: section.id,
+          x: section.x,
+          y: section.y,
+          width: section.width,
+          height: section.height
+        });
+        
+        relCoords = CoordinateService.toRelative({ x, y }, section);
+        console.log('🎯 [CANVAS EVENTS] Relative coordinates before clamping:', relCoords);
+        
+        // Clamp to section bounds to ensure elements stay inside
+        relCoords.x = Math.max(0, Math.min(relCoords.x, section.width - 80)); // Leave space for element size
+        relCoords.y = Math.max(0, Math.min(relCoords.y, section.height - 80));
+        
+        console.log('🎯 [CANVAS EVENTS] Relative coordinates after clamping:', relCoords);
+        
+        // Safety check: if relative coordinates are still negative, don't assign section
+        if (relCoords.x < 0 || relCoords.y < 0) {
+          console.warn('⚠️ [CANVAS EVENTS] Negative relative coordinates detected, removing section assignment');
+          sectionId = null;
+          relCoords = { x, y }; // Use absolute coordinates instead
+        }
+      }
+    }
 
     switch (currentActiveTool) {
       case 'select':
@@ -147,13 +179,14 @@ export const useCanvasEvents = ({
         const textElement: CanvasElement = {
           id: generateId(),
           type: currentActiveTool,
-          x: x,
-          y: y,
+          x: relCoords.x,
+          y: relCoords.y,
           width: 200,
           height: currentActiveTool === 'sticky-note' ? 100 : 50,
           text: '',
           fill: '#000000',
           backgroundColor: currentActiveTool === 'sticky-note' ? '#FFFFE0' : 'transparent',
+          ...(sectionId ? { sectionId } : {})
         };
         addElement(textElement);
         addHistoryEntry('Add text element', [], []);
@@ -161,23 +194,24 @@ export const useCanvasEvents = ({
         break;
 
       default:
-        if (['rectangle', 'circle', 'triangle', 'square', 'hexagon', 'star', 'line', 'arrow'].includes(currentActiveTool)) {
+        if ([
+          'rectangle', 'circle', 'triangle', 'square', 'hexagon', 'star', 'line', 'arrow'
+        ].includes(currentActiveTool)) {
           const shapeElement: CanvasElement = {
             id: generateId(),
             type: currentActiveTool as CanvasElement['type'],
-            x: x,
-            y: y,
+            x: relCoords.x,
+            y: relCoords.y,
             width: 80,
             height: 80,
             fill: '#000000',
             stroke: '#000000',
-            strokeWidth: 1
+            strokeWidth: 1,
+            ...(sectionId ? { sectionId } : {})
           };
-          
           if (currentActiveTool === 'circle') {
             shapeElement.radius = 40;
           }
-          
           addElement(shapeElement);
           addHistoryEntry('Add shape element', [], []);
         }
@@ -186,9 +220,9 @@ export const useCanvasEvents = ({
   }, [canvasContainerRef, clearSelection, setEditingTextId, setEditingTextId, getCanvasCoordinates, updateElement, addHistoryEntry, textAreaRef, generateId, addElement]);
 
   // Global mouse move handler
-  const handleGlobalMouseMove = useCallback((e: MouseEvent) => {
+  const handleGlobalMouseMove = useCallback((_e: MouseEvent) => {
     // Mouse move logic would go here when dragging is implemented
-  }, [getCanvasCoordinates]);
+  }, []);
 
   // Global mouse up handler
   const handleGlobalMouseUp = useCallback(() => {

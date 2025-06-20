@@ -1,6 +1,6 @@
 // src/features/canvas/layers/MainLayer.tsx
 import React, { useMemo, useCallback } from 'react';
-import { Layer, Line } from 'react-konva';
+import { Group, Line } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../stores/types';
 import { designSystem } from '../../../styles/designSystem';
@@ -15,10 +15,7 @@ import { EditableNode } from '../shapes/EditableNode';
 import { EnhancedTableElement } from '../components/EnhancedTableElement';
 import { ConnectorRenderer } from '../components/ConnectorRenderer';
 import KonvaErrorBoundary from '../components/KonvaErrorBoundary';
-import {
-  createEventDelegation,
-  optimizeLayerProps,  throttleRAF
-} from '../utils/events';
+import { optimizeLayerProps } from '../utils/events';
 // Import enhanced store for consistent section access
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 
@@ -114,41 +111,11 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     };
   }, [getSectionById, getSectionForElement]);
 
-  // Create throttled event handlers for performance
-  const throttledDragEnd = useMemo(() => 
-    throttleRAF((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
-      onElementDragEnd(e, elementId);
-    }), [onElementDragEnd]
-  );
-
-  // Create event delegation for the layer
-  const delegatedProps = useMemo(() => {
-    return createEventDelegation(
-      {
-        enableClick: true,
-        enableDrag: true,
-        enableHover: false // Disabled for performance
-      },
-      {
-        onElementClick: (elementId: string, event: any) => {
-          const element = elements.find(el => el.id === elementId);
-          if (element) {
-            onElementClick(event, element);
-          }
-        },
-        onElementDragEnd: (elementId: string, event: any) => {
-          throttledDragEnd(event, elementId);
-        }
-      }
-    );
-  }, [elements, onElementClick, throttledDragEnd]);
-  // Optimize layer props for performance
-  const optimizedProps = useMemo(() => 
-    optimizeLayerProps({
-      listening: true,
-      name: name || 'main-layer' // Ensure name is always a string
-    }, true), [name]
-  );  // Render individual elements with comprehensive type handling
+  // Optimize Group props for performance
+  const optimizedProps = useMemo(() => {
+    return optimizeLayerProps({}); // Extract relevant props for Group
+  }, []);
+  // Render individual elements with comprehensive type handling
   const renderElement = useCallback((element: CanvasElement) => {
     const isSelected = selectedElementIds.includes(element.id);
     const isEditing = false; // This will be handled by text editing overlay
@@ -514,12 +481,11 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   if (drawingLine) {
     allNodes.push(drawingLine);
   }
-
   return (
-    <Layer {...delegatedProps} {...optimizedProps}>
+    <Group {...optimizedProps} name={name || "main-group"}>
       <KonvaErrorBoundary>
         {allNodes}
       </KonvaErrorBoundary>
-    </Layer>
+    </Group>
   );
 };

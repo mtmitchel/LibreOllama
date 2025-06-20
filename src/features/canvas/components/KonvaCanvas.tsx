@@ -5,6 +5,7 @@ import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanc
 import { useShallow } from 'zustand/react/shallow';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { findNearestConnectionPoint } from '../utils/snappingUtils';
+import { CoordinateService } from '../utils/coordinateService';
 import type { CanvasElement } from '../types';
 import '../../../styles/konvaCanvas.css';
 import '../../../styles/multiDrag.css';
@@ -227,10 +228,14 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
       const node = e.target;
       const allElementsMap = { ...elements, ...sections };
       const element = allElementsMap[_elementId];
-      if (!element) return;
-
-      // Get the absolute position directly from the Konva node.
+      if (!element) return;      // Get the absolute position directly from the Konva node.
       let newPos = node.absolutePosition();
+
+      // Validate coordinates to prevent NaN/invalid values
+      if (!newPos || isNaN(newPos.x) || isNaN(newPos.y) || !isFinite(newPos.x) || !isFinite(newPos.y)) {
+        console.error('❌ [KONVA CANVAS] Invalid position from Konva node:', newPos);
+        return;
+      }
 
       // Normalize for shape-specific positioning differences
       if (element.type === 'circle') {
@@ -245,6 +250,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           x: newPos.x - radius,
           y: newPos.y - radius
         };
+      }
+
+      // Additional validation after normalization
+      if (isNaN(newPos.x) || isNaN(newPos.y) || !isFinite(newPos.x) || !isFinite(newPos.y)) {
+        console.error('❌ [KONVA CANVAS] Invalid position after normalization:', newPos);
+        return;
       }
 
       if (element.type === 'section') {
@@ -270,9 +281,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
 
     try {
       const { pointerPos: startPointerPos, elementStates } = multiDragState.current;
-      const endPointerPos = stage.getPointerPosition() || { x: 0, y: 0 };
-
-      const deltaX = endPointerPos.x - startPointerPos.x;
+      const endPointerPos = stage.getPointerPosition() || { x: 0, y: 0 };      const deltaX = endPointerPos.x - startPointerPos.x;
       const deltaY = endPointerPos.y - startPointerPos.y;
 
       // Early exit for minimal movement (avoids unnecessary updates)
@@ -281,45 +290,102 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         return;
       }
 
-      const updates: Record<string, Partial<CanvasElement>> = {};
-      const sectionUpdates: Record<string, string[]> = {}; // track section reassignments
+      // Convert screen-space delta to canvas-space delta (accounting for zoom)
+      const canvasScale = stage.scaleX() || 1; // Assuming uniform scaling
+      const canvasDelta = CoordinateService.screenDeltaToCanvasDelta(
+        { x: deltaX, y: deltaY },
+        canvasScale
+      );
 
-      // Calculate new positions with section awareness
-      Object.entries(elementStates).forEach(([id, state]) => {
+      console.log('🎯 [MULTI-DRAG] Delta conversion:', {
+        screenDelta: { x: deltaX, y: deltaY },
+        canvasScale,
+        canvasDelta
+      });
+
+      // Create elements map for batch processing
+      const elementsToUpdate: Record<string, CanvasElement> = {};
+      Object.keys(elementStates).forEach(id => {
         const element = allElements[id];
-        if (!element) return;
+        if (element) {
+          elementsToUpdate[id] = element;
+        }
+      });      // Apply delta to all selected elements while preserving their coordinate systems
+      const updates = CoordinateService.batchApplyDelta(
+        elementsToUpdate,
+        canvasDelta,
+        sections
+      );
 
-        const newX = state.initialPos.x + deltaX;
-        const newY = state.initialPos.y + deltaY;
-
-        // Check for section reassignment
-        const newParentSection = findSectionAtPoint({ x: newX, y: newY });
-
-        updates[id] = {
-          x: newX,
-          y: newY,
-          // Update parent section if changed for elements that support it
-          ...(newParentSection !== state.parentSection && 'sectionId' in element && { sectionId: newParentSection }),
-        };
-
-        // Track section changes for connection updates
-        if (newParentSection !== state.parentSection) {
-          if (newParentSection) {
-            sectionUpdates[newParentSection] = sectionUpdates[newParentSection] || [];
-            sectionUpdates[newParentSection].push(id);
+      // Check if elements need section capture/release logic
+      const elementsNeedingCaptureCheck: string[] = [];      // For each element with position updates, check if it needs section capture/release
+      Object.keys(updates).forEach(elementId => {
+        const element = allElements[elementId];
+        if (element && element.type !== 'section') {
+          const canvasElement = element as CanvasElement;
+          const updatedPos = updates[elementId];
+          
+          if (!updatedPos) return;
+          
+          // Calculate the element's new absolute position for section detection
+          const newAbsolutePos = canvasElement.sectionId 
+            ? CoordinateService.toAbsolute(
+                { ...canvasElement, x: updatedPos.x, y: updatedPos.y },
+                sections
+              )
+            : updatedPos;
+          
+          // Check if element should be captured/released from a section
+          const targetSectionId = findSectionAtPoint(newAbsolutePos);
+          const currentSectionId = canvasElement.sectionId || null;
+          
+          if (targetSectionId !== currentSectionId) {
+            elementsNeedingCaptureCheck.push(elementId);
+            console.log('🎯 [MULTI-DRAG] Element needs section capture/release check:', {
+              elementId,
+              currentSection: currentSectionId,
+              targetSection: targetSectionId,
+              newPosition: newAbsolutePos
+            });
           }
         }
       });
 
       if (Object.keys(updates).length > 0) {
         // Single atomic update for optimal performance and undo/redo
+        // This preserves coordinate systems (relative for section elements, absolute for canvas elements)
         updateMultipleElements(updates);
 
-        // Task 4: Save atomic history entry after drag completion
+        // Handle section capture/release for elements that need it
+        if (elementsNeedingCaptureCheck.length > 0) {
+          console.log('🔄 [MULTI-DRAG] Processing section capture/release for elements:', elementsNeedingCaptureCheck);
+            elementsNeedingCaptureCheck.forEach(elementId => {
+            const element = allElements[elementId];
+            if (!element || element.type === 'section') return;
+            
+            const canvasElement = element as CanvasElement;
+            const updatedPos = updates[elementId];
+            
+            if (!updatedPos) return;
+            
+            // Calculate the element's final absolute position
+            const finalAbsolutePos = canvasElement.sectionId 
+              ? CoordinateService.toAbsolute(
+                  { ...canvasElement, x: updatedPos.x, y: updatedPos.y },
+                  sections
+                )
+              : updatedPos;
+            
+            // Use handleElementDrop to handle the section capture/release logic
+            handleElementDrop(elementId, finalAbsolutePos);
+          });
+        }
+
+        // Add history entry for the multi-drag operation
         addHistoryEntry(
           `Move ${Object.keys(updates).length} element${Object.keys(updates).length > 1 ? 's' : ''}`,
-          [], // patches will be handled by updateMultipleElements
-          [], // inverse patches will be handled by updateMultipleElements
+          [], // patches handled by updateMultipleElements
+          [], // inverse patches handled by updateMultipleElements
           {
             elementIds: Object.keys(updates),
             operationType: 'move',
@@ -327,24 +393,13 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
           }
         );
 
-        console.log(`✅ [MULTI-DRAG] Completed: ${Object.keys(updates).length} elements moved`, {
-          deltaX: deltaX.toFixed(2),
-          deltaY: deltaY.toFixed(2),
+        console.log(`✅ [MULTI-DRAG] Completed: ${Object.keys(updates).length} elements moved`, {          canvasDelta,
           duration: `${dragDuration.toFixed(2)}ms`,
-          sectionChanges: Object.keys(sectionUpdates).length,
+          updatedElements: Object.keys(updates),
+          captureChecks: elementsNeedingCaptureCheck.length
         });
-
-        // Optional: Handle section re-parenting with drop logic for each moved element
-        if (Object.keys(sectionUpdates).length > 0) {
-          Object.entries(sectionUpdates).forEach(([_sectionId, elementIds]) => {
-            elementIds.forEach(elementId => {
-              const elementUpdate = updates[elementId];
-              if (elementUpdate && elementUpdate.x !== undefined && elementUpdate.y !== undefined) {
-                handleElementDrop(elementId, { x: elementUpdate.x, y: elementUpdate.y });
-              }
-            });
-          });
-        }
+      } else {
+        console.log('⏭️ [MULTI-DRAG] No elements needed position updates');
       }
 
     } catch (error) {
@@ -361,7 +416,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         dragAnimationFrame.current = null;
       }
     }
-  }, [elements, sections, handleSectionDragEnd, handleElementDrop, updateMultipleElements, findSectionAtPoint, allElements, dragAnimationFrame, multiDragState]);
+  }, [elements, sections, handleSectionDragEnd, updateMultipleElements, findSectionAtPoint, allElements, dragAnimationFrame, multiDragState, addHistoryEntry, handleElementDrop]);
 
   // Enhanced real-time drag update for smooth visual feedback
   const handleElementDragMove = useCallback((_e: Konva.KonvaEventObject<DragEvent>, _elementId: string) => {
@@ -517,6 +572,138 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = ({
         console.log('📦 [SECTION] Starting section at:', pos);
       }
       // Section completion moved to mouse up handler
+    } else if (selectedTool === 'rectangle') {
+      console.log('🟦 [RECTANGLE] Rectangle tool detected!');
+      
+      // Create rectangle at clicked position
+      const rectWidth = 150;
+      const rectHeight = 100;
+      const rectTopLeftX = pos.x - rectWidth / 2;
+      const rectTopLeftY = pos.y - rectHeight / 2;
+      
+      // Find target section if click is within a section
+      const targetSectionId = findSectionAtPoint && findSectionAtPoint({ x: pos.x, y: pos.y });
+      const targetSection = targetSectionId && sections ? sections[targetSectionId] : null;
+      
+      const newRectangle: CanvasElement = {
+        id: `rect-${Date.now()}`,
+        type: 'rectangle',
+        x: targetSection ? rectTopLeftX - targetSection.x : rectTopLeftX,
+        y: targetSection ? rectTopLeftY - targetSection.y : rectTopLeftY,
+        width: rectWidth,
+        height: rectHeight,
+        fill: '#DBEAFE',
+        stroke: '#3B82F6',
+        strokeWidth: 2,
+        sectionId: targetSectionId
+      };
+      
+      console.log('🟦 [RECTANGLE] Creating rectangle at:', { x: newRectangle.x, y: newRectangle.y, targetSection: targetSectionId });
+      
+      addElement(newRectangle);
+      selectElement(newRectangle.id);
+      
+      // Automatically switch to select tool after creation
+      setSelectedTool('select');
+      console.log('🟦 [RECTANGLE] Automatically switched to select tool after rectangle creation');
+      
+    } else if (selectedTool === 'circle') {
+      console.log('⭕ [CIRCLE] Circle tool detected!');
+      
+      // Create circle at clicked position
+      const radius = 60;
+      
+      // Find target section if click is within a section
+      const targetSectionId = findSectionAtPoint && findSectionAtPoint({ x: pos.x, y: pos.y });
+      const targetSection = targetSectionId && sections ? sections[targetSectionId] : null;
+      
+      const newCircle: CanvasElement = {
+        id: `circle-${Date.now()}`,
+        type: 'circle',
+        x: targetSection ? pos.x - targetSection.x : pos.x,
+        y: targetSection ? pos.y - targetSection.y : pos.y,
+        radius: radius,
+        fill: '#DCFCE7',
+        stroke: '#22C55E',
+        strokeWidth: 2,
+        sectionId: targetSectionId
+      };
+      
+      console.log('⭕ [CIRCLE] Creating circle at:', { x: newCircle.x, y: newCircle.y, targetSection: targetSectionId });
+      
+      addElement(newCircle);
+      selectElement(newCircle.id);
+      
+      // Automatically switch to select tool after creation
+      setSelectedTool('select');
+      console.log('⭕ [CIRCLE] Automatically switched to select tool after circle creation');
+      
+    } else if (selectedTool === 'triangle') {
+      console.log('🔺 [TRIANGLE] Triangle tool detected!');
+      
+      // Create triangle at clicked position
+      const triWidth = 100;
+      const triHeight = 80;
+      
+      // Find target section if click is within a section
+      const targetSectionId = findSectionAtPoint && findSectionAtPoint({ x: pos.x, y: pos.y });
+      const targetSection = targetSectionId && sections ? sections[targetSectionId] : null;
+      
+      const newTriangle: CanvasElement = {
+        id: `triangle-${Date.now()}`,
+        type: 'triangle',
+        x: targetSection ? pos.x - targetSection.x : pos.x,
+        y: targetSection ? pos.y - targetSection.y : pos.y,
+        width: triWidth,
+        height: triHeight,
+        fill: '#FEF3C7',
+        stroke: '#F59E0B',
+        strokeWidth: 2,
+        sectionId: targetSectionId
+      };
+      
+      console.log('🔺 [TRIANGLE] Creating triangle at:', { x: newTriangle.x, y: newTriangle.y, targetSection: targetSectionId });
+      
+      addElement(newTriangle);
+      selectElement(newTriangle.id);
+      
+      // Automatically switch to select tool after creation
+      setSelectedTool('select');
+      console.log('🔺 [TRIANGLE] Automatically switched to select tool after triangle creation');
+      
+    } else if (selectedTool === 'star') {
+      console.log('⭐ [STAR] Star tool detected!');
+      
+      // Create star at clicked position
+      const radius = 60;
+      const innerRadius = 30;
+      
+      // Find target section if click is within a section
+      const targetSectionId = findSectionAtPoint && findSectionAtPoint({ x: pos.x, y: pos.y });
+      const targetSection = targetSectionId && sections ? sections[targetSectionId] : null;
+      
+      const newStar: CanvasElement = {
+        id: `star-${Date.now()}`,
+        type: 'star',
+        x: targetSection ? pos.x - targetSection.x : pos.x,
+        y: targetSection ? pos.y - targetSection.y : pos.y,
+        numPoints: 5,
+        innerRadius: innerRadius,
+        radius: radius,
+        fill: '#E1BEE7',
+        stroke: '#9C27B0',
+        strokeWidth: 2,
+        sectionId: targetSectionId
+      };
+      
+      console.log('⭐ [STAR] Creating star at:', { x: newStar.x, y: newStar.y, targetSection: targetSectionId });
+      
+      addElement(newStar);
+      selectElement(newStar.id);
+      
+      // Automatically switch to select tool after creation
+      setSelectedTool('select');
+      console.log('⭐ [STAR] Automatically switched to select tool after star creation');
     } else if (selectedTool === 'text') {
       const stage = internalStageRef.current;
       if (!stage) return;
