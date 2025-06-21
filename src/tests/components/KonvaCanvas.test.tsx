@@ -1,9 +1,21 @@
-import { describe, test, expect, beforeEach, jest, afterEach } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
+
+// Mock canvas module FIRST, before any other imports
+vi.mock('canvas', () => ({
+  createCanvas: vi.fn(() => ({
+    getContext: vi.fn(() => ({})),
+    toDataURL: vi.fn(() => 'data:image/png;base64,'),
+    width: 800,
+    height: 600,
+  })),
+}));
+
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
-import { KonvaCanvas } from '@/features/canvas/components/KonvaCanvas';
+import KonvaCanvas from '@/features/canvas/components/KonvaCanvas';
 import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
 import { useTauriCanvas } from '@/features/canvas/hooks/useTauriCanvas';
 import { ElementId } from '@/features/canvas/types/enhanced.types';
@@ -11,28 +23,34 @@ import { ElementId } from '@/features/canvas/types/enhanced.types';
 // Mock store using a factory function
 const mockStore = {
   elements: new Map(),
+  sections: new Map(),
   selectedElementIds: new Set<string>(),
+  selectedSectionIds: new Set<string>(),
   selectedTool: 'select',
   isDrawing: false,
   currentPath: [],
-  addElement: jest.fn(),
-  updateElement: jest.fn(),
-  deleteElement: jest.fn(),
-  selectElement: jest.fn(),
-  clearSelection: jest.fn(),
-  setSelectedTool: jest.fn(),
-  undo: jest.fn(),
-  redo: jest.fn(),
+  addElement: vi.fn(),
+  updateElement: vi.fn(),
+  deleteElement: vi.fn(),
+  selectElement: vi.fn(),
+  clearSelection: vi.fn(),
+  setSelectedTool: vi.fn(),
+  undo: vi.fn(),
+  redo: vi.fn(),
+  addHistoryEntry: vi.fn(),
   zoom: 1,
   pan: { x: 0, y: 0 },
-  setPan: jest.fn(),
-  setZoom: jest.fn(),
-  // Add other store methods as needed
-  reset: jest.fn(),
+  setPan: vi.fn(),
+  setZoom: vi.fn(),
+  reset: vi.fn(),
+  // Mock enhanced store properties
+  canvasSize: { width: 800, height: 600 },
+  viewport: { x: 0, y: 0, scale: 1 },
+  performance: { renderCount: 0 },
 };
 
-jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: jest.fn((selector) => {
+vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
+  useCanvasStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockStore);
     }
@@ -40,9 +58,9 @@ jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
   }),
 }));
 
-jest.mock('@/features/canvas/hooks/useTauriCanvas');
+vi.mock('@/features/canvas/hooks/useTauriCanvas');
 
-const mockUseTauriCanvas = useTauriCanvas as jest.MockedFunction<typeof useTauriCanvas>;
+const mockUseTauriCanvas = useTauriCanvas as any;
 
 // Helper to create mock elements
 const createMockElement = (overrides = {}) => ({
@@ -61,16 +79,35 @@ const createMockElement = (overrides = {}) => ({
   ...overrides
 });
 
+// Helper to create mock canvas props
+const createMockCanvasProps = (overrides = {}) => ({
+  width: 800,
+  height: 600,
+  panZoomState: {
+    scale: 1,
+    position: { x: 0, y: 0 }
+  },
+  stageRef: { current: null },
+  onWheelHandler: vi.fn(),
+  ...overrides,
+});
+
+// Helper to render KonvaCanvas with required props
+const renderKonvaCanvas = (props = {}) => {
+  const canvasProps = createMockCanvasProps(props);
+  return renderWithKonva(<KonvaCanvas {...canvasProps} />);
+};
+
 describe('KonvaCanvas', () => {
   // Mock Tauri canvas methods
-  const saveCanvasMock = jest.fn() as jest.MockedFunction<() => Promise<void>>;
-  const loadCanvasMock = jest.fn() as jest.MockedFunction<() => Promise<any>>;
+  const saveCanvasMock = vi.fn() as any;
+  const loadCanvasMock = vi.fn() as any;
 
   let mockTauriCanvas: any;
 
   beforeEach(() => {
     // Reset all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Setup mock store state
     mockStore.elements.clear();
@@ -97,7 +134,7 @@ describe('KonvaCanvas', () => {
 
   afterEach(() => {
     act(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
   });
 
@@ -106,7 +143,7 @@ describe('KonvaCanvas', () => {
       // Set tool to rectangle
       mockStore.selectedTool = 'rectangle';
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
       expect(canvas).toBeTruthy();
@@ -158,7 +195,7 @@ describe('KonvaCanvas', () => {
     test('should create a circle element when drawing with circle tool', async () => {
       mockStore.selectedTool = 'circle';
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -185,7 +222,7 @@ describe('KonvaCanvas', () => {
       mockStore.isDrawing = false;
       mockStore.currentPath = [];
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -220,7 +257,7 @@ describe('KonvaCanvas', () => {
     test('should select element when clicked with select tool', async () => {
       mockStore.selectedTool = 'select';
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -240,7 +277,7 @@ describe('KonvaCanvas', () => {
       mockStore.selectedTool = 'select';
       mockStore.selectedElementIds = new Set(['elem1']);
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -259,7 +296,7 @@ describe('KonvaCanvas', () => {
       mockStore.selectedTool = 'select';
       mockStore.selectedElementIds = new Set(['elem1']);
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -279,7 +316,7 @@ describe('KonvaCanvas', () => {
 
   describe('Keyboard Shortcuts', () => {
     test('should handle undo/redo shortcuts', async () => {
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       // Undo
       act(() => {
@@ -297,7 +334,7 @@ describe('KonvaCanvas', () => {
     test('should delete selected elements on Delete key', async () => {
       mockStore.selectedElementIds = new Set(['elem1']);
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       act(() => {
         fireEvent.keyDown(window, { key: 'Delete' });
@@ -309,7 +346,7 @@ describe('KonvaCanvas', () => {
     test('should clear selection on Escape key', async () => {
       mockStore.selectedElementIds = new Set(['elem1', 'elem2']);
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       act(() => {
         fireEvent.keyDown(window, { key: 'Escape' });
@@ -324,7 +361,7 @@ describe('KonvaCanvas', () => {
       mockStore.selectedTool = 'select';
       const elem1 = mockStore.elements.get(ElementId('elem1'));
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -347,10 +384,10 @@ describe('KonvaCanvas', () => {
 
     test('should handle canvas panning with space key', async () => {
       // Add setPan mock to the store
-      const setPanMock = jest.fn();
+      const setPanMock = vi.fn();
       mockStore.setPan = setPanMock;
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -374,10 +411,10 @@ describe('KonvaCanvas', () => {
 
     test('should handle zoom with Ctrl+wheel', async () => {
       // Add setZoom mock to the store
-      const setZoomMock = jest.fn();
+      const setZoomMock = vi.fn();
       mockStore.setZoom = setZoomMock;
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       const canvas = screen.getByRole('presentation').querySelector('canvas');
 
@@ -402,7 +439,7 @@ describe('KonvaCanvas', () => {
     test('should save canvas with Ctrl+S', async () => {
       saveCanvasMock.mockResolvedValue(void 0);
       
-      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+      renderKonvaCanvas();
 
       act(() => {
         fireEvent.keyDown(window, { key: 's', ctrlKey: true });

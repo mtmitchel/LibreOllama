@@ -1,29 +1,29 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { act } from '@testing-library/react';
 
 // Mock the entire store module to avoid hook execution outside React
 const mockHistoryState = {
-  canUndo: jest.fn(() => false),
-  canRedo: jest.fn(() => false),
-  undo: jest.fn(() => null),
-  redo: jest.fn(() => null),
-  addHistoryEntry: jest.fn(),
-  startHistoryGroup: jest.fn(),
-  endHistoryGroup: jest.fn(),
-  isInGroup: jest.fn(() => false),
-  getHistoryLength: jest.fn(() => 0),
-  getCurrentHistoryEntry: jest.fn(() => null),
-  getHistoryPreview: jest.fn(() => []),
-  clearHistory: jest.fn(),
+  canUndo: vi.fn(() => false),
+  canRedo: vi.fn(() => false),
+  undo: vi.fn(() => null),
+  redo: vi.fn(() => null),
+  addHistoryEntry: vi.fn(),
+  startHistoryGroup: vi.fn(),
+  endHistoryGroup: vi.fn(),
+  isInGroup: vi.fn(() => false),
+  getHistoryLength: vi.fn(() => 0),
+  getCurrentHistoryEntry: vi.fn(() => null),
+  getHistoryPreview: vi.fn(() => []),
+  clearHistory: vi.fn(),
   history: {
     entries: [],
     maxSize: 50,
     currentSize: 0,
-    add: jest.fn(),
-    clear: jest.fn(),
-    get: jest.fn(),
-    canUndo: jest.fn(() => false),
-    canRedo: jest.fn(() => false)
+    add: vi.fn(),
+    clear: vi.fn(),
+    get: vi.fn(),
+    canUndo: vi.fn(() => false),
+    canRedo: vi.fn(() => false)
   },
   currentIndex: -1,
   isGrouping: false,
@@ -41,14 +41,14 @@ const mockHistoryState = {
 };
 
 // Mock selector that returns our mock state
-const mockUseCanvasStore = jest.fn((selector: any) => {
+const mockUseCanvasStore = vi.fn((selector: any) => {
   if (typeof selector === 'function') {
     return selector(mockHistoryState);
   }
   return mockHistoryState;
 });
 
-jest.mock('../../features/canvas/stores/canvasStore.enhanced', () => ({
+vi.mock('../../features/canvas/stores/canvasStore.enhanced', () => ({
   useCanvasStore: mockUseCanvasStore,
   useCanvasHistory: () => ({
     canUndo: false,
@@ -59,7 +59,7 @@ jest.mock('../../features/canvas/stores/canvasStore.enhanced', () => ({
 }));
 
 describe('Canvas History Store', () => {  beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset mock return values after clearAllMocks()
     mockHistoryState.canUndo.mockImplementation(() => false);
     mockHistoryState.canRedo.mockImplementation(() => false);

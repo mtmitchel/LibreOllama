@@ -1,4 +1,5 @@
-import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
 import { CircleShape } from '../../features/canvas/shapes/CircleShape';
 import { createMockCanvasElement, renderKonva } from '../utils/testUtils';
 
@@ -37,10 +38,10 @@ describe('CircleShape', () => {
         visible: mockElement.visible,
         rotation: mockElement.rotation
       },
-      onUpdate: jest.fn(),
-      onStartTextEdit: jest.fn(),
-      onSelect: jest.fn(),
-      onDoubleClick: jest.fn()
+      onUpdate: vi.fn(),
+      onStartTextEdit: vi.fn(),
+      onSelect: vi.fn(),
+      onDoubleClick: vi.fn()
     };
   });
 

@@ -1,11 +1,62 @@
 /**
- * Jest Setup for ESM + TypeScript + React Konva
+ * Vitest Setup for ESM + TypeScript + React Konva
  * Based on comprehensive testing guide best practices
  */
 
 import '@testing-library/jest-dom';
-// Add jest-canvas-mock for proper Konva testing
-import 'jest-canvas-mock';
+import { vi } from 'vitest';
+
+// Enhanced canvas module mocking to prevent native module loading
+// Mock canvas module before any imports
+vi.mock('canvas', () => ({
+  createCanvas: vi.fn(() => ({
+    getContext: vi.fn(() => ({
+      fillRect: vi.fn(),
+      clearRect: vi.fn(),
+      getImageData: vi.fn(() => ({ data: new Array(4) })),
+      putImageData: vi.fn(),
+      createImageData: vi.fn(() => new Array(4)),
+      setTransform: vi.fn(),
+      drawImage: vi.fn(),
+      save: vi.fn(),
+      fillText: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      stroke: vi.fn(),
+      translate: vi.fn(),
+      scale: vi.fn(),
+      rotate: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      measureText: vi.fn(() => ({ width: 0 })),
+      transform: vi.fn(),
+      rect: vi.fn(),
+      clip: vi.fn(),
+    })),
+    toDataURL: vi.fn(() => 'data:image/png;base64,'),
+    width: 800,
+    height: 600,
+  })),
+  Image: vi.fn(() => ({
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    width: 0,
+    height: 0,
+    src: '',
+    onload: null,
+    onerror: null,
+  })),
+  loadImage: vi.fn(() => Promise.resolve({
+    width: 100,
+    height: 100,
+  })),
+}));
+
+// Also mock canvas/lib-extra
+vi.mock('canvas/lib-extra', () => ({}));
 
 // Enable Immer Map/Set plugin for store tests
 import { enableMapSet } from 'immer';
@@ -70,7 +121,20 @@ Object.defineProperty(window, 'matchMedia', {
   disconnect() {}
 };
 
-// Note: ESM modules don't support jest.mock() in setup files
-// Individual test files should use jest.unstable_mockModule() 
-// or dynamic imports for proper ESM module mocking
-console.log('✅ ESM Test Setup Complete - Individual tests handle module mocking');
+// Suppress Konva warnings in tests
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  const message = args[0];
+  if (typeof message === 'string') {
+    // Suppress known Konva warnings that are expected in test environment
+    if (message.includes('Text components are not supported for now in ReactKonva') ||
+        message.includes('Group will be used instead') ||
+        message.includes('is a not valid value for "fill" attribute') ||
+        message.includes('DOM_Portal.html')) {
+      return;
+    }
+  }
+  originalWarn.apply(console, args);
+};
+
+console.log('✅ Enhanced ESM Test Setup Complete with Canvas Mocking');

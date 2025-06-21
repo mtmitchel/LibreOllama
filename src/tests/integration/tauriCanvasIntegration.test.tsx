@@ -7,7 +7,8 @@
  * KonvaCanvas component. The UI component is mocked to focus on testing
  * the data flow between the store and backend API.
  */
-import { describe, test, expect, beforeEach, jest, afterEach } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from '@testing-library/react';
@@ -17,34 +18,34 @@ import { canvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
 import { ElementId } from '@/features/canvas/types/enhanced.types';
 
 // Mock Tauri API
-jest.mock('@tauri-apps/api/core', () => ({
-  invoke: jest.fn()
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn()
 }));
 
-jest.mock('@tauri-apps/api/event', () => ({
-  listen: jest.fn(),
-  emit: jest.fn()
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: vi.fn(),
+  emit: vi.fn()
 }));
 
 // Import mocked functions after mocking
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 
-const mockInvoke = invoke as jest.MockedFunction<typeof invoke>;
-const mockListen = listen as jest.MockedFunction<typeof listen>;
-const mockEmit = emit as jest.MockedFunction<typeof emit>;
+const mockInvoke = invoke as vi.MockedFunction<typeof invoke>;
+const mockListen = listen as vi.MockedFunction<typeof listen>;
+const mockEmit = emit as vi.MockedFunction<typeof emit>;
 
 // Fix the mock setup
-mockListen.mockImplementation(() => Promise.resolve(jest.fn()));
+mockListen.mockImplementation(() => Promise.resolve(vi.fn()));
 
-jest.unmock('@/features/canvas/stores/canvasStore.enhanced');
+vi.unmock('@/features/canvas/stores/canvasStore.enhanced');
 
 describe('Tauri Canvas Integration - End to End', () => {
-  let mockUnlisten: jest.Mock = jest.fn(); // Initialize at top level to avoid undefined issues
+  let mockUnlisten: vi.Mock = vi.fn(); // Initialize at top level to avoid undefined issues
 
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Reset store to clean state - get the full state and call clearCanvas if it exists
     const state = canvasStore.getState();
@@ -55,7 +56,7 @@ describe('Tauri Canvas Integration - End to End', () => {
     }
     
     // Setup unlisten mock
-    mockUnlisten = jest.fn();
+    mockUnlisten = vi.fn();
     mockListen.mockResolvedValue(mockUnlisten);
   });
 
@@ -238,7 +239,7 @@ describe('Tauri Canvas Integration - End to End', () => {
     const store = canvasStore.getState();
 
     // Setup listener mock
-    const eventHandler = jest.fn();
+    const eventHandler = vi.fn();
     mockListen.mockImplementation((event: string, handler: any) => {
       if (event === 'canvas:collaborative-edit') {
         eventHandler.mockImplementation(handler);

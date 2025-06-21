@@ -1,19 +1,20 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Stage, Layer } from 'react-konva';
-import { jest } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
 import { CachedShape } from '@/features/canvas/shapes/CachedShape';
 import { createMockCanvasElement } from '@/tests/utils/testUtils';
 
 // Mock the hook dependencies
-jest.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({
+vi.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({
   useShapeCaching: () => ({
     nodeRef: { current: null },
     isCached: false,
     shouldCache: true,
-    applyCaching: jest.fn(),
-    clearCaching: jest.fn(),
-    refreshCache: jest.fn(),
+    applyCaching: vi.fn(),
+    clearCaching: vi.fn(),
+    refreshCache: vi.fn(),
     config: {
       enabled: true,
       forceCache: false,
@@ -47,7 +48,7 @@ describe('CachedShape', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });  describe('Rendering', () => {
     test('renders cached shape component', () => {
       const result = render(

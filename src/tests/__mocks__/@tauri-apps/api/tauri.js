@@ -1,7 +1,7 @@
 // Mock for @tauri-apps/api/tauri
-const { jest } = require('@jest/globals');
+import { vi } from 'vitest';
 
-export const invoke = jest.fn();
+export const invoke = vi.fn();
 
 // Helper to reset the mock between tests
 export const __resetInvokeMock = () => {

@@ -1,10 +1,10 @@
 // Mock for @tauri-apps/api/event
-const { jest } = require('@jest/globals');
+import { vi } from 'vitest';
 
 const listeners = new Map();
 
 // Mock the 'listen' function
-export const listen = jest.fn((event, handler) => {
+export const listen = vi.fn((event, handler) => {
   if (!listeners.has(event)) {
     listeners.set(event, new Set());
   }
@@ -22,7 +22,7 @@ export const listen = jest.fn((event, handler) => {
 });
 
 // Mock the 'once' function
-export const once = jest.fn((event, handler) => {
+export const once = vi.fn((event, handler) => {
   const wrappedHandler = (eventData) => {
     handler(eventData);
     // Auto-remove after first call
@@ -44,7 +44,7 @@ export const once = jest.fn((event, handler) => {
 });
 
 // Mock the 'emit' function
-export const emit = jest.fn((event, payload) => {
+export const emit = vi.fn((event, payload) => {
   return Promise.resolve();
 });
 

@@ -1,4 +1,4 @@
-import { describe, test, expect } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect
 
 // Simple test to check if basic Jest functionality works
 describe('Minimal Fix Test', () => {

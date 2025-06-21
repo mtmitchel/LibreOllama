@@ -1,5 +1,5 @@
 // Simple test to validate Jest setup
-import { describe, test, expect } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect
 
 describe('Simple Jest Test', () => {
   test('should pass basic assertion', () => {

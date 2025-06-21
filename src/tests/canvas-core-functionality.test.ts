@@ -1,4 +1,4 @@
-import { describe, test, expect } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect
 
 describe('Canvas Core Functionality', () => {
   describe('Element ID Generation', () => {

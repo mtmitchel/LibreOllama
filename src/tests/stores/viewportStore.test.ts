@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import Konva from 'konva';

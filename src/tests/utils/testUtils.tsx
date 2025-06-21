@@ -2,7 +2,7 @@ import { ReactElement } from 'react';
 import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { Stage, Layer } from 'react-konva';
 import type { 
   CanvasElement, 
@@ -201,16 +201,16 @@ export const createMockSection = (elementCount: number = 3): {
  */
 export const createMockKonvaEvent = (overrides: any = {}) => ({
   target: {
-    getStage: jest.fn(() => createMockStage()),
-    getLayer: jest.fn(),
-    getParent: jest.fn(),
-    x: jest.fn(() => 0),
-    y: jest.fn(() => 0),
+    getStage: vi.fn(() => createMockStage()),
+    getLayer: vi.fn(),
+    getParent: vi.fn(),
+    x: vi.fn(() => 0),
+    y: vi.fn(() => 0),
     ...overrides.target,
   },
   evt: {
-    preventDefault: jest.fn(),
-    stopPropagation: jest.fn(),
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
     clientX: 100,
     clientY: 100,
     shiftKey: false,
@@ -226,28 +226,28 @@ export const createMockKonvaEvent = (overrides: any = {}) => ({
  * Mock Konva stage
  */
 export const createMockStage = (overrides: any = {}) => ({
-  getPointerPosition: jest.fn(() => ({ x: 100, y: 100 })),
-  width: jest.fn(() => 800),
-  height: jest.fn(() => 600),
-  scale: jest.fn(() => ({ x: 1, y: 1 })),
-  position: jest.fn(() => ({ x: 0, y: 0 })),
-  find: jest.fn(() => []),
-  findOne: jest.fn(),
-  draw: jest.fn(),
-  batchDraw: jest.fn(),
-  on: jest.fn(),
-  off: jest.fn(),
-  fire: jest.fn(),
-  getAbsoluteTransform: jest.fn(() => ({
+  getPointerPosition: vi.fn(() => ({ x: 100, y: 100 })),
+  width: vi.fn(() => 800),
+  height: vi.fn(() => 600),
+  scale: vi.fn(() => ({ x: 1, y: 1 })),
+  position: vi.fn(() => ({ x: 0, y: 0 })),
+  find: vi.fn(() => []),
+  findOne: vi.fn(),
+  draw: vi.fn(),
+  batchDraw: vi.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+  fire: vi.fn(),
+  getAbsoluteTransform: vi.fn(() => ({
     copy: () => ({
       invert: () => ({
         point: (p: any) => p,
       }),
     }),
   })),
-  toJSON: jest.fn(() => '{}'),
-  toDataURL: jest.fn(() => 'data:image/png;base64,'),
-  destroy: jest.fn(),
+  toJSON: vi.fn(() => '{}'),
+  toDataURL: vi.fn(() => 'data:image/png;base64,'),
+  destroy: vi.fn(),
   ...overrides,
 });
 
@@ -261,16 +261,16 @@ export const createMockCanvasStore = (overrides: any = {}) => ({
   panZoomState: { scale: 1, position: { x: 0, y: 0 } },
   
   // Actions
-  addElement: jest.fn(),
-  updateElement: jest.fn(),
-  deleteElement: jest.fn(),
-  selectElement: jest.fn(),
-  clearSelection: jest.fn(),
-  setSelectedTool: jest.fn(),
+  addElement: vi.fn(),
+  updateElement: vi.fn(),
+  deleteElement: vi.fn(),
+  selectElement: vi.fn(),
+  clearSelection: vi.fn(),
+  setSelectedTool: vi.fn(),
   
   // History
-  undo: jest.fn(),
-  redo: jest.fn(),
+  undo: vi.fn(),
+  redo: vi.fn(),
   canUndo: false,
   canRedo: false,
   

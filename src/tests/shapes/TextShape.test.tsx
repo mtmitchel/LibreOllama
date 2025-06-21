@@ -1,4 +1,5 @@
-import { describe, test, expect, beforeEach, jest, afterEach } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
 import React from 'react';
 import { screen, fireEvent } from '@testing-library/react';
 import { act } from '@testing-library/react';
@@ -11,15 +12,15 @@ const mockStore = {
   elements: new Map(),
   selectedElementIds: new Set<string>(),
   editingTextId: null as string | null, // Allow string or null
-  selectElement: jest.fn(),
-  updateElement: jest.fn(),
-  setEditingTextId: jest.fn(),
+  selectElement: vi.fn(),
+  updateElement: vi.fn(),
+  setEditingTextId: vi.fn(),
   selectedTool: 'select',
 };
 
 // Mock the store with proper factory pattern
-jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: jest.fn((selector) => {
+vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
+  useCanvasStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockStore);
     }
@@ -28,21 +29,21 @@ jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
 }));
 
 import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
-const mockUseCanvasStore = useCanvasStore as jest.MockedFunction<typeof useCanvasStore>;
+const mockUseCanvasStore = useCanvasStore as vi.MockedFunction<typeof useCanvasStore>;
 
 describe('TextShape', () => {
   let mockElement: CanvasElement;
-  let updateElementMock: jest.Mock;
-  let startTextEditMock: jest.Mock; // Add the missing declaration
-  let setEditingTextIdMock: jest.Mock; // Add the missing declaration
-  let selectElementMock: jest.Mock; // Add the missing declaration
+  let updateElementMock: vi.Mock;
+  let startTextEditMock: vi.Mock; // Add the missing declaration
+  let setEditingTextIdMock: vi.Mock; // Add the missing declaration
+  let selectElementMock: vi.Mock; // Add the missing declaration
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    updateElementMock = jest.fn();
-    startTextEditMock = jest.fn(); // Initialize the mock
-    setEditingTextIdMock = jest.fn(); // Initialize the mock
-    selectElementMock = jest.fn(); // Initialize the mock
+    vi.clearAllMocks();
+    updateElementMock = vi.fn();
+    startTextEditMock = vi.fn(); // Initialize the mock
+    setEditingTextIdMock = vi.fn(); // Initialize the mock
+    selectElementMock = vi.fn(); // Initialize the mock
     
     mockElement = {
       id: 'text-1',
@@ -72,7 +73,7 @@ describe('TextShape', () => {
 
   afterEach(() => {
     act(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
   });
 
@@ -83,8 +84,8 @@ describe('TextShape', () => {
           element={mockElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -105,8 +106,8 @@ describe('TextShape', () => {
           element={multiLineElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -118,7 +119,7 @@ describe('TextShape', () => {
 
   describe('Text Editing', () => {
     test('should enter edit mode on double click', () => {
-      const handleStartEdit = jest.fn((elementId: string) => {
+      const handleStartEdit = vi.fn((elementId: string) => {
         mockStore.editingTextId = elementId;
         setEditingTextIdMock(elementId);
         startTextEditMock(elementId);
@@ -129,8 +130,8 @@ describe('TextShape', () => {
           element={mockElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={handleStartEdit}
         />
@@ -155,8 +156,8 @@ describe('TextShape', () => {
           element={mockElement}
           isSelected={true}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -182,8 +183,8 @@ describe('TextShape', () => {
           element={emptyTextElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -209,8 +210,8 @@ describe('TextShape', () => {
           element={styledElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -227,8 +228,8 @@ describe('TextShape', () => {
           element={mockElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -249,8 +250,8 @@ describe('TextShape', () => {
           element={updatedElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -267,8 +268,8 @@ describe('TextShape', () => {
           element={mockElement}
           isSelected={true}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -280,14 +281,14 @@ describe('TextShape', () => {
     });
 
     test('should be draggable when select tool is active', () => {
-      const handleDragEnd = jest.fn();
+      const handleDragEnd = vi.fn();
 
       renderWithKonva(
         <EditableNode
           element={mockElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
+          onElementClick={vi.fn()}
           onElementDragEnd={handleDragEnd}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
@@ -319,8 +320,8 @@ describe('TextShape', () => {
           element={specialTextElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -342,8 +343,8 @@ describe('TextShape', () => {
           element={longTextElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -364,8 +365,8 @@ describe('TextShape', () => {
           element={rtlElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -382,8 +383,8 @@ describe('TextShape', () => {
           element={mockElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -404,8 +405,8 @@ describe('TextShape', () => {
               element={updatedElement}
               isSelected={false}
               selectedTool="select"
-              onElementClick={jest.fn()}
-              onElementDragEnd={jest.fn()}
+              onElementClick={vi.fn()}
+              onElementDragEnd={vi.fn()}
               onElementUpdate={updateElementMock}
               onStartTextEdit={startTextEditMock}
             />
@@ -423,7 +424,7 @@ describe('TextShape', () => {
 
   describe('Integration with Store', () => {
     test('should integrate with text editing store state', () => {
-      const handleElementClick = jest.fn((e: any, element: CanvasElement) => {
+      const handleElementClick = vi.fn((e: any, element: CanvasElement) => {
         selectElementMock(element.id);
       });
 
@@ -433,7 +434,7 @@ describe('TextShape', () => {
           isSelected={false}
           selectedTool="select"
           onElementClick={handleElementClick}
-          onElementDragEnd={jest.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />
@@ -456,8 +457,8 @@ describe('TextShape', () => {
           element={mockElement}
           isSelected={false}
           selectedTool="select"
-          onElementClick={jest.fn()}
-          onElementDragEnd={jest.fn()}
+          onElementClick={vi.fn()}
+          onElementDragEnd={vi.fn()}
           onElementUpdate={updateElementMock}
           onStartTextEdit={startTextEditMock}
         />

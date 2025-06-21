@@ -1,7 +1,6 @@
-import { jest } from '@jest/globals';
-jest.unmock('@/features/canvas/stores/canvasStore.enhanced');
-
-import { describe, test, expect, beforeEach } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
+vi.unmock('@/features/canvas/stores/canvasStore.enhanced');
 import { act } from '@testing-library/react';
 import { canvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
 import { ElementId, CanvasElement } from '@/features/canvas/types/enhanced.types';

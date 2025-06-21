@@ -1,11 +1,10 @@
-import { describe, test, expect, beforeEach, jest, afterEach } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
 import React from 'react';
 import { screen } from '@testing-library/react';
 import { act } from '@testing-library/react';
 // Import jest-dom for extra matchers
 import '@testing-library/jest-dom';
-// Extend expect with jest-dom matchers
-import { expect as expectExtended } from '@jest/globals';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import { CanvasLayerManager } from '@/features/canvas/layers/CanvasLayerManager';
 import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
@@ -22,15 +21,15 @@ const mockStore = {
   zoom: 1,
   pan: { x: 0, y: 0 },
   // Add other store methods as needed
-  reset: jest.fn(),
-  setSelectedTool: jest.fn(),
-  updateElement: jest.fn(),
-  deleteElement: jest.fn(),
-  selectElement: jest.fn(),
+  reset: vi.fn(),
+  setSelectedTool: vi.fn(),
+  updateElement: vi.fn(),
+  deleteElement: vi.fn(),
+  selectElement: vi.fn(),
 };
 
-jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: jest.fn((selector) => {
+vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
+  useCanvasStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockStore);
     }
@@ -39,8 +38,8 @@ jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
 }));
 
 // Mock viewport culling hook
-jest.mock('@/features/canvas/hooks/useViewportCulling', () => ({
-  useViewportCulling: jest.fn(() => ({
+vi.mock('@/features/canvas/hooks/useViewportCulling', () => ({
+  useViewportCulling: vi.fn(() => ({
     visibleElements: [],
     cullingStats: { 
       totalElements: 0, 
@@ -51,7 +50,7 @@ jest.mock('@/features/canvas/hooks/useViewportCulling', () => ({
 }));
 
 // Mock feature flags hook BEFORE any imports - using correct paths
-jest.mock('@/features/canvas/hooks/useFeatureFlags', () => {
+vi.mock('@/features/canvas/hooks/useFeatureFlags', () => {
   const mockFlags = {
     'grouped-section-rendering': false,
     'centralized-transformer': false,
@@ -60,14 +59,14 @@ jest.mock('@/features/canvas/hooks/useFeatureFlags', () => {
   };
   
   return {
-    useFeatureFlag: jest.fn().mockReturnValue(false),
-    useFeatureFlags: jest.fn().mockReturnValue(mockFlags),
+    useFeatureFlag: vi.fn().mockReturnValue(false),
+    useFeatureFlags: vi.fn().mockReturnValue(mockFlags),
     __esModule: true,
   };
 });
 
 // Mock the relative path as it appears in CanvasLayerManager
-jest.mock('../../features/canvas/hooks/useFeatureFlags', () => {
+vi.mock('../../features/canvas/hooks/useFeatureFlags', () => {
   const mockFlags = {
     'grouped-section-rendering': false,
     'centralized-transformer': false,
@@ -76,52 +75,52 @@ jest.mock('../../features/canvas/hooks/useFeatureFlags', () => {
   };
   
   return {
-    useFeatureFlag: jest.fn().mockReturnValue(false),
-    useFeatureFlags: jest.fn().mockReturnValue(mockFlags),
+    useFeatureFlag: vi.fn().mockReturnValue(false),
+    useFeatureFlags: vi.fn().mockReturnValue(mockFlags),
     __esModule: true,
   };
 });
 
 // Mock all layer components to isolate CanvasLayerManager logic
-jest.mock('@/features/canvas/layers/BackgroundLayer', () => ({
+vi.mock('@/features/canvas/layers/BackgroundLayer', () => ({
   BackgroundLayer: () => <div data-testid="background-layer">Background Layer</div>
 }));
 
-jest.mock('@/features/canvas/layers/MainLayer', () => ({
+vi.mock('@/features/canvas/layers/MainLayer', () => ({
   MainLayer: () => <div data-testid="main-layer">Main Layer</div>
 }));
 
-jest.mock('@/features/canvas/layers/ConnectorLayer', () => ({
+vi.mock('@/features/canvas/layers/ConnectorLayer', () => ({
   ConnectorLayer: () => <div data-testid="connector-layer">Connector Layer</div>
 }));
 
-jest.mock('@/features/canvas/layers/UILayer', () => ({
+vi.mock('@/features/canvas/layers/UILayer', () => ({
   UILayer: () => <div data-testid="ui-layer">UI Layer</div>
 }));
 
-jest.mock('@/features/canvas/components/GroupedSectionRenderer2', () => ({
+vi.mock('@/features/canvas/components/GroupedSectionRenderer2', () => ({
   GroupedSectionRenderer: () => <div data-testid="grouped-section-renderer">Grouped Section Renderer</div>
 }));
 
-jest.mock('@/features/canvas/components/TransformerManager', () => ({
+vi.mock('@/features/canvas/components/TransformerManager', () => ({
   TransformerManager: () => <div data-testid="transformer-manager">Transformer Manager</div>
 }));
 
-jest.mock('@/features/canvas/components/drawing/DrawingContainment', () => ({
+vi.mock('@/features/canvas/components/drawing/DrawingContainment', () => ({
   DrawingContainment: () => <div data-testid="drawing-containment">Drawing Containment</div>
 }));
 
 describe('CanvasLayerManager', () => {
-  const onElementClickMock = jest.fn();
-  const onElementDragEndMock = jest.fn();
-  const onElementUpdateMock = jest.fn();
-  const onStartTextEditMock = jest.fn();
+  const onElementClickMock = vi.fn();
+  const onElementDragEndMock = vi.fn();
+  const onElementUpdateMock = vi.fn();
+  const onStartTextEditMock = vi.fn();
   
   let mockElements: Map<ElementId, CanvasElement>;
   let mockStageRef: React.RefObject<any>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Create mock elements
     mockElements = new Map([
@@ -163,14 +162,14 @@ describe('CanvasLayerManager', () => {
 
     mockStageRef = { 
       current: {
-        getPointerPosition: jest.fn(() => ({ x: 0, y: 0 })),
-        width: jest.fn(() => 800),
-        height: jest.fn(() => 600),
-        getAbsolutePosition: jest.fn(() => ({ x: 0, y: 0 })),
-        getTransform: jest.fn(() => ({ m: [1, 0, 0, 1, 0, 0] })),
-        batchDraw: jest.fn(),
-        draw: jest.fn(),
-        container: jest.fn(() => ({
+        getPointerPosition: vi.fn(() => ({ x: 0, y: 0 })),
+        width: vi.fn(() => 800),
+        height: vi.fn(() => 600),
+        getAbsolutePosition: vi.fn(() => ({ x: 0, y: 0 })),
+        getTransform: vi.fn(() => ({ m: [1, 0, 0, 1, 0, 0] })),
+        batchDraw: vi.fn(),
+        draw: vi.fn(),
+        container: vi.fn(() => ({
           getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
         }))
       }
@@ -192,7 +191,7 @@ describe('CanvasLayerManager', () => {
 
   afterEach(() => {
     act(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
   });
 
@@ -200,14 +199,14 @@ describe('CanvasLayerManager', () => {
     test('should render all layers with correct hierarchy', () => {
       // Create a proper mock stage object with methods the component might use
       const mockStage = {
-        getPointerPosition: jest.fn(() => ({ x: 0, y: 0 })),
-        width: jest.fn(() => 800),
-        height: jest.fn(() => 600),
-        getAbsolutePosition: jest.fn(() => ({ x: 0, y: 0 })),
-        getTransform: jest.fn(() => ({ m: [1, 0, 0, 1, 0, 0] })),
-        batchDraw: jest.fn(),
-        draw: jest.fn(),
-        container: jest.fn(() => ({
+        getPointerPosition: vi.fn(() => ({ x: 0, y: 0 })),
+        width: vi.fn(() => 800),
+        height: vi.fn(() => 600),
+        getAbsolutePosition: vi.fn(() => ({ x: 0, y: 0 })),
+        getTransform: vi.fn(() => ({ m: [1, 0, 0, 1, 0, 0] })),
+        batchDraw: vi.fn(),
+        draw: vi.fn(),
+        container: vi.fn(() => ({
           getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
         }))
       };
@@ -476,7 +475,7 @@ describe('CanvasLayerManager', () => {
 
     test('should recover from rendering errors', () => {
       // Mock console.error to suppress error output
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // Create an element that might cause rendering issues
       const problematicElements = new Map<ElementId, CanvasElement>([
@@ -512,8 +511,8 @@ describe('CanvasLayerManager', () => {
 
   describe('Layer Interactions', () => {
     test('should pass through element interactions correctly', () => {
-      const handleClick = jest.fn();
-      const handleDragEnd = jest.fn();
+      const handleClick = vi.fn();
+      const handleDragEnd = vi.fn();
 
       renderWithKonva(
         <CanvasLayerManager

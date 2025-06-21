@@ -1,25 +1,26 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
-import * as CanvasElementsStore from '@/features/canvas/stores/slices/canvasElementsStore';
-import { createMockCanvasElement } from '@/tests/utils/testUtils';
-import {
-  ElementId,
-  RectangleElement,
-} from '@/features/canvas/types/enhanced.types';
+// src/tests/stores/canvasElementsStore.test.ts
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 
-// Note: ESM doesn't support jest.unmock() - modules are unmocked by default
+// Mock canvas module FIRST, before any other imports
+vi.mock('canvas', () => ({
+  createCanvas: vi.fn(() => ({
+    getContext: vi.fn(() => ({})),
+    toDataURL: vi.fn(() => 'data:image/png;base64,'),
+    width: 800,
+    height: 600,
+  })),
+}));
 
-const createTestStore = () =>
-  create<CanvasElementsStore.CanvasElementsState>()(
-    immer(CanvasElementsStore.createCanvasElementsStore),
-  );
+import { createMockCanvasElement } from '../utils/testUtils';
+import { RectangleElement, CircleElement } from '../../features/canvas/types/enhanced.types';
 
-describe('canvasElementsStore', () => {
-  let store: ReturnType<typeof createTestStore>;
+describe('canvasElementsStore (legacy)', () => {
+  let store: any;
 
-  beforeEach(() => {
-    store = createTestStore();
+  beforeEach(async () => {
+    // Use dynamic import to avoid canvas module loading issues
+    const { createCanvasElementsStore } = await import('../../features/canvas/stores/slices/canvasElementsStore');
+    store = createCanvasElementsStore();
   });
 
   describe('Element Management', () => {
@@ -33,9 +34,8 @@ describe('canvasElementsStore', () => {
       store.getState().addElement(element);
 
       const state = store.getState();
-      expect(state.elements.get(element.id)).toEqual(
-        expect.objectContaining(element),
-      );
+      expect(state.elements.has(element.id)).toBe(true);
+      expect(state.elements.get(element.id)).toEqual(element);
     });
 
     test('updates element properties', () => {
@@ -48,39 +48,32 @@ describe('canvasElementsStore', () => {
       store.getState().updateElement(element.id, updates);
 
       const updatedElement = store.getState().elements.get(element.id) as RectangleElement;
-      expect(updatedElement).toBeDefined();
       expect(updatedElement.x).toBe(200);
       expect(updatedElement.y).toBe(300);
       expect(updatedElement.fill).toBe('#00ff00');
     });
 
     test('updates multiple elements in batch', () => {
-      const element1 = createMockCanvasElement({ id: ElementId('elem1'), type: 'rectangle' });
-      const element2 = createMockCanvasElement({ id: ElementId('elem2'), type: 'circle' });
+      const element1 = createMockCanvasElement({ id: 'elem1', type: 'rectangle' });
+      const element2 = createMockCanvasElement({ id: 'elem2', type: 'circle' });
 
       store.getState().addElement(element1);
       store.getState().addElement(element2);
 
-      const updates = {
-        [ElementId('elem1')]: { x: 100 },
-        [ElementId('elem2')]: { radius: 75 },
-      };
+      const updates = [
+        { id: element1.id, updates: { x: 100, y: 200 } },
+        { id: element2.id, updates: { x: 300, y: 400 } }
+      ];
 
-      store.getState().updateMultipleElements(updates as any);
+      store.getState().updateElements(updates);
 
-      const state = store.getState();
-      const updatedElement1 = state.elements.get(ElementId('elem1'));
-      const updatedElement2 = state.elements.get(ElementId('elem2'));
+      const updatedElement1 = store.getState().elements.get(element1.id) as RectangleElement;
+      const updatedElement2 = store.getState().elements.get(element2.id) as CircleElement;
 
-      expect(updatedElement1).toBeDefined();
-      expect(updatedElement2).toBeDefined();
-
-      if (updatedElement1) {
-        expect(updatedElement1.x).toBe(100);
-      }
-      if (updatedElement2 && 'radius' in updatedElement2) {
-        expect(updatedElement2.radius).toBe(75);
-      }
+      expect(updatedElement1.x).toBe(100);
+      expect(updatedElement1.y).toBe(200);
+      expect(updatedElement2.x).toBe(300);
+      expect(updatedElement2.y).toBe(400);
     });
 
     test('deletes an element', () => {
@@ -93,13 +86,15 @@ describe('canvasElementsStore', () => {
     });
 
     test('deletes multiple elements', () => {
-      const element1 = createMockCanvasElement({ id: ElementId('elem1') });
-      const element2 = createMockCanvasElement({ id: ElementId('elem2') });
+      const element1 = createMockCanvasElement({ id: 'elem1' });
+      const element2 = createMockCanvasElement({ id: 'elem2' });
       store.getState().addElement(element1);
       store.getState().addElement(element2);
 
-      store.getState().deleteElements([ElementId('elem1'), ElementId('elem2')]);
-      expect(store.getState().elements.size).toBe(0);
+      store.getState().deleteElements([element1.id, element2.id]);
+
+      expect(store.getState().elements.has(element1.id)).toBe(false);
+      expect(store.getState().elements.has(element2.id)).toBe(false);
     });
   });
 });

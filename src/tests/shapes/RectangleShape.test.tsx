@@ -1,4 +1,5 @@
-import { describe, test, expect, beforeEach, jest, afterEach } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
 import React from 'react';
 import { screen, fireEvent } from '@testing-library/react';
 import { act } from '@testing-library/react';
@@ -11,17 +12,17 @@ import { CanvasElement, ElementId } from '@/features/canvas/types/enhanced.types
 const mockStore = {
   elements: new Map(),
   selectedElementIds: new Set<string>(),
-  selectElement: jest.fn(),
+  selectElement: vi.fn(),
   selectedTool: 'select',
   // Add other store methods as needed
-  reset: jest.fn(),
-  setSelectedTool: jest.fn(),
-  updateElement: jest.fn(),
-  deleteElement: jest.fn(),
+  reset: vi.fn(),
+  setSelectedTool: vi.fn(),
+  updateElement: vi.fn(),
+  deleteElement: vi.fn(),
 };
 
-jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: jest.fn((selector) => {
+vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
+  useCanvasStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockStore);
     }
@@ -45,14 +46,14 @@ const mockElement: CanvasElement = {
 };
 
 describe('RectangleShape', () => {
-  const onElementClickMock = jest.fn();
-  const onElementDragEndMock = jest.fn();
-  const onElementUpdateMock = jest.fn();
-  const onStartTextEditMock = jest.fn();
+  const onElementClickMock = vi.fn();
+  const onElementDragEndMock = vi.fn();
+  const onElementUpdateMock = vi.fn();
+  const onStartTextEditMock = vi.fn();
 
   beforeEach(() => {
     // Reset all mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Reset store state
     mockStore.elements.clear();
@@ -64,7 +65,7 @@ describe('RectangleShape', () => {
   afterEach(() => {
     // Reset store state after each test to ensure isolation
     act(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
   });
 
@@ -92,7 +93,7 @@ describe('RectangleShape', () => {
   describe('Interactions', () => {
     test('should trigger selectElement action when rectangle is clicked', () => {
       // Setup the click handler to call selectElement
-      const handleClick = jest.fn((e, element: CanvasElement) => {
+      const handleClick = vi.fn((e, element: CanvasElement) => {
         mockStore.selectElement(element.id);
       });
 
@@ -118,7 +119,7 @@ describe('RectangleShape', () => {
         target: {},
         currentTarget: {},
         evt: { clientX: 0, clientY: 0 },
-        cancel: jest.fn(),
+        cancel: vi.fn(),
         cancelBubble: false
       } as any;
       

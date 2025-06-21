@@ -1,21 +1,22 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Stage, Layer } from 'react-konva';
-import { jest } from '@jest/globals';
+// Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
+import { vi } from 'vitest';
 
 // Mock the dependencies that RectangleShape needs
-jest.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({
+vi.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({
   useShapeCaching: () => ({
     nodeRef: { current: null },
     isCached: false,
     shouldCache: false,
-    applyCaching: jest.fn(),
-    clearCaching: jest.fn(),
-    refreshCache: jest.fn(),
+    applyCaching: vi.fn(),
+    clearCaching: vi.fn(),
+    refreshCache: vi.fn(),
   }),
 }));
 
-jest.mock('@/styles/designSystem', () => ({
+vi.mock('@/styles/designSystem', () => ({
   designSystem: {
     colors: {
       primary: { 500: '#000000' },
@@ -56,8 +57,8 @@ describe('RectangleShape Component Tests', () => {
       x: mockElement.x,
       y: mockElement.y,
     },
-    onUpdate: jest.fn(),
-    onStartTextEdit: jest.fn(),
+    onUpdate: vi.fn(),
+    onStartTextEdit: vi.fn(),
   };
 
   // Helper component to wrap RectangleShape in Konva context

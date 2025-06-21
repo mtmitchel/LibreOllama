@@ -10,12 +10,13 @@
     "tauri": "tauri",
     "tauri:dev": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri dev",
     "tauri:build": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js",
-    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js --watch",
-    "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js --coverage",
-    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js --testPathPattern=integration",
-    "test:phase1": "node phase1-test-runner.js",
-    "test:canvas": "tsc src/tests/phase1-test-suite.ts --outDir dist/tests && node dist/tests/phase1-test-suite.js"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run src/tests/integration",
+    "test:canvas": "vitest run src/tests/shapes src/tests/components src/tests/layers",
+    "test:stores": "vitest run src/tests/stores"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
@@ -48,16 +49,19 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.21",
-    "canvas": "^3.1.1",
     "jest": "^30.0.2",
     "jest-canvas-mock": "^2.5.2",
     "jest-environment-jsdom": "^30.0.2",
+    "jest-transform-stub": "^2.0.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^3.2.4"
   }
 }

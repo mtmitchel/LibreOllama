@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:clear:*)",
+      "Bash(npm test:*)",
+      "Bash(npx jest:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:stores:*)",
+      "Bash(find:*)",
+      "Bash(sed:*)"
+    ],
+    "deny": []
+  }
+}
