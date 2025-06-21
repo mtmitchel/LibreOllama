@@ -1,4 +1,6 @@
 // Main export for @tauri-apps/api
+const { jest } = require('@jest/globals');
+
 export * from './tauri';
 export * from './event';
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Stage, Layer } from 'react-konva';
+import { jest } from '@jest/globals';
 
 // Mock the dependencies that RectangleShape needs
 jest.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({

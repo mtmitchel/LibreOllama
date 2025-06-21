@@ -7,7 +7,7 @@ import {
 } from '../../features/canvas/stores/slices/selectionStore';
 import { ElementId } from '../../features/canvas/types/enhanced.types';
 
-jest.unmock('../../features/canvas/stores/slices/selectionStore');
+// Note: ESM doesn't support jest.unmock() - modules are unmocked by default
 
 const createTestStore = () =>
   create<SelectionState>()(immer(createSelectionStore));

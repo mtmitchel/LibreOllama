@@ -285,6 +285,20 @@ jest.mock('react-konva-utils', () => ({
   mockPerformanceNow: jest.fn(() => Date.now()),
 };
 
+// Mock import.meta.env
+Object.defineProperty(global, 'import', {
+  value: {
+    meta: {
+      env: {
+        DEV: false,
+        PROD: true,
+        MODE: 'test',
+        VITE_APP_TITLE: 'LibreOllama Test',
+      }
+    }
+  }
+});
+
 // Mock performance API
 Object.defineProperty(window, 'performance', {
   value: {

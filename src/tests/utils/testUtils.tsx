@@ -2,6 +2,8 @@ import { ReactElement } from 'react';
 import { render, RenderOptions, RenderResult } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { jest } from '@jest/globals';
+import { Stage, Layer } from 'react-konva';
 import type { 
   CanvasElement, 
   ElementId
@@ -17,7 +19,19 @@ export interface TestEnvironment {
 export interface TestRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   initialState?: any;
   withProviders?: boolean;
+  withKonva?: boolean;
 }
+
+/**
+ * Wrapper for testing Konva components
+ */
+const KonvaWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Stage width={800} height={600}>
+    <Layer>
+      {children}
+    </Layer>
+  </Stage>
+);
 
 /**
  * Setup test environment with user events and providers
@@ -26,10 +40,13 @@ export const setupTestEnvironment = (): TestEnvironment => {
   const user = userEvent.setup();
   
   const testRender = async (ui: ReactElement, options: TestRenderOptions = {}) => {
-    const { withProviders = true, ...renderOptions } = options;
+    const { withProviders = true, withKonva = false, ...renderOptions } = options;
+    
+    const wrapper = withKonva ? KonvaWrapper : undefined;
     
     return act(async () => {
       return render(ui, {
+        wrapper,
         ...renderOptions,
       });
     });
@@ -42,6 +59,20 @@ export const setupTestEnvironment = (): TestEnvironment => {
       // Custom cleanup logic if needed
     },
   };
+};
+
+/**
+ * Render Konva components with Stage and Layer wrapper
+ */
+export const renderKonva = (ui: ReactElement, options: Omit<RenderOptions, 'wrapper'> = {}) => {
+  return render(
+    <Stage width={800} height={600}>
+      <Layer>
+        {ui}
+      </Layer>
+    </Stage>,
+    options
+  );
 };
 
 /**

@@ -1,4 +1,6 @@
 // Mock for @tauri-apps/api/event
+const { jest } = require('@jest/globals');
+
 const listeners = new Map();
 
 // Mock the 'listen' function

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import { screen } from '@testing-library/react';
 import { performanceTestUtils, setupTestEnvironment, createMockCanvasElement } from '../utils/testUtils';
 

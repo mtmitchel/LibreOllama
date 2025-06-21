@@ -8,7 +8,7 @@ import {
   RectangleElement,
 } from '@/features/canvas/types/enhanced.types';
 
-jest.unmock('@/features/canvas/stores/slices/canvasElementsStore');
+// Note: ESM doesn't support jest.unmock() - modules are unmocked by default
 
 const createTestStore = () =>
   create<CanvasElementsStore.CanvasElementsState>()(

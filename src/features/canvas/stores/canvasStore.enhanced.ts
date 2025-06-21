@@ -19,13 +19,13 @@ import { CoordinateService } from '../utils/coordinateService';
 
 
 // Import store slices with namespace imports for consistency across environments
-import * as CanvasElementsStore from './slices/canvasElementsStore';
-import * as SectionStore from './slices/sectionStore';
-import * as TextEditingStore from './slices/textEditingStore';
-import * as ViewportStore from './slices/viewportStore';
-import * as CanvasHistoryStore from './slices/canvasHistoryStore';
-import * as SelectionStore from './slices/selectionStore';
-import * as CanvasUIStore from './slices/canvasUIStore';
+import * as CanvasElementsStore from '@/features/canvas/stores/slices/canvasElementsStore';
+import * as SectionStore from '@/features/canvas/stores/slices/sectionStore';
+import * as TextEditingStore from '@/features/canvas/stores/slices/textEditingStore';
+import * as ViewportStore from '@/features/canvas/stores/slices/viewportStore';
+import * as CanvasHistoryStore from '@/features/canvas/stores/slices/canvasHistoryStore';
+import * as SelectionStore from '@/features/canvas/stores/slices/selectionStore';
+import * as CanvasUIStore from '@/features/canvas/stores/slices/canvasUIStore';
 
 import { ElementId, SectionId } from '../types/enhanced.types';
 // import { safeMapGet, toElementId, toSectionId } from '../types/compatibility';
@@ -48,13 +48,14 @@ export interface CanvasStoreState extends
   convertElementToRelativeCoordinates: (elementId: ElementId, sectionId: SectionId) => void;
 }
 
-// Create the enhanced store with cross-slice operations
-export const useCanvasStore = create<CanvasStoreState>()(
-  subscribeWithSelector(
-    immer(
-      (set, get, api) => {
-        // Create each slice
-        const elementsSlice = CanvasElementsStore.createCanvasElementsStore(set as any, get as any, api as any);
+// Store factory function for lazy initialization
+const createEnhancedCanvasStore = () => {
+  return create<CanvasStoreState>()(
+    subscribeWithSelector(
+      immer(
+        (set, get, api) => {
+          // Create each slice
+          const elementsSlice = CanvasElementsStore.createCanvasElementsStore(set as any, get as any, api as any);
         const sectionSlice = SectionStore.createSectionStore(set as any, get as any, api as any);
         const textEditingSlice = TextEditingStore.createTextEditingStore(set as any, get as any, api as any);
         const selectionSlice = SelectionStore.createSelectionStore(set as any, get as any, api as any);
@@ -184,10 +185,26 @@ export const useCanvasStore = create<CanvasStoreState>()(
             });
           },
         };
-      }
+        }
+      )
     )
-  )
-);
+  );
+};
+
+// Lazy initialization to avoid module loading issues
+let canvasStore: ReturnType<typeof createEnhancedCanvasStore> | null = null;
+
+const getCanvasStore = () => {
+  if (!canvasStore) {
+    canvasStore = createEnhancedCanvasStore();
+  }
+  return canvasStore;
+};
+
+// Main store hook
+export const useCanvasStore = <T>(selector: (state: CanvasStoreState) => T) => {
+  return getCanvasStore()(selector);
+};
 
 // Export granular, memoized selectors for performance (as per [LO-Refactor] guidelines)
 export const useCanvasElements = () => useCanvasStore(state => ({

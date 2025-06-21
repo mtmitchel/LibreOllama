@@ -76,10 +76,11 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
   clip: jest.fn(),
 });
 
-HTMLCanvasElement.prototype.toDataURL = jest.fn(() => '');
+HTMLCanvasElement.prototype.toDataURL = vi.fn(() => '');
 
-// Mock Konva
-jest.mock('konva', () => ({
+// Note: ESM modules don't support jest.mock in setup files
+// Individual test files should use vi.mock() or jest.unstable_mockModule()
+// for proper ESM module mocking as recommended in the testing guide
   Stage: jest.fn().mockImplementation(() => ({
     container: jest.fn(() => document.createElement('div')),
     getPointerPosition: jest.fn(() => ({ x: 100, y: 100 })),

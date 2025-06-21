@@ -1,4 +1,6 @@
 // Mock for @tauri-apps/api/tauri
+const { jest } = require('@jest/globals');
+
 export const invoke = jest.fn();
 
 // Helper to reset the mock between tests

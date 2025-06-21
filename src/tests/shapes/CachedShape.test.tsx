@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { Stage, Layer } from 'react-konva';
+import { jest } from '@jest/globals';
 import { CachedShape } from '@/features/canvas/shapes/CachedShape';
 import { createMockCanvasElement } from '@/tests/utils/testUtils';
 

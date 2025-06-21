@@ -5,20 +5,12 @@ export default {
   
   // File extensions to process
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  
-  // Transform files with these extensions
+    // Transform files with these extensions - Minimal for ESM
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       useESM: true,
-      tsconfig: 'tsconfig.jest.json' // Correctly point to the Jest-specific tsconfig
-    }],
-    '^.+\\.(js|jsx)$': ['babel-jest', {
-      presets: [
-        ['@babel/preset-env', { 
-          targets: { node: 'current' }
-        }],
-        ['@babel/preset-react', { runtime: 'automatic' }]
-      ]
+      tsconfig: 'tsconfig.jest.json',
+      isolatedModules: true // Faster compilation
     }]
   },
   
@@ -27,9 +19,8 @@ export default {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  
-  // Setup files
-  setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts', '@testing-library/jest-dom'],
+    // Setup files
+  setupFilesAfterEnv: ['<rootDir>/src/tests/setup-new.ts', '@testing-library/jest-dom'],
   
   // Test patterns
   testMatch: [

@@ -6,9 +6,6 @@
  */
 
 import { StateCreator } from 'zustand';
-import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
 import type { CanvasElement, SectionElement } from '../../types/enhanced.types';
 import { ElementId, SectionId } from '../../types/enhanced.types';
@@ -1035,28 +1032,5 @@ export const createCanvasElementsStore: StateCreator<
   },
 });
 
-// Create individual store hook for direct component usage
-export const useCanvasElementsStore = create<CanvasElementsState>()(
-  subscribeWithSelector(
-    immer(createCanvasElementsStore)
-  )
-);
-
-// Export store selectors for optimized subscriptions
-export const useCanvasElements = () => useCanvasElementsStore((state) => state.elements);
-export const useElementOrder = () => useCanvasElementsStore((state) => state.elementOrder);
-export const useAddElement = () => useCanvasElementsStore((state) => state.addElement);
-export const useUpdateElement = () => useCanvasElementsStore((state) => state.updateElement);
-export const useDeleteElement = () => useCanvasElementsStore((state) => state.deleteElement);
-export const useGetElementById = () => useCanvasElementsStore((state) => state.getElementById);
-export const useGetAllElements = () => useCanvasElementsStore((state) => state.getAllElements);
-
-// Table operation selectors
-export const useUpdateTableCell = () => useCanvasElementsStore((state) => state.updateTableCell);
-export const useAddTableRow = () => useCanvasElementsStore((state) => state.addTableRow);
-export const useAddTableColumn = () => useCanvasElementsStore((state) => state.addTableColumn);
-export const useRemoveTableRow = () => useCanvasElementsStore((state) => state.removeTableRow);
-export const useRemoveTableColumn = () => useCanvasElementsStore((state) => state.removeTableColumn);
-export const useResizeTableRow = () => useCanvasElementsStore((state) => state.resizeTableRow);
-export const useResizeTableColumn = () => useCanvasElementsStore((state) => state.resizeTableColumn);
-export const useResizeTable = () => useCanvasElementsStore((state) => state.resizeTable);
+// Note: Store instance and selectors are created in the enhanced store
+// This slice only exports the store creator function to avoid namespace import conflicts
