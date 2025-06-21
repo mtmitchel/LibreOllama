@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
-import { screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { CircleShape } from '../../features/canvas/shapes/CircleShape';
 import { createMockCanvasElement, renderKonva } from '../utils/testUtils';
 

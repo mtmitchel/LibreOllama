@@ -1,14 +1,21 @@
-
-import { render } from '@testing-library/react';
-import React from 'react';
+import React, { ReactElement } from 'react';
+import { render, RenderOptions } from '@testing-library/react';
 import { Stage, Layer } from 'react-konva';
 
-const renderInKonva = (ui: React.ReactElement) => {
-  return render(
-    <Stage>
-      <Layer>{ui}</Layer>
+const KonvaProvider = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <Stage width={800} height={600}>
+      <Layer>{children}</Layer>
     </Stage>
   );
 };
 
-export { renderInKonva };
+const renderWithKonva = (
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'>,
+) => render(ui, { wrapper: KonvaProvider, ...options });
+
+const renderInKonva = renderWithKonva; // Alias for backward compatibility
+
+export * from '@testing-library/react';
+export { renderWithKonva, renderInKonva };

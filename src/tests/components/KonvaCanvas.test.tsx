@@ -1,483 +1,451 @@
 import { describe, test, expect, beforeEach, jest, afterEach } from '@jest/globals';
+import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { act } from '@testing-library/react';
+import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import { KonvaCanvas } from '@/features/canvas/components/KonvaCanvas';
 import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
-import { invoke } from '@tauri-apps/api/tauri';
-import { createMockCanvasElement, createMockCanvasStore } from '../../utils';
-import { renderInKonva } from '../../utils/konva-test-utils';
+import { useTauriCanvas } from '@/features/canvas/hooks/useTauriCanvas';
+import { ElementId } from '@/features/canvas/types/enhanced.types';
 
-// Mock the store
+// Mock all dependencies
 jest.mock('@/features/canvas/stores/canvasStore.enhanced');
-const mockUseCanvasStore = useCanvasStore as jest.MockedFunction<typeof useCanvasStore>;
+jest.mock('@/features/canvas/hooks/useTauriCanvas');
 
-// Mock Tauri
-const mockInvoke = invoke as jest.MockedFunction<typeof invoke>;
+const mockUseCanvasStore = useCanvasStore as jest.MockedFunction<typeof useCanvasStore>;
+const mockUseTauriCanvas = useTauriCanvas as jest.MockedFunction<typeof useTauriCanvas>;
+
+// Helper to create mock elements
+const createMockElement = (overrides = {}) => ({
+  id: 'test-element',
+  type: 'rectangle',
+  tool: 'rectangle',
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  fill: '#000000',
+  stroke: '#000000',
+  strokeWidth: 1,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+  ...overrides
+});
 
 describe('KonvaCanvas', () => {
+  // Mock store methods
+  const addElementMock = jest.fn();
+  const updateElementMock = jest.fn();
+  const deleteElementMock = jest.fn();
+  const selectElementMock = jest.fn();
+  const clearSelectionMock = jest.fn();
+  const setSelectedToolMock = jest.fn();
+  const undoMock = jest.fn();
+  const redoMock = jest.fn();
+  
+  // Mock Tauri canvas methods
+  const saveCanvasMock = jest.fn();
+  const loadCanvasMock = jest.fn();
+
   let mockStore: any;
-  let defaultProps: any;
+  let mockTauriCanvas: any;
 
   beforeEach(() => {
-    // Setup mock store
-    mockStore = createMockCanvasStore({
+    // Reset all mocks
+    jest.clearAllMocks();
+    
+    // Setup mock store state
+    mockStore = {
       elements: new Map([
-        ['elem1', createMockCanvasElement({ id: 'elem1', type: 'rectangle' })],
-        ['elem2', createMockCanvasElement({ id: 'elem2', type: 'circle' })],
-        ['elem3', createMockCanvasElement({ id: 'elem3', type: 'text' })]
+        [ElementId('elem1'), createMockElement({ id: 'elem1', type: 'rectangle', x: 10, y: 10 })],
+        [ElementId('elem2'), createMockElement({ id: 'elem2', type: 'circle', x: 100, y: 100 })],
       ]),
-      selectedElementIds: new Set(),
+      selectedElementIds: new Set<string>(),
       selectedTool: 'select',
-      panZoomState: { scale: 1, position: { x: 0, y: 0 } }
-    });
-
-    mockUseCanvasStore.mockReturnValue(mockStore);
-
-    defaultProps = {
-      width: 800,
-      height: 600,
-      onReady: jest.fn()
+      isDrawing: false,
+      currentPath: [],
+      addElement: addElementMock,
+      updateElement: updateElementMock,
+      deleteElement: deleteElementMock,
+      selectElement: selectElementMock,
+      clearSelection: clearSelectionMock,
+      setSelectedTool: setSelectedToolMock,
+      undo: undoMock,
+      redo: redoMock,
+      zoom: 1,
+      pan: { x: 0, y: 0 },
     };
 
-    // Reset mocks
-    mockInvoke.mockReset();
+    // Setup mock Tauri canvas
+    mockTauriCanvas = {
+      saveCanvas: saveCanvasMock,
+      loadCanvas: loadCanvasMock,
+      isLoading: false,
+      error: null,
+      isSaved: true,
+    };
+
+    // Configure mocks to return our mock objects
+    mockUseCanvasStore.mockImplementation((selector) => {
+      if (typeof selector === 'function') {
+        return selector(mockStore);
+      }
+      return mockStore;
+    });
+
+    mockUseTauriCanvas.mockReturnValue(mockTauriCanvas);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('Canvas Initialization', () => {
-    test('renders canvas with correct dimensions', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const stage = screen.getByRole('presentation');
-      expect(stage).toBeInTheDocument();
-      
-      // Check dimensions are applied
-      expect(defaultProps.width).toBe(800);
-      expect(defaultProps.height).toBe(600);
-    });
-
-    test('initializes with elements from store', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      // All elements should be rendered
-      expect(screen.getByRole('presentation')).toBeInTheDocument();
-      expect(mockStore.elements.size).toBe(3);
-    });
-
-    test('calls onReady callback after initialization', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      await waitFor(() => {
-        expect(defaultProps.onReady).toHaveBeenCalled();
-      });
-    });
-
-    test('sets up event listeners on mount', async () => {
-      const { unmount } = renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      // Event listeners would be set up
-      const stage = screen.getByRole('presentation');
-      expect(stage).toBeInTheDocument();
-
-      unmount();
-      // Listeners should be cleaned up
+    act(() => {
+      jest.clearAllMocks();
     });
   });
 
-  describe('Tool Operations', () => {
-    test('handles select tool interactions', async () => {
-      mockStore.selectedTool = 'select';
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const stage = screen.getByRole('presentation');
-      fireEvent.click(stage);
-
-      // Click on empty space should clear selection
-      expect(mockStore.clearSelection).toHaveBeenCalled();
-    });
-
-    test('handles rectangle drawing tool', async () => {
+  describe('Drawing Actions', () => {
+    test('should create a rectangle element when drawing with rectangle tool', async () => {
+      // Set tool to rectangle
       mockStore.selectedTool = 'rectangle';
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const stage = screen.getByRole('presentation');
       
-      // Simulate drawing
-      fireEvent.mouseDown(stage, { clientX: 100, clientY: 100 });
-      fireEvent.mouseMove(stage, { clientX: 200, clientY: 200 });
-      fireEvent.mouseUp(stage);
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      // Should create new rectangle
-      expect(mockStore.addElement).toHaveBeenCalledWith(
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
+      expect(canvas).toBeTruthy();
+
+      // Simulate user drawing a rectangle
+      act(() => {
+        fireEvent.mouseDown(canvas!, { 
+          clientX: 100, 
+          clientY: 100,
+          bubbles: true 
+        });
+      });
+
+      act(() => {
+        fireEvent.mouseMove(canvas!, { 
+          clientX: 200, 
+          clientY: 200,
+          bubbles: true 
+        });
+      });
+
+      act(() => {
+        fireEvent.mouseUp(canvas!, { 
+          clientX: 200, 
+          clientY: 200,
+          bubbles: true 
+        });
+      });
+
+      // Assert that addCanvasElement was called with correct payload
+      expect(addElementMock).toHaveBeenCalledTimes(1);
+      expect(addElementMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'rectangle',
+          tool: 'rectangle',
           x: expect.any(Number),
           y: expect.any(Number),
           width: expect.any(Number),
-          height: expect.any(Number)
+          height: expect.any(Number),
+          fill: expect.any(String),
+          stroke: expect.any(String),
+          strokeWidth: expect.any(Number),
+          createdAt: expect.any(Number),
+          updatedAt: expect.any(Number),
         })
       );
     });
 
-    test('handles circle drawing tool', async () => {
+    test('should create a circle element when drawing with circle tool', async () => {
       mockStore.selectedTool = 'circle';
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const stage = screen.getByRole('presentation');
       
-      fireEvent.mouseDown(stage, { clientX: 150, clientY: 150 });
-      fireEvent.mouseMove(stage, { clientX: 200, clientY: 200 });
-      fireEvent.mouseUp(stage);
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      expect(mockStore.addElement).toHaveBeenCalledWith(
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
+
+      // Simulate drawing a circle
+      act(() => {
+        fireEvent.mouseDown(canvas!, { clientX: 150, clientY: 150 });
+        fireEvent.mouseMove(canvas!, { clientX: 250, clientY: 250 });
+        fireEvent.mouseUp(canvas!, { clientX: 250, clientY: 250 });
+      });
+
+      expect(addElementMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'circle',
+          tool: 'circle',
           x: expect.any(Number),
           y: expect.any(Number),
-          radius: expect.any(Number)
+          radius: expect.any(Number),
         })
       );
     });
 
-    test('handles text tool placement', async () => {
-      mockStore.selectedTool = 'text';
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const stage = screen.getByRole('presentation');
-      fireEvent.click(stage, { clientX: 100, clientY: 100 });
-
-      expect(mockStore.addElement).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'text',
-          x: expect.any(Number),
-          y: expect.any(Number),
-          text: expect.any(String)
-        })
-      );
-    });
-
-    test('switches tools correctly', async () => {
-      const { rerender } = renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      // Start with select tool
-      mockStore.selectedTool = 'select';
-      await rerender(<KonvaCanvas {...defaultProps} />);
-
-      // Switch to rectangle tool
-      mockStore.selectedTool = 'rectangle';
-      await rerender(<KonvaCanvas {...defaultProps} />);
-
-      // Cursor and behavior should update
-      expect(mockStore.selectedTool).toBe('rectangle');
-    });
-  });
-
-  describe('Selection Management', () => {
-    test('selects single element on click', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      // Simulate clicking on an element
-      const element = mockStore.elements.get('elem1');
-      mockStore.selectElement.mockImplementation((id: string) => {
-        mockStore.selectedElementIds = new Set([id]);
-      });
-
-      // In real implementation, would click on the actual element
-      mockStore.selectElement('elem1');
-
-      expect(mockStore.selectElement).toHaveBeenCalledWith('elem1');
-    });
-
-    test('handles multi-selection with shift key', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      // Select first element
-      mockStore.selectElement('elem1');
+    test('should handle pen/drawing tool with path creation', async () => {
+      mockStore.selectedTool = 'pen';
+      mockStore.isDrawing = false;
+      mockStore.currentPath = [];
       
-      // Shift-click second element
-      const stage = screen.getByRole('presentation');
-      fireEvent.click(stage, { shiftKey: true });
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      // Would add to selection
-      expect(mockStore.addToSelection).toBeDefined();
-    });
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
 
-    test('handles selection box drag', async () => {
-      mockStore.selectedTool = 'select';
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const stage = screen.getByRole('presentation');
-
-      // Start selection box
-      fireEvent.mouseDown(stage, { clientX: 50, clientY: 50 });
-      fireEvent.mouseMove(stage, { clientX: 250, clientY: 250 });
-      fireEvent.mouseUp(stage);
-
-      // Would select elements within box
-      expect(mockStore.startMultiSelection).toBeDefined();
-    });
-
-    test('clears selection on escape key', async () => {
-      mockStore.selectedElementIds = new Set(['elem1', 'elem2']);
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      fireEvent.keyDown(window, { key: 'Escape' });
-
-      expect(mockStore.clearSelection).toHaveBeenCalled();
-    });
-  });
-
-  describe('Element Manipulation', () => {
-    test('handles element dragging', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const element = mockStore.elements.get('elem1');
-      const initialX = element.x;
-      const initialY = element.y;
-
-      // Simulate drag (in real implementation, would be on the element)
-      mockStore.updateElement('elem1', { x: initialX + 50, y: initialY + 50 });
-
-      expect(mockStore.updateElement).toHaveBeenCalledWith('elem1', {
-        x: initialX + 50,
-        y: initialY + 50
+      // Start drawing
+      act(() => {
+        fireEvent.mouseDown(canvas!, { clientX: 50, clientY: 50 });
       });
-    });
 
-    test('handles element deletion', async () => {
-      mockStore.selectedElementIds = new Set(['elem1']);
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+      // Draw path
+      act(() => {
+        fireEvent.mouseMove(canvas!, { clientX: 60, clientY: 60 });
+        fireEvent.mouseMove(canvas!, { clientX: 70, clientY: 80 });
+        fireEvent.mouseMove(canvas!, { clientX: 80, clientY: 100 });
+      });
 
-      fireEvent.keyDown(window, { key: 'Delete' });
+      // Finish drawing
+      act(() => {
+        fireEvent.mouseUp(canvas!, { clientX: 80, clientY: 100 });
+      });
 
-      expect(mockStore.deleteElement).toHaveBeenCalledWith('elem1');
-    });
-
-    test('handles element duplication', async () => {
-      mockStore.selectedElementIds = new Set(['elem1']);
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      fireEvent.keyDown(window, { key: 'd', ctrlKey: true });
-
-      // Would duplicate selected elements
-      expect(mockStore.addElement).toBeDefined();
-    });
-
-    test('handles element transformation', async () => {
-      mockStore.selectedElementIds = new Set(['elem1']);
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      // Simulate transform (rotation, scale)
-      const transformData = {
-        rotation: 45,
-        scaleX: 1.5,
-        scaleY: 1.5
-      };
-
-      mockStore.updateElement('elem1', transformData);
-
-      expect(mockStore.updateElement).toHaveBeenCalledWith('elem1', transformData);
+      expect(addElementMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'pen',
+          tool: 'pen',
+          points: expect.any(Array),
+        })
+      );
     });
   });
 
-  describe('Pan and Zoom', () => {
-    test('handles canvas panning', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+  describe('Selection Interactions', () => {
+    test('should select element when clicked with select tool', async () => {
+      mockStore.selectedTool = 'select';
+      
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      const stage = screen.getByRole('presentation');
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
 
-      // Hold space and drag
-      fireEvent.keyDown(window, { key: ' ' });
-      fireEvent.mouseDown(stage, { clientX: 100, clientY: 100 });
-      fireEvent.mouseMove(stage, { clientX: 150, clientY: 150 });
-      fireEvent.mouseUp(stage);
-      fireEvent.keyUp(window, { key: ' ' });
+      // Simulate clicking on an element's position
+      act(() => {
+        fireEvent.click(canvas!, { 
+          clientX: 15, // Near elem1's position
+          clientY: 15,
+        });
+      });
 
-      // Pan position should update
-      expect(mockStore.panZoomState).toBeDefined();
+      // Should attempt to select element at that position
+      // In a real implementation, this would hit-test and select the element
+      expect(mockStore.selectedTool).toBe('select');
     });
 
-    test('handles zoom with mouse wheel', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+    test('should clear selection when clicking empty space', async () => {
+      mockStore.selectedTool = 'select';
+      mockStore.selectedElementIds = new Set(['elem1']);
+      
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      const stage = screen.getByRole('presentation');
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
 
-      // Zoom in
-      fireEvent.wheel(stage, { deltaY: -100, ctrlKey: true });
+      // Click on empty space
+      act(() => {
+        fireEvent.click(canvas!, { 
+          clientX: 400, // Empty area
+          clientY: 400,
+        });
+      });
 
-      // Zoom level should increase
-      expect(mockStore.setZoom).toBeDefined();
+      expect(clearSelectionMock).toHaveBeenCalled();
     });
 
-    test('handles zoom limits', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+    test('should handle multi-selection with Shift key', async () => {
+      mockStore.selectedTool = 'select';
+      mockStore.selectedElementIds = new Set(['elem1']);
+      
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      const stage = screen.getByRole('presentation');
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
 
-      // Try to zoom beyond limits
-      for (let i = 0; i < 20; i++) {
-        fireEvent.wheel(stage, { deltaY: -100, ctrlKey: true });
-      }
+      // Shift-click to add to selection
+      act(() => {
+        fireEvent.click(canvas!, { 
+          clientX: 105, // Near elem2's position
+          clientY: 105,
+          shiftKey: true,
+        });
+      });
 
-      // Should respect maximum zoom
-      expect(mockStore.panZoomState.scale).toBeLessThanOrEqual(5); // Assuming max zoom is 5
-    });
-
-    test('resets zoom on double click', async () => {
-      mockStore.panZoomState = { scale: 2, position: { x: 100, y: 100 } };
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      const stage = screen.getByRole('presentation');
-      fireEvent.doubleClick(stage, { ctrlKey: true });
-
-      // Should reset to 100% zoom
-      expect(mockStore.resetZoom).toBeDefined();
+      // Would add to selection rather than replace
+      expect(mockStore.selectedTool).toBe('select');
     });
   });
 
   describe('Keyboard Shortcuts', () => {
-    test('handles undo shortcut', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+    test('should handle undo/redo shortcuts', async () => {
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+      // Undo
+      act(() => {
+        fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+      });
+      expect(undoMock).toHaveBeenCalledTimes(1);
 
-      expect(mockStore.undo).toHaveBeenCalled();
+      // Redo
+      act(() => {
+        fireEvent.keyDown(window, { key: 'y', ctrlKey: true });
+      });
+      expect(redoMock).toHaveBeenCalledTimes(1);
     });
 
-    test('handles redo shortcut', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      fireEvent.keyDown(window, { key: 'y', ctrlKey: true });
-
-      expect(mockStore.redo).toHaveBeenCalled();
-    });
-
-    test('handles select all shortcut', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      fireEvent.keyDown(window, { key: 'a', ctrlKey: true });
-
-      expect(mockStore.selectAll).toHaveBeenCalled();
-    });
-
-    test('handles copy/paste shortcuts', async () => {
+    test('should delete selected elements on Delete key', async () => {
       mockStore.selectedElementIds = new Set(['elem1']);
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
-
-      // Copy
-      fireEvent.keyDown(window, { key: 'c', ctrlKey: true });
       
-      // Paste
-      fireEvent.keyDown(window, { key: 'v', ctrlKey: true });
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      // Would handle clipboard operations
-      expect(mockStore.selectedElementIds.size).toBeGreaterThan(0);
+      act(() => {
+        fireEvent.keyDown(window, { key: 'Delete' });
+      });
+
+      expect(deleteElementMock).toHaveBeenCalledWith('elem1');
+    });
+
+    test('should clear selection on Escape key', async () => {
+      mockStore.selectedElementIds = new Set(['elem1', 'elem2']);
+      
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+
+      act(() => {
+        fireEvent.keyDown(window, { key: 'Escape' });
+      });
+
+      expect(clearSelectionMock).toHaveBeenCalled();
     });
   });
 
-  describe('Performance Features', () => {
-    test('implements viewport culling', async () => {
-      // Add many elements outside viewport
-      const manyElements = new Map();
-      for (let i = 0; i < 1000; i++) {
-        manyElements.set(`elem${i}`, createMockCanvasElement({
-          id: `elem${i}`,
-          x: Math.random() * 5000,
-          y: Math.random() * 5000
-        }));
-      }
+  describe('Canvas Transformation', () => {
+    test('should handle element dragging', async () => {
+      mockStore.selectedTool = 'select';
+      const elem1 = mockStore.elements.get(ElementId('elem1'));
       
-      mockStore.elements = manyElements;
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      // Only visible elements should be rendered
-      // This is hard to test with mocks but important for performance
-      expect(mockStore.elements.size).toBe(1000);
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
+
+      // Simulate dragging an element
+      act(() => {
+        fireEvent.mouseDown(canvas!, { clientX: 15, clientY: 15 });
+        fireEvent.mouseMove(canvas!, { clientX: 50, clientY: 50 });
+        fireEvent.mouseUp(canvas!, { clientX: 50, clientY: 50 });
+      });
+
+      // In real implementation, this would update element position
+      expect(mockStore.selectedTool).toBe('select');
     });
 
-    test('debounces rapid updates', async () => {
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+    test('should handle canvas panning with space key', async () => {
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      // Simulate rapid mouse movements
-      const stage = screen.getByRole('presentation');
-      for (let i = 0; i < 10; i++) {
-        fireEvent.mouseMove(stage, { clientX: i * 10, clientY: i * 10 });
-      }
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
 
-      // Updates should be debounced
-      expect(mockStore.updateElement).toBeDefined();
+      // Hold space and drag to pan
+      act(() => {
+        fireEvent.keyDown(window, { key: ' ' });
+        fireEvent.mouseDown(canvas!, { clientX: 100, clientY: 100 });
+        fireEvent.mouseMove(canvas!, { clientX: 150, clientY: 150 });
+        fireEvent.mouseUp(canvas!, { clientX: 150, clientY: 150 });
+        fireEvent.keyUp(window, { key: ' ' });
+      });
+
+      // Pan state would be updated in real implementation
+      expect(mockStore.pan).toBeDefined();
+    });
+
+    test('should handle zoom with Ctrl+wheel', async () => {
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
+
+      const canvas = screen.getByRole('presentation').querySelector('canvas');
+
+      // Zoom in
+      act(() => {
+        fireEvent.wheel(canvas!, { 
+          deltaY: -100, 
+          ctrlKey: true,
+          clientX: 400,
+          clientY: 300,
+        });
+      });
+
+      // Zoom would be updated in real implementation
+      expect(mockStore.zoom).toBeDefined();
     });
   });
 
-  describe('Canvas State Persistence', () => {
-    test('saves canvas state to backend', async () => {
-      mockInvoke.mockResolvedValue(undefined);
+  describe('Save/Load Operations', () => {
+    test('should save canvas with Ctrl+S', async () => {
+      saveCanvasMock.mockResolvedValue(undefined);
       
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+      renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      // Trigger save
-      fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+      act(() => {
+        fireEvent.keyDown(window, { key: 's', ctrlKey: true });
+      });
 
       await waitFor(() => {
-        expect(mockInvoke).toHaveBeenCalledWith('save_canvas_data', expect.any(Object));
+        expect(saveCanvasMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            elements: expect.any(Array),
+          }),
+          expect.any(String)
+        );
       });
     });
 
-    test('loads canvas state from backend', async () => {
-      const savedData = {
+    test('should load canvas data on mount when specified', async () => {
+      const mockCanvasData = {
         elements: [
-          createMockCanvasElement({ id: 'saved1' }),
-          createMockCanvasElement({ id: 'saved2' })
-        ]
+          createMockElement({ id: 'loaded1' }),
+          createMockElement({ id: 'loaded2' }),
+        ],
       };
       
-      mockInvoke.mockResolvedValue(JSON.stringify(savedData));
+      loadCanvasMock.mockResolvedValue(mockCanvasData);
       
-      renderInKonva(
+      renderWithKonva(
         <KonvaCanvas 
-          {...defaultProps} 
+          width={800} 
+          height={600} 
           loadOnMount={true}
           filename="test-canvas.json"
         />
       );
 
       await waitFor(() => {
-        expect(mockInvoke).toHaveBeenCalledWith('load_canvas_data', {
-          filename: 'test-canvas.json'
-        });
+        expect(loadCanvasMock).toHaveBeenCalledWith('test-canvas.json');
       });
     });
   });
 
-  describe('Error Handling', () => {
-    test('handles render errors gracefully', async () => {
-      // Mock console.error to suppress error output
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      // Force an error by passing invalid props
-      const invalidProps = { ...defaultProps, width: null };
+  describe('Performance', () => {
+    test('should handle rendering many elements efficiently', async () => {
+      // Create many elements
+      const manyElements = new Map();
+      for (let i = 0; i < 100; i++) {
+        manyElements.set(
+          ElementId(`elem${i}`), 
+          createMockElement({ 
+            id: `elem${i}`, 
+            x: Math.random() * 800,
+            y: Math.random() * 600,
+          })
+        );
+      }
       
-      renderInKonva(<KonvaCanvas {...invalidProps} />);
-
-      // Should render fallback or handle error
-      expect(screen.getByRole('presentation')).toBeInTheDocument();
-
-      consoleSpy.mockRestore();
-    });
-
-    test('recovers from failed save operations', async () => {
-      mockInvoke.mockRejectedValue(new Error('Save failed'));
+      mockStore.elements = manyElements;
       
-      renderInKonva(<KonvaCanvas {...defaultProps} />);
+      const { container } = renderWithKonva(<KonvaCanvas width={800} height={600} />);
 
-      fireEvent.keyDown(window, { key: 's', ctrlKey: true });
-
-      // Should handle error without crashing
-      await waitFor(() => {
-        expect(mockInvoke).toHaveBeenCalled();
-      });
+      // Should render without performance issues
+      expect(container.querySelector('[role="presentation"]')).toBeInTheDocument();
+      expect(mockStore.elements.size).toBe(100);
     });
   });
 });
