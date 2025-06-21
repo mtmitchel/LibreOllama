@@ -2,17 +2,17 @@
 import React from 'react';
 import { Group, Line, Arrow, Circle } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../stores/types';
+import { CanvasElement, ElementId, ConnectorElement, isConnectorElement } from '../types/enhanced.types';
 import ConnectorRenderer from '../components/ConnectorRenderer';
 
 interface ConnectorLayerProps {
-  elements: CanvasElement[];
-  selectedElementIds: string[];
+  elements: Map<ElementId, CanvasElement>;
+  selectedElementIds: Set<ElementId>;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
-  onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
+  onElementUpdate?: (id: ElementId, updates: Partial<CanvasElement>) => void;
   isDrawingConnector?: boolean;
-  connectorStart?: { x: number; y: number; elementId?: string; anchor?: string } | null;
-  connectorEnd?: { x: number; y: number; elementId?: string; anchor?: string } | null;
+  connectorStart?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
+  connectorEnd?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
   selectedTool: string;
 }
 
@@ -32,16 +32,22 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
   connectorEnd,
   selectedTool
 }) => {
-  // Filter only connector elements
-  const connectorElements = React.useMemo(() => 
-    elements.filter(el => el.type === 'connector'),
-    [elements]
-  );
+  // Filter only connector elements from the Map
+  const connectorElements = React.useMemo(() => {
+    const connectors: ConnectorElement[] = [];
+    elements.forEach((element) => {
+      if (isConnectorElement(element)) {
+        connectors.push(element);
+      }
+    });
+    return connectors;
+  }, [elements]);
+
   return (
     <Group listening={true} name="connector-group">
       {/* Render existing connectors */}
       {connectorElements.map(element => {
-        const isSelected = selectedElementIds.includes(element.id);
+        const isSelected = selectedElementIds.has(element.id);
         
         return (
           <ConnectorRenderer
@@ -50,7 +56,7 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
             isSelected={isSelected}
             onSelect={() => onElementClick({} as any, element)}
             onUpdate={onElementUpdate || (() => {})}
-            elements={elements.reduce((acc, el) => ({ ...acc, [el.id]: el }), {})}
+            elements={Array.from(elements.values()).reduce((acc, el) => ({ ...acc, [el.id]: el }), {})}
             sections={{}} // Sections would be passed here if needed
           />
         );

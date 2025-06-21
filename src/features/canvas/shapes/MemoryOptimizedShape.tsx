@@ -1,17 +1,11 @@
 // src/components/canvas/shapes/MemoryOptimizedShape.tsx
 /**
- * Example implementation showing how to integrate memory tracking with canvas components
- * Part of Phase 4 Performance Optimizations
+ * A shape component that demonstrates memory optimization best practices
+ * This is a simplified version for testing purposes
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Rect, Image as KonvaImage } from 'react-konva';
-import { 
-  useComponentMemoryTracking, 
-  useKonvaNodeTracking, 
-  useTextureMemoryTracking,
-  useEventListenerTracking 
-} from '../../features/canvas/hooks/canvas/useCanvasPerformance';
 
 interface MemoryOptimizedShapeProps {
   id: string;
@@ -33,46 +27,19 @@ export const MemoryOptimizedShape: React.FC<MemoryOptimizedShapeProps> = ({
   fill = '#blue',
   imageUrl,
   onSelect
-}) => {  // Track component memory usage
-  const { trackOperation } = useComponentMemoryTracking('MemoryOptimizedShape');
-  
-  // Track event listeners
-  const { addListener, removeListener } = useEventListenerTracking();
-
-  // Track Konva nodes (1 for the shape itself)
-  useKonvaNodeTracking(1);
-
-  // Track texture memory if we have an image
-  useTextureMemoryTracking(
-    imageUrl ? width : 0, 
-    imageUrl ? height : 0, 
-    'RGBA'
-  );
-
+}) => {
   // Memoize image loading to prevent memory leaks
   const image = useMemo(() => {
     if (!imageUrl) return null;
     
-    return trackOperation('loadImage', () => {
-      const img = new window.Image();
-      img.src = imageUrl;
-      return img;
-    });
-  }, [imageUrl, trackOperation]);
-  // Track event listener registration
-  useEffect(() => {
-    if (onSelect) {
-      addListener();
-      return () => removeListener();
-    }
-    return undefined;
-  }, [onSelect, addListener, removeListener]);
+    const img = new window.Image();
+    img.src = imageUrl;
+    return img;
+  }, [imageUrl]);
 
-  // Handle click with memory tracking
+  // Handle click
   const handleClick = () => {
-    trackOperation('handleClick', () => {
-      onSelect?.();
-    });
+    onSelect?.();
   };
 
   if (imageUrl && image) {
@@ -85,6 +52,7 @@ export const MemoryOptimizedShape: React.FC<MemoryOptimizedShapeProps> = ({
         height={height}
         image={image}
         onClick={handleClick}
+        data-testid="memory-optimized-shape"
       />
     );
   }
@@ -98,6 +66,7 @@ export const MemoryOptimizedShape: React.FC<MemoryOptimizedShapeProps> = ({
       height={height}
       fill={fill}
       onClick={handleClick}
+      data-testid="memory-optimized-shape"
     />
   );
 };

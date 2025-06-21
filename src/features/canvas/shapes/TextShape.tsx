@@ -2,16 +2,18 @@
 import React, { useEffect, useRef } from 'react';
 import { Text } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../stores/types';
+import { TextElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import { designSystem } from '../../../styles/designSystem';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 
 interface TextShapeProps {
-  element: CanvasElement;
+  element: TextElement;
+  isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
 
@@ -23,8 +25,10 @@ interface TextShapeProps {
  */
 export const TextShape: React.FC<TextShapeProps> = React.memo(({
   element,
+  isSelected,
   konvaProps,
   onUpdate,
+  onStartTextEdit,
   stageRef,
 }) => {
   const textNodeRef = useRef<Konva.Text>(null);

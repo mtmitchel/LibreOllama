@@ -1,14 +1,15 @@
 // src/components/canvas/shapes/CircleShape.tsx
 import React from 'react';
 import { Circle } from 'react-konva';
-import { CanvasElement } from '../stores/types';
+import { CircleElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { designSystem } from '../../../styles/designSystem';
 
 interface CircleShapeProps {
-  element: CanvasElement;
+  element: CircleElement;
   isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
 }
 
 /**

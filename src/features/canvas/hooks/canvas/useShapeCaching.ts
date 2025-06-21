@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import Konva from 'konva';
-import { CanvasElement } from '../layers/types';
+import { CanvasElement } from '../../types/enhanced.types';
 
 interface CacheConfig {
   /** Whether caching is enabled for this shape */
@@ -49,18 +49,21 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
   const complexTypes = ['table', 'enhanced-table', 'section', 'rich-text'];
   if (complexTypes.includes(element.type)) return true;
 
-  // Cache large shapes
-  const size = (element.width || 0) * (element.height || 0);
+  // Cache large shapes (use type-safe property access)
+  const width = 'width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0);
+  const height = 'height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0);
+  const size = width * height;
   if (size > config.sizeThreshold) return true;
+  
   // Cache shapes with multiple visual properties (complexity heuristic)
   const visualProps = [
-    element.fill,
-    element.stroke,
-    element.strokeWidth,
-    element.fontSize,
-    element.fontFamily,
-    element.backgroundColor,
-    element.textColor
+    'fill' in element ? element.fill : undefined,
+    'stroke' in element ? element.stroke : undefined,
+    'strokeWidth' in element ? element.strokeWidth : undefined,
+    'fontSize' in element ? element.fontSize : undefined,
+    'fontFamily' in element ? element.fontFamily : undefined,
+    'backgroundColor' in element ? element.backgroundColor : undefined,
+    'textColor' in element ? element.textColor : undefined
   ].filter(Boolean).length;
   
   if (visualProps >= config.complexityThreshold) return true;
@@ -74,16 +77,16 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
 const generateCacheKey = (element: CanvasElement, dependencies: any[] = []): string => {
   const visualProps = {
     type: element.type,
-    width: element.width,
-    height: element.height,
-    fill: element.fill,
-    stroke: element.stroke,
-    strokeWidth: element.strokeWidth,
-    fontSize: element.fontSize,
-    fontFamily: element.fontFamily,
-    fontStyle: element.fontStyle,
-    textDecoration: element.textDecoration,
-    text: element.text,
+    width: 'width' in element ? element.width : ('radius' in element ? element.radius * 2 : undefined),
+    height: 'height' in element ? element.height : ('radius' in element ? element.radius * 2 : undefined),
+    fill: 'fill' in element ? element.fill : undefined,
+    stroke: 'stroke' in element ? element.stroke : undefined,
+    strokeWidth: 'strokeWidth' in element ? element.strokeWidth : undefined,
+    fontSize: 'fontSize' in element ? element.fontSize : undefined,
+    fontFamily: 'fontFamily' in element ? element.fontFamily : undefined,
+    fontStyle: 'fontStyle' in element ? element.fontStyle : undefined,
+    textDecoration: 'textDecoration' in element ? element.textDecoration : undefined,
+    text: 'text' in element ? element.text : undefined,
     // Table-specific properties
     enhancedTableData: (element as any).enhancedTableData ? 
       JSON.stringify((element as any).enhancedTableData) : undefined,
@@ -139,17 +142,16 @@ export const useShapeCaching = ({
         node.cache();
         isCachedRef.current = true;
         lastCacheKeyRef.current = currentCacheKey;
-        
-        console.log(`🗂️ [CACHE] Applied caching to ${element.type} element:`, {
+          console.log(`🗂️ [CACHE] Applied caching to ${element.type} element:`, {
           elementId: element.id,
-          size: `${element.width}x${element.height}`,
+          size: `${('width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0))}x${('height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0))}`,
           cacheKey: currentCacheKey.slice(0, 50) + '...'
         });
       }
     } catch (error) {
       console.warn(`⚠️ [CACHE] Failed to cache ${element.type} element:`, error);
     }
-  }, [shouldCache, currentCacheKey, element.id, element.type, element.width, element.height]);
+  }, [shouldCache, currentCacheKey, element.id, element.type]);
 
   /**
    * Clear caching from the Konva node

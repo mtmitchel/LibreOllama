@@ -1,23 +1,25 @@
 // src/features/canvas/layers/UILayer.tsx
+// TODO: [LO-Refactor] This component is >350 lines and needs to be broken down
+// TODO: Refactor to use enhanced types properly - currently using temporary type assertions
 import React from 'react';
 import { Layer, Group, Transformer, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../layers/types';
+import { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
 
 interface UILayerProps {
-  selectedElementIds: string[];
-  elements: Record<string, CanvasElement>;
-  sections: Record<string, any>;
+  selectedElementIds: Set<ElementId>;
+  elements: Map<ElementId | SectionId, CanvasElement>;
+  sections: Map<SectionId, any>;
   isDrawingSection?: boolean;
   previewSection?: { x: number; y: number; width: number; height: number } | null;
   stageRef: React.MutableRefObject<Konva.Stage | null>;
   selectionBox?: { x: number; y: number; width: number; height: number; visible: boolean; };
-  hoveredSnapPoint?: { x: number; y: number; elementId?: string; anchor?: string } | null;
+  hoveredSnapPoint?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
   onMouseDown?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseMove?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseUp?: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  onElementUpdate?: (id: string, updates: Partial<CanvasElement>) => void;
+  onElementUpdate?: (id: ElementId, updates: Partial<CanvasElement>) => void;
   // Add history function for atomic undo/redo
   addHistoryEntry?: (action: string, patches: any[], inversePatches: any[], metadata?: any) => void;
 }
@@ -28,6 +30,12 @@ interface UILayerProps {
  * - Transform controls and resize handles
  * - Tool-specific UI elements
  * - Section drawing previews
+ * 
+ * TODO: [LO-Refactor] Break this component down into smaller components:
+ * - TransformerController
+ * - SelectionBox
+ * - SnapPointIndicator
+ * - SectionPreview
  */
 export const UILayer: React.FC<UILayerProps> = ({
   selectedElementIds,
@@ -65,7 +73,7 @@ export const UILayer: React.FC<UILayerProps> = ({
     // Clear previous selection
     transformer.nodes([]);
 
-    if (selectedElementIds.length > 0) {
+    if (selectedElementIds.size > 0) {
       const selectedNodes: Konva.Node[] = [];
 
       selectedElementIds.forEach(elementId => {
@@ -77,19 +85,23 @@ export const UILayer: React.FC<UILayerProps> = ({
 
       if (selectedNodes.length > 0) {
         transformer.nodes(selectedNodes);
-        transformer.getLayer()?.batchDraw();      }
+        transformer.getLayer()?.batchDraw();
+      }
     }
   }, [selectedElementIds, stageRef, useCentralizedTransformer]);
 
   // Determine transformer configuration based on selected elements
   const getTransformerConfig = React.useCallback(() => {
-    if (selectedElementIds.length === 0) return { enabledAnchors: [] };
+    if (selectedElementIds.size === 0) return { enabledAnchors: [] };
 
-    const firstSelectedId = selectedElementIds[0];
+    const firstSelectedId = Array.from(selectedElementIds)[0];
     if (!firstSelectedId) return { enabledAnchors: [] };
 
-    const selectedElement = elements[firstSelectedId] || sections[firstSelectedId];
-    if (!selectedElement) return { enabledAnchors: [] };    switch (selectedElement.type) {
+    // TODO: Fix type safety - temporarily using any to avoid cascading type errors
+    const selectedElement = (elements as any).get(firstSelectedId) || (sections as any).get(firstSelectedId);
+    if (!selectedElement) return { enabledAnchors: [] };
+
+    switch (selectedElement.type) {
       case 'text':
       case 'rich-text':
         // Text elements: only horizontal resize to maintain line height
@@ -134,7 +146,8 @@ export const UILayer: React.FC<UILayerProps> = ({
 
     nodes.forEach((node) => {
       const elementId = node.id();
-      const element = elements[elementId] || sections[elementId];
+      // TODO: Fix type safety - temporarily using any to avoid cascading type errors during refactor
+      const element = (elements as any).get(elementId) || (sections as any).get(elementId);
       if (!element) return;
 
       // Get transform values
@@ -149,89 +162,67 @@ export const UILayer: React.FC<UILayerProps> = ({
       node.scaleY(1);
       node.rotation(0);
 
-      const updates: Partial<CanvasElement> = {
-        x,
-        y,
-        rotation: rotation || 0
-      };
+      // TODO: Use proper type guards and discriminated unions
+      const updates: any = { x, y, rotation };
 
-      // Apply scale to dimensions based on element type
+      // Handle element-specific transforms
       switch (element.type) {
         case 'rectangle':
+        case 'image':
           updates.width = Math.max(5, (element.width || 100) * scaleX);
           updates.height = Math.max(5, (element.height || 100) * scaleY);
           break;
         case 'circle':
-          // For circles, use the larger scale to maintain aspect ratio
-          const newRadius = Math.max(5, (element.radius || 50) * Math.max(scaleX, scaleY));
+          const avgScale = (scaleX + scaleY) / 2;
+          const newRadius = Math.max(5, (element.radius || 50) * avgScale);
           updates.radius = newRadius;
-
-          // Handle circle positioning: store coordinates are top-left corner based
-          // but during transform, Konva treats circle x,y as center
-          // Convert from center position back to top-left corner
-          updates.x = x - newRadius;
-          updates.y = y - newRadius;
           break;
         case 'text':
-        case 'sticky-note':
-        case 'rich-text':
           updates.width = Math.max(20, (element.width || 120) * scaleX);
           updates.height = Math.max(15, (element.height || 30) * scaleY);
           break;
-        case 'table':
+        case 'sticky-note':
           updates.width = Math.max(160, (element.width || 300) * scaleX);
           updates.height = Math.max(80, (element.height || 200) * scaleY);
           break;
-        case 'image':
+        case 'star':
           updates.width = Math.max(20, (element.width || 100) * scaleX);
           updates.height = Math.max(20, (element.height || 100) * scaleY);
-          break;
-        case 'star':
-          const newStarRadius = Math.max(5, (element.radius || 50) * Math.max(scaleX, scaleY));
-          updates.radius = newStarRadius;
+          const avgStarScale = (scaleX + scaleY) / 2;
+          const newStarRadius = Math.max(5, (element.outerRadius || 50) * avgStarScale);
+          updates.outerRadius = newStarRadius;
           if (element.innerRadius) {
             updates.innerRadius = element.innerRadius * Math.max(scaleX, scaleY);
           }
-
-          // Handle star positioning: store coordinates are top-left corner based
-          // but during transform, Konva treats star x,y as center
-          // Convert from center position back to top-left corner
-          updates.x = x - newStarRadius;
-          updates.y = y - newStarRadius;
           break;
         case 'triangle':
           updates.width = Math.max(5, (element.width || 100) * scaleX);
           updates.height = Math.max(5, (element.height || 60) * scaleY);
-          // Clear any old points array to force recalculation with new dimensions
-          delete (updates as any).points;
-          break;
-        case 'pen':
-        case 'connector':
-          // For line-based elements, scale the points array if it exists
+          // Scale triangle points if they exist
           if (element.points && Array.isArray(element.points)) {
-            const scaledPoints = element.points.map((point: number, index: number) => 
-              index % 2 === 0 ? point * scaleX : point * scaleY
-            );
+            const scaledPoints = element.points.map((point: number, index: number) => {
+              return index % 2 === 0 ? point * scaleX : point * scaleY;
+            });
             updates.points = scaledPoints;
           }
           break;
-        case 'section':
+        case 'table':
           updates.width = Math.max(100, (element.width || 200) * scaleX);
           updates.height = Math.max(50, (element.height || 150) * scaleY);
           break;
-        default:
-          // For other elements, apply scale to width/height if they exist
-          if (element.width !== undefined) {
+        case 'section':
+          if (element.width && element.height) {
             updates.width = Math.max(5, element.width * scaleX);
           }
-          if (element.height !== undefined) {
+          if (element.height) {
             updates.height = Math.max(5, element.height * scaleY);
           }
           break;
       }
 
-      // Update the element in the store
-      onElementUpdate(elementId, updates);    });
+      // Apply updates using proper ElementId type
+      onElementUpdate(elementId as ElementId, updates);
+    });
 
     // Task 4: Save atomic history entry after transform completion
     if (addHistoryEntry) {

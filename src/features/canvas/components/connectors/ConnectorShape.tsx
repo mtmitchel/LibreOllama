@@ -17,8 +17,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
   connector, 
   isSelected = false,
   onSelect 
-}) => {
-  // Build path points for Konva Line component
+}) => {  // Build path points for Konva Line component
   const buildPathPoints = (): number[] => {
     const points: number[] = [];
     
@@ -26,9 +25,11 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
     points.push(connector.startPoint.x, connector.startPoint.y);
     
     // Intermediate points
-    connector.intermediatePoints.forEach(point => {
-      points.push(point.x, point.y);
-    });
+    if (connector.intermediatePoints) {
+      connector.intermediatePoints.forEach(point => {
+        points.push(point.x, point.y);
+      });
+    }
     
     // End point
     points.push(connector.endPoint.x, connector.endPoint.y);
@@ -37,7 +38,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
   };
   // Build SVG path for curved connectors
   const buildSVGPath = (): string => {
-    if (connector.subType !== 'curved' || connector.intermediatePoints.length < 2) {
+    if (connector.subType !== 'curved' || !connector.intermediatePoints || connector.intermediatePoints.length < 2) {
       return '';
     }
     
@@ -58,9 +59,8 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
       onSelect();
     }
   };
-
   // Render based on connector subType
-  if (connector.subType === 'curved' && connector.intermediatePoints.length >= 2) {
+  if (connector.subType === 'curved' && connector.intermediatePoints && connector.intermediatePoints.length >= 2) {
     return (
       <Path
         data={buildSVGPath()}

@@ -1,27 +1,42 @@
 // Test component to verify Konva canvas integration
 import React from 'react';
-import { useKonvaCanvasStore } from '../stores';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useShallow } from 'zustand/react/shallow';
+import { ElementId as ElementIdFactory } from '../types/enhanced.types';
+import type { RectangleElement } from '../types/enhanced.types';
 
 export const KonvaDebugPanel: React.FC = () => {
   // Fixed: Use specific selectors to prevent infinite re-renders
-  const elements = useKonvaCanvasStore(state => state.elements);
-  const selectedTool = useKonvaCanvasStore(state => state.selectedTool);
-  const selectedElementId = useKonvaCanvasStore(state => state.selectedElementId);
-  const addElement = useKonvaCanvasStore(state => state.addElement);
+  const {
+    elements,
+    selectedTool,
+    selectedElementIds,
+    addElement
+  } = useCanvasStore(
+    useShallow((state) => ({
+      elements: state.elements,
+      selectedTool: state.selectedTool,
+      selectedElementIds: state.selectedElementIds,
+      addElement: state.addElement,
+    }))
+  );
   
-  const elementCount = Object.keys(elements).length;
+  const elementCount = elements.size;
+  const selectedElementId = Array.from(selectedElementIds)[0] || null;
 
   const testCreateElement = () => {
-    const testElement = {
-      id: `test-${Date.now()}`,
-      type: 'rectangle' as const,
+    const testElement: RectangleElement = {
+      id: ElementIdFactory(`test-${Date.now()}`),
+      type: 'rectangle',
       x: Math.random() * 200 + 50,
       y: Math.random() * 200 + 50,
       width: 100,
       height: 60,
       fill: '#FF6B6B',
       stroke: '#333',
-      strokeWidth: 2
+      strokeWidth: 2,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     
     addElement(testElement);

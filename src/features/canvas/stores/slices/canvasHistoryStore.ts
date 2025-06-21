@@ -2,31 +2,19 @@
 /**
  * Canvas History Store - Undo/redo functionality using Immer patches
  * Part of the LibreOllama Canvas Architecture Enhancement - Phase 2
+ * Updated to use RingBuffer for bounded memory usage
  */
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
 import { Patch, applyPatches } from 'immer';
 import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
-
-export interface HistoryEntry {
-  id: string;
-  timestamp: number;
-  action: string;
-  patches: Patch[];
-  inversePatches: Patch[];
-  metadata?: {
-    elementIds?: string[];
-    operationType?: 'create' | 'update' | 'delete' | 'move' | 'format';
-    affectedCount?: number;
-  };
-}
+import { HistoryRingBuffer, HistoryEntry } from '../../utils/RingBuffer';
 
 export interface CanvasHistoryState {
-  // History stack
-  history: HistoryEntry[];
+  // History stack - Using RingBuffer for bounded memory
+  history: HistoryRingBuffer;
   currentIndex: number;
-  maxHistorySize: number;
   
   // History grouping
   isGrouping: boolean;
@@ -90,10 +78,9 @@ export const createCanvasHistoryStore: StateCreator<
   [],
   CanvasHistoryState
 > = (set, get) => ({
-  // Initial state
-  history: [],
+  // Initial state - Using RingBuffer with default capacity of 50
+  history: new HistoryRingBuffer(50),
   currentIndex: -1,
-  maxHistorySize: 100,
   
   // Grouping state
   isGrouping: false,
@@ -126,11 +113,11 @@ export const createCanvasHistoryStore: StateCreator<
         const shouldGroup = state.isGrouping && 
                            state.currentGroupId && 
                            (now - state.groupStartTime) < state.maxGroupDuration &&
-                           state.history.length > 0;
+                           state.history.getSize() > 0;
         
         if (shouldGroup) {
           // Merge with the last entry in the current group
-          const lastEntry = state.history[state.currentIndex];
+          const lastEntry = state.history.get(state.currentIndex);
           if (lastEntry && lastEntry.metadata?.operationType === metadata?.operationType) {
             lastEntry.patches.push(...patches);
             lastEntry.inversePatches.unshift(...inversePatches);
@@ -162,24 +149,18 @@ export const createCanvasHistoryStore: StateCreator<
         };
         
         // Remove any redo history when adding new entry
-        if (state.currentIndex < state.history.length - 1) {
-          state.history.splice(state.currentIndex + 1);
+        if (state.currentIndex < state.history.getSize() - 1) {
+          // Truncate the buffer to remove redo entries
+          state.history.truncate(state.currentIndex + 1);
         }
         
         // Add new entry
         state.history.push(newEntry);
-        state.currentIndex = state.history.length - 1;
-        
-        // Enforce history size limit
-        if (state.history.length > state.maxHistorySize) {
-          const removeCount = state.history.length - state.maxHistorySize;
-          state.history.splice(0, removeCount);
-          state.currentIndex -= removeCount;
-        }
+        state.currentIndex = state.history.getSize() - 1;
         
         // Update metrics
         state.historyMetrics.totalHistoryEntries++;
-        state.historyMetrics.memoryUsage = state.history.length * 100; // Rough estimate
+        state.historyMetrics.memoryUsage = state.history.getMemoryUsage();
         
         console.log('✅ [HISTORY STORE] History entry added successfully:', entryId);
       });
@@ -187,7 +168,7 @@ export const createCanvasHistoryStore: StateCreator<
       PerformanceMonitor.recordMetric('historyEntryAdded', patches.length, 'canvas', {
         action,
         grouped: get().isGrouping,
-        totalEntries: get().history.length
+        totalEntries: get().history.getSize()
       });
     } finally {
       endTiming();
@@ -200,12 +181,12 @@ export const createCanvasHistoryStore: StateCreator<
     try {
       const { history, currentIndex } = get();
       
-      if (currentIndex < 0 || currentIndex >= history.length) {
+      if (currentIndex < 0 || currentIndex >= history.getSize()) {
         console.log('📚 [HISTORY STORE] Cannot undo: no history available');
         return null;
       }
       
-      const entry = history[currentIndex];
+      const entry = history.get(currentIndex);
       if (!entry) {
         console.log('📚 [HISTORY STORE] Cannot undo: entry not found');
         return null;
@@ -236,12 +217,12 @@ export const createCanvasHistoryStore: StateCreator<
     try {
       const { history, currentIndex } = get();
       
-      if (currentIndex >= history.length - 1) {
+      if (currentIndex >= history.getSize() - 1) {
         console.log('📚 [HISTORY STORE] Cannot redo: no redo history available');
         return null;
       }
       
-      const entry = history[currentIndex + 1];
+      const entry = history.get(currentIndex + 1);
       if (!entry) {
         console.log('📚 [HISTORY STORE] Cannot redo: entry not found');
         return null;
@@ -301,22 +282,22 @@ export const createCanvasHistoryStore: StateCreator<
 
   canRedo: (): boolean => {
     const { history, currentIndex } = get();
-    return currentIndex < history.length - 1;
+    return currentIndex < history.getSize() - 1;
   },
 
   getHistoryLength: (): number => {
-    return get().history.length;
+    return get().history.getSize();
   },
 
   getCurrentHistoryEntry: (): HistoryEntry | null => {
     const { history, currentIndex } = get();
-    return currentIndex >= 0 && currentIndex < history.length ? history[currentIndex]! : null;
+    return currentIndex >= 0 && currentIndex < history.getSize() ? history.get(currentIndex) || null : null;
   },
 
   getHistoryPreview: (maxEntries: number = 10): HistoryEntry[] => {
     const { history, currentIndex } = get();
     const start = Math.max(0, currentIndex - maxEntries + 1);
-    const end = Math.min(history.length, currentIndex + maxEntries);
+    const end = Math.min(history.getSize(), currentIndex + maxEntries);
     return history.slice(start, end);
   },
 
@@ -325,11 +306,11 @@ export const createCanvasHistoryStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('clearHistory');
     
     try {
-      const historyLength = get().history.length;
+      const historyLength = get().history.getSize();
       console.log('📚 [HISTORY STORE] Clearing history:', historyLength, 'entries');
       
       set((state: Draft<CanvasHistoryState>) => {
-        state.history = [];
+        state.history.clear();
         state.currentIndex = -1;
         state.isGrouping = false;
         state.currentGroupId = null;
@@ -346,10 +327,10 @@ export const createCanvasHistoryStore: StateCreator<
 
   clearRedoHistory: () => {
     set((state: Draft<CanvasHistoryState>) => {
-      if (state.currentIndex < state.history.length - 1) {
-        const removedCount = state.history.length - state.currentIndex - 1;
-        state.history.splice(state.currentIndex + 1);
-        state.historyMetrics.memoryUsage = state.history.length * 100;
+      if (state.currentIndex < state.history.getSize() - 1) {
+        const removedCount = state.history.getSize() - state.currentIndex - 1;
+        state.history.truncate(state.currentIndex + 1);
+        state.historyMetrics.memoryUsage = state.history.getMemoryUsage();
         
         console.log('📚 [HISTORY STORE] Cleared redo history:', removedCount, 'entries');
       }
@@ -363,22 +344,21 @@ export const createCanvasHistoryStore: StateCreator<
       console.log('📚 [HISTORY STORE] Compacting history');
       
       set((state: Draft<CanvasHistoryState>) => {
-        const originalLength = state.history.length;
+        const originalSize = state.history.getSize();
         
-        // Remove entries older than 1 hour
-        const oneHourAgo = performance.now() - (60 * 60 * 1000);
-        const compactedHistory = state.history.filter(entry => 
-          entry.timestamp > oneHourAgo || 
-          state.history.indexOf(entry) > state.currentIndex - 10 // Keep last 10 entries
-        );
+        // Use the RingBuffer's compact method
+        state.history.compact();
         
-        const adjustedIndex = Math.max(-1, state.currentIndex - (originalLength - compactedHistory.length));
+        const newSize = state.history.getSize();
         
-        state.history = compactedHistory;
-        state.currentIndex = adjustedIndex;
-        state.historyMetrics.memoryUsage = state.history.length * 100;
+        // Adjust current index if needed
+        if (state.currentIndex >= newSize) {
+          state.currentIndex = newSize - 1;
+        }
         
-        console.log('✅ [HISTORY STORE] History compacted:', originalLength, '->', compactedHistory.length);
+        state.historyMetrics.memoryUsage = state.history.getMemoryUsage();
+        
+        console.log('✅ [HISTORY STORE] History compacted:', originalSize, '->', newSize);
       });
       
       PerformanceMonitor.recordMetric('historyCompact', 1, 'canvas');
@@ -389,15 +369,26 @@ export const createCanvasHistoryStore: StateCreator<
 
   setMaxHistorySize: (size: number) => {
     set((state: Draft<CanvasHistoryState>) => {
-      state.maxHistorySize = Math.max(10, Math.min(1000, size));
+      const validSize = Math.max(10, Math.min(1000, size));
       
-      // Trim history if it exceeds new limit
-      if (state.history.length > state.maxHistorySize) {
-        const removeCount = state.history.length - state.maxHistorySize;
-        state.history.splice(0, removeCount);
-        state.currentIndex = Math.max(-1, state.currentIndex - removeCount);
-        state.historyMetrics.memoryUsage = state.history.length * 100;
+      // Create a new RingBuffer with the new capacity
+      const newHistory = new HistoryRingBuffer(validSize);
+      
+      // Copy existing entries up to the new capacity
+      const entriesToCopy = Math.min(state.history.getSize(), validSize);
+      const startIndex = Math.max(0, state.history.getSize() - entriesToCopy);
+      
+      for (let i = startIndex; i < state.history.getSize(); i++) {
+        const entry = state.history.get(i);
+        if (entry) {
+          newHistory.push(entry);
+        }
       }
+      
+      // Update state
+      state.history = newHistory;
+      state.currentIndex = Math.min(state.currentIndex, newHistory.getSize() - 1);
+      state.historyMetrics.memoryUsage = newHistory.getMemoryUsage();
     });
     
     console.log('📚 [HISTORY STORE] Max history size set to:', size);
@@ -407,7 +398,7 @@ export const createCanvasHistoryStore: StateCreator<
   jumpToHistoryIndex: (index: number): Patch[] | null => {
     const { history, currentIndex } = get();
     
-    if (index < -1 || index >= history.length) {
+    if (index < -1 || index >= history.getSize()) {
       console.log('📚 [HISTORY STORE] Invalid history index:', index);
       return null;
     }
@@ -420,7 +411,7 @@ export const createCanvasHistoryStore: StateCreator<
     if (index < currentIndex) {
       // Moving backward - apply inverse patches
       for (let i = currentIndex; i > index; i--) {
-        const entry = history[i];
+        const entry = history.get(i);
         if (entry) {
           patches.push(...entry.inversePatches);
         }
@@ -428,7 +419,7 @@ export const createCanvasHistoryStore: StateCreator<
     } else if (index > currentIndex) {
       // Moving forward - apply forward patches
       for (let i = currentIndex + 1; i <= index; i++) {
-        const entry = history[i];
+        const entry = history.get(i);
         if (entry) {
           patches.push(...entry.patches);
         }
@@ -451,7 +442,7 @@ export const createCanvasHistoryStore: StateCreator<
   getHistoryStatistics: () => {
     const { history } = get();
     
-    if (history.length === 0) {
+    if (history.getSize() === 0) {
       return {
         totalEntries: 0,
         oldestEntry: 0,
@@ -461,7 +452,16 @@ export const createCanvasHistoryStore: StateCreator<
       };
     }
     
-    const actions = history.map(entry => entry.action);
+    const actions: string[] = [];
+    let oldestTimestamp = Infinity;
+    let newestTimestamp = -Infinity;
+    
+    history.forEach(entry => {
+      actions.push(entry.action);
+      oldestTimestamp = Math.min(oldestTimestamp, entry.timestamp);
+      newestTimestamp = Math.max(newestTimestamp, entry.timestamp);
+    });
+    
     const actionCounts = actions.reduce((acc, action) => {
       acc[action] = (acc[action] || 0) + 1;
       return acc;
@@ -471,11 +471,11 @@ export const createCanvasHistoryStore: StateCreator<
       .sort(([,a], [,b]) => b - a)[0]?.[0] || '';
     
     return {
-      totalEntries: history.length,
-      oldestEntry: history[0]?.timestamp || 0,
-      newestEntry: history[history.length - 1]?.timestamp || 0,
+      totalEntries: history.getSize(),
+      oldestEntry: oldestTimestamp,
+      newestEntry: newestTimestamp,
       mostCommonAction,
-      memoryFootprint: history.length * 100 // Rough estimate
+      memoryFootprint: history.getMemoryUsage()
     };
   },
 
@@ -498,7 +498,7 @@ export const createCanvasHistoryStore: StateCreator<
         totalHistoryEntries: 0,
         averageUndoTime: 0,
         averageRedoTime: 0,
-        memoryUsage: state.history.length * 100
+        memoryUsage: state.history.getMemoryUsage()
       };
     });
     
@@ -512,34 +512,15 @@ export const createCanvasHistoryStore: StateCreator<
       console.log('📚 [HISTORY STORE] Optimizing history memory usage');
       
       set((state: Draft<CanvasHistoryState>) => {
-        // Compact similar consecutive operations
-        const optimizedHistory: HistoryEntry[] = [];
+        // Use the RingBuffer's compact method to optimize memory
+        const originalSize = state.history.getSize();
+        state.history.compact();
+        const newSize = state.history.getSize();
         
-        for (let i = 0; i < state.history.length; i++) {
-          const current = state.history[i];
-          const next = state.history[i + 1];
-          
-          if (!current) continue;
-          
-          // If next entry is similar and within time threshold, skip current
-          if (next &&
-              current.action === next.action &&
-              next.timestamp - current.timestamp < 1000 && // 1 second threshold
-              current.metadata?.operationType === next.metadata?.operationType) {
-            continue; // Skip current entry
-          }
-          
-          optimizedHistory.push(current);
-        }
+        // Update metrics
+        state.historyMetrics.memoryUsage = state.history.getMemoryUsage();
         
-        const originalLength = state.history.length;
-        state.history = optimizedHistory;
-        
-        // Adjust current index
-        state.currentIndex = Math.min(state.currentIndex, optimizedHistory.length - 1);
-        state.historyMetrics.memoryUsage = optimizedHistory.length * 100;
-        
-        console.log('✅ [HISTORY STORE] Memory optimized:', originalLength, '->', optimizedHistory.length);
+        console.log('✅ [HISTORY STORE] Memory optimized:', originalSize, '->', newSize);
       });
       
       PerformanceMonitor.recordMetric('historyMemoryOptimize', 1, 'canvas');

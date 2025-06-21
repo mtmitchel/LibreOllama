@@ -6,7 +6,8 @@ import { Stage } from 'konva/lib/Stage';
 import { Line, Arrow, Circle } from 'react-konva';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import { debug } from '../utils/debug';
-import type { CanvasElement } from '../types';
+import type { CanvasElement, ConnectorElement } from '../types/enhanced.types';
+import { ElementId } from '../types/enhanced.types';
 
 // Connector-specific types (migrated from old types)
 interface ConnectorEndpoint {
@@ -41,7 +42,10 @@ const SNAP_DISTANCE = 20; // Distance in pixels to snap to elements
 
 // Utility functions for connector calculations
 const getAnchorPoint = (element: CanvasElement, anchor: ConnectorEndpoint['anchorPoint']): { x: number; y: number } => {
-  const { x, y, width = 100, height = 100 } = element;
+  const { x, y } = element;
+  // Use default size if width/height not available or default to reasonable bounds
+  const width = ('width' in element && typeof element.width === 'number') ? element.width : 100;
+  const height = ('height' in element && typeof element.height === 'number') ? element.height : 100;
   
   switch (anchor) {
     case 'top':
@@ -197,11 +201,11 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
       hasEndArrow: connectorType === 'arrow',
       arrowSize: 10
     };
+      const pathPoints = calculateConnectorPath(drawingState.startPoint, drawingState.currentEndPoint);
     
-    const pathPoints = calculateConnectorPath(drawingState.startPoint, drawingState.currentEndPoint);
-    
-    const connectorElement: CanvasElement = {
-      id: generateId(),
+    const now = Date.now();
+    const connectorElement: ConnectorElement = {
+      id: ElementId(generateId()),
       type: 'connector',
       subType: connectorType,
       x: 0, // Connectors use absolute coordinates in pathPoints
@@ -209,8 +213,10 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
       startPoint: drawingState.startPoint,
       endPoint: drawingState.currentEndPoint,
       connectorStyle,
-      pathPoints
-    } as CanvasElement;
+      pathPoints,
+      createdAt: now,
+      updatedAt: now
+    };
     
     debug.canvas.elementOperation('connector-create', connectorElement.id, {
       type: connectorType,

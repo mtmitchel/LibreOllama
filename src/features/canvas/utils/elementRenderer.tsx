@@ -1,27 +1,27 @@
 // src/features/canvas/utils/elementRenderer.tsx
 import React from 'react';
-import { Rect, Circle, Line } from 'react-konva';
-import { CanvasElement } from '../stores/types';
+import { Rect, Circle } from 'react-konva';
+import { CanvasElement, ElementId, SectionId, isPenElement, isRectangleElement, isCircleElement, isTextElement, isImageElement, isStickyNoteElement, isStarElement, isTriangleElement } from '../types/enhanced.types';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
 import { StarShape } from '../shapes/StarShape';
 import { TriangleShape } from '../shapes/TriangleShape';
 import { PenShape } from '../shapes/PenShape';
-import { EditableNode } from '../shapes/EditableNode';
 import Konva from 'konva';
+import { Vector2d } from 'konva/lib/types';
 
 interface RenderElementProps {
   element: CanvasElement;
   isSelected: boolean;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
-  onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
-  onStartTextEdit: (elementId: string) => void;
-  dragBoundFunc?: (pos: { x: number; y: number }) => { x: number; y: number };
+  onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId) => void;
+  onElementUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
+  dragBoundFunc?: (this: Konva.Node, pos: Vector2d) => Vector2d;
   draggable?: boolean;
   sectionContext?: {
-    sectionId: string;
+    sectionId: SectionId;
     isInSection: boolean;
   };
 }
@@ -40,18 +40,19 @@ export const renderElement = ({
   dragBoundFunc,
   draggable = true,
   sectionContext
-}: RenderElementProps): React.ReactElement => {
+}: RenderElementProps): React.ReactElement | null => {
   const commonProps = {
     key: element.id,
     element,
     isSelected,
     konvaProps: {
+      id: element.id,
       x: element.x || 0,
       y: element.y || 0,
       draggable: draggable && !element.isLocked,
-      dragBoundFunc: dragBoundFunc,
+      ...(dragBoundFunc && { dragBoundFunc }),
       onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
-      onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id)
+      onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id as ElementId)
     },
     onUpdate: onElementUpdate,
     onStartTextEdit,
@@ -60,80 +61,85 @@ export const renderElement = ({
 
   switch (element.type) {
     case 'text':
-      return <TextShape {...commonProps} />;
-    
-    case 'rich-text':
-      // For now, use basic text until we fix EditableNode props
-      return <TextShape {...commonProps} />;
-    
+      if (isTextElement(element)) {
+        return <TextShape {...commonProps} element={element} />;
+      }
+      return null;
+
     case 'image':
-      return <ImageShape {...commonProps} />;
-    
+      if (isImageElement(element)) {
+        return <ImageShape {...commonProps} element={element} />;
+      }
+      return null;
+
     case 'sticky-note':
-      return <StickyNoteShape {...commonProps} />;
-    
+      if (isStickyNoteElement(element)) {
+        return <StickyNoteShape {...commonProps} element={element} />;
+      }
+      return null;
+
     case 'star':
-      return <StarShape {...commonProps} />;
-    
+      if (isStarElement(element)) {
+        return <StarShape {...commonProps} element={element} />;
+      }
+      return null;
+
     case 'triangle':
-      return <TriangleShape {...commonProps} />;
-    
+      if (isTriangleElement(element)) {
+        return <TriangleShape {...commonProps} element={element} />;
+      }
+      return null;
+
     case 'pen':
-      return <PenShape {...commonProps} />;
-    
+      if (isPenElement(element)) {
+        return <PenShape {...commonProps} element={element} />;
+      }
+      return null;
+
     case 'rectangle':
-      return (
-        <Rect
-          key={element.id}
-          id={element.id}
-          {...commonProps.konvaProps}
-          width={element.width || 100}
-          height={element.height || 100}
-          fill={element.fill || '#3B82F6'}
-          stroke={element.stroke || '#1E40AF'}
-          strokeWidth={element.strokeWidth || 2}
-        />
-      );
-    
+      if (isRectangleElement(element)) {
+        return (
+          <Rect
+            {...commonProps.konvaProps}
+            width={element.width || 100}
+            height={element.height || 100}
+            fill={element.fill || '#3B82F6'}
+            stroke={element.stroke || '#1E40AF'}
+            strokeWidth={element.strokeWidth || 2}
+            cornerRadius={element.cornerRadius || 0}
+          />
+        );
+      }
+      return null;
+
     case 'circle':
-      return (
-        <Circle
-          key={element.id}
-          id={element.id}
-          {...commonProps.konvaProps}
-          radius={element.radius || 50}
-          fill={element.fill || '#3B82F6'}
-          stroke={element.stroke || '#1E40AF'}
-          strokeWidth={element.strokeWidth || 2}
-        />
-      );
-    
-    case 'line':
-    case 'arrow':
-      return (
-        <Line
-          key={element.id}
-          id={element.id}
-          {...commonProps.konvaProps}
-          points={element.points || [0, 0, 100, 100]}
-          stroke={element.stroke || '#1E40AF'}
-          strokeWidth={element.strokeWidth || 2}
-        />
-      );
-    
+      if (isCircleElement(element)) {
+        return (
+          <Circle
+            {...commonProps.konvaProps}
+            radius={element.radius || 50}
+            fill={element.fill || '#3B82F6'}
+            stroke={element.stroke || '#1E40AF'}
+            strokeWidth={element.strokeWidth || 2}
+          />
+        );
+      }
+      return null;
+
+    case 'section':
+      // Sections are handled by the GroupedSectionRenderer, not here
+      return null;
+
+    case 'connector':
+      // Connectors are handled by a dedicated connector layer, not here
+      return null;
+
+    case 'table':
+      // Tables need a dedicated component that we haven't created yet
+      return null;
+
     default:
-      // Fallback for unknown types
-      return (
-        <Rect
-          key={element.id}
-          id={element.id}
-          {...commonProps.konvaProps}
-          width={element.width || 100}
-          height={element.height || 100}
-          fill="rgba(255, 0, 0, 0.3)"
-          stroke="#FF0000"
-          strokeWidth={1}
-        />
-      );
+      // This should never happen with the discriminated union
+      return null;
   }
 };

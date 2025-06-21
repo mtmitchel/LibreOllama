@@ -1,11 +1,14 @@
 // src/components/canvas/shapes/ImageShape.tsx
 import React from 'react';
 import { Image } from 'react-konva';
-import { CanvasElement } from '../stores/types';
+import { ImageElement, ElementId, CanvasElement } from '../types/enhanced.types';
 
 interface ImageShapeProps {
-  element: CanvasElement;
+  element: ImageElement;
+  isSelected: boolean;
   konvaProps: any;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
 }
 
 /**
@@ -19,14 +22,14 @@ export const ImageShape: React.FC<ImageShapeProps> = React.memo(({
 }) => {
   const [image, setImage] = React.useState<HTMLImageElement | null>(null);
   React.useEffect(() => {
-    const imageSrc = (element as any).src || (element as any).imageUrl;
+    const imageSrc = element.imageUrl;
     if (imageSrc) {
       const img = new window.Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => setImage(img);
       img.src = imageSrc;
     }
-  }, [(element as any).src, (element as any).imageUrl]);
+  }, [element.imageUrl]);
   return (
     <Image
       {...konvaProps}

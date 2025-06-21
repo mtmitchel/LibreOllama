@@ -2,7 +2,16 @@
 import React, { useMemo, useCallback } from 'react';
 import { Group, Line } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../stores/types';
+import { 
+  CanvasElement, 
+  ElementId, 
+  SectionId, 
+  isSectionElement, 
+  isRectangleElement,
+  isCircleElement,
+  isRectangularElement, 
+  SectionElement
+} from '../types/enhanced.types';
 import { designSystem } from '../../../styles/designSystem';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
@@ -16,34 +25,27 @@ import { EnhancedTableElement } from '../components/EnhancedTableElement';
 import { ConnectorRenderer } from '../components/ConnectorRenderer';
 import KonvaErrorBoundary from '../components/KonvaErrorBoundary';
 import { optimizeLayerProps } from '../utils/events';
-// Import enhanced store for consistent section access
-import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
 
 interface MainLayerProps {
   name?: string;
   elements: CanvasElement[];
-  selectedElementIds: string[];
+  selectedElementIds: Set<ElementId | SectionId>;
   selectedTool: string;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
-  onElementDragStart?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementDragMove?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
-  onStartTextEdit: (elementId: string) => void;
-  onSectionResize?: (sectionId: string, newWidth: number, newHeight: number) => void;
+  onElementDragStart?: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => void;
+  onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => void;
+  onElementDragMove?: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => void;
+  onElementUpdate: (id: ElementId | SectionId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
+  onSectionResize?: (sectionId: SectionId, newWidth: number, newHeight: number) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null>;
   isDrawing?: boolean;
   currentPath?: number[];
   onLayerDraw?: () => void;
-  elementsBySection?: Record<string, CanvasElement[]>;
+  elementsBySection?: Map<SectionId, CanvasElement[]>;
 }
 
-/**
- * MainLayer - Renders primary interactive canvas elements
- * - Shapes, text, images, sections
- * - Interactive elements with drag/selection support
- * - Performance optimized rendering with event delegation
- */
 export const MainLayer: React.FC<MainLayerProps> = ({
   name,
   elements,
@@ -62,77 +64,64 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   onLayerDraw,
   elementsBySection
 }) => {
-  // Get section store access for boundary calculations
-  const { getSectionById, getSectionForElement, sections } = useEnhancedStore();
+  const { elements: elementsMap } = useCanvasStore();
 
-  const handleTransformEnd = useCallback((_element: CanvasElement, updates: Partial<CanvasElement>) => {
-    // The element object from the transformer is stale, so we only use the updates.
-    onElementUpdate(updates.id!, updates);
-  }, [onElementUpdate]);
+  const getSection = useCallback((sectionId: SectionId): SectionElement | undefined => {
+    const el = elementsMap.get(sectionId);
+    return el && isSectionElement(el) ? el : undefined;
+  }, [elementsMap]);
 
-  // Create drag boundary function for elements inside sections
   const createDragBoundFunc = useCallback((element: CanvasElement) => {
     return (pos: { x: number; y: number }) => {
-      const sectionId = getSectionForElement(element.id);
-      if (!sectionId) {
-        // No section constraint - allow free movement
+      if (!element.sectionId) {
         return pos;
       }
-
-      const section = getSectionById(sectionId);
+      const section = getSection(element.sectionId);
       if (!section) {
         return pos;
       }
 
-      // Calculate element bounds
-      const elementWidth = element.width || 0;
-      const elementHeight = element.height || 0;
+      const elementWidth = isRectangularElement(element) ? element.width : 0;
+      const elementHeight = isRectangularElement(element) ? element.height : 0;
 
-      // For elements in sections, the pos comes as absolute coordinates
-      // but we need to constrain relative to the section
       const relativeX = pos.x - section.x;
-      const relativeY = pos.y - section.y - (section.titleBarHeight || 32);
+      const relativeY = pos.y - section.y;
 
-      // Constrain to section boundaries with some padding
       const padding = 5;
       const minX = padding;
       const maxX = section.width - elementWidth - padding;
       const minY = padding;
-      const maxY = section.height - (section.titleBarHeight || 32) - elementHeight - padding;
+      const maxY = section.height - elementHeight - padding;
 
       const constrainedRelativeX = Math.max(minX, Math.min(maxX, relativeX));
       const constrainedRelativeY = Math.max(minY, Math.min(maxY, relativeY));
 
-      // Convert back to absolute coordinates for Konva
       return {
         x: section.x + constrainedRelativeX,
-        y: section.y + (section.titleBarHeight || 32) + constrainedRelativeY
+        y: section.y + constrainedRelativeY
       };
     };
-  }, [getSectionById, getSectionForElement]);
+  }, [getSection]);
 
-  // Optimize Group props for performance
-  const optimizedProps = useMemo(() => {
-    return optimizeLayerProps({}); // Extract relevant props for Group
-  }, []);
-  // Render individual elements with comprehensive type handling
+  const optimizedProps = useMemo(() => optimizeLayerProps({}), []);
+
   const renderElement = useCallback((element: CanvasElement) => {
-    const isSelected = selectedElementIds.includes(element.id);
+    const isSelected = selectedElementIds.has(element.id);
     const isEditing = false; // This will be handled by text editing overlay
 
     // Elements should be draggable when select tool is active or when the element is selected
     const isDraggable = !isEditing &&
       selectedTool === 'select' && // Only draggable in select mode for better UX
-      !(element as any).isLocked &&
-      !(element.sectionId && selectedElementIds.includes(element.sectionId));
+      !element.isLocked &&
+      !(element.sectionId && selectedElementIds.has(element.sectionId));
 
     // Calculate rendering position based on section membership
-    const section = element.sectionId ? sections[element.sectionId] : null;
+    const section = element.sectionId ? getSection(element.sectionId) : null;
     const renderX = section ? section.x + element.x : element.x;
     const renderY = section ? section.y + element.y : element.y;
 
     // Common props for Konva shapes
-    const konvaElementProps = {
+    const konvaElementProps: any = {
       id: element.id,
       x: renderX,
       y: renderY,
@@ -141,8 +130,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
       onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id),
       opacity: 1,
-      stroke: isSelected ? designSystem.colors.primary[500] : (element.stroke || undefined),
-      strokeWidth: isSelected ? (element.strokeWidth || 1) + 1.5 : (element.strokeWidth || 1),
+      stroke: isSelected ? designSystem.colors.primary[500] : (element as any).stroke,
+      strokeWidth: isSelected ? (((element as any).strokeWidth || 1) + 1.5) : ((element as any).strokeWidth || 1),
       shadowColor: isSelected ? designSystem.colors.primary[300] : undefined,
       shadowBlur: isSelected ? 10 : 0,
       shadowOpacity: isSelected ? 0.7 : 0,
@@ -150,20 +139,20 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     };
 
     // For basic shapes (rectangle, circle), use EditableNode wrapper pattern
-    if (['rectangle', 'circle'].includes(element.type)) {
+    if (isRectangleElement(element) || isCircleElement(element)) {
       return (
         <KonvaErrorBoundary key={`${element.id}-editable-boundary`}>
           <EditableNode
             key={element.id}
-            element={element}
+            element={element as any}
             isSelected={isSelected}
             selectedTool={selectedTool}
-            onElementClick={onElementClick}
-            onElementDragEnd={onElementDragEnd}
-            onElementUpdate={onElementUpdate}
-            onStartTextEdit={onStartTextEdit}
-            {...(onElementDragStart && { onElementDragStart })}
-            {...(onElementDragMove && { onElementDragMove })}
+            onElementClick={onElementClick as any}
+            onElementDragEnd={onElementDragEnd as any}
+            onElementUpdate={onElementUpdate as any}
+            onStartTextEdit={onStartTextEdit as any}
+            {...(onElementDragStart && { onElementDragStart: onElementDragStart as any })}
+            {...(onElementDragMove && { onElementDragMove: onElementDragMove as any })}
           />
         </KonvaErrorBoundary>
       );
@@ -171,40 +160,31 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 
     // For complex shapes, use existing individual shape components
     switch (element.type) {
-      case 'text':        return (
+      case 'text':
+        return (
           <KonvaErrorBoundary key={`${element.id}-text-boundary`}>
             <TextShape
               key={element.id}
-              element={element}
+              element={element as any}
               konvaProps={konvaElementProps}
-              onUpdate={onElementUpdate}
+              onUpdate={onElementUpdate as any}
               stageRef={stageRef}
             />
           </KonvaErrorBoundary>
         );
-
-      case 'sticky-note':        return (
+      case 'sticky-note':
+        return (
           <KonvaErrorBoundary key={`${element.id}-sticky-boundary`}>
             <StickyNoteShape
               key={element.id}
-              element={element}
+              element={element as any}
               konvaProps={konvaElementProps}
-              onUpdate={onElementUpdate}
-              stageRef={stageRef}            />
+              onUpdate={onElementUpdate as any}
+              stageRef={stageRef}
+            />
           </KonvaErrorBoundary>
-        );case 'rich-text':
-        return (
-          <TextShape
-            key={element.id}
-            element={element}
-            konvaProps={konvaElementProps}
-            onUpdate={onElementUpdate}
-            stageRef={stageRef}
-          />
         );
-
       case 'pen':
-        console.log('🖊️ [MAIN LAYER] Rendering pen element:', element.id, 'points:', element.points);
         return (
           <PenShape
             key={element.id}
@@ -212,7 +192,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             konvaProps={konvaElementProps}
           />
         );
-
       case 'star':
         return (
           <StarShape
@@ -221,7 +200,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             konvaProps={konvaElementProps}
           />
         );
-
       case 'triangle':
         return (
           <TriangleShape
@@ -234,213 +212,63 @@ export const MainLayer: React.FC<MainLayerProps> = ({
         return (
           <ImageShape
             key={element.id}
-            element={element}
-            konvaProps={konvaElementProps}          />
-        );        case 'connector':
-        // Create a proper elements map for ConnectorRenderer
-        const elementsMap = elements.reduce((acc, el) => ({ ...acc, [el.id]: el }), {});
-
+            element={element as any}
+            konvaProps={konvaElementProps}
+          />
+        );
+      case 'connector':
         return (
           <KonvaErrorBoundary key={`${element.id}-connector-boundary`}>
             <ConnectorRenderer
               key={element.id}
-              element={element}
+              element={element as any}
               isSelected={isSelected}
               onSelect={() => {
-                const fakeEvent = {} as Konva.KonvaEventObject<MouseEvent>;
+                const fakeEvent = { target: stageRef?.current } as unknown as Konva.KonvaEventObject<MouseEvent>;
                 onElementClick(fakeEvent, element);
               }}
-              onUpdate={onElementUpdate}
-              elements={elementsMap}
-              sections={sections}
+              onUpdate={onElementUpdate as any}
+              elements={Object.fromEntries(elementsMap.entries()) as any}
+              sections={new Map(Array.from(elementsMap.values()).filter(isSectionElement).map(s => [s.id, s])) as any}
             />
           </KonvaErrorBoundary>
         );
-        case 'section':
-        const sectionChildren = elementsBySection?.[element.id] || [];
-          // Create custom section drag handler that moves contained elements
+      case 'section':
+        const sectionChildren = elementsBySection?.get(element.id) || [];
         const sectionKonvaProps = {
           ...konvaElementProps,
           onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
-            // Get the new section position
             const newSectionX = e.target.x();
             const newSectionY = e.target.y();
-
-            // Update section position
-            onElementUpdate(element.id, {
-              x: newSectionX,
-              y: newSectionY
-            });
-
-            // Note: Child elements maintain their relative positions automatically
-            // since they're positioned relative to the section in renderX/renderY calculation
-
-            // Call original drag end handler for any additional processing
+            onElementUpdate(element.id, { x: newSectionX, y: newSectionY });
             onElementDragEnd(e, element.id);
           }
         };
-
         return (
           <SectionShape
             key={element.id}
             element={element as any}
             isSelected={isSelected}
             konvaProps={sectionKonvaProps}
-            onUpdate={onElementUpdate}
-            onStartTextEdit={onStartTextEdit}
-            onSectionResize={onSectionResize || (() => {})}
-          >
-            {sectionChildren.map(childElement => {
-              const childIsSelected = selectedElementIds.includes(childElement.id);
-
-              // Create specialized event handlers for child elements
-              const handleChildClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-                e.cancelBubble = true; // Prevent section selection
-                onElementClick(e, childElement);
-              };              const handleChildDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-                e.cancelBubble = true; // Prevent section drag
-
-                // Get the new position from Konva (absolute coordinates since elements are positioned absolutely in render)
-                const newAbsoluteX = e.target.x();
-                const newAbsoluteY = e.target.y();
-
-                // Convert to section-relative coordinates
-                const section = sections[element.id];
-                if (section) {
-                  // Convert from absolute position back to relative coordinates for storage
-                  const relativeX = newAbsoluteX - section.x;
-                  const relativeY = newAbsoluteY - section.y - (section.titleBarHeight || 32);
-
-                  // Ensure coordinates are within section bounds with some padding
-                  const padding = 5;
-                  const maxX = section.width - (childElement.width || 50) - padding;
-                  const maxY = section.height - (section.titleBarHeight || 32) - (childElement.height || 30) - padding;
-
-                  const constrainedX = Math.max(padding, Math.min(maxX, relativeX));
-                  const constrainedY = Math.max(padding, Math.min(maxY, relativeY));
-
-                  // Update element with constrained relative coordinates
-                  onElementUpdate(childElement.id, {
-                    x: constrainedX,
-                    y: constrainedY
-                  });
-                } else {
-                  // Fallback if section not found
-                  onElementUpdate(childElement.id, {
-                    x: newAbsoluteX,
-                    y: newAbsoluteY
-                  });
-                }
-
-                // Call the original handler for any additional processing
-                onElementDragEnd(e, childElement.id);
-              };
-
-              const handleChildUpdate = (id: string, updates: Partial<CanvasElement>) => {
-                // Ensure updates don't include absolute positioning that would break section containment
-                const safeUpdates = { ...updates };
-
-                // For resize operations, keep coordinates relative to section
-                if ('x' in updates || 'y' in updates) {                  // Coordinates are already relative, just pass them through
-                }
-
-                onElementUpdate(id, safeUpdates);
-              };
-
-              const childKonvaProps = {
-                id: childElement.id,
-                x: childElement.x, // Use relative coordinates stored in the element
-                y: childElement.y, // Use relative coordinates stored in the element
-                draggable: selectedTool === 'select' && !childElement.isLocked,
-                onClick: handleChildClick,
-                onDragEnd: handleChildDragEnd,
-                opacity: 1,
-                stroke: childIsSelected ? designSystem.colors.primary[500] : (childElement.stroke || undefined),
-                strokeWidth: childIsSelected ? (childElement.strokeWidth || 1) + 1.5 : (childElement.strokeWidth || 1),
-                shadowColor: childIsSelected ? designSystem.colors.primary[300] : undefined,
-                shadowBlur: childIsSelected ? 10 : 0,
-                shadowOpacity: childIsSelected ? 0.7 : 0,
-                perfectDrawEnabled: false,
-              };
-                // Render child element with the same logic as main elements
-              if (['rectangle', 'circle'].includes(childElement.type)) {                return (
-                  <KonvaErrorBoundary key={`${childElement.id}-child-editable-boundary`}>
-                    <EditableNode
-                      key={childElement.id}
-                      element={childElement}
-                      isSelected={childIsSelected}
-                      selectedTool={selectedTool}
-                      onElementClick={handleChildClick}
-                      onElementDragEnd={handleChildDragEnd}
-                      onElementUpdate={handleChildUpdate}
-                      onStartTextEdit={onStartTextEdit}
-                      {...(onElementDragStart && { onElementDragStart })}
-                      {...(onElementDragMove && { onElementDragMove })}
-                    />
-                  </KonvaErrorBoundary>
-                );
-              }
-
-              // Handle other child element types based on type
-              switch (childElement.type) {
-                case 'text':
-                  return (
-                    <KonvaErrorBoundary key={`${childElement.id}-child-text-boundary`}>
-                      <TextShape
-                        key={childElement.id}
-                        element={childElement}
-                        konvaProps={childKonvaProps}
-                        onUpdate={handleChildUpdate}
-                        stageRef={stageRef}
-                      />
-                    </KonvaErrorBoundary>
-                  );                case 'sticky-note':
-                  return (
-                    <KonvaErrorBoundary key={`${childElement.id}-child-sticky-boundary`}>
-                      <StickyNoteShape
-                        key={childElement.id}
-                        element={childElement}
-                        konvaProps={childKonvaProps}
-                        onUpdate={handleChildUpdate}
-                        stageRef={stageRef}
-                      />
-                    </KonvaErrorBoundary>
-                  );
-                case 'star':
-                  return (
-                    <StarShape
-                      key={childElement.id}
-                      element={childElement}
-                      konvaProps={childKonvaProps}
-                    />
-                  );
-                case 'triangle':
-                  return (
-                    <TriangleShape
-                      key={childElement.id}
-                      element={childElement}
-                      konvaProps={childKonvaProps}
-                    />
-                  );
-                default:
-                  console.warn('Unhandled child element type:', childElement.type);
-                  return null;
-              }
-            })}
+            onUpdate={onElementUpdate as any}
+            onStartTextEdit={onStartTextEdit as any}
+            onSectionResize={onSectionResize ? (id, w, h) => onSectionResize(id as SectionId, w, h) : (() => {})}>
+            {sectionChildren.map(childElement => renderElement(childElement))}
           </SectionShape>
         );
-
-      case 'table':        return (
+      case 'table':
+        return (
           <KonvaErrorBoundary key={`${element.id}-error-boundary`}>
             <EnhancedTableElement
               key={element.id}
-              element={element}
-              isSelected={isSelected}              onSelect={(element) => {
-                const fakeEvent = {} as Konva.KonvaEventObject<MouseEvent>;
-                onElementClick(fakeEvent, element);
+              element={element as any}
+              isSelected={isSelected}
+              onSelect={(el) => {
+                const fakeEvent = { target: stageRef?.current } as unknown as Konva.KonvaEventObject<MouseEvent>;
+                onElementClick(fakeEvent, el as CanvasElement);
               }}
               onUpdate={(updates) => {
-                onElementUpdate(element.id, updates);
+                onElementUpdate(element.id, updates as Partial<CanvasElement>);
               }}
               onDragEnd={(e) => onElementDragEnd(e, element.id)}
               stageRef={stageRef || { current: null }}
@@ -448,21 +276,22 @@ export const MainLayer: React.FC<MainLayerProps> = ({
           </KonvaErrorBoundary>
         );
       default:
-        console.warn('Unhandled element type in MainLayer:', element.type);
+        console.warn('Unhandled element type in MainLayer:', (element as any).type);
         return null;
     }
-  }, [selectedElementIds, selectedTool, onElementClick, onElementDragEnd, onElementUpdate, onStartTextEdit, sections, elementsBySection, getSectionById, getSectionForElement, handleTransformEnd, stageRef]);
+  }, [selectedElementIds, selectedTool, onElementClick, onElementDragEnd, onElementUpdate, onStartTextEdit, onSectionResize, stageRef, elementsMap, elementsBySection, getSection, createDragBoundFunc]);
 
   // Effect to trigger layer redraw when needed
   React.useEffect(() => {
     if (onLayerDraw) {
       onLayerDraw();
     }
-  }, [elements.length, onLayerDraw]);  // Use robust rendering pattern to eliminate whitespace issues
+  }, [elements.length, onLayerDraw]);
+
+  // Use robust rendering pattern to eliminate whitespace issues
   const validElements = elements.filter(Boolean); // Filter out any undefined elements first
-  
   const elementNodes = validElements.map(renderElement);
-  
+
   // Drawing line component for active drawing state - add key to prevent React warning
   const drawingLine = isDrawing && currentPath.length > 0 ? (
     <Line
@@ -481,6 +310,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   if (drawingLine) {
     allNodes.push(drawingLine);
   }
+
   return (
     <Group {...optimizedProps} name={name || "main-group"}>
       <KonvaErrorBoundary>

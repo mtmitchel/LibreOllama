@@ -6,18 +6,17 @@
 import React, { useEffect, useCallback } from 'react';
 import { Line } from 'react-konva';
 import { useCanvasStore } from '../../stores/canvasStore.enhanced';
-import type { ConnectorElement, Coordinates } from '../../types/enhanced.types';
-import type { CanvasElement } from '../../stores/types';
+import type { ConnectorElement, Coordinates, CanvasElement, SectionId } from '../../types/enhanced.types';
 
 export const ConnectorManager: React.FC<{ connectors: ConnectorElement[] }> = ({ connectors }) => {
   const elements = useCanvasStore(state => state.elements);
   const sections = useCanvasStore(state => state.sections);
   const updateElement = useCanvasStore(state => state.updateElement);  // Get element's absolute position, considering parent sections
-  const getElementAbsolutePosition = useCallback((element: CanvasElement): Coordinates => {
+  const getElementAbsolutePosition = useCallback((element: CanvasElement | { x: number; y: number; sectionId?: SectionId | null }): Coordinates => {
     let pos = { x: element.x, y: element.y };
     
     if (element.sectionId && sections) {
-      const section = sections[element.sectionId];
+      const section = sections.get(element.sectionId);
       if (section) {
         // Recursively find parent position (sections can be nested)
         const sectionPos = getElementAbsolutePosition(section);
@@ -82,7 +81,7 @@ export const ConnectorManager: React.FC<{ connectors: ConnectorElement[] }> = ({
     let startPoint = connector.startPoint;
     let endPoint = connector.endPoint;      // Update start point if connected to an element
     if (connector.startElementId) {
-      const startElement = elements[connector.startElementId];
+      const startElement = elements.get(connector.startElementId);
       if (startElement) {
         startPoint = getConnectionPoint(startElement, 'center');
       }
@@ -90,7 +89,7 @@ export const ConnectorManager: React.FC<{ connectors: ConnectorElement[] }> = ({
     
     // Update end point if connected to an element
     if (connector.endElementId) {
-      const endElement = elements[connector.endElementId];
+      const endElement = elements.get(connector.endElementId);
       if (endElement) {
         endPoint = getConnectionPoint(endElement, 'center');
       }
@@ -124,9 +123,7 @@ export const ConnectorManager: React.FC<{ connectors: ConnectorElement[] }> = ({
       connector.startPoint.y !== startPoint.y ||
       connector.endPoint.x !== endPoint.x ||
       connector.endPoint.y !== endPoint.y ||
-      JSON.stringify(connector.intermediatePoints) !== JSON.stringify(intermediatePoints);
-    
-    if (hasChanged) {
+      JSON.stringify(connector.intermediatePoints) !== JSON.stringify(intermediatePoints);    if (hasChanged) {
       updateElement(connector.id, {
         startPoint,
         endPoint,

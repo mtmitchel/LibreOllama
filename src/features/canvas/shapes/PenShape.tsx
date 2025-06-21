@@ -1,12 +1,12 @@
 // src/features/canvas/shapes/PenShape.tsx
 import React from 'react';
 import { Line } from 'react-konva';
-import { CanvasElement } from '../stores/types';
+import { PenElement } from '../types/enhanced.types';
 import { designSystem } from '../../../styles/designSystem';
 import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
 
 interface PenShapeProps {
-  element: CanvasElement;
+  element: PenElement;
   konvaProps: any;
 }
 
@@ -42,7 +42,7 @@ export const PenShape: React.FC<PenShapeProps> = React.memo(({
       strokeWidth={element.strokeWidth || 3}
       lineCap="round"
       lineJoin="round"
-      tension={0.5}
+      tension={element.tension || 0.5}
       // Konva performance optimizations
       perfectDrawEnabled={false} // Disable perfect drawing for better performance
       shadowForStrokeEnabled={false} // Disable shadow for stroke to prevent extra rendering pass

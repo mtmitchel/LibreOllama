@@ -13,7 +13,7 @@ import { CanvasEventHandler } from './CanvasEventHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
 // import { useCanvasSetup } from './useCanvasSetup';
-import { CanvasTool } from '../types/enhanced.types';
+import { CanvasTool, ElementId, SectionId, CanvasElement } from '../types/enhanced.types';
 import '../../../styles/konvaCanvas.css';
 import '../../../styles/multiDrag.css';
 
@@ -69,6 +69,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   // Get current tool and drawing state from store
   const currentTool = useCanvasStore(state => state.selectedTool) as CanvasTool;
   const isDrawing = useCanvasStore(state => state.isDrawing);
+  const selectedElementIds = useCanvasStore(state => state.selectedElementIds);
+  const elements = useCanvasStore(state => state.elements);
 
   // Sync external and internal stage refs
   useEffect(() => {
@@ -136,6 +138,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
             stageWidth={width}
             stageHeight={height}
             stageRef={internalStageRef}
+            elements={elements as Map<ElementId | SectionId, CanvasElement>}
+            selectedElementIds={selectedElementIds}
             onElementUpdate={(id, updates) => {
               // Delegate to store
               useCanvasStore.getState().updateElement(id, updates);

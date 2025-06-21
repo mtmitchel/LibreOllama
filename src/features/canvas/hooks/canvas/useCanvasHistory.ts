@@ -107,33 +107,33 @@ export const useCanvasHistory = () => {
     const state = getHistoryState();
     return {
       undo: {
-        enabled: state.canUndo,
-        tooltip: state.canUndo && currentIndex >= 0 && history[currentIndex] 
-          ? `Undo: ${history[currentIndex].action}` 
+        enabled: state.canUndo,        tooltip: state.canUndo && currentIndex >= 0 && history.get(currentIndex) 
+          ? `Undo: ${history.get(currentIndex)!.action}` 
           : 'Nothing to undo'
       },
       redo: {
-        enabled: state.canRedo,
-        tooltip: state.canRedo && currentIndex + 1 < history.length && history[currentIndex + 1]
-          ? `Redo: ${history[currentIndex + 1]?.action || 'Unknown action'}`
+        enabled: state.canRedo,        tooltip: state.canRedo && currentIndex + 1 < history.getSize() && history.get(currentIndex + 1)
+          ? `Redo: ${history.get(currentIndex + 1)?.action || 'Unknown action'}`
           : 'Nothing to redo'
       }
     };
   }, [getHistoryState, currentIndex, history]);
-
   // Get memory usage statistics for history
   const getMemoryUsage = useCallback(() => {
-    // Estimate memory usage based on history entries
-    const estimatedSize = history.reduce((total, entry) => {
-      // Rough estimation - each entry is ~1KB
-      return total + JSON.stringify(entry).length;
-    }, 0);
+    // Estimate memory usage based on history entries using the available methods
+    let estimatedSize = 0;
+    for (let i = 0; i < history.getSize(); i++) {
+      const entry = history.get(i);
+      if (entry) {
+        estimatedSize += JSON.stringify(entry).length;
+      }
+    }
 
     return {
       estimatedBytes: estimatedSize,
       estimatedKB: Math.round(estimatedSize / 1024),
-      entryCount: history.length,
-      averageEntrySize: history.length > 0 ? Math.round(estimatedSize / history.length) : 0
+      entryCount: history.getSize(),
+      averageEntrySize: history.getSize() > 0 ? Math.round(estimatedSize / history.getSize()) : 0
     };
   }, [history]);
   return {

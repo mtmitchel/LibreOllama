@@ -2,43 +2,45 @@
 /**
  * Section Store - FIXED VERSION
  * Handles section operations and containment without circular dependencies
+ * Updated to use Map<string, SectionElement> for O(1) performance
  */
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import type { SectionElement } from '../../../../types/section';
+import type { SectionElement } from '../../types/enhanced.types';
+import { SectionId, ElementId } from '../../types/enhanced.types';
 
 export interface SectionState {
-  // Section data
-  sections: Record<string, SectionElement>;
+  // Section data - Updated to use Map for O(1) operations
+  sections: Map<string, SectionElement>;
   sectionOrder: string[];
-  
-  // Section operations
-  createSection: (x: number, y: number, width?: number, height?: number, title?: string) => string;
-  updateSection: (id: string, updates: Partial<SectionElement>) => void;
-  deleteSection: (id: string) => void;
-  duplicateSection: (id: string) => void;
+    // Section operations
+  createSection: (x: number, y: number, width?: number, height?: number, title?: string) => SectionId;
+  updateSection: (id: SectionId, updates: Partial<SectionElement>) => void;
+  deleteSection: (id: SectionId) => void;
+  duplicateSection: (id: SectionId) => void;
   
   // Element containment - basic operations that don't require element data
-  addElementToSection: (elementId: string, sectionId: string) => void;
-  removeElementFromSection: (elementId: string, sectionId: string) => void;
-  moveElementBetweenSections: (elementId: string, fromSectionId: string, toSectionId: string) => void;
-  getElementsInSection: (sectionId: string) => string[];
-  getSectionForElement: (elementId: string) => string | null;
+  addElementToSection: (elementId: ElementId, sectionId: SectionId) => void;
+  removeElementFromSection: (elementId: ElementId, sectionId: SectionId) => void;
+  moveElementBetweenSections: (elementId: ElementId, fromSectionId: SectionId, toSectionId: SectionId) => void;
+  getElementsInSection: (sectionId: SectionId) => ElementId[];
+  getSectionForElement: (elementId: ElementId) => SectionId | null;
   
   // Section movement and resize
-  handleSectionDragEnd: (sectionId: string, newX: number, newY: number) => { deltaX: number; deltaY: number; containedElementIds: string[] } | null;
-  resizeSection: (sectionId: string, newWidth: number, newHeight: number) => { scaleX: number; scaleY: number; containedElementIds: string[] } | null;
+  handleSectionDragEnd: (sectionId: SectionId, newX: number, newY: number) => { deltaX: number; deltaY: number; childElementIds: ElementId[] } | null;
+  resizeSection: (sectionId: SectionId, newWidth: number, newHeight: number) => { scaleX: number; scaleY: number; childElementIds: ElementId[] } | null;
   
   // Section queries
-  getSectionById: (id: string) => SectionElement | null;
+  getSectionById: (id: SectionId) => SectionElement | null;
   getAllSections: () => SectionElement[];
   
   // Section utilities
   clearAllSections: () => void;
   isElementInAnySection: (elementId: string) => boolean;
-    // NEW: Capture elements helper that will be called from the combined store
-  captureElementsInSection: (sectionId: string, elements: Record<string, any>) => string[];
+  
+  // NEW: Capture elements helper that will be called from the combined store
+  captureElementsInSection: (sectionId: string, elements: Map<string, any>) => string[];
 }
 
 export const createSectionStore: StateCreator<
@@ -47,13 +49,12 @@ export const createSectionStore: StateCreator<
   [],
   SectionState
 > = (set, get) => ({
-  // Initial state
-  sections: {},
-  sectionOrder: [],
+  // Initial state - Using Map for O(1) performance
+  sections: new Map(),  sectionOrder: [],
   
   // Section operations
   createSection: (x, y, width = 400, height = 300, title = 'New Section') => {
-    const sectionId = `section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const sectionId = SectionId(`section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
     const section: SectionElement = {
       id: sectionId,
       type: 'section',
@@ -61,22 +62,19 @@ export const createSectionStore: StateCreator<
       y,
       width,
       height,
-      title,
-      containedElementIds: [],
+      title,      childElementIds: [],
       isLocked: false,
       isHidden: false,
       backgroundColor: '#f8f9fa',
       borderColor: '#e9ecef',
       borderWidth: 2,
       cornerRadius: 8,
-      titleBarHeight: 32,
-      titleFontSize: 14,
-      titleColor: '#495057',
-      opacity: 1
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     
     set((state: Draft<SectionState>) => {
-      state.sections[sectionId] = section;
+      state.sections.set(sectionId, section);
       state.sectionOrder.push(sectionId);
     });
     
@@ -86,8 +84,10 @@ export const createSectionStore: StateCreator<
 
   updateSection: (id, updates) => {
     set((state: Draft<SectionState>) => {
-      if (state.sections[id]) {
-        Object.assign(state.sections[id], updates);
+      const section = state.sections.get(id);
+      if (section) {
+        const updatedSection = { ...section, ...updates };
+        state.sections.set(id, updatedSection);
         console.log('✅ [SECTION STORE] Updated section:', id, updates);
       }
     });
@@ -95,18 +95,18 @@ export const createSectionStore: StateCreator<
   
   deleteSection: (id) => {
     set((state: Draft<SectionState>) => {
-      const section = state.sections[id];
+      const section = state.sections.get(id);
       if (section) {
         // Note: Contained elements become free elements (handled by combined store)
-        delete state.sections[id];
+        state.sections.delete(id);
         state.sectionOrder = state.sectionOrder.filter(sId => sId !== id);
-        console.log('✅ [SECTION STORE] Deleted section:', id, 'with', section.containedElementIds.length, 'contained elements');
+        console.log('✅ [SECTION STORE] Deleted section:', id, 'with', section.childElementIds.length, 'contained elements');
       }
     });
   },
   
   duplicateSection: (id) => {
-    const section = get().sections[id];
+    const section = get().sections.get(id);
     if (section) {
       const newSectionId = get().createSection(
         section.x + 20,
@@ -116,12 +116,16 @@ export const createSectionStore: StateCreator<
         section.title + ' Copy'
       );
       
-      set((state: Draft<SectionState>) => {
-        if (state.sections[newSectionId]) {
-          state.sections[newSectionId].backgroundColor = section.backgroundColor;
-          state.sections[newSectionId].borderColor = section.borderColor;
-          state.sections[newSectionId].isLocked = section.isLocked;
-          state.sections[newSectionId].isHidden = section.isHidden;
+      set((state: Draft<SectionState>) => {        const newSection = state.sections.get(newSectionId);
+        if (newSection) {
+          const updatedSection = {
+            ...newSection,
+            ...(section.backgroundColor && { backgroundColor: section.backgroundColor }),
+            ...(section.borderColor && { borderColor: section.borderColor }),
+            ...(section.isLocked !== undefined && { isLocked: section.isLocked }),
+            ...(section.isHidden !== undefined && { isHidden: section.isHidden })
+          };
+          state.sections.set(newSectionId, updatedSection);
         }
       });
       
@@ -132,18 +136,21 @@ export const createSectionStore: StateCreator<
   // Element containment - simplified without element access
   addElementToSection: (elementId, sectionId) => {
     set((state: Draft<SectionState>) => {
-      const section = state.sections[sectionId];
-      if (section && !section.containedElementIds.includes(elementId)) {
+      const section = state.sections.get(sectionId);
+      if (section && !section.childElementIds.includes(elementId)) {
         // Remove element from any other section first
-        Object.values(state.sections).forEach(s => {
-          const index = s.containedElementIds.indexOf(elementId);
+        state.sections.forEach((s, sId) => {
+          const index = s.childElementIds.indexOf(elementId);
           if (index > -1) {
-            s.containedElementIds.splice(index, 1);
+            s.childElementIds.splice(index, 1);
+            // Update the section in the map
+            state.sections.set(sId, { ...s });
           }
         });
         
         // Add to target section
-        section.containedElementIds.push(elementId);
+        section.childElementIds.push(elementId);
+        state.sections.set(sectionId, { ...section });
         console.log('✅ [SECTION STORE] Added element', elementId, 'to section', sectionId);
       }
     });
@@ -151,11 +158,12 @@ export const createSectionStore: StateCreator<
   
   removeElementFromSection: (elementId, sectionId) => {
     set((state: Draft<SectionState>) => {
-      const section = state.sections[sectionId];
+      const section = state.sections.get(sectionId);
       if (section) {
-        const index = section.containedElementIds.indexOf(elementId);
+        const index = section.childElementIds.indexOf(elementId);
         if (index > -1) {
-          section.containedElementIds.splice(index, 1);
+          section.childElementIds.splice(index, 1);
+          state.sections.set(sectionId, { ...section });
           console.log('✅ [SECTION STORE] Removed element', elementId, 'from section', sectionId);
         }
       }
@@ -169,24 +177,24 @@ export const createSectionStore: StateCreator<
   },
   
   getElementsInSection: (sectionId) => {
-    const section = get().sections[sectionId];
-    return section ? [...section.containedElementIds] : [];
+    const section = get().sections.get(sectionId);
+    return section ? [...section.childElementIds] : [];
   },
-  
-  getSectionForElement: (elementId) => {
+    getSectionForElement: (elementId) => {
     const sections = get().sections;
-    for (const sectionId in sections) {
-      const section = sections[sectionId];
-      if (section && section.containedElementIds.includes(elementId)) {
-        return sectionId;
+    
+    for (const [sectionId, section] of sections) {
+      if (section.childElementIds.includes(elementId)) {
+        return SectionId(sectionId);
       }
     }
+    
     return null;
   },
   
   // Section movement and resize
   handleSectionDragEnd: (sectionId, newX, newY) => {
-    const section = get().sections[sectionId];
+    const section = get().sections.get(sectionId);
     if (!section) return null;
     
     const deltaX = newX - section.x;
@@ -194,69 +202,79 @@ export const createSectionStore: StateCreator<
     
     set((state: Draft<SectionState>) => {
       // Update section position
-      const section = state.sections[sectionId];
+      const section = state.sections.get(sectionId);
       if (section) {
-        section.x = newX;
-        section.y = newY;
+        const updatedSection = {
+          ...section,
+          x: newX,
+          y: newY
+        };
+        state.sections.set(sectionId, updatedSection);
       }
     });
     
     console.log('✅ [SECTION STORE] Section drag end:', sectionId, 'moved by', { deltaX, deltaY });
     
     // Return delta for element store to update contained elements
-    return { deltaX, deltaY, containedElementIds: section.containedElementIds };
+    return { deltaX, deltaY, childElementIds: section.childElementIds };
   },
   
   resizeSection: (sectionId, newWidth, newHeight) => {
-    const section = get().sections[sectionId];
+    const section = get().sections.get(sectionId);
     if (!section) return null;
     
     const scaleX = newWidth / section.width;
     const scaleY = newHeight / section.height;
     
     set((state: Draft<SectionState>) => {
-      const section = state.sections[sectionId];
+      const section = state.sections.get(sectionId);
       if (section) {
-        section.width = newWidth;
-        section.height = newHeight;
+        const updatedSection = {
+          ...section,
+          width: newWidth,
+          height: newHeight
+        };
+        state.sections.set(sectionId, updatedSection);
         console.log('✅ [SECTION STORE] Resized section:', sectionId, { newWidth, newHeight, scaleX, scaleY });
       }
     });
     
     // Return scale factors for proportional resizing of contained elements
-    return { scaleX, scaleY, containedElementIds: section.containedElementIds };
+    return { scaleX, scaleY, childElementIds: section.childElementIds };
   },
   
-  // Section queries
+  // Section queries - Updated to work with Map
   getSectionById: (id) => {
-    return get().sections[id] || null;
+    return get().sections.get(id) || null;
   },
   
   getAllSections: () => {
     const { sections, sectionOrder } = get();
-    return sectionOrder.map(id => sections[id]).filter((section): section is SectionElement => Boolean(section));
+    return sectionOrder
+      .map(id => sections.get(id))
+      .filter((section): section is SectionElement => section !== undefined);
   },
   
-  // Section utilities
+  // Section utilities - Updated to work with Map
   clearAllSections: () => {
     set((state: Draft<SectionState>) => {
-      state.sections = {};
+      state.sections.clear();
       state.sectionOrder = [];
     });
     console.log('✅ [SECTION STORE] Cleared all sections');
   },
-  
-  isElementInAnySection: (elementId) => {
-    return get().getSectionForElement(elementId) !== null;
+    isElementInAnySection: (elementId) => {
+    return get().getSectionForElement(ElementId(elementId)) !== null;
   },
-    // NEW: Method to capture elements that are within section bounds
-  captureElementsInSection: (sectionId: string, elements: Record<string, any>) => {
-    const section = get().sections[sectionId];
+  
+  // NEW: Method to capture elements that are within section bounds - Updated to work with Map
+  captureElementsInSection: (sectionId: string, elements: Map<string, any>) => {
+    const section = get().sections.get(sectionId);
     if (!section) return [];
     
     const capturedElementIds: string[] = [];
     
-    Object.entries(elements).forEach(([elementId, element]) => {
+    elements.forEach((element, elementId) => {
       // Skip if element is already in a section
       if (element.sectionId) return;
       
@@ -287,26 +305,31 @@ export const createSectionStore: StateCreator<
         });
       }
     });
-    
-    // Add captured elements to the section
+      // Add captured elements to the section
     if (capturedElementIds.length > 0) {
       set((state: Draft<SectionState>) => {
-        const section = state.sections[sectionId];
+        const section = state.sections.get(sectionId);
         if (section) {
           // Remove elements from other sections
           capturedElementIds.forEach(elementId => {
-            Object.values(state.sections).forEach(s => {
-              if (s.id !== sectionId) {
-                const index = s.containedElementIds.indexOf(elementId);
+            state.sections.forEach((s, sId) => {
+              if (sId !== sectionId) {
+                const index = s.childElementIds.findIndex(id => (id as string) === elementId);
                 if (index > -1) {
-                  s.containedElementIds.splice(index, 1);
+                  s.childElementIds.splice(index, 1);
+                  // Update the section in the map
+                  state.sections.set(sId, { ...s });
                 }
               }
             });
           });
           
-          // Add all elements to this section
-          section.containedElementIds = capturedElementIds;
+          // Add all elements to this section - Convert strings to ElementId
+          const updatedSection = {
+            ...section,
+            childElementIds: capturedElementIds.map(id => ElementId(id))
+          };
+          state.sections.set(sectionId, updatedSection);
           console.log('✅ [SECTION STORE] Captured', capturedElementIds.length, 'elements in section:', sectionId);
         }
       });

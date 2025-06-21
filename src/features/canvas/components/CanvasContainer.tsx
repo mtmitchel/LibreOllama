@@ -3,13 +3,15 @@ import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
-import { useCanvasPerformance } from '../hooks/canvas/useCanvasPerformance';
+// import { useCanvasPerformance } from '../hooks/canvas/useCanvasPerformance';
 import { useViewportControls } from '../hooks/canvas/useViewportControls';
 import { useSelectionManager } from '../hooks/canvas/useSelectionManager';
 import { useCanvasHistory } from '../hooks/canvas/useCanvasHistory';
 // FIXED: Use the new modular store consistently
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
-import type { CanvasElement } from '../stores/types';
+import { useCanvasDrawing } from '../hooks/useCanvasDrawing';
+import type { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
+import { toElementId } from '../types/compatibility';
 import { designSystem } from '../../../styles/designSystem';
 
 interface CanvasContainerProps {
@@ -37,39 +39,41 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   // Stage reference
   const stageRef = useRef<Konva.Stage | null>(null);
 
+  // Custom hook for drawing
+  useCanvasDrawing(stageRef.current);
 
   // Canvas state
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState<number[]>([]);
-  const [isDrawingConnector, setIsDrawingConnector] = useState(false);
-  const [connectorStart, setConnectorStart] = useState<{ x: number; y: number; elementId?: string; anchor?: string } | null>(null);
-  const [connectorEnd, setConnectorEnd] = useState<{ x: number; y: number; elementId?: string; anchor?: string } | null>(null);
+  const [isDrawingConnector, setIsDrawingConnector] = useState(false);  const [connectorStart, setConnectorStart] = useState<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>(null);
+  const [connectorEnd, setConnectorEnd] = useState<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>(null);
   const [isDrawingSection, setIsDrawingSection] = useState(false);
-  const [previewSection, setPreviewSection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-
-  // Custom hooks
-  const { recordRenderTime, startRenderTiming } = useCanvasPerformance({ enableLogging: true });
+  const [previewSection, setPreviewSection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);  // Custom hooks
   const { zoom, pan, zoomIn, zoomOut } = useViewportControls();
   const { selectSingle, clear: clearSelection, selectedElementIds } = useSelectionManager();
-  const { addToHistory } = useCanvasHistory();  // Store hooks - FIXED: Use the new modular store consistently
-  const elements = useCanvasStore((state) => Object.values(state.elements));
+  const { addToHistory } = useCanvasHistory();
+  // Store hooks - FIXED: Use the new modular store consistently
+  const elementsMap = useCanvasStore((state) => state.elements);
+  // const elements = useCanvasStore((state) => Object.values(state.elements));
   const updateElement = useCanvasStore((state) => state.updateElement);
+  const updateSection = useCanvasStore((state) => state.updateSection);
   const addElement = useCanvasStore((state) => state.addElement);
   const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
   const selectedTool = useCanvasStore((state) => state.selectedTool);
   const createSection = useCanvasStore((state) => state.createSection);
-
-  // Performance tracking
-  useEffect(() => {
-    const elementCount = Object.keys(elements).length;
-    const endTiming = startRenderTiming();
-    
-    // Simulate a render cycle
-    requestAnimationFrame(() => {
-      endTiming(); // This returns void, so we need to track time differently
-      recordRenderTime(16, elementCount); // Use a default 16ms for now
-    });
-  }, [elements, startRenderTiming, recordRenderTime]);
+  
+  // Combined update function for elements and sections
+  const handleElementOrSectionUpdate = useCallback((id: ElementId | SectionId, updates: Partial<CanvasElement>) => {
+    // Check if this is a section ID (sections have their own update function)
+    if (typeof id === 'string' && id.includes('section')) {
+      // This is a simplified check - you might need a more robust type check
+      updateSection(id as SectionId, updates as any);
+    } else {
+      updateElement(id as ElementId, updates);
+    }
+  }, [updateElement, updateSection]);
+  // Performance monitoring
+  // const performance = useCanvasPerformance(elements.length);
 
   // Handle element selection
   const handleElementClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => {
@@ -77,11 +81,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     selectSingle(element.id);
     onElementSelect?.(element);
   }, [selectSingle, onElementSelect]);
-
   // Handle element drag end
   const handleElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
     const node = e.target;
-    updateElement(elementId, {
+    updateElement(toElementId(elementId), {
       x: node.x(),
       y: node.y()
     });
@@ -98,11 +101,21 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     setEditingTextId(elementId);
     onStartTextEdit?.(elementId);
   }, [setEditingTextId, onStartTextEdit]);
-
   // Handle stage click (deselection)
   const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Only deselect if clicking on empty space
-    if (e.target === stageRef.current) {
+    // Only deselect if clicking on empty space (stage itself or background layer)
+    const targetName = e.target.name?.() || '';
+    const targetId = e.target.id?.() || '';
+    
+    // Deselect if clicking on:
+    // 1. The stage itself
+    // 2. Background layer
+    // 3. Any layer that's not an interactive element
+    if (e.target === stageRef.current || 
+        targetName === 'background-layer' ||
+        targetName === 'background-rect' ||
+        (!targetId || targetId === '') ||
+        e.target.getType() === 'Stage') {
       clearSelection();
     }
   }, [clearSelection]);
@@ -123,16 +136,17 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     } else {
       zoomOut(scaleBy);
     }
-  }, [zoomIn, zoomOut]);  // Handle mouse down for drawing tools
+  }, [zoomIn, zoomOut]);
+
+  // Handle mouse down for drawing tools (delegated to useCanvasDrawing for pen)
   const handleMouseDown = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
     const stage = stageRef.current;
     if (!stage) return;
     
     const pos = stage.getRelativePointerPosition();
-    if (!pos) return;    if (selectedTool === 'pen') {
-      setIsDrawing(true);
-      setCurrentPath([pos.x, pos.y]);
-    } else if (selectedTool === 'section') {
+    if (!pos) return;
+
+    if (selectedTool === 'section') {
       setIsDrawingSection(true);
       setPreviewSection({
         x: pos.x,
@@ -144,16 +158,17 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       setIsDrawingConnector(true);
       setConnectorStart({ x: pos.x, y: pos.y });
       setConnectorEnd({ x: pos.x, y: pos.y });
-    }
-  }, [selectedTool]);  // Handle mouse move for drawing
+    }  }, [selectedTool]);
+
+  // Handle mouse move for drawing (delegated to useCanvasDrawing for pen)
   const handleMouseMove = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
     const stage = stageRef.current;
     if (!stage) return;
     
     const point = stage.getRelativePointerPosition();
-    if (!point) return;    if (isDrawing && selectedTool === 'pen') {
-      setCurrentPath(prev => [...prev, point.x, point.y]);
-    } else if (isDrawingSection && selectedTool === 'section' && previewSection) {
+    if (!point) return;
+
+    if (isDrawingSection && selectedTool === 'section' && previewSection) {
       const width = point.x - previewSection.x;
       const height = point.y - previewSection.y;
       
@@ -165,29 +180,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     } else if (isDrawingConnector && (selectedTool === 'connector-line' || selectedTool === 'connector-arrow')) {
       setConnectorEnd({ x: point.x, y: point.y });
     }
-  }, [isDrawing, isDrawingSection, selectedTool, previewSection]);
-  // Handle mouse up for drawing completion
-  const handleMouseUp = useCallback(() => {
-    const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }, [isDrawingSection, selectedTool, previewSection]);
 
-    if (selectedTool === 'pen' && isDrawing && currentPath.length >= 4) {
-      const newElement: CanvasElement = {
-        id: generateId(),
-        type: selectedTool,
-        x: 0,
-        y: 0,
-        points: currentPath,
-        stroke: designSystem.colors.secondary[800],
-        strokeWidth: 3,
-        fill: 'transparent',
-      };
-      
-      addElement(newElement);
-      addToHistory(`Draw ${selectedTool}`, [], [], {
-        elementIds: [newElement.id],
-        operationType: 'create',
-        affectedCount: 1
-      });    } else if (selectedTool === 'section' && isDrawingSection && previewSection && 
+  // Handle mouse up for drawing completion (delegated to useCanvasDrawing for pen)
+  const handleMouseUp = useCallback(() => {
+    if (selectedTool === 'section' && isDrawingSection && previewSection && 
                Math.abs(previewSection.width) > 10 && Math.abs(previewSection.height) > 10) {
       
       const sectionId = createSection(
@@ -209,16 +206,28 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         Math.pow(connectorEnd.x - connectorStart.x, 2) + 
         Math.pow(connectorEnd.y - connectorStart.y, 2)
       );
-      
-      if (distance > 10) { // Minimum distance to create connector
+        if (distance > 10) { // Minimum distance to create connector
         const newElement: CanvasElement = {
-          id: generateId(),
+          id: toElementId(`connector_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`),
           type: 'connector',
+          subType: 'line',
           x: connectorStart.x,
           y: connectorStart.y,
-          points: [0, 0, connectorEnd.x - connectorStart.x, connectorEnd.y - connectorStart.y],
+          startPoint: { x: connectorStart.x, y: connectorStart.y },
+          endPoint: { x: connectorEnd.x, y: connectorEnd.y },
+          intermediatePoints: [],
           stroke: designSystem.colors.secondary[600],
-          strokeWidth: 2
+          strokeWidth: 2,
+          pathPoints: [0, 0, connectorEnd.x - connectorStart.x, connectorEnd.y - connectorStart.y],
+          connectorStyle: {
+            strokeColor: designSystem.colors.secondary[600],
+            strokeWidth: 2,
+            startArrow: 'none',
+            endArrow: 'arrow',
+            arrowSize: 10
+          },
+          createdAt: Date.now(),
+          updatedAt: Date.now()
         };
         
         addElement(newElement);
@@ -236,23 +245,31 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     setIsDrawingSection(false);
     setPreviewSection(null);
     setIsDrawingConnector(false);
-    setConnectorStart(null);
-    setConnectorEnd(null);
-  }, [selectedTool, isDrawing, isDrawingSection, isDrawingConnector, currentPath, previewSection, connectorStart, connectorEnd, addElement, addToHistory]);
+    setConnectorStart(null);    setConnectorEnd(null);
+  }, [
+    selectedTool, 
+    isDrawing, 
+    isDrawingSection, 
+    isDrawingConnector, 
+    currentPath, 
+    previewSection, 
+    connectorStart, 
+    connectorEnd, 
+    addElement, 
+    addToHistory
+  ]);
 
   // Keyboard event handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Handle delete key
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementIds.length > 0) {
-        selectedElementIds.forEach((id: string) => {
-          updateElement(id, { deleted: true } as any); // Mark as deleted
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementIds.size > 0) {        selectedElementIds.forEach((id: string) => {
+          updateElement(toElementId(id), { deleted: true } as any); // Mark as deleted
         });
-        
-        addToHistory(`Delete ${selectedElementIds.length} elements`, [], [], {
-          elementIds: selectedElementIds,
+          addToHistory(`Delete ${selectedElementIds.size} elements`, [], [], {
+          elementIds: Array.from(selectedElementIds),
           operationType: 'delete',
-          affectedCount: selectedElementIds.length
+          affectedCount: selectedElementIds.size
         });
         
         clearSelection();
@@ -286,20 +303,21 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         x={pan.x}
         y={pan.y}
         scaleX={zoom}
-        scaleY={zoom}
-        style={{
+        scaleY={zoom}        style={{
           display: 'block',
           backgroundColor: designSystem.canvasStyles.background,
           cursor: selectedTool === 'pan' ? 'grab' : 
-                  selectedTool.startsWith('connector-') ? 'crosshair' : 'default',          userSelect: 'none',
+                  selectedTool.startsWith('connector-') ? 'crosshair' : 'default',
+          userSelect: 'none',
           WebkitUserSelect: 'none',
         }}
-      >
-        <CanvasLayerManager
+      >        <CanvasLayerManager
           stageWidth={width}
           stageHeight={height}
           stageRef={stageRef}
-          onElementUpdate={updateElement}
+          elements={elementsMap as Map<ElementId | SectionId, CanvasElement>}
+          selectedElementIds={selectedElementIds}
+          onElementUpdate={handleElementOrSectionUpdate}
           onElementDragEnd={handleElementDragEnd}
           onElementClick={handleElementClick}
           onStartTextEdit={handleStartTextEdit}

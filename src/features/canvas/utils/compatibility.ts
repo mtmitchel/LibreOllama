@@ -1,11 +1,12 @@
 /**
  * Canvas Compatibility Layer
- * Ensures backward compatibility during the transition period
- * 
+ * Ensures backward compatibility during the transition period from legacy stores
+ * to the enhanced, unified store with new data structures (Map, Set).
+ *
  * This module provides:
- * - Type conversion between old and new formats
- * - Legacy API compatibility wrappers
- * - Migration utilities for existing data
+ * - Type conversion between old (Record<string, any>) and new (Map, Set with branded types) formats.
+ * - Legacy API compatibility wrappers for services that need to function during the transition.
+ * - A robust migration utility to automatically update legacy store state to the new format.
  */
 
 import { CanvasElement as LegacyCanvasElement } from '../../../types';
@@ -20,11 +21,12 @@ import {
 } from '../types/enhanced.types';
 
 /**
- * Convert legacy canvas elements to enhanced typed elements
+ * Converts a single legacy canvas element to the new enhanced, type-safe format.
+ * This function handles all element types and assigns branded IDs.
  */
 export function convertLegacyToEnhanced(legacyElement: LegacyCanvasElement): CanvasElement {
   const baseElement = {
-    id: ElementId(legacyElement.id),
+    id: ElementId(legacyElement.id), // Apply branding
     type: legacyElement.type,
     x: legacyElement.x,
     y: legacyElement.y,
@@ -32,7 +34,7 @@ export function convertLegacyToEnhanced(legacyElement: LegacyCanvasElement): Can
     isLocked: legacyElement.isLocked || false,
     isHidden: legacyElement.isHidden || false,
     sectionId: legacyElement.sectionId ? SectionId(legacyElement.sectionId) : null,
-    createdAt: Date.now(), // Fallback for legacy elements
+    createdAt: (legacyElement as any).createdAt || Date.now(), // Preserve or add timestamp
     updatedAt: Date.now(),
   };
 
@@ -77,17 +79,18 @@ export function convertLegacyToEnhanced(legacyElement: LegacyCanvasElement): Can
     case 'section':
       return {
         ...baseElement,
-        id: SectionId(legacyElement.id),
+        id: SectionId(legacyElement.id), // Re-brand as SectionId for sections
         type: 'section',
         width: (legacyElement as any).width || 200,
         height: (legacyElement as any).height || 150,
-        title: (legacyElement as any).title,
+        title: (legacyElement as any).title || 'Section',
         backgroundColor: (legacyElement as any).backgroundColor,
         borderColor: (legacyElement as any).borderColor,
         borderWidth: (legacyElement as any).borderWidth,
         cornerRadius: (legacyElement as any).cornerRadius,
         collapsed: (legacyElement as any).collapsed || false,
-        childElementIds: ((legacyElement as any).childElementIds || []).map((id: string) => ElementId(id)),
+        // Legacy property could be childElementIds or containedElementIds, the new property is childElementIds as per the type definition.
+        childElementIds: ((legacyElement as any).childElementIds || (legacyElement as any).containedElementIds || []).map((id: string) => ElementId(id)),
       } as SectionElement;
 
     default:
@@ -95,14 +98,14 @@ export function convertLegacyToEnhanced(legacyElement: LegacyCanvasElement): Can
       return {
         ...baseElement,
         type: legacyElement.type,
-        // Add any additional properties that might exist
         ...(legacyElement as any),
       } as CanvasElement;
   }
 }
 
 /**
- * Convert enhanced typed elements back to legacy format
+ * Converts an enhanced, type-safe element back to the legacy format.
+ * This is useful for interacting with parts of the system that have not yet been updated.
  */
 export function convertEnhancedToLegacy(enhancedElement: CanvasElement): LegacyCanvasElement {
   const baseElement = {
@@ -116,37 +119,43 @@ export function convertEnhancedToLegacy(enhancedElement: CanvasElement): LegacyC
     sectionId: enhancedElement.sectionId as string | null, // Remove branding
   };
 
-  // Return with all the specific properties
   return {
     ...baseElement,
-    ...(enhancedElement as any), // Include all type-specific properties
+    ...(enhancedElement as any),
   } as LegacyCanvasElement;
 }
 
 /**
- * Batch convert legacy elements to enhanced format
+ * Batch converts legacy elements and sections from Records or Arrays into a single enhanced Map.
+ * This is the primary conversion utility for migrating to the new store structure.
  */
-export function convertLegacyElementsMap(
-  legacyElements: Record<string, LegacyCanvasElement>
-): Map<ElementId, CanvasElement> {
-  const enhancedMap = new Map<ElementId, CanvasElement>();
-  
-  Object.values(legacyElements).forEach(legacyElement => {
-    const enhanced = convertLegacyToEnhanced(legacyElement);
-    // Only add non-section elements to the elements map
-    if (enhanced.type !== 'section') {
-      enhancedMap.set(enhanced.id as ElementId, enhanced);
-    }
-  });
+export function convertLegacyStateToEnhancedMap(
+  legacyElements: Record<string, LegacyCanvasElement> | LegacyCanvasElement[],
+  legacySections: Record<string, LegacyCanvasElement> | LegacyCanvasElement[] = {}
+): Map<ElementId | SectionId, CanvasElement> {
+  const enhancedMap = new Map<ElementId | SectionId, CanvasElement>();
+
+  const processItems = (items: Record<string, LegacyCanvasElement> | LegacyCanvasElement[]) => {
+    const itemsArray = Array.isArray(items) ? items : Object.values(items);
+    itemsArray.forEach(item => {
+      if (item && item.id) { // Basic validation
+        const enhanced = convertLegacyToEnhanced(item);
+        enhancedMap.set(enhanced.id, enhanced);
+      }
+    });
+  };
+
+  processItems(legacyElements);
+  processItems(legacySections);
 
   return enhancedMap;
 }
 
 /**
- * Convert enhanced elements map back to legacy format
+ * Converts an enhanced elements Map back to a legacy Record format.
  */
 export function convertEnhancedElementsMap(
-  enhancedElements: Map<ElementId, CanvasElement>
+  enhancedElements: Map<ElementId | SectionId, CanvasElement>
 ): Record<string, LegacyCanvasElement> {
   const legacyMap: Record<string, LegacyCanvasElement> = {};
   
@@ -159,115 +168,60 @@ export function convertEnhancedElementsMap(
 }
 
 /**
- * Legacy API compatibility wrapper for coordinate service
- */
-export class LegacyCoordinateServiceWrapper {
-  static toAbsolute(
-    element: LegacyCanvasElement, 
-    sections: Record<string, LegacyCanvasElement>
-  ): { x: number; y: number } {
-    // Import the optimized service
-    const { OptimizedCoordinateService } = require('../utils/OptimizedCoordinateService');
-    
-    // Convert to enhanced format
-    const enhancedElement = convertLegacyToEnhanced(element);
-    const enhancedSections = new Map<SectionId, SectionElement>();
-    
-    Object.values(sections)
-      .filter(section => section.type === 'section')
-      .forEach(section => {
-        const enhanced = convertLegacyToEnhanced(section) as SectionElement;
-        enhancedSections.set(enhanced.id, enhanced);
-      });
-
-    // Use optimized service
-    return OptimizedCoordinateService.toAbsolute(enhancedElement, enhancedSections);
-  }
-
-  static toRelative(
-    absoluteCoords: { x: number; y: number },
-    section: LegacyCanvasElement,
-    sections: Record<string, LegacyCanvasElement>
-  ): { x: number; y: number } {
-    const { OptimizedCoordinateService } = require('../utils/OptimizedCoordinateService');
-    
-    const enhancedSection = convertLegacyToEnhanced(section) as SectionElement;
-    const enhancedSections = new Map<SectionId, SectionElement>();
-    
-    Object.values(sections)
-      .filter(s => s.type === 'section')
-      .forEach(s => {
-        const enhanced = convertLegacyToEnhanced(s) as SectionElement;
-        enhancedSections.set(enhanced.id, enhanced);
-      });
-
-    return OptimizedCoordinateService.toRelative(absoluteCoords, enhancedSection, enhancedSections);
-  }
-}
-
-/**
- * Migration utility to gradually migrate store data
+ * Migration utility to handle the transition of the entire Zustand store state.
  */
 export class StoreMigrationUtility {
   /**
-   * Migrate legacy store state to enhanced format
+   * Migrates a legacy store state to the new enhanced format.
+   * - Combines `elements` and `sections` Records into a single `elements` Map.
+   * - Converts `selectedElementIds` Array to a Set.
+   * - Deletes the obsolete `sections` and `sectionOrder` properties.
    */
   static migrateLegacyStore(legacyState: any): any {
+    if (!this.needsMigration(legacyState)) {
+      return legacyState;
+    }
+      
+    console.log("⏳ [Compatibility] Starting store data migration to new format...");
     const migratedState = { ...legacyState };
 
-    // Migrate elements if they exist
-    if (legacyState.elements) {
-      if (Array.isArray(legacyState.elements)) {
-        // Convert array to Map
-        const elementsMap = new Map<ElementId, CanvasElement>();        legacyState.elements.forEach((element: LegacyCanvasElement) => {
-          const enhanced = convertLegacyToEnhanced(element);
-          if (enhanced.type !== 'section') {
-            elementsMap.set(enhanced.id as ElementId, enhanced);
-          }
-        });
-        migratedState.elements = elementsMap;
-      } else if (typeof legacyState.elements === 'object') {
-        // Convert Record to Map
-        migratedState.elements = convertLegacyElementsMap(legacyState.elements);
-      }
-    }
+    const legacyElements = legacyState.elements || {};
+    const legacySections = legacyState.sections || {};
 
-    // Migrate sections if they exist
-    if (legacyState.sections) {
-      const sectionsMap = new Map<SectionId, SectionElement>();
-      Object.values(legacyState.sections).forEach((section: any) => {
-        if (section.type === 'section') {
-          const enhanced = convertLegacyToEnhanced(section) as SectionElement;
-          sectionsMap.set(enhanced.id, enhanced);
-        }
-      });
-      migratedState.sections = sectionsMap;
-    }
+    // Create a single map for both elements and sections
+    migratedState.elements = convertLegacyStateToEnhancedMap(legacyElements, legacySections);
+    
+    // Remove the old, separate sections properties
+    delete migratedState.sections;
+    delete migratedState.sectionOrder;
 
-    // Migrate selected element IDs
+    // Migrate selected element IDs to a Set for efficient lookups
     if (legacyState.selectedElementIds && Array.isArray(legacyState.selectedElementIds)) {
       migratedState.selectedElementIds = new Set(
         legacyState.selectedElementIds.map((id: string) => ElementId(id))
       );
     }
-
+    
+    console.log("✅ [Compatibility] Store data successfully migrated.");
     return migratedState;
   }
 
   /**
-   * Check if store needs migration
-   */  static needsMigration(state: any): boolean {
-    // Check for legacy formats
+   * Checks if a given store state requires migration.
+   * Migration is needed if `elements` is not a Map, a `sections` property exists,
+   * or `selectedElementIds` is an Array.
+   */
+  static needsMigration(state: any): boolean {
     return (
-      (state.elements && !(state.elements instanceof Map)) ||
-      (state.sections && !(state.sections instanceof Map)) ||
-      (state.selectedElementIds && Array.isArray(state.selectedElementIds))
+      (!!state.elements && !(state.elements instanceof Map)) ||
+      (!!state.sections && typeof state.sections === 'object') ||
+      (!!state.selectedElementIds && Array.isArray(state.selectedElementIds))
     );
   }
 }
 
 /**
- * Development utility for testing compatibility
+ * A development utility for testing the compatibility layer and migration logic.
  */
 export const CompatibilityTester = {
   testElementConversion(legacyElement: LegacyCanvasElement): boolean {
@@ -275,7 +229,6 @@ export const CompatibilityTester = {
       const enhanced = convertLegacyToEnhanced(legacyElement);
       const backToLegacy = convertEnhancedToLegacy(enhanced);
       
-      // Basic validation
       return (
         backToLegacy.id === legacyElement.id &&
         backToLegacy.type === legacyElement.type &&
@@ -283,7 +236,7 @@ export const CompatibilityTester = {
         backToLegacy.y === legacyElement.y
       );
     } catch (error) {
-      console.error('Element conversion failed:', error);
+      console.error('Element conversion test failed:', error);
       return false;
     }
   },
@@ -292,22 +245,30 @@ export const CompatibilityTester = {
     const issues: string[] = [];
     
     try {
+      if (!StoreMigrationUtility.needsMigration(legacyState)) {
+        return { isCompatible: true, issues: [] };
+      }
+
       const migrated = StoreMigrationUtility.migrateLegacyStore(legacyState);
-        // Validate migration was successful
-      if (legacyState.elements && !(migrated.elements instanceof Map)) {
-        issues.push('Elements migration failed');
+      
+      if (!(migrated.elements instanceof Map)) {
+        issues.push('Elements migration failed: result is not a Map.');
       }
       
-      if (legacyState.sections && !(migrated.sections instanceof Map)) {
-        issues.push('Sections migration failed');
+      if (migrated.sections) {
+        issues.push('`sections` property was not removed after migration.');
+      }
+
+      if (migrated.selectedElementIds && !(migrated.selectedElementIds instanceof Set)) {
+        issues.push('`selectedElementIds` migration failed: result is not a Set.');
       }
 
       return {
         isCompatible: issues.length === 0,
         issues
       };
-    } catch (error) {
-      issues.push(`Migration error: ${error}`);
+    } catch (error: any) {
+      issues.push(`Migration process threw an error: ${error.message}`);
       return { isCompatible: false, issues };
     }
   }

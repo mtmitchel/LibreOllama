@@ -3,35 +3,18 @@ import React, { useMemo, useCallback } from 'react';
 import { Group } from 'react-konva';
 import Konva from 'konva';
 import { SectionShape } from '../shapes/SectionShape';
-import { CanvasElement } from '../stores/types';
+import { CanvasElement as LegacyCanvasElement } from '../stores/types';
 import { SectionElement } from '../../../types/section';
+import { ElementRenderer } from './ElementRenderer';
+import { CanvasElement as EnhancedCanvasElement } from '../types/enhanced.types';
 
 interface GroupedSectionRendererProps {
   section: SectionElement;
-  children: CanvasElement[];
+  children: LegacyCanvasElement[];
   isSelected: boolean;
-  onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
+  onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: LegacyCanvasElement) => void;
   onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
-  onStartTextEdit: (elementId: string) => void;
-  onSectionResize?: (sectionId: string, newWidth: number, newHeight: number) => void;
-}
-
-// src/features/canvas/components/GroupedSectionRenderer.tsx
-import React, { useMemo, useCallback } from 'react';
-import { Group } from 'react-konva';
-import Konva from 'konva';
-import { SectionShape } from '../shapes/SectionShape';
-import { CanvasElement } from '../stores/types';
-import { SectionElement } from '../../../types/section';
-
-interface GroupedSectionRendererProps {
-  section: SectionElement;
-  children: CanvasElement[];
-  isSelected: boolean;
-  onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
-  onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
+  onElementUpdate: (id: string, updates: Partial<LegacyCanvasElement>) => void;
   onStartTextEdit: (elementId: string) => void;
   onSectionResize?: (sectionId: string, newWidth: number, newHeight: number) => void;
 }
@@ -69,7 +52,7 @@ export const GroupedSectionRenderer: React.FC<GroupedSectionRendererProps> = ({
   }), [section.width, section.height, section.titleBarHeight]);
 
   // Create drag bound function for child elements within the section
-  const createChildDragBoundFunc = useCallback((childElement: CanvasElement) => {
+  const createChildDragBoundFunc = useCallback((childElement: LegacyCanvasElement) => {
     return (pos: { x: number; y: number }) => {
       const elementWidth = childElement.width || 0;
       const elementHeight = childElement.height || 0;
@@ -105,71 +88,54 @@ export const GroupedSectionRenderer: React.FC<GroupedSectionRendererProps> = ({
     onElementDragEnd(e, elementId);
   }, [onElementUpdate, onElementDragEnd]);
 
-  // For now, we'll render children as a placeholder
-  // TODO: Implement proper child element rendering in next iteration
+  // Render children using the new ElementRenderer component
   const renderedChildren = useMemo(() => {
     return children.map(child => {
-      // Convert absolute coordinates to relative coordinates for grouping
-      const relativeX = (child.x || 0) - (section.x || 0);
-      const relativeY = (child.y || 0) - (section.y || 0);
+      // ElementRenderer expects absolute coordinates for its own logic,
+      // but the Konva <Group> handles the relative positioning.
+      // We pass the original element so ElementRenderer can handle its type.
+      
+      // The drag bound function needs to be created for each child
+      const dragBoundFunc = createChildDragBoundFunc(child);
 
-      // For this initial implementation, just render as placeholder rectangles
-      // This will be replaced with proper element rendering in the next phase
       return (
-        <Group
+        <ElementRenderer
           key={child.id}
-          x={relativeX}
-          y={relativeY}
-          draggable={true}
-          dragBoundFunc={createChildDragBoundFunc(child)}
-          onDragEnd={(e) => handleChildDragEnd(e, child.id)}
-        >
-          {/* Placeholder - will be replaced with actual element rendering */}
-        </Group>
+          element={child as EnhancedCanvasElement} // Cast to the enhanced type
+          isSelected={false} // Child selection is handled at a higher level
+          onElementClick={onElementClick as any} // Cast to satisfy ElementRenderer props
+          onElementDragEnd={handleChildDragEnd} // Use the relative drag handler
+          onElementUpdate={onElementUpdate as any} // Cast to satisfy ElementRenderer props
+          onStartTextEdit={onStartTextEdit}
+          // Override Konva props to enforce relative positioning and drag bounds
+          overrideKonvaProps={{
+            x: (child.x || 0) - (section.x || 0),
+            y: (child.y || 0) - (section.y || 0),
+            dragBoundFunc: dragBoundFunc,
+            draggable: !child.isLocked,
+          }}
+        />
       );
     });
-  }, [
-    children, 
-    section.x, 
-    section.y, 
-    section.id,
-    createChildDragBoundFunc,
-    handleChildDragEnd
-  ]);
+  }, [children, section.x, section.y, createChildDragBoundFunc, onElementClick, handleChildDragEnd, onElementUpdate, onStartTextEdit]);
 
   return (
     <Group
       id={`section-group-${section.id}`}
-      x={section.x || 0}
-      y={section.y || 0}
-      draggable={true}
-      onDragEnd={(e) => {
-        const node = e.target;
-        onElementUpdate(section.id, {
-          x: node.x(),
-          y: node.y()
-        });
-        onElementDragEnd(e, section.id);
-      }}
+      x={section.x}
+      y={section.y}
+      draggable={!section.isLocked}
     >
-      {/* Section background and UI - positioned at (0,0) relative to group */}
       <SectionShape
-        element={{
-          ...section,
-          x: 0, // Always 0 since the Group handles absolute positioning
-          y: 0  // Always 0 since the Group handles absolute positioning
-        }}
+        element={section} // Corrected prop: use 'element' instead of 'section'
         isSelected={isSelected}
-        konvaProps={{
-          listening: true
-        }}
-        onUpdate={onElementUpdate}
-        onStartTextEdit={onStartTextEdit}
-        onSectionResize={onSectionResize || (() => {})}
-      />
-      
-      {/* Child elements with relative positioning */}
-      {renderedChildren}
+        onUpdate={onElementUpdate as (id: string, updates: Partial<SectionElement>) => void} // Cast handler
+        {...(onSectionResize && { onSectionResize })} // Conditionally pass onSectionResize
+        konvaProps={{}}
+      >
+        {/* Render the actual elements inside the section group */}
+        {renderedChildren}
+      </SectionShape>
     </Group>
   );
 };

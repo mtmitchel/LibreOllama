@@ -13,6 +13,20 @@
 // A function cannot accidentally accept a SectionId where an ElementId is required.
 type Brand<K, T> = K & { __brand: T };
 
+// Rich text support
+export interface RichTextSegment {
+  text: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  fontWeight?: string;
+  textDecoration?: string;
+  fill?: string;
+  url?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  listType?: 'none' | 'bullet' | 'numbered';
+}
+
 export type ElementId = Brand<string, 'ElementId'>;
 export type SectionId = Brand<string, 'SectionId'>;
 export type LayerId = Brand<string, 'LayerId'>;
@@ -85,19 +99,32 @@ export interface SectionElement extends Omit<BaseElement, 'id'> {
   cornerRadius?: number;
   collapsed?: boolean;
   childElementIds: ElementId[];
+  containedElementIds?: ElementId[]; // Legacy compatibility
+}
+
+export interface ConnectorStyle {
+  strokeColor?: string;
+  strokeWidth?: number;
+  strokeDashArray?: number[];
+  startArrow?: 'none' | 'arrow' | 'circle' | 'diamond';
+  endArrow?: 'none' | 'arrow' | 'circle' | 'diamond';
+  arrowSize?: number;
+  text?: string;
 }
 
 export interface ConnectorElement extends BaseElement {
   type: 'connector';
-  subType: 'straight' | 'bent' | 'curved';
-  startElementId?: ElementId;
-  endElementId?: ElementId;
+  subType: 'line' | 'arrow' | 'straight' | 'bent' | 'curved';
+  startElementId?: ElementId | undefined;
+  endElementId?: ElementId | undefined;
   startPoint: { x: number; y: number };
   endPoint: { x: number; y: number };
-  intermediatePoints: { x: number; y: number }[];
+  intermediatePoints?: { x: number; y: number }[];
   stroke?: string;
   strokeWidth?: number;
   pathPoints?: number[];
+  connectorStyle?: ConnectorStyle;
+  points?: number[];
 }
 
 export interface ImageElement extends BaseElement {
@@ -108,6 +135,12 @@ export interface ImageElement extends BaseElement {
   opacity?: number;
 }
 
+export interface EnhancedTableData {
+  rows: Array<{ height?: number; id?: string }>;
+  columns: Array<{ width?: number; id?: string }>;
+  cells: TableCell[][];
+}
+
 export interface TableElement extends BaseElement {
   type: 'table';
   rows: number;
@@ -115,6 +148,7 @@ export interface TableElement extends BaseElement {
   width: number;
   height: number;
   tableData?: TableCell[][];
+  enhancedTableData?: EnhancedTableData;
   cellPadding?: number;
   borderWidth?: number;
   borderColor?: string;
@@ -122,11 +156,17 @@ export interface TableElement extends BaseElement {
 
 export interface TableCell {
   content: string;
+  text?: string; // Legacy compatibility
+  segments?: RichTextSegment[]; // Rich text support
   width?: number;
   height?: number;
   backgroundColor?: string;
   textColor?: string;
   fontSize?: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  fontWeight?: string;
+  textDecoration?: string;
   textAlign?: 'left' | 'center' | 'right';
   verticalAlign?: 'top' | 'middle' | 'bottom';
 }
@@ -147,11 +187,14 @@ export interface PenElement extends BaseElement {
   stroke?: string;
   strokeWidth?: number;
   tension?: number;
+  fill?: string;
 }
 
 export interface TriangleElement extends BaseElement {
   type: 'triangle';
   points: number[];
+  width?: number;
+  height?: number;
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
@@ -167,6 +210,18 @@ export interface StarElement extends BaseElement {
   strokeWidth?: number;
 }
 
+export interface RichTextElement extends BaseElement {
+  type: 'rich-text';
+  text: string;
+  segments: RichTextSegment[];
+  width?: number;
+  height?: number;
+  fontSize?: number;
+  fontFamily?: string;
+  fill?: string;
+  textAlign?: 'left' | 'center' | 'right';
+}
+
 // Main discriminated union for all canvas elements
 export type CanvasElement = 
   | TextElement
@@ -179,12 +234,17 @@ export type CanvasElement =
   | StickyNoteElement
   | PenElement
   | TriangleElement
-  | StarElement;
+  | StarElement
+  | RichTextElement;
 
 // Type Predicates provide safe type narrowing within the code.
 // No more `(element as RectangleElement).width`.
-export function isTextElement(el: CanvasElement): el is TextElement {
-  return el.type === 'text';
+export function isTextElement(element: CanvasElement): element is TextElement {
+  return element.type === 'text';
+}
+
+export function isRectangularElement(element: CanvasElement): element is CanvasElement & { width: number; height: number } {
+    return 'width' in element && 'height' in element;
 }
 
 export function isRectangleElement(el: CanvasElement): el is RectangleElement {
@@ -225,6 +285,10 @@ export function isTriangleElement(el: CanvasElement): el is TriangleElement {
 
 export function isStarElement(el: CanvasElement): el is StarElement {
   return el.type === 'star';
+}
+
+export function isRichTextElement(el: CanvasElement): el is RichTextElement {
+  return el.type === 'rich-text';
 }
 
 // Strict event map ensures all event payloads are correctly typed

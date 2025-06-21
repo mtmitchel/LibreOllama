@@ -1,31 +1,31 @@
 // src/hooks/useKeyboardShortcuts.ts
 import { useEffect } from 'react';
 import { useCanvasStore } from '../features/canvas/stores';
+import { ElementId } from '../features/canvas/types/enhanced.types';
 
 export const useKeyboardShortcuts = () => {
-  // Use unified canvas store with selectors
   const undo = useCanvasStore((state) => state.undo);
   const redo = useCanvasStore((state) => state.redo);
   const canUndo = useCanvasStore((state) => state.canUndo);
   const canRedo = useCanvasStore((state) => state.canRedo);
-  const deleteElement = useCanvasStore((state) => state.deleteElement);
+  const deleteElements = useCanvasStore((state) => state.deleteElements);
   const duplicateElement = useCanvasStore((state) => state.duplicateElement);
   const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
   const clearSelection = useCanvasStore((state) => state.clearSelection);
   const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
-  
-  const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent shortcuts when typing in inputs, textareas, or contentEditable elements
       if (
-        e.target instanceof HTMLInputElement || 
+        e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
         (e.target instanceof HTMLElement && e.target.contentEditable === 'true')
       ) {
         return;
       }
+
+      const firstSelectedId: ElementId | null = selectedElementIds.size > 0 ? selectedElementIds.values().next().value ?? null : null;
 
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
@@ -70,8 +70,8 @@ export const useKeyboardShortcuts = () => {
             break;
           case 'd':
             e.preventDefault();
-            if (selectedElementId) {
-              duplicateElement(selectedElementId);
+            if (firstSelectedId) {
+              duplicateElement(firstSelectedId);
             }
             break;
         }
@@ -79,9 +79,9 @@ export const useKeyboardShortcuts = () => {
         switch (e.key) {
           case 'Delete':
           case 'Backspace':
-            if (selectedElementId) {
+            if (selectedElementIds.size > 0) {
               e.preventDefault();
-              deleteElement(selectedElementId);
+              deleteElements(Array.from(selectedElementIds));
             }
             break;
           case 'Escape':
@@ -133,5 +133,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, canUndo, canRedo, selectedElementId, deleteElement, duplicateElement, setSelectedTool, clearSelection]);
+  }, [undo, redo, canUndo, canRedo, selectedElementIds, deleteElements, duplicateElement, setSelectedTool, clearSelection]);
 };

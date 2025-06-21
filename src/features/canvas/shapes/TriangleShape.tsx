@@ -1,12 +1,15 @@
 // src/features/canvas/shapes/TriangleShape.tsx
 import React from 'react';
 import { Line } from 'react-konva';
-import { CanvasElement } from '../stores/types';
+import { TriangleElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { designSystem } from '../../../styles/designSystem';
 
 interface TriangleShapeProps {
-  element: CanvasElement;
+  element: TriangleElement;
+  isSelected: boolean;
   konvaProps: any;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
 }
 
 /**
@@ -16,16 +19,11 @@ interface TriangleShapeProps {
  */
 export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
   element,
+  isSelected,
   konvaProps,
 }) => {
-  const width = element.width || 100;
-  const height = element.height || 60;
-  
-  const points = element.points || [
-    0, -height / 2,
-    width / 2, height / 2,
-    -width / 2, height / 2,
-  ];
+  // Use points from element or generate default triangle points
+  const points = element.points || [0, -30, 50, 30, -50, 30];
 
   return (
     <Line
@@ -33,8 +31,8 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
       points={points}
       closed
       fill={element.fill || designSystem.colors.success[500]}
-      stroke={element.stroke || designSystem.colors.success[500]}
-      strokeWidth={element.strokeWidth || 2}
+      stroke={isSelected ? designSystem.colors.primary[500] : (element.stroke || designSystem.colors.success[500])}
+      strokeWidth={isSelected ? 3 : (element.strokeWidth || 2)}
     />
   );
 });

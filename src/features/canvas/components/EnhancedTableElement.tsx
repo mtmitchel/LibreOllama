@@ -1,8 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../stores/types';
-import { TableCell } from '../types';
+import { CanvasElement, isTableElement, TableCell, ElementId } from '../types/enhanced.types';
 import { designSystem } from '../../../styles/designSystem';
 import { 
   useCanvasStore
@@ -62,6 +61,16 @@ const isFullTableCell = (cell: any): cell is TableCell => {
 
 export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableElementProps>(
   ({ element, isSelected, onSelect, onUpdate, onDragEnd, stageRef }, ref) => {
+  
+  // Type safety: Ensure we're working with a table element
+  if (!isTableElement(element)) {
+    console.error('🔧 [TABLE] Invalid element type passed to EnhancedTableElement:', element.type);
+    return null;
+  }
+  
+  // Type assertion for branded ID - table elements should always have ElementId
+  const tableId = element.id as ElementId;
+
   // State for hover interactions and controls
   const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
@@ -94,7 +103,7 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
   const resizeStartSizeRef = useRef<{ width: number; height: number } | null>(null);
   const resizeStartElementPosRef = useRef<{ x: number; y: number } | null>(null);
   const [liveSize, setLiveSize] = useState<{ width: number, height: number } | null>(null);
-  const liveSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const liveSizeRef = useRef<{ width: number, height: number } | null>(null);
 
   // Wrapper function to update both state and ref
   const updateLiveSize = useCallback((size: { width: number; height: number } | null) => {
@@ -137,9 +146,8 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
     headerHover: headerHover.type,
     storeMethodsAvailable: typeof addTableRow === 'function'
   });
-
-  // Get enhanced table data from element with null safety
-  const enhancedTableData = element.enhancedTableData;
+  // Get enhanced table data from element with null safety and type guard
+  const enhancedTableData = isTableElement(element) ? element.enhancedTableData : undefined;
 
   console.log('🔧 [ENHANCED TABLE] Rendering table:', element.id, { 
     hasEnhancedTableData: !!enhancedTableData,
@@ -211,29 +219,27 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
       }
     }
   }, []);
-
   // Handle remove row/column
   const handleRemoveRowColumn = useCallback((type: 'row' | 'column', index: number) => {
     if (type === 'row') {
-      removeTableRow?.(element.id, index);
+      removeTableRow?.(tableId, index);
     } else {
-      removeTableColumn?.(element.id, index);
+      removeTableColumn?.(tableId, index);
     }
     setContextMenu(null);
-  }, [element.id, removeTableRow, removeTableColumn]);
+  }, [tableId, removeTableRow, removeTableColumn]);
 
   // Handle delete key press
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' && editingCell) {
+    const handleKeyDown = (e: KeyboardEvent) => {      if (e.key === 'Delete' && editingCell) {
         // If a cell is selected but not being edited, allow row/column deletion
         if (e.shiftKey) {
           // Shift+Delete removes column
-          removeTableColumn?.(element.id, editingCell.col);
+          removeTableColumn?.(tableId, editingCell.col);
           setEditingCell(null);
         } else if (e.ctrlKey || e.metaKey) {
           // Ctrl+Delete removes row
-          removeTableRow?.(element.id, editingCell.row);
+          removeTableRow?.(tableId, editingCell.row);
           setEditingCell(null);
         }
       }
@@ -318,10 +324,8 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
           fontFamily: designSystem.typography.fontFamily.sans,
           fill: designSystem.colors.secondary[800]
         }]
-      };
-
-      // Use the store's updateTableCell method
-      updateTableCell(element.id, editingCell.row, editingCell.col, updateData);
+      };      // Use the store's updateTableCell method
+      updateTableCell(tableId, editingCell.row, editingCell.col, updateData);
 
       // Handle tab navigation
       if (shouldNavigateNext) {
@@ -340,7 +344,7 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
       console.error('ERROR in handleCellSave:', error);
       setEditingCell(null);
     }
-  }, [editingCell, element.id, updateTableCell, getNextCell, navigateToCell]);
+  }, [editingCell, tableId, updateTableCell, getNextCell, navigateToCell]);
 
   // Handle cell edit cancel
   const handleCellCancel = () => {
@@ -449,16 +453,15 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
     resizeTableColumnRef.current = resizeTableColumn;
     resizeTableRowRef.current = resizeTableRow;
   }, [enhancedTableData, totalWidth, totalHeight, onUpdate, resizeTableColumn, resizeTableRow]);
-
   // Throttled resize functions to prevent excessive updates
   const throttledColumnResize = useRef(
-    throttle((elementId: string, columnIndex: number, newWidth: number) => {
+    throttle((elementId: ElementId, columnIndex: number, newWidth: number) => {
       resizeTableColumnRef.current?.(elementId, columnIndex, newWidth);
     }, 16) // ~60fps
   ).current;
 
   const throttledRowResize = useRef(
-    throttle((elementId: string, rowIndex: number, newHeight: number) => {
+    throttle((elementId: ElementId, rowIndex: number, newHeight: number) => {
       resizeTableRowRef.current?.(elementId, rowIndex, newHeight);
     }, 16) // ~60fps
   ).current;
@@ -551,7 +554,7 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
             currentElementsInStore: Object.keys(useCanvasStore.getState().elements)
           });
           // Use the updateElement function from the hook instead of getting it from store
-          updateElement(element.id, { x: newX, y: newY });
+          updateElement(tableId, { x: newX, y: newY });
         }
       }
     };
@@ -572,9 +575,7 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
         // console.log('🔧 [RESIZE DEBUG] Applying final table resize with live size:', liveSizeRef.current);
         // Table-wide resize final update
         // Use the updateElement function from the hook instead of getting it from store
-        const currentElement = useCanvasStore.getState().elements[element.id];
-
-        if (currentElement?.enhancedTableData) {
+        const currentElement = useCanvasStore.getState().elements.get(element.id);        if (currentElement && isTableElement(currentElement) && currentElement.enhancedTableData) {
           const currentTableData = currentElement.enhancedTableData;
           const currentColumns = currentTableData.columns || [];
           const currentRows = currentTableData.rows || [];
@@ -583,12 +584,11 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
           const currentTotalWidth = currentColumns.reduce((sum, col) => sum + (col?.width || 100), 0);
           const currentTotalHeight = currentRows.reduce((sum, row) => sum + (row?.height || 40), 0);
 
-          if (resizeHandleRef.current?.includes('e') && !resizeHandleRef.current?.includes('s') && !resizeHandleRef.current?.includes('n')) {
-            // Only horizontal resize (e, w)
+          if (resizeHandleRef.current?.includes('e') && !resizeHandleRef.current?.includes('s') && !resizeHandleRef.current?.includes('n')) {            // Only horizontal resize (e, w)
             const widthRatio = liveSizeRef.current.width / currentTotalWidth;
             const updatedColumns = currentColumns.map(col => ({
               ...col,
-              width: Math.max(MIN_CELL_WIDTH, Math.round(col.width * widthRatio)),
+              width: Math.max(MIN_CELL_WIDTH, Math.round((col.width || MIN_CELL_WIDTH) * widthRatio)),
             }));
 
             updateElement(element.id, {
@@ -597,13 +597,12 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
                 ...currentTableData,
                 columns: updatedColumns,
               },
-            });
-          } else if (resizeHandleRef.current?.includes('w') && !resizeHandleRef.current?.includes('s') && !resizeHandleRef.current?.includes('n')) {
+            });          } else if (resizeHandleRef.current?.includes('w') && !resizeHandleRef.current?.includes('s') && !resizeHandleRef.current?.includes('n')) {
             // Only horizontal resize (w)
             const widthRatio = liveSizeRef.current.width / currentTotalWidth;
             const updatedColumns = currentColumns.map(col => ({
               ...col,
-              width: Math.max(MIN_CELL_WIDTH, Math.round(col.width * widthRatio)),
+              width: Math.max(MIN_CELL_WIDTH, Math.round((col.width || MIN_CELL_WIDTH) * widthRatio)),
             }));
 
             updateElement(element.id, {
@@ -612,13 +611,12 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
                 ...currentTableData,
                 columns: updatedColumns,
               },
-            });
-          } else if ((resizeHandleRef.current?.includes('s') || resizeHandleRef.current?.includes('n')) && !resizeHandleRef.current?.includes('e') && !resizeHandleRef.current?.includes('w')) {
+            });          } else if ((resizeHandleRef.current?.includes('s') || resizeHandleRef.current?.includes('n')) && !resizeHandleRef.current?.includes('e') && !resizeHandleRef.current?.includes('w')) {
             // Only vertical resize (s, n)
             const heightRatio = liveSizeRef.current.height / currentTotalHeight;
             const updatedRows = currentRows.map(row => ({
               ...row,
-              height: Math.max(MIN_CELL_HEIGHT, Math.round(row.height * heightRatio)),
+              height: Math.max(MIN_CELL_HEIGHT, Math.round((row.height ?? MIN_CELL_HEIGHT) * heightRatio)),
             }));
 
             updateElement(element.id, {
@@ -628,19 +626,18 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
                 rows: updatedRows,
               },
             });
-          } else {
-            // Both dimensions (corner handles: se, sw, ne, nw)
+          } else {            // Both dimensions (corner handles: se, sw, ne, nw)
             const widthRatio = liveSizeRef.current.width / currentTotalWidth;
             const heightRatio = liveSizeRef.current.height / currentTotalHeight;
 
             const updatedColumns = currentColumns.map(col => ({
               ...col,
-              width: Math.max(MIN_CELL_WIDTH, Math.round(col.width * widthRatio)),
+              width: Math.max(MIN_CELL_WIDTH, Math.round((col.width ?? MIN_CELL_WIDTH) * widthRatio)),
             }));
 
             const updatedRows = currentRows.map(row => ({
               ...row,
-              height: Math.max(MIN_CELL_HEIGHT, Math.round(row.height * heightRatio)),
+              height: Math.max(MIN_CELL_HEIGHT, Math.round((row.height ?? MIN_CELL_HEIGHT) * heightRatio)),
             }));
 
             updateElement(element.id, {

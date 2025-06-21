@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { Transformer } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
-import { CoordinateService } from '../utils/coordinateService';
+import { CanvasElement, ElementId } from '../types/enhanced.types';
 
 interface TransformerManagerProps {
   stageRef: React.MutableRefObject<Konva.Stage | null>;
@@ -26,14 +26,14 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
   
   const { 
     selectedElementIds,
-    updateElement,
     updateMultipleElements,
     elements,
-    sections
+    sections,
+    addHistoryEntry
   } = useEnhancedStore();
 
   // Get all elements in a combined map
-  const allElements = { ...elements, ...sections };
+  const allElements = new Map([...elements.entries(), ...sections.entries()]);
 
   // Update transformer when selection changes
   useEffect(() => {
@@ -45,7 +45,7 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
     // Clear existing nodes
     transformer.nodes([]);
 
-    if (selectedElementIds.length === 0) {
+    if (selectedElementIds.size === 0) {
       // No selection - hide transformer
       transformer.visible(false);
       return;
@@ -75,7 +75,7 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
     } else {
       transformer.visible(false);
     }
-  }, [selectedElementIds, stageRef]);
+  }, [selectedElementIds, stageRef, elements, sections]);
 
   // Handle transform end to update element state
   const handleTransformEnd = useCallback(() => {
@@ -83,66 +83,72 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
     if (!transformer) return;
 
     const nodes = transformer.nodes();
-    const updates: Record<string, Partial<any>> = {};
+    if (nodes.length === 0) return;
+    
+    const updates: Record<string, Partial<CanvasElement>> = {};
 
     nodes.forEach(node => {
-      const elementId = node.id();
-      
-      // Handle section groups differently
-      if (elementId.startsWith('section-group-')) {
-        const actualElementId = elementId.replace('section-group-', '');
-        updates[actualElementId] = {
-          x: node.x(),
-          y: node.y(),
-          scaleX: node.scaleX(),
-          scaleY: node.scaleY(),
-          rotation: node.rotation()
-        };
-        
-        // For sections, also update width/height if scaled
-        const element = allElements[actualElementId];
-        if (element && (node.scaleX() !== 1 || node.scaleY() !== 1)) {
-          updates[actualElementId] = {
-            ...updates[actualElementId],
-            width: (element.width || 300) * node.scaleX(),
-            height: (element.height || 200) * node.scaleY()
-          };
-          
-          // Reset scale after applying to dimensions
-          node.scaleX(1);
-          node.scaleY(1);
-        }
-      } else {
-        // Regular elements
-        updates[elementId] = {
-          x: node.x(),
-          y: node.y(),
-          scaleX: node.scaleX(),
-          scaleY: node.scaleY(),
-          rotation: node.rotation()
-        };
+      const elementId = node.id().replace('section-group-', '') as ElementId;
+      const element = allElements.get(elementId);
+      if (!element) return;
 
-        // For regular elements, also update width/height if scaled
-        const element = allElements[elementId];
-        if (element && (node.scaleX() !== 1 || node.scaleY() !== 1)) {
+      const scaleX = node.scaleX();
+      const scaleY = node.scaleY();
+      
+      const commonUpdate = {
+        x: node.x(),
+        y: node.y(),
+        rotation: node.rotation(),
+      };
+
+      switch (element.type) {
+        case 'rectangle':
+        case 'image':
+        case 'text':
+        case 'sticky-note':
+        case 'triangle':
+        case 'section':
           updates[elementId] = {
-            ...updates[elementId],
-            width: (element.width || 100) * node.scaleX(),
-            height: (element.height || 100) * node.scaleY()
+            ...commonUpdate,
+            width: Math.max(20, ((element as any).width || 100) * scaleX),
+            height: Math.max(20, ((element as any).height || 100) * scaleY),
           };
-          
-          // Reset scale after applying to dimensions
-          node.scaleX(1);
-          node.scaleY(1);
+          break;
+        case 'circle': {
+          const avgScale = (scaleX + scaleY) / 2;
+          updates[elementId] = {
+            ...commonUpdate,
+            radius: Math.max(10, ((element as any).radius || 50) * avgScale),
+          };
+          break;
         }
+        case 'star': {
+          const avgStarScale = (scaleX + scaleY) / 2;
+          updates[elementId] = {
+            ...commonUpdate,
+            outerRadius: Math.max(10, ((element as any).outerRadius || 50) * avgStarScale),
+            innerRadius: Math.max(5, ((element as any).innerRadius || 20) * avgStarScale),
+          };
+          break;
+        }
+        default:
+          updates[elementId] = commonUpdate;
+          break;
       }
+
+      node.scaleX(1);
+      node.scaleY(1);
     });
 
-    // Apply all updates atomically
     if (Object.keys(updates).length > 0) {
       updateMultipleElements(updates);
+      addHistoryEntry('Transform Elements', [], [], {
+        elementIds: Object.keys(updates) as ElementId[],
+        operationType: 'update',
+        affectedCount: Object.keys(updates).length,
+      });
     }
-  }, [allElements, updateMultipleElements]);
+  }, [allElements, updateMultipleElements, addHistoryEntry]);
 
   return (
     <Transformer

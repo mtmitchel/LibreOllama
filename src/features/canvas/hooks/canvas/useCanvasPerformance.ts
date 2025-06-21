@@ -1,160 +1,147 @@
-// src/hooks/canvas/useCanvasPerformance.ts
 import { useCallback, useEffect, useState } from 'react';
-import { PerformanceMonitor, recordMetric } from '../../../../utils/performance';
 
-interface CanvasPerformanceMetrics {
-  renderTime: number;
+// Memory stats interface
+export interface MemoryStats {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
   elementCount: number;
-  memoryUsage: number;
-  fps: number;
-  lastUpdate: number;
+  renderTime: number;
 }
 
-interface UseCanvasPerformanceOptions {
-  enableLogging?: boolean;
-  sampleSize?: number;
-  throttleInterval?: number;
+// Memory alert interface
+export interface MemoryAlert {
+  id: string;
+  type: 'warning' | 'error';
+  message: string;
+  timestamp: number;
+  suggestion?: string;
+}
+
+// Performance thresholds
+const MEMORY_THRESHOLDS = {
+  WARNING: 0.7, // 70% of heap limit
+  ERROR: 0.9,   // 90% of heap limit
+  ELEMENT_WARNING: 1000,
+  ELEMENT_ERROR: 2000,
+};
+
+/**
+ * Hook for monitoring canvas memory usage and performance
+ */
+export function useCanvasMemoryStats(elementCount: number = 0) {
+  const [memoryStats, setMemoryStats] = useState<MemoryStats>({
+    usedJSHeapSize: 0,
+    totalJSHeapSize: 0,
+    jsHeapSizeLimit: 0,
+    elementCount,
+    renderTime: 0,
+  });
+
+  const updateMemoryStats = useCallback(() => {
+    if ('memory' in performance) {
+      const memory = (performance as any).memory;
+      const startTime = performance.now();
+      
+      setMemoryStats(prev => ({
+        ...prev,
+        usedJSHeapSize: memory.usedJSHeapSize || 0,
+        totalJSHeapSize: memory.totalJSHeapSize || 0,
+        jsHeapSizeLimit: memory.jsHeapSizeLimit || 0,
+        elementCount,
+        renderTime: performance.now() - startTime,
+      }));
+    } else {
+      // Fallback for browsers without memory API
+      setMemoryStats(prev => ({
+        ...prev,
+        elementCount,
+        renderTime: 0,
+      }));
+    }
+  }, [elementCount]);
+
+  useEffect(() => {
+    updateMemoryStats();
+    const interval = setInterval(updateMemoryStats, 5000); // Update every 5 seconds
+    return () => clearInterval(interval);
+  }, [updateMemoryStats]);
+
+  return memoryStats;
 }
 
 /**
- * useCanvasPerformance - Performance monitoring hook for canvas operations
- * - Integrates with existing performance monitoring system
- * - Tracks render times, element counts, memory usage
- * - Provides performance optimization recommendations
+ * Hook for generating memory alerts based on performance thresholds
  */
-export const useCanvasPerformance = (options: UseCanvasPerformanceOptions = {}) => {
-  const {
-    enableLogging = false,
-    sampleSize = 60,
-    throttleInterval = 1000
-  } = options;
+export function useMemoryAlerts(memoryStats: MemoryStats) {
+  const [alerts, setAlerts] = useState<MemoryAlert[]>([]);
 
-  const [metrics, setMetrics] = useState<CanvasPerformanceMetrics>({
-    renderTime: 0,
-    elementCount: 0,
-    memoryUsage: 0,
-    fps: 0,
-    lastUpdate: Date.now()
-  });
+  useEffect(() => {
+    const newAlerts: MemoryAlert[] = [];
 
-  const [renderTimes, setRenderTimes] = useState<number[]>([]);
-
-  // Record render time for a canvas operation
-  const recordRenderTime = useCallback((renderTime: number, elementCount: number = 0) => {
-    setRenderTimes(prev => {
-      const newTimes = [...prev, renderTime];
-      if (newTimes.length > sampleSize) {
-        newTimes.shift(); // Remove oldest sample
+    // Check memory usage
+    if (memoryStats.jsHeapSizeLimit > 0) {
+      const memoryUsageRatio = memoryStats.usedJSHeapSize / memoryStats.jsHeapSizeLimit;
+      
+      if (memoryUsageRatio > MEMORY_THRESHOLDS.ERROR) {
+        newAlerts.push({
+          id: `memory-error-${Date.now()}`,
+          type: 'error',
+          message: `Critical memory usage: ${Math.round(memoryUsageRatio * 100)}%`,
+          timestamp: Date.now(),
+          suggestion: 'Consider reducing canvas elements or clearing unused data',
+        });
+      } else if (memoryUsageRatio > MEMORY_THRESHOLDS.WARNING) {
+        newAlerts.push({
+          id: `memory-warning-${Date.now()}`,
+          type: 'warning',
+          message: `High memory usage: ${Math.round(memoryUsageRatio * 100)}%`,
+          timestamp: Date.now(),
+          suggestion: 'Monitor memory usage and consider optimizations',
+        });
       }
-      return newTimes;
-    });
+    }
 
-    const avgRenderTime = renderTimes.length > 0 
-      ? renderTimes.reduce((sum, time) => sum + time, 0) / renderTimes.length 
-      : renderTime;
-
-    setMetrics(prev => ({
-      ...prev,
-      renderTime: avgRenderTime,
-      elementCount,
-      lastUpdate: Date.now()
-    }));
-
-    // Record metric in the global performance system
-    recordMetric('canvasRender', renderTime, 'canvas', {
-      elementCount: elementCount.toString(),
-      avgRenderTime: avgRenderTime.toString()
-    });
-
-    if (enableLogging && renderTime > 16) { // Log slow renders (>16ms for 60fps)
-      console.warn('🐌 [CANVAS PERFORMANCE] Slow render detected:', {
-        renderTime: `${renderTime.toFixed(2)}ms`,
-        elementCount,
-        avgRenderTime: `${avgRenderTime.toFixed(2)}ms`
+    // Check element count
+    if (memoryStats.elementCount > MEMORY_THRESHOLDS.ELEMENT_ERROR) {
+      newAlerts.push({
+        id: `elements-error-${Date.now()}`,
+        type: 'error',
+        message: `Too many elements: ${memoryStats.elementCount}`,
+        timestamp: Date.now(),
+        suggestion: 'Consider grouping elements or using pagination',
+      });
+    } else if (memoryStats.elementCount > MEMORY_THRESHOLDS.ELEMENT_WARNING) {
+      newAlerts.push({
+        id: `elements-warning-${Date.now()}`,
+        type: 'warning',
+        message: `Many elements: ${memoryStats.elementCount}`,
+        timestamp: Date.now(),
+        suggestion: 'Monitor performance and consider optimizations',
       });
     }
-  }, [renderTimes, sampleSize, enableLogging]);
 
-  // Start timing a render operation
-  const startRenderTiming = useCallback(() => {
-    return PerformanceMonitor.startTiming('canvasRender');
-  }, []);
+    setAlerts(newAlerts);
+  }, [memoryStats]);
 
-  // Update memory usage
-  const updateMemoryUsage = useCallback(() => {
-    if ('memory' in performance) {
-      const memInfo = (performance as any).memory;
-      const memoryUsageMB = memInfo.usedJSHeapSize / (1024 * 1024);
-      
-      setMetrics(prev => ({
-        ...prev,
-        memoryUsage: memoryUsageMB
-      }));
+  return alerts;
+}
 
-      recordMetric('canvasMemory', memoryUsageMB, 'canvas');
-    }
-  }, []);
-
-  // Calculate FPS from render times
-  useEffect(() => {
-    if (renderTimes.length > 10) {
-      const avgRenderTime = renderTimes.reduce((sum, time) => sum + time, 0) / renderTimes.length;
-      const fps = avgRenderTime > 0 ? Math.min(60, 1000 / avgRenderTime) : 60;
-      
-      setMetrics(prev => ({
-        ...prev,
-        fps
-      }));
-    }
-  }, [renderTimes]);
-
-  // Throttled memory usage updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      updateMemoryUsage();
-    }, throttleInterval);
-
-    return () => clearInterval(interval);
-  }, [updateMemoryUsage, throttleInterval]);
-
-  // Performance optimization recommendations
-  const getOptimizationRecommendations = useCallback(() => {
-    const recommendations: string[] = [];
-
-    if (metrics.renderTime > 16) {
-      recommendations.push('Consider reducing element count or implementing viewport culling');
-    }
-
-    if (metrics.elementCount > 1000) {
-      recommendations.push('Large number of elements detected - enable viewport culling');
-    }
-
-    if (metrics.memoryUsage > 100) {
-      recommendations.push('High memory usage - consider element pooling or cleanup');
-    }
-
-    if (metrics.fps < 30) {
-      recommendations.push('Low FPS detected - optimize render pipeline');
-    }
-
-    return recommendations;
-  }, [metrics]);
-
-  // Get performance summary
-  const getPerformanceSummary = useCallback(() => {
-    return {
-      ...metrics,
-      isPerformanceGood: metrics.renderTime < 16 && metrics.fps > 45,
-      recommendations: getOptimizationRecommendations()
-    };
-  }, [metrics, getOptimizationRecommendations]);
+/**
+ * Main performance monitoring hook that combines memory stats and alerts
+ */
+export function useCanvasPerformance(elementCount: number = 0) {
+  const memoryStats = useCanvasMemoryStats(elementCount);
+  const alerts = useMemoryAlerts(memoryStats);
 
   return {
-    metrics,
-    recordRenderTime,
-    startRenderTiming,
-    updateMemoryUsage,
-    getOptimizationRecommendations,
-    getPerformanceSummary
+    memoryStats,
+    alerts,
+    isHealthy: alerts.length === 0,
+    hasWarnings: alerts.some(alert => alert.type === 'warning'),
+    hasErrors: alerts.some(alert => alert.type === 'error'),
   };
-};
+}
+
+// Export default for backward compatibility
+export default useCanvasPerformance;

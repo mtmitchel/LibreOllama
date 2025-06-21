@@ -1,15 +1,16 @@
 // src/components/canvas/shapes/RectangleShape.tsx
 import React from 'react';
 import { Rect } from 'react-konva';
-import { CanvasElement } from '../stores/types';
+import { RectangleElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { designSystem } from '../../../styles/designSystem';
 import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
 
 interface RectangleShapeProps {
-  element: CanvasElement;
+  element: RectangleElement;
   isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
 }
 
 /**

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { CoordinateService } from '../../utils/coordinateService';
 import { useCanvasStore } from '../../stores/canvasStore.enhanced';
-import type { CanvasElement } from '../../../../types';
+import type { CanvasElement } from '../../types/enhanced.types';
+import { toElementId, toSectionId } from '../../types/compatibility';
 
 interface UseCanvasEventsProps {
   canvasContainerRef: React.RefObject<HTMLDivElement>;
@@ -50,7 +51,7 @@ export const useCanvasEvents = ({
     }
     
     const { elements: currentElements, selectedTool: currentActiveTool, editingTextId: currentEditingText } = useCanvasStore.getState();
-    const element = currentElements[elementId];
+    const element = currentElements.get(elementId);
 
     if (!element) {
       console.warn('Element not found in store:', elementId);
@@ -64,24 +65,25 @@ export const useCanvasEvents = ({
       if (!shiftPressed && currentEditingText) {
         if (textAreaRef.current) {
           const currentTextValue = textAreaRef.current.value;
-          updateElement(currentEditingText, { text: currentTextValue });
+          updateElement(toElementId(currentEditingText), { text: currentTextValue });
           addHistoryEntry('Update text', [], []);
         }
         setEditingTextId(null);
       }
       
       if (shiftPressed) {
-        selectElement(elementId, true);
+        selectElement(toElementId(elementId), true);
       } else {
-        selectElement(elementId, false);
+        selectElement(toElementId(elementId), false);
       }
 
       // Prepare for dragging
       initialElementPositions.current = {};
       const { selectedElementIds } = useCanvasStore.getState();
       selectedElementIds.forEach((id: string) => {
-        if (currentElements[id]) {
-          initialElementPositions.current[id] = { x: currentElements[id].x, y: currentElements[id].y };
+        if (currentElements.get(id)) {
+          const elem = currentElements.get(id)!;
+          initialElementPositions.current[id] = { x: elem.x, y: elem.y };
         }
       });
       
@@ -129,7 +131,7 @@ export const useCanvasEvents = ({
     
     let relCoords = { x, y };
     if (sectionId) {
-      const section = sections[sectionId];
+      const section = sections.get(sectionId);
       if (section) {
         console.log('🎯 [CANVAS EVENTS] Section details:', {
           id: section.id,
@@ -162,7 +164,7 @@ export const useCanvasEvents = ({
         if (currentStoreState.editingTextId) {
           if (textAreaRef.current) {
             const currentTextValue = textAreaRef.current.value;
-            updateElement(currentStoreState.editingTextId, { text: currentTextValue });
+            updateElement(toElementId(currentStoreState.editingTextId), { text: currentTextValue });
             addHistoryEntry('Update text', [], []);
           }
           setEditingTextId(null);
@@ -175,43 +177,120 @@ export const useCanvasEvents = ({
         break;
 
       case 'text':
-      case 'sticky-note':
         const textElement: CanvasElement = {
-          id: generateId(),
-          type: currentActiveTool,
+          id: toElementId(generateId()),
+          type: 'text',
           x: relCoords.x,
           y: relCoords.y,
           width: 200,
-          height: currentActiveTool === 'sticky-note' ? 100 : 50,
+          height: 50,
           text: '',
           fill: '#000000',
-          backgroundColor: currentActiveTool === 'sticky-note' ? '#FFFFE0' : 'transparent',
-          ...(sectionId ? { sectionId } : {})
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          ...(sectionId ? { sectionId: toSectionId(sectionId) } : {})
         };
         addElement(textElement);
         addHistoryEntry('Add text element', [], []);
         setEditingTextId(textElement.id);
         break;
 
+      case 'sticky-note':
+        const stickyElement: CanvasElement = {
+          id: toElementId(generateId()),
+          type: 'sticky-note',
+          x: relCoords.x,
+          y: relCoords.y,
+          width: 200,
+          height: 100,
+          text: '',
+          backgroundColor: '#FFFFE0',
+          textColor: '#000000',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          ...(sectionId ? { sectionId: toSectionId(sectionId) } : {})
+        };
+        addElement(stickyElement);
+        addHistoryEntry('Add sticky note', [], []);
+        setEditingTextId(stickyElement.id);
+        break;
+
       default:
         if ([
           'rectangle', 'circle', 'triangle', 'square', 'hexagon', 'star', 'line', 'arrow'
         ].includes(currentActiveTool)) {
-          const shapeElement: CanvasElement = {
-            id: generateId(),
-            type: currentActiveTool as CanvasElement['type'],
-            x: relCoords.x,
-            y: relCoords.y,
-            width: 80,
-            height: 80,
-            fill: '#000000',
-            stroke: '#000000',
-            strokeWidth: 1,
-            ...(sectionId ? { sectionId } : {})
-          };
-          if (currentActiveTool === 'circle') {
-            shapeElement.radius = 40;
+          let shapeElement: CanvasElement;
+          
+          if (currentActiveTool === 'triangle') {
+            // Triangle uses points instead of width/height
+            const size = 80;
+            shapeElement = {
+              id: toElementId(generateId()),
+              type: 'triangle',
+              x: relCoords.x,
+              y: relCoords.y,
+              points: [
+                size/2, 0,        // top point
+                0, size,          // bottom left
+                size, size        // bottom right
+              ],
+              width: size,        // Add for compatibility
+              height: size,       // Add for compatibility
+              fill: '#000000',
+              stroke: '#000000',
+              strokeWidth: 1,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              ...(sectionId ? { sectionId: toSectionId(sectionId) } : {})
+            };
+          } else if (currentActiveTool === 'circle') {
+            shapeElement = {
+              id: toElementId(generateId()),
+              type: 'circle',
+              x: relCoords.x,
+              y: relCoords.y,
+              radius: 40,
+              fill: '#000000',
+              stroke: '#000000',
+              strokeWidth: 1,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              ...(sectionId ? { sectionId: toSectionId(sectionId) } : {})
+            };
+          } else if (currentActiveTool === 'star') {
+            shapeElement = {
+              id: toElementId(generateId()),
+              type: 'star',
+              x: relCoords.x,
+              y: relCoords.y,
+              innerRadius: 20,
+              outerRadius: 40,
+              numPoints: 5,
+              fill: '#000000',
+              stroke: '#000000',
+              strokeWidth: 1,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              ...(sectionId ? { sectionId: toSectionId(sectionId) } : {})
+            };
+          } else {
+            // Rectangle and other rectangular shapes
+            shapeElement = {
+              id: toElementId(generateId()),
+              type: 'rectangle',
+              x: relCoords.x,
+              y: relCoords.y,
+              width: 80,
+              height: 80,
+              fill: '#000000',
+              stroke: '#000000',
+              strokeWidth: 1,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              ...(sectionId ? { sectionId: toSectionId(sectionId) } : {})
+            };
           }
+          
           addElement(shapeElement);
           addHistoryEntry('Add shape element', [], []);
         }
@@ -234,16 +313,16 @@ export const useCanvasEvents = ({
     const { selectedElementIds: currentSelectedIds, editingTextId: currentEditingId } = useCanvasStore.getState();
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (currentSelectedIds.length > 0) {
+      if (currentSelectedIds.size > 0) {
         e.preventDefault();
-        currentSelectedIds.forEach((id: string) => deleteElement(id));
+        currentSelectedIds.forEach((id: string) => deleteElement(toElementId(id)));
         addHistoryEntry('Delete elements', [], []);
       }
     } else if (e.key === 'Escape') {
       if (currentEditingId) {
         if (textAreaRef.current) {
           const currentTextValue = textAreaRef.current.value;
-          updateElement(currentEditingId, { text: currentTextValue });
+          updateElement(toElementId(currentEditingId), { text: currentTextValue });
           addHistoryEntry('Update text', [], []);
         }
         setEditingTextId(null);
@@ -276,19 +355,19 @@ export const useCanvasEvents = ({
   const handleDeleteButtonClick = useCallback(() => {
     const { selectedElementIds: currentSelectedIds, elements: currentElements } = useCanvasStore.getState();
     
-    if (currentSelectedIds.length > 0) {
+    if (currentSelectedIds.size > 0) {
       console.log('Deleting elements:', currentSelectedIds);
       
       currentSelectedIds.forEach((id: string) => {
-        if (currentElements[id]) {
-          deleteElement(id);
+        if (currentElements.get(id)) {
+          deleteElement(toElementId(id));
         }
       });
       addHistoryEntry('Delete elements', [], []);
       
       setTimeout(() => {
         const updatedState = useCanvasStore.getState();
-        if (updatedState.selectedElementIds.length === 0) {
+        if (updatedState.selectedElementIds.size === 0) {
           clearSelection();
         }
       }, 0);
@@ -319,6 +398,7 @@ export const useCanvasEvents = ({
       container.addEventListener('wheel', handleWheel, { passive: false });
       return () => container.removeEventListener('wheel', handleWheel);
     }
+    return undefined;
   }, [handleWheel, canvasContainerRef]);
 
   return {

@@ -2,16 +2,18 @@
 import React, { useEffect, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../stores/types';
+import { StickyNoteElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import { designSystem } from '../../../styles/designSystem';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 
 interface StickyNoteShapeProps {
-  element: CanvasElement;
+  element: StickyNoteElement;
+  isSelected: boolean;
   konvaProps: any;
-  onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
 
@@ -22,8 +24,10 @@ interface StickyNoteShapeProps {
  */
 export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   element,
+  isSelected,
   konvaProps,
   onUpdate,
+  onStartTextEdit,
   stageRef
 }) => {
   const { editingTextId, setEditingTextId } = useCanvasStore();
@@ -142,7 +146,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
       window.removeEventListener('resize', handleWindowChange);
       window.removeEventListener('scroll', handleWindowChange);
     };
-  }, [editingTextId, element.id, element.text, element.fontSize, element.fontFamily, width, height, onUpdate, setEditingTextId, stageRef]);
+  }, [editingTextId, element.id, element.text, element.fontSize, width, height, onUpdate, setEditingTextId, stageRef]);
   const hasContent = element.text && element.text.trim().length > 0;
   const displayText = hasContent ? element.text! : 'Double-click to edit';
   const textColor = hasContent 
@@ -178,7 +182,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
         fontFamily={getAvailableFontFamily()}
         fill={textColor}
         wrap="word"
-        align={element.textAlign || 'left'}
+        align={'left'}
         verticalAlign="top"
         fontStyle={hasContent ? 'normal' : 'italic'}
         shadowColor={hasContent ? 'transparent' : '#FF6B6B'}

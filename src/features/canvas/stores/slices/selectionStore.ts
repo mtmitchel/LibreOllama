@@ -2,7 +2,7 @@
 /**
  * Selection Store - Manages element selection and multi-selection
  * Part of the LibreOllama Canvas Architecture Enhancement - Phase 2
- * Updated to use string[] instead of Set<string> for better component compatibility
+ * Updated to use Set<ElementId> for O(1) performance.
  */
 
 import { StateCreator } from 'zustand';
@@ -11,11 +11,12 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
 import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
+import { ElementId } from '../../types/enhanced.types';
 
 export interface SelectionState {
   // Selected element tracking
-  selectedElementIds: string[];
-  lastSelectedElementId: string | null;
+  selectedElementIds: Set<ElementId>;
+  lastSelectedElementId: ElementId | null;
   
   // Selection rectangle for multi-selection
   selectionRectangle: {
@@ -43,27 +44,27 @@ export interface SelectionState {
   };
   
   // Selection operations
-  selectElement: (elementId: string, addToSelection?: boolean) => void;
-  deselectElement: (elementId: string) => void;
-  toggleElementSelection: (elementId: string) => void;
-  selectMultipleElements: (elementIds: string[], replaceSelection?: boolean) => void;
+  selectElement: (elementId: ElementId, addToSelection?: boolean) => void;
+  deselectElement: (elementId: ElementId) => void;
+  toggleElementSelection: (elementId: ElementId) => void;
+  selectMultipleElements: (elementIds: ElementId[], replaceSelection?: boolean) => void;
   
   // Selection queries
-  isElementSelected: (elementId: string) => boolean;
-  getSelectedElementIds: () => string[];
+  isElementSelected: (elementId: ElementId) => boolean;
+  getSelectedElementIds: () => ElementId[];
   getSelectedElementCount: () => number;
   hasSelection: () => boolean;
   hasMultipleSelection: () => boolean;
   
   // Selection management
   clearSelection: () => void;
-  selectAllElements: (elementIds?: string[]) => void;
-  invertSelection: (allElementIds: string[]) => void;
+  selectAllElements: (elementIds?: ElementId[]) => void;
+  invertSelection: (allElementIds: ElementId[]) => void;
   
   // Selection rectangle operations
   startSelectionRectangle: (startX: number, startY: number) => void;
   updateSelectionRectangle: (endX: number, endY: number) => void;
-  completeSelectionRectangle: (elementIds: string[]) => void;
+  completeSelectionRectangle: (elementIds: ElementId[]) => void;
   cancelSelectionRectangle: () => void;
   
   // Modifier key tracking
@@ -71,7 +72,7 @@ export interface SelectionState {
   
   // Performance optimization
   optimizeSelection: () => void;
-  validateSelection: (allElementIds: string[]) => void;
+  validateSelection: (allElementIds: ElementId[]) => void;
 }
 
 export const createSelectionStore: StateCreator<
@@ -81,7 +82,7 @@ export const createSelectionStore: StateCreator<
   SelectionState
 > = (set, get) => ({
   // Initial state
-  selectedElementIds: [],
+  selectedElementIds: new Set(),
   lastSelectedElementId: null,
   selectionRectangle: null,
   
@@ -100,7 +101,7 @@ export const createSelectionStore: StateCreator<
   },
 
   // Selection operations
-  selectElement: (elementId: string, addToSelection = false) => {
+  selectElement: (elementId: ElementId, addToSelection = false) => {
     const endTiming = PerformanceMonitor.startTiming('selectElement');
     
     try {
@@ -109,65 +110,60 @@ export const createSelectionStore: StateCreator<
       set((state: Draft<SelectionState>) => {
         if (!addToSelection && !state.modifierKeys.ctrl && !state.modifierKeys.meta) {
           // Clear existing selection if not adding
-          state.selectedElementIds.length = 0;
+          state.selectedElementIds.clear();
         }
         
-        if (!state.selectedElementIds.includes(elementId)) {
-          state.selectedElementIds.push(elementId);
-        }
+        state.selectedElementIds.add(elementId);
         state.lastSelectedElementId = elementId;
         state.selectionMetrics.selectionOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        if (state.selectedElementIds.length > 1) {
+        if (state.selectedElementIds.size > 1) {
           state.selectionMetrics.multiSelectOperations++;
         }
         
-        console.log('✅ [SELECTION STORE] Element selected:', elementId, 'Total selected:', state.selectedElementIds.length);
+        console.log('✅ [SELECTION STORE] Element selected:', elementId, 'Total selected:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('elementSelected', 1, 'interaction', {
         elementId,
         addToSelection,
-        totalSelected: get().selectedElementIds.length
+        totalSelected: get().selectedElementIds.size
       });
     } finally {
       endTiming();
     }
   },
 
-  deselectElement: (elementId: string) => {
+  deselectElement: (elementId: ElementId) => {
     const endTiming = PerformanceMonitor.startTiming('deselectElement');
     
     try {
       console.log('🎯 [SELECTION STORE] Deselecting element:', elementId);
       
       set((state: Draft<SelectionState>) => {
-        const index = state.selectedElementIds.indexOf(elementId);
-        if (index > -1) {
-          state.selectedElementIds.splice(index, 1);
-        }
+        state.selectedElementIds.delete(elementId);
         
         if (state.lastSelectedElementId === elementId) {
-          state.lastSelectedElementId = state.selectedElementIds[state.selectedElementIds.length - 1] || null;
+          state.lastSelectedElementId = Array.from(state.selectedElementIds).pop() || null;
         }
         
         state.selectionMetrics.selectionOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] Element deselected:', elementId, 'Total selected:', state.selectedElementIds.length);
+        console.log('✅ [SELECTION STORE] Element deselected:', elementId, 'Total selected:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('elementDeselected', 1, 'interaction', {
         elementId,
-        totalSelected: get().selectedElementIds.length
+        totalSelected: get().selectedElementIds.size
       });
     } finally {
       endTiming();
     }
   },
 
-  toggleElementSelection: (elementId: string) => {
+  toggleElementSelection: (elementId: ElementId) => {
     const isSelected = get().isElementSelected(elementId);
     if (isSelected) {
       get().deselectElement(elementId);
@@ -176,7 +172,7 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  selectMultipleElements: (elementIds: string[], replaceSelection = true) => {
+  selectMultipleElements: (elementIds: ElementId[], replaceSelection = true) => {
     const endTiming = PerformanceMonitor.startTiming('selectMultipleElements');
     
     try {
@@ -184,13 +180,11 @@ export const createSelectionStore: StateCreator<
       
       set((state: Draft<SelectionState>) => {
         if (replaceSelection) {
-          state.selectedElementIds.length = 0; // Clear array
+          state.selectedElementIds.clear(); // Clear set
         }
         
         for (const id of elementIds) {
-          if (!state.selectedElementIds.includes(id)) {
-            state.selectedElementIds.push(id);
-          }
+          state.selectedElementIds.add(id);
         }
         
         state.lastSelectedElementId = elementIds[elementIds.length - 1] || null;
@@ -198,12 +192,12 @@ export const createSelectionStore: StateCreator<
         state.selectionMetrics.multiSelectOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] Multiple elements selected:', state.selectedElementIds.length);
+        console.log('✅ [SELECTION STORE] Multiple elements selected:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('multipleElementsSelected', elementIds.length, 'interaction', {
         replaceSelection,
-        totalSelected: get().selectedElementIds.length
+        totalSelected: get().selectedElementIds.size
       });
     } finally {
       endTiming();
@@ -211,8 +205,8 @@ export const createSelectionStore: StateCreator<
   },
 
   // Selection queries
-  isElementSelected: (elementId: string) => {
-    return get().selectedElementIds.includes(elementId);
+  isElementSelected: (elementId: ElementId) => {
+    return get().selectedElementIds.has(elementId);
   },
 
   getSelectedElementIds: () => {
@@ -220,15 +214,15 @@ export const createSelectionStore: StateCreator<
   },
 
   getSelectedElementCount: () => {
-    return get().selectedElementIds.length;
+    return get().selectedElementIds.size;
   },
 
   hasSelection: () => {
-    return get().selectedElementIds.length > 0;
+    return get().selectedElementIds.size > 0;
   },
 
   hasMultipleSelection: () => {
-    return get().selectedElementIds.length > 1;
+    return get().selectedElementIds.size > 1;
   },
 
   // Selection management
@@ -236,10 +230,10 @@ export const createSelectionStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('clearSelection');
     
     try {
-      const previousCount = get().selectedElementIds.length;
+      const previousCount = get().selectedElementIds.size;
       
       set((state: Draft<SelectionState>) => {
-        state.selectedElementIds.length = 0; // Clear array
+        state.selectedElementIds.clear(); // Clear set
         state.lastSelectedElementId = null;
         state.selectionMetrics.selectionOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
@@ -252,45 +246,45 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  selectAllElements: (elementIds?: string[]) => {
+  selectAllElements: (elementIds?: ElementId[]) => {
     const endTiming = PerformanceMonitor.startTiming('selectAllElements');
     
     try {
       set((state: Draft<SelectionState>) => {
         if (elementIds) {
-          state.selectedElementIds = [...elementIds];
+          state.selectedElementIds = new Set(elementIds);
         }
         state.selectionMetrics.selectionOperations++;
         state.selectionMetrics.multiSelectOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] All elements selected:', state.selectedElementIds.length);
+        console.log('✅ [SELECTION STORE] All elements selected:', state.selectedElementIds.size);
       });
       
-      PerformanceMonitor.recordMetric('allElementsSelected', get().selectedElementIds.length, 'interaction');
+      PerformanceMonitor.recordMetric('allElementsSelected', get().selectedElementIds.size, 'interaction');
     } finally {
       endTiming();
     }
   },
 
-  invertSelection: (allElementIds: string[]) => {
+  invertSelection: (allElementIds: ElementId[]) => {
     const endTiming = PerformanceMonitor.startTiming('invertSelection');
     
     try {
       set((state: Draft<SelectionState>) => {
         const currentSelection = state.selectedElementIds;
-        const newSelection = allElementIds.filter(id => !currentSelection.includes(id));
+        const newSelection = new Set(allElementIds.filter(id => !currentSelection.has(id)));
         
         state.selectedElementIds = newSelection;
-        state.lastSelectedElementId = newSelection[newSelection.length - 1] || null;
+        state.lastSelectedElementId = Array.from(newSelection).pop() || null;
         state.selectionMetrics.selectionOperations++;
         state.selectionMetrics.multiSelectOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] Selection inverted:', state.selectedElementIds.length);
+        console.log('✅ [SELECTION STORE] Selection inverted:', state.selectedElementIds.size);
       });
       
-      PerformanceMonitor.recordMetric('selectionInverted', get().selectedElementIds.length, 'interaction');
+      PerformanceMonitor.recordMetric('selectionInverted', get().selectedElementIds.size, 'interaction');
     } finally {
       endTiming();
     }
@@ -318,7 +312,7 @@ export const createSelectionStore: StateCreator<
     });
   },
 
-  completeSelectionRectangle: (elementIds: string[]) => {
+  completeSelectionRectangle: (elementIds: ElementId[]) => {
     const addToSelection = get().modifierKeys.ctrl || get().modifierKeys.meta;
     get().selectMultipleElements(elementIds, !addToSelection);
     
@@ -346,18 +340,13 @@ export const createSelectionStore: StateCreator<
     
     try {
       set((state: Draft<SelectionState>) => {
-        // Remove any duplicate IDs (shouldn't happen, but safety check)
-        const uniqueIds = Array.from(new Set(state.selectedElementIds));
-        
-        let optimized = false;
-        if (uniqueIds.length !== state.selectedElementIds.length) {
-          state.selectedElementIds = uniqueIds;
-          optimized = true;
-        }
+        // With Set, uniqueness is guaranteed, so this check is no longer needed
+        // but we can keep the log for consistency.
+        const originalSize = state.selectedElementIds.size;
         
         console.log('🔧 [SELECTION STORE] Selection optimized:', { 
-          hadDuplicates: optimized,
-          finalCount: state.selectedElementIds.length 
+          hadDuplicates: false, // Set handles uniqueness automatically
+          finalCount: originalSize 
         });
       });
     } finally {
@@ -365,23 +354,31 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  validateSelection: (allElementIds: string[]) => {
+  validateSelection: (allElementIds: ElementId[]) => {
     const endTiming = PerformanceMonitor.startTiming('validateSelection');
     
     try {
       set((state: Draft<SelectionState>) => {
         // Filter out any invalid element IDs
         const validElementIds = new Set(allElementIds);
-        const validSelection = state.selectedElementIds.filter(id => validElementIds.has(id));
+        const currentSelection = state.selectedElementIds;
+        let changed = false;
         
-        const removedCount = state.selectedElementIds.length - validSelection.length;
+        for (const selectedId of currentSelection) {
+          if (!validElementIds.has(selectedId)) {
+            currentSelection.delete(selectedId);
+            changed = true;
+          }
+        }
         
-        if (removedCount > 0) {
-          state.selectedElementIds = validSelection;
+        const removedCount = currentSelection.size - state.selectedElementIds.size;
+        
+        if (changed) {
+          state.selectedElementIds = currentSelection;
           
           // Update last selected if it was invalid
           if (state.lastSelectedElementId && !validElementIds.has(state.lastSelectedElementId)) {
-            state.lastSelectedElementId = validSelection[validSelection.length - 1] || null;
+            state.lastSelectedElementId = Array.from(currentSelection).pop() || null;
           }
           
           console.warn('⚠️ [SELECTION STORE] Invalid element IDs removed:', removedCount);

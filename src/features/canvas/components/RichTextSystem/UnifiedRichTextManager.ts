@@ -1,6 +1,7 @@
 // src/features/canvas/components/RichTextSystem/UnifiedRichTextManager.ts
 
-import { StandardTextFormat, RichTextSegment } from '../../../../types/richText';
+import { StandardTextFormat } from '../../../../types/richText';
+import type { RichTextSegment } from '../../types/enhanced.types';
 
 export class UnifiedRichTextManager {  // Method to apply formatting to segments of text
   applyFormattingToSegments(
@@ -221,19 +222,29 @@ export class UnifiedRichTextManager {  // Method to apply formatting to segments
     if (segments.length <= 1) return segments;
 
     const result: RichTextSegment[] = [];
-    let current = { ...segments[0] };
+    const firstSegment = segments[0];
+    if (!firstSegment) return segments;
+    
+    let current: RichTextSegment = { 
+      ...firstSegment,
+      text: firstSegment.text || ''
+    };
 
     for (let i = 1; i < segments.length; i++) {
       const next = segments[i];
+      if (!next) continue;
       
       // Check if formatting is identical (excluding text)
       if (this.areSegmentAttributesEqual(current, next)) {
         // Merge text content
-        current.text += next.text;
+        current.text += (next.text || '');
       } else {
         // Push current and start new segment
         result.push(current);
-        current = { ...next };
+        current = { 
+          ...next,
+          text: next.text || ''
+        };
       }
     }
 
@@ -447,7 +458,10 @@ export class UnifiedRichTextManager {  // Method to apply formatting to segments
 
       // Recursively process child nodes
       for (let i = 0; i < node.childNodes.length; i++) {
-        this.parseNodeToSegments(node.childNodes[i], segments, newFormat, newListType);
+        const childNode = node.childNodes[i];
+        if (childNode) {
+          this.parseNodeToSegments(childNode, segments, newFormat, newListType);
+        }
       }
     }
   }
@@ -458,6 +472,7 @@ export class UnifiedRichTextManager {  // Method to apply formatting to segments
     
     for (const styleRule of styles) {
       const [property, value] = styleRule.split(':').map(s => s.trim());
+      if (!value) continue;
       
       switch (property) {
         case 'font-size':

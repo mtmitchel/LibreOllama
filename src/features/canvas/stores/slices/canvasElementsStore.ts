@@ -2,6 +2,7 @@
 /**
  * Canvas Elements Store - Handles element CRUD operations
  * Part of the LibreOllama Canvas Architecture Enhancement - Phase 2
+ * Updated to use Map<string, CanvasElement> for O(1) performance
  */
 
 import { StateCreator } from 'zustand';
@@ -9,12 +10,14 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
-import type { CanvasElement } from '../../../../types';
+import type { CanvasElement, SectionElement } from '../../types/enhanced.types';
+import { ElementId, SectionId } from '../../types/enhanced.types';
+import { isCircleElement, isStarElement, isTextElement, isPenElement, isTableElement, isSectionElement, isConnectorElement, isTriangleElement, isRectangularElement } from '../../types/enhanced.types';
 import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
 
 export interface CanvasElementsState {
-  // Element data
-  elements: Record<string, CanvasElement>;
+  // Element data - Updated to use Map for O(1) operations
+  elements: Map<string, CanvasElement>;
   elementOrder: string[];
   
   // Drawing state
@@ -24,21 +27,21 @@ export interface CanvasElementsState {
   
   // Element operations
   addElement: (element: CanvasElement) => void;
-  updateElement: (id: string, updates: Partial<CanvasElement>) => void;
-  updateMultipleElements: (updates: Record<string, Partial<CanvasElement>>) => void;
-  deleteElement: (id: string) => void;
-  deleteElements: (ids: string[]) => void;
-  duplicateElement: (id: string) => void;
+  updateElement: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  updateMultipleElements: (updates: Record<ElementId, Partial<CanvasElement>>) => void;
+  deleteElement: (id: ElementId) => void;
+  deleteElements: (ids: ElementId[]) => void;
+  duplicateElement: (id: ElementId) => void;
   
   // Table operations - NEW
-  updateTableCell: (tableId: string, rowIndex: number, colIndex: number, updates: any) => void;
-  addTableRow: (tableId: string, insertIndex?: number) => void;
-  addTableColumn: (tableId: string, insertIndex?: number) => void;
-  removeTableRow: (tableId: string, rowIndex: number) => void;
-  removeTableColumn: (tableId: string, colIndex: number) => void;
-  resizeTableRow: (tableId: string, rowIndex: number, newHeight: number) => void;
-  resizeTableColumn: (tableId: string, colIndex: number, newWidth: number) => void;
-  resizeTable: (tableId: string, newWidth: number, newHeight: number) => void;
+  updateTableCell: (tableId: ElementId, rowIndex: number, colIndex: number, updates: any) => void;
+  addTableRow: (tableId: ElementId, insertIndex?: number) => void;
+  addTableColumn: (tableId: ElementId, insertIndex?: number) => void;
+  removeTableRow: (tableId: ElementId, rowIndex: number) => void;
+  removeTableColumn: (tableId: ElementId, colIndex: number) => void;
+  resizeTableRow: (tableId: ElementId, rowIndex: number, newHeight: number) => void;
+  resizeTableColumn: (tableId: ElementId, colIndex: number, newWidth: number) => void;
+  resizeTable: (tableId: ElementId, newWidth: number, newHeight: number) => void;
   
   // Drawing operations
   startDrawing: (x: number, y: number, tool: 'pen' | 'pencil') => void;
@@ -47,18 +50,19 @@ export interface CanvasElementsState {
   cancelDrawing: () => void;
   
   // Element queries
-  getElementById: (id: string) => CanvasElement | null;
+  getElementById: (id: ElementId) => CanvasElement | null;
   getElementsByType: (type: string) => CanvasElement[];
-  getElementsByIds: (ids: string[]) => CanvasElement[];
+  getElementsByIds: (ids: ElementId[]) => CanvasElement[];
   getAllElements: () => CanvasElement[];
-    // Element utilities
+  
+  // Element utilities
   clearAllElements: () => void;
   clearCanvas: () => void; // Clears all elements and resets canvas state
   exportElements: () => CanvasElement[];
   importElements: (elements: CanvasElement[]) => void;
   validateElement: (element: CanvasElement) => boolean;
-  optimizeElement: (id: string) => void;
-  handleElementDrop: (elementId: string, position: { x: number; y: number }) => void;
+  optimizeElement: (id: ElementId) => void;
+  handleElementDrop: (elementId: ElementId, position: { x: number; y: number }) => void;
 }
 
 export const createCanvasElementsStore: StateCreator<
@@ -67,14 +71,15 @@ export const createCanvasElementsStore: StateCreator<
   [],
   CanvasElementsState
 > = (set, get) => ({
-  // Initial state
-  elements: {},
+  // Initial state - Using Map for O(1) performance
+  elements: new Map(),
   elementOrder: [],
   
   // Drawing state
   isDrawing: false,
   currentPath: [],
   drawingTool: null,
+  
   // Element operations with performance monitoring
   addElement: (element: CanvasElement) => {
     const endTiming = PerformanceMonitor.startTiming('addElement');
@@ -90,12 +95,18 @@ export const createCanvasElementsStore: StateCreator<
       }
       
       set((state: Draft<CanvasElementsState>) => {
-        state.elements[element.id] = { ...element };
-        if (!state.elementOrder.includes(element.id)) {
-          state.elementOrder.push(element.id);
+        // Ensure createdAt and updatedAt are set
+        const elementWithTimestamps = {
+          ...element,
+          createdAt: element.createdAt || Date.now(),
+          updatedAt: element.updatedAt || Date.now()
+        };
+        state.elements.set(element.id as string, elementWithTimestamps);
+        if (!state.elementOrder.includes(element.id as string)) {
+          state.elementOrder.push(element.id as string);
         }
         console.log('✅ [ELEMENTS STORE] Element added successfully:', element.id);
-        console.log('🔧 [ELEMENTS STORE] Total elements after add:', Object.keys(state.elements).length);
+        console.log('🔧 [ELEMENTS STORE] Total elements after add:', state.elements.size);
       });
       
       PerformanceMonitor.recordMetric('elementAdded', 1, 'canvas', { elementType: element.type });
@@ -103,43 +114,49 @@ export const createCanvasElementsStore: StateCreator<
       endTiming();
     }
   },
-  updateElement: (id: string, updates: Partial<CanvasElement>) => {
+  
+  updateElement: (id: ElementId, updates: Partial<CanvasElement>) => {
     const endTiming = PerformanceMonitor.startTiming('updateElement');
     
     try {
       console.log('🔧 [ELEMENTS STORE] Updating element:', id, updates);
-      console.log('🔧 [ELEMENTS STORE] Current elements in store:', Object.keys(get().elements));
+      console.log('🔧 [ELEMENTS STORE] Current elements in store:', Array.from(get().elements.keys()));
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[id];        if (!element) {
+        const element = state.elements.get(id as string);
+        if (!element) {
           console.warn('🔧 [ELEMENTS STORE] Element not found for update:', id);
-          console.warn('🔧 [ELEMENTS STORE] Available elements:', Object.keys(state.elements));
+          console.warn('🔧 [ELEMENTS STORE] Available elements:', Array.from(state.elements.keys()));
           return;
         }
         
         // Prevent storing empty or whitespace-only text (React-Konva issue)
-        if (updates.text !== undefined) {
-          const trimmedText = updates.text.trim();
+        // TODO: Add proper type guards for text elements
+        if ('text' in updates && updates.text !== undefined) {
+          const trimmedText = (updates as any).text.trim();
           if (trimmedText.length === 0) {
             console.warn('🔧 [ELEMENTS STORE] Preventing whitespace-only text update for element:', id);
-            updates.text = 'Text'; // Use default text instead
+            (updates as any).text = 'Text'; // Use default text instead
           }
         }
         
-        // Apply updates
-        if (state.elements[id]) {
-          Object.assign(state.elements[id], updates);
-        }
+        // Apply updates with proper type handling
+        const updatedElement = { 
+          ...element, 
+          ...updates,
+          updatedAt: Date.now() 
+        } as CanvasElement;
+        state.elements.set(id as string, updatedElement);
         console.log('✅ [ELEMENTS STORE] Element updated successfully:', id);
       });
       
-      PerformanceMonitor.recordMetric('elementUpdated', 1, 'canvas', { elementType: get().elements[id]?.type });
+      PerformanceMonitor.recordMetric('elementUpdated', 1, 'canvas', { elementType: get().elements.get(id as string)?.type });
     } finally {
       endTiming();
     }
   },
 
-  updateMultipleElements: (updates: Record<string, Partial<CanvasElement>>) => {
+  updateMultipleElements: (updates: Record<ElementId, Partial<CanvasElement>>) => {
     const endTiming = PerformanceMonitor.startTiming('updateMultipleElements');
     
     try {
@@ -147,9 +164,15 @@ export const createCanvasElementsStore: StateCreator<
       
       set((state: Draft<CanvasElementsState>) => {
         Object.entries(updates).forEach(([id, elementUpdates]) => {
-          const element = state.elements[id];
+          const element = state.elements.get(id as string);
           if (element) {
-            Object.assign(element, elementUpdates);
+            // Type-safe update that preserves discriminated union integrity
+            const updatedElement = { 
+              ...element, 
+              ...elementUpdates,
+              updatedAt: Date.now()
+            } as CanvasElement;
+            state.elements.set(id as string, updatedElement);
           }
         });
       });
@@ -160,19 +183,19 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  deleteElement: (id: string) => {
+  deleteElement: (id: ElementId) => {
     const endTiming = PerformanceMonitor.startTiming('deleteElement');
     
     try {
-      const element = get().elements[id];
+      const element = get().elements.get(id as string);
       if (!element) {
         console.warn('🔧 [ELEMENTS STORE] Element not found for deletion:', id);
         return;
       }
 
       set((state: Draft<CanvasElementsState>) => {
-        delete state.elements[id];
-        state.elementOrder = state.elementOrder.filter(elementId => elementId !== id);
+        state.elements.delete(id as string);
+        state.elementOrder = state.elementOrder.filter(elementId => elementId !== (id as string));
       });
       
       PerformanceMonitor.recordMetric('elementDeleted', 1, 'canvas', { elementType: element.type });
@@ -182,7 +205,7 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  deleteElements: (ids: string[]) => {
+  deleteElements: (ids: ElementId[]) => {
     const endTiming = PerformanceMonitor.startTiming('deleteElements');
     
     try {
@@ -190,9 +213,9 @@ export const createCanvasElementsStore: StateCreator<
       
       set((state: Draft<CanvasElementsState>) => {
         ids.forEach(id => {
-          delete state.elements[id];
+          state.elements.delete(id as string);
         });
-        state.elementOrder = state.elementOrder.filter(elementId => !ids.includes(elementId));
+        state.elementOrder = state.elementOrder.filter(elementId => !ids.includes(elementId as ElementId));
       });
       
       PerformanceMonitor.recordMetric('elementsDeleted', ids.length, 'canvas');
@@ -201,43 +224,64 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  duplicateElement: (id: string) => {
+  duplicateElement: (id: ElementId) => {
     const endTiming = PerformanceMonitor.startTiming('duplicateElement');
     
     try {
-      const element = get().elements[id];
+      const element = get().elements.get(id as string);
       if (!element) {
         console.warn('🔧 [ELEMENTS STORE] Element not found for duplication:', id);
         return;
       }
 
-      const duplicatedElement: CanvasElement = {
-        ...element,
-        id: `${element.id}_copy_${Date.now()}`,
-        x: element.x + 10,
-        y: element.y + 10
-      };      get().addElement(duplicatedElement);
+      let duplicatedElement: CanvasElement;
+      
+      if (element.type === 'section') {
+        // Handle section elements with SectionId
+        duplicatedElement = {
+          ...element,
+          id: SectionId(`${element.id}_copy_${Date.now()}`),
+          x: element.x + 10,
+          y: element.y + 10,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        } as SectionElement;
+      } else {
+        // Handle regular elements with ElementId
+        duplicatedElement = {
+          ...element,
+          id: ElementId(`${element.id}_copy_${Date.now()}`),
+          x: element.x + 10,
+          y: element.y + 10,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+      }
+      
+      get().addElement(duplicatedElement);
       
       PerformanceMonitor.recordMetric('elementDuplicated', 1, 'canvas', { elementType: element.type });
       console.log('✅ [ELEMENTS STORE] Element duplicated successfully:', id, '→', duplicatedElement.id);
     } finally {
       endTiming();
-    }  },
+    }
+  },
 
   // Table operations implementation
-  updateTableCell: (tableId: string, rowIndex: number, colIndex: number, updates: any) => {
+  updateTableCell: (tableId: ElementId, rowIndex: number, colIndex: number, updates: any) => {
     const endTiming = PerformanceMonitor.startTiming('updateTableCell');
     
     try {
       console.log('🔧 [TABLE] Updating table cell:', { tableId, rowIndex, colIndex, updates });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table' || !element.enhancedTableData) {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
         }
-          const { cells } = element.enhancedTableData;
+        
+        const { cells } = element.enhancedTableData;
         if (rowIndex < 0 || rowIndex >= cells.length || 
             colIndex < 0 || !cells[rowIndex] || colIndex >= cells[rowIndex].length) {
           console.warn('🔧 [TABLE] Invalid cell indices:', { tableId, rowIndex, colIndex, rows: cells.length, cols: cells[0]?.length });
@@ -247,6 +291,8 @@ export const createCanvasElementsStore: StateCreator<
         const cell = cells[rowIndex]?.[colIndex];
         if (cell) {
           Object.assign(cell, updates);
+          // Update the element in the map
+          state.elements.set(tableId as string, { ...element });
           console.log('✅ [TABLE] Cell updated successfully:', { tableId, rowIndex, colIndex });
         } else {
           console.warn('🔧 [TABLE] Cell not found:', { tableId, rowIndex, colIndex });
@@ -259,14 +305,14 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  addTableRow: (tableId: string, insertIndex?: number) => {
+  addTableRow: (tableId: ElementId, insertIndex?: number) => {
     const endTiming = PerformanceMonitor.startTiming('addTableRow');
     
     try {
       console.log('🔧 [TABLE] Adding table row:', { tableId, insertIndex });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table' || !element.enhancedTableData) {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
@@ -289,7 +335,8 @@ export const createCanvasElementsStore: StateCreator<
         // Create new cell row with default cell values
         const newCellRow = columns.map((_, colIndex) => ({
           id: `cell-${Date.now()}-${colIndex}`,
-          text: '',
+          content: '', // Required property
+          text: '', // Legacy compatibility
           segments: [],
           backgroundColor: '#FFFFFF',
           textColor: '#000000',
@@ -312,6 +359,9 @@ export const createCanvasElementsStore: StateCreator<
         // Insert the new cell row
         cells.splice(newRowIndex, 0, newCellRow);
         
+        // Update the element in the map
+        state.elements.set(tableId as string, { ...element });
+        
         console.log('✅ [TABLE] Row added successfully:', { tableId, newRowIndex, totalRows: rows.length });
       });
       
@@ -321,19 +371,20 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  addTableColumn: (tableId: string, insertIndex?: number) => {
+  addTableColumn: (tableId: ElementId, insertIndex?: number) => {
     const endTiming = PerformanceMonitor.startTiming('addTableColumn');
     
     try {
       console.log('🔧 [TABLE] Adding table column:', { tableId, insertIndex });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table' || !element.enhancedTableData) {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
         }
-          const { columns, cells } = element.enhancedTableData;
+        
+        const { columns, cells } = element.enhancedTableData;
         const newColIndex = insertIndex !== undefined ? insertIndex : columns.length;
         
         // Create new column
@@ -351,7 +402,8 @@ export const createCanvasElementsStore: StateCreator<
         cells.forEach((row, rowIndex) => {
           const newCell = {
             id: `cell-${Date.now()}-${rowIndex}`,
-            text: '',
+            content: '', // Required property
+            text: '', // Legacy compatibility
             segments: [],
             backgroundColor: '#FFFFFF',
             textColor: '#000000',
@@ -374,6 +426,9 @@ export const createCanvasElementsStore: StateCreator<
           row.splice(newColIndex, 0, newCell);
         });
         
+        // Update the element in the map
+        state.elements.set(tableId as string, { ...element });
+        
         console.log('✅ [TABLE] Column added successfully:', { tableId, newColIndex, totalColumns: columns.length });
       });
       
@@ -383,14 +438,14 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  removeTableRow: (tableId: string, rowIndex: number) => {
+  removeTableRow: (tableId: ElementId, rowIndex: number) => {
     const endTiming = PerformanceMonitor.startTiming('removeTableRow');
     
     try {
       console.log('🔧 [TABLE] Removing table row:', { tableId, rowIndex });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table' || !element.enhancedTableData) {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
@@ -407,6 +462,9 @@ export const createCanvasElementsStore: StateCreator<
         rows.splice(rowIndex, 1);
         cells.splice(rowIndex, 1);
         
+        // Update the element in the map
+        state.elements.set(tableId as string, { ...element });
+        
         console.log('✅ [TABLE] Row removed successfully:', { tableId, rowIndex, remainingRows: rows.length });
       });
       
@@ -416,14 +474,14 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  removeTableColumn: (tableId: string, colIndex: number) => {
+  removeTableColumn: (tableId: ElementId, colIndex: number) => {
     const endTiming = PerformanceMonitor.startTiming('removeTableColumn');
     
     try {
       console.log('🔧 [TABLE] Removing table column:', { tableId, colIndex });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table' || !element.enhancedTableData) {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
@@ -444,6 +502,9 @@ export const createCanvasElementsStore: StateCreator<
           row.splice(colIndex, 1);
         });
         
+        // Update the element in the map
+        state.elements.set(tableId as string, { ...element });
+        
         console.log('✅ [TABLE] Column removed successfully:', { tableId, colIndex, remainingColumns: columns.length });
       });
       
@@ -453,14 +514,14 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  resizeTableRow: (tableId: string, rowIndex: number, newHeight: number) => {
+  resizeTableRow: (tableId: ElementId, rowIndex: number, newHeight: number) => {
     const endTiming = PerformanceMonitor.startTiming('resizeTableRow');
     
     try {
       console.log('🔧 [TABLE] Resizing table row:', { tableId, rowIndex, newHeight });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table' || !element.enhancedTableData) {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
@@ -472,9 +533,14 @@ export const createCanvasElementsStore: StateCreator<
           console.warn('🔧 [TABLE] Invalid row index:', { rowIndex, totalRows: rows.length });
           return;
         }
-          // Update row height
+        
+        // Update row height
         if (rows[rowIndex]) {
           rows[rowIndex].height = Math.max(20, newHeight);
+          
+          // Update the element in the map
+          state.elements.set(tableId as string, { ...element });
+          
           console.log('✅ [TABLE] Row resized successfully:', { tableId, rowIndex, newHeight: rows[rowIndex].height });
         }
       });
@@ -485,14 +551,14 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  resizeTableColumn: (tableId: string, colIndex: number, newWidth: number) => {
+  resizeTableColumn: (tableId: ElementId, colIndex: number, newWidth: number) => {
     const endTiming = PerformanceMonitor.startTiming('resizeTableColumn');
     
     try {
       console.log('🔧 [TABLE] Resizing table column:', { tableId, colIndex, newWidth });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table' || !element.enhancedTableData) {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
@@ -504,9 +570,14 @@ export const createCanvasElementsStore: StateCreator<
           console.warn('🔧 [TABLE] Invalid column index:', { colIndex, totalColumns: columns.length });
           return;
         }
-          // Update column width
+        
+        // Update column width
         if (columns[colIndex]) {
           columns[colIndex].width = Math.max(50, newWidth);
+          
+          // Update the element in the map
+          state.elements.set(tableId as string, { ...element });
+          
           console.log('✅ [TABLE] Column resized successfully:', { tableId, colIndex, newWidth: columns[colIndex].width });
         }
       });
@@ -517,24 +588,29 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  resizeTable: (tableId: string, newWidth: number, newHeight: number) => {
+  resizeTable: (tableId: ElementId, newWidth: number, newHeight: number) => {
     const endTiming = PerformanceMonitor.startTiming('resizeTable');
     
     try {
       console.log('🔧 [TABLE] Resizing table:', { tableId, newWidth, newHeight });
       
       set((state: Draft<CanvasElementsState>) => {
-        const element = state.elements[tableId];
+        const element = state.elements.get(tableId as string);
         if (!element || element.type !== 'table') {
           console.warn('🔧 [TABLE] Table not found or invalid:', tableId);
           return;
         }
         
         // Update table element dimensions
-        element.width = Math.max(100, newWidth);
-        element.height = Math.max(60, newHeight);
+        const updatedElement = {
+          ...element,
+          width: Math.max(100, newWidth),
+          height: Math.max(60, newHeight)
+        };
         
-        console.log('✅ [TABLE] Table resized successfully:', { tableId, newWidth: element.width, newHeight: element.height });
+        state.elements.set(tableId as string, updatedElement);
+        
+        console.log('✅ [TABLE] Table resized successfully:', { tableId, newWidth: updatedElement.width, newHeight: updatedElement.height });
       });
       
       PerformanceMonitor.recordMetric('tableResized', 1, 'canvas');
@@ -571,27 +647,31 @@ export const createCanvasElementsStore: StateCreator<
     }
 
     console.log('🖊️ [DRAWING] Finishing drawing, points:', state.currentPath.length / 2);
-      // Create a new pen/pencil element
+    
+    // Create a new pen/pencil element
     const newElement: CanvasElement = {
-      id: `${state.drawingTool}-${Date.now()}`,
-      type: state.drawingTool === 'pen' ? 'pen' : 'pen', // Use 'pen' type for both
+      id: ElementId(`${state.drawingTool}-${Date.now()}`),
+      type: 'pen',
       x: 0,
       y: 0,
-      width: 100,
-      height: 100,
       points: [...state.currentPath],
       stroke: state.drawingTool === 'pen' ? '#000000' : '#666666',
       strokeWidth: state.drawingTool === 'pen' ? 2 : 1,
-      fill: ''
-    };
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    } as CanvasElement;
 
-    console.log('🖊️ [DRAWING] Creating new element with points:', newElement.points);
+    // Type-safe access to points for pen elements
+    if (newElement.type === 'pen' && 'points' in newElement) {
+      console.log('🖊️ [DRAWING] Creating new element with points:', newElement.points);
+    }
     console.log('🖊️ [DRAWING] Element will be added to store with id:', newElement.id);
 
-    // Add the element and reset drawing state
+    // Add the element
+    get().addElement(newElement);
+    
+    // Reset drawing state
     set((state: Draft<CanvasElementsState>) => {
-      state.elements[newElement.id] = newElement;
-      state.elementOrder.push(newElement.id);
       state.isDrawing = false;
       state.currentPath = [];
       state.drawingTool = null;
@@ -609,39 +689,48 @@ export const createCanvasElementsStore: StateCreator<
     });
   },
 
-  // Element queries
-  getElementById: (id: string) => {
-    return get().elements[id] || null;
+  // Element queries - Updated to work with Map
+  getElementById: (id: ElementId) => {
+    return get().elements.get(id as string) || null;
   },
 
   getElementsByType: (type: string) => {
     const elements = get().elements;
-    return Object.values(elements).filter(element => element.type === type);
+    const result: CanvasElement[] = [];
+    
+    elements.forEach(element => {
+      if (element.type === type) {
+        result.push(element);
+      }
+    });
+    
+    return result;
   },
 
-  getElementsByIds: (ids: string[]) => {
+  getElementsByIds: (ids: ElementId[]) => {
     const elements = get().elements;
-    return ids.map(id => elements[id]).filter(Boolean) as CanvasElement[];
+    return ids.map(id => elements.get(id as string)).filter(Boolean) as CanvasElement[];
   },
 
   getAllElements: () => {
-    return Object.values(get().elements);
+    return Array.from(get().elements.values());
   },
 
-  // Element utilities
+  // Element utilities - Updated to work with Map
   clearAllElements: () => {
     const endTiming = PerformanceMonitor.startTiming('clearAllElements');
     
     try {
-      const elementCount = Object.keys(get().elements).length;
+      const elementCount = get().elements.size;
       console.log('🔧 [ELEMENTS STORE] Clearing all elements, count:', elementCount);
       
       set((state: Draft<CanvasElementsState>) => {
-        state.elements = {};
+        state.elements.clear();
         state.elementOrder = [];
       });
       
-      PerformanceMonitor.recordMetric('allElementsCleared', elementCount, 'canvas');      console.log('✅ [ELEMENTS STORE] All elements cleared successfully');
+      PerformanceMonitor.recordMetric('allElementsCleared', elementCount, 'canvas');
+      console.log('✅ [ELEMENTS STORE] All elements cleared successfully');
     } finally {
       endTiming();
     }
@@ -651,12 +740,12 @@ export const createCanvasElementsStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('clearCanvas');
     
     try {
-      const elementCount = Object.keys(get().elements).length;
+      const elementCount = get().elements.size;
       console.log('🔧 [ELEMENTS STORE] Clearing entire canvas, element count:', elementCount);
       
       set((state: Draft<CanvasElementsState>) => {
         // Clear all elements
-        state.elements = {};
+        state.elements.clear();
         state.elementOrder = [];
         
         // Reset drawing state
@@ -676,7 +765,7 @@ export const createCanvasElementsStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('exportElements');
     
     try {
-      const elements = Object.values(get().elements);
+      const elements = Array.from(get().elements.values());
       console.log('🔧 [ELEMENTS STORE] Exporting elements, count:', elements.length);
       
       PerformanceMonitor.recordMetric('elementsExported', elements.length, 'canvas');
@@ -701,9 +790,15 @@ export const createCanvasElementsStore: StateCreator<
       
       set((state: Draft<CanvasElementsState>) => {
         validElements.forEach(element => {
-          state.elements[element.id] = { ...element };
-          if (!state.elementOrder.includes(element.id)) {
-            state.elementOrder.push(element.id);
+          // Ensure createdAt and updatedAt are set
+          const elementWithTimestamps = {
+            ...element,
+            createdAt: element.createdAt || Date.now(),
+            updatedAt: element.updatedAt || Date.now()
+          };
+          state.elements.set(element.id as string, elementWithTimestamps);
+          if (!state.elementOrder.includes(element.id as string)) {
+            state.elementOrder.push(element.id as string);
           }
         });
       });
@@ -714,6 +809,7 @@ export const createCanvasElementsStore: StateCreator<
       endTiming();
     }
   },
+
   validateElement: (element: CanvasElement): boolean => {
     const endTiming = PerformanceMonitor.startTiming('validateElement');
     
@@ -744,8 +840,10 @@ export const createCanvasElementsStore: StateCreator<
           typeY: typeof element.y
         });
         return false;
-      }      // Validate dimensions based on element type
-      if (element.type === 'circle') {
+      }
+      
+      // Validate dimensions based on element type using type guards
+      if (isCircleElement(element)) {
         if (typeof element.radius !== 'number' || element.radius <= 0) {
           console.error('🔧 [ELEMENTS STORE] Invalid circle: missing or invalid radius', {
             radius: element.radius,
@@ -754,29 +852,30 @@ export const createCanvasElementsStore: StateCreator<
           return false;
         }
         console.log('✅ [ELEMENTS STORE] Circle validation passed');
-      } else if (element.type === 'star') {
+      } else if (isStarElement(element)) {
         // Star elements use radius and innerRadius
-        if (typeof element.radius !== 'number' || element.radius <= 0 ||
-            typeof element.innerRadius !== 'number' || element.innerRadius <= 0) {
+        if (typeof element.innerRadius !== 'number' || element.innerRadius <= 0 ||
+            typeof element.outerRadius !== 'number' || element.outerRadius <= 0) {
           console.error('🔧 [ELEMENTS STORE] Invalid star: missing or invalid radius', {
-            radius: element.radius,
             innerRadius: element.innerRadius,
-            typeRadius: typeof element.radius,
-            typeInnerRadius: typeof element.innerRadius
+            outerRadius: element.outerRadius,
+            typeInnerRadius: typeof element.innerRadius,
+            typeOuterRadius: typeof element.outerRadius
           });
           return false;
         }
         console.log('✅ [ELEMENTS STORE] Star validation passed');
-      } else if (element.type === 'text') {
+      } else if (isTextElement(element)) {
         // Text elements only need width, height is dynamic
-        if (typeof element.width !== 'number' || element.width <= 0) {
-          console.error('🔧 [ELEMENTS STORE] Invalid text: missing or invalid width', {
+        if (element.width !== undefined && (typeof element.width !== 'number' || element.width <= 0)) {
+          console.error('🔧 [ELEMENTS STORE] Invalid text: invalid width', {
             width: element.width,
             typeWidth: typeof element.width
           });
           return false;
         }
-        console.log('✅ [ELEMENTS STORE] Text validation passed');      } else if (element.type === 'pen') {
+        console.log('✅ [ELEMENTS STORE] Text validation passed');
+      } else if (isPenElement(element)) {
         // Pen elements use points array and don't need width/height
         if (!Array.isArray(element.points) || element.points.length < 4) {
           console.error('🔧 [ELEMENTS STORE] Invalid pen: missing or invalid points', {
@@ -785,29 +884,38 @@ export const createCanvasElementsStore: StateCreator<
           });
           return false;
         }
-        console.log('✅ [ELEMENTS STORE] Pen validation passed');      } else if (element.type === 'table') {
+        console.log('✅ [ELEMENTS STORE] Pen validation passed');
+      } else if (isTableElement(element)) {
         // Table elements need width, height, and enhancedTableData with rows/cols arrays
         if (typeof element.width !== 'number' || typeof element.height !== 'number' ||
-            element.width <= 0 || element.height <= 0 ||
-            !element.enhancedTableData || 
-            !Array.isArray(element.enhancedTableData.rows) || 
-            !Array.isArray(element.enhancedTableData.columns) ||
-            element.enhancedTableData.rows.length <= 0 || 
-            element.enhancedTableData.columns.length <= 0 ||
-            !Array.isArray(element.enhancedTableData.cells)) {
-          console.error('🔧 [ELEMENTS STORE] Invalid table: missing or invalid dimensions/structure', {
+            element.width <= 0 || element.height <= 0) {
+          console.error('🔧 [ELEMENTS STORE] Invalid table: missing or invalid dimensions', {
             width: element.width,
-            height: element.height,
+            height: element.height
+          });
+          return false;
+        }
+        if (element.enhancedTableData && 
+            (!Array.isArray(element.enhancedTableData.rows) || 
+             !Array.isArray(element.enhancedTableData.columns) ||
+             element.enhancedTableData.rows.length <= 0 || 
+             element.enhancedTableData.columns.length <= 0 ||
+             !Array.isArray(element.enhancedTableData.cells))) {
+          console.error('🔧 [ELEMENTS STORE] Invalid table: invalid table structure', {
             enhancedTableData: element.enhancedTableData
           });
           return false;
         }
-        console.log('✅ [ELEMENTS STORE] Table validation passed', {
-          rows: element.enhancedTableData.rows.length,
-          columns: element.enhancedTableData.columns.length,
-          cellsCount: element.enhancedTableData.cells.length
-        });
-      } else if (element.type === 'section') {
+        if (element.enhancedTableData) {
+          console.log('✅ [ELEMENTS STORE] Table validation passed', {
+            rows: element.enhancedTableData.rows.length,
+            columns: element.enhancedTableData.columns.length,
+            cellsCount: element.enhancedTableData.cells.length
+          });
+        } else {
+          console.log('✅ [ELEMENTS STORE] Table validation passed (no enhanced data)');
+        }
+      } else if (isSectionElement(element)) {
         // Section elements need width and height
         if (typeof element.width !== 'number' || typeof element.height !== 'number' ||
             element.width <= 0 || element.height <= 0) {
@@ -815,20 +923,33 @@ export const createCanvasElementsStore: StateCreator<
             width: element.width,
             height: element.height
           });
-          return false;        }
+          return false;
+        }
         console.log('✅ [ELEMENTS STORE] Section validation passed');
-      } else if (element.type === 'connector') {
-        // Connector elements use points array like pen
-        if (!Array.isArray(element.points) || element.points.length < 4) {
+      } else if (isConnectorElement(element)) {
+        // Connector elements use startPoint and endPoint
+        if (!element.startPoint || !element.endPoint ||
+            typeof element.startPoint.x !== 'number' || typeof element.startPoint.y !== 'number' ||
+            typeof element.endPoint.x !== 'number' || typeof element.endPoint.y !== 'number') {
           console.error('🔧 [ELEMENTS STORE] Invalid connector: missing or invalid points', {
+            startPoint: element.startPoint,
+            endPoint: element.endPoint
+          });
+          return false;
+        }
+        console.log('✅ [ELEMENTS STORE] Connector validation passed');
+      } else if (isTriangleElement(element)) {
+        // Triangle elements use points array but can also have width/height for compatibility
+        if (!Array.isArray(element.points) || element.points.length < 6) {
+          console.error('🔧 [ELEMENTS STORE] Invalid triangle: missing or invalid points', {
             points: element.points,
             pointsLength: Array.isArray(element.points) ? element.points.length : 'not array'
           });
           return false;
         }
-        console.log('✅ [ELEMENTS STORE] Connector validation passed');
-      } else {
-        // Most other elements need width and height
+        console.log('✅ [ELEMENTS STORE] Triangle validation passed');
+      } else if (isRectangularElement(element)) {
+        // Elements with width and height
         if (typeof element.width !== 'number' || typeof element.height !== 'number' ||
             element.width <= 0 || element.height <= 0) {
           console.error('🔧 [ELEMENTS STORE] Invalid element: missing or invalid dimensions', {
@@ -840,6 +961,10 @@ export const createCanvasElementsStore: StateCreator<
           return false;
         }
         console.log('✅ [ELEMENTS STORE] Element validation passed');
+      } else {
+        // Unknown element type
+        console.error('🔧 [ELEMENTS STORE] Unknown element type:', element);
+        return false;
       }
       
       PerformanceMonitor.recordMetric('textValidation', 1, 'interaction', {
@@ -854,11 +979,11 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
 
-  optimizeElement: (id: string) => {
+  optimizeElement: (id: ElementId) => {
     const endTiming = PerformanceMonitor.startTiming('optimizeElement');
     
     try {
-      const element = get().elements[id];
+      const element = get().elements.get(id as string);
       if (!element) {
         console.warn('🔧 [ELEMENTS STORE] Element not found for optimization:', id);
         return;
@@ -869,17 +994,24 @@ export const createCanvasElementsStore: StateCreator<
       let optimized = false;
       
       set((state: Draft<CanvasElementsState>) => {
-        const stateElement = state.elements[id];
+        const stateElement = state.elements.get(id as string);
         if (!stateElement) return;
         
-        // Example optimizations
-        if (stateElement.width && stateElement.width < 1) {
-          stateElement.width = 1;
-          optimized = true;
+        // Example optimizations - use type guards to check properties
+        if (isRectangularElement(stateElement)) {
+          if (stateElement.width < 1) {
+            stateElement.width = 1;
+            optimized = true;
+          }
+          if (stateElement.height < 1) {
+            stateElement.height = 1;
+            optimized = true;
+          }
         }
-        if (stateElement.height && stateElement.height < 1) {
-          stateElement.height = 1;
-          optimized = true;
+        
+        if (optimized) {
+          // Update the element in the map
+          state.elements.set(id as string, { ...stateElement });
         }
       });
       
@@ -893,9 +1025,11 @@ export const createCanvasElementsStore: StateCreator<
       });
     } finally {
       endTiming();
-    }  },
+    }
+  },
+  
   // Placeholder for handleElementDrop - will be overridden in combined store
-  handleElementDrop: (_elementId: string, _position: { x: number; y: number }) => {
+  handleElementDrop: (_elementId: ElementId, _position: { x: number; y: number }) => {
     console.warn('🔧 [ELEMENTS STORE] handleElementDrop called but not implemented in slice');
     // This will be overridden in the combined store to avoid circular dependencies
   },

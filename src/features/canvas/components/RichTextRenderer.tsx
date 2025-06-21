@@ -2,18 +2,12 @@
 import React, { useRef, useEffect } from 'react';
 import { Group } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement, RichTextSegment } from '../stores/konvaCanvasStore';
+import { RichTextElement, RichTextSegment } from '../types/enhanced.types';
 import { designSystem } from '../../../styles/designSystem';
 import UnifiedTextElement from './UnifiedTextElement';
 
-export type RichTextElementType = CanvasElement & {
-  type: 'rich-text';
-  segments: RichTextSegment[];
-  width?: number;
-};
-
 interface RichTextRendererProps extends Omit<Konva.GroupConfig, 'children'> {
-  element: RichTextElementType;
+  element: RichTextElement;
   isEditing: boolean;
   onTextUpdate: (id: string, text: string) => void;
   onEditingCancel: () => void;
@@ -60,14 +54,14 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
         textDecoration: segment.textDecoration || '',
         fill: segment.fill || element.fill || designSystem.colors.secondary[700],
         align: element.textAlign || 'left',
-        width: element.width
+        ...(element.width && { width: element.width })
       });
 
       if (segment.url) {
         let clickTimeout: number | null = null;
         
         // Store event handlers for cleanup
-        const clickHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+        const clickHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
           // Clear any existing timeout
           if (clickTimeout) {
             window.clearTimeout(clickTimeout);
@@ -82,7 +76,7 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
           }, 300); // 300ms delay to detect double-click
         };
         
-        const dblClickHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+        const dblClickHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
           // Clear the single-click timeout on double-click
           if (clickTimeout) {
             window.clearTimeout(clickTimeout);
@@ -133,7 +127,7 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
   }, [element, isEditing]);
 
   if (isEditing) {
-    const plainText = element.segments.map((s) => s.text).join('');
+    const plainText = element.segments.map((s: RichTextSegment) => s.text).join('');
     const textElementForEditing = {
       ...element,
       type: 'text' as const,
@@ -141,7 +135,7 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
       fontSize: element.fontSize || designSystem.typography.fontSize.base,
       fontFamily: element.fontFamily || designSystem.typography.fontFamily.sans,
       fill: element.fill || designSystem.colors.secondary[700],
-      textAlign: element.textAlign
+      textAlign: element.textAlign || 'left' as const
     };
 
     return (

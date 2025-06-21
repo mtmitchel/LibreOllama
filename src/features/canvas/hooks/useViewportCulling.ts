@@ -1,8 +1,9 @@
-import { useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef, useCallback, useEffect } from 'react';
 import { PanZoom, Size, ViewportBounds } from '../types';
-// Import CanvasElement from the correct store location
-import type { CanvasElement } from '../types';
+import type { CanvasElement } from '../types/enhanced.types';
+import { isRectangularElement } from '../types/enhanced.types';
 import { PerformanceMonitor, recordMetric } from '../../../utils/performance';
+import { Quadtree, createCanvasQuadtree, batchInsertElements } from '../utils/spatial/Quadtree';
 
 export interface UseViewportCullingProps {
   elements: CanvasElement[];
@@ -15,6 +16,7 @@ export interface CullingConfig {
   enableHierarchicalCulling: boolean;
   enableLOD: boolean;
   enableIntersectionObserver: boolean;
+  enableQuadtree: boolean; // New option for quadtree culling
   bufferMultiplier: number;
   lodThresholds: {
     high: number;
@@ -22,6 +24,11 @@ export interface CullingConfig {
     low: number;
   };
   maxElementsPerGroup: number;
+  quadtreeConfig?: {
+    maxDepth?: number;
+    maxElementsPerNode?: number;
+    minNodeSize?: number;
+  };
 }
 
 export interface ElementGroup {
@@ -43,8 +50,6 @@ export interface LODLevel {
 // Helper to get element bounds with proper typing
 const getElementBounds = (element: CanvasElement): { left: number; top: number; right: number; bottom: number } => {
   switch (element.type) {
-    case 'line':
-    case 'arrow':
     case 'connector':
       // For connectors and lines, use pathPoints if available
       if (element.pathPoints && element.pathPoints.length >= 4) {
@@ -65,12 +70,14 @@ const getElementBounds = (element: CanvasElement): { left: number; top: number; 
         }
         return { left: minX, top: minY, right: maxX, bottom: maxY };
       }
-      // Fallback to basic bounds
+      // Fallback to start/end points
+      const start = element.startPoint;
+      const end = element.endPoint;
       return {
-        left: element.x,
-        top: element.y,
-        right: element.x + (element.width || 50),
-        bottom: element.y + (element.height || 50)
+          left: Math.min(start.x, end.x),
+          top: Math.min(start.y, end.y),
+          right: Math.max(start.x, end.x),
+          bottom: Math.max(start.y, end.y),
       };
     case 'pen':
       if (!element.points || element.points.length === 0) {
@@ -92,16 +99,28 @@ const getElementBounds = (element: CanvasElement): { left: number; top: number; 
         }
       }
       return { left: minX, top: minY, right: maxX, bottom: maxY };
+    case 'circle':
+        return {
+            left: element.x - element.radius,
+            top: element.y - element.radius,
+            right: element.x + element.radius,
+            bottom: element.y + element.radius,
+        };
     default:
-      // Default for rectangle-like shapes
-      return {
-        left: element.x,
-        top: element.y,
-        right: element.x + (element.width || 0),
-        bottom: element.y + (element.height || 0)
-      };
+      if (isRectangularElement(element)) {
+          return {
+            left: element.x,
+            top: element.y,
+            right: element.x + element.width,
+            bottom: element.y + element.height,
+          };
+      }
+      // Default for elements without width/height (like text before dimensions are calculated)
+      return { left: element.x, top: element.y, right: element.x + 1, bottom: element.y + 1 };
   }
 };
+
+// Removed unused defaultCullingConfig - using inline config instead
 
 // Enhanced viewport culling with hierarchical and LOD support
 export const useViewportCulling = ({
@@ -115,6 +134,7 @@ export const useViewportCulling = ({
     enableHierarchicalCulling: true,
     enableLOD: true,
     enableIntersectionObserver: false, // Disabled by default for canvas elements
+    enableQuadtree: true,
     bufferMultiplier: 1.2,
     lodThresholds: {
       high: 2.0,   // Zoom > 2x = high detail
@@ -122,11 +142,46 @@ export const useViewportCulling = ({
       low: 0.1     // Zoom < 0.5x = low detail
     },
     maxElementsPerGroup: 50,
+    quadtreeConfig: {
+      maxDepth: 8,
+      maxElementsPerNode: 10,
+      minNodeSize: 50
+    },
     ...config
   };
 
-  const groupCache = useRef<Map<string, ElementGroup>>(new Map());
-  const intersectionObserver = useRef<IntersectionObserver | null>(null);
+  // Only keep used refs
+  const quadtreeRef = useRef<Quadtree | null>(null);
+  const lastElementCountRef = useRef(0);
+
+  // Initialize or update quadtree when elements change significantly
+  useEffect(() => {
+    if (!cullingConfig.enableQuadtree || !canvasSize) return;
+
+    // Only rebuild quadtree if element count changed significantly
+    const elementCountChanged = Math.abs(elements.length - lastElementCountRef.current) > 10;
+    
+    if (!quadtreeRef.current || elementCountChanged) {
+      console.log('[Quadtree] Rebuilding spatial index for', elements.length, 'elements');
+      
+      // Create quadtree with canvas bounds
+      const canvasBounds = {
+        x: -10000,
+        y: -10000,
+        width: 20000,
+        height: 20000
+      };
+      
+      quadtreeRef.current = createCanvasQuadtree(canvasBounds, cullingConfig.quadtreeConfig);
+      
+      // Batch insert all elements
+      batchInsertElements(quadtreeRef.current, elements);
+      lastElementCountRef.current = elements.length;
+      
+      const stats = quadtreeRef.current.getStats();
+      console.log('[Quadtree] Stats:', stats);
+    }
+  }, [elements.length, cullingConfig.enableQuadtree, cullingConfig.quadtreeConfig, canvasSize]);
 
   // Calculate LOD level based on zoom
   const getLODLevel = useCallback((zoom: number): LODLevel => {
@@ -206,6 +261,9 @@ export const useViewportCulling = ({
     return groups;
   }, [cullingConfig.enableHierarchicalCulling, cullingConfig.maxElementsPerGroup]);
 
+  // Removed unused utility functions (isInteractive, isStatic, isDraggable, isResizable, isEditable, getElementLOD)
+  // These were not being used in the culling logic
+
   return useMemo(() => {
     const endTiming = PerformanceMonitor.startTiming('viewportCulling');
     
@@ -238,7 +296,7 @@ export const useViewportCulling = ({
       // If LOD level is hidden, cull everything except critical elements
       if (lodLevel.level === 'hidden') {
         const criticalElements = elements.filter(el =>
-          el.type === 'text' || el.type === 'rich-text' || el.isLocked
+          el.type === 'text' || el.isLocked
         );
         
         recordMetric('viewportCullingLODHidden', elements.length - criticalElements.length, 'render');
@@ -253,7 +311,8 @@ export const useViewportCulling = ({
             visibleElements: criticalElements.length,
             culledElements: elements.length - criticalElements.length,
             groupsCulled: 0,
-            lodLevel: lodLevel.level
+            lodLevel: lodLevel.level,
+        quadtreeEnabled: cullingConfig.enableQuadtree && quadtreeRef.current !== null
           }
         };
       }
@@ -274,7 +333,25 @@ export const useViewportCulling = ({
       let culledElements: CanvasElement[] = [];
       let groupsCulled = 0;
 
-      if (cullingConfig.enableHierarchicalCulling) {
+      // Use quadtree for efficient spatial queries if enabled
+      if (cullingConfig.enableQuadtree && quadtreeRef.current && elements.length > 100) {
+        const startQuery = performance.now();
+        
+        // Query quadtree for visible element IDs
+        const visibleIds = quadtreeRef.current.query(viewportBounds);
+        
+        // Map IDs back to elements (handle both ElementId and SectionId)
+        const idSet = new Set<string>(visibleIds.map(id => id as string));
+        visibleElements = elements.filter(el => idSet.has(el.id as string));
+        culledElements = elements.filter(el => !idSet.has(el.id as string));
+        
+        const queryTime = performance.now() - startQuery;
+        if (import.meta.env.DEV) {
+          console.log(`[Quadtree] Query completed in ${queryTime.toFixed(2)}ms, found ${visibleElements.length} visible elements`);
+        }
+        
+        recordMetric('quadtreeQueryTime', queryTime, 'render');
+      } else if (cullingConfig.enableHierarchicalCulling) {
         // Process groups first
         elementGroups.forEach(group => {
           const groupIntersects =

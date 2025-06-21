@@ -1,6 +1,7 @@
 // src/components/Toolbar/KonvaToolbar.tsx
 import React, { useRef } from 'react';
 import { useCanvasStore } from '../../features/canvas/stores/canvasStore.enhanced';
+import { ElementId, SectionId } from '../../features/canvas/types/enhanced.types';
 import { useTauriCanvas } from '../../features/canvas/hooks/useTauriCanvas';
 import { 
   MousePointer2, 
@@ -97,8 +98,8 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   const sections = useCanvasStore((state) => state.sections);
   const addElementToSection = useCanvasStore((state) => state.addElementToSection);
   
-  const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
-  const selectedElement = selectedElementId ? elements[selectedElementId] : null;
+  const selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
+  const selectedElement = selectedElementId ? elements.get(selectedElementId) : null;
   const { saveToFile, loadFromFile } = useTauriCanvas();
 
   const handleDeleteSelected = () => {
@@ -272,19 +273,21 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
                 const img = new window.Image();
                 img.onload = () => {
                   const imageElement = {
-                    id: generateId(),
+                    id: ElementId(generateId()),
                     type: 'image' as const,
                     x: centerX - img.width / 4,
                     y: centerY - img.height / 4,
                     width: img.width / 2,
                     height: img.height / 2,
                     imageUrl,
-                    sectionId: null as string | null // Initialize as null, will be set if in a section
+                    sectionId: null as SectionId | null, // Initialize as null, will be set if in a section
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
                   };
                   
                   // Check if the image should be placed in a section
                   const targetSectionId = useCanvasStore.getState().findSectionAtPoint({ x: imageElement.x, y: imageElement.y });
-                  const targetSection = targetSectionId ? sections[targetSectionId] : null;
+                  const targetSection = targetSectionId ? sections.get(targetSectionId) : null;
                   
                   if (targetSection) {
                     // Convert world coordinates to section-relative coordinates
@@ -294,7 +297,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
                     // Update element with relative coordinates and section ID
                     imageElement.x = relativeX;
                     imageElement.y = relativeY;
-                    imageElement.sectionId = targetSection.id;
+                    imageElement.sectionId = targetSection.id as any; // TODO: Fix type conversion
                   }
                   
                   addElement(imageElement);
@@ -428,7 +431,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             
             // Check if the table should be placed in a section
             const targetSectionId = useCanvasStore.getState().findSectionAtPoint({ x: tableElement.x, y: tableElement.y });
-            const targetSection = targetSectionId ? sections[targetSectionId] : null;
+            const targetSection = targetSectionId ? sections.get(targetSectionId) : null;
             
             if (targetSection) {
               // Convert world coordinates to section-relative coordinates
@@ -462,7 +465,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
         
         // Check if the element should be placed in a section BEFORE adding to store
         const targetSectionId = useCanvasStore.getState().findSectionAtPoint({ x: newElement.x, y: newElement.y });
-        const targetSection = targetSectionId ? sections[targetSectionId] : null;
+        const targetSection = targetSectionId ? sections.get(targetSectionId) : null;
         
         if (targetSection) {
           // Convert world coordinates to section-relative coordinates
@@ -587,8 +590,12 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       {canShowColorPicker && (
         <div className="konva-toolbar-group">
           <ColorPicker
-            {...(((selectedElement?.fill || selectedElement?.backgroundColor) && { 
-              selectedColor: selectedElement?.fill || selectedElement?.backgroundColor 
+            {...((selectedElement && (
+              ('fill' in selectedElement && selectedElement.fill) || 
+              ('backgroundColor' in selectedElement && selectedElement.backgroundColor)
+            ) && { 
+              selectedColor: ('fill' in selectedElement && selectedElement.fill) || 
+                           ('backgroundColor' in selectedElement && selectedElement.backgroundColor) || '#000000'
             }) || {})}
             onColorChange={(color) => handleColorChange(color, 
               selectedElement?.type === 'sticky-note' ? 'backgroundColor' : 'fill'

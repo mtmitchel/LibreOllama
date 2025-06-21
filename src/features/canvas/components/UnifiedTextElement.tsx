@@ -283,9 +283,8 @@ const UnifiedTextElement = React.forwardRef<Konva.Group, UnifiedTextElementProps
                 <Text
                   key={index}
                   ref={index === 0 ? textRef : undefined} // Only attach ref to first segment
-                  y={segmentY}
-                  width={element.width || 200}
-                  height={element.height}
+                  y={segmentY}                  width={element.width || 200}
+                  height={element.height || 20}
                   text={segment.text}
                   fontSize={segment.fontSize || element.fontSize || 16}
                   fontFamily={segment.fontFamily || element.fontFamily || 'Inter, sans-serif'}
@@ -303,11 +302,10 @@ const UnifiedTextElement = React.forwardRef<Konva.Group, UnifiedTextElementProps
           )}
 
           {/* Fallback to basic text if no rich text segments */}
-          {shouldShowMainText && !hasRichTextSegments && (
-            <Text
+          {shouldShowMainText && !hasRichTextSegments && (            <Text
               ref={textRef}
               width={element.width || 200}
-              height={element.height}
+              height={element.height || 20}
               text={displayText}
               fontSize={element.fontSize || 16}
               fontFamily={element.fontFamily || 'Inter, sans-serif'}
@@ -323,10 +321,9 @@ const UnifiedTextElement = React.forwardRef<Konva.Group, UnifiedTextElementProps
           )}
           
           {/* Placeholder text for regular text elements */}
-          {shouldShowPlaceholder && (
-            <Text
+          {shouldShowPlaceholder && (            <Text
               width={element.width || 200}
-              height={element.height}
+              height={element.height || 20}
               text="Double-click to add text"
               fontSize={14}
               fontFamily="Inter, sans-serif"

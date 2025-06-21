@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import Konva from 'konva';
 import { CanvasTool } from '../types/enhanced.types';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { toElementId, toSectionId } from '../types/compatibility';
 
 interface CanvasEventHandlerProps {
   stageRef: React.RefObject<Konva.Stage>;
@@ -260,7 +261,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     
     const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newText = {
-      id: generateId(),
+      id: toElementId(generateId()),
       type: 'text' as const,
       x: pointer.x,
       y: pointer.y,
@@ -269,7 +270,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       fontFamily: 'Inter, sans-serif',
       fill: '#1F2937',
       width: 200,
-      height: 24
+      height: 24,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     
     console.log('📝 [CanvasEventHandler] Creating text element:', newText);
@@ -478,7 +481,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       // Create section immediately (click-to-place)
       const generateId = () => `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const newSection = {
-        id: generateId(),
+        id: toSectionId(generateId()),
         type: 'section' as const,
         x: pointer.x,
         y: pointer.y,
@@ -487,12 +490,15 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         backgroundColor: '#F9FAFB',
         borderColor: '#D1D5DB',
         borderWidth: 2,
-        title: 'New Section'
+        title: 'New Section',
+        childElementIds: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
       
       console.log('📦 [CanvasEventHandler] Creating section element:', newSection);
       addElement(newSection);
-      selectElement(newSection.id);
+      selectElement(toElementId(newSection.id as string));
       setSelectedTool('select');
     }
   }
@@ -552,7 +558,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     
     const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newStickyNote = {
-      id: generateId(),
+      id: toElementId(generateId()),
       type: 'sticky-note' as const,
       x: pointer.x,
       y: pointer.y,
@@ -562,7 +568,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       text: 'Type your note here...',
       fontSize: 12,
       fontFamily: 'Inter, sans-serif',
-      textColor: '#92400E'
+      textColor: '#92400E',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     
     console.log('🗒️ [CanvasEventHandler] Creating sticky note element:', newStickyNote);

@@ -96,10 +96,10 @@ export const CachedShape = forwardRef<CachedShapeRef, CachedShapeProps>(({
       });
     }
   }, [element.type, element.id, shouldCache, isCached, config, element.width, element.height]);
-
   return (
     <Group
       ref={groupRef}
+      data-testid="cached-shape"
       {...groupProps}
       // Add visual indicator for cached shapes in development
       {...(process.env.NODE_ENV === 'development' && isCached && {

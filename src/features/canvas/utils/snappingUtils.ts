@@ -1,6 +1,6 @@
 // src/lib/snappingUtils.ts
-import { CanvasElement } from '../features/canvas/types';
-import type { AttachmentPoint } from '../types/connector';
+import { CanvasElement, ElementId } from '../types/enhanced.types';
+import type { AttachmentPoint } from '../../../types/connector';
 
 export interface SnapPoint {
   x: number;
@@ -19,7 +19,41 @@ export interface ConnectionPoint {
 const SNAP_THRESHOLD = 20; // pixels
 
 export function getElementConnectionPoints(element: CanvasElement): ConnectionPoint[] {
-  const { id, x, y, width = 100, height = 100, radius } = element;
+  // Helper function to get element dimensions with type safety
+  const getDimensions = () => {
+    switch (element.type) {
+      case 'rectangle':
+      case 'text':
+      case 'table':
+      case 'image':
+        return { 
+          width: element.width || 100, 
+          height: element.height || 100, 
+          radius: undefined 
+        };
+      case 'circle':
+        return { 
+          width: (element.radius || 50) * 2, 
+          height: (element.radius || 50) * 2, 
+          radius: element.radius || 50 
+        };
+      case 'section':
+        return { 
+          width: element.width, 
+          height: element.height, 
+          radius: undefined 
+        };
+      default:
+        return { 
+          width: 100, 
+          height: 100, 
+          radius: undefined 
+        };
+    }
+  };
+
+  const { id, x, y } = element;
+  const { width, height, radius } = getDimensions();
   
   // Handle circles
   if (radius && element.type === 'circle') {
@@ -57,8 +91,27 @@ export function getElementSnapPoints(element: CanvasElement): SnapPoint[] {
   
   switch (element.type) {
     case 'rectangle':
-    case 'sticky-note':
     case 'image':
+      if (element.width && element.height) {
+        const centerX = element.x + element.width / 2;
+        const centerY = element.y + element.height / 2;
+        
+        points.push(
+          { x: element.x, y: element.y, elementId: element.id, type: 'corner' },
+          { x: element.x + element.width, y: element.y, elementId: element.id, type: 'corner' },
+          { x: element.x, y: element.y + element.height, elementId: element.id, type: 'corner' },
+          { x: element.x + element.width, y: element.y + element.height, elementId: element.id, type: 'corner' },
+          { x: centerX, y: element.y, elementId: element.id, type: 'top' },
+          { x: centerX, y: element.y + element.height, elementId: element.id, type: 'bottom' },
+          { x: element.x, y: centerY, elementId: element.id, type: 'left' },
+          { x: element.x + element.width, y: centerY, elementId: element.id, type: 'right' },
+          { x: centerX, y: centerY, elementId: element.id, type: 'center' }
+        );
+      }
+      break;
+      
+    case 'text':
+    case 'table':
       if (element.width && element.height) {
         const centerX = element.x + element.width / 2;
         const centerY = element.y + element.height / 2;
@@ -90,29 +143,15 @@ export function getElementSnapPoints(element: CanvasElement): SnapPoint[] {
       break;
       
     case 'star':
-      if (element.radius) {
-        points.push(
-          { x: element.x, y: element.y, elementId: element.id, type: 'center' },
-          { x: element.x + element.radius, y: element.y, elementId: element.id, type: 'right' },
-          { x: element.x - element.radius, y: element.y, elementId: element.id, type: 'left' },
-          { x: element.x, y: element.y + element.radius, elementId: element.id, type: 'bottom' },
-          { x: element.x, y: element.y - element.radius, elementId: element.id, type: 'top' }
-        );
-      }
-      break;
-      
     case 'triangle':
-      if (element.width && element.height) {
-        const centerX = element.x;
-        const centerY = element.y;
-        
-        points.push(
-          { x: centerX, y: centerY - element.height / 2, elementId: element.id, type: 'top' },
-          { x: centerX - element.width / 2, y: centerY + element.height / 2, elementId: element.id, type: 'corner' },
-          { x: centerX + element.width / 2, y: centerY + element.height / 2, elementId: element.id, type: 'corner' },
-          { x: centerX, y: centerY, elementId: element.id, type: 'center' }
-        );
-      }
+      // For star and triangle, use simple center point and assume 100x100 default size
+      points.push(
+        { x: element.x, y: element.y, elementId: element.id, type: 'center' },
+        { x: element.x + 50, y: element.y, elementId: element.id, type: 'right' },
+        { x: element.x - 50, y: element.y, elementId: element.id, type: 'left' },
+        { x: element.x, y: element.y + 50, elementId: element.id, type: 'bottom' },
+        { x: element.x, y: element.y - 50, elementId: element.id, type: 'top' }
+      );
       break;
   }
   

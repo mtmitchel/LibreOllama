@@ -1,7 +1,8 @@
 // src/features/canvas/components/toolbar/KonvaToolbar.tsx
-import React, { useRef } from 'react';
+import React from 'react';
 import { useCanvasStore as useEnhancedStore } from '../../stores/canvasStore.enhanced';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
+import { ElementId } from '../../types/enhanced.types';
 import { 
   MousePointer2, 
   Type, 
@@ -63,7 +64,6 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   sidebarOpen,
   onToggleSidebar
 }) => {
-  const tableCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Use enhanced store as single source of truth
   const { 
     elements, 
@@ -87,8 +87,8 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     addElementToSection
   } = useEnhancedStore();
   
-  const selectedElementId = selectedElementIds.length > 0 ? selectedElementIds[0] : null;
-  const selectedElement = selectedElementId ? elements[selectedElementId] : null;
+  const selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
+  const selectedElement = selectedElementId ? elements.get(selectedElementId) : null;
   const { saveToFile, loadFromFile } = useTauriCanvas();
 
   const handleDeleteSelected = () => {
@@ -144,7 +144,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   };
 
   const createElementForTool = (toolId: string) => {
-    const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const generateId = (): ElementId => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` as ElementId;
     // Calculate center position of visible canvas area considering viewport
     // Calculate positioning for new elements - always use viewport center
     let elementX: number;
@@ -165,7 +165,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     elementY = (screenCenterY - (pan?.y || 0)) / (zoom || 1);
 
     const targetSectionId = findSectionAtPoint && findSectionAtPoint({ x: elementX, y: elementY });
-    const targetSection = targetSectionId && sections ? sections[targetSectionId] : null;
+    const targetSection = targetSectionId && sections ? sections.get(targetSectionId) : null;
 
     let newElement: any = null;
 
@@ -266,7 +266,9 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
                   width: img.width / 2,
                   height: img.height / 2,
                   imageUrl,
-                  sectionId: targetSectionId
+                  sectionId: targetSectionId,
+                  createdAt: Date.now(),
+                  updatedAt: Date.now()
                 };
 
                 // **TARGETED FIX**: Toolbar elements default to canvas (not auto-assigned to sections)
@@ -308,141 +310,81 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           y: targetSection ? elementY - targetSection.y : elementY,
           numPoints: 5,
           innerRadius: 30,
-          radius: 60,
-          fill: '#E1BEE7',
-          stroke: '#9C27B0',
+          outerRadius: 70,
+          fill: '#FFFBEB',
+          stroke: '#FBBF24',
           strokeWidth: 2,
           sectionId: targetSectionId
         };
         break;
-          
-      case 'pen':
-        // Pen tool activates drawing mode, doesn't create element immediately
-        // The actual pen path will be created during drawing interaction
-        return;
-          
-      case 'section':
-        // Section tool activates drawing mode, doesn't create element immediately
-        return;
-            case 'table':
-        console.log('🔧 [TOOLBAR] Table tool clicked - creating table element');
-        // Debounce table creation to prevent duplicates
-        if (tableCreationTimeoutRef.current) {
-          clearTimeout(tableCreationTimeoutRef.current);
-        }
         
-        tableCreationTimeoutRef.current = setTimeout(() => {
-          console.log('🔧 [TOOLBAR] Executing table creation after timeout');
-          // Create a table element with proper enhanced table data structure
-          const rows = 3;
-          const cols = 3;
-          const cellWidth = 120;
-          const cellHeight = 50;
-          
-          const tableWidth = cellWidth * cols;
-          const tableHeight = cellHeight * rows;
-          const tableTopLeftX = elementX - tableWidth / 2;
-          const tableTopLeftY = elementY - tableHeight / 2;
-
-          // Create enhanced table data structure
-          const enhancedTableData = {
-            rows: Array(rows).fill(0).map((_, rowIndex) => ({
-              id: `row-${rowIndex}`,
-              height: cellHeight,
-              minHeight: 30,
-              maxHeight: 200,
-              isResizable: true,
-              isHeader: rowIndex === 0
-            })),
-            columns: Array(cols).fill(0).map((_, colIndex) => ({
-              id: `col-${colIndex}`,
-              width: cellWidth,
-              minWidth: 60,
-              maxWidth: 300,
-              isResizable: true,
-              textAlign: 'left' as const
-            })),
-            cells: Array(rows).fill(0).map(() => 
-              Array(cols).fill(0).map(() => ({
-                id: generateId(),
-                text: '',
-                segments: [],
-                backgroundColor: '#ffffff',
-                textColor: '#000000',
-                fontSize: 14,
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 'normal',
-                fontStyle: 'normal',
-                textAlign: 'left' as const,
-                textDecoration: 'none',
-                borderColor: '#e0e0e0',
-                borderWidth: 1,
-                padding: 8,
-                isHeader: false,
-                isSelected: false,
-                containedElementIds: [],
-                rowSpan: 1,
-                colSpan: 1
-              }))
-            )
-          };
-
-          const tableElement: any = {
-            id: generateId(),
-            type: 'table' as const,
-            x: targetSection ? tableTopLeftX - targetSection.x : tableTopLeftX,
-            y: targetSection ? tableTopLeftY - targetSection.y : tableTopLeftY,
-            width: tableWidth,
-            height: tableHeight,
-            enhancedTableData,
-            sectionId: targetSectionId
-          };
-
-          console.log('🔧 [TOOLBAR] Created table element:', tableElement);
-          console.log('🔧 [TOOLBAR] About to call addElement with table');
-          // **TARGETED FIX**: Toolbar elements default to canvas (not auto-assigned to sections)
-          addElement(tableElement);
-          console.log('🔧 [TOOLBAR] addElement called successfully');
-          
-          if (targetSectionId && addElementToSection) {
-            addElementToSection(tableElement.id, targetSectionId);
-            console.log('🔧 [TOOLBAR] Added table to section:', targetSectionId);
-          }
-          
-          selectElement(tableElement.id);
-          console.log('🔧 [TOOLBAR] Table creation completed');
-          tableCreationTimeoutRef.current = null;
-        }, 100);
+      case 'table':
+        const tableWidth = 300;
+        const tableHeight = 200;
+        const tableTopLeftX = elementX - tableWidth / 2;
+        const tableTopLeftY = elementY - tableHeight / 2;
+        newElement = {
+          id: generateId(),
+          type: 'table',
+          x: targetSection ? tableTopLeftX - targetSection.x : tableTopLeftX,
+          y: targetSection ? tableTopLeftY - targetSection.y : tableTopLeftY,
+          width: tableWidth,
+          height: tableHeight,
+          sectionId: targetSectionId,
+          enhancedTableData: {
+            rows: [
+              { id: 'row-1', height: 40, isResizable: true, isHeader: true },
+              { id: 'row-2', height: 40, isResizable: true, isHeader: false },
+              { id: 'row-3', height: 40, isResizable: true, isHeader: false }
+            ],
+            columns: [
+              { id: 'col-1', width: 100, isResizable: true, textAlign: 'left' as const },
+              { id: 'col-2', width: 100, isResizable: true, textAlign: 'left' as const },
+              { id: 'col-3', width: 100, isResizable: true, textAlign: 'left' as const }
+            ],
+            cells: [
+              [
+                { id: 'cell-1-1', content: 'Header 1', text: 'Header 1', segments: [], backgroundColor: '#f5f5f5', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: true, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 },
+                { id: 'cell-1-2', content: 'Header 2', text: 'Header 2', segments: [], backgroundColor: '#f5f5f5', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: true, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 },
+                { id: 'cell-1-3', content: 'Header 3', text: 'Header 3', segments: [], backgroundColor: '#f5f5f5', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'bold', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: true, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 }
+              ],
+              [
+                { id: 'cell-2-1', content: 'Data 1', text: 'Data 1', segments: [], backgroundColor: '#ffffff', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: false, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 },
+                { id: 'cell-2-2', content: 'Data 2', text: 'Data 2', segments: [], backgroundColor: '#ffffff', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: false, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 },
+                { id: 'cell-2-3', content: 'Data 3', text: 'Data 3', segments: [], backgroundColor: '#ffffff', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: false, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 }
+              ],
+              [
+                { id: 'cell-3-1', content: 'Data 4', text: 'Data 4', segments: [], backgroundColor: '#ffffff', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: false, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 },
+                { id: 'cell-3-2', content: 'Data 5', text: 'Data 5', segments: [], backgroundColor: '#ffffff', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: false, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 },
+                { id: 'cell-3-3', content: 'Data 6', text: 'Data 6', segments: [], backgroundColor: '#ffffff', textColor: '#000000', fontSize: 14, fontFamily: 'Inter, sans-serif', fontWeight: 'normal', fontStyle: 'normal', textAlign: 'left' as const, textDecoration: 'none', borderColor: '#e0e0e0', borderWidth: 1, padding: 8, isHeader: false, isSelected: false, containedElementIds: [], rowSpan: 1, colSpan: 1 }
+              ]
+            ]
+          },
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        break;
+        
+      default:
+        // Do nothing for tools that don't create elements immediately
         return;
     }
 
     if (newElement) {
-      // Add element to store
       addElement(newElement);
-      
-      // AFTER adding to store, add to section if needed
-      if (newElement.sectionId && addElementToSection) {
-        addElementToSection(newElement.id, newElement.sectionId);
+      if (targetSectionId && addElementToSection) {
+        addElementToSection(newElement.id, targetSectionId);
       }
-
       selectElement(newElement.id);
-
-      // For text elements, immediately enter edit mode for FigJam-style behavior
-      // TEMPORARILY DISABLED: The auto-editing is causing the 12-space issue
-      // TODO: Re-enable once we fix the root cause in text editing initialization
-      // if (newElement.type === 'text') {
-      //   setEditingTextId(newElement.id);
-      // }
-      
-      // After creating element, switch to select tool immediately
       setTimeout(() => setSelectedTool('select'), 100);
     }
   };
-  
-  const handleColorChange = (color: string, type: 'fill' | 'stroke' | 'backgroundColor') => {
+
+  const handleColorChange = (color: string) => {
     if (!selectedElementId) return;
     
-    updateElement(selectedElementId, { [type]: color });
+    const colorProperty = selectedElement?.type === 'sticky-note' ? 'backgroundColor' : 'fill';
+    updateElement(selectedElementId, { [colorProperty]: color });
   };
   
   const canShowColorPicker = selectedElement && 
@@ -525,12 +467,14 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       {canShowColorPicker && (
         <div className="konva-toolbar-group">
           <ColorPicker
-            {...(((selectedElement?.fill || selectedElement?.backgroundColor) && { 
-              selectedColor: selectedElement?.fill || selectedElement?.backgroundColor 
+            {...((selectedElement && (
+              ('fill' in selectedElement && selectedElement.fill) || 
+              ('backgroundColor' in selectedElement && selectedElement.backgroundColor)
+            ) && { 
+              selectedColor: ('fill' in selectedElement && selectedElement.fill) || 
+                           ('backgroundColor' in selectedElement && selectedElement.backgroundColor) || '#000000'
             }) || {})}
-            onColorChange={(color) => handleColorChange(color, 
-              selectedElement?.type === 'sticky-note' ? 'backgroundColor' : 'fill'
-            )}
+            onColorChange={handleColorChange}
             type={selectedElement?.type === 'sticky-note' ? 'sticky' : 'fill'}
           />
         </div>

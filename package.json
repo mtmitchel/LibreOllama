@@ -10,8 +10,12 @@
     "tauri": "tauri",
     "tauri:dev": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri dev",
     "tauri:build": "set PATH=%USERPROFILE%\\.cargo\\bin;%PATH% && tauri build",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest --testPathPattern=integration",
     "test:phase1": "node phase1-test-runner.js",
-    "test:canvas": "node src/tests/phase1-test-suite.ts"
+    "test:canvas": "tsc src/tests/phase1-test-suite.ts --outDir dist/tests && node dist/tests/phase1-test-suite.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.5.0",
@@ -32,6 +36,8 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.27.2",
+    "@babel/preset-react": "^7.27.1",
     "@jest/globals": "^30.0.2",
     "@tauri-apps/cli": "^2",
     "@testing-library/jest-dom": "^6.6.3",
@@ -44,9 +50,12 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
     "jest": "^30.0.2",
+    "jest-canvas-mock": "^2.5.2",
     "jest-environment-jsdom": "^30.0.2",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.4.17",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"
   }

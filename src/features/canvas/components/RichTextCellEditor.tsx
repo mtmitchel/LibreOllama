@@ -4,7 +4,8 @@ import { designSystem } from '../../../styles/designSystem';
 import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
 import { StandardTextFormat, RichTextSegment } from '../../../types/richText';
 import FloatingTextToolbar from './FloatingTextToolbar';
-import ContentEditableRichTextEditor from './ContentEditableRichTextEditor';
+// TODO: ContentEditableRichTextEditor component needs to be implemented
+// import ContentEditableRichTextEditor from './ContentEditableRichTextEditor';
 
 // Error logging utility for production safety
 const logError = (message: string, error?: any) => {
