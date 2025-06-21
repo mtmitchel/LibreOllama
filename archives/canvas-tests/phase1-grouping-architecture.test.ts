@@ -403,3 +403,4 @@ export const runPhase1Tests = () => {
 if (require.main === module) {
   runPhase1Tests();
 }
+

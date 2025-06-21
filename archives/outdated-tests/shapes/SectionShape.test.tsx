@@ -568,3 +568,4 @@ describe('SectionShape Component', () => {
     });
   });
 });
+

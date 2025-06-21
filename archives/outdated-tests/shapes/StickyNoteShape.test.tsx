@@ -569,3 +569,4 @@ describe('StickyNoteShape Component', () => {
     });
   });
 });
+

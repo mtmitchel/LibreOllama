@@ -452,3 +452,4 @@ describe('ImageShape Component', () => {
     });
   });
 });
+

@@ -2,7 +2,6 @@
 import React from 'react';
 import { Circle } from 'react-konva';
 import { CircleElement, ElementId, CanvasElement } from '../types/enhanced.types';
-import { designSystem } from '../../../styles/designSystem';
 
 interface CircleShapeProps {
   element: CircleElement;
@@ -35,9 +34,8 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
       {...konvaProps}
       x={centerX}
       y={centerY}
-      radius={radius}
-      fill={element.fill || designSystem.colors.secondary[100]}
-      stroke={isSelected ? designSystem.colors.primary[500] : (element.stroke || '')}
+      radius={radius}      fill={element.fill || '#e5e7eb'} // fallback color instead of designSystem
+      stroke={isSelected ? '#3b82f6' : (element.stroke || '')} // fallback color instead of designSystem
       strokeWidth={isSelected ? 2 : (element.strokeWidth || 0)}
     />
   );

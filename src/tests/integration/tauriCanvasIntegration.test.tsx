@@ -1,10 +1,19 @@
+/**
+ * Store-to-API Integration Test
+ * 
+ * Note: Despite the filename, this is not a UI integration test but rather
+ * a store-to-API integration test. It tests the integration between the
+ * canvas store and the Tauri API without actually rendering the real
+ * KonvaCanvas component. The UI component is mocked to focus on testing
+ * the data flow between the store and backend API.
+ */
 import { describe, test, expect, beforeEach, jest, afterEach } from '@jest/globals';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { act, renderHook } from '@testing-library/react';
+import { act } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import { KonvaCanvas } from '@/features/canvas/components/KonvaCanvas';
-import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
+import { canvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
 import { ElementId } from '@/features/canvas/types/enhanced.types';
 
 // Mock Tauri API
@@ -25,18 +34,25 @@ const mockInvoke = invoke as jest.MockedFunction<typeof invoke>;
 const mockListen = listen as jest.MockedFunction<typeof listen>;
 const mockEmit = emit as jest.MockedFunction<typeof emit>;
 
+// Fix the mock setup
+mockListen.mockImplementation(() => Promise.resolve(jest.fn()));
+
+jest.unmock('@/features/canvas/stores/canvasStore.enhanced');
+
 describe('Tauri Canvas Integration - End to End', () => {
-  let mockUnlisten: jest.Mock;
+  let mockUnlisten: jest.Mock = jest.fn(); // Initialize at top level to avoid undefined issues
 
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
     
-    // Reset store to clean state
-    const { result } = renderHook(() => useCanvasStore((state) => state));
-    act(() => {
-      result.current.clearCanvas();
-    });
+    // Reset store to clean state - get the full state and call clearCanvas if it exists
+    const state = canvasStore.getState();
+    if (state.clearCanvas) {
+      act(() => {
+        state.clearCanvas();
+      });
+    }
     
     // Setup unlisten mock
     mockUnlisten = jest.fn();
@@ -99,15 +115,15 @@ describe('Tauri Canvas Integration - End to End', () => {
       }
     };
 
-    mockInvoke.mockImplementation((command: string, args?: any) => {
+    mockInvoke.mockImplementation(((command: string, args?: any) => {
       if (command === 'load_canvas_data') {
         return Promise.resolve(JSON.stringify(mockLoadedData));
       }
       if (command === 'save_canvas_data') {
-        return Promise.resolve();
+        return Promise.resolve(undefined);
       }
       return Promise.reject(new Error(`Unknown command: ${command}`));
-    });
+    }) as any);
 
     // Mock the KonvaCanvas component since it has complex dependencies
     const MockKonvaCanvas = ({ loadOnMount, filename }: any) => {
@@ -116,14 +132,12 @@ describe('Tauri Canvas Integration - End to End', () => {
           // Simulate loading data
           mockInvoke('load_canvas_data', { filename }).then((data) => {
             const parsed = JSON.parse(data as string);
-            // Load elements into store
-            const { result } = renderHook(() => useCanvasStore((state) => state));
-            act(() => {
-              parsed.elements.forEach((el: any) => {
-                result.current.addElement({
-                  ...el,
-                  id: ElementId(el.id)
-                });
+            // Load elements into store using direct access
+            const store = canvasStore.getState();
+            parsed.elements.forEach((el: any) => {
+              store.addElement({
+                ...el,
+                id: ElementId(el.id)
               });
             });
           });
@@ -151,80 +165,63 @@ describe('Tauri Canvas Integration - End to End', () => {
     });
 
     // Get store hook to verify state
-    const { result: storeHook } = renderHook(() => useCanvasStore((state) => ({
-      elements: state.elements,
-      addElement: state.addElement,
-      updateElement: state.updateElement,
-      deleteElement: state.deleteElement,
-      selectElement: state.selectElement,
-      setSelectedTool: state.setSelectedTool
-    })));
+    const store = canvasStore.getState();
 
     // Verify that elements were loaded into the store
     await waitFor(() => {
-      expect(storeHook.current.elements.size).toBe(3);
+      expect(store.elements.size).toBe(3);
     });
 
     // Step 3: Simulate user modifications
-    act(() => {
-      storeHook.current.setSelectedTool('rectangle');
-    });
+    store.setSelectedTool('rectangle');
 
     // Add a new element
-    act(() => {
-      storeHook.current.addElement({
-        id: ElementId('new-rect-1'),
-        type: 'rectangle',
-        tool: 'rectangle',
-        x: 400,
-        y: 300,
-        width: 100,
-        height: 100,
-        fill: '#0000ff',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
+    store.addElement({
+      id: ElementId('new-rect-1'),
+      type: 'rectangle',
+      tool: 'rectangle',
+      x: 400,
+      y: 300,
+      width: 100,
+      height: 100,
+      fill: '#0000ff',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
 
     // Verify new element was added
-    expect(storeHook.current.elements.size).toBe(4);
+    expect(store.elements.size).toBe(4);
 
     // Modify an existing element
-    act(() => {
-      storeHook.current.setSelectedTool('select');
-      storeHook.current.selectElement(ElementId('loaded-rect-1'));
-      storeHook.current.updateElement(ElementId('loaded-rect-1'), {
-        x: 100,
-        y: 100,
-        fill: '#0000ff'
-      });
+    store.setSelectedTool('select');
+    store.selectElement(ElementId('loaded-rect-1'));
+    store.updateElement(ElementId('loaded-rect-1'), {
+      x: 100,
+      y: 100,
+      fill: '#0000ff'
     });
 
     // Delete an element
-    act(() => {
-      storeHook.current.selectElement(ElementId('loaded-circle-1'));
-      storeHook.current.deleteElement(ElementId('loaded-circle-1'));
-    });
+    store.selectElement(ElementId('loaded-circle-1'));
+    store.deleteElement(ElementId('loaded-circle-1'));
 
     // Verify modifications
-    expect(storeHook.current.elements.size).toBe(3);
-    expect(storeHook.current.elements.has(ElementId('loaded-circle-1'))).toBe(false);
-    
-    const modifiedRect = storeHook.current.elements.get(ElementId('loaded-rect-1'));
+    expect(store.elements.size).toBe(3);
+    expect(store.elements.has(ElementId('loaded-circle-1'))).toBe(false);
+
+    const modifiedRect = store.elements.get(ElementId('loaded-rect-1'));
     expect(modifiedRect?.x).toBe(100);
     expect(modifiedRect?.y).toBe(100);
     expect(modifiedRect?.fill).toBe('#0000ff');
 
     // Step 4: Simulate save
     const saveData = {
-      elements: Array.from(storeHook.current.elements.values())
+      elements: Array.from(store.elements.values())
     };
 
-    await act(async () => {
-      await mockInvoke('save_canvas_data', {
-        data: JSON.stringify(saveData),
-        filename: 'test-canvas.json'
-      });
+    await mockInvoke('save_canvas_data', {
+      data: JSON.stringify(saveData),
+      filename: 'test-canvas.json'
     });
 
     // Assert that save was called
@@ -237,11 +234,8 @@ describe('Tauri Canvas Integration - End to End', () => {
   });
 
   test('should handle real-time collaboration events', async () => {
-    // Get store hook
-    const { result: storeHook } = renderHook(() => useCanvasStore((state) => ({
-      elements: state.elements,
-      addElement: state.addElement
-    })));
+    // Get store instance
+    const store = canvasStore.getState();
 
     // Setup listener mock
     const eventHandler = jest.fn();
@@ -253,9 +247,7 @@ describe('Tauri Canvas Integration - End to End', () => {
     });
 
     // Setup collaboration
-    await act(async () => {
-      await mockListen('canvas:collaborative-edit', eventHandler);
-    });
+    await mockListen('canvas:collaborative-edit', eventHandler);
 
     // Simulate receiving a collaborative edit
     const collaborativeEdit = {
@@ -274,31 +266,29 @@ describe('Tauri Canvas Integration - End to End', () => {
       }
     };
 
-    act(() => {
-      // Add element to store as if received from collaboration
-      storeHook.current.addElement({
-        ...collaborativeEdit.element,
-        id: ElementId(collaborativeEdit.element.id)
-      });
+    // Add element to store as if received from collaboration
+    store.addElement({
+      ...collaborativeEdit.element,
+      id: ElementId(collaborativeEdit.element.id)
     });
 
     // Verify the collaborative element was added
-    expect(storeHook.current.elements.has(ElementId('collab-elem-1'))).toBe(true);
-    expect(storeHook.current.elements.size).toBe(1);
+    expect(store.elements.has(ElementId('collab-elem-1'))).toBe(true);
+    expect(store.elements.size).toBe(1);
   });
 
   test('should recover from connection failures gracefully', async () => {
     let failureCount = 0;
-    mockInvoke.mockImplementation((command: string) => {
+    mockInvoke.mockImplementation(((command: string) => {
       if (command === 'save_canvas_data') {
         failureCount++;
         if (failureCount <= 2) {
           return Promise.reject(new Error('Network error'));
         }
-        return Promise.resolve();
+        return Promise.resolve(undefined);
       }
-      return Promise.resolve();
-    });
+      return Promise.resolve(undefined);
+    }) as any);
 
     // Simulate retry logic
     const saveWithRetry = async (data: any, maxRetries = 3) => {

@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom';
 import 'jest-canvas-mock';
 import React from 'react';
+import { enableMapSet } from 'immer';
+
+// Enable Immer Map/Set support globally for all tests
+enableMapSet();
 
 // Mock Tauri API
 jest.mock('@tauri-apps/api', () => require('../__mocks__/@tauri-apps/api'));

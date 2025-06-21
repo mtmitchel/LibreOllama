@@ -18,12 +18,15 @@ jest.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({
 jest.mock('@/styles/designSystem', () => ({
   designSystem: {
     colors: {
-      primary: '#000000',
-      secondary: '#666666',
+      primary: { 500: '#000000' },
+      secondary: { 500: '#666666' },
     },
     shapes: {
       defaultFill: '#cccccc',
       defaultStroke: '#000000',
+    },
+    borderRadius: {
+      md: 8,
     }
   }
 }));

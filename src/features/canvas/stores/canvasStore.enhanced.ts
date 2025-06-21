@@ -11,12 +11,14 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
 import { Draft } from 'immer';
 import { CoordinateService } from '../utils/coordinateService';
 // TODO: Integrate performance utilities after core functionality is stable
 // import { queueCanvasOperation } from '../utils/performance/operationQueue';
 // import { CanvasErrorHandler } from '../utils/performance/canvasErrorHandler';
 
+enableMapSet();
 
 // Import store slices with namespace imports for consistency across environments
 import * as CanvasElementsStore from '@/features/canvas/stores/slices/canvasElementsStore';
@@ -192,14 +194,17 @@ const createEnhancedCanvasStore = () => {
 };
 
 // Lazy initialization to avoid module loading issues
-let canvasStore: ReturnType<typeof createEnhancedCanvasStore> | null = null;
+let _canvasStore: ReturnType<typeof createEnhancedCanvasStore> | null = null;
 
 const getCanvasStore = () => {
-  if (!canvasStore) {
-    canvasStore = createEnhancedCanvasStore();
+  if (!_canvasStore) {
+    _canvasStore = createEnhancedCanvasStore();
   }
-  return canvasStore;
+  return _canvasStore;
 };
+
+// Export the vanilla store for direct access in tests
+export const canvasStore = getCanvasStore();
 
 // Main store hook
 export const useCanvasStore = <T>(selector: (state: CanvasStoreState) => T) => {

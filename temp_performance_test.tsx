@@ -44,7 +44,9 @@ describe('Canvas Performance Tests', () => {
       const startTime = performance.now();
 
       elements.forEach(element => {
-        canvasStore.getState().addElement(element);
+        act(() => {
+          canvasStore.getState().addElement(element);
+        });
       });
 
       const endTime = performance.now();
@@ -79,20 +81,26 @@ describe('Canvas Performance Tests', () => {
           tool: type,
           x: (i % 100) * 10,
           y: Math.floor(i / 100) * 10,
+          fill: `hsl(${i % 360}, 70%, 50%)`,
+          stroke: '#000000',
+          strokeWidth: 1,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
 
         let element: CanvasElement;
         switch (type) {
+          case 'rectangle':
+            element = { ...baseElement, width: 50, height: 50 };
+            break;
           case 'circle':
-            element = { ...baseElement, radius: 25, fill: '#ff0000' };
+            element = { ...baseElement, radius: 25 };
             break;
           case 'text':
-            element = { ...baseElement, text: `Text ${i}`, fontSize: 14 };
+            element = { ...baseElement, text: `Item ${i}`, fontSize: 14, fontFamily: 'Arial' };
             break;
           case 'star':
-            element = { ...baseElement, radius: 20, innerRadius: 10, numPoints: 5, fill: '#ffff00' };
+            element = { ...baseElement, radius: 25, innerRadius: 12, numPoints: 5 };
             break;
           case 'triangle':
             element = { ...baseElement, width: 50, height: 50, fill: '#00ff00' };
@@ -107,7 +115,9 @@ describe('Canvas Performance Tests', () => {
       const startTime = performance.now();
 
       elements.forEach(element => {
-        canvasStore.getState().addElement(element);
+        act(() => {
+          canvasStore.getState().addElement(element);
+        });
       });
 
       const endTime = performance.now();
@@ -123,8 +133,8 @@ describe('Canvas Performance Tests', () => {
     test('should update 1000 elements efficiently', () => {
       // First, add 1000 elements
       const elementCount = 1000;
-      act(() => {
-        for (let i = 0; i < elementCount; i++) {
+      for (let i = 0; i < elementCount; i++) {
+        act(() => {
           canvasStore.getState().addElement({
             id: ElementId(`update-elem-${i}`),
             type: 'rectangle',
@@ -137,17 +147,19 @@ describe('Canvas Performance Tests', () => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
           });
-        }
-      });
+        });
+      }
 
       // Measure time to update all elements
       const startTime = performance.now();
 
       for (let i = 0; i < elementCount; i++) {
-        canvasStore.getState().updateElement(ElementId(`update-elem-${i}`), {
-          x: i * 3,
-          y: i * 3,
-          fill: '#ff0000',
+        act(() => {
+          canvasStore.getState().updateElement(ElementId(`update-elem-${i}`), {
+            x: i * 3,
+            y: i * 3,
+            fill: '#ff0000',
+          });
         });
       }
 
@@ -169,10 +181,10 @@ describe('Canvas Performance Tests', () => {
       const elementCount = 2000;
       const elementIds: ElementId[] = [];
 
-      act(() => {
-        for (let i = 0; i < elementCount; i++) {
-          const id = ElementId(`select-elem-${i}`);
-          elementIds.push(id);
+      for (let i = 0; i < elementCount; i++) {
+        const id = ElementId(`select-elem-${i}`);
+        elementIds.push(id);
+        act(() => {
           canvasStore.getState().addElement({
             id,
             type: 'circle',
@@ -184,14 +196,16 @@ describe('Canvas Performance Tests', () => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
           });
-        }
-      });
+        });
+      }
 
       // Select half of the elements
       const elementsToSelect = elementIds.slice(0, 1000);
       
       const startTime = performance.now();
-      canvasStore.getState().selectMultipleElements(elementsToSelect, true);
+      act(() => {
+        canvasStore.getState().selectMultipleElements(elementsToSelect, true);
+      });
       const endTime = performance.now();
       const totalTime = endTime - startTime;
 
@@ -212,8 +226,8 @@ describe('Canvas Performance Tests', () => {
     test('should delete elements efficiently from large canvas', () => {
       // Add 2000 elements
       const elementCount = 2000;
-      act(() => {
-        for (let i = 0; i < elementCount; i++) {
+      for (let i = 0; i < elementCount; i++) {
+        act(() => {
           canvasStore.getState().addElement({
             id: ElementId(`delete-elem-${i}`),
             type: 'star',
@@ -227,14 +241,16 @@ describe('Canvas Performance Tests', () => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
           });
-        }
-      });
+        });
+      }
 
       // Delete 500 elements
       const startTime = performance.now();
 
       for (let i = 0; i < 500; i++) {
-        canvasStore.getState().deleteElement(ElementId(`delete-elem-${i}`));
+        act(() => {
+          canvasStore.getState().deleteElement(ElementId(`delete-elem-${i}`));
+        });
       }
 
       const endTime = performance.now();
@@ -253,8 +269,8 @@ describe('Canvas Performance Tests', () => {
     test('should efficiently filter visible elements from large dataset', () => {
       // Add elements spread across large area
       const elementCount = 10000;
-      act(() => {
-        for (let i = 0; i < elementCount; i++) {
+      for (let i = 0; i < elementCount; i++) {
+        act(() => {
           canvasStore.getState().addElement({
             id: ElementId(`viewport-elem-${i}`),
             type: 'rectangle',
@@ -267,8 +283,8 @@ describe('Canvas Performance Tests', () => {
             createdAt: Date.now(),
             updatedAt: Date.now(),
           });
-        }
-      });
+        });
+      }
 
       // Set viewport bounds
       act(() => {
@@ -283,10 +299,11 @@ describe('Canvas Performance Tests', () => {
       // Measure viewport culling performance
       const startTime = performance.now();
 
-      const visibleElements = Array.from(canvasStore.getState().elements.values()).filter((element: CanvasElement) => {
+      const state = canvasStore.getState();
+      const visibleElements = Array.from(state.elements.values()).filter((element: CanvasElement) => {
         if (!('width' in element && 'height' in element)) return false;
         
-        const viewport = canvasStore.getState().viewportBounds!;
+        const viewport = state.viewportBounds!;
         const rectElement = element as CanvasElement & { width: number; height: number };
         return rectElement.x < viewport.right && 
                rectElement.x + rectElement.width > viewport.left &&
@@ -307,31 +324,37 @@ describe('Canvas Performance Tests', () => {
   describe('Memory Efficiency', () => {
     test('should maintain reasonable memory usage with large datasets', () => {
       // Add and clear elements multiple times
-      act(() => {
-        for (let round = 0; round < 5; round++) {
-          // Add 1000 elements
-          for (let i = 0; i < 1000; i++) {
+      for (let round = 0; round < 5; round++) {
+        // Add 1000 elements
+        for (let i = 0; i < 1000; i++) {
+          act(() => {
             canvasStore.getState().addElement({
               id: ElementId(`memory-elem-${round}-${i}`),
               type: 'text',
               tool: 'text',
               x: i,
               y: i,
-              text: `elem-${i}`,
-              fontSize: 12,
+              text: `Memory test ${round}-${i}`,
+              fontSize: 16,
               createdAt: Date.now(),
               updatedAt: Date.now(),
             });
-          }
-
-          // All elements should be there
-          expect(canvasStore.getState().elements.size).toBe(1000);
-
-          // Clear canvas
-          canvasStore.getState().clearCanvas();
-          expect(canvasStore.getState().elements.size).toBe(0);
+          });
         }
-      });
+
+        expect(canvasStore.getState().elements.size).toBe(1000);
+
+        // Clear canvas
+        act(() => {
+          canvasStore.getState().clearCanvas();
+        });
+
+        expect(canvasStore.getState().elements.size).toBe(0);
+      }
+
+      // Memory should be properly cleaned up after clearing
+      // (In a real scenario, we'd use performance.measureUserAgentSpecificMemory())
+      expect(canvasStore.getState().elements.size).toBe(0);
     });
   });
 });

@@ -7,6 +7,10 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
+import { enableMapSet } from 'immer';
+
+// Enable Immer MapSet plugin for Map/Set support
+enableMapSet();
 import type { CanvasElement, SectionElement } from '../../types/enhanced.types';
 import { ElementId, SectionId } from '../../types/enhanced.types';
 import { isCircleElement, isStarElement, isTextElement, isPenElement, isTableElement, isSectionElement, isConnectorElement, isTriangleElement, isRectangularElement } from '../../types/enhanced.types';

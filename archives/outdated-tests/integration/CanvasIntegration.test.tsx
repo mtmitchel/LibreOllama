@@ -1172,3 +1172,4 @@ describe('Comprehensive Canvas Integration Tests', () => {
     });
   });
 });
+

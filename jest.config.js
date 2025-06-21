@@ -3,6 +3,9 @@ export default {
   // Test environment
   testEnvironment: 'jsdom',
   
+  // Timeout settings
+  testTimeout: 10000, // 10 seconds default timeout
+  
   // File extensions to process
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
     // Transform files with these extensions - Minimal for ESM
@@ -18,6 +21,8 @@ export default {
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Add Tauri API mock mapping
+    '^@tauri-apps/api/tauri$': '<rootDir>/src/tests/__mocks__/@tauri-apps/api/tauri.js',
   },
     // Setup files
   setupFilesAfterEnv: ['<rootDir>/src/tests/setup-new.ts', '@testing-library/jest-dom'],
@@ -35,6 +40,9 @@ export default {
     '<rootDir>/archives/'
   ],
   
+  // Test timeout in milliseconds (default is 5000)
+  testTimeout: 10000, // 10 seconds max per test
+
   // Coverage configuration
   collectCoverage: false, // Disable coverage for now to focus on tests
   collectCoverageFrom: [

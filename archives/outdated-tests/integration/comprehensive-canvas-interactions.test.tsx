@@ -1231,3 +1231,4 @@ describe('Comprehensive Canvas Interactions', () => {
     });
   });
 });
+

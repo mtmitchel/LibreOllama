@@ -4,24 +4,45 @@ import { screen, fireEvent } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import { EditableNode } from '@/features/canvas/shapes/EditableNode';
-import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
 import { CanvasElement, ElementId } from '@/features/canvas/types/enhanced.types';
 
-// Mock the store
-jest.mock('@/features/canvas/stores/canvasStore.enhanced');
+// Define mock store state and methods
+const mockStore = {
+  elements: new Map(),
+  selectedElementIds: new Set<string>(),
+  editingTextId: null as string | null, // Allow string or null
+  selectElement: jest.fn(),
+  updateElement: jest.fn(),
+  setEditingTextId: jest.fn(),
+  selectedTool: 'select',
+};
+
+// Mock the store with proper factory pattern
+jest.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
+  useCanvasStore: jest.fn((selector) => {
+    if (typeof selector === 'function') {
+      return selector(mockStore);
+    }
+    return mockStore;
+  }),
+}));
+
+import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
 const mockUseCanvasStore = useCanvasStore as jest.MockedFunction<typeof useCanvasStore>;
 
 describe('TextShape', () => {
-  const selectElementMock = jest.fn();
-  const updateElementMock = jest.fn();
-  const startTextEditMock = jest.fn();
-  const setEditingTextIdMock = jest.fn();
-  
   let mockElement: CanvasElement;
-  let mockStore: any;
+  let updateElementMock: jest.Mock;
+  let startTextEditMock: jest.Mock; // Add the missing declaration
+  let setEditingTextIdMock: jest.Mock; // Add the missing declaration
+  let selectElementMock: jest.Mock; // Add the missing declaration
 
   beforeEach(() => {
     jest.clearAllMocks();
+    updateElementMock = jest.fn();
+    startTextEditMock = jest.fn(); // Initialize the mock
+    setEditingTextIdMock = jest.fn(); // Initialize the mock
+    selectElementMock = jest.fn(); // Initialize the mock
     
     mockElement = {
       id: 'text-1',
@@ -37,22 +58,16 @@ describe('TextShape', () => {
       updatedAt: Date.now(),
     };
 
-    mockStore = {
-      elements: new Map([[mockElement.id, mockElement]]),
-      selectedElementIds: new Set<string>(),
-      editingTextId: null,
-      selectElement: selectElementMock,
-      updateElement: updateElementMock,
-      setEditingTextId: setEditingTextIdMock,
-      selectedTool: 'select',
-    };
-
-    mockUseCanvasStore.mockImplementation((selector) => {
-      if (typeof selector === 'function') {
-        return selector(mockStore);
-      }
-      return mockStore;
-    });
+    // Reset mock store state
+    mockStore.elements = new Map([[mockElement.id, mockElement]]);
+    mockStore.selectedElementIds = new Set<string>();
+    mockStore.editingTextId = null;
+    mockStore.selectedTool = 'select';
+    
+    // Clear mock function calls
+    mockStore.selectElement.mockClear();
+    mockStore.updateElement.mockClear();
+    mockStore.setEditingTextId.mockClear();
   });
 
   afterEach(() => {
@@ -408,7 +423,7 @@ describe('TextShape', () => {
 
   describe('Integration with Store', () => {
     test('should integrate with text editing store state', () => {
-      const handleElementClick = jest.fn((e, element) => {
+      const handleElementClick = jest.fn((e: any, element: CanvasElement) => {
         selectElementMock(element.id);
       });
 

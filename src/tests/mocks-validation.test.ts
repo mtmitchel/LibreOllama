@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { listen, emit, __emit, __clearListeners } from '@tauri-apps/api/event';
 
 describe('Mock Validation Tests', () => {

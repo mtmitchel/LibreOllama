@@ -76,3 +76,4 @@ export const canvasTextEditingTests = {
 if (typeof window !== 'undefined') {
   (window as any).canvasTextEditingTests = canvasTextEditingTests;
 }
+

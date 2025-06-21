@@ -4,6 +4,8 @@
  */
 
 import '@testing-library/jest-dom';
+// Add jest-canvas-mock for proper Konva testing
+import 'jest-canvas-mock';
 
 // Enable Immer Map/Set plugin for store tests
 import { enableMapSet } from 'immer';
