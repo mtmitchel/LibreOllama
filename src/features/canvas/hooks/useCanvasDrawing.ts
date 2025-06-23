@@ -1,10 +1,14 @@
 // src/features/canvas/hooks/useCanvasDrawing.ts
 import { useEffect } from 'react';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useCanvasStore } from '../stores';
 import Konva from 'konva';
 
 export const useCanvasDrawing = (stage: Konva.Stage | null) => {
-  const { selectedTool, isDrawing, startDrawing, updateDrawing, finishDrawing } = useCanvasStore();
+  const selectedTool = useCanvasStore(state => state.selectedTool);
+  const isDrawing = useCanvasStore(state => state.isDrawing);
+  const startDrawing = useCanvasStore(state => state.startDrawing);
+  const updateDrawing = useCanvasStore(state => state.updateDrawing);
+  const finishDrawing = useCanvasStore(state => state.finishDrawing);
 
   useEffect(() => {
     if (!stage) return;

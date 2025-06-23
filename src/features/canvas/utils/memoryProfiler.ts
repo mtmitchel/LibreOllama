@@ -1,5 +1,6 @@
 // Memory and Performance Monitoring - Phase 5
 import { useEffect, useRef, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 
 /**
  * CanvasMemoryProfiler - Comprehensive memory monitoring for canvas operations
@@ -9,7 +10,7 @@ export class CanvasMemoryProfiler {
   private baseline: number = 0;
   private measurements: MemoryMeasurement[] = [];
   private intervalId: NodeJS.Timeout | null = null;
-  private isMonitoring: boolean = false;
+  private _isMonitoring: boolean = false;
 
   constructor(private options: MemoryProfilerOptions = {}) {
     this.options = {
@@ -28,12 +29,10 @@ export class CanvasMemoryProfiler {
     if (!this.isMemoryApiAvailable()) {
       console.warn('Memory API not available in this browser');
       return;
-    }
-
-    this.baseline = this.getCurrentMemoryUsage();
-    this.isMonitoring = true;
+    }    this.baseline = this.getCurrentMemoryUsage();
+    this._isMonitoring = true;
     
-    console.log(`Memory profiling started. Baseline: ${this.formatBytes(this.baseline)}`);
+    logger.log(`Memory profiling started. Baseline: ${this.formatBytes(this.baseline)}`);
     
     // Start periodic measurements
     this.intervalId = setInterval(() => {
@@ -50,10 +49,10 @@ export class CanvasMemoryProfiler {
       this.intervalId = null;
     }
     
-    this.isMonitoring = false;
+    this._isMonitoring = false;
     
     const report = this.generateReport();
-    console.log('Memory profiling stopped:', report);
+    logger.log('Memory profiling stopped:', report);
     
     return report;
   }
@@ -192,13 +191,12 @@ export class CanvasMemoryProfiler {
     const recentMeasurements = this.measurements.slice(-10);
     const growth = recentMeasurements.map(m => m.growthFromBaseline);
     
-    console.group('🔍 Memory Leak Analysis');
-    console.log('Recent growth pattern:', growth.map(g => this.formatBytes(g)));
-    console.log('Recommendations:');
-    console.log('• Check for unreleased Konva nodes');
-    console.log('• Verify event listeners are properly removed');
-    console.log('• Review canvas element caching strategy');
-    console.log('• Check for circular references in element data');
+    console.group('🔍 Memory Leak Analysis');    logger.log('Recent growth pattern:', growth.map(g => this.formatBytes(g)));
+    logger.log('Recommendations:');
+    logger.log('• Check for unreleased Konva nodes');
+    logger.log('• Verify event listeners are properly removed');
+    logger.log('• Review canvas element caching strategy');
+    logger.log('• Check for circular references in element data');
     console.groupEnd();
   }
 

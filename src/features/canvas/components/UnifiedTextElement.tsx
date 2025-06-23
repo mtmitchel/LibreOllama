@@ -2,10 +2,10 @@
 import React, { useRef, useCallback } from 'react';
 import { Text, Group, Rect } from 'react-konva';
 import Konva from 'konva';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 import { triggerLayerRedraw } from '../utils/canvasRedrawUtils';
 
-import { RichTextSegment } from '../../../types/richText';
+import { RichTextSegment } from '../types/richText';
 import { richTextManager } from './RichTextSystem/UnifiedRichTextManager';
 
 export interface UnifiedTextElementProps {
@@ -357,3 +357,4 @@ const UnifiedTextElement = React.forwardRef<Konva.Group, UnifiedTextElementProps
 UnifiedTextElement.displayName = 'UnifiedTextElement';
 
 export default UnifiedTextElement;
+

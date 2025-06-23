@@ -9,19 +9,18 @@ import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 
 // Import all shape components
-import RectangleShape from '@/features/canvas/shapes/RectangleShape';
-import CircleShape from '@/features/canvas/shapes/CircleShape';
-import TriangleShape from '@/features/canvas/shapes/TriangleShape';
-import StarShape from '@/features/canvas/shapes/StarShape';
-import TextShape from '@/features/canvas/shapes/TextShape';
-import StickyNoteShape from '@/features/canvas/shapes/StickyNoteShape';
-import PenShape from '@/features/canvas/shapes/PenShape';
-import ImageShape from '@/features/canvas/shapes/ImageShape';
+import { RectangleShape } from '@/features/canvas/shapes/RectangleShape';
+import { CircleShape } from '@/features/canvas/shapes/CircleShape';
+import { TriangleShape } from '@/features/canvas/shapes/TriangleShape';
+import { StarShape } from '@/features/canvas/shapes/StarShape';
+import { TextShape } from '@/features/canvas/shapes/TextShape';
+import { StickyNoteShape } from '@/features/canvas/shapes/StickyNoteShape';
+import { PenShape } from '@/features/canvas/shapes/PenShape';
+import { ImageShape } from '@/features/canvas/shapes/ImageShape';
 
 // Import element type utilities
 import { 
   ElementId,
-  toElementId,
   isRectangleElement,
   isCircleElement,
   isTriangleElement,
@@ -31,6 +30,9 @@ import {
   isPenElement,
   isImageElement
 } from '@/features/canvas/types/enhanced.types';
+
+// Import compatibility utilities
+import { toElementId } from '@/features/canvas/types/compatibility';
 
 // Mock design system
 vi.mock('@/designSystem', () => ({
@@ -78,10 +80,22 @@ const getBaseShapeProps = (element: any) => ({
   element,
   isSelected: false,
   isDragging: false,
+  konvaProps: {
+    x: element.x || 0,
+    y: element.y || 0,
+    id: element.id,
+    draggable: true,
+    onClick: vi.fn(),
+    onMouseDown: vi.fn(),
+    onDragStart: vi.fn(),
+    onDragEnd: vi.fn(),
+  },
   onSelect: vi.fn(),
   onDragStart: vi.fn(),
   onDragEnd: vi.fn(),
   onElementDoubleClick: vi.fn(),
+  onUpdate: vi.fn(),
+  onStartTextEdit: vi.fn(),
   stageScale: 1,
   nodeRef: { current: null },
 });

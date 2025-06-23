@@ -1,22 +1,42 @@
-import { KonvaNode } from '../../types/konva.types';
-import { Quadtree } from './quadtree';
-import { Rectangle } from '../layers/types';
+import { CanvasElement } from '../../stores/types';
+import { Quadtree } from '../spatial/Quadtree';
+import { BoundingBox, ViewportBounds } from '../../types/enhanced.types';
+
+interface Rectangle {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export class ViewportCuller {
-    private quadtree: Quadtree<KonvaNode>;
+    private quadtree: Quadtree;
 
     constructor(boundary: Rectangle) {
-        this.quadtree = new Quadtree<KonvaNode>(boundary, 4);
+        const bounds: BoundingBox = {
+            x: boundary.x,
+            y: boundary.y,
+            width: boundary.width,
+            height: boundary.height
+        };
+        this.quadtree = new Quadtree(bounds);
     }
 
-    public build(nodes: KonvaNode[]) {
-        this.quadtree = new Quadtree<KonvaNode>(this.quadtree.boundary, 4);
-        for (const node of nodes) {
-            this.quadtree.insert({ x: node.x, y: node.y, data: node });
+    public build(elements: CanvasElement[]) {
+        this.quadtree.clear();
+        for (const element of elements) {
+            // Convert stores/types CanvasElement to enhanced.types CanvasElement
+            this.quadtree.insert(element as any);
         }
     }
 
-    public getVisibleNodes(viewport: Rectangle): KonvaNode[] {
-        return this.quadtree.query(viewport);
+    public getVisibleElements(viewport: Rectangle): string[] {
+        const viewportBounds: ViewportBounds = {
+            left: viewport.x,
+            top: viewport.y,
+            right: viewport.x + viewport.width,
+            bottom: viewport.y + viewport.height
+        };
+        return this.quadtree.query(viewportBounds);
     }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../ui';
+import { Card } from '../../shared/ui';
 import { Task } from '../../lib/mockData';
 
 interface ProjectProgressWidgetProps {

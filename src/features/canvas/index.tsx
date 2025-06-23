@@ -18,8 +18,6 @@ export { default as ImprovedTable } from './components/ImprovedTable';
 export { default as EnhancedTableElement } from './components/EnhancedTableElement';
 
 // Text Editing Components
-export { default as TextEditingOverlay } from './components/TextEditingOverlay';
-export { default as RichTextCellEditor } from './components/RichTextCellEditor';
 export { default as UnifiedTextEditor } from './components/UnifiedTextEditor';
 
 // Layer exports
@@ -29,10 +27,10 @@ export * from './layers';
 export * from './shapes';
 
 // Store exports
-export * from './stores';
+export { useCanvasStore, canvasStore } from './stores';
 
-// Hook exports
-export * from './hooks';
+// Hook exports (specific to avoid conflicts)
+export { useCanvasEvents } from './hooks';
 
 // Utility exports
 export * from './utils';

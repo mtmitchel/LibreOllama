@@ -13,7 +13,7 @@ export interface CanvasFeatureFlags {
 
 // Default feature flag configuration
 const DEFAULT_FLAGS: CanvasFeatureFlags = {
-  useRefactoredCanvas: true, // Enable refactored canvas by default for testing
+  useRefactoredCanvas: true, // Re-enabled - we'll fix the refactored canvas properly
   useEnhancedEventHandler: true, // Safe to enable immediately
   useOptimizedCoordinateService: true, // Safe to enable immediately
   useEnhancedCacheManager: true, // Safe to enable immediately

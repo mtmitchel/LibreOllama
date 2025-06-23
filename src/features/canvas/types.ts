@@ -1,4 +1,6 @@
 // Canvas feature types - re-exports from main types directory
+import type { BoundingBox } from './types/enhanced.types';
+
 export type {
   CanvasElement,
   TextElement,
@@ -19,15 +21,12 @@ export type {
   TableColumn,
   TableDataModel,
   TableSelection,
-  PanZoom,
-  Size,
+  PanZoom,  Size,
   ViewportBounds,
   Coordinates,
-  BoundingBox,
   BaseElement,
   ElementPosition,
-  CoordinateSpace,
-  ViewportState,
+  CoordinateSpace,  ViewportState,
   SelectionState,
   CanvasHistoryState,
   HistoryEntry,
@@ -37,27 +36,28 @@ export type {
   CanvasElementsState,
   TextEditingState,
   HistoryState,
-  Canvas
+  Canvas,
+  BoundingBox
 } from '../../types';
 
 export type {
   RichTextSegment,
   StandardTextFormat,
   TextSelection,
-} from '../../types/richText';
+} from './types/richText';
 
 export type {
   ConnectorEndpoint,
   ConnectorStyle,
-} from '../../types/connector';
+} from './types/connector';
 
 export type {
   SectionElement as SectionType,
-} from '../../types/section';
+} from './types/section';
 
 export type {
   KonvaNode,
-} from '../../types/konva.types';
+} from './types/konva.types';
 
 // Additional canvas-specific types
 export interface CanvasLayer {

@@ -6,10 +6,10 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
+import { logger } from '@/lib/logger';
+import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 import { ViewportCuller } from '../../utils/viewport/viewportCuller';
-import { Rectangle } from '../../utils/viewport/types';
-import { KonvaNode } from '../../../../types/konva.types';
+import { CanvasElement } from '../types';
 import Konva from 'konva';
 
 export interface ViewportState {
@@ -56,7 +56,7 @@ export interface ViewportState {
 
   // View culling operations
   updateViewportBounds: () => void;
-  updateVisibleElements: (allElements: KonvaNode[]) => void;
+  updateVisibleElements: (allElements: CanvasElement[]) => void;
   isElementVisible: (elementId: string) => boolean;
   setCullingEnabled: (enabled: boolean) => void;
 
@@ -104,7 +104,7 @@ export const createViewportStore: StateCreator<
       const { pan, zoom: currentZoom, minZoom, maxZoom } = get();
       const newZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
 
-      console.log(`🔎 [VIEWPORT STORE] Setting zoom: ${newZoom}`, { centerPoint });
+      logger.log(`🔎 [VIEWPORT STORE] Setting zoom: ${newZoom}`, { centerPoint });
 
       if (centerPoint) {
         const mousePointTo = {
@@ -137,7 +137,7 @@ export const createViewportStore: StateCreator<
       
       PerformanceMonitor.recordMetric('viewportZoom', 1, 'canvas', { newZoom });
       
-      console.log('✅ [VIEWPORT STORE] Zoom updated successfully:', get().zoom);
+      logger.log('✅ [VIEWPORT STORE] Zoom updated successfully:', get().zoom);
     } finally {
       endTiming();
     }
@@ -147,7 +147,7 @@ export const createViewportStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('setPan');
     
     try {
-      console.log('📐 [VIEWPORT STORE] Setting pan:', pan);
+      logger.log('📐 [VIEWPORT STORE] Setting pan:', pan);
       
       set((state: Draft<ViewportState>) => {
         state.pan.x = Math.max(-state.maxPanDistance, Math.min(state.maxPanDistance, pan.x));
@@ -155,7 +155,7 @@ export const createViewportStore: StateCreator<
         state.viewportMetrics.panOperations++;
         state.viewportMetrics.lastViewportUpdate = performance.now();
         
-        console.log('✅ [VIEWPORT STORE] Pan updated successfully:', state.pan);
+        logger.log('✅ [VIEWPORT STORE] Pan updated successfully:', state.pan);
       });
       
       // Update viewport bounds after pan change
@@ -174,7 +174,7 @@ export const createViewportStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('setViewportSize');
     
     try {
-      console.log('📏 [VIEWPORT STORE] Setting viewport size:', size);
+      logger.log('📏 [VIEWPORT STORE] Setting viewport size:', size);
       
       set((state: Draft<ViewportState>) => {
         state.viewportSize = { ...size };
@@ -186,7 +186,7 @@ export const createViewportStore: StateCreator<
       
       PerformanceMonitor.recordMetric('viewportResize', 1, 'canvas', size);
       
-      console.log('✅ [VIEWPORT STORE] Viewport size updated successfully');
+      logger.log('✅ [VIEWPORT STORE] Viewport size updated successfully');
     } finally {
       endTiming();
     }
@@ -207,7 +207,7 @@ export const createViewportStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('zoomToFit');
     
     try {
-      console.log('🎯 [VIEWPORT STORE] Zooming to fit elements:', elementIds);
+      logger.log('🎯 [VIEWPORT STORE] Zooming to fit elements:', elementIds);
       
       if (elementIds.length === 0) return;
       
@@ -229,7 +229,7 @@ export const createViewportStore: StateCreator<
       
       PerformanceMonitor.recordMetric('zoomToFit', elementIds.length, 'canvas', { padding });
       
-      console.log('✅ [VIEWPORT STORE] Zoom to fit completed');
+      logger.log('✅ [VIEWPORT STORE] Zoom to fit completed');
     } finally {
       endTiming();
     }
@@ -239,7 +239,7 @@ export const createViewportStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('resetViewport');
     
     try {
-      console.log('🔄 [VIEWPORT STORE] Resetting viewport');
+      logger.log('🔄 [VIEWPORT STORE] Resetting viewport');
       
       set((state: Draft<ViewportState>) => {
         state.zoom = 1;
@@ -251,7 +251,7 @@ export const createViewportStore: StateCreator<
       
       PerformanceMonitor.recordMetric('viewportReset', 1, 'canvas');
       
-      console.log('✅ [VIEWPORT STORE] Viewport reset completed');
+      logger.log('✅ [VIEWPORT STORE] Viewport reset completed');
     } finally {
       endTiming();
     }
@@ -265,10 +265,9 @@ export const createViewportStore: StateCreator<
     const right = (-pan.x + viewportSize.width) / zoom;
     const bottom = (-pan.y + viewportSize.height) / zoom;
     set({ viewportBounds: { left, top, right, bottom } });
-  },
-  updateVisibleElements: (allElements: KonvaNode[]) => {
+  },  updateVisibleElements: (allElements: CanvasElement[]) => {
     if (!get().cullingEnabled) {
-      const allElementIds = allElements.map((el: KonvaNode) => el.id);
+      const allElementIds = allElements.map((el: CanvasElement) => el.id);
       set((state: Draft<ViewportState>) => {
         state.visibleElementIds = new Set(allElementIds);
       });
@@ -276,20 +275,19 @@ export const createViewportStore: StateCreator<
     }
 
     const { viewportBounds, viewportSize } = get();
-    const viewportRect = new Rectangle(
-      viewportBounds.left,
-      viewportBounds.top,
-      viewportBounds.right - viewportBounds.left,
-      viewportBounds.bottom - viewportBounds.top
-    );
+    const viewportRect = {
+      x: viewportBounds.left,
+      y: viewportBounds.top,
+      width: viewportBounds.right - viewportBounds.left,
+      height: viewportBounds.bottom - viewportBounds.top
+    };
 
-    const culler = new ViewportCuller(new Rectangle(0, 0, viewportSize.width, viewportSize.height));
+    const culler = new ViewportCuller({ x: 0, y: 0, width: viewportSize.width, height: viewportSize.height });
     culler.build(allElements);
-    const visibleNodes = culler.getVisibleNodes(viewportRect);
-    const visibleElementIds = new Set(visibleNodes.map((node: KonvaNode) => node.id));
+    const visibleElementIds = culler.getVisibleElements(viewportRect);
 
     set((state: Draft<ViewportState>) => {
-      state.visibleElementIds = visibleElementIds;
+      state.visibleElementIds = new Set(visibleElementIds);
     });
   },
   isElementVisible: (elementId: string) => {
@@ -339,6 +337,6 @@ export const createViewportStore: StateCreator<
       };
     });
     
-    console.log('🔍 [VIEWPORT STORE] Viewport metrics reset');
+    logger.log('🔍 [VIEWPORT STORE] Viewport metrics reset');
   }
 });

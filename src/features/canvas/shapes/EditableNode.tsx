@@ -1,18 +1,17 @@
 // src/components/canvas/shapes/EditableNode.tsx
 import React from 'react';
 import Konva from 'konva';
-import { CanvasElement } from '../stores/types';
+import { CanvasElement } from '../types/enhanced.types';
 import { RectangleShape } from './RectangleShape';
 import { CircleShape } from './CircleShape';
 import UnifiedTextElement from '../components/UnifiedTextElement';
 import StickyNoteElement from '../components/StickyNoteElement';
-import RichTextRenderer from '../components/RichTextRenderer';
 import { EnhancedTableElement } from '../components/EnhancedTableElement';
 import SectionElement from '../components/SectionElement';
 import ImageElement from '../components/ImageElement';
 import ConnectorRenderer from '../components/ConnectorRenderer';
 import { Line, Star } from 'react-konva';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 
 interface EditableNodeProps {
   element: CanvasElement;
@@ -58,9 +57,8 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       draggable: isDraggable,
       onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
       onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id),
-      opacity: 1,
-      stroke: isSelected ? designSystem.colors.primary[500] : element.stroke,
-      strokeWidth: isSelected ? (element.strokeWidth || 1) + 1.5 : element.strokeWidth,
+      opacity: 1,      stroke: isSelected ? designSystem.colors.primary[500] : (element as any).stroke,
+      strokeWidth: isSelected ? ((element as any).strokeWidth || 1) + 1.5 : (element as any).strokeWidth,
       perfectDrawEnabled: false, // Performance optimization
     };
 
@@ -88,22 +86,22 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
   // Render appropriate shape component based on element type
   switch (element.type) {
     case 'rectangle':
-      return (
-        <RectangleShape
+      return (        <RectangleShape
           element={element}
           isSelected={isSelected}
           konvaProps={commonProps}
           onUpdate={onElementUpdate}
+          onStartTextEdit={onStartTextEdit}
         />
       );
 
     case 'circle':
-      return (
-        <CircleShape
+      return (        <CircleShape
           element={element}
           isSelected={isSelected}
           konvaProps={commonProps}
           onUpdate={onElementUpdate}
+          onStartTextEdit={onStartTextEdit}
         />
       );
 
@@ -138,14 +136,11 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
             onStartTextEdit(element.id);
           }}
         />
-      );
-
-    case 'rich-text':
+      );    case 'rich-text':
       return (
-        <RichTextRenderer
+        <UnifiedTextElement
           element={element as any}
           {...commonProps}
-          onFormatChange={() => {}} // Will be handled by text editing store
           onDblClick={(e: any) => {
             e.cancelBubble = true;
             e.evt?.stopPropagation();
@@ -170,7 +165,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       );
 
     case 'star':
-      const starRadius = element.radius || (element.width || 100) / 2;
+      const starRadius = (element as any).radius || ((element as any).width || 100) / 2;
       // Normalize star positioning to top-left corner like rectangles
       // Store coordinates represent top-left corner, but Star needs center coordinates
       const starCenterX = (commonProps.x || 0) + starRadius;
@@ -180,9 +175,8 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
         <Star
           {...commonProps}
           x={starCenterX}
-          y={starCenterY}
-          numPoints={element.sides || 5}
-          innerRadius={element.innerRadius || (element.width || 100) / 4}
+          y={starCenterY}          numPoints={(element as any).sides || 5}
+          innerRadius={(element as any).innerRadius || ((element as any).width || 100) / 4}
           outerRadius={starRadius}
           fill={element.fill || designSystem.colors.warning[500]}
           stroke={element.stroke || designSystem.colors.warning[600]}
@@ -216,11 +210,10 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           element={element}
           konvaProps={commonProps}        />
       );    case 'section':
-      return (
-        <SectionElement
+      return (        <SectionElement
           section={element as any}
           isSelected={isSelected}
-          onUpdate={onElementUpdate}
+          onUpdate={(id: string, updates: any) => onElementUpdate(id, updates as Partial<CanvasElement>)}
           onSelect={() => {}} // Handled by parent
           onDragEnd={onElementDragEnd}
           isDraggable={isDraggable}
@@ -246,16 +239,16 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
         <ConnectorRenderer
           element={element}
           isSelected={isSelected}
-          onSelect={() => onElementClick({} as any, element)}
-          elements={{}} // Will be passed from parent
-          sections={{}} // Will be passed from parent
+          onSelect={() => onElementClick({} as any, element)}          elements={new Map()} // Will be passed from parent
+          sections={new Map()} // Will be passed from parent
         />
       );
 
     default:
-      console.warn('Unknown element type in EditableNode:', element.type);
+      console.warn('Unknown element type in EditableNode:', (element as any).type);
       return null;
   }
 });
 
 EditableNode.displayName = 'EditableNode';
+

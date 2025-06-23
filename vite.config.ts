@@ -10,6 +10,32 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Use the new universal canvas mock for all canvas imports
+      "canvas": path.resolve(__dirname, "./src/tests/__mocks__/canvas-universal.ts"),
+    },
+  },
+  
+  // Optimize dependencies for browser
+  optimizeDeps: {
+    include: ["konva", "react-konva"],
+    // No longer need to exclude canvas as it's properly aliased
+    force: true, // Force re-optimization to ensure proper canvas handling
+  },
+  
+  // Build configuration for Tauri
+  build: {
+    // Target modern browsers for better canvas support
+    target: ["chrome89", "edge89", "firefox89", "safari15"],
+    // Increase chunk size limit for Konva
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      // No longer need to externalize canvas
+      output: {
+        // Ensure Konva is properly chunked for WebView2
+        manualChunks: {
+          konva: ['konva', 'react-konva']
+        }
+      }
     },
   },
 
@@ -19,7 +45,7 @@ export default defineConfig({
   clearScreen: false,
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
-    port: 1420,
+    port: 1423,
     strictPort: true,
     host: host ? host : "0.0.0.0",
     hmr: host

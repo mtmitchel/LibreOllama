@@ -1,5 +1,5 @@
 // src/features/canvas/utils/fontLoader.ts
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 
 /**
  * Ensures fonts are loaded before using them in Konva
@@ -31,3 +31,4 @@ export const getAvailableFontFamily = (): string => {
   // Return the design system font family - browser will handle fallbacks
   return designSystem.typography.fontFamily.sans;
 };
+

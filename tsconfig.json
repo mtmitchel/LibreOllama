@@ -1,86 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ESNext",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
     "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
+    "esModuleInterop": false,
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-
-    /* Performance Optimizations */
-    "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
-    "composite": false,
-    
-    /* Path mapping - Enhanced for Canvas System */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/canvas/*": ["./src/components/canvas/*"],
-      "@/stores/*": ["./src/stores/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/types/*": ["./src/types/*"],
-      "@/performance/*": ["./src/utils/performance/*"],
-      "@/cache/*": ["./src/utils/cache/*"]
-    },
-    "typeRoots": ["./node_modules/@types", "./src/types"],
-
-    /* Enhanced Linting for Performance */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": true,
-    
-    /* Advanced Type Checking */
-    "noImplicitOverride": true,
-    "allowUnusedLabels": false,
-    "allowUnreachableCode": false,
-    
-    /* Module Resolution Optimizations */
-    "preserveSymlinks": false,
-    "forceConsistentCasingInFileNames": true,
-    
-    /* Canvas/Konva Specific Optimizations */
-    "experimentalDecorators": false,
-    "emitDecoratorMetadata": false,
-    
-    /* Performance Monitoring */
-    "generateCpuProfile": "profile.cpuprofile",
-    "extendedDiagnostics": false
+      "@/*": ["./src/*"]
+    }
   },
-  "include": [
-    "src",
-    "src/types/**/*",
-    "src/utils/performance/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.spec.ts",
-    "**/*.spec.tsx",
-    ".tsbuildinfo"
-  ],
-  "references": [{ "path": "./tsconfig.node.json" }],
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
-  }
+  "include": ["src", "src-tauri"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

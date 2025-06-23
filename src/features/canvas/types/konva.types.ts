@@ -2,6 +2,9 @@
 import Konva from 'konva';
 import type { CanvasElement } from '../types';
 
+// Base KonvaNode type for compatibility
+export type KonvaNode = Konva.Node;
+
 // Konva Node References
 export interface KonvaNodeRef {
   current: Konva.Node | null;

@@ -1,5 +1,5 @@
 // src/features/canvas/utils/textEditingUtils.tsx
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 
 interface TextEditorOptions {
   position: {
@@ -136,3 +136,4 @@ export const createTextEditor = (options: TextEditorOptions): (() => void) => {
     }
   };
 };
+

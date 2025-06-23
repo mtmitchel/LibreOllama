@@ -4,9 +4,8 @@ import Konva from 'konva';
 import CanvasIntegrationWrapper from './CanvasIntegrationWrapper';
 import KonvaToolbar from './toolbar/KonvaToolbar';
 import CanvasSidebar from './CanvasSidebar';
-// import { SimpleTextEditor } from './SimpleTextEditor'; // Temporarily disabled
-import { designSystem } from '../../../styles/designSystem';
-import { useViewportControls } from '../hooks/canvas/useViewportControls';
+import { designSystem } from '../../../design-system';
+import { useViewportControls } from '../hooks/useViewportControls';
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts';
 import '../../../styles/konvaCanvas.css';
 import '../../../styles/canvas-enhancements.css';
@@ -100,4 +99,5 @@ const KonvaApp: React.FC = () => {
 };
 
 export default KonvaApp;
+
 

@@ -39,7 +39,7 @@ npm run type-check       # TypeScript check
 - **Canvas**: Konva.js + React-Konva
 - **State**: Zustand with Immer
 - **Styling**: Tailwind CSS
-- **Testing**: Jest with ESM configuration
+- **Testing**: Vitest with ESM configuration
 
 ### Feature Structure
 ```
@@ -81,11 +81,11 @@ All stores use Immer for immutable updates and follow branded type patterns (`El
 
 ## Testing Approach
 
-### Jest Configuration
-- ESM-first setup with `@swc/jest`
+### Vitest Configuration
+- ESM-first setup with SWC
 - Konva mocking for canvas tests
 - Path aliases matching Vite config
-- Separate Windows configuration (`jest.config.js`)
+- Integrated with Vite configuration
 
 ### Test Utilities
 - `konva-test-utils.tsx` - Canvas testing helpers
@@ -157,4 +157,4 @@ The project uses extensive path aliases defined in `vite.config.ts`:
 - Canvas system uses Konva.js - familiarize with its patterns and performance characteristics  
 - All stores follow immutable update patterns with Immer
 - Test files should mock Konva appropriately using provided utilities
-- Windows development requires specific Jest configuration (`jest.config.js`)
+- Windows development uses the same Vitest configuration as other platforms

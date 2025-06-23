@@ -1,6 +1,6 @@
 // src/lib/snappingUtils.ts
-import { CanvasElement, ElementId } from '../types/enhanced.types';
-import type { AttachmentPoint } from '../../../types/connector';
+import { CanvasElement } from '../types/enhanced.types';
+import type { AttachmentPoint } from '../types/connector';
 
 export interface SnapPoint {
   x: number;

@@ -1,4 +1,4 @@
-import { Card } from '../ui';
+import { Card } from '../../shared/ui';
 import { ChatConversation } from '../../lib/chatMockData';
 import { 
   Plus, Search, Pin, Users, MessagesSquare, Download, Trash2

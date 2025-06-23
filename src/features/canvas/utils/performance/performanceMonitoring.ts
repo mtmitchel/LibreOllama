@@ -4,6 +4,7 @@
  */
 
 import Konva from 'konva';
+import { logger } from '@/lib/logger';
 
 export interface RenderStats {
   totalNodes: number;
@@ -69,12 +70,12 @@ export class KonvaPerformanceMonitor {
     };
 
     console.group('📊 Konva Render Stats');
-    console.log('Total Nodes:', stats.totalNodes);
-    console.log('Shapes:', stats.shapes);
-    console.log('Groups:', stats.groups);
-    console.log('Cached Nodes:', stats.cached);
-    console.log('Listening Nodes:', stats.listening);
-    console.log('Layers:', stats.layers);
+    logger.log('Total Nodes:', stats.totalNodes);
+    logger.log('Shapes:', stats.shapes);
+    logger.log('Groups:', stats.groups);
+    logger.log('Cached Nodes:', stats.cached);
+    logger.log('Listening Nodes:', stats.listening);
+    logger.log('Layers:', stats.layers);
     
     // Performance warnings
     if (stats.totalNodes > 1000) {
@@ -110,7 +111,7 @@ export class KonvaPerformanceMonitor {
     stage.draw();
     const duration = performance.now() - start;
 
-    console.log(`🎨 Redraw took ${duration.toFixed(2)}ms`);
+    logger.log(`🎨 Redraw took ${duration.toFixed(2)}ms`);
     
     if (duration > 16) {
       console.warn(`⚠️ Slow redraw detected (${duration.toFixed(2)}ms). Target: <16ms for 60fps`);
@@ -126,7 +127,7 @@ export class KonvaPerformanceMonitor {
     if (this.isMonitoring) return;
 
     this.isMonitoring = true;
-    console.log('🔍 Started Konva performance monitoring');
+    logger.log('🔍 Started Konva performance monitoring');
 
     const monitor = () => {
       if (!this.isMonitoring) return;
@@ -162,7 +163,7 @@ export class KonvaPerformanceMonitor {
    */
   stopMonitoring(): void {
     this.isMonitoring = false;
-    console.log('⏹️ Stopped Konva performance monitoring');
+    logger.log('⏹️ Stopped Konva performance monitoring');
   }
 
   /**
@@ -230,7 +231,7 @@ export class CanvasMetrics {
     
     // In a real app, this would send to analytics service
     if (process.env.NODE_ENV === 'development') {
-      console.log('📈 Canvas Render Metrics:', {
+      logger.log('📈 Canvas Render Metrics:', {
         elementCount,
         renderTime: time,
         fps,
@@ -247,7 +248,7 @@ export class CanvasMetrics {
    */
   trackOperation(operation: string, duration: number, metadata?: Record<string, any>): void {
     if (process.env.NODE_ENV === 'development') {
-      console.log('⚡ Canvas Operation:', {
+      logger.log('⚡ Canvas Operation:', {
         operation,
         duration,
         ...metadata
@@ -274,7 +275,7 @@ export class CanvasMetrics {
   trackMemoryUsage(): void {
     if ('memory' in performance) {
       const memory = (performance as any).memory;
-      console.log('🧠 Memory Usage:', {
+      logger.log('🧠 Memory Usage:', {
         used: Math.round(memory.usedJSHeapSize / 1024 / 1024) + ' MB',
         total: Math.round(memory.totalJSHeapSize / 1024 / 1024) + ' MB',
         limit: Math.round(memory.jsHeapSizeLimit / 1024 / 1024) + ' MB'
@@ -298,22 +299,22 @@ export const CanvasDebugHelpers = {
       measureRedraw: KonvaPerformanceMonitor.measureRedraw,
       
       logCoordinates: (elementId: string) => {
-        console.log(`Element ${elementId} coordinates would be logged here`);
+        logger.log(`Element ${elementId} coordinates would be logged here`);
         // This would integrate with your store to get actual element data
       },
       
       validateSections: () => {
-        console.log('Section validation would run here');
+        logger.log('Section validation would run here');
         // This would check for circular references, orphaned elements, etc.
       },
 
       stressTest: (nodeCount: number = 1000) => {
-        console.log(`Creating ${nodeCount} nodes for stress testing...`);
+        logger.log(`Creating ${nodeCount} nodes for stress testing...`);
         // This would create many elements to test performance
       },
 
       profileRedraw: (iterations: number = 10) => {
-        console.log(`Profiling ${iterations} redraws...`);
+        logger.log(`Profiling ${iterations} redraws...`);
         const times: number[] = [];
         
         for (let i = 0; i < iterations; i++) {
@@ -324,11 +325,11 @@ export const CanvasDebugHelpers = {
         const min = Math.min(...times);
         const max = Math.max(...times);
         
-        console.log(`Redraw Profile: avg=${average.toFixed(2)}ms, min=${min.toFixed(2)}ms, max=${max.toFixed(2)}ms`);
+        logger.log(`Redraw Profile: avg=${average.toFixed(2)}ms, min=${min.toFixed(2)}ms, max=${max.toFixed(2)}ms`);
       }
     };
 
-    console.log('🛠️ Canvas debug helpers attached to window.debugCanvas');
+    logger.log('🛠️ Canvas debug helpers attached to window.debugCanvas');
   },
 
   /**

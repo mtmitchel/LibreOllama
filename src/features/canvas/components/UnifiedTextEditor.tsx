@@ -1,7 +1,7 @@
 // src/components/canvas/UnifiedTextEditor.tsx
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system/designSystem';
 
 interface UnifiedTextEditorProps {
   isEditing: boolean;
@@ -76,6 +76,7 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
       setHasInitialized(false);
       setHasPlaceholderBeenCleared(false); // Reset when not editing
     }
+    return undefined;
   }, [isEditing, hasInitialized, editText]);
 
   // Handle text selection for formatting
@@ -130,6 +131,7 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
       document.addEventListener('keydown', handleKeyDown, { passive: false });
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
+    return undefined;
   }, [isEditing, onFinishEditing, onCancelEditing, hasPlaceholderBeenCleared]);
 
   // Handle clicks outside to finish editing
@@ -151,6 +153,7 @@ export const UnifiedTextEditor: React.FC<UnifiedTextEditorProps> = ({
       document.addEventListener('mousedown', handleClickOutside, { capture: true });
       return () => document.removeEventListener('mousedown', handleClickOutside, { capture: true });
     }
+    return undefined;
   }, [isEditing, onFinishEditing]);
 
   if (!isEditing) return null;

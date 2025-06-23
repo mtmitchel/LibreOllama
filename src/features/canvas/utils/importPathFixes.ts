@@ -1,8 +1,9 @@
 // Import Path Migration Script for Canvas Consolidation
 // This script contains the systematic import fixes needed to resolve the 939 TypeScript errors
 
-import fs from 'fs';
-import path from 'path';
+// Legacy import path fixes - retained for potential future refactoring
+// import fs from 'fs';
+// import path from 'path';
 
 interface ImportFix {
   file: string;

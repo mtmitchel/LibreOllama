@@ -7,8 +7,9 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import type { RichTextSegment } from '../../../../types/richText';
-import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
+import { logger } from '@/lib/logger';
+import type { RichTextSegment } from '../../types/richText';
+import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 
 // Helper function for consistent metric recording
 const recordMetric = (name: string, value: number, category: 'canvas' | 'render' | 'interaction' | 'memory' | 'network', metadata?: any) => {
@@ -105,7 +106,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('setEditingTextId');
     
     try {
-      console.log('📝 [TEXT STORE] Setting editing text ID:', id);
+      logger.log('📝 [TEXT STORE] Setting editing text ID:', id);
       
       set((state: Draft<TextEditingState>) => {
         state.editingTextId = id;
@@ -118,7 +119,7 @@ export const createTextEditingStore: StateCreator<
           state.currentTextFormat = {};
         }
         
-        console.log('✅ [TEXT STORE] Editing text ID updated successfully');
+        logger.log('✅ [TEXT STORE] Editing text ID updated successfully');
       });
       
       recordMetric('textEditingStateChange', 1, 'interaction', {
@@ -140,7 +141,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('updateElementText');
     
     try {
-      console.log('📝 [TEXT STORE] Updating element text:', elementId, newText.length, 'characters');
+      logger.log('📝 [TEXT STORE] Updating element text:', elementId, newText.length, 'characters');
       
       // This would interact with the elements store
       // For now, we track the performance metrics
@@ -153,7 +154,7 @@ export const createTextEditingStore: StateCreator<
         state.textEditingMetrics.stateUpdateCount++;
       });
       
-      console.log('✅ [TEXT STORE] Element text updated successfully');
+      logger.log('✅ [TEXT STORE] Element text updated successfully');
     } finally {
       endTiming();
     }
@@ -163,7 +164,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('insertTextAtCursor');
     
     try {
-      console.log('📝 [TEXT STORE] Inserting text at cursor:', elementId, text);
+      logger.log('📝 [TEXT STORE] Inserting text at cursor:', elementId, text);
       
       const { textSelection } = get();
       if (!textSelection || textSelection.elementId !== elementId) {
@@ -187,7 +188,7 @@ export const createTextEditingStore: StateCreator<
         }
       });
       
-      console.log('✅ [TEXT STORE] Text inserted successfully');
+      logger.log('✅ [TEXT STORE] Text inserted successfully');
     } finally {
       endTiming();
     }
@@ -204,7 +205,7 @@ export const createTextEditingStore: StateCreator<
       }
       
       const deletedLength = textSelection.end - textSelection.start;
-      console.log('📝 [TEXT STORE] Deleting text selection:', elementId, deletedLength, 'characters');
+      logger.log('📝 [TEXT STORE] Deleting text selection:', elementId, deletedLength, 'characters');
       
       recordMetric('textDelete', deletedLength, 'interaction', {
         elementId,
@@ -221,7 +222,7 @@ export const createTextEditingStore: StateCreator<
         }
       });
       
-      console.log('✅ [TEXT STORE] Text selection deleted successfully');
+      logger.log('✅ [TEXT STORE] Text selection deleted successfully');
     } finally {
       endTiming();
     }
@@ -232,7 +233,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('applyTextFormat');
     
     try {
-      console.log('📝 [TEXT STORE] Applying text format:', elementId, format, selection);
+      logger.log('📝 [TEXT STORE] Applying text format:', elementId, format, selection);
       
       recordMetric('textFormat', 1, 'interaction', {
         elementId,
@@ -245,7 +246,7 @@ export const createTextEditingStore: StateCreator<
         state.textEditingMetrics.stateUpdateCount++;
       });
       
-      console.log('✅ [TEXT STORE] Text format applied successfully');
+      logger.log('✅ [TEXT STORE] Text format applied successfully');
     } finally {
       endTiming();
     }
@@ -255,7 +256,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('clearTextFormat');
     
     try {
-      console.log('📝 [TEXT STORE] Clearing text format:', elementId, selection);
+      logger.log('📝 [TEXT STORE] Clearing text format:', elementId, selection);
       
       recordMetric('textFormatClear', 1, 'interaction', {
         elementId,
@@ -267,7 +268,7 @@ export const createTextEditingStore: StateCreator<
         state.textEditingMetrics.stateUpdateCount++;
       });
       
-      console.log('✅ [TEXT STORE] Text format cleared successfully');
+      logger.log('✅ [TEXT STORE] Text format cleared successfully');
     } finally {
       endTiming();
     }
@@ -297,7 +298,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('setTextSelection');
     
     try {
-      console.log('📝 [TEXT STORE] Setting text selection:', elementId, start, end, direction);
+      logger.log('📝 [TEXT STORE] Setting text selection:', elementId, start, end, direction);
       
       set((state: Draft<TextEditingState>) => {
         if (elementId === null) {
@@ -318,7 +319,7 @@ export const createTextEditingStore: StateCreator<
         selectionLength: elementId ? Math.abs(end - start) : 0
       });
       
-      console.log('✅ [TEXT STORE] Text selection updated successfully');
+      logger.log('✅ [TEXT STORE] Text selection updated successfully');
     } finally {
       endTiming();
     }
@@ -332,7 +333,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('selectAllText');
     
     try {
-      console.log('📝 [TEXT STORE] Selecting all text:', elementId);
+      logger.log('📝 [TEXT STORE] Selecting all text:', elementId);
       
       // This would get the text length from the elements store
       // For now, use a large number to represent "all text"
@@ -340,7 +341,7 @@ export const createTextEditingStore: StateCreator<
       
       recordMetric('selectAllText', 1, 'interaction', { elementId });
       
-      console.log('✅ [TEXT STORE] All text selected successfully');
+      logger.log('✅ [TEXT STORE] All text selected successfully');
     } finally {
       endTiming();
     }
@@ -351,7 +352,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('validateRichTextElement');
     
     try {
-      console.log('📝 [TEXT STORE] Validating rich text element:', elementId);
+      logger.log('📝 [TEXT STORE] Validating rich text element:', elementId);
       
       // This would validate the actual element from the elements store
       // For now, return true as a placeholder
@@ -372,7 +373,7 @@ export const createTextEditingStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('optimizeRichTextSegments');
     
     try {
-      console.log('📝 [TEXT STORE] Optimizing rich text segments:', elementId);
+      logger.log('📝 [TEXT STORE] Optimizing rich text segments:', elementId);
       
       // This would optimize the segments in the elements store
       recordMetric('textOptimization', 1, 'interaction', { elementId });
@@ -381,7 +382,7 @@ export const createTextEditingStore: StateCreator<
         state.textEditingMetrics.stateUpdateCount++;
       });
       
-      console.log('✅ [TEXT STORE] Rich text segments optimized successfully');
+      logger.log('✅ [TEXT STORE] Rich text segments optimized successfully');
     } finally {
       endTiming();
     }
@@ -487,6 +488,6 @@ export const createTextEditingStore: StateCreator<
       };
     });
     
-    console.log('📝 [TEXT STORE] Text editing metrics reset');
+    logger.log('📝 [TEXT STORE] Text editing metrics reset');
   }
 });

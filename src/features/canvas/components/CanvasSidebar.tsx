@@ -8,7 +8,7 @@ import {
   Search,
 } from "lucide-react";
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 import "./CanvasSidebar.css";
 
 interface CanvasItem {
@@ -507,3 +507,4 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
 };
 
 export default CanvasSidebar;
+

@@ -6,7 +6,7 @@
  * dramatically improving performance when dealing with large canvases.
  */
 
-import type { CanvasElement, ElementId, BoundingBox, ViewportBounds, SpatialIndexNode, QuadtreeConfig } from '../../types/enhanced.types';
+import type { CanvasElement, ElementId, SectionId, BoundingBox, ViewportBounds, QuadtreeConfig } from '../../types/enhanced.types';
 import { isCircleElement, isRectangularElement } from '../../types/enhanced.types';
 
 /**
@@ -43,8 +43,8 @@ function getElementBounds(element: CanvasElement): BoundingBox {
       let maxX = -Infinity, maxY = -Infinity;
       
       for (let i = 0; i < element.points.length; i += 2) {
-        const x = element.x + element.points[i];
-        const y = element.y + element.points[i + 1];
+        const x = element.x + (element.points[i] || 0);
+        const y = element.y + (element.points[i + 1] || 0);
         minX = Math.min(minX, x);
         maxX = Math.max(maxX, x);
         minY = Math.min(minY, y);
@@ -64,8 +64,8 @@ function getElementBounds(element: CanvasElement): BoundingBox {
     let maxX = -Infinity, maxY = -Infinity;
     
     for (let i = 0; i < element.points.length; i += 2) {
-      const x = element.x + element.points[i];
-      const y = element.y + element.points[i + 1];
+      const x = element.x + (element.points[i] || 0);
+      const y = element.y + (element.points[i + 1] || 0);
       minX = Math.min(minX, x);
       maxX = Math.max(maxX, x);
       minY = Math.min(minY, y);
@@ -124,9 +124,9 @@ function boundsContains(container: BoundingBox, contained: BoundingBox): boolean
 /**
  * Quadtree node class
  */
-class QuadtreeNode implements SpatialIndexNode {
+class QuadtreeNode {
   bounds: BoundingBox;
-  elementIds: ElementId[] = [];
+  elementIds: (ElementId | SectionId)[] = [];
   children?: QuadtreeNode[];
   
   constructor(bounds: BoundingBox) {
@@ -167,7 +167,7 @@ class QuadtreeNode implements SpatialIndexNode {
 export class Quadtree {
   private root: QuadtreeNode;
   private config: QuadtreeConfig;
-  private elementBounds: Map<ElementId, BoundingBox> = new Map();
+  private elementBounds: Map<ElementId | SectionId, BoundingBox> = new Map();
   
   constructor(bounds: BoundingBox, config?: Partial<QuadtreeConfig>) {
     this.root = new QuadtreeNode(bounds);
@@ -210,14 +210,14 @@ export class Quadtree {
    * Update an element's position in the quadtree
    */
   update(element: CanvasElement): void {
-    this.remove(element.id);
+    this.remove(element.id as ElementId);
     this.insert(element);
   }
   
   /**
    * Query elements within a viewport bounds
    */
-  query(viewport: ViewportBounds): ElementId[] {
+  query(viewport: ViewportBounds): (ElementId | SectionId)[] {
     const viewportBox: BoundingBox = {
       x: viewport.left,
       y: viewport.top,
@@ -260,7 +260,7 @@ export class Quadtree {
   /**
    * Insert element into a specific node
    */
-  private insertIntoNode(node: QuadtreeNode, elementId: ElementId, bounds: BoundingBox, depth: number): void {
+  private insertIntoNode(node: QuadtreeNode, elementId: ElementId | SectionId, bounds: BoundingBox, depth: number): void {
     // If node doesn't intersect with element bounds, skip
     if (!boundsIntersect(node.bounds, bounds)) {
       return;
@@ -331,7 +331,7 @@ export class Quadtree {
   /**
    * Query elements from a specific node
    */
-  private queryNode(node: QuadtreeNode, viewport: BoundingBox, results: ElementId[]): void {
+  private queryNode(node: QuadtreeNode, viewport: BoundingBox, results: (ElementId | SectionId)[]): void {
     // If node doesn't intersect viewport, skip
     if (!boundsIntersect(node.bounds, viewport)) {
       return;
@@ -382,7 +382,7 @@ export function getVisibleElements(
   const visibleElements: CanvasElement[] = [];
   
   visibleIds.forEach(id => {
-    const element = allElements.get(id);
+    const element = allElements.get(id as ElementId);
     if (element && !element.isHidden) {
       visibleElements.push(element);
     }

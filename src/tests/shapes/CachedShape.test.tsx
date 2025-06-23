@@ -1,13 +1,13 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Stage, Layer } from 'react-konva';
 // Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
 import { vi } from 'vitest';
-import { CachedShape } from '@/features/canvas/shapes/CachedShape';
-import { createMockCanvasElement } from '@/tests/utils/testUtils';
+import { Stage, Layer } from 'react-konva';
+import { CachedShape } from '../../features/canvas/shapes/CachedShape';
+import { createMockCanvasElement } from '../utils/testUtils';
 
 // Mock the hook dependencies
-vi.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({
+vi.mock('../../features/canvas/hooks/canvas/useShapeCaching', () => ({
   useShapeCaching: () => ({
     nodeRef: { current: null },
     isCached: false,
@@ -65,7 +65,7 @@ describe('CachedShape', () => {
       render(<CachedShape {...defaultProps} />);
       
       const cachedElement = screen.getByTestId('cached-shape');
-      expect(cachedElement).toBeInTheDocument();
+      expect(cachedElement).toBeDefined();
       
       // In a real implementation, we would check if caching is applied
       // This is a basic structure test
@@ -75,7 +75,7 @@ describe('CachedShape', () => {
       render(<CachedShape {...defaultProps} isSelected={true} />);
       
       const cachedElement = screen.getByTestId('cached-shape');
-      expect(cachedElement).toBeInTheDocument();
+      expect(cachedElement).toBeDefined();
     });
   });
 
@@ -86,7 +86,7 @@ describe('CachedShape', () => {
       // Rerender with same props should not cause unnecessary updates
       rerender(<CachedShape {...defaultProps} />);
       
-      expect(screen.getByTestId('cached-shape')).toBeInTheDocument();
+      expect(screen.getByTestId('cached-shape')).toBeDefined();
     });
 
     test('handles large elements efficiently', () => {
@@ -98,7 +98,7 @@ describe('CachedShape', () => {
 
       render(<CachedShape {...defaultProps} element={largeElement} />);
       
-      expect(screen.getByTestId('cached-shape')).toBeInTheDocument();
+      expect(screen.getByTestId('cached-shape')).toBeDefined();
     });
   });
 
@@ -109,7 +109,7 @@ describe('CachedShape', () => {
       const updatedElement = { ...mockElement, width: 300 };
       rerender(<CachedShape {...defaultProps} element={updatedElement} />);
       
-      expect(screen.getByTestId('cached-shape')).toBeInTheDocument();
+      expect(screen.getByTestId('cached-shape')).toBeDefined();
     });
 
     test('maintains cache stability for unchanged elements', () => {
@@ -118,7 +118,7 @@ describe('CachedShape', () => {
       // Rerender with identical element should maintain cache
       rerender(<CachedShape {...defaultProps} />);
       
-      expect(screen.getByTestId('cached-shape')).toBeInTheDocument();
+      expect(screen.getByTestId('cached-shape')).toBeDefined();
     });
   });
 });

@@ -339,7 +339,7 @@ class EventOptimizerImpl {
     recordMetric('touchEnd', this.activeTouches.size, 'interaction');
   }
 
-  private handleTouchCancel(event: TouchEvent): void {
+  private handleTouchCancel(_event: TouchEvent): void {
     this.activeTouches.clear();
     this.gestureState.clear();
     recordMetric('touchCancel', 1, 'interaction');
@@ -463,7 +463,7 @@ class EventOptimizerImpl {
   /**
    * Finalize and emit completed gestures
    */
-  private finalizeGestures(event: TouchEvent | MouseEvent): void {
+  private finalizeGestures(_event: TouchEvent | MouseEvent): void {
     this.gestureState.forEach((gesture, id) => {
       gesture.isActive = false;
       this.emitGestureEvent(gesture);

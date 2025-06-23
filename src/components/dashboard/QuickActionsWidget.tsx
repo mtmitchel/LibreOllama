@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card } from '../ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../ui/DropdownMenu';
+import { Card } from '../../shared/ui';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../shared/ui/DropdownMenu';
 import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate } from 'lucide-react';
 
 interface QuickAction {

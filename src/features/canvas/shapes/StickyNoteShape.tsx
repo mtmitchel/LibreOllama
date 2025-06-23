@@ -3,10 +3,11 @@ import React, { useEffect, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { StickyNoteElement, ElementId, CanvasElement } from '../types/enhanced.types';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
-import { designSystem } from '../../../styles/designSystem';
+import { useCanvasStore } from '../stores';
+import { designSystem } from '../../../design-system';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
+import { logger } from '@/lib/logger';
 
 interface StickyNoteShapeProps {
   element: StickyNoteElement;
@@ -24,13 +25,13 @@ interface StickyNoteShapeProps {
  */
 export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   element,
-  isSelected,
   konvaProps,
   onUpdate,
-  onStartTextEdit,
   stageRef
 }) => {
-  const { editingTextId, setEditingTextId } = useCanvasStore();
+  // Use individual primitive selectors for React 19 compatibility
+  const editingTextId = useCanvasStore(state => state.editingTextId);
+  const setEditingTextId = useCanvasStore(state => state.setEditingTextId);
   const cleanupRef = useRef<(() => void) | null>(null);
   const width = element.width || 200;
   const height = element.height || 100;
@@ -39,9 +40,8 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   useEffect(() => {
     ensureFontsLoaded();
   }, []);
-  
-  const handleDoubleClick = () => {
-    console.log('🔧 [STICKY NOTE] Double-click detected, starting text edit for:', element.id);
+    const handleDoubleClick = () => {
+    logger.log('🔧 [STICKY NOTE] Double-click detected, starting text edit for:', element.id);
     setEditingTextId(element.id);
   };
 
@@ -194,3 +194,4 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
 });
 
 StickyNoteShape.displayName = 'StickyNoteShape';
+

@@ -13,9 +13,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Konva from 'konva';
 import { useCanvasFeatureFlag } from '../utils/featureFlags';
 
-// Import both canvas implementations
-import LegacyKonvaCanvas from './KonvaCanvas'; // Existing implementation
-import RefactoredKonvaCanvas from './KonvaCanvasRefactored'; // New implementation
+// Import the main canvas implementation
+import KonvaCanvas from './KonvaCanvas'; // Main implementation (previously refactored)
 
 // Shared props interface that both implementations must support
 interface CanvasWrapperProps {
@@ -89,54 +88,29 @@ export const CanvasIntegrationWrapper: React.FC<CanvasWrapperProps> = (props) =>
     }
   };
 
-  // Memoized component selection to prevent unnecessary re-renders
+  // Always use the main canvas component (previously refactored, now main)
   const CanvasComponent = useMemo(() => {
-    // Always use legacy canvas if there's an error or feature flag is disabled
-    if (hasError || !useRefactoredCanvas) {
-      console.log(`🔄 Canvas Integration: Using LEGACY canvas`, {
-        hasError,
-        useRefactoredCanvas,
-        reason: hasError ? 'error fallback' : 'feature flag disabled'
-      });
-      return LegacyKonvaCanvas;
-    }
-    
-    console.log(`✨ Canvas Integration: Using REFACTORED canvas with new coordinate system`);
-    return RefactoredKonvaCanvas;
-  }, [useRefactoredCanvas, hasError]);
+    console.log(`✨ Canvas Integration: Using main canvas component`);
+    return KonvaCanvas;
+  }, []); // No dependencies needed since we always use the same component
 
-  // Enhanced props for refactored canvas (when applicable)
+  // Enhanced props for the main canvas
   const enhancedProps = useMemo(() => {
-    if (hasError || !useRefactoredCanvas) {
-      return props; // Pass through original props for legacy canvas
-    }
-
-    // For refactored canvas, we can add additional props or transformations here
     return {
       ...props,
-      // Add any refactored-specific props
+      // Add enhanced features
       performanceMonitoring: enablePerformanceMonitoring,
       onError: handleError,
     };
-  }, [props, useRefactoredCanvas, hasError, enablePerformanceMonitoring]);
+  }, [props, enablePerformanceMonitoring]);
 
-  // Error boundary wrapper for refactored canvas
-  if (useRefactoredCanvas && !hasError) {
-    return (
-      <CanvasErrorBoundary onError={handleError}>
-        <CanvasComponent {...enhancedProps} />
-        {enablePerformanceMonitoring && <PerformanceOverlay metrics={performanceMetrics} />}
-      </CanvasErrorBoundary>
-    );
-  }
-
-  // Legacy canvas (no error boundary needed - it's proven stable)
+  // Always use error boundary for production stability
   return (
-    <>
-      <CanvasComponent {...props} />
+    <CanvasErrorBoundary onError={handleError}>
+      <CanvasComponent {...enhancedProps} />
       {enablePerformanceMonitoring && <PerformanceOverlay metrics={performanceMetrics} />}
       {hasError && <ErrorNotification error={errorInfo} />}
-    </>
+    </CanvasErrorBoundary>
   );
 };
 

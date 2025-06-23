@@ -1,6 +1,6 @@
 // src/features/canvas/components/toolbar/KonvaToolbar.tsx
 import React from 'react';
-import { useCanvasStore as useEnhancedStore } from '../../stores/canvasStore.enhanced';
+import { useCanvasStore } from '../../stores';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
 import { ElementId } from '../../types/enhanced.types';
 import { 
@@ -64,28 +64,28 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   sidebarOpen,
   onToggleSidebar
 }) => {
-  // Use enhanced store as single source of truth
-  const { 
-    elements, 
-    updateElement, 
-    deleteElement, 
-    addElement, 
-    clearAllElements, 
-    exportElements, 
-    importElements,
-    selectedTool, 
-    setSelectedTool,
-    undo, 
-    redo,    canUndo, 
-    canRedo,
-    selectedElementIds, 
-    selectElement,
-    pan, 
-    zoom,
-    findSectionAtPoint,
-    sections,
-    addElementToSection
-  } = useEnhancedStore();
+  // Use enhanced store as single source of truth - split selectors to prevent infinite loop
+  const elements = useCanvasStore((state) => state.elements);
+  const updateElement = useCanvasStore((state) => state.updateElement);
+  const deleteElement = useCanvasStore((state) => state.deleteElement);
+  const addElement = useCanvasStore((state) => state.addElement);
+  const clearAllElements = useCanvasStore((state) => state.clearAllElements);
+  const exportElements = useCanvasStore((state) => state.exportElements);
+  const importElements = useCanvasStore((state) => state.importElements);
+  const selectedTool = useCanvasStore((state) => state.selectedTool);
+  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
+  const undo = useCanvasStore((state) => state.undo);
+  const redo = useCanvasStore((state) => state.redo);
+  const canUndo = useCanvasStore((state) => state.canUndo);
+  const canRedo = useCanvasStore((state) => state.canRedo);
+  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
+  const selectElement = useCanvasStore((state) => state.selectElement);
+  const pan = useCanvasStore((state) => state.pan);
+  const zoom = useCanvasStore((state) => state.zoom);
+  const findSectionAtPoint = useCanvasStore((state) => state.findSectionAtPoint);
+  const sections = useCanvasStore((state) => state.sections);
+  const addElementToSection = useCanvasStore((state) => state.addElementToSection);
+  const createSection = useCanvasStore((state) => state.createSection);
   
   const selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
   const selectedElement = selectedElementId ? elements.get(selectedElementId) : null;
@@ -131,9 +131,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
     setSelectedTool(toolId);
       // Tools that activate drawing/interaction modes instead of creating elements immediately
     const drawingModeTools = [
-      'select', 'pan', 'section', 
-      'pen', 'connector-line', 'connector-arrow',
-      'rectangle', 'circle', 'triangle', 'star' // Shape tools should activate, not create immediately
+      'select', 'pan', 
+      'pen', 'connector-line', 'connector-arrow'
+      // REMOVED: shape tools should create elements immediately when selected from dropdown
+      // REMOVED: 'section' - sections are now created immediately like other elements
     ];
     
     // For most tools, create element immediately
@@ -293,8 +294,9 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           type: 'triangle',
           x: targetSection ? elementX - targetSection.x : elementX,
           y: targetSection ? elementY - targetSection.y : elementY,
+          points: [0, 60, 50, 0, 100, 60], // Triangle points: bottom-left, top-center, bottom-right
           width: 100,
-          height: 80,
+          height: 60,
           fill: '#FEF3C7',
           stroke: '#F59E0B',
           strokeWidth: 2,
@@ -310,7 +312,7 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           y: targetSection ? elementY - targetSection.y : elementY,
           numPoints: 5,
           innerRadius: 30,
-          outerRadius: 70,
+          outerRadius: 60,
           fill: '#FFFBEB',
           stroke: '#FBBF24',
           strokeWidth: 2,
@@ -318,6 +320,20 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
         };
         break;
         
+      case 'section':
+        const sectionWidth = 400;
+        const sectionHeight = 300;
+        const sectionTopLeftX = elementX - sectionWidth / 2;
+        const sectionTopLeftY = elementY - sectionHeight / 2;
+        
+        // Use the createSection hook that was declared at component top level
+        const newSectionId = createSection(sectionTopLeftX, sectionTopLeftY, sectionWidth, sectionHeight, 'New Section');
+        
+        // Select the newly created section and reset tool
+        selectElement(newSectionId as any); // Section IDs can be selected
+        setTimeout(() => setSelectedTool('select'), 100);
+        return; // Early return since section creation is handled differently
+      
       case 'table':
         const tableWidth = 300;
         const tableHeight = 200;

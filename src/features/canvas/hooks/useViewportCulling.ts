@@ -2,7 +2,7 @@ import { useMemo, useRef, useCallback, useEffect } from 'react';
 import { PanZoom, Size, ViewportBounds } from '../types';
 import type { CanvasElement } from '../types/enhanced.types';
 import { isRectangularElement } from '../types/enhanced.types';
-import { PerformanceMonitor, recordMetric } from '../../../utils/performance';
+import { PerformanceMonitor, recordMetric } from '../utils/performance';
 import { Quadtree, createCanvasQuadtree, batchInsertElements } from '../utils/spatial/Quadtree';
 
 export interface UseViewportCullingProps {
@@ -220,8 +220,8 @@ export const useViewportCulling = ({
     }
   }, [cullingConfig.lodThresholds]);
 
-  // Create hierarchical groups for better culling
-  const createElementGroups = useCallback((elements: CanvasElement[]): ElementGroup[] => {
+  // Memoize hierarchical groups creation for better performance
+  const elementGroups = useMemo(() => {
     if (!cullingConfig.enableHierarchicalCulling) {
       return [{
         id: 'default',
@@ -259,10 +259,29 @@ export const useViewportCulling = ({
     }
 
     return groups;
-  }, [cullingConfig.enableHierarchicalCulling, cullingConfig.maxElementsPerGroup]);
+  }, [elements, cullingConfig.enableHierarchicalCulling, cullingConfig.maxElementsPerGroup]);
 
   // Removed unused utility functions (isInteractive, isStatic, isDraggable, isResizable, isEditable, getElementLOD)
   // These were not being used in the culling logic
+
+  // Memoize expensive viewport bounds calculation
+  const viewportBounds = useMemo(() => {
+    if (!canvasSize || canvasSize.width === 0 || canvasSize.height === 0) {
+      return null;
+    }
+    
+    const buffer = Math.max(canvasSize.width, canvasSize.height) * cullingConfig.bufferMultiplier;
+    
+    return {
+      left: (-panOffset.x - buffer) / zoomLevel,
+      top: (-panOffset.y - buffer) / zoomLevel,
+      right: (canvasSize.width - panOffset.x + buffer) / zoomLevel,
+      bottom: (canvasSize.height - panOffset.y + buffer) / zoomLevel,
+    };
+  }, [panOffset.x, panOffset.y, canvasSize, zoomLevel, cullingConfig.bufferMultiplier]);
+
+  // Memoize LOD level calculation
+  const lodLevel = useMemo(() => getLODLevel(zoomLevel), [zoomLevel, getLODLevel]);
 
   return useMemo(() => {
     const endTiming = PerformanceMonitor.startTiming('viewportCulling');
@@ -272,26 +291,24 @@ export const useViewportCulling = ({
       const isInitializing = !canvasSize || canvasSize.width === 0 || canvasSize.height === 0 || zoomLevel === 0;
       const isVerySmallCanvas = canvasSize && (canvasSize.width < 200 || canvasSize.height < 200);
       
-      if (isInitializing || isVerySmallCanvas) {
+      if (isInitializing || isVerySmallCanvas || !viewportBounds) {
         if (import.meta.env.DEV) {
           console.log(`[Enhanced ViewportCulling] ${isInitializing ? 'Initializing' : 'Very small canvas'} - showing all elements`);
         }
         return {
           visibleElements: elements,
           culledElements: [],
-          lodLevel: getLODLevel(zoomLevel),
+          lodLevel,
           elementGroups: [],
           cullingStats: {
             totalElements: elements.length,
             visibleElements: elements.length,
             culledElements: 0,
             groupsCulled: 0,
-            lodLevel: getLODLevel(zoomLevel).level
+            lodLevel: lodLevel.level
           }
         };
       }
-
-      const lodLevel = getLODLevel(zoomLevel);
       
       // If LOD level is hidden, cull everything except critical elements
       if (lodLevel.level === 'hidden') {
@@ -317,18 +334,9 @@ export const useViewportCulling = ({
         };
       }
 
-      // Calculate viewport bounds with adaptive buffer
-      const buffer = Math.max(50, canvasSize.width * 0.1 * cullingConfig.bufferMultiplier);
-      
-      const viewportBounds: ViewportBounds = {
-        left: (-panOffset.x - buffer) / zoomLevel,
-        top: (-panOffset.y - buffer) / zoomLevel,
-        right: (canvasSize.width - panOffset.x + buffer) / zoomLevel,
-        bottom: (canvasSize.height - panOffset.y + buffer) / zoomLevel,
-      };
+      // Use the memoized viewport bounds (already calculated above)
 
-      // Create element groups for hierarchical culling
-      const elementGroups = createElementGroups(elements);
+      // Use the memoized element groups
       let visibleElements: CanvasElement[] = [];
       let culledElements: CanvasElement[] = [];
       let groupsCulled = 0;
@@ -457,5 +465,5 @@ export const useViewportCulling = ({
     } finally {
       endTiming();
     }
-  }, [elements, zoomLevel, panOffset.x, panOffset.y, canvasSize?.width, canvasSize?.height, cullingConfig, getLODLevel, createElementGroups]);
+  }, [elements, zoomLevel, panOffset.x, panOffset.y, canvasSize?.width, canvasSize?.height, cullingConfig, getLODLevel, elementGroups, viewportBounds, lodLevel]);
 };

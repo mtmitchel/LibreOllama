@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../components/ui';
+import { Card } from '../shared/ui';
 import { Plus, List, LayoutGrid, MoreHorizontal, CircleDashed, LoaderCircle, CheckCircle } from 'lucide-react';
 import { useHeader, HeaderProps, SecondaryAction } from '../contexts/HeaderContext';
 

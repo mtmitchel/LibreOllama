@@ -6,7 +6,7 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
+import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 
 export interface ModalState {
   id: string;

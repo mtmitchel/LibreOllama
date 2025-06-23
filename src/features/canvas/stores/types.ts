@@ -4,8 +4,8 @@
  * Re-exports from the original store for compatibility during transition
  */
 
-import type { RichTextSegment } from '../../../types/richText';
-import type { ConnectorEndpoint, ConnectorStyle } from '../../../types/connector';
+import type { RichTextSegment } from '../types/richText';
+import type { ConnectorEndpoint, ConnectorStyle } from '../types/connector';
 
 export interface TableCell {
   id: string;
@@ -73,10 +73,10 @@ export interface EnhancedTableData {
 }
 
 // Re-export connector types
-export type { ConnectorEndpoint, ConnectorStyle } from '../../../types/connector';
+export type { ConnectorEndpoint, ConnectorStyle } from '../types/connector';
 
 // Re-export section types
-export type { SectionElement } from '../../../types/section';
+export type { SectionElement } from '../types/section';
 
 export interface CanvasElement {
   id: string;

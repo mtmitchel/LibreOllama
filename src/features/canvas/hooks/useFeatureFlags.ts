@@ -1,5 +1,6 @@
 // src/features/canvas/hooks/useFeatureFlags.ts
 import { useMemo } from 'react';
+import { logger } from '@/lib/logger';
 
 interface FeatureFlags {
   'grouped-section-rendering': boolean;
@@ -26,7 +27,7 @@ export const useFeatureFlags = (): FeatureFlags => {
       'unified-text-overlays': false,    // Not implemented yet
     };
     
-    console.log('🏁 [useFeatureFlags] Feature flags loaded:', flags);
+    logger.log('🏁 [useFeatureFlags] Feature flags loaded:', flags);
     return flags;
   }, []);
 };

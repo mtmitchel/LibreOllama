@@ -7,7 +7,6 @@
  */
 
 import { KonvaEventObject } from 'konva/lib/Node';
-import { KonvaNode } from '../../types/konva.types';
 
 export interface EventDelegationConfig {
   enableDrag?: boolean;

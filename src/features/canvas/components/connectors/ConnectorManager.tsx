@@ -131,29 +131,15 @@ export const ConnectorManager: React.FC<{ connectors: ConnectorElement[] }> = ({
       });
     }
   }, [elements, getConnectionPoint, updateElement]);
-
-  // Subscribe to element changes and update all connectors
+  // Subscribe to element changes and update all connectors with debouncing
   useEffect(() => {
-    // Update all connectors when elements change
-    connectors.forEach(updateConnectorPath);
-  }, [elements, sections, connectors, updateConnectorPath]);
-
-  // Subscribe to store changes for real-time updates
-  useEffect(() => {
-    const unsubscribe = useCanvasStore.subscribe(
-      (state) => ({ elements: state.elements, sections: state.sections }),
-      () => {
-        // Debounce updates to avoid excessive recalculation
-        const timeoutId = setTimeout(() => {
-          connectors.forEach(updateConnectorPath);
-        }, 16); // ~60fps
-        
-        return () => clearTimeout(timeoutId);
-      }
-    );
+    // Debounce updates to avoid excessive recalculation
+    const timeoutId = setTimeout(() => {
+      connectors.forEach(updateConnectorPath);
+    }, 16); // ~60fps
     
-    return unsubscribe;
-  }, [connectors, updateConnectorPath]);
+    return () => clearTimeout(timeoutId);
+  }, [elements, sections, connectors, updateConnectorPath]);
   return (
     <>
       {connectors.map(connector => (

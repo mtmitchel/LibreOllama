@@ -6,7 +6,7 @@
  */
 
 import { PerformanceMonitor, recordMetric } from '../performance';
-import type { CanvasElement } from './types';
+import type { CanvasElement } from '../../stores/types';
 
 export interface RenderTask {
   id: string;

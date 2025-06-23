@@ -5,6 +5,7 @@
  */
 
 import { CanvasElement } from '../stores/types';
+import { logger } from '@/lib/logger';
 
 export interface CanvasData {
   elements: CanvasElement[];
@@ -204,7 +205,7 @@ export class CanvasDataValidator {
       repaired.metadata.modified = new Date().toISOString();
     }
 
-    console.log(`🔍 [DATA VALIDATOR] Validation complete:`, {
+    logger.log(`🔍 [DATA VALIDATOR] Validation complete:`, {
       elementsProcessed: repaired.elements.length,
       errorsFound: errors.length,
       warningsFound: warnings.length,
@@ -281,7 +282,7 @@ export class CanvasDataMigrator {
    * (absolute coordinates to relative coordinates in sections)
    */
   static migrateV1ToV2(oldData: any): CanvasData {
-    console.log('🔄 [DATA MIGRATOR] Starting v1 to v2 migration...');
+    logger.log('🔄 [DATA MIGRATOR] Starting v1 to v2 migration...');
     
     const migrated = structuredClone(oldData);
     
@@ -296,7 +297,7 @@ export class CanvasDataMigrator {
           // Old system stored absolute coordinates, new system needs relative
           element.x -= section.x;
           element.y -= section.y;
-          console.log(`🔄 [DATA MIGRATOR] Converted element ${element.id} to relative coordinates`);
+          logger.log(`🔄 [DATA MIGRATOR] Converted element ${element.id} to relative coordinates`);
         }
       }
     });
@@ -304,7 +305,7 @@ export class CanvasDataMigrator {
     // Set version marker
     migrated.version = 2;
     
-    console.log('✅ [DATA MIGRATOR] Migration complete');
+    logger.log('✅ [DATA MIGRATOR] Migration complete');
     return migrated;
   }
 

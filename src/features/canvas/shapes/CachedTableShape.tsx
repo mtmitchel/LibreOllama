@@ -10,7 +10,7 @@
 import React, { useMemo } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import { CanvasElement } from '../stores/types';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 import { CachedShape } from './CachedShape';
 
 interface CachedTableShapeProps {
@@ -145,3 +145,4 @@ export const CachedTableShape: React.FC<CachedTableShapeProps> = React.memo(({
 });
 
 CachedTableShape.displayName = 'CachedTableShape';
+

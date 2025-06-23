@@ -29,7 +29,7 @@ export const validatePhase1Implementation = (): void => {
     console.log('✅ useFeatureFlags hook available');
     
     // Check if the grouped section renderer exists
-    const groupedRendererModule = require('../src/features/canvas/components/GroupedSectionRenderer2');
+    const groupedRendererModule = require('../src/features/canvas/components/GroupedSectionRenderer');
     console.log('✅ GroupedSectionRenderer component available');
     
     // Check if the transformer manager exists

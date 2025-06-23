@@ -34,7 +34,7 @@ export type {
 } from './layers/types';
 
 // Canvas Stores
-export { useCanvasStore as useKonvaCanvasStore } from './stores/canvasStore.enhanced';
+export { useCanvasStore as useKonvaCanvasStore } from './stores';
 export type { CanvasState } from './hooks/useGranularSelectors';
 
 // Granular Selectors (Phase 2 Optimization)
@@ -100,7 +100,7 @@ export { ConnectorLayer } from './layers/ConnectorLayer';
 export { CanvasLayerManager } from './layers/CanvasLayerManager';
 
 // Utility Functions
-export { CoordinateService } from './utils/coordinateService';
+export { CoordinateService } from './utils/canvasCoordinateService';
 
 // Canvas Optimization Utilities
 export {
@@ -122,7 +122,7 @@ export {
 
 export {
   Quadtree
-} from './utils/viewport/quadtree';
+} from './utils/spatial/Quadtree';
 
 // Version information for debugging
 export const CANVAS_VERSION = '2.0.0-optimized';

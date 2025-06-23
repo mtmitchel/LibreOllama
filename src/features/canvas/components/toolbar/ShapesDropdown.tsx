@@ -26,10 +26,8 @@ interface ShapesDropdownProps {
 
 const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  // Fixed: Use modular store hook
-  const { selectedTool } = useCanvasStore();
+  const dropdownRef = useRef<HTMLDivElement>(null);  // Fixed: Use modular store hook - split selector
+  const selectedTool = useCanvasStore((state) => state.selectedTool);
   
   // Find the currently selected shape tool, default to rectangle
   const currentShapeTool = shapeTools.find(tool => tool.id === selectedTool) || shapeTools[0]!;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import { Stage, Layer } from 'react-konva';
 // Vitest globals enabled in config - no need to import describe, test, expect, beforeEach, afterEach
 import { vi } from 'vitest';
+import { Stage, Layer } from 'react-konva';
 
 // Mock the dependencies that RectangleShape needs
 vi.mock('@/features/canvas/hooks/canvas/useShapeCaching', () => ({
@@ -33,11 +33,12 @@ vi.mock('@/styles/designSystem', () => ({
 }));
 
 // Import after mocking dependencies
-import { RectangleShape } from '@/features/canvas/shapes/RectangleShape';
+import { RectangleShape } from '../../features/canvas/shapes/RectangleShape';
+import { ElementId } from '../../features/canvas/types/enhanced.types';
 
 describe('RectangleShape Component Tests', () => {
   const mockElement = {
-    id: 'rect-1',
+    id: ElementId('rect-1'),
     type: 'rectangle' as const,
     x: 100,
     y: 100,

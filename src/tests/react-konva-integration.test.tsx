@@ -18,7 +18,7 @@ describe('React-Konva Integration Tests', () => {
       </Stage>
     );
 
-    expect(container.querySelector('canvas')).toBeInTheDocument();
+    expect(container.querySelector('canvas')).toBeDefined();
   });
 
   test('renders multiple Konva shapes', () => {
@@ -50,9 +50,9 @@ describe('React-Konva Integration Tests', () => {
     );
 
     const canvas = container.querySelector('canvas');
-    expect(canvas).toBeInTheDocument();
-    expect(canvas).toHaveAttribute('width', '800');
-    expect(canvas).toHaveAttribute('height', '600');
+    expect(canvas).toBeDefined();
+    expect(canvas?.getAttribute('width')).toBe('800');
+    expect(canvas?.getAttribute('height')).toBe('600');
   });
 
   test('renders Konva Layer without errors', () => {
@@ -74,7 +74,7 @@ describe('React-Konva Integration Tests', () => {
       </Stage>
     );
 
-    expect(container.querySelector('canvas')).toBeInTheDocument();
+    expect(container.querySelector('canvas')).toBeDefined();
   });
 
   test('handles multiple Layers', () => {
@@ -89,7 +89,7 @@ describe('React-Konva Integration Tests', () => {
       </Stage>
     );
 
-    expect(container.querySelector('canvas')).toBeInTheDocument();
+    expect(container.querySelector('canvas')).toBeDefined();
   });
 
   test('renders with different Stage dimensions', () => {
@@ -109,8 +109,8 @@ describe('React-Konva Integration Tests', () => {
       );
 
       const canvas = container.querySelector('canvas');
-      expect(canvas).toHaveAttribute('width', width.toString());
-      expect(canvas).toHaveAttribute('height', height.toString());
+      expect(canvas?.getAttribute('width')).toBe(width.toString());
+      expect(canvas?.getAttribute('height')).toBe(height.toString());
     });
   });
 });

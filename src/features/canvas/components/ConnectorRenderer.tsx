@@ -2,7 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { Line, Arrow } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, ElementId, SectionId, ConnectorElement } from '../types/enhanced.types';
-import { getAnchorPoint } from '../../../types/connector';
+import { getAnchorPoint } from '../types/connector';
 
 interface ConnectorRendererProps {
   element: ConnectorElement;

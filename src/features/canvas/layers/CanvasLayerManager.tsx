@@ -6,7 +6,7 @@ import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
 import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
-import { GroupedSectionRenderer } from '../components/GroupedSectionRenderer2';
+import { GroupedSectionRenderer } from '../components/GroupedSectionRenderer';
 import { TransformerManager } from '../components/TransformerManager';
 import { DrawingContainment } from '../components/drawing/DrawingContainment';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
@@ -24,7 +24,7 @@ interface CanvasLayerManagerProps {
   onElementDragMove?: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => void;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
   onStartTextEdit: (elementId: ElementId) => void;
-  onTransformEnd?: (id: SectionId, props: { x: number; y: number; width: number; height: number }) => void;
+  _onTransformEnd?: (id: SectionId, props: { x: number; y: number; width: number; height: number }) => void;
   isDrawingConnector?: boolean;
   connectorStart?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
   connectorEnd?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
@@ -45,7 +45,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   onElementDragMove,
   onElementClick,
   onStartTextEdit,
-  onTransformEnd,
+  _onTransformEnd,
   isDrawingConnector,
   connectorStart,
   connectorEnd,
@@ -56,25 +56,24 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   const useGroupedSections = useFeatureFlag('grouped-section-rendering');
   const useCentralizedTransformer = useFeatureFlag('centralized-transformer');
   
-  const { 
-    clearSelection, 
-    selectMultipleElements,
-    selectedTool,
-    hoveredSnapPoint,
-    zoom,
-    pan,
-    updateSection,
-    addHistoryEntry,
-    addElement,
-    addElementToSection,
-    selectElement,
-    setSelectedTool,
-    isDrawing: storeIsDrawing,
-    startDrawing,
-    updateDrawing,
-    finishDrawing,
-    currentPath,
-  } = useCanvasStore();
+  // Split selectors to prevent infinite loop
+  const clearSelection = useCanvasStore((state) => state.clearSelection);
+  const selectMultipleElements = useCanvasStore((state) => state.selectMultipleElements);
+  const selectedTool = useCanvasStore((state) => state.selectedTool);
+  const hoveredSnapPoint = useCanvasStore((state) => state.hoveredSnapPoint);
+  const zoom = useCanvasStore((state) => state.zoom);
+  const pan = useCanvasStore((state) => state.pan);
+  const updateSection = useCanvasStore((state) => state.updateSection);
+  const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
+  const addElement = useCanvasStore((state) => state.addElement);
+  const addElementToSection = useCanvasStore((state) => state.addElementToSection);
+  const selectElement = useCanvasStore((state) => state.selectElement);
+  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
+  const storeIsDrawing = useCanvasStore((state) => state.isDrawing);
+  const startDrawing = useCanvasStore((state) => state.startDrawing);
+  const updateDrawing = useCanvasStore((state) => state.updateDrawing);
+  const finishDrawing = useCanvasStore((state) => state.finishDrawing);
+  const currentPath = useCanvasStore((state) => state.currentPath);
 
   const stage = stageRef.current;
   const stageSize = stage ? { width: stage.width(), height: stage.height() } : { width: 0, height: 0 };

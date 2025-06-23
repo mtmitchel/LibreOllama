@@ -1,6 +1,6 @@
 // src/hooks/useKeyboardShortcuts.ts
 import { useEffect } from 'react';
-import { useCanvasStore } from '../features/canvas/stores';
+import { useCanvasStore } from '../features/canvas/stores/canvasStore.enhanced';
 import { ElementId } from '../features/canvas/types/enhanced.types';
 
 export const useKeyboardShortcuts = () => {

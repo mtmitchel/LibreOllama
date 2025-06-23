@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useHeader, HeaderProps } from '../contexts/HeaderContext';
-import { Button } from '../components/ui';
-import { Card } from '../components/ui';
+import { Button } from '../shared/ui';
+import { Card } from '../shared/ui';
 import {
   Plus,
   Settings,

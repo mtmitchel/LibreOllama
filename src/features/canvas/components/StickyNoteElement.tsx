@@ -3,8 +3,8 @@ import React, { useRef, useCallback } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../types';
-import type { StandardTextFormat } from '../../../types/richText';
-import { designSystem, getStickyNoteColors } from '../../../styles/designSystem';
+import type { StandardTextFormat } from '../types/richText';
+import { designSystem, getStickyNoteColors } from '../../../design-system';
 import { richTextManager as UnifiedRichTextManager } from './RichTextSystem/UnifiedRichTextManager'; // Corrected import alias
 import { triggerLayerRedraw } from '../utils/canvasRedrawUtils';
 

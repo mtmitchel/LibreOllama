@@ -106,8 +106,8 @@ export interface ConnectorStyle {
   strokeColor?: string;
   strokeWidth?: number;
   strokeDashArray?: number[];
-  startArrow?: 'none' | 'arrow' | 'circle' | 'diamond';
-  endArrow?: 'none' | 'arrow' | 'circle' | 'diamond';
+  startArrow?: 'none' | 'solid' | 'line' | 'triangle' | 'diamond';
+  endArrow?: 'none' | 'solid' | 'line' | 'triangle' | 'diamond';
   arrowSize?: number;
   text?: string;
 }
@@ -371,6 +371,7 @@ export type CanvasTool =
   | 'rectangle'
   | 'circle'
   | 'line'
+  | 'connector'
   | 'pen'
   | 'star'
   | 'triangle'

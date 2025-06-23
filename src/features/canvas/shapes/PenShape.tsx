@@ -2,8 +2,8 @@
 import React from 'react';
 import { Line } from 'react-konva';
 import { PenElement } from '../types/enhanced.types';
-import { designSystem } from '../../../styles/designSystem';
-import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
+import { designSystem } from '../../../design-system';
+import { useShapeCaching } from '../hooks/useShapeCaching';
 
 interface PenShapeProps {
   element: PenElement;
@@ -52,3 +52,4 @@ export const PenShape: React.FC<PenShapeProps> = React.memo(({
 });
 
 PenShape.displayName = 'PenShape';
+

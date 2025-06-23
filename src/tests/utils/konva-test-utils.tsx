@@ -1,6 +1,6 @@
 import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { Stage, Layer } from 'react-konva';
+// import { Stage, Layer } from 'react-konva';
 import { vi } from 'vitest';
 
 const KonvaProvider = ({ children }: { children: React.ReactNode }) => {

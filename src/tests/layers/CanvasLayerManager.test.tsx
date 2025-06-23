@@ -98,7 +98,7 @@ vi.mock('@/features/canvas/layers/UILayer', () => ({
   UILayer: () => <div data-testid="ui-layer">UI Layer</div>
 }));
 
-vi.mock('@/features/canvas/components/GroupedSectionRenderer2', () => ({
+vi.mock('@/features/canvas/components/GroupedSectionRenderer', () => ({
   GroupedSectionRenderer: () => <div data-testid="grouped-section-renderer">Grouped Section Renderer</div>
 }));
 

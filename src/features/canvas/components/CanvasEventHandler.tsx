@@ -9,8 +9,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import Konva from 'konva';
 import { CanvasTool } from '../types/enhanced.types';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
-import { toElementId, toSectionId } from '../types/compatibility';
+import { useCanvasStore } from '../stores';
+import { toElementId } from '../types/compatibility';
 
 interface CanvasEventHandlerProps {
   stageRef: React.RefObject<Konva.Stage>;
@@ -29,8 +29,15 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // Access canvas store for drawing functions
-  const { startDrawing, updateDrawing, finishDrawing, addElement, selectElement, setSelectedTool } = useCanvasStore();
+  // Access canvas store for drawing functions - split selectors
+  const startDrawing = useCanvasStore((state) => state.startDrawing);
+  const updateDrawing = useCanvasStore((state) => state.updateDrawing);
+  const finishDrawing = useCanvasStore((state) => state.finishDrawing);
+  const addElement = useCanvasStore((state) => state.addElement);
+  const selectElement = useCanvasStore((state) => state.selectElement);
+  const clearSelection = useCanvasStore((state) => state.clearSelection);
+  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
+  const createSection = useCanvasStore((state) => state.createSection);
 
   // Build a map of handlers for the current tool
   const toolHandlers = useMemo(() => {
@@ -198,7 +205,16 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     if (!pointer) return;
 
     if (e.target === stage) {
+      // Clicked on empty canvas - clear selection
+      clearSelection();
       dispatchCanvasEvent('canvas:click', { position: pointer });
+    } else {
+      // Clicked on an element - select it
+      const elementId = e.target.id();
+      if (elementId) {
+        selectElement(toElementId(elementId), e.evt.shiftKey);
+        dispatchCanvasEvent('element:select', { elementId, shiftKey: e.evt.shiftKey });
+      }
     }
   }
 
@@ -478,27 +494,12 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       lastMousePosRef.current = pointer;
       console.log('📦 [CanvasEventHandler] Creating section at:', pointer);
       
-      // Create section immediately (click-to-place)
-      const generateId = () => `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const newSection = {
-        id: toSectionId(generateId()),
-        type: 'section' as const,
-        x: pointer.x,
-        y: pointer.y,
-        width: 300,
-        height: 200,
-        backgroundColor: '#F9FAFB',
-        borderColor: '#D1D5DB',
-        borderWidth: 2,
-        title: 'New Section',
-        childElementIds: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
+      // Create section using the proper store method
+      const sectionId = createSection(pointer.x, pointer.y, 300, 200, 'New Section');
+      console.log('📦 [CanvasEventHandler] Created section with ID:', sectionId);
       
-      console.log('📦 [CanvasEventHandler] Creating section element:', newSection);
-      addElement(newSection);
-      selectElement(toElementId(newSection.id as string));
+      // Select the newly created section
+      selectElement(toElementId(sectionId as string));
       setSelectedTool('select');
     }
   }

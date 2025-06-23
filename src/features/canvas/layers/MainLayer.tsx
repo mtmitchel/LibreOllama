@@ -12,7 +12,7 @@ import {
   isRectangularElement, 
   SectionElement
 } from '../types/enhanced.types';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
@@ -64,7 +64,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   onLayerDraw,
   elementsBySection
 }) => {
-  const { elements: elementsMap } = useCanvasStore();
+  const elementsMap = useCanvasStore((state) => state.elements);
 
   const getSection = useCallback((sectionId: SectionId): SectionElement | undefined => {
     const el = elementsMap.get(sectionId);
@@ -169,6 +169,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               konvaProps={konvaElementProps}
               onUpdate={onElementUpdate as any}
               stageRef={stageRef}
+              isSelected={isSelected}
+              onStartTextEdit={onStartTextEdit as any}
             />
           </KonvaErrorBoundary>
         );
@@ -181,6 +183,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               konvaProps={konvaElementProps}
               onUpdate={onElementUpdate as any}
               stageRef={stageRef}
+              isSelected={isSelected}
+              onStartTextEdit={onStartTextEdit as any}
             />
           </KonvaErrorBoundary>
         );
@@ -198,6 +202,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             key={element.id}
             element={element}
             konvaProps={konvaElementProps}
+            isSelected={isSelected}
+            onUpdate={onElementUpdate as any}
+            onStartTextEdit={onStartTextEdit as any}
           />
         );
       case 'triangle':
@@ -206,6 +213,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             key={element.id}
             element={element}
             konvaProps={konvaElementProps}
+            isSelected={isSelected}
+            onUpdate={onElementUpdate as any}
+            onStartTextEdit={onStartTextEdit as any}
           />
         );
       case 'image':
@@ -214,6 +224,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             key={element.id}
             element={element as any}
             konvaProps={konvaElementProps}
+            isSelected={isSelected}
+            onUpdate={onElementUpdate as any}
+            onStartTextEdit={onStartTextEdit as any}
           />
         );
       case 'connector':
@@ -319,3 +332,4 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     </Group>
   );
 };
+

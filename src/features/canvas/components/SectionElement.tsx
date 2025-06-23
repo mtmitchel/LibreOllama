@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { SectionElement as SectionType } from '../../../types/section';
-import { designSystem } from '../../../styles/designSystem';
+import { SectionElement as SectionType } from '../types/section';
+import { designSystem } from '../../../design-system';
 
 interface SectionElementProps {
   section: SectionType;
@@ -348,3 +348,4 @@ const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(
 SectionElement.displayName = 'SectionElement';
 
 export default SectionElement;
+

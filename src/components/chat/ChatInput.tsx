@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Button, Textarea } from '../ui';
+import { Button, Textarea } from '../../shared/ui';
 import { Paperclip, Send } from 'lucide-react';
 
 interface ChatInputProps {

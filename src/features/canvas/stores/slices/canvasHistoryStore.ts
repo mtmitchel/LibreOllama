@@ -7,9 +7,12 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import { Patch, applyPatches } from 'immer';
-import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
+import { Patch } from 'immer';
+import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 import { HistoryRingBuffer, HistoryEntry } from '../../utils/RingBuffer';
+
+// Re-export HistoryEntry for external use
+export type { HistoryEntry };
 
 export interface CanvasHistoryState {
   // History stack - Using RingBuffer for bounded memory

@@ -8,8 +8,9 @@
 
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { Group } from 'react-konva';
+import { logger } from '@/lib/logger';
 import Konva from 'konva';
-import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
+import { useShapeCaching } from '../hooks/useShapeCaching';
 import { CanvasElement } from '../stores/types';
 
 interface CachedShapeProps {
@@ -56,14 +57,11 @@ export const CachedShape = forwardRef<CachedShapeRef, CachedShapeProps>(({
   ...groupProps
 }, ref) => {
   const groupRef = useRef<Konva.Group>(null);
-  
-  // Initialize shape caching
+    // Initialize shape caching
   const {
     nodeRef,
     isCached,
     shouldCache,
-    applyCaching,
-    clearCaching,
     refreshCache,
     config
   } = useShapeCaching({
@@ -83,11 +81,10 @@ export const CachedShape = forwardRef<CachedShapeRef, CachedShapeProps>(({
     refreshCache,
     isCached: () => isCached
   }), [refreshCache, isCached]);
-
   // Performance logging for development
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development' && shouldCache) {
-      console.log(`🗂️ [CACHE DEBUG] ${element.type} shape caching:`, {
+      logger.log(`🗂️ [CACHE DEBUG] ${element.type} shape caching:`, {
         elementId: element.id,
         shouldCache,
         isCached,

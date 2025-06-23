@@ -2,16 +2,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-// Mock canvas module FIRST, before any other imports
-vi.mock('canvas', () => ({
-  createCanvas: vi.fn(() => ({
-    getContext: vi.fn(() => ({})),
-    toDataURL: vi.fn(() => 'data:image/png;base64,'),
-    width: 800,
-    height: 600,
-  })),
-}));
-
 // Mock Tauri API
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
@@ -19,21 +9,18 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 // Mock the canvas store
 vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: vi.fn(() => ({
-    exportElements: vi.fn(),
-    importElements: vi.fn(),
-  })),
+  useCanvasStore: vi.fn(),
 }));
 
 // Import after mocks are set up
-import { useTauriCanvas } from '@/features/canvas/hooks/useTauriCanvas';
+import { useTauriCanvas } from '../../features/canvas/hooks/useTauriCanvas';
 
 describe('useTauriCanvas', () => {
   let mockInvoke: any;
   let mockExportElements: any;
   let mockImportElements: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     console.log = vi.fn(); // Mock console.log
     console.error = vi.fn(); // Mock console.error
@@ -43,12 +30,30 @@ describe('useTauriCanvas', () => {
     mockExportElements = vi.fn();
     mockImportElements = vi.fn();
     
-    // Setup store mock to return our mock functions
-    vi.mocked(await import('@/features/canvas/stores/canvasStore.enhanced')).useCanvasStore
-      .mockReturnValue({
+    // Setup store mock to handle Zustand selector pattern
+    const mockUseCanvasStore = vi.mocked(await import('../../features/canvas/stores/canvasStore.enhanced')).useCanvasStore;
+    mockUseCanvasStore.mockImplementation((selector) => {
+      const mockStore = {
         exportElements: mockExportElements,
         importElements: mockImportElements,
-      });
+        elements: new Map(),
+        sections: new Map(),
+        selectedElementIds: new Set(),
+        editingTextId: null,
+        selectedTool: 'select' as const,
+        viewportBounds: { left: 0, top: 0, right: 800, bottom: 600 },
+        isDrawing: false,
+        currentPath: [],
+        findSectionAtPoint: vi.fn(),
+        handleElementDrop: vi.fn(),
+        captureElementsAfterSectionCreation: vi.fn(),
+        updateElementCoordinatesOnSectionMove: vi.fn(),
+        convertElementToAbsoluteCoordinates: vi.fn(),
+        convertElementToRelativeCoordinates: vi.fn(),
+        clearCanvas: vi.fn(),
+      };
+      return selector ? selector(mockStore as any) : mockStore;
+    });
   });
 
   describe('saveToFile', () => {

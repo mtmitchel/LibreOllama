@@ -56,8 +56,8 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
             isSelected={isSelected}
             onSelect={() => onElementClick({} as any, element)}
             onUpdate={onElementUpdate || (() => {})}
-            elements={Array.from(elements.values()).reduce((acc, el) => ({ ...acc, [el.id]: el }), {})}
-            sections={{}} // Sections would be passed here if needed
+            elements={elements} // Pass the Map directly
+            sections={new Map()} // Sections would be passed here if needed
           />
         );
       })}

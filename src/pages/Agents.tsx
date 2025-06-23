@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card } from '../components/ui';
+import { Card } from '../shared/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle } from 'lucide-react';
 

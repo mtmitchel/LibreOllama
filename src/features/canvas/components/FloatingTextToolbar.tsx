@@ -2,7 +2,7 @@
 // Migrated from src/components/canvas/FloatingTextToolbar.tsx to feature-based structure
 import React, { useEffect, useState, useRef, RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 import { debug } from '../utils/debug';
 
 // Basic toolbar button component
@@ -113,8 +113,8 @@ const ColorPicker: React.FC<{
   title: string;
   value: string;
   onChange: (color: string) => void;
-}> = ({ title, value, onChange }) => {
-  const colors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+}> = ({ title, value, onChange: _onChange }) => {
+  // const _colors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
   
   return (
     <div style={{ position: 'relative' }}>
@@ -367,3 +367,4 @@ export const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
 };
 
 export default FloatingTextToolbar;
+

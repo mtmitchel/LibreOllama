@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react';
-import { Card, Button } from '../components/ui'; // Updated to use Button from ui/index.tsx
-import { PageLayout } from '../components/ui/PageLayout';
+import { Card, Button } from '../shared/ui'; // Updated to use Button from ui/index.tsx
+import { PageLayout } from '../shared/ui/PageLayout';
 
 interface CalendarEvent {
   id: string;

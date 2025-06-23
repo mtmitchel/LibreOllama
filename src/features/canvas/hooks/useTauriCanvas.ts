@@ -1,31 +1,82 @@
 // src/hooks/useTauriCanvas.ts
 import { invoke } from '@tauri-apps/api/core';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useCanvasStore } from '../stores';
+import { useCallback, useMemo } from 'react';
 
 export const useTauriCanvas = () => {
-  const exportElements = useCanvasStore((state) => state.exportElements);
-  const importElements = useCanvasStore((state) => state.importElements);
-  const saveToFile = async (filename: string) => {
+  // Use stable selectors with proper memoization
+  const exportElements = useCanvasStore(
+    useCallback((state) => state.exportElements, [])
+  );
+  const importElements = useCanvasStore(
+    useCallback((state) => state.importElements, [])
+  );
+  
+  // Memoize expensive operations
+  const saveToFile = useCallback(async (filename: string) => {
     try {
+      if (!filename || typeof filename !== 'string') {
+        throw new Error('Invalid filename provided');
+      }
+      
       const elements = exportElements();
+      if (!elements) {
+        throw new Error('No elements to export');
+      }
+      
       const data = JSON.stringify(elements);
       await invoke('save_canvas_data', { data, filename });
       console.log('Canvas saved successfully');
+      return true;
     } catch (error) {
       console.error('Error saving canvas:', error);
+      throw error; // Re-throw for caller to handle
     }
-  };
+  }, [exportElements]);
 
-  const loadFromFile = async (filename: string) => {
+  const loadFromFile = useCallback(async (filename: string) => {
     try {
+      if (!filename || typeof filename !== 'string') {
+        throw new Error('Invalid filename provided');
+      }
+      
       const data = await invoke('load_canvas_data', { filename });
-      const elements = JSON.parse(data as string);
+      if (!data) {
+        throw new Error('No data received from file');
+      }
+      
+      let elements;
+      try {
+        elements = JSON.parse(data as string);
+      } catch (parseError) {
+        throw new Error('Invalid JSON data in file');
+      }
+      
+      if (!elements || typeof elements !== 'object') {
+        throw new Error('Invalid canvas data format');
+      }
+      
       importElements(elements);
       console.log('Canvas loaded successfully');
+      return elements;
     } catch (error) {
       console.error('Error loading canvas:', error);
+      throw error; // Re-throw for caller to handle
     }
-  };
+  }, [importElements]);
 
-  return { saveToFile, loadFromFile };
+  // Memoize the returned object to prevent unnecessary re-renders
+  const api = useMemo(() => ({
+    saveToFile,
+    loadFromFile,
+    // Add utility functions for error handling
+    isFileSupported: (filename: string) => {
+      return filename && (filename.endsWith('.json') || filename.endsWith('.canvas'));
+    },
+    sanitizeFilename: (filename: string) => {
+      return filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+    }
+  }), [saveToFile, loadFromFile]);
+
+  return api;
 };

@@ -6,39 +6,24 @@
 
 // Re-export the main canvas store and its hooks from the feature module
 export {
-  useCanvasStore,
-  type CanvasStoreState
-} from '../features/canvas/stores';
+  useCanvasStore,  type CanvasStoreState
+} from '../features/canvas/stores/canvasStore.enhanced';
 
 // Import for local use
-import { useCanvasStore, type CanvasStoreState } from '../features/canvas/stores';
+import { useCanvasStore, type CanvasStoreState } from '../features/canvas/stores/canvasStore.enhanced';
 
 // Legacy compatibility interface
 export interface LibreOllamaCanvasStore extends CanvasStoreState {}
 
 // Performance and debugging hooks
-export const useCanvasState = () => useCanvasStore();
-export const useCanvasActions = () => useCanvasStore((state) => ({
-  // Element actions
-  addElement: state.addElement,
-  updateElement: state.updateElement,
-  deleteElement: state.deleteElement,
-  updateMultipleElements: state.updateMultipleElements,
-  
-  // Text actions (using correct method names from the actual store)
-  // Note: Text editing methods are available through useTextEditing hook
-  
-  // Selection actions
-  selectElement: state.selectElement,
-  clearSelection: state.clearSelection,
-  
-  // Viewport actions
-  setZoom: state.setZoom,
-  setPan: state.setPan,
-  
-  // History actions
-  undo: state.undo,
-  redo: state.redo,
-}));
+export const useCanvasState = () => useCanvasStore(state => state);
+
+// Individual action selectors for React 19 compatibility - use these instead of useCanvasActions
+// Note: Element and selection actions are provided by feature store slices to avoid conflicts
+export const useUpdateMultipleElements = () => useCanvasStore(state => state.updateMultipleElements);
+export const useSetZoom = () => useCanvasStore(state => state.setZoom);
+export const useSetPan = () => useCanvasStore(state => state.setPan);
+
+// Note: History actions are provided by canvasHistoryStore slice
 
 export default useCanvasStore;

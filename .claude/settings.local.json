@@ -3,13 +3,26 @@
     "allow": [
       "Bash(npm run test:clear:*)",
       "Bash(npm test:*)",
-      "Bash(npx jest:*)",
       "Bash(node:*)",
       "Bash(rm:*)",
       "Bash(npm install:*)",
       "Bash(npm run test:stores:*)",
       "Bash(find:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(timeout 10 npm test:*)",
+      "Bash(timeout 15 npx vitest run --run src/tests/stores/canvasElementsStore.test.ts)",
+      "Bash(timeout 10 npx vitest run --run src/tests/simple.test.ts --no-config)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx:*)",
+      "Bash(timeout 5 npx vitest --version)",
+      "Bash(timeout 8 npx vitest run --run --config vitest.no-setup.config.ts src/tests/simple.test.ts)",
+      "Bash(timeout:*)",
+      "Bash(cp:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }

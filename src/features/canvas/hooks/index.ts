@@ -9,11 +9,12 @@ export * from './useTauriCanvas';
 export * from './useViewportCulling';
 
 // Canvas-specific hooks
-export * from './canvas/useCanvasEvents';
-export * from './canvas/useCanvasHistory';
-export * from './canvas/useCanvasPerformance';
-export * from './canvas/useCanvasSizing';
-export * from './canvas/useMemoryTracking';
-export * from './canvas/useSelectionManager';
-export * from './canvas/useShapeCaching';
-export * from './canvas/useViewportControls';
+export * from './useCanvasEvents';
+export * from './useCanvasHistory';
+export * from './useCanvasPerformance';
+export * from './useCanvasSizing';
+// Export specific hooks from useMemoryTracking to avoid conflicts
+export { useCacheMemoryTracking } from './useMemoryTracking';
+export * from './useSelectionManager';
+export * from './useShapeCaching';
+export * from './useViewportControls';

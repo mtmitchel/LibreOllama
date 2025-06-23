@@ -17,7 +17,7 @@ interface SectionHandlerProps {
   onSelect: (id: SectionId) => void;
 }
 
-export const SectionHandler: React.FC<SectionHandlerProps> = ({ 
+const SectionHandler: React.FC<SectionHandlerProps> = ({ 
   section, 
   children, 
   isSelected, 
@@ -25,26 +25,26 @@ export const SectionHandler: React.FC<SectionHandlerProps> = ({
 }) => {
   const groupRef = useRef<Konva.Group>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
-  const updateElement = useCanvasStore(state => state.updateElement);
-
+  
+  // Get section-specific update function instead of element update
+  const updateSection = useCanvasStore(state => state.updateSection);
   // When a section is dragged, only its own absolute position is updated.
   // Children move with it automatically thanks to the <Group> transform.
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     const target = e.target as Konva.Group;
-    updateElement(section.id, { 
+    updateSection(section.id, { 
       x: target.x(), 
       y: target.y() 
     });
-  }, [section.id, updateElement]);
+  }, [section.id, updateSection]);
 
   // When resizing, update the section's dimensions and reset the node's scale.
   const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
     const node = e.target as Konva.Group;
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
-    
-    // Update section dimensions based on scale
-    updateElement(section.id, {
+      // Update section dimensions based on scale
+    updateSection(section.id, {
       width: Math.max(50, section.width * scaleX),
       height: Math.max(50, section.height * scaleY),
     });
@@ -52,7 +52,7 @@ export const SectionHandler: React.FC<SectionHandlerProps> = ({
     // Reset scale to prevent compounding transformations
     node.scaleX(1);
     node.scaleY(1);
-  }, [section.id, section.width, section.height, updateElement]);
+  }, [section.id, section.width, section.height, updateSection]);
 
   // Handle section selection
   const handleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {

@@ -2,10 +2,11 @@
 import React, { useMemo, useRef } from 'react';
 import { Group, Rect, Text, Circle } from 'react-konva';
 import Konva from 'konva';
-import { SectionElement } from '../../../types/section';
-import { designSystem } from '../../../styles/designSystem';
+import { SectionElement } from '../types/section';
+import { designSystem } from '../../../design-system';
 // Add performance optimization imports
-import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
+import { useShapeCaching } from '../hooks/useShapeCaching';
+import { logger } from '@/lib/logger';
 
 interface SectionShapeProps {
   element: SectionElement;
@@ -34,9 +35,10 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
 }) => {
   const titleTextRef = useRef<any>(null);
 
+  // Note: Using type assertion for SectionElement -> CanvasElement compatibility
   // Apply shape caching for large or complex sections
   const { nodeRef } = useShapeCaching({
-    element,
+    element: element as any, // Type assertion needed for section compatibility
     cacheConfig: {
       enabled: true,
       complexityThreshold: 1, // Sections are always complex (container type)
@@ -150,7 +152,7 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
       document.removeEventListener('mouseup', handleMouseUp);
 
       // The final state is already set by the last onSectionResize call during drag
-      console.log('🎯 [SECTION RESIZE] Resize operation completed for section:', element.id);
+      logger.log('🎯 [SECTION RESIZE] Resize operation completed for section:', element.id);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -465,3 +467,4 @@ export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
 });
 
 SectionShape.displayName = 'SectionShape';
+

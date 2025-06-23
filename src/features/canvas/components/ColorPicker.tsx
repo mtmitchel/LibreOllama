@@ -2,7 +2,7 @@
 // Migrated from src/components/canvas/ColorPicker.tsx to feature-based structure
 import React from 'react';
 import { Palette } from 'lucide-react';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 
 interface ColorPickerProps {
   selectedColor?: string;
@@ -87,3 +87,4 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 };
 
 export default ColorPicker;
+

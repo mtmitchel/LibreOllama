@@ -1,16 +1,14 @@
 // src/components/canvas/shapes/RectangleShape.tsx
 import React from 'react';
 import { Rect } from 'react-konva';
-import { RectangleElement, ElementId, CanvasElement } from '../types/enhanced.types';
-import { designSystem } from '../../../styles/designSystem';
-import { useShapeCaching } from '../hooks/canvas/useShapeCaching';
+import Konva from 'konva';
+import { RectangleElement } from '../types/enhanced.types';
+import { designSystem } from '../../../design-system';
+import { useShapeCaching } from '../hooks/useShapeCaching';
+import { BaseShapeProps } from '../types/shape-props.types';
 
-interface RectangleShapeProps {
-  element: RectangleElement;
-  isSelected: boolean;
-  konvaProps: any;
-  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
-  onStartTextEdit: (elementId: ElementId) => void;
+interface RectangleShapeProps extends BaseShapeProps<RectangleElement> {
+  // Rectangle-specific props can be added here if needed
 }
 
 /**
@@ -21,9 +19,8 @@ interface RectangleShapeProps {
  */
 export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   element,
-  isSelected,
-  konvaProps
-}) => {  // Apply shape caching for large rectangles or when they have both fill and stroke
+  isSelected
+}) => {// Apply shape caching for large rectangles or when they have both fill and stroke
   const shouldCache = ((element.width || 100) * (element.height || 100) > 10000) || 
                      !!(element.fill && element.stroke);
   
@@ -36,13 +33,14 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     },
     dependencies: [element.fill, element.stroke, element.width, element.height, isSelected]
   });
-
   return (
     <Rect
-      ref={nodeRef}
-      {...konvaProps}
+      ref={nodeRef as React.RefObject<Konva.Rect>}
+      x={element.x}
+      y={element.y}
       width={element.width || 100}
       height={element.height || 100}
+      rotation={element.rotation || 0}
       fill={element.fill || designSystem.colors.primary[100]}
       stroke={isSelected ? designSystem.colors.primary[500] : (element.stroke || '')}
       strokeWidth={isSelected ? 2 : (element.strokeWidth || 0)}

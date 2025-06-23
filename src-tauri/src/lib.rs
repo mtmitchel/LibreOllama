@@ -83,6 +83,13 @@ pub fn run() {
 
     println!("🔧 [BACKEND-DEBUG] Database initialization complete, registering Tauri commands...");
 
+    // CRITICAL FIX: Enable WebView2 hardware acceleration for canvas rendering
+    // This addresses the primary cause of canvas failures in Tauri applications
+    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", 
+        "--ignore-gpu-blocklist --enable-accelerated-canvas --enable-webgl --enable-accelerated-2d-canvas");
+    
+    println!("🎨 [BACKEND-DEBUG] WebView2 hardware acceleration enabled for canvas rendering");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card } from '../ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../ui/DropdownMenu';
+import { Card } from '../../shared/ui';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../shared/ui/DropdownMenu';
 import { Settings2 } from 'lucide-react';
 import { AgentStatus } from '../../lib/mockData';
 

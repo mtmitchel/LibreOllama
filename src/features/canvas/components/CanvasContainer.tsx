@@ -4,15 +4,15 @@ import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 // import { useCanvasPerformance } from '../hooks/canvas/useCanvasPerformance';
-import { useViewportControls } from '../hooks/canvas/useViewportControls';
-import { useSelectionManager } from '../hooks/canvas/useSelectionManager';
-import { useCanvasHistory } from '../hooks/canvas/useCanvasHistory';
+import { useViewportControls } from '../hooks/useViewportControls';
+import { useSelectionManager } from '../hooks/useSelectionManager';
+import { useCanvasHistory } from '../hooks/useCanvasHistory';
 // FIXED: Use the new modular store consistently
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useCanvasStore } from '../stores';
 import { useCanvasDrawing } from '../hooks/useCanvasDrawing';
 import type { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import { toElementId } from '../types/compatibility';
-import { designSystem } from '../../../styles/designSystem';
+import { designSystem } from '../../../design-system';
 
 interface CanvasContainerProps {
   width: number;
@@ -223,7 +223,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
             strokeColor: designSystem.colors.secondary[600],
             strokeWidth: 2,
             startArrow: 'none',
-            endArrow: 'arrow',
+            endArrow: 'triangle',
             arrowSize: 10
           },
           createdAt: Date.now(),

@@ -10,7 +10,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
-import { PerformanceMonitor } from '../../../../utils/performance/PerformanceMonitor';
+import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 import { ElementId } from '../../types/enhanced.types';
 
 export interface SelectionState {

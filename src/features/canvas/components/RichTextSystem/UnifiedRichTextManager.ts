@@ -1,6 +1,6 @@
 // src/features/canvas/components/RichTextSystem/UnifiedRichTextManager.ts
 
-import { StandardTextFormat } from '../../../../types/richText';
+import { StandardTextFormat } from '../../types/richText';
 import type { RichTextSegment } from '../../types/enhanced.types';
 
 export class UnifiedRichTextManager {  // Method to apply formatting to segments of text

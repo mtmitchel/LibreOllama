@@ -84,7 +84,11 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   stageRef,
   isActive,
   connectorType
-}) => {  const { addElement, elements, setSelectedTool } = useCanvasStore();
+}) => {
+  // Split selectors to prevent infinite loop
+  const addElement = useCanvasStore((state) => state.addElement);
+  const elements = useCanvasStore((state) => state.elements);
+  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
   
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,

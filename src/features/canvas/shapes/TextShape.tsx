@@ -3,8 +3,8 @@ import React, { useEffect, useRef } from 'react';
 import { Text } from 'react-konva';
 import Konva from 'konva';
 import { TextElement, ElementId, CanvasElement } from '../types/enhanced.types';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
-import { designSystem } from '../../../styles/designSystem';
+import { useCanvasStore } from '../stores';
+import { designSystem } from '../../../design-system';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 
@@ -25,15 +25,15 @@ interface TextShapeProps {
  */
 export const TextShape: React.FC<TextShapeProps> = React.memo(({
   element,
-  isSelected,
   konvaProps,
   onUpdate,
-  onStartTextEdit,
   stageRef,
 }) => {
   const textNodeRef = useRef<Konva.Text>(null);
 
-  const { editingTextId, setEditingTextId } = useCanvasStore();
+  // Use individual primitive selectors for React 19 compatibility
+  const editingTextId = useCanvasStore(state => state.editingTextId);
+  const setEditingTextId = useCanvasStore(state => state.setEditingTextId);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   // Ensure fonts are loaded for better text rendering
@@ -162,3 +162,4 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
 });
 
 TextShape.displayName = 'TextShape';
+

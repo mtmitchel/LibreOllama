@@ -6,13 +6,15 @@ import { TopBar } from './components/layout/TopBar';
 import { CommandPalette } from './components/CommandPalette';
 import { useCommandPalette } from './hooks/useCommandPalette';
 
+// Import debug component for testing
+import CanvasDebugger from './components/CanvasDebugger';
+
 // Import all page components
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
 import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
 import KonvaApp from './features/canvas/components/KonvaApp'; // Fixed: Use features version
-import CanvasTest from './pages/CanvasTest'; // Test canvas
 import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';
 import Agents from './pages/Agents';
@@ -35,7 +37,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  */
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const isCanvasPage = location.pathname === '/canvas' || location.pathname === '/canvas-test';
+  const isCanvasPage = location.pathname === '/canvas';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -47,7 +49,6 @@ const AppContent: React.FC = () => {
       {isCanvasPage ? (
         <Routes>
           <Route path="/canvas" element={<KonvaApp />} />
-          <Route path="/canvas-test" element={<CanvasTest />} />
         </Routes>
       ) : (
         <MainLayout>
@@ -60,6 +61,7 @@ const AppContent: React.FC = () => {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/agents" element={<Agents />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/debug-canvas" element={<CanvasDebugger />} />
           </Routes>
         </MainLayout>
       )}

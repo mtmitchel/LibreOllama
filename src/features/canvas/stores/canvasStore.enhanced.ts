@@ -13,7 +13,9 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
 import { Draft } from 'immer';
-import { CoordinateService } from '../utils/coordinateService';
+import { CoordinateService } from '../utils/canvasCoordinateService';
+import { logger } from '@/lib/logger';
+
 // TODO: Integrate performance utilities after core functionality is stable
 // import { queueCanvasOperation } from '../utils/performance/operationQueue';
 // import { CanvasErrorHandler } from '../utils/performance/canvasErrorHandler';
@@ -94,12 +96,12 @@ const createEnhancedCanvasStore = () => {
             const element = currentState.elements.get(elementId);
             
             if (!element) {
-              console.warn('❌ [CANVAS STORE] Element not found for drop:', elementId);
+              logger.warn('❌ [CANVAS STORE] Element not found for drop:', elementId);
               return;
             }
 
             if (!CoordinateService.validateCoordinates(position)) {
-              console.error('❌ [CANVAS STORE] Invalid coordinates provided for drop:', position);
+              logger.error('❌ [CANVAS STORE] Invalid coordinates provided for drop:', position);
               return;
             }
             
@@ -121,7 +123,7 @@ const createEnhancedCanvasStore = () => {
               set((state: Draft<CanvasStoreState>) => {
                 const stateElement = state.elements.get(elementId);
                 if (!stateElement) {
-                  console.warn('❌ [CANVAS STORE] Element not found in draft state for drop:', elementId);
+                  logger.warn('❌ [CANVAS STORE] Element not found in draft state for drop:', elementId);
                   return;
                 }
 
@@ -131,20 +133,20 @@ const createEnhancedCanvasStore = () => {
                 stateElement.sectionId = conversionResult.sectionId ? SectionId(conversionResult.sectionId) : null;
                 stateElement.updatedAt = Date.now();
 
-                console.log('✅ [CANVAS STORE] Element dropped successfully:', {
+                logger.log('✅ [CANVAS STORE] Element dropped successfully:', {
                   elementId,
                   newPosition: conversionResult.coordinates,
                   sectionId: conversionResult.sectionId
                 });
               });
             } catch (error) {
-              console.error('❌ [CANVAS STORE] Error during element drop:', error);
+              logger.error('❌ [CANVAS STORE] Error during element drop:', error);
               // TODO: Integrate with CanvasErrorHandler for production error recovery
             }
           },
 
           captureElementsAfterSectionCreation: (_sectionId: SectionId) => {
-            console.log('🔧 [ENHANCED STORE] captureElementsAfterSectionCreation temporarily disabled for type safety');
+            logger.log('🔧 [ENHANCED STORE] captureElementsAfterSectionCreation temporarily disabled for type safety');
             // TODO: Re-implement after section store is fully updated to enhanced types
           },
 
@@ -153,22 +155,22 @@ const createEnhancedCanvasStore = () => {
             // so their coordinates don't need to change when the parent section moves.
             // The rendering engine handles the group transform.
             // We just need to ensure the section's own coordinates are updated, which is done in its own slice.
-            console.log('✅ [ENHANCED STORE] Section moved. Child positions are relative.', { sectionId });
+            logger.log('✅ [ENHANCED STORE] Section moved. Child positions are relative.', { sectionId });
           },
 
           convertElementToAbsoluteCoordinates: (_elementId: ElementId) => {
-            console.log('🔧 [ENHANCED STORE] convertElementToAbsoluteCoordinates temporarily disabled for type safety');
+            logger.log('🔧 [ENHANCED STORE] convertElementToAbsoluteCoordinates temporarily disabled for type safety');
             // TODO: Re-implement after section store is fully updated to enhanced types
           },
 
           convertElementToRelativeCoordinates: (_elementId: ElementId, _sectionId: SectionId) => {
-            console.log('🔧 [ENHANCED STORE] convertElementToRelativeCoordinates temporarily disabled for type safety');
+            logger.log('🔧 [ENHANCED STORE] convertElementToRelativeCoordinates temporarily disabled for type safety');
             // TODO: Re-implement after section store is fully updated to enhanced types
           },
 
           // FIXED: Enhanced clearCanvas function that clears both elements AND sections
           clearCanvas: () => {
-            console.log('🧹 [CANVAS STORE] Clearing entire canvas including sections');
+            logger.log('🧹 [CANVAS STORE] Clearing entire canvas including sections');
             
             set((state: Draft<CanvasStoreState>) => {
               state.elements.clear();
@@ -183,7 +185,7 @@ const createEnhancedCanvasStore = () => {
               // Clear text editing state
               state.editingTextId = null;
               
-              console.log('✅ [CANVAS STORE] Canvas fully cleared including sections');
+              logger.log('✅ [CANVAS STORE] Canvas fully cleared including sections');
             });
           },
         };
@@ -206,26 +208,24 @@ const getCanvasStore = () => {
 // Export the vanilla store for direct access in tests
 export const canvasStore = getCanvasStore();
 
+// Export the creator function for testing purposes
+export const createCanvasStore = createEnhancedCanvasStore;
+
 // Main store hook
 export const useCanvasStore = <T>(selector: (state: CanvasStoreState) => T) => {
   return getCanvasStore()(selector);
 };
 
-// Export granular, memoized selectors for performance (as per [LO-Refactor] guidelines)
-export const useCanvasElements = () => useCanvasStore(state => ({
-  elements: state.elements,
-  addElement: state.addElement,
-  updateElement: state.updateElement,
-  deleteElement: state.deleteElement,
-  duplicateElement: state.duplicateElement
-}));
+// Export individual primitive selectors for React 19 compatibility
+// Individual primitive selectors for React 19 compatibility  
+// Object-returning selectors cause "getSnapshot should be cached" errors
+export const useElements = () => useCanvasStore(state => state.elements);
+export const useAddElement = () => useCanvasStore(state => state.addElement);
+export const useUpdateElement = () => useCanvasStore(state => state.updateElement);
+export const useDeleteElement = () => useCanvasStore(state => state.deleteElement);
+export const useDuplicateElement = () => useCanvasStore(state => state.duplicateElement);
 
-export const useSelection = () => useCanvasStore(state => ({
-  selectedElementIds: state.selectedElementIds,
-  selectElement: state.selectElement,
-  selectMultipleElements: state.selectMultipleElements,
-  clearSelection: state.clearSelection
-}));
+// Note: Selection selectors are provided by selectionStore slice to avoid export conflicts
 
 // Granular element access selector for O(1) lookups
 export const useElement = (elementId: ElementId) => useCanvasStore(
@@ -237,7 +237,7 @@ export const useIsElementSelected = (elementId: ElementId) => useCanvasStore(
   state => state.selectedElementIds.has(elementId)
 );
 
-// Performance-optimized viewport elements selector
+// Elements selector - Note: This returns a new array each time, components should memoize if needed
 export const useViewportElements = () => useCanvasStore(
   state => {
     // Only return elements visible in viewport for rendering optimization
@@ -258,37 +258,26 @@ export const useViewportElements = () => useCanvasStore(
   }
 );
 
-export const useTextEditing = () => useCanvasStore(state => ({
-  editingTextId: state.editingTextId
-}));
+// Individual primitive selectors for React 19 compatibility
+export const useEditingTextId = () => useCanvasStore(state => state.editingTextId);
 
-export const useCanvasUI = () => useCanvasStore(state => ({
-  selectedTool: state.selectedTool,
-  setSelectedTool: state.setSelectedTool
-}));
+export const useSelectedTool = () => useCanvasStore(state => state.selectedTool);
+export const useSetSelectedTool = () => useCanvasStore(state => state.setSelectedTool);
 
-export const useViewport = () => useCanvasStore(state => ({
-  viewportBounds: state.viewportBounds
-}));
+export const useViewportBounds = () => useCanvasStore(state => state.viewportBounds);
 
-export const useCanvasHistory = () => useCanvasStore(state => ({
-  undo: state.undo,
-  redo: state.redo,
-  canUndo: state.canUndo,
-  canRedo: state.canRedo
-}));
+export const useUndo = () => useCanvasStore(state => state.undo);
+export const useRedo = () => useCanvasStore(state => state.redo);
+export const useCanUndo = () => useCanvasStore(state => state.canUndo);
+export const useCanRedo = () => useCanvasStore(state => state.canRedo);
 
-export const useSections = () => useCanvasStore(state => ({
-  sections: state.sections,
-  createSection: state.createSection,
-  updateSection: state.updateSection,
-  deleteSection: state.deleteSection
-}));
+export const useSectionsData = () => useCanvasStore(state => state.sections);
+export const useCreateSection = () => useCanvasStore(state => state.createSection);
+export const useUpdateSection = () => useCanvasStore(state => state.updateSection);
+export const useDeleteSection = () => useCanvasStore(state => state.deleteSection);
 
-export const useDrawing = () => useCanvasStore(state => ({
-  isDrawing: state.isDrawing,
-  currentPath: state.currentPath
-}));
+export const useIsDrawing = () => useCanvasStore(state => state.isDrawing);
+export const useCurrentPath = () => useCanvasStore(state => state.currentPath);
 
 // Setup text debugging monitoring
 if (process.env.NODE_ENV === 'development') {
@@ -298,7 +287,5 @@ if (process.env.NODE_ENV === 'development') {
 // Development debugging: expose store globally
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   (window as any).useCanvasStore = useCanvasStore;
-  console.log('🔧 Canvas store exposed globally as window.useCanvasStore for debugging');
+  logger.log('🔧 Canvas store exposed globally as window.useCanvasStore for debugging');
 }
-
-export default useCanvasStore;

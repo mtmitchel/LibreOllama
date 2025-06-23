@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Input, Textarea, Checkbox } from '../ui';
+import { Card, Button, Input, Textarea, Checkbox } from '../../shared/ui';
 import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 interface ProjectForm {
