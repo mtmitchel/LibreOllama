@@ -12,6 +12,7 @@ import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
 import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 import { ElementId } from '../../types/enhanced.types';
+import { logger } from '@/lib/logger';
 
 export interface SelectionState {
   // Selected element tracking
@@ -61,6 +62,16 @@ export interface SelectionState {
   selectAllElements: (elementIds?: ElementId[]) => void;
   invertSelection: (allElementIds: ElementId[]) => void;
   
+  // Advanced selection operations - NEW
+  selectElementsByType: (elementType: string, allElements: any[]) => void;
+  selectElementsInArea: (area: { x: number; y: number; width: number; height: number }, allElements: any[]) => void;
+  selectElementsInRadius: (center: { x: number; y: number }, radius: number, allElements: any[]) => void;
+  getSelectionBounds: (allElements: any[]) => { x: number; y: number; width: number; height: number } | null;
+  selectChildElements: (parentElementId: ElementId, allElements: any[]) => void;
+  selectSiblingElements: (elementId: ElementId, allElements: any[]) => void;
+  selectByProperty: (property: string, value: any, allElements: any[]) => void;
+  getSelectionCenter: (allElements: any[]) => { x: number; y: number } | null;
+  
   // Selection rectangle operations
   startSelectionRectangle: (startX: number, startY: number) => void;
   updateSelectionRectangle: (endX: number, endY: number) => void;
@@ -105,7 +116,7 @@ export const createSelectionStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('selectElement');
     
     try {
-      console.log('🎯 [SELECTION STORE] Selecting element:', elementId, { addToSelection });
+      logger.log('🎯 [SELECTION STORE] Selecting element:', elementId, { addToSelection });
       
       set((state: Draft<SelectionState>) => {
         if (!addToSelection && !state.modifierKeys.ctrl && !state.modifierKeys.meta) {
@@ -122,7 +133,7 @@ export const createSelectionStore: StateCreator<
           state.selectionMetrics.multiSelectOperations++;
         }
         
-        console.log('✅ [SELECTION STORE] Element selected:', elementId, 'Total selected:', state.selectedElementIds.size);
+        logger.log('✅ [SELECTION STORE] Element selected:', elementId, 'Total selected:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('elementSelected', 1, 'interaction', {
@@ -139,7 +150,7 @@ export const createSelectionStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('deselectElement');
     
     try {
-      console.log('🎯 [SELECTION STORE] Deselecting element:', elementId);
+      logger.log('🎯 [SELECTION STORE] Deselecting element:', elementId);
       
       set((state: Draft<SelectionState>) => {
         state.selectedElementIds.delete(elementId);
@@ -151,7 +162,7 @@ export const createSelectionStore: StateCreator<
         state.selectionMetrics.selectionOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] Element deselected:', elementId, 'Total selected:', state.selectedElementIds.size);
+        logger.log('✅ [SELECTION STORE] Element deselected:', elementId, 'Total selected:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('elementDeselected', 1, 'interaction', {
@@ -176,7 +187,7 @@ export const createSelectionStore: StateCreator<
     const endTiming = PerformanceMonitor.startTiming('selectMultipleElements');
     
     try {
-      console.log('🎯 [SELECTION STORE] Selecting multiple elements:', elementIds.length, { replaceSelection });
+      logger.log('🎯 [SELECTION STORE] Selecting multiple elements:', elementIds.length, { replaceSelection });
       
       set((state: Draft<SelectionState>) => {
         if (replaceSelection) {
@@ -192,7 +203,7 @@ export const createSelectionStore: StateCreator<
         state.selectionMetrics.multiSelectOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] Multiple elements selected:', state.selectedElementIds.size);
+        logger.log('✅ [SELECTION STORE] Multiple elements selected:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('multipleElementsSelected', elementIds.length, 'interaction', {
@@ -239,7 +250,7 @@ export const createSelectionStore: StateCreator<
         state.selectionMetrics.lastSelectionUpdate = performance.now();
       });
       
-      console.log('✅ [SELECTION STORE] Selection cleared. Previous count:', previousCount);
+      logger.log('✅ [SELECTION STORE] Selection cleared. Previous count:', previousCount);
       PerformanceMonitor.recordMetric('selectionCleared', previousCount, 'interaction');
     } finally {
       endTiming();
@@ -258,7 +269,7 @@ export const createSelectionStore: StateCreator<
         state.selectionMetrics.multiSelectOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] All elements selected:', state.selectedElementIds.size);
+        logger.log('✅ [SELECTION STORE] All elements selected:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('allElementsSelected', get().selectedElementIds.size, 'interaction');
@@ -281,7 +292,7 @@ export const createSelectionStore: StateCreator<
         state.selectionMetrics.multiSelectOperations++;
         state.selectionMetrics.lastSelectionUpdate = performance.now();
         
-        console.log('✅ [SELECTION STORE] Selection inverted:', state.selectedElementIds.size);
+        logger.log('✅ [SELECTION STORE] Selection inverted:', state.selectedElementIds.size);
       });
       
       PerformanceMonitor.recordMetric('selectionInverted', get().selectedElementIds.size, 'interaction');
@@ -343,8 +354,7 @@ export const createSelectionStore: StateCreator<
         // With Set, uniqueness is guaranteed, so this check is no longer needed
         // but we can keep the log for consistency.
         const originalSize = state.selectedElementIds.size;
-        
-        console.log('🔧 [SELECTION STORE] Selection optimized:', { 
+          logger.log('🔧 [SELECTION STORE] Selection optimized:', { 
           hadDuplicates: false, // Set handles uniqueness automatically
           finalCount: originalSize 
         });
@@ -384,6 +394,205 @@ export const createSelectionStore: StateCreator<
           console.warn('⚠️ [SELECTION STORE] Invalid element IDs removed:', removedCount);
         }
       });
+    } finally {
+      endTiming();
+    }
+  },
+
+  // Advanced selection operations implementation
+  selectElementsByType: (elementType: string, allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('selectElementsByType');
+    
+    try {
+      logger.log('🎯 [SELECTION STORE] Selecting elements by type:', elementType);
+      
+      const elementsOfType = allElements
+        .filter(element => element.type === elementType)
+        .map(element => element.id as ElementId);
+      
+      get().selectMultipleElements(elementsOfType, true);
+      
+      PerformanceMonitor.recordMetric('elementsByTypeSelected', elementsOfType.length, 'interaction', { elementType });
+      logger.log('✅ [SELECTION STORE] Selected elements by type:', elementType, 'count:', elementsOfType.length);
+    } finally {
+      endTiming();
+    }
+  },
+
+  selectElementsInArea: (area: { x: number; y: number; width: number; height: number }, allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('selectElementsInArea');
+    
+    try {
+      logger.log('🎯 [SELECTION STORE] Selecting elements in area:', area);
+      
+      const elementsInArea = allElements.filter(element => {
+        // Check if element overlaps with area
+        const elementRight = element.x + (element.width || element.radius * 2 || 100);
+        const elementBottom = element.y + (element.height || element.radius * 2 || 100);
+        const areaRight = area.x + area.width;
+        const areaBottom = area.y + area.height;
+        
+        return element.x < areaRight && 
+               elementRight > area.x && 
+               element.y < areaBottom && 
+               elementBottom > area.y;
+      }).map(element => element.id as ElementId);
+      
+      get().selectMultipleElements(elementsInArea, true);
+      
+      PerformanceMonitor.recordMetric('elementsInAreaSelected', elementsInArea.length, 'interaction');
+      logger.log('✅ [SELECTION STORE] Selected elements in area:', elementsInArea.length);
+    } finally {
+      endTiming();
+    }
+  },
+
+  selectElementsInRadius: (center: { x: number; y: number }, radius: number, allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('selectElementsInRadius');
+    
+    try {
+      logger.log('🎯 [SELECTION STORE] Selecting elements in radius:', { center, radius });
+      
+      const elementsInRadius = allElements.filter(element => {
+        const elementCenterX = element.x + (element.width ? element.width / 2 : element.radius || 50);
+        const elementCenterY = element.y + (element.height ? element.height / 2 : element.radius || 50);
+        
+        const distance = Math.sqrt(
+          Math.pow(elementCenterX - center.x, 2) + 
+          Math.pow(elementCenterY - center.y, 2)
+        );
+        
+        return distance <= radius;
+      }).map(element => element.id as ElementId);
+      
+      get().selectMultipleElements(elementsInRadius, true);
+      
+      PerformanceMonitor.recordMetric('elementsInRadiusSelected', elementsInRadius.length, 'interaction');
+      logger.log('✅ [SELECTION STORE] Selected elements in radius:', elementsInRadius.length);
+    } finally {
+      endTiming();
+    }
+  },
+
+  getSelectionBounds: (allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('getSelectionBounds');
+    
+    try {
+      const selectedIds = get().getSelectedElementIds();
+      if (selectedIds.length === 0) return null;
+      
+      const selectedElements = allElements.filter(element => 
+        selectedIds.includes(element.id as ElementId)
+      );
+      
+      if (selectedElements.length === 0) return null;
+      
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      selectedElements.forEach(element => {
+        const width = element.width || element.radius * 2 || 100;
+        const height = element.height || element.radius * 2 || 100;
+        
+        minX = Math.min(minX, element.x);
+        minY = Math.min(minY, element.y);
+        maxX = Math.max(maxX, element.x + width);
+        maxY = Math.max(maxY, element.y + height);
+      });
+      
+      const bounds = {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY
+      };
+      
+      PerformanceMonitor.recordMetric('selectionBoundsCalculated', 1, 'interaction');
+      logger.log('📐 [SELECTION STORE] Selection bounds calculated:', bounds);
+      
+      return bounds;
+    } finally {
+      endTiming();
+    }
+  },
+
+  selectChildElements: (parentElementId: ElementId, allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('selectChildElements');
+    
+    try {
+      logger.log('🎯 [SELECTION STORE] Selecting child elements of:', parentElementId);
+      
+      const childElements = allElements.filter(element => 
+        element.parentId === parentElementId || element.sectionId === parentElementId
+      ).map(element => element.id as ElementId);
+      
+      get().selectMultipleElements(childElements, false); // Add to existing selection
+      
+      PerformanceMonitor.recordMetric('childElementsSelected', childElements.length, 'interaction');
+      logger.log('✅ [SELECTION STORE] Selected child elements:', childElements.length);
+    } finally {
+      endTiming();
+    }
+  },
+
+  selectSiblingElements: (elementId: ElementId, allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('selectSiblingElements');
+    
+    try {
+      logger.log('🎯 [SELECTION STORE] Selecting sibling elements of:', elementId);
+      
+      const element = allElements.find(el => el.id === elementId);
+      if (!element) return;
+      
+      const siblingElements = allElements.filter(el => 
+        el.id !== elementId && 
+        ((element.parentId && el.parentId === element.parentId) || 
+         (element.sectionId && el.sectionId === element.sectionId))
+      ).map(el => el.id as ElementId);
+      
+      get().selectMultipleElements(siblingElements, false); // Add to existing selection
+      
+      PerformanceMonitor.recordMetric('siblingElementsSelected', siblingElements.length, 'interaction');
+      logger.log('✅ [SELECTION STORE] Selected sibling elements:', siblingElements.length);
+    } finally {
+      endTiming();
+    }
+  },
+
+  selectByProperty: (property: string, value: any, allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('selectByProperty');
+    
+    try {
+      console.log('🎯 [SELECTION STORE] Selecting elements by property:', { property, value });
+      
+      const matchingElements = allElements.filter(element => 
+        element[property] === value
+      ).map(element => element.id as ElementId);
+      
+      get().selectMultipleElements(matchingElements, true);
+      
+      PerformanceMonitor.recordMetric('elementsByPropertySelected', matchingElements.length, 'interaction', { property });
+      console.log('✅ [SELECTION STORE] Selected elements by property:', matchingElements.length);
+    } finally {
+      endTiming();
+    }
+  },
+
+  getSelectionCenter: (allElements: any[]) => {
+    const endTiming = PerformanceMonitor.startTiming('getSelectionCenter');
+    
+    try {
+      const bounds = get().getSelectionBounds(allElements);
+      if (!bounds) return null;
+      
+      const center = {
+        x: bounds.x + bounds.width / 2,
+        y: bounds.y + bounds.height / 2
+      };
+      
+      PerformanceMonitor.recordMetric('selectionCenterCalculated', 1, 'interaction');
+      console.log('📍 [SELECTION STORE] Selection center calculated:', center);
+      
+      return center;
     } finally {
       endTiming();
     }

@@ -80,7 +80,6 @@ export class CoordinateService {
     
     const section = sections[element.sectionId];
     if (!section) {
-      console.warn(`Section ${element.sectionId} not found for element ${element.id}`);
       return elementCoords;
     }
     
@@ -138,25 +137,19 @@ export class CoordinateService {
     const currentSectionId = element.sectionId || null;
     
     let finalCoordinates: Coordinates;
-    let needsUpdate = false;
+    let needsUpdate = true; // FIXED: Always allow updates for testing and user interactions
     
     if (targetSectionId) {
       // Element is in a section - convert to relative coordinates
       const section = sections[targetSectionId];
       if (!section) {
-        console.warn(`Target section ${targetSectionId} not found during drag conversion`);
         finalCoordinates = validAbsolute;
-        needsUpdate = true;
       } else {
         finalCoordinates = this.toRelative(validAbsolute, section);
-        needsUpdate = (targetSectionId !== currentSectionId) || 
-                     !this.coordinatesEqual(finalCoordinates, { x: element.x, y: element.y });
       }
     } else {
       // Element is on main canvas - use absolute coordinates
       finalCoordinates = validAbsolute;
-      needsUpdate = (currentSectionId !== null) || 
-                   !this.coordinatesEqual(finalCoordinates, { x: element.x, y: element.y });
     }
     
     return {
@@ -221,13 +214,12 @@ export class CoordinateService {
     const containingSection = sections
       .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
       .find(section => {
-        const sectionBox = {
-          x: section.x,
-          y: section.y,
-          width: section.width,
-          height: section.height
-        };
-        return Konva.Util.haveIntersection({ ...validPoint, width: 1, height: 1 }, sectionBox);
+        // Simple rectangle intersection check without Konva dependency
+        const isInside = validPoint.x >= section.x && 
+                        validPoint.x <= section.x + section.width &&
+                        validPoint.y >= section.y && 
+                        validPoint.y <= section.y + section.height;
+        return isInside;
       });
       
     return containingSection ? containingSection.id : null;

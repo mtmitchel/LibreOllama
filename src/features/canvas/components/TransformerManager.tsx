@@ -199,10 +199,46 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
           const commonUpdate = { x, y, rotation };
 
           switch (element.type) {
+            case 'text': {
+              const currentWidth = (element as any).width || 100;
+              const currentHeight = (element as any).height || 100;
+              const newWidth = Math.max(20, Math.min(5000, currentWidth * scaleX));
+              const newHeight = Math.max(20, Math.min(5000, currentHeight * scaleY));
+              
+              // For text elements, also scale the font size proportionally
+              const currentFontSize = (element as any).fontSize || 16;
+              const avgScale = (scaleX + scaleY) / 2;
+              const newFontSize = Math.max(8, Math.min(120, currentFontSize * avgScale));
+              
+              updates[elementId] = {
+                ...commonUpdate,
+                width: newWidth,
+                height: newHeight,
+                fontSize: newFontSize,
+              };
+              break;
+            }
+            case 'sticky-note': {
+              const currentWidth = (element as any).width || 100;
+              const currentHeight = (element as any).height || 100;
+              const newWidth = Math.max(20, Math.min(5000, currentWidth * scaleX));
+              const newHeight = Math.max(20, Math.min(5000, currentHeight * scaleY));
+              
+              // For sticky notes, also scale the font size proportionally
+              const currentFontSize = (element as any).fontSize || 14;
+              const avgScale = (scaleX + scaleY) / 2;
+              const newFontSize = Math.max(8, Math.min(72, currentFontSize * avgScale));
+              
+              updates[elementId] = {
+                ...commonUpdate,
+                width: newWidth,
+                height: newHeight,
+                fontSize: newFontSize,
+              };
+              break;
+            }
             case 'rectangle':
             case 'image':
-            case 'text':
-            case 'sticky-note':
             case 'triangle':
             case 'section':
               const currentWidth = (element as any).width || 100;

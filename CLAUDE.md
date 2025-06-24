@@ -81,6 +81,15 @@ All stores use Immer for immutable updates and follow branded type patterns (`El
 
 ## Testing Approach
 
+### Sophisticated Testing Framework
+**CRITICAL**: We have a production-ready testing framework using vanilla Zustand patterns and real store implementations. This framework is specifically designed to catch actual integration bugs.
+
+### Key Testing Principles
+- **Failing integration tests represent REAL implementation issues** that need to be fixed
+- Use vanilla Zustand testing patterns with real store instances
+- Robust integration tests expose authentic bugs that mocked tests miss
+- Follow Phase 8A Implementation Roadmap to fix identified integration issues
+
 ### Vitest Configuration
 - ESM-first setup with SWC
 - Konva mocking for canvas tests
@@ -91,6 +100,7 @@ All stores use Immer for immutable updates and follow branded type patterns (`El
 - `konva-test-utils.tsx` - Canvas testing helpers
 - `setup-new.ts` - Modern test environment
 - Canvas-specific test suites in `src/tests/canvas/`
+- **Read the Canvas Testing Plan line by line** - `/docs/CANVAS_TESTING_PLAN.md`
 
 ### Running Specific Tests
 ```bash
@@ -103,6 +113,13 @@ npm run test:canvas
 # Watch mode for development
 npm run test:watch -- --testNamePattern="specific test"
 ```
+
+### Integration Testing Protocol
+When working on canvas functionality, ALWAYS:
+1. **Read the Canvas Testing Plan** (`/docs/CANVAS_TESTING_PLAN.md`) line by line
+2. **Run robust integration tests** to expose real implementation issues
+3. **Fix actual bugs** identified by failing tests (not test framework issues)
+4. **Follow Phase 8A Implementation Roadmap** for systematic bug fixes
 
 ## Canvas Development Guidelines
 

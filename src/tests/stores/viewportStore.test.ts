@@ -1,11 +1,13 @@
 // Vitest globals enabled in config - no need to import describe, test, expect, beforeEach
-import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import { immer } from 'zustand/middleware/immer';
 import Konva from 'konva';
 
 // Use relative imports to avoid path resolution issues during testing
-import * as ViewportStore from '../../features/canvas/stores/slices/viewportStore';
-import type { ViewportState } from '../../features/canvas/stores/slices/viewportStore';
+import {
+  createViewportStore,
+  ViewportState,
+} from '../../features/canvas/stores/slices/viewportStore';
 
 // Create a mock Konva.Stage
 const mockStage = {
@@ -16,16 +18,8 @@ const mockStage = {
   getPointerPosition: () => ({ x: 400, y: 300 }),
 } as unknown as Konva.Stage;
 
-// Debug logging to understand the export issue
-console.log('ViewportStore exports:', Object.keys(ViewportStore));
-console.log('ViewportStore.createViewportStore:', ViewportStore.createViewportStore);
-console.log('Type of createViewportStore:', typeof ViewportStore.createViewportStore);
-
-// Destructure to get direct access
-const { createViewportStore } = ViewportStore;
-
-const createTestStore = () =>
-  create<ViewportState>()(immer(createViewportStore));
+// A helper to create a fresh, isolated store for each test with proper middleware
+const createTestStore = () => createStore<ViewportState>()(immer(createViewportStore));
 
 describe('viewportStore', () => {
   let store: ReturnType<typeof createTestStore>;

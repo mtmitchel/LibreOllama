@@ -47,7 +47,9 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
   const centerY = safeY + radius;
     return (
     <Circle
+      {...konvaProps}
       ref={nodeRef as React.RefObject<Konva.Circle>}
+      id={element.id}
       x={centerX}
       y={centerY}
       radius={radius}

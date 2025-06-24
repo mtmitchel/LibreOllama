@@ -152,6 +152,11 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   const textColor = hasContent 
     ? (element.textColor || designSystem.colors.secondary[900])
     : '#FF6B6B'; // Bright red for placeholder
+  
+  // Dynamic font size calculation based on element dimensions
+  const baseFontSize = element.fontSize || designSystem.typography.fontSize.sm;
+  const scaledFontSize = Math.max(8, Math.min(72, height * 0.15));
+  const finalFontSize = element.fontSize ? baseFontSize : scaledFontSize;
 
   return (
     <Group
@@ -178,7 +183,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
         width={width - 20}
         height={height - 20}
         text={displayText}
-        fontSize={element.fontSize || designSystem.typography.fontSize.sm}
+        fontSize={finalFontSize}
         fontFamily={getAvailableFontFamily()}
         fill={textColor}
         wrap="word"

@@ -143,16 +143,26 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
   const safeText = (element.text && element.text.trim().length > 0) ? element.text : 'Text';
   const hasContent = element.text && element.text.trim().length > 0;
   const textColor = '#000000'; // Always black
+  
+  // Dynamic font size calculation based on element dimensions
+  const elementWidth = element.width || 250;
+  const elementHeight = element.height || 50;
+  const baseFontSize = element.fontSize || designSystem.typography.fontSize.xl;
+  
+  // Scale font size based on element height (maintain aspect ratio)
+  const scaledFontSize = Math.max(8, Math.min(120, elementHeight * 0.6));
+  const finalFontSize = element.fontSize ? baseFontSize : scaledFontSize;
 
   return (
     <>
       <Text
         {...konvaProps}
         id={element.id}        text={safeText}
-        fontSize={element.fontSize || designSystem.typography.fontSize.xl}
+        fontSize={finalFontSize}
         fontFamily={getAvailableFontFamily()}
         fill={textColor}
-        width={element.width || 250}
+        width={elementWidth}
+        height={elementHeight}
         fontStyle={hasContent ? (element.fontStyle || 'normal') : 'italic'}
         onDblClick={handleDoubleClick}
         ref={textNodeRef}

@@ -11,11 +11,14 @@ vi.mock('canvas', () => ({
   })),
 }));
 
-import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import { immer } from 'zustand/middleware/immer';
 
-// Dynamic imports to avoid canvas loading issues
-let CanvasElementsStore: any;
+// Import the store creator directly
+import {
+  createCanvasElementsStore,
+  CanvasElementsState,
+} from '@/features/canvas/stores/slices/canvasElementsStore';
 
 // Mock element helper that creates valid elements matching the schema
 const createMockCanvasElement = (overrides: any = {}): any => {
@@ -159,16 +162,14 @@ const createMockCanvasElement = (overrides: any = {}): any => {
   }
 };
 
-describe('canvasElementsStore', () => {
-  let store: any;
+// A helper to create a fresh, isolated store for each test with proper middleware
+const createTestStore = () => createStore<CanvasElementsState>()(immer(createCanvasElementsStore));
 
-  beforeEach(async () => {
-    // Dynamically import the store to avoid canvas loading issues
-    if (!CanvasElementsStore) {
-      CanvasElementsStore = await import('@/features/canvas/stores/slices/canvasElementsStore');
-    }
-    
-    store = create()(immer(CanvasElementsStore.createCanvasElementsStore));
+describe('canvasElementsStore', () => {
+  let store: ReturnType<typeof createTestStore>;
+
+  beforeEach(() => {
+    store = createTestStore();
   });
 
   describe('Element Management', () => {

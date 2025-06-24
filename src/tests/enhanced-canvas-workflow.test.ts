@@ -5,14 +5,26 @@
  */
 
 import { vi } from 'vitest';
-import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import { immer } from 'zustand/middleware/immer';
 
 // Import working store slices
-import * as CanvasElementsStore from '../features/canvas/stores/slices/canvasElementsStore';
-import * as SelectionStore from '../features/canvas/stores/slices/selectionStore';
-import * as ViewportStore from '../features/canvas/stores/slices/viewportStore';
-import * as CanvasHistoryStore from '../features/canvas/stores/slices/canvasHistoryStore';
+import {
+  createCanvasElementsStore,
+  CanvasElementsState,
+} from '../features/canvas/stores/slices/canvasElementsStore';
+import {
+  createSelectionStore,
+  SelectionState,
+} from '../features/canvas/stores/slices/selectionStore';
+import {
+  createViewportStore,
+  ViewportState,
+} from '../features/canvas/stores/slices/viewportStore';
+import {
+  createCanvasHistoryStore,
+  CanvasHistoryState,
+} from '../features/canvas/stores/slices/canvasHistoryStore';
 
 // Import utilities that work
 import { createMockCanvasElement } from './utils/testUtils';
@@ -23,35 +35,20 @@ import {
   TextElement,
 } from '../features/canvas/types/enhanced.types';
 
-// Test store creation utilities
-const createElementsStore = () =>
-  create<CanvasElementsStore.CanvasElementsState>()(
-    immer(CanvasElementsStore.createCanvasElementsStore),
-  );
-
-const createSelectionStore = () =>
-  create<SelectionStore.SelectionState>()(
-    immer(SelectionStore.createSelectionStore),
-  );
-
-const createViewportStore = () =>
-  create<ViewportStore.ViewportState>()(
-    immer(ViewportStore.createViewportStore),
-  );
-
-const createHistoryStore = () =>
-  create<CanvasHistoryStore.CanvasHistoryState>()(
-    immer(CanvasHistoryStore.createCanvasHistoryStore),
-  );
+// Test store creation utilities using vanilla Zustand with proper middleware
+const createElementsStore = () => createStore<CanvasElementsState>()(immer(createCanvasElementsStore));
+const createTestSelectionStore = () => createStore<SelectionState>()(immer(createSelectionStore));
+const createTestViewportStore = () => createStore<ViewportState>()(immer(createViewportStore));
+const createTestHistoryStore = () => createStore<CanvasHistoryState>()(immer(createCanvasHistoryStore));
 
 describe('Enhanced Canvas Workflow Tests', () => {
   describe('🎯 Core Element Workflow', () => {
     let elementsStore: ReturnType<typeof createElementsStore>;
-    let selectionStore: ReturnType<typeof createSelectionStore>;
+    let selectionStore: ReturnType<typeof createTestSelectionStore>;
 
     beforeEach(() => {
       elementsStore = createElementsStore();
-      selectionStore = createSelectionStore();
+      selectionStore = createTestSelectionStore();
     });
 
     test('Complete Add → Select → Update workflow', () => {
@@ -123,10 +120,10 @@ describe('Enhanced Canvas Workflow Tests', () => {
   });
 
   describe('🔄 Viewport and Coordinate Workflow', () => {
-    let viewportStore: ReturnType<typeof createViewportStore>;
+    let viewportStore: ReturnType<typeof createTestViewportStore>;
 
     beforeEach(() => {
-      viewportStore = createViewportStore();
+      viewportStore = createTestViewportStore();
     });
 
     test('Zoom and pan workflow', () => {
@@ -171,10 +168,10 @@ describe('Enhanced Canvas Workflow Tests', () => {
   });
 
   describe('📝 History and Undo/Redo Workflow', () => {
-    let historyStore: ReturnType<typeof createHistoryStore>;
+    let historyStore: ReturnType<typeof createTestHistoryStore>;
 
     beforeEach(() => {
-      historyStore = createHistoryStore();
+      historyStore = createTestHistoryStore();
     });    test('History recording and undo/redo workflow', () => {
       const state = historyStore.getState();
       
@@ -207,15 +204,15 @@ describe('Enhanced Canvas Workflow Tests', () => {
 
   describe('🔗 Cross-Store Integration Workflows', () => {
     let elementsStore: ReturnType<typeof createElementsStore>;
-    let selectionStore: ReturnType<typeof createSelectionStore>;
-    let viewportStore: ReturnType<typeof createViewportStore>;
-    let historyStore: ReturnType<typeof createHistoryStore>;
+    let selectionStore: ReturnType<typeof createTestSelectionStore>;
+    let viewportStore: ReturnType<typeof createTestViewportStore>;
+    let historyStore: ReturnType<typeof createTestHistoryStore>;
 
     beforeEach(() => {
       elementsStore = createElementsStore();
-      selectionStore = createSelectionStore();
-      viewportStore = createViewportStore();
-      historyStore = createHistoryStore();
+      selectionStore = createTestSelectionStore();
+      viewportStore = createTestViewportStore();
+      historyStore = createTestHistoryStore();
     });
 
     test('Complete canvas interaction workflow', () => {
@@ -296,7 +293,7 @@ describe('Enhanced Canvas Workflow Tests', () => {
   describe('⚡ Performance and Stress Testing', () => {
     test('Large number of elements workflow', () => {
       const elementsStore = createElementsStore();
-      const selectionStore = createSelectionStore();      // Add many elements
+      const selectionStore = createTestSelectionStore();      // Add many elements
       const elements: any[] = [];
       for (let i = 0; i < 100; i++) {
         const element = createMockCanvasElement({
@@ -324,7 +321,7 @@ describe('Enhanced Canvas Workflow Tests', () => {
     });
 
     test('Rapid viewport changes', () => {
-      const viewportStore = createViewportStore();
+      const viewportStore = createTestViewportStore();
       const state = viewportStore.getState();
 
       // Rapid zoom changes

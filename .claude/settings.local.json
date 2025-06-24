@@ -22,7 +22,10 @@
       "Bash(grep:*)",
       "Bash(pkill:*)",
       "Bash(true)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm run test:canvas:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }

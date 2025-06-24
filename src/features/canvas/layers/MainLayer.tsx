@@ -73,32 +73,33 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 
   const createDragBoundFunc = useCallback((element: CanvasElement) => {
     return (pos: { x: number; y: number }) => {
+      // If element is not in a section, allow free movement
       if (!element.sectionId) {
         return pos;
       }
+      
       const section = getSection(element.sectionId);
       if (!section) {
         return pos;
       }
 
-      const elementWidth = isRectangularElement(element) ? element.width : 0;
-      const elementHeight = isRectangularElement(element) ? element.height : 0;
+      // Get element dimensions for proper boundary calculation
+      const elementWidth = isRectangularElement(element) ? element.width : 
+                          element.type === 'circle' ? element.radius * 2 : 50;
+      const elementHeight = isRectangularElement(element) ? element.height : 
+                           element.type === 'circle' ? element.radius * 2 : 50;
 
-      const relativeX = pos.x - section.x;
-      const relativeY = pos.y - section.y;
+      // Constrain to section bounds with padding using absolute coordinates
+      const padding = 10;
+      const minX = section.x + padding;
+      const maxX = section.x + section.width - elementWidth - padding;
+      const minY = section.y + padding;
+      const maxY = section.y + section.height - elementHeight - padding;
 
-      const padding = 5;
-      const minX = padding;
-      const maxX = section.width - elementWidth - padding;
-      const minY = padding;
-      const maxY = section.height - elementHeight - padding;
-
-      const constrainedRelativeX = Math.max(minX, Math.min(maxX, relativeX));
-      const constrainedRelativeY = Math.max(minY, Math.min(maxY, relativeY));
-
+      // Return constrained absolute position
       return {
-        x: section.x + constrainedRelativeX,
-        y: section.y + constrainedRelativeY
+        x: Math.max(minX, Math.min(maxX, pos.x)),
+        y: Math.max(minY, Math.min(maxY, pos.y))
       };
     };
   }, [getSection]);
@@ -115,10 +116,10 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       !element.isLocked &&
       !(element.sectionId && selectedElementIds.has(element.sectionId));
 
-    // Calculate rendering position based on section membership
-    const section = element.sectionId ? getSection(element.sectionId) : null;
-    const renderX = section ? section.x + element.x : element.x;
-    const renderY = section ? section.y + element.y : element.y;
+    // Elements now maintain absolute coordinates even when in sections
+    // They move together as a group when the section moves
+    const renderX = element.x;
+    const renderY = element.y;
 
     // Common props for Konva shapes
     const konvaElementProps: any = {

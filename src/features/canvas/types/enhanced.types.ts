@@ -372,14 +372,15 @@ export type CanvasTool =
   | 'circle'
   | 'line'
   | 'connector'
+  | 'connector-line'
+  | 'connector-arrow'
   | 'pen'
   | 'star'
   | 'triangle'
   | 'sticky-note'
   | 'image'
   | 'table'
-  | 'section'
-  | 'connector';
+  | 'section';
 
 // Selection types
 export interface SelectionState {

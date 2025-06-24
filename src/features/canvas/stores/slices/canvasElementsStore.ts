@@ -35,6 +35,24 @@ export interface CanvasElementsState {
   deleteElements: (ids: ElementId[]) => void;
   duplicateElement: (id: ElementId) => void;
   
+  // Connector operations - NEW
+  startConnector: (startPoint: { x: number; y: number }, subType?: 'line' | 'arrow' | 'straight' | 'bent' | 'curved') => ElementId;
+  finishConnector: (connectorId: ElementId, endPoint: { x: number; y: number }) => void;
+  updateConnectorPath: (connectorId: ElementId, startPoint: { x: number; y: number }, endPoint: { x: number; y: number }) => void;
+  attachConnectorToElement: (connectorId: ElementId, elementId: ElementId, isStart: boolean, anchorPoint?: string) => void;
+  detachConnectorFromElement: (connectorId: ElementId, isStart: boolean) => void;
+  getConnectorsForElement: (elementId: ElementId) => CanvasElement[];
+  
+  // Element management - NEW
+  hideElement: (id: ElementId) => void;
+  showElement: (id: ElementId) => void;
+  lockElement: (id: ElementId) => void;
+  unlockElement: (id: ElementId) => void;
+  toggleElementVisibility: (id: ElementId) => void;
+  toggleElementLock: (id: ElementId) => void;
+  bulkUpdateElements: (elementIds: ElementId[], updates: Partial<CanvasElement>) => void;
+  moveElementToPosition: (id: ElementId, x: number, y: number) => void;
+  
   // Table operations - NEW
   updateTableCell: (tableId: ElementId, rowIndex: number, colIndex: number, updates: any) => void;
   addTableRow: (tableId: ElementId, insertIndex?: number) => void;
@@ -123,13 +141,12 @@ export const createCanvasElementsStore: StateCreator<
     try {
       logger.log('🔧 [ELEMENTS STORE] Updating element:', id, updates);
       logger.log('🔧 [ELEMENTS STORE] Current elements in store:', Array.from(get().elements.keys()));
-      
-      set((state: Draft<CanvasElementsState>) => {
+        set((state: Draft<CanvasElementsState>) => {
         const element = state.elements.get(id as string);
         if (!element) {
-          console.warn('🔧 [ELEMENTS STORE] Element not found for update:', id);
-          console.warn('🔧 [ELEMENTS STORE] Available elements:', Array.from(state.elements.keys()));
-          return;
+          const errorMsg = `Element not found for update: ${id}. Available elements: ${Array.from(state.elements.keys()).join(', ')}`;
+          console.error('🔧 [ELEMENTS STORE]', errorMsg);
+          throw new Error(errorMsg);
         }
         
         // Prevent storing empty or whitespace-only text (React-Konva issue)
@@ -642,8 +659,8 @@ export const createCanvasElementsStore: StateCreator<
 
   finishDrawing: () => {
     const state = get();
-    if (!state.isDrawing || state.currentPath.length < 4) {
-      logger.log('🖊️ [DRAWING] Cannot finish drawing - insufficient points');
+    if (!state.isDrawing || state.currentPath.length < 2) {
+      logger.log('🖊️ [DRAWING] Cannot finish drawing - insufficient points (need at least 1 point)');
       get().cancelDrawing();
       return;
     }
@@ -1030,6 +1047,274 @@ export const createCanvasElementsStore: StateCreator<
     }
   },
   
+  // Connector operations implementation
+  startConnector: (startPoint: { x: number; y: number }, subType = 'straight') => {
+    const endTiming = PerformanceMonitor.startTiming('startConnector');
+    
+    try {
+      const connectorId = ElementId(`connector-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+      logger.log('🔗 [CONNECTOR] Starting connector:', connectorId, { startPoint, subType });
+      
+      const connectorElement: CanvasElement = {
+        id: connectorId,
+        type: 'connector',
+        subType,
+        x: startPoint.x,
+        y: startPoint.y,
+        startPoint,
+        endPoint: { ...startPoint }, // Initially same as start
+        intermediatePoints: [],
+        stroke: '#333333',
+        strokeWidth: 2,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      
+      get().addElement(connectorElement);
+      
+      PerformanceMonitor.recordMetric('connectorStarted', 1, 'canvas', { subType });
+      logger.log('✅ [CONNECTOR] Connector started successfully:', connectorId);
+      
+      return connectorId;
+    } finally {
+      endTiming();
+    }
+  },
+
+  finishConnector: (connectorId: ElementId, endPoint: { x: number; y: number }) => {
+    const endTiming = PerformanceMonitor.startTiming('finishConnector');
+    
+    try {
+      logger.log('🔗 [CONNECTOR] Finishing connector:', connectorId, { endPoint });
+      
+      const connector = get().elements.get(connectorId as string);
+      if (!connector || connector.type !== 'connector') {
+        console.warn('🔗 [CONNECTOR] Connector not found or invalid type:', connectorId);
+        return;
+      }
+      
+      get().updateElement(connectorId, {
+        endPoint,
+        updatedAt: Date.now()
+      });
+      
+      PerformanceMonitor.recordMetric('connectorFinished', 1, 'canvas');
+      logger.log('✅ [CONNECTOR] Connector finished successfully:', connectorId);
+    } finally {
+      endTiming();
+    }
+  },
+
+  updateConnectorPath: (connectorId: ElementId, startPoint: { x: number; y: number }, endPoint: { x: number; y: number }) => {
+    const endTiming = PerformanceMonitor.startTiming('updateConnectorPath');
+    
+    try {
+      logger.log('🔗 [CONNECTOR] Updating connector path:', connectorId, { startPoint, endPoint });
+      
+      const connector = get().elements.get(connectorId as string);
+      if (!connector || connector.type !== 'connector') {
+        console.warn('🔗 [CONNECTOR] Connector not found or invalid type:', connectorId);
+        return;
+      }
+      
+      // Calculate intermediate points based on connector subType
+      let intermediatePoints: { x: number; y: number }[] = [];
+      
+      if (isConnectorElement(connector)) {
+        if (connector.subType === 'bent') {
+          // Simple L-shaped connector
+          const midX = (startPoint.x + endPoint.x) / 2;
+          intermediatePoints = [
+            { x: midX, y: startPoint.y },
+            { x: midX, y: endPoint.y }
+          ];
+        } else if (connector.subType === 'curved') {
+          // Bezier curve approximation
+          const controlPoint1 = {
+            x: startPoint.x + (endPoint.x - startPoint.x) * 0.3,
+            y: startPoint.y
+          };
+          const controlPoint2 = {
+            x: startPoint.x + (endPoint.x - startPoint.x) * 0.7,
+            y: endPoint.y
+          };
+          intermediatePoints = [controlPoint1, controlPoint2];
+        }
+      }
+      
+      get().updateElement(connectorId, {
+        startPoint,
+        endPoint,
+        intermediatePoints,
+        updatedAt: Date.now()
+      });
+      
+      PerformanceMonitor.recordMetric('connectorPathUpdated', 1, 'canvas');
+      logger.log('✅ [CONNECTOR] Connector path updated successfully:', connectorId);
+    } finally {
+      endTiming();
+    }
+  },
+
+  attachConnectorToElement: (connectorId: ElementId, elementId: ElementId, isStart: boolean, anchorPoint = 'center') => {
+    const endTiming = PerformanceMonitor.startTiming('attachConnectorToElement');
+    
+    try {
+      logger.log('🔗 [CONNECTOR] Attaching connector to element:', { connectorId, elementId, isStart, anchorPoint });
+      
+      const connector = get().elements.get(connectorId as string);
+      const element = get().elements.get(elementId as string);
+      
+      if (!connector || connector.type !== 'connector') {
+        console.warn('🔗 [CONNECTOR] Connector not found or invalid type:', connectorId);
+        return;
+      }
+      
+      if (!element) {
+        console.warn('🔗 [CONNECTOR] Element not found:', elementId);
+        return;
+      }
+      
+      const updates: Partial<CanvasElement> = {
+        updatedAt: Date.now()
+      };
+      
+      if (isStart) {
+        (updates as any).startElementId = elementId;
+      } else {
+        (updates as any).endElementId = elementId;
+      }
+      
+      get().updateElement(connectorId, updates);
+      
+      PerformanceMonitor.recordMetric('connectorAttached', 1, 'canvas', { isStart });
+      logger.log('✅ [CONNECTOR] Connector attached successfully:', { connectorId, elementId, isStart });
+    } finally {
+      endTiming();
+    }
+  },
+
+  detachConnectorFromElement: (connectorId: ElementId, isStart: boolean) => {
+    const endTiming = PerformanceMonitor.startTiming('detachConnectorFromElement');
+    
+    try {
+      logger.log('🔗 [CONNECTOR] Detaching connector from element:', { connectorId, isStart });
+      
+      const connector = get().elements.get(connectorId as string);
+      if (!connector || connector.type !== 'connector') {
+        console.warn('🔗 [CONNECTOR] Connector not found or invalid type:', connectorId);
+        return;
+      }
+      
+      const updates: Partial<CanvasElement> = {
+        updatedAt: Date.now()
+      };
+      
+      if (isStart) {
+        (updates as any).startElementId = undefined;
+      } else {
+        (updates as any).endElementId = undefined;
+      }
+      
+      get().updateElement(connectorId, updates);
+      
+      PerformanceMonitor.recordMetric('connectorDetached', 1, 'canvas', { isStart });
+      logger.log('✅ [CONNECTOR] Connector detached successfully:', { connectorId, isStart });
+    } finally {
+      endTiming();
+    }
+  },
+
+  getConnectorsForElement: (elementId: ElementId) => {
+    const endTiming = PerformanceMonitor.startTiming('getConnectorsForElement');
+    
+    try {
+      logger.log('🔗 [CONNECTOR] Getting connectors for element:', elementId);
+      
+      const connectors: CanvasElement[] = [];
+      const elements = get().elements;
+      
+      elements.forEach(element => {
+        if (element.type === 'connector' && isConnectorElement(element)) {
+          if (element.startElementId === elementId || element.endElementId === elementId) {
+            connectors.push(element);
+          }
+        }
+      });
+      
+      PerformanceMonitor.recordMetric('connectorsRetrieved', connectors.length, 'canvas');
+      logger.log('✅ [CONNECTOR] Found connectors for element:', elementId, 'count:', connectors.length);
+      
+      return connectors;
+    } finally {
+      endTiming();
+    }
+  },
+
+  // Element management implementation
+  hideElement: (id: ElementId) => {
+    logger.log('👁️ [ELEMENT] Hiding element:', id);
+    get().updateElement(id, { isHidden: true });
+  },
+
+  showElement: (id: ElementId) => {
+    logger.log('👁️ [ELEMENT] Showing element:', id);
+    get().updateElement(id, { isHidden: false });
+  },
+
+  lockElement: (id: ElementId) => {
+    logger.log('🔒 [ELEMENT] Locking element:', id);
+    get().updateElement(id, { isLocked: true });
+  },
+
+  unlockElement: (id: ElementId) => {
+    logger.log('🔓 [ELEMENT] Unlocking element:', id);
+    get().updateElement(id, { isLocked: false });
+  },
+
+  toggleElementVisibility: (id: ElementId) => {
+    const element = get().elements.get(id as string);
+    if (element) {
+      const newVisibility = !element.isHidden;
+      logger.log('👁️ [ELEMENT] Toggling element visibility:', id, 'to:', newVisibility ? 'hidden' : 'visible');
+      get().updateElement(id, { isHidden: newVisibility });
+    }
+  },
+
+  toggleElementLock: (id: ElementId) => {
+    const element = get().elements.get(id as string);
+    if (element) {
+      const newLockState = !element.isLocked;
+      logger.log('🔒 [ELEMENT] Toggling element lock:', id, 'to:', newLockState ? 'locked' : 'unlocked');
+      get().updateElement(id, { isLocked: newLockState });
+    }
+  },
+
+  bulkUpdateElements: (elementIds: ElementId[], updates: Partial<CanvasElement>) => {
+    const endTiming = PerformanceMonitor.startTiming('bulkUpdateElements');
+    
+    try {
+      logger.log('📦 [ELEMENT] Bulk updating elements:', elementIds.length, 'elements with updates:', updates);
+      
+      const bulkUpdates: Record<ElementId, Partial<CanvasElement>> = {};
+      elementIds.forEach(id => {
+        bulkUpdates[id] = updates;
+      });
+      
+      get().updateMultipleElements(bulkUpdates);
+      
+      PerformanceMonitor.recordMetric('bulkElementsUpdated', elementIds.length, 'canvas');
+      logger.log('✅ [ELEMENT] Bulk update completed successfully for', elementIds.length, 'elements');
+    } finally {
+      endTiming();
+    }
+  },
+
+  moveElementToPosition: (id: ElementId, x: number, y: number) => {
+    logger.log('📍 [ELEMENT] Moving element to position:', id, { x, y });
+    get().updateElement(id, { x, y });
+  },
+
   // Placeholder for handleElementDrop - will be overridden in combined store
   handleElementDrop: (_elementId: ElementId, _position: { x: number; y: number }) => {
     console.warn('🔧 [ELEMENTS STORE] handleElementDrop called but not implemented in slice');

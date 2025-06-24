@@ -19,8 +19,10 @@ interface RectangleShapeProps extends BaseShapeProps<RectangleElement> {
  */
 export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   element,
-  isSelected
-}) => {// Apply shape caching for large rectangles or when they have both fill and stroke
+  isSelected,
+  konvaProps
+}) => {
+  // Apply shape caching for large rectangles or when they have both fill and stroke
   const shouldCache = ((element.width || 100) * (element.height || 100) > 10000) || 
                      !!(element.fill && element.stroke);
   
@@ -35,7 +37,9 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   });
   return (
     <Rect
+      {...konvaProps}
       ref={nodeRef as React.RefObject<Konva.Rect>}
+      id={element.id}
       x={element.x}
       y={element.y}
       width={element.width || 100}

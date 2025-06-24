@@ -181,13 +181,6 @@ export const useCanvasEvents = ({
         startDrawing(x, y, 'pen');
         break;
 
-      case 'section':
-        // Create a new section at the clicked position
-        const newSectionId = createSection(x, y, 400, 300, 'New Section');
-        addHistoryEntry('Add section', [], []);
-        console.log('✅ [CANVAS EVENTS] Created section:', newSectionId);
-        break;
-
       case 'text':
         const textElement: CanvasElement = {
           id: toElementId(generateId()),

@@ -3,6 +3,7 @@ import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
+import { CanvasEventHandler } from './CanvasEventHandler';
 // import { useCanvasPerformance } from '../hooks/canvas/useCanvasPerformance';
 import { useViewportControls } from '../hooks/useViewportControls';
 import { useSelectionManager } from '../hooks/useSelectionManager';
@@ -27,7 +28,7 @@ interface CanvasContainerProps {
  * - App state coordination and layout shell
  * - Integration point for all stores and hooks
  * - Maintains backward compatibility with existing components
- * - Performance monitoring integration
+ * - Uses centralized CanvasEventHandler for all interactions
  */
 export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   width,
@@ -138,126 +139,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   }, [zoomIn, zoomOut]);
 
-  // Handle mouse down for drawing tools (delegated to useCanvasDrawing for pen)
-  const handleMouseDown = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    
-    const pos = stage.getRelativePointerPosition();
-    if (!pos) return;
+  // NOTE: Legacy event handlers removed - all event handling delegated to CanvasEventHandler
 
-    if (selectedTool === 'section') {
-      setIsDrawingSection(true);
-      setPreviewSection({
-        x: pos.x,
-        y: pos.y,
-        width: 0,
-        height: 0
-      });
-    } else if (selectedTool === 'connector-line' || selectedTool === 'connector-arrow') {
-      setIsDrawingConnector(true);
-      setConnectorStart({ x: pos.x, y: pos.y });
-      setConnectorEnd({ x: pos.x, y: pos.y });
-    }  }, [selectedTool]);
 
-  // Handle mouse move for drawing (delegated to useCanvasDrawing for pen)
-  const handleMouseMove = useCallback((_e: Konva.KonvaEventObject<MouseEvent>) => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    
-    const point = stage.getRelativePointerPosition();
-    if (!point) return;
 
-    if (isDrawingSection && selectedTool === 'section' && previewSection) {
-      const width = point.x - previewSection.x;
-      const height = point.y - previewSection.y;
-      
-      setPreviewSection(prev => prev ? {
-        ...prev,
-        width,
-        height
-      } : null);
-    } else if (isDrawingConnector && (selectedTool === 'connector-line' || selectedTool === 'connector-arrow')) {
-      setConnectorEnd({ x: point.x, y: point.y });
-    }
-  }, [isDrawingSection, selectedTool, previewSection]);
 
-  // Handle mouse up for drawing completion (delegated to useCanvasDrawing for pen)
-  const handleMouseUp = useCallback(() => {
-    if (selectedTool === 'section' && isDrawingSection && previewSection && 
-               Math.abs(previewSection.width) > 10 && Math.abs(previewSection.height) > 10) {
-      
-      const sectionId = createSection(
-        previewSection.width < 0 ? previewSection.x + previewSection.width : previewSection.x,
-        previewSection.height < 0 ? previewSection.y + previewSection.height : previewSection.y,
-        Math.abs(previewSection.width),
-        Math.abs(previewSection.height),
-        'New Section'
-      );
-      
-      addToHistory(`Create section`, [], [], {
-        elementIds: [sectionId],
-        operationType: 'create',
-        affectedCount: 1
-      });
-    } else if ((selectedTool === 'connector-line' || selectedTool === 'connector-arrow') && 
-               isDrawingConnector && connectorStart && connectorEnd) {
-      const distance = Math.sqrt(
-        Math.pow(connectorEnd.x - connectorStart.x, 2) + 
-        Math.pow(connectorEnd.y - connectorStart.y, 2)
-      );
-        if (distance > 10) { // Minimum distance to create connector
-        const newElement: CanvasElement = {
-          id: toElementId(`connector_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`),
-          type: 'connector',
-          subType: 'line',
-          x: connectorStart.x,
-          y: connectorStart.y,
-          startPoint: { x: connectorStart.x, y: connectorStart.y },
-          endPoint: { x: connectorEnd.x, y: connectorEnd.y },
-          intermediatePoints: [],
-          stroke: designSystem.colors.secondary[600],
-          strokeWidth: 2,
-          pathPoints: [0, 0, connectorEnd.x - connectorStart.x, connectorEnd.y - connectorStart.y],
-          connectorStyle: {
-            strokeColor: designSystem.colors.secondary[600],
-            strokeWidth: 2,
-            startArrow: 'none',
-            endArrow: 'triangle',
-            arrowSize: 10
-          },
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        };
-        
-        addElement(newElement);
-        addToHistory(`Create ${selectedTool}`, [], [], {
-          elementIds: [newElement.id],
-          operationType: 'create',
-          affectedCount: 1
-        });
-      }
-    }
-    
-    // Reset drawing state
-    setCurrentPath([]);
-    setIsDrawing(false);
-    setIsDrawingSection(false);
-    setPreviewSection(null);
-    setIsDrawingConnector(false);
-    setConnectorStart(null);    setConnectorEnd(null);
-  }, [
-    selectedTool, 
-    isDrawing, 
-    isDrawingSection, 
-    isDrawingConnector, 
-    currentPath, 
-    previewSection, 
-    connectorStart, 
-    connectorEnd, 
-    addElement, 
-    addToHistory
-  ]);
 
   // Keyboard event handling
   useEffect(() => {
@@ -290,46 +176,56 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   return (
     <div className={`canvas-container ${className}`}>
-      <Stage
-        ref={stageRef}
-        width={width}
-        height={height}
-        onMouseDown={handleMouseDown}
-        onMousemove={handleMouseMove}
-        onMouseup={handleMouseUp}
-        onClick={handleStageClick}
-        onWheel={handleWheel}
-        draggable={selectedTool === 'pan'}
-        x={pan.x}
-        y={pan.y}
-        scaleX={zoom}
-        scaleY={zoom}        style={{
-          display: 'block',
-          backgroundColor: designSystem.canvasStyles.background,
-          cursor: selectedTool === 'pan' ? 'grab' : 
-                  selectedTool.startsWith('connector-') ? 'crosshair' : 'default',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-        }}
-      >        <CanvasLayerManager
-          stageWidth={width}
-          stageHeight={height}
-          stageRef={stageRef}
-          elements={elementsMap as Map<ElementId | SectionId, CanvasElement>}
-          selectedElementIds={selectedElementIds}
-          onElementUpdate={handleElementOrSectionUpdate}
-          onElementDragEnd={handleElementDragEnd}
-          onElementClick={handleElementClick}
-          onStartTextEdit={handleStartTextEdit}
-          isDrawing={isDrawing}
-          currentPath={currentPath}
-          isDrawingConnector={isDrawingConnector}
-          connectorStart={connectorStart}
-          connectorEnd={connectorEnd}
-          isDrawingSection={isDrawingSection}
-          previewSection={previewSection}
-        />
-      </Stage>
+      <CanvasEventHandler
+        stageRef={stageRef as React.RefObject<Konva.Stage>}
+        currentTool={selectedTool as any}
+        isDrawingConnector={isDrawingConnector}
+        setIsDrawingConnector={setIsDrawingConnector}
+        connectorStart={connectorStart}
+        setConnectorStart={setConnectorStart}
+        connectorEnd={connectorEnd}
+        setConnectorEnd={setConnectorEnd}
+        isDrawingSection={isDrawingSection}
+        setIsDrawingSection={setIsDrawingSection}
+        previewSection={previewSection}
+        setPreviewSection={setPreviewSection}
+      >
+        <Stage
+          ref={stageRef}
+          width={width}
+          height={height}
+          draggable={selectedTool === 'pan'}
+          x={pan.x}
+          y={pan.y}
+          scaleX={zoom}
+          scaleY={zoom}
+          style={{
+            display: 'block',
+            backgroundColor: designSystem.canvasStyles.background,
+            cursor: selectedTool === 'pan' ? 'grab' : 
+                    selectedTool.startsWith('connector-') ? 'crosshair' : 'default',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
+        >
+          <CanvasLayerManager
+            stageWidth={width}
+            stageHeight={height}
+            stageRef={stageRef}
+            elements={elementsMap as Map<ElementId | SectionId, CanvasElement>}
+            selectedElementIds={selectedElementIds}
+            onElementUpdate={handleElementOrSectionUpdate}
+            onElementDragEnd={handleElementDragEnd}
+            onElementClick={handleElementClick}
+            onStartTextEdit={handleStartTextEdit}
+            isDrawingConnector={isDrawingConnector}
+            connectorStart={connectorStart}
+            connectorEnd={connectorEnd}
+            isDrawingSection={isDrawingSection}
+            previewSection={previewSection}
+          />
+        </Stage>
+      </CanvasEventHandler>
     </div>
   );
 };

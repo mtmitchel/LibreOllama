@@ -1,5 +1,5 @@
 // Vitest globals enabled in config - no need to import describe, test, expect, beforeEach
-import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import { immer } from 'zustand/middleware/immer';
 import {
   createSelectionStore,
@@ -7,10 +7,8 @@ import {
 } from '../../features/canvas/stores/slices/selectionStore';
 import { ElementId } from '../../features/canvas/types/enhanced.types';
 
-// Note: ESM doesn't support jest.unmock() - modules are unmocked by default
-
-const createTestStore = () =>
-  create<SelectionState>()(immer(createSelectionStore));
+// A helper to create a fresh, isolated store for each test with proper middleware
+const createTestStore = () => createStore<SelectionState>()(immer(createSelectionStore));
 
 describe('selectionStore', () => {
   let store: ReturnType<typeof createTestStore>;

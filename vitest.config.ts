@@ -9,10 +9,14 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: [
-      './vitest.setup.ts',
+      './vitest.hoisted.setup.ts', // Hoisted mocks run first
+      './src/tests/setup.ts',
       'vitest-canvas-mock',
     ],
     testTimeout: 20000,
+  },
+  optimizeDeps: {
+    include: ['konva', 'react-konva'],
   },
   resolve: {
     alias: {

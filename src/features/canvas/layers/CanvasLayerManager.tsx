@@ -74,6 +74,8 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   const updateDrawing = useCanvasStore((state) => state.updateDrawing);
   const finishDrawing = useCanvasStore((state) => state.finishDrawing);
   const currentPath = useCanvasStore((state) => state.currentPath);
+  const sections = useCanvasStore((state) => state.sections);
+  const captureElementsAfterSectionCreation = useCanvasStore((state) => state.captureElementsAfterSectionCreation);
 
   const stage = stageRef.current;
   const stageSize = stage ? { width: stage.width(), height: stage.height() } : { width: 0, height: 0 };
@@ -168,25 +170,6 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         };
         break;
         
-      case 'section':
-        const newSectionId = `section_${now}` as SectionId;
-        newElement = {
-          id: newSectionId,
-          type: 'section',
-          x: elementX,
-          y: elementY,
-          width: 300,
-          height: 200,
-          backgroundColor: '#F8FAFC',
-          borderColor: '#E2E8F0',
-          borderWidth: 2,
-          title: 'New Section',
-          childElementIds: [],
-          createdAt: now,
-          updatedAt: now,
-        };
-        break;
-        
       case 'triangle':
         newElement = {
           id: generateId(),
@@ -225,19 +208,22 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     if (newElement) {
       addElement(newElement);
       
-      if (!isSectionElement(newElement) && newElement.sectionId && addElementToSection) {
+      // Add element to section if it was created inside one
+      if (newElement.sectionId && addElementToSection) {
         addElementToSection(newElement.id as ElementId, newElement.sectionId);
       }
       
-      if (!isSectionElement(newElement)) {
-        selectElement(newElement.id as ElementId);
-      }
-      
+      selectElement(newElement.id as ElementId);
       setSelectedTool('select');
     }
   };
 
-  const allElementsArray: CanvasElement[] = useMemo(() => Array.from(elements.values()), [elements]);
+  const allElementsArray: CanvasElement[] = useMemo(() => {
+    // Combine elements and sections for rendering
+    const elementsArray = Array.from(elements.values());
+    const sectionsArray = Array.from(sections.values());
+    return [...elementsArray, ...sectionsArray];
+  }, [elements, sections]);
 
   const { visibleElements, cullingStats } = useViewportCulling({
     elements: allElementsArray,
@@ -346,7 +332,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
     
-    if (['rectangle', 'circle', 'triangle', 'star', 'text', 'sticky-note', 'section'].includes(selectedTool)) {
+    if (['rectangle', 'circle', 'triangle', 'star', 'text', 'sticky-note'].includes(selectedTool)) {
       handleCanvasElementCreation(pos);
       return;
     }
@@ -395,14 +381,15 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     const box = new Konva.Rect(selectionBox).getClientRect();
     
     const getElementBoundingBox = (element: CanvasElement) => {
-      if ('width' in element && 'height' in element) {
+      if ('width' in element && 'height' in element && element.width !== undefined && element.height !== undefined) {
         return { x: element.x, y: element.y, width: element.width, height: element.height };
       }
-      if (element.type === 'circle') {
-        return { x: element.x - element.radius, y: element.y - element.radius, width: element.radius * 2, height: element.radius * 2 };
+      if (element.type === 'circle' && 'radius' in element) {
+        const radius = element.radius || 0;
+        return { x: element.x - radius, y: element.y - radius, width: radius * 2, height: radius * 2 };
       }
       // Default for elements without width/height (like connectors, pen)
-      return { x: element.x, y: element.y, width: 0, height: 0 };
+      return { x: element.x, y: element.y, width: 50, height: 50 }; // Provide default dimensions
     };
 
     const selected = allElementsArray.filter(el => {
@@ -420,10 +407,11 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       <BackgroundLayer
         width={stageSize.width}
         height={stageSize.height}
-        onBackgroundClick={() => {
-          // Clear selection when clicking on background
-          clearSelection();
-        }}
+        // REMOVED onBackgroundClick - CanvasEventHandler handles all events
+        // onBackgroundClick={() => {
+        //   // Clear selection when clicking on background
+        //   clearSelection();
+        // }}
       />
       
       {useGroupedSections ? (
@@ -477,6 +465,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         currentPath={currentPath}
         {...(onElementDragStart && { onElementDragStart })}
         {...(onElementDragMove && { onElementDragMove })}
+        onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
       />
       
       <ConnectorLayer
@@ -506,9 +495,10 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       previewSection={previewSection ?? null}
       selectionBox={selectionBox}
       hoveredSnapPoint={hoveredSnapPoint as { x: number; y: number; elementId?: ElementId; anchor?: string } | null}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      // REMOVED conflicting mouse handlers - CanvasEventHandler handles all events
+      // onMouseDown={handleMouseDown}
+      // onMouseMove={handleMouseMove}
+      // onMouseUp={handleMouseUp}
       onElementUpdate={onElementUpdate}
       addHistoryEntry={addHistoryEntry}
     />,
