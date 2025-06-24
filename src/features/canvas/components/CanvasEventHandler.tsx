@@ -12,6 +12,7 @@ import { CanvasTool, ElementId } from '../types/enhanced.types';
 import { useCanvasStore } from '../stores';
 import { toElementId } from '../types/compatibility';
 import { logger } from '@/lib/logger';
+import { findNearestSnapPoint, getConnectorStyle } from '../utils/connectorUtils';
 
 // Import table creation utility
 const createTableData = (id: string, rows: number, cols: number) => {
@@ -87,6 +88,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   const isPointerDownRef = useRef(false);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  // FIXED: Store current tool handlers in ref to avoid constant event listener re-attachment
+  const currentToolHandlersRef = useRef<Map<string, EventHandler>>(new Map());
 
   // Access canvas store for drawing functions - split selectors
   const startDrawing = useCanvasStore((state) => state.startDrawing);
@@ -101,27 +104,38 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
   const createSection = useCanvasStore((state) => state.createSection);
   const captureElementsAfterSectionCreation = useCanvasStore((state) => state.captureElementsAfterSectionCreation);
+  const elements = useCanvasStore((state) => state.elements);
+  const setHoveredSnapPoint = useCanvasStore((state) => state.setHoveredSnapPoint);
 
-  // Build a map of handlers for the current tool
+  // Build a map of handlers for the current tool and store in ref
   const toolHandlers = useMemo(() => {
+    console.log('🔧 [CanvasEventHandler] Computing handlers for tool:', currentTool);
+    console.log('🔧 [CanvasEventHandler] Tool handlers registration starting...');
+    console.log('🔧 [CanvasEventHandler] Current tool from props:', currentTool);
     const map = new Map<string, EventHandler>();
 
     // Define tool-specific event handlers
     switch (currentTool) {
       case 'select':
+        console.log('🔧 [CanvasEventHandler] Registering SELECT tool handlers');
         map.set('mousedown', handleSelectMouseDown);
         map.set('mousemove', handleSelectMouseMove);
         map.set('mouseup', handleSelectMouseUp);
         map.set('click', handleSelectClick);
+        // FIX: Register dragend handler for persisting element positions after drag.
+        // This replaces the inefficient manual drag logic in mousemove.
+        map.set('dragend', handleElementDragEnd);
         break;
 
       case 'pan':
+        console.log('🔧 [CanvasEventHandler] Registering PAN tool handlers');
         map.set('mousedown', handlePanMouseDown);
         map.set('mousemove', handlePanMouseMove);
         map.set('mouseup', handlePanMouseUp);
         break;
 
       case 'text':
+        console.log('🔧 [CanvasEventHandler] Registering TEXT tool handlers');
         map.set('click', handleTextClick);
         break;
 
@@ -129,6 +143,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       case 'circle':
       case 'star':
       case 'triangle':
+        console.log('🔧 [CanvasEventHandler] Registering SHAPE tool handlers for:', currentTool);
         map.set('mousedown', handleShapeMouseDown);
         map.set('mousemove', handleShapeMouseMove);
         map.set('mouseup', handleShapeMouseUp);
@@ -136,6 +151,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         break;
 
       case 'pen':
+        console.log('🔧 [CanvasEventHandler] Registering PEN tool handlers');
         map.set('mousedown', handlePenMouseDown);
         map.set('mousemove', handlePenMouseMove);
         map.set('mouseup', handlePenMouseUp);
@@ -146,6 +162,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       case 'connector':
       case 'connector-line':
       case 'connector-arrow':
+        console.log('🔧 [CanvasEventHandler] Registering CONNECTOR tool handlers for:', currentTool);
         map.set('mousedown', handleConnectorMouseDown);
         map.set('mousemove', handleConnectorMouseMove);
         map.set('mouseup', handleConnectorMouseUp);
@@ -153,6 +170,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         break;
 
       case 'section':
+        console.log('🔧 [CanvasEventHandler] Registering SECTION tool handlers');
         // RE-ENABLED: Section tool handlers to enable drawing mode
         map.set('mousedown', handleSectionMouseDown);
         map.set('mousemove', handleSectionMouseMove);
@@ -161,6 +179,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         break;
 
       case 'sticky-note':
+        console.log('🔧 [CanvasEventHandler] Registering STICKY-NOTE tool handlers');
         map.set('click', handleStickyNoteClick);
         map.set('mousedown', handleStickyNoteMouseDown);
         map.set('mousemove', handleStickyNoteMouseMove);
@@ -168,6 +187,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         break;
 
       case 'image':
+        console.log('🔧 [CanvasEventHandler] Registering IMAGE tool handlers');
         map.set('click', handleImageClick);
         map.set('mousedown', handleImageMouseDown);
         map.set('mousemove', handleImageMouseMove);
@@ -175,6 +195,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         break;
 
       case 'table':
+        console.log('🔧 [CanvasEventHandler] Registering TABLE tool handlers');
         map.set('click', handleTableClick);
         map.set('mousedown', handleTableMouseDown);
         map.set('mousemove', handleTableMouseMove);
@@ -185,6 +206,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     // Always handle wheel events for zoom
     map.set('wheel', handleWheel);
 
+    console.log('🔧 [CanvasEventHandler] Tool handlers registered:', Array.from(map.keys()).join(', '));
+    // FIXED: Update the ref with the new handlers
+    currentToolHandlersRef.current = map;
     return map;
   }, [currentTool]);
 
@@ -249,15 +273,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         // TODO: Implement selection box if needed
       } else {
         // Element drag - update element position
-        const elementId = e.target.id();
-        if (elementId) {
-          const typedElementId = toElementId(elementId);
-          updateElement(typedElementId, {
-            x: e.target.x(),
-            y: e.target.y(),
-            updatedAt: Date.now()
-          });
-        }
+        // FIX: This logic is incorrect and inefficient. It is now handled by the `dragend` event.
+        // The element's draggable property should be used instead of manual position updates here.
       }
 
       lastMousePosRef.current = pointer;
@@ -290,6 +307,29 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         selectElement(toElementId(elementId));
       }
     }
+  }
+
+  function handleElementDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
+    const targetNode = e.target;
+    const elementId = toElementId(targetNode.id());
+
+    if (!elementId) {
+      logger.warn('[CanvasEventHandler] dragend event on element with no ID');
+      return;
+    }
+
+    const newPosition = {
+      x: targetNode.x(),
+      y: targetNode.y(),
+    };
+
+    logger.log(`✅ [CanvasEventHandler] DragEnd on ${elementId}. New position:`, newPosition);
+
+    // updateElement should handle history tracking internally
+    updateElement(elementId, {
+      ...newPosition,
+      updatedAt: Date.now(),
+    });
   }
 
   function handleSelectClick(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -572,26 +612,57 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    const target = e.target;
-    const elementId = target.id() ? toElementId(target.id()) : undefined;
-
+    // Find nearest snap point
+    const snapPoint = findNearestSnapPoint(pointer, elements);
+    
     if (!isDrawingConnector) {
-        setIsDrawingConnector(true);
-        setConnectorStart({ x: pointer.x, y: pointer.y, elementId });
-        setConnectorEnd({ x: pointer.x, y: pointer.y, elementId });
+      setIsDrawingConnector(true);
+      
+      if (snapPoint) {
+        console.log('🔗 [CanvasEventHandler] Connector start snapped to element:', snapPoint.elementId);
+        setConnectorStart({
+          x: snapPoint.x,
+          y: snapPoint.y,
+          elementId: snapPoint.elementId,
+          anchor: snapPoint.attachmentPoint
+        });
+        setConnectorEnd({
+          x: snapPoint.x,
+          y: snapPoint.y,
+          elementId: snapPoint.elementId,
+          anchor: snapPoint.attachmentPoint
+        });
+      } else {
+        setConnectorStart({ x: pointer.x, y: pointer.y });
+        setConnectorEnd({ x: pointer.x, y: pointer.y });
+      }
     }
   }
 
   function handleConnectorMouseMove(e: Konva.KonvaEventObject<MouseEvent>) {
-      if (!isDrawingConnector || !connectorStart) return;
+    if (!isDrawingConnector || !connectorStart) return;
 
-      const stage = stageRef.current;
-      if (!stage) return;
+    const stage = stageRef.current;
+    if (!stage) return;
 
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
 
+    // Find nearest snap point for visual feedback
+    const snapPoint = findNearestSnapPoint(pointer, elements);
+    
+    if (snapPoint) {
+      setHoveredSnapPoint(snapPoint);
+      setConnectorEnd({
+        x: snapPoint.x,
+        y: snapPoint.y,
+        elementId: snapPoint.elementId,
+        anchor: snapPoint.attachmentPoint
+      });
+    } else {
+      setHoveredSnapPoint(null);
       setConnectorEnd({ x: pointer.x, y: pointer.y });
+    }
   }
 
   function handleConnectorMouseUp(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -603,8 +674,19 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    const target = e.target;
-    const endElementId = target.id() ? toElementId(target.id()) : undefined;
+    // Find snap point for end position
+    const endSnapPoint = findNearestSnapPoint(pointer, elements);
+    const endPoint = endSnapPoint || { x: pointer.x, y: pointer.y };
+
+    // Don't create connector if start and end are the same
+    if (connectorStart.x === endPoint.x && connectorStart.y === endPoint.y) {
+      console.log('🔗 [CanvasEventHandler] Connector too small, canceling');
+      setIsDrawingConnector(false);
+      setConnectorStart(null);
+      setConnectorEnd(null);
+      setHoveredSnapPoint(null);
+      return;
+    }
 
     const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -621,13 +703,29 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       subType: subType,
       x: connectorStart.x, // Set base coordinates
       y: connectorStart.y,
-      startPoint: { x: connectorStart.x, y: connectorStart.y },
-      endPoint: { x: pointer.x, y: pointer.y },
+      startPoint: {
+        x: connectorStart.x,
+        y: connectorStart.y,
+        attachmentPoint: connectorStart.anchor
+      },
+      endPoint: {
+        x: endPoint.x,
+        y: endPoint.y,
+        attachmentPoint: endSnapPoint?.attachmentPoint
+      },
       startElementId: connectorStart.elementId,
-      endElementId: endElementId,
+      endElementId: endSnapPoint?.elementId,
+      stroke: '#6366F1',
+      strokeWidth: 2,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
+
+    console.log('🔗 [CanvasEventHandler] Creating connector:', {
+      from: connectorStart.elementId || 'canvas',
+      to: endSnapPoint?.elementId || 'canvas',
+      type: subType
+    });
 
     addElement(newConnector);
 
@@ -635,11 +733,13 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     setIsDrawingConnector(false);
     setConnectorStart(null);
     setConnectorEnd(null);
+    setHoveredSnapPoint(null);
     setSelectedTool('select');
   }
 
   function handleSectionMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
     console.log('🎯 [CanvasEventHandler] SECTION MOUSEDOWN - starting section draw');
+    console.log('🎯 [CanvasEventHandler] SECTION MOUSEDOWN - currentTool:', currentTool);
     // Only allow section drawing when clicking on the stage (not on existing elements)
     if (e.target !== stageRef.current) {
         console.log('🎯 [CanvasEventHandler] SECTION MOUSEDOWN - clicked on element, ignoring');
@@ -684,9 +784,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
           return;
       }
 
-      // Prevent creating tiny sections
-      if (Math.abs(previewSection.width) < 10 || Math.abs(previewSection.height) < 10) {
-          console.log('🎯 [CanvasEventHandler] SECTION MOUSEUP - section too small, aborting');
+      // Prevent creating tiny sections - made even more forgiving (reduced from 5px to 2px)
+      if (Math.abs(previewSection.width) < 2 || Math.abs(previewSection.height) < 2) {
+          console.log('🎯 [CanvasEventHandler] SECTION MOUSEUP - section too small, aborting (width:', Math.abs(previewSection.width), 'height:', Math.abs(previewSection.height), ')');
           setIsDrawingSection(false);
           setPreviewSection(null);
           isPointerDownRef.current = false;
@@ -1073,7 +1173,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     // For now, just prevent the default scroll behavior
   }
 
-  // Set up event delegation
+  // FIXED: Set up event delegation with stable event listeners
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -1082,7 +1182,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const handleEvent = (e: Konva.KonvaEventObject<any>) => {
       console.log('🎯 [CanvasEventHandler] Event received:', e.type, 'currentTool:', currentTool);
       logger.log('🎯 [CanvasEventHandler] Event received:', e.type, 'currentTool:', currentTool);
-      const handler = toolHandlers.get(e.type);
+      // FIXED: Use the ref to get current handlers, avoiding dependency on toolHandlers
+      const handler = currentToolHandlersRef.current.get(e.type);
       if (handler) {
         console.log('🎯 [CanvasEventHandler] Handler found for:', e.type, 'executing...');
         logger.log('🎯 [CanvasEventHandler] Handler found for:', e.type, 'executing...');
@@ -1101,8 +1202,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       }
     };
 
-    // Attach all event listeners
-    const eventTypes = ['mousedown', 'mousemove', 'mouseup', 'click', 'wheel'];
+    // Attach all event listeners including dragend
+    const eventTypes = ['mousedown', 'mousemove', 'mouseup', 'click', 'wheel', 'dragend'];
     eventTypes.forEach(eventType => {
       stage.on(eventType, handleEvent);
     });
@@ -1117,7 +1218,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [stageRef, toolHandlers]);
+  }, [stageRef]); // FIXED: Remove toolHandlers from dependency to prevent constant re-attachment
 
   // Cleanup on unmount
   useEffect(() => {

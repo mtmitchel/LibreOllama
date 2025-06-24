@@ -15,6 +15,8 @@ import { enableMapSet } from 'immer';
 import { Draft } from 'immer';
 import { CoordinateService } from '../utils/canvasCoordinateService';
 import { logger } from '@/lib/logger';
+import { updateConnectorPosition } from '../utils/connectorUtils';
+import { isConnectorElement } from '../types/enhanced.types';
 
 // TODO: Integrate performance utilities after core functionality is stable
 // import { queueCanvasOperation } from '../utils/performance/operationQueue';
@@ -50,6 +52,7 @@ export interface CanvasStoreState extends
   updateElementCoordinatesOnSectionMove: (sectionId: SectionId, deltaX: number, deltaY: number) => void;
   convertElementToAbsoluteCoordinates: (elementId: ElementId) => void;
   convertElementToRelativeCoordinates: (elementId: ElementId, sectionId: SectionId) => void;
+  updateConnectedConnectors: (elementId: ElementId) => void;
 }
 
 // Store factory function for lazy initialization
@@ -191,6 +194,9 @@ const createEnhancedCanvasStore = () => {
                   newSectionId: conversionResult.sectionId
                 });
               });
+              
+              // Update any connected connectors
+              get().updateConnectedConnectors(elementId);
             } catch (error) {
               logger.error('❌ [CANVAS STORE] Error during element drop:', error);
               // TODO: Integrate with CanvasErrorHandler for production error recovery
@@ -220,98 +226,59 @@ const createEnhancedCanvasStore = () => {
             }
             
             try {
-              // Use section store's capture method with element map
+              // 1. Use the refactored, non-mutating query from the section store
               const capturedElementIds = currentState.captureElementsInSection(sectionId, currentState.elements);
               
-              logger.log('🔍 [ENHANCED STORE] Capture results:', {
+              logger.log('🔍 [ENHANCED STORE] Capture query results:', {
                 sectionId,
                 capturedCount: capturedElementIds.length,
                 capturedIds: capturedElementIds,
-                sectionBounds: { x: section.x, y: section.y, width: section.width, height: section.height }
               });
               
               if (capturedElementIds.length > 0) {
-                // FIXED: Update elements to reference the section with proper type handling
+                // 2. Perform all state mutations here in the enhanced store
                 set((state: Draft<CanvasStoreState>) => {
+                  const targetSection = state.sections.get(sectionId);
+                  if (!targetSection) return;
+
+                  // Initialize childElementIds if it doesn't exist
+                  if (!targetSection.childElementIds) {
+                    targetSection.childElementIds = [];
+                  }
+
                   capturedElementIds.forEach(elementId => {
                     const element = state.elements.get(elementId);
                     if (element) {
-                      // FIXED: Proper sectionId assignment with type safety
-                      const updatedElement = {
-                        ...element,
-                        sectionId: SectionId(sectionId), // FIXED: Ensure proper SectionId type
-                        updatedAt: Date.now()
-                      };
-                      state.elements.set(elementId, updatedElement);
+                      const oldSectionId = element.sectionId;
+
+                      // A. Update the element's sectionId
+                      element.sectionId = SectionId(sectionId);
+                      element.updatedAt = Date.now();
+                      state.elements.set(elementId, element);
+
+                      // B. Remove from old section's childElementIds if it exists
+                      if (oldSectionId && oldSectionId !== sectionId) {
+                        const oldSection = state.sections.get(oldSectionId);
+                        if (oldSection && oldSection.childElementIds) {
+                          const index = oldSection.childElementIds.indexOf(ElementId(elementId));
+                          if (index > -1) {
+                            oldSection.childElementIds.splice(index, 1);
+                          }
+                        }
+                      }
                       
-                      logger.log('✅ [ENHANCED STORE] Assigned sectionId to captured element:', {
-                        elementId,
-                        sectionId: updatedElement.sectionId,
-                        elementPosition: { x: element.x, y: element.y }
-                      });
-                    } else {
-                      logger.warn('❌ [ENHANCED STORE] Element not found during capture update:', elementId);
+                      // C. Add to new section's childElementIds if not already present
+                      if (!targetSection.childElementIds.includes(ElementId(elementId))) {
+                        targetSection.childElementIds.push(ElementId(elementId));
+                      }
+
+                      logger.log('✅ [ENHANCED STORE] Assigned element to section:', { elementId, sectionId });
                     }
                   });
-                  
-                  // FIXED: Ensure section has the correct childElementIds array in both stores
-                  // Use the helper function for consistent cross-store synchronization
-                  const currentSection = state.sections.get(sectionId);
-                  if (currentSection) {
-                    const updatedSection = {
-                      ...currentSection,
-                      childElementIds: capturedElementIds.map(id => ElementId(id))
-                    };
-                    state.sections.set(sectionId, updatedSection);
-                    
-                    // Also update the section in elements store for cross-store consistency
-                    const sectionElement = state.elements.get(sectionId);
-                    if (sectionElement) {
-                      const updatedSectionElement = { ...sectionElement, childElementIds: updatedSection.childElementIds };
-                      state.elements.set(sectionId, updatedSectionElement);
-                    }
-                    
-                    logger.log('✅ [ENHANCED STORE] Updated section with child elements in both stores:', {
-                      sectionId,
-                      childCount: updatedSection.childElementIds.length,
-                      childIds: updatedSection.childElementIds
-                    });
-                  } else {
-                    logger.error('❌ [ENHANCED STORE] Section not found for childElementIds update:', sectionId);
-                  }
-                });
-                
-                logger.log('✅ [ENHANCED STORE] Successfully captured and updated', capturedElementIds.length, 'elements');
-              } else {
-                logger.log('ℹ️ [ENHANCED STORE] No elements found to capture for section:', sectionId);
-                
-                // FIXED: Initialize proper structure even when no elements captured
-                set((state: Draft<CanvasStoreState>) => {
-                  const currentSection = state.sections.get(sectionId);
-                  if (currentSection) {
-                    const updatedSection = {
-                      ...currentSection,
-                      childElementIds: [] // FIXED: Always ensure array exists
-                    };
-                    state.sections.set(sectionId, updatedSection);
-                    
-                    // Also update in elements store
-                    const sectionElement = state.elements.get(sectionId);
-                    if (sectionElement) {
-                      (sectionElement as any).childElementIds = [];
-                      state.elements.set(sectionId, sectionElement);
-                    }
-                    
-                    logger.log('✅ [ENHANCED STORE] Initialized empty childElementIds for section:', sectionId);
-                  }
                 });
               }
             } catch (error) {
-              logger.error('❌ [ENHANCED STORE] Error during element capture:', error, {
-                sectionId,
-                sectionCoords: { x: section.x, y: section.y },
-                elementCount: currentState.elements.size
-              });
+              logger.error('❌ [ENHANCED STORE] Error during element capture:', error);
             }
           },
 
@@ -439,6 +406,44 @@ const createEnhancedCanvasStore = () => {
             }
           },
 
+          updateConnectedConnectors: (elementId: ElementId) => {
+            logger.log('🔗 [ENHANCED STORE] Updating connectors connected to element:', elementId);
+            
+            const currentState = get();
+            const updates: Array<{ id: string; updates: Partial<any> }> = [];
+            
+            // Find all connectors connected to this element
+            currentState.elements.forEach((element, id) => {
+              if (isConnectorElement(element)) {
+                const connector = element as any;
+                if (connector.startElementId === elementId || connector.endElementId === elementId) {
+                  const connectorUpdates = updateConnectorPosition(connector, currentState.elements);
+                  if (Object.keys(connectorUpdates).length > 0) {
+                    updates.push({ id, updates: connectorUpdates });
+                  }
+                }
+              }
+            });
+            
+            if (updates.length > 0) {
+              logger.log('🔗 [ENHANCED STORE] Updating', updates.length, 'connectors');
+              
+              // Apply all connector updates
+              set((state: Draft<CanvasStoreState>) => {
+                updates.forEach(({ id, updates }) => {
+                  const connector = state.elements.get(id);
+                  if (connector) {
+                    Object.assign(connector, updates);
+                    connector.updatedAt = Date.now();
+                    state.elements.set(id, connector);
+                  }
+                });
+              });
+              
+              logger.log('✅ [ENHANCED STORE] Connectors updated successfully');
+            }
+          },
+
           // FIXED: Enhanced clearCanvas function that clears both elements AND sections
           clearCanvas: () => {
             logger.log('🧹 [CANVAS STORE] Clearing entire canvas including sections');
@@ -547,10 +552,11 @@ const createEnhancedCanvasStore = () => {
                 let elementWidth = 50;
                 let elementHeight = 50;
                 
-                if (element.width && element.height) {
+                // Use type predicates to safely access element properties
+                if ('width' in element && element.width && 'height' in element && element.height) {
                   elementWidth = element.width;
                   elementHeight = element.height;
-                } else if (element.radius) {
+                } else if ('radius' in element && element.radius) {
                   elementWidth = element.radius * 2;
                   elementHeight = element.radius * 2;
                 }
@@ -797,10 +803,19 @@ const createEnhancedCanvasStore = () => {
               const section = currentState.sections.get(element.sectionId);
               if (section) {
                 // Get element dimensions for boundary checking
-                const elementWidth = 'width' in element ? (element as any).width : 
-                                    element.type === 'circle' ? (element as any).radius * 2 : 50;
-                const elementHeight = 'height' in element ? (element as any).height : 
-                                     element.type === 'circle' ? (element as any).radius * 2 : 50;
+                let elementWidth = 50;
+                let elementHeight = 50;
+                
+                if ('width' in element && element.width) {
+                  elementWidth = element.width;
+                }
+                if ('height' in element && element.height) {
+                  elementHeight = element.height;
+                }
+                if ('radius' in element && element.radius) {
+                  elementWidth = element.radius * 2;
+                  elementHeight = element.radius * 2;
+                }
                 
                 // Apply constraints
                 const padding = 10;
@@ -826,6 +841,11 @@ const createEnhancedCanvasStore = () => {
 
             // Call the original element store update method
             elementsSlice.updateElement(id, updates);
+            
+            // Update any connected connectors if position changed
+            if ('x' in updates || 'y' in updates) {
+              get().updateConnectedConnectors(id);
+            }
           },
 
           // Override addElement to provide automatic cross-store registration
@@ -957,8 +977,19 @@ export const useViewportElements = () => useCanvasStore(
     
     return Array.from(state.elements.values()).filter(element => {
       // Use type-safe property access for dimensions
-      const elementWidth = 'width' in element ? element.width : 100;
-      const elementHeight = 'height' in element ? element.height : 100;
+      let elementWidth = 100;
+      let elementHeight = 100;
+      
+      if ('width' in element && element.width) {
+        elementWidth = element.width;
+      }
+      if ('height' in element && element.height) {
+        elementHeight = element.height;
+      }
+      if ('radius' in element && element.radius) {
+        elementWidth = element.radius * 2;
+        elementHeight = element.radius * 2;
+      }
       
       // Simple viewport culling - can be enhanced with more sophisticated bounds checking
       return element.x < viewport.right && 

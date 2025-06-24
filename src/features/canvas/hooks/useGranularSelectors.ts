@@ -1,174 +1,194 @@
 // Granular Selectors for Canvas State Management
 // Optimized selectors to prevent unnecessary re-renders
 
-import type { CanvasElement } from '../types';
+import type { CanvasElement } from '../stores/types';
+import type { ElementId } from '../types/enhanced.types';
+import { 
+  useCanvasStore, 
+  useSelectedTool as useSelectedToolFromStore,
+  useElements as useElementsFromStore,
+  useIsDrawing as useIsDrawingFromStore,
+  useElement as useElementFromStore
+} from '../stores/canvasStore.enhanced';
+import { 
+  useSelectedElementIds as useSelectedElementIdsFromStore,
+  useSelectionStore 
+} from '../stores/slices/selectionStore';
 
-// These will be implemented once we have the actual store interface
-export interface CanvasState {
-  elements: Record<string, CanvasElement>;
-  selectedElementIds: string[];
-  currentTool: string;
-  isDrawing: boolean;
-  pan: { x: number; y: number };
-  zoom: number;
-  history: any[];
-  redoStack: any[];
-}
-
-// Store hook placeholder - will be imported from actual store
-type StoreSelector<T> = (state: CanvasState) => T;
-declare const useKonvaCanvasStore: <T>(selector: StoreSelector<T>) => T;
-
-// Selector utilities for fine-grained subscriptions
-export const useElementProperty = <T>(
-  elementId: string, 
-  property: keyof CanvasElement
-): T | undefined => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => state.elements[elementId]?.[property] as T
+// Element property selectors
+export const useElementProperty = <T>(elementId: string, property: keyof CanvasElement): T | undefined => {
+  return useCanvasStore(
+    (state) => {
+      const element = state.elements.get(elementId);
+      return element ? (element as any)[property] as T : undefined;
+    }
   );
 };
 
-// Optimized position selectors
+// Element position selector
 export const useElementPosition = (elementId: string) => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => {
-      const element = state.elements[elementId];
-      return element ? { x: element.x, y: element.y } : null;
+  return useCanvasStore(
+    (state) => {
+      const element = state.elements.get(elementId);
+      return element ? { x: element.x, y: element.y } : { x: 0, y: 0 };
     }
   );
 };
 
-// Optimized dimension selectors
+// Element dimensions selector
 export const useElementDimensions = (elementId: string) => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => {
-      const element = state.elements[elementId];
-      return element ? { 
-        width: element.width || 0, 
-        height: element.height || 0 
-      } : null;
+  return useCanvasStore(
+    (state) => {
+      const element = state.elements.get(elementId);
+      if (!element) return { width: 0, height: 0 };
+      
+      // Handle different element types
+      if ('width' in element && 'height' in element) {
+        return { width: element.width, height: element.height };
+      } else if ('radius' in element) {
+        return { width: (element as any).radius * 2, height: (element as any).radius * 2 };
+      } else {
+        return { width: 50, height: 50 }; // Default dimensions
+      }
     }
   );
 };
 
-// Style-specific selectors
+// Element style selector
 export const useElementStyle = (elementId: string) => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => {
-      const element = state.elements[elementId];
-      return element ? {
-        fill: element.fill,
-        stroke: element.stroke,
-        strokeWidth: element.strokeWidth
-      } : null;
+  return useCanvasStore(
+    (state) => {
+      const element = state.elements.get(elementId);
+      if (!element) return {};
+      
+      return {
+        fill: 'fill' in element ? element.fill : undefined,
+        stroke: 'stroke' in element ? element.stroke : undefined,
+        strokeWidth: 'strokeWidth' in element ? element.strokeWidth : undefined,
+        opacity: 'opacity' in element ? element.opacity : 1,
+      };
     }
   );
 };
 
 // Selection state selectors
-export const useIsElementSelected = (elementId: string): boolean => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => state.selectedElementIds.includes(elementId)
-  );
+export const useIsElementSelected = (elementId: string) => {
+  return useSelectionStore((state) => state.selectedElementIds.has(elementId as ElementId));
 };
 
-// Multiple element selectors with memoization
+// Element collection selectors
 export const useSelectedElements = () => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => state.selectedElementIds
-      .map((id: string) => state.elements[id])
-      .filter(Boolean)
-  );
-};
-
-// Viewport-specific selectors
-export const useViewportElements = (bounds: { x: number; y: number; width: number; height: number }) => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => Object.values(state.elements).filter((element: CanvasElement) => {
-      // Simple bounding box intersection
-      return element.x + (element.width || 0) >= bounds.x &&
-             element.x <= bounds.x + bounds.width &&
-             element.y + (element.height || 0) >= bounds.y &&
-             element.y <= bounds.y + bounds.height;
-    })
-  );
-};
-
-// Performance metrics selectors
-export const useElementCount = () => {
-  return useKonvaCanvasStore((state: CanvasState) => Object.keys(state.elements).length);
-};
-
-export const useSelectedElementCount = () => {
-  return useKonvaCanvasStore((state: CanvasState) => state.selectedElementIds.length);
-};
-
-// Type-specific element selectors
-export const useElementsByType = (type: string) => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => Object.values(state.elements).filter((element: CanvasElement) => element.type === type)
-  );
-};
-
-// History and undo/redo selectors
-export const useCanUndoRedo = () => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => ({
-      canUndo: state.history.length > 0,
-      canRedo: state.redoStack.length > 0
-    })
-  );
-};
-
-// Tool and interaction state selectors
-export const useCurrentTool = () => {
-  return useKonvaCanvasStore((state: CanvasState) => state.currentTool);
-};
-
-export const useIsDrawing = () => {
-  return useKonvaCanvasStore((state: CanvasState) => state.isDrawing);
-};
-
-// Zoom and pan state selectors
-export const useViewportTransform = () => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => ({
-      x: state.pan.x,
-      y: state.pan.y,
-      scaleX: state.zoom,
-      scaleY: state.zoom
-    })
-  );
-};
-
-// Batch selectors for performance
-export const useElementsInRegion = (region: { x: number; y: number; width: number; height: number }) => {
-  return useKonvaCanvasStore(
-    (state: CanvasState) => {
-      const elementsInRegion: CanvasElement[] = [];
-      for (const element of Object.values(state.elements)) {
-        if (isElementInRegion(element, region)) {
-          elementsInRegion.push(element);
-        }
-      }
-      return elementsInRegion;
+  return useCanvasStore(
+    (state) => {
+      const selectedIds = Array.from(state.selectedElementIds);
+      return selectedIds
+        .map((id: string) => state.elements.get(id))
+        .filter((element) => element !== undefined);
     }
   );
 };
 
-// Helper function for region checking
-const isElementInRegion = (
-  element: CanvasElement, 
-  region: { x: number; y: number; width: number; height: number }
-): boolean => {
-  const elementRight = element.x + (element.width || 0);
-  const elementBottom = element.y + (element.height || 0);
-  const regionRight = region.x + region.width;
-  const regionBottom = region.y + region.height;
-
-  return element.x < regionRight &&
-         elementRight > region.x &&
-         element.y < regionBottom &&
-         elementBottom > region.y;
+// Elements by type selector
+export const useElementsByType = (type: string) => {
+  return useCanvasStore(
+    (state) => Array.from(state.elements.values()).filter((element) => {
+      return element.type === type;
+    })
+  );
 };
+
+// Canvas statistics selectors
+export const useElementCount = () => {
+  return useCanvasStore((state) => state.elements.size);
+};
+
+export const useSelectedCount = () => {
+  return useSelectionStore((state) => state.selectedElementIds.size);
+};
+
+// Viewport and interaction selectors
+export const useViewportBounds = () => {
+  return useCanvasStore((state) => state.viewportBounds);
+};
+
+export const useZoom = () => {
+  return useCanvasStore((state) => state.zoom);
+};
+
+export const usePan = () => {
+  return useCanvasStore((state) => state.pan);
+};
+
+// Tool and interaction state selectors
+export const useCurrentTool = () => {
+  return useSelectedToolFromStore();
+};
+
+export const useIsDrawing = () => {
+  return useIsDrawingFromStore();
+};
+
+export const useCurrentPath = () => {
+  return useCanvasStore((state) => state.currentPath || []);
+};
+
+// History selectors
+export const useCanUndo = () => {
+  return useCanvasStore((state) => state.canUndo());
+};
+
+export const useCanRedo = () => {
+  return useCanvasStore((state) => state.canRedo());
+};
+
+// Text editing selectors
+export const useEditingTextId = () => {
+  return useCanvasStore((state) => state.editingTextId);
+};
+
+export const useIsEditingText = (elementId?: string) => {
+  return useCanvasStore(
+    (state) => elementId ? state.editingTextId === elementId : state.editingTextId !== null
+  );
+};
+
+// Section selectors
+export const useSections = () => {
+  return useCanvasStore((state) => Array.from(state.sections.values()));
+};
+
+export const useSection = (sectionId: string) => {
+  return useCanvasStore((state) => state.sections.get(sectionId));
+};
+
+export const useElementsInSection = (sectionId: string) => {
+  return useCanvasStore(
+    (state) => {
+      const section = state.sections.get(sectionId);
+      if (!section || !section.childElementIds) return [];
+      
+      return section.childElementIds
+        .map(id => state.elements.get(id))
+        .filter((element) => element !== undefined);
+    }
+  );
+};
+
+// Performance monitoring selector
+export const useRenderingStats = () => {
+  return useCanvasStore(
+    (state) => ({
+      totalElements: state.elements.size,
+      selectedElements: state.selectedElementIds.size,
+      sections: state.sections.size,
+      isDrawing: state.isDrawing,
+      currentTool: state.selectedTool,
+    })
+  );
+};
+
+// Re-export commonly used store hooks for convenience
+export { useSelectedToolFromStore as useSelectedTool };
+export { useElementsFromStore as useElements };
+export { useSelectedElementIdsFromStore as useSelectedElementIds };
+export { useElementFromStore as useElement };

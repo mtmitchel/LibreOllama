@@ -1,8 +1,8 @@
 import React, { useMemo, useEffect } from 'react';
-import { Line, Arrow } from 'react-konva';
+import { Line, Arrow, Path } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, ElementId, SectionId, ConnectorElement } from '../types/enhanced.types';
-import { getAnchorPoint } from '../types/connector';
+import { getElementSnapPoints, calculateConnectorPath } from '../utils/connectorUtils';
 
 interface ConnectorRendererProps {
   element: ConnectorElement;
@@ -16,13 +16,12 @@ interface ConnectorRendererProps {
 export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, ConnectorRendererProps>(
   ({ element, isSelected, onSelect, onUpdate, elements, sections = new Map() }, ref) => {
     // Only render if this is a connector element
-    if (element.type !== 'connector' || !element.startPoint || !element.endPoint || !element.connectorStyle) {
+    if (element.type !== 'connector' || !element.startPoint || !element.endPoint) {
       return null;
     }
 
-    // Helper function to get anchor point with section support
-    const getElementAnchorPoint = (targetElement: CanvasElement, anchor: string) => {
-      // Get element coordinates - convert to absolute if in a section
+    // Helper function to get element position with section support
+    const getAbsoluteElementPosition = (targetElement: CanvasElement) => {
       let elementX = targetElement.x;
       let elementY = targetElement.y;
       
@@ -34,23 +33,13 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
         }
       }
       
-      // Use the imported getAnchorPoint utility with proper element format
-      return getAnchorPoint(
-        { 
-          x: elementX, 
-          y: elementY, 
-          width: 'width' in targetElement ? targetElement.width || 0 : 0, 
-          height: 'height' in targetElement ? targetElement.height || 0 : 0, 
-          radius: 'radius' in targetElement ? targetElement.radius || 0 : 0 
-        },
-        anchor as any
-      );
+      return { x: elementX, y: elementY };
     };
 
     // Memoize endpoint calculations for performance
-    const { updatedStartPoint, updatedEndPoint, isValid } = useMemo(() => {
+    const { updatedStartPoint, updatedEndPoint, pathPoints, isValid } = useMemo(() => {
       // Update connector path if connected to elements
-      const getUpdatedEndpoint = (point: { x: number; y: number }, elementId?: ElementId) => {
+      const getUpdatedEndpoint = (point: { x: number; y: number; attachmentPoint?: any }, elementId?: ElementId) => {
         if (!elementId) {
           return { 
             endpoint: point, 
@@ -69,13 +58,28 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
           };
         }
         
-        // For now, just use center anchor since we don't have anchor info in the current structure
-        const anchorPoint = getElementAnchorPoint(connectedElement, 'center');
+        // Get absolute position for the element
+        const absPos = getAbsoluteElementPosition(connectedElement);
+        const absoluteElement = { ...connectedElement, x: absPos.x, y: absPos.y };
+        
+        // Get snap points for the element
+        const snapPoints = getElementSnapPoints(absoluteElement);
+        
+        // Find the specific attachment point or use the stored position
+        if (point.attachmentPoint) {
+          const attachedPoint = snapPoints.find(sp => sp.attachmentPoint === point.attachmentPoint);
+          if (attachedPoint) {
+            return {
+              endpoint: { x: attachedPoint.x, y: attachedPoint.y },
+              isConnected: true,
+              isValid: true
+            };
+          }
+        }
+        
+        // Fallback to stored position
         return {
-          endpoint: {
-            x: anchorPoint.x,
-            y: anchorPoint.y
-          },
+          endpoint: point,
           isConnected: true,
           isValid: true
         };
@@ -85,21 +89,33 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
         return {
           updatedStartPoint: { x: 0, y: 0 },
           updatedEndPoint: { x: 0, y: 0 },
-          isValid: false,
-          hasConnections: false
+          pathPoints: [0, 0, 0, 0],
+          isValid: false
         };
       }
 
       const startResult = getUpdatedEndpoint(element.startPoint, element.startElementId);
       const endResult = getUpdatedEndpoint(element.endPoint, element.endElementId);
       
+      // Calculate the path based on connector type
+      const routingType = element.subType === 'curved' ? 'curved' : 
+                         element.subType === 'bent' ? 'orthogonal' : 'straight';
+      
+      const calculatedPath = calculateConnectorPath(
+        startResult.endpoint,
+        endResult.endpoint,
+        routingType,
+        element.startPoint.attachmentPoint,
+        element.endPoint.attachmentPoint
+      );
+      
       return {
         updatedStartPoint: startResult.endpoint,
         updatedEndPoint: endResult.endpoint,
-        isValid: startResult.isValid && endResult.isValid,
-        hasConnections: startResult.isConnected || endResult.isConnected
+        pathPoints: calculatedPath,
+        isValid: startResult.isValid && endResult.isValid
       };
-    }, [element.startPoint, element.endPoint, elements, sections, getElementAnchorPoint]);
+    }, [element, elements, sections, getAbsoluteElementPosition]);
 
     // Handle cleanup of invalid connections
     useEffect(() => {
@@ -110,14 +126,14 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
       }
     }, [isValid, element.id, onUpdate]);
     
-    // Calculate the current path - for straight connectors, just use start and end points
-    const pathPoints = [updatedStartPoint.x, updatedStartPoint.y, updatedEndPoint.x, updatedEndPoint.y];
-    
     const commonProps = {
       points: pathPoints,
-      stroke: element.connectorStyle.strokeColor || '#000000',
-      strokeWidth: element.connectorStyle.strokeWidth || 2,
-      ...(element.connectorStyle.strokeDashArray && element.connectorStyle.strokeDashArray.length > 0 && {
+      stroke: element.stroke || '#6366F1',
+      strokeWidth: element.strokeWidth || 2,
+      lineCap: 'round' as const,
+      lineJoin: 'round' as const,
+      // Add dash pattern if specified
+      ...(element.connectorStyle?.strokeDashArray && {
         dash: element.connectorStyle.strokeDashArray
       }),
       onClick: onSelect,
@@ -126,22 +142,46 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
       // Visual feedback for selection
       ...(isSelected && {
         shadowColor: '#3B82F6',
-        shadowBlur: 4,
+        shadowBlur: 8,
         shadowOpacity: 0.6,
       }),
     };
 
-    // Render based on connector style - check if it has arrows
-    const hasEndArrow = element.connectorStyle.endArrow && element.connectorStyle.endArrow !== 'none';
+    // Render based on connector type
+    const isArrowType = element.subType === 'arrow' || element.subType === 'connector-arrow';
+    const isCurvedType = element.subType === 'curved';
     
-    if (hasEndArrow) {
+    // For curved connectors, use Path instead of Line/Arrow
+    if (isCurvedType && pathPoints.length === 6) {
+      const pathData = `M ${pathPoints[0]} ${pathPoints[1]} Q ${pathPoints[2]} ${pathPoints[3]} ${pathPoints[4]} ${pathPoints[5]}`;
+      return (
+        <Path
+          ref={ref as any}
+          data={pathData}
+          stroke={element.stroke || '#6366F1'}
+          strokeWidth={element.strokeWidth || 2}
+          fill="none"
+          onClick={onSelect}
+          onTap={onSelect}
+          listening={true}
+          {...(isSelected && {
+            shadowColor: '#3B82F6',
+            shadowBlur: 8,
+            shadowOpacity: 0.6,
+          })}
+        />
+      );
+    }
+    
+    // For arrow connectors
+    if (isArrowType) {
       return (
         <Arrow
           ref={ref as React.RefObject<Konva.Arrow>}
           {...commonProps}
-          fill={element.connectorStyle.strokeColor || '#000000'}
-          pointerLength={element.connectorStyle.arrowSize || 10}
-          pointerWidth={element.connectorStyle.arrowSize || 10}
+          fill={element.stroke || '#6366F1'}
+          pointerLength={10}
+          pointerWidth={10}
         />
       );
     }

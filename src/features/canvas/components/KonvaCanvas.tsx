@@ -12,6 +12,7 @@ import Konva from 'konva';
 import { CanvasEventHandler } from './CanvasEventHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { useCanvasStore, canvasStore } from '../stores/canvasStore.enhanced';
+import { useCurrentTool } from '../hooks/useGranularSelectors';
 // import { useCanvasSetup } from './useCanvasSetup';
 import { CanvasTool, ElementId, SectionId, CanvasElement } from '../types/enhanced.types';
 import '../../../styles/konvaCanvas.css';
@@ -71,9 +72,14 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   const elements = useCanvasStore(state => state.elements);
   const sections = useCanvasStore(state => state.sections);
   const selectedElementIds = useCanvasStore(state => state.selectedElementIds);
-  const currentTool = useCanvasStore(state => state.selectedTool);
+  const currentTool = useCurrentTool();
   const isDrawing = useCanvasStore(state => state.isDrawing);
   const setSelectedTool = useCanvasStore(state => state.setSelectedTool);
+  
+  // Debug logging for tool state
+  useEffect(() => {
+    console.log('📊 [KonvaCanvas] Tool state updated:', currentTool);
+  }, [currentTool]);
   
   // Combine elements and sections for rendering
   const allElements = useMemo(() => {

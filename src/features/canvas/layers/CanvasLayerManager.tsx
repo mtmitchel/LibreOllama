@@ -50,6 +50,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   connectorStart,
   connectorEnd,
   previewSection,
+  isDrawingSection,
   elements,
   selectedElementIds,
 }) => {
@@ -491,7 +492,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       selectedElementIds={selectedElementIdsOnly}
       elements={elements}
       sections={sectionElementsMap}
-      isDrawingSection={isDrawingConnector ?? false} // Should be isDrawingSection
+      isDrawingSection={isDrawingSection ?? false}
       previewSection={previewSection ?? null}
       selectionBox={selectionBox}
       hoveredSnapPoint={hoveredSnapPoint as { x: number; y: number; elementId?: ElementId; anchor?: string } | null}

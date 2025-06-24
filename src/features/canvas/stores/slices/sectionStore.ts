@@ -7,8 +7,10 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import type { SectionElement } from '../../types/enhanced.types';
-import { SectionId, ElementId } from '../../types/enhanced.types';
+// Correctly import all necessary types and type guards
+import type { SectionElement, CanvasElement } from '../../types/enhanced.types';
+import { ElementId, SectionId } from '../../types/enhanced.types';
+import { isRectangularElement, isCircleElement } from '../../types/enhanced.types';
 import { logger } from '@/lib/logger';
 
 export interface SectionState {
@@ -41,7 +43,8 @@ export interface SectionState {
   isElementInAnySection: (elementId: string) => boolean;
   
   // NEW: Capture elements helper that will be called from the combined store
-  captureElementsInSection: (sectionId: string, elements: Map<string, any>) => string[];
+  // FIXED: Use CanvasElement for strong typing
+  captureElementsInSection: (sectionId: string, elements: Map<string, CanvasElement>) => string[];
 }
 
 export const createSectionStore: StateCreator<
@@ -63,7 +66,8 @@ export const createSectionStore: StateCreator<
       y,
       width,
       height,
-      title,      childElementIds: [],
+      title,
+      childElementIds: [],
       isLocked: false,
       isHidden: false,
       backgroundColor: '#f8f9fa',
@@ -274,12 +278,13 @@ export const createSectionStore: StateCreator<
   },
   
   // NEW: Method to capture elements that are within section bounds - Updated to work with Map
-  captureElementsInSection: (sectionId: string, elements: Map<string, any>) => {
+  // FIXED: Use CanvasElement for strong typing and type guards for safe property access
+  captureElementsInSection: (sectionId: string, elements: Map<string, CanvasElement>) => {
     const section = get().sections.get(sectionId);
     if (!section) return [];
     
     const capturedElementIds: string[] = [];
-      elements.forEach((element, elementId) => {
+    elements.forEach((element, elementId) => {
       // Skip if element is already in a DIFFERENT section
       if (element.sectionId && element.sectionId !== sectionId) return;
       
@@ -290,16 +295,28 @@ export const createSectionStore: StateCreator<
       const elementX = element.x;
       const elementY = element.y;
       
-      // Get element dimensions
-      let elementWidth = 50;
-      let elementHeight = 50;
+      // Get element dimensions using type guards
+      let elementWidth = 0;
+      let elementHeight = 0;
       
-      if (element.width && element.height) {
+      if (isRectangularElement(element)) {
+        // This covers rectangle, image, sticky-note, table, and text (if width/height are set)
         elementWidth = element.width;
         elementHeight = element.height;
-      } else if (element.radius) {
+      } else if (isCircleElement(element)) {
         elementWidth = element.radius * 2;
         elementHeight = element.radius * 2;
+      } else {
+        // For now, we only handle elements with clear rectangular or circular bounds.
+        // Other types like 'pen' or 'connector' would require bounding box calculation.
+        logger.log(`[SECTION STORE] Skipping element with unhandled type for capture: ${element.type}`, elementId);
+        return; // Skip elements we can't measure yet
+      }
+      
+      // Ensure we have valid dimensions before proceeding
+      if (!elementWidth || !elementHeight || elementWidth <= 0 || elementHeight <= 0) {
+        logger.log(`[SECTION STORE] Skipping element with invalid or zero dimensions: ${element.type}`, elementId);
+        return;
       }
       
       // Calculate element center
@@ -311,7 +328,8 @@ export const createSectionStore: StateCreator<
                              elementCenterX <= section.x + section.width && 
                              elementCenterY >= section.y && 
                              elementCenterY <= section.y + section.height;
-        if (isWithinSection) {
+                             
+      if (isWithinSection) {
         capturedElementIds.push(elementId);
         logger.log('🎯 [SECTION STORE] Captured existing element:', elementId, {
           element: { 
@@ -323,57 +341,11 @@ export const createSectionStore: StateCreator<
             height: elementHeight 
           },
           section: { x: section.x, y: section.y, width: section.width, height: section.height }
-        });      }
-    });
-      // Add captured elements to the section OR initialize empty childElementIds
-    set((state: Draft<SectionState>) => {
-      const section = state.sections.get(sectionId);
-      if (section) {
-        if (capturedElementIds.length > 0) {
-          // Remove elements from other sections
-          capturedElementIds.forEach(elementId => {
-            state.sections.forEach((s, sId) => {
-              if (sId !== sectionId) {
-                const index = s.childElementIds.findIndex(id => (id as string) === elementId);
-                if (index > -1) {
-                  s.childElementIds.splice(index, 1);
-                  // Update the section in the map
-                  state.sections.set(sId, { ...s });
-                }
-              }
-            });
-          });
-          
-          // FIXED: Merge with existing childElementIds instead of replacing
-          const existingIds = section.childElementIds || [];
-          const newIds = capturedElementIds.map(id => ElementId(id));
-          const mergedIds = [...existingIds];
-          
-          // Add only new IDs that aren't already in the array
-          newIds.forEach(newId => {
-            if (!mergedIds.some(existingId => existingId === newId)) {
-              mergedIds.push(newId);
-            }
-          });
-          
-          const updatedSection = {
-            ...section,
-            childElementIds: mergedIds
-          };
-          state.sections.set(sectionId, updatedSection);
-          logger.log('✅ [SECTION STORE] Merged', capturedElementIds.length, 'new elements with', existingIds.length, 'existing elements in section:', sectionId);
-        } else {
-          // FIXED: Initialize empty childElementIds even when no elements are captured
-          const updatedSection = {
-            ...section,
-            childElementIds: []
-          };
-          state.sections.set(sectionId, updatedSection);
-          logger.log('✅ [SECTION STORE] Initialized empty childElementIds for section:', sectionId);
-        }
+        });
       }
     });
     
+    // This function is now a pure query. The calling function (in enhanced store) handles state updates.
     return capturedElementIds;
   }
 });
