@@ -41,19 +41,22 @@ export const renderElement = ({
   draggable = true,
   sectionContext
 }: RenderElementProps): React.ReactElement | null => {
-  const commonProps = {
-    key: element.id,
+  const { id, ...restOfElement } = element;
+
+  const konvaProps = {
+    id: id,
+    x: element.x || 0,
+    y: element.y || 0,
+    draggable: draggable && !element.isLocked,
+    ...(dragBoundFunc && { dragBoundFunc }),
+    onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
+    onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id as ElementId)
+  };
+
+  const commonShapeProps = {
     element,
     isSelected,
-    konvaProps: {
-      id: element.id,
-      x: element.x || 0,
-      y: element.y || 0,
-      draggable: draggable && !element.isLocked,
-      ...(dragBoundFunc && { dragBoundFunc }),
-      onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
-      onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id as ElementId)
-    },
+    konvaProps,
     onUpdate: onElementUpdate,
     onStartTextEdit,
     sectionContext
@@ -62,37 +65,37 @@ export const renderElement = ({
   switch (element.type) {
     case 'text':
       if (isTextElement(element)) {
-        return <TextShape {...commonProps} element={element} />;
+        return <TextShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 
     case 'image':
       if (isImageElement(element)) {
-        return <ImageShape {...commonProps} element={element} />;
+        return <ImageShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 
     case 'sticky-note':
       if (isStickyNoteElement(element)) {
-        return <StickyNoteShape {...commonProps} element={element} />;
+        return <StickyNoteShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 
     case 'star':
       if (isStarElement(element)) {
-        return <StarShape {...commonProps} element={element} />;
+        return <StarShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 
     case 'triangle':
       if (isTriangleElement(element)) {
-        return <TriangleShape {...commonProps} element={element} />;
+        return <TriangleShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 
     case 'pen':
       if (isPenElement(element)) {
-        return <PenShape {...commonProps} element={element} />;
+        return <PenShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 
@@ -100,7 +103,8 @@ export const renderElement = ({
       if (isRectangleElement(element)) {
         return (
           <Rect
-            {...commonProps.konvaProps}
+            key={id}
+            {...konvaProps}
             width={element.width || 100}
             height={element.height || 100}
             fill={element.fill || '#3B82F6'}
@@ -116,7 +120,8 @@ export const renderElement = ({
       if (isCircleElement(element)) {
         return (
           <Circle
-            {...commonProps.konvaProps}
+            key={id}
+            {...konvaProps}
             radius={element.radius || 50}
             fill={element.fill || '#3B82F6'}
             stroke={element.stroke || '#1E40AF'}

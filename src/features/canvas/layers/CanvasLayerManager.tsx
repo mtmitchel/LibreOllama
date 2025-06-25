@@ -7,12 +7,14 @@ import { MainLayer } from './MainLayer';
 import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
 import { GroupedSectionRenderer } from '../components/GroupedSectionRenderer';
+import SectionElement from '../components/SectionElement';
+import { ElementRenderer } from '../components/ElementRenderer';
 import { TransformerManager } from '../components/TransformerManager';
 import { DrawingContainment } from '../components/drawing/DrawingContainment';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
-import { CanvasElement, ElementId, SectionElement, SectionId, isSectionElement, ConnectorElement } from '../types/enhanced.types';
+import { CanvasElement, ElementId, SectionElement as SectionElementType, SectionId, isSectionElement, ConnectorElement } from '../types/enhanced.types';
 import { useViewportCulling } from '../hooks/useViewportCulling';
 
 interface CanvasLayerManagerProps {
@@ -88,7 +90,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     const now = Date.now();
     const generateId = (): ElementId => `element_${now}_${Math.random().toString(36).substr(2, 9)}` as ElementId;
     
-    const targetSection = Array.from(elements.values()).find((el): el is SectionElement =>
+    const targetSection = Array.from(sections.values()).find((el): el is SectionElementType =>
       isSectionElement(el) &&
       pos.x >= el.x &&
       pos.x <= el.x + el.width &&
@@ -245,7 +247,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   const { mainElements, connectorElements, sectionElements, elementsBySection } = useMemo(() => {
     const main: CanvasElement[] = [];
     const connectors: ConnectorElement[] = [];
-    const sectionsArr: SectionElement[] = [];
+    const sectionsArr: SectionElementType[] = [];
     const bySection = new Map<SectionId, CanvasElement[]>();
 
     visibleElements.forEach((el) => {
@@ -417,18 +419,24 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         sortedSectionElements.map(section => {
           const isSelected = selectedElementIds.has(section.id) || (section.childElementIds ?? []).some(id => selectedElementIds.has(id));
           return (
-            <GroupedSectionRenderer
+            <SectionElement
               key={section.id}
               section={section}
-              elements={sortedElementsBySection.get(section.id) || []}
-              isSelected={isSelected}
-              onElementClick={onElementClick}
-              onElementDragEnd={onElementDragEnd}
-              onElementUpdate={onElementUpdate}
-              onSectionUpdate={updateSection}
-              onStartTextEdit={onStartTextEdit}
-              onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
-            />
+              onUpdate={updateSection}
+              onDragEnd={onElementDragEnd}
+            >
+              {(sortedElementsBySection.get(section.id) || []).map(element => (
+                <ElementRenderer
+                  key={element.id}
+                  element={element}
+                  isSelected={selectedElementIds.has(element.id)}
+                  onElementClick={onElementClick}
+                  onElementDragEnd={onElementDragEnd}
+                  onElementUpdate={onElementUpdate}
+                  onStartTextEdit={onStartTextEdit}
+                />
+              ))}
+            </SectionElement>
           );
         })
       ) : (

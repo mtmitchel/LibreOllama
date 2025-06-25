@@ -13,7 +13,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
 import { Draft } from 'immer';
-import { CoordinateService } from '../utils/canvasCoordinateService';
+
 import { logger } from '@/lib/logger';
 import { updateConnectorPosition } from '../utils/connectorUtils';
 import { isConnectorElement } from '../types/enhanced.types';
@@ -242,19 +242,23 @@ export const createEnhancedCanvasStore = () => {
             const scaleX = newWidth / oldWidth;
             const scaleY = newHeight / oldHeight;
 
-            // Update the section itself
             get().updateSection(sectionId, { width: newWidth, height: newHeight });
 
-            // Update child elements
             section.childElementIds.forEach(elementId => {
               const element = elements.get(elementId);
               if (element) {
                 const newX = element.x * scaleX;
                 const newY = element.y * scaleY;
-                const newWidth = (element.width || 0) * scaleX;
-                const newHeight = (element.height || 0) * scaleY;
+                let updates: Partial<CanvasElement> = { x: newX, y: newY };
 
-                updateElement(elementId, { x: newX, y: newY, width: newWidth, height: newHeight });
+                if (element.type === 'circle') {
+                  updates.radius = (element.radius || 0) * Math.min(scaleX, scaleY);
+                } else {
+                  updates.width = (element.width || 0) * scaleX;
+                  updates.height = (element.height || 0) * scaleY;
+                }
+
+                updateElement(elementId, updates);
               }
             });
           },
@@ -593,55 +597,11 @@ export const createEnhancedCanvasStore = () => {
           updateElement: (id: ElementId, updates: Partial<any>) => {
             const currentState = get();
             const element = currentState.elements.get(id as string);
+
             
-            // Note: Let the elements store handle the "not found" error case
-            // This ensures that tests can properly catch cross-store synchronization issues
 
-            // If element is in a section and position is being updated, apply constraints
-            if (element && element.sectionId && ('x' in updates || 'y' in updates)) {
-              const section = currentState.sections.get(element.sectionId);
-              if (section) {
-                // Get element dimensions for boundary checking
-                let elementWidth = 50;
-                let elementHeight = 50;
-                
-                if ('width' in element && element.width) {
-                  elementWidth = element.width;
-                }
-                if ('height' in element && element.height) {
-                  elementHeight = element.height;
-                }
-                if ('radius' in element && element.radius) {
-                  elementWidth = element.radius * 2;
-                  elementHeight = element.radius * 2;
-                }
-                
-                // Apply constraints
-                const padding = 10;
-                const minX = section.x + padding;
-                const maxX = section.x + section.width - elementWidth - padding;
-                const minY = section.y + padding;
-                const maxY = section.y + section.height - elementHeight - padding;
-                
-                if ('x' in updates) {
-                  updates.x = Math.max(minX, Math.min(maxX, updates.x));
-                }
-                if ('y' in updates) {
-                  updates.y = Math.max(minY, Math.min(maxY, updates.y));
-                }
-                
-                logger.log('🔒 [ENHANCED STORE] Applied section constraints to element:', {
-                  elementId: id,
-                  sectionBounds: { x: section.x, y: section.y, width: section.width, height: section.height },
-                  constrainedPosition: { x: updates.x, y: updates.y }
-                });
-              }
-            }
-
-            // Call the original element store update method
             elementsSlice.updateElement(id, updates);
             
-            // Update any connected connectors if position changed
             if ('x' in updates || 'y' in updates) {
               get().updateConnectedConnectors(id);
             }

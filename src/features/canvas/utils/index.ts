@@ -5,7 +5,6 @@
 
 // Core canvas utilities
 export * from './canvasRedrawUtils';
-export * from './canvasCoordinateService';
 export * from './richTextUtils';
 
 // Canvas-specific utilities

@@ -100,7 +100,6 @@ export { ConnectorLayer } from './layers/ConnectorLayer';
 export { CanvasLayerManager } from './layers/CanvasLayerManager';
 
 // Utility Functions
-export { CoordinateService } from './utils/canvasCoordinateService';
 
 // Canvas Optimization Utilities
 export {
