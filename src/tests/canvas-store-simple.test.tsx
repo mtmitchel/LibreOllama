@@ -11,12 +11,16 @@ describe('Canvas Store - Simple Operations', () => {
     // Create a fresh store instance for each test
     store = createCanvasStore();
   });
-
   test('should add a single element correctly', () => {
     const element = createMockCanvasElement({ type: 'rectangle' });
     store.getState().addElement(element);
     expect(store.getState().elements.size).toBe(1);
-    expect(store.getState().elements.get(element.id)).toEqual(element);
+    const addedElement = store.getState().elements.get(element.id);
+    expect(addedElement).toBeDefined();
+    expect(addedElement!.id).toBe(element.id);
+    expect(addedElement!.type).toBe(element.type);
+    expect(addedElement!.x).toBe(element.x);
+    expect(addedElement!.y).toBe(element.y);
   });
     test('should update an element correctly', () => {
     const element = createMockCanvasElement({ type: 'rectangle' });

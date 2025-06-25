@@ -6,6 +6,7 @@ import { Layer, Group, Transformer, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
+import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 
 interface UILayerProps {
   selectedElementIds: Set<ElementId>;
@@ -52,8 +53,8 @@ export const UILayer: React.FC<UILayerProps> = ({
   onElementUpdate,
   addHistoryEntry,
 }) => {
-  // Check if centralized transformer is enabled
-  const useCentralizedTransformer = useFeatureFlag('centralized-transformer');
+  // Check if centralized transformer is enabled with enhanced fallback support
+  const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
   
   const transformerRef = React.useRef<Konva.Transformer>(null);
   const layerRef = React.useRef<Konva.Group>(null);

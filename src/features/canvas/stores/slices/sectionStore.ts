@@ -54,11 +54,14 @@ export const createSectionStore: StateCreator<
   SectionState
 > = (set, get) => ({
   // Initial state - Using Map for O(1) performance
-  sections: new Map(),  sectionOrder: [],
-  
+  sections: new Map(),  sectionOrder: [],  
   // Section operations
   createSection: (x, y, width = 400, height = 300, title = 'New Section') => {
     const sectionId = SectionId(`section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    
+    // Enhanced debugging for section creation
+    console.log('🔧 [SECTION STORE] Creating section with params:', { x, y, width, height, title });
+    
     const section: SectionElement = {
       id: sectionId,
       type: 'section',

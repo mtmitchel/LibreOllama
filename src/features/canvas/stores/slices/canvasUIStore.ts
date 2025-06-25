@@ -5,6 +5,7 @@
  */
 
 import { StateCreator } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
 import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 
@@ -32,6 +33,24 @@ export interface CanvasUIState {
   selectedTool: string;
   availableTools: string[];
   toolGroups: Record<string, string[]>;
+  
+  // Tool settings for different tools
+  toolSettings: {
+    pen?: {
+      color: string;
+      width: number;
+    };
+    brush?: {
+      color: string;
+      width: number;
+      opacity: number;
+    };
+    text?: {
+      fontSize: number;
+      fontFamily: string;
+      color: string;
+    };
+  };
   
   // Sidebar and panel states
   leftSidebarOpen: boolean;
@@ -108,11 +127,9 @@ export interface CanvasUIState {
   hoveredSnapPoint: { x: number; y: number; elementId?: string; anchor?: string } | null;
   
   // Tool operations
-  setSelectedTool: (tool: string) => void;
-  getSelectedTool: () => string;
-  getAvailableTools: () => string[];
-  addTool: (toolId: string, groupId?: string) => void;
-  removeTool: (toolId: string) => void;
+  setActiveTool: (tool: string) => void;
+  setPenColor: (color: string) => void;
+  setPenWidth: (width: number) => void;
   
   // Panel operations
   toggleLeftSidebar: () => void;
@@ -176,16 +193,23 @@ export const createCanvasUIStore: StateCreator<
   [['zustand/immer', never]],
   [],
   CanvasUIState
-> = (set, get) => ({
-  // Initial state
+> = (set, get) => ({  // Initial state
   selectedTool: 'select',
-  availableTools: ['select', 'rectangle', 'circle', 'text', 'pen', 'arrow', 'sticky-note'],
+  availableTools: ['select', 'rectangle', 'circle', 'text', 'pen', 'arrow', 'sticky-note', 'section'],
   toolGroups: {
     selection: ['select', 'lasso'],
     shapes: ['rectangle', 'circle', 'triangle', 'star'],
     drawing: ['pen', 'brush', 'eraser'],
     text: ['text', 'sticky-note'],
     connectors: ['arrow', 'line', 'connector']
+  },
+  
+  // Tool settings
+  toolSettings: {
+    pen: {
+      color: '#000000',
+      width: 5
+    }
   },
   
   // Panel states
@@ -240,11 +264,11 @@ export const createCanvasUIStore: StateCreator<
   hoveredSnapPoint: null,
 
   // Tool operations
-  setSelectedTool: (tool: string) => {
-    const endTiming = PerformanceMonitor.startTiming('setSelectedTool');
+  setActiveTool: (tool: string) => {
+    const endTiming = PerformanceMonitor.startTiming('setActiveTool');
     
     try {
-      console.log('🔧 [UI STORE] Setting selected tool:', tool);
+      console.log('🔧 [UI STORE] Setting active tool:', tool);
       
       set((state: Draft<CanvasUIState>) => {
         const previousTool = state.selectedTool;
@@ -262,6 +286,23 @@ export const createCanvasUIStore: StateCreator<
     } finally {
       endTiming();
     }
+  },
+  setPenColor: (color: string) => {
+    set((state: Draft<CanvasUIState>) => {
+      if (!state.toolSettings.pen) {
+        state.toolSettings.pen = { color: '#000000', width: 5 }; // Initialize if not present
+      }
+      state.toolSettings.pen.color = color;
+    });
+  },
+
+  setPenWidth: (width: number) => {
+    set((state: Draft<CanvasUIState>) => {
+      if (!state.toolSettings.pen) {
+        state.toolSettings.pen = { color: '#000000', width: 5 }; // Initialize if not present
+      }
+      state.toolSettings.pen.width = width;
+    });
   },
 
   getSelectedTool: (): string => {
@@ -595,7 +636,6 @@ export const createCanvasUIStore: StateCreator<
     }
     return state.globalLoading || Object.keys(state.loadingStates).length > 0;
   },
-
   // Notification operations
   showNotification: (notification: Omit<CanvasUIState['notifications'][0], 'id' | 'timestamp' | 'isVisible'>): string => {
     const notificationId = `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -609,23 +649,24 @@ export const createCanvasUIStore: StateCreator<
       };
       
       state.notifications.push(newNotification);
-      
-      // Auto-hide after duration
-      if (newNotification.duration) {
-        setTimeout(() => {
-          get().hideNotification(notificationId);
-        }, newNotification.duration);
-      }
     });
-    
+
+    // Auto-hide after duration if specified
+    if (notification.duration && notification.duration > 0) {
+      setTimeout(() => {
+        const store = get();
+        store.hideNotification(notificationId);
+      }, notification.duration);
+    }
+
     return notificationId;
   },
 
-  hideNotification: (notificationId: string) => {
+  hideNotification: (id: string) => {
     set((state: Draft<CanvasUIState>) => {
-      const notification = state.notifications.find(notif => notif.id === notificationId);
-      if (notification) {
-        notification.isVisible = false;
+      const index = state.notifications.findIndex(n => n.id === id);
+      if (index !== -1) {
+        state.notifications.splice(index, 1);
       }
     });
   },
@@ -636,23 +677,18 @@ export const createCanvasUIStore: StateCreator<
     });
   },
 
-  // Performance utilities
+  // Performance metrics
   getUIPerformance: () => {
-    const metrics = get().uiMetrics;
-    return {
-      toolSwitches: metrics.toolSwitches,
-      panelToggles: metrics.panelToggles,
-      modalOpens: metrics.modalOpens
-    };
+    const state = get();
+    return state.uiMetrics;
   },
-
   resetUIMetrics: () => {
     set((state: Draft<CanvasUIState>) => {
       state.uiMetrics = {
         toolSwitches: 0,
         panelToggles: 0,
         modalOpens: 0,
-        lastUIUpdate: 0
+        lastUIUpdate: Date.now()
       };
     });
   }

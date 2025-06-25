@@ -33,12 +33,15 @@ import * as CanvasHistoryStore from '@/features/canvas/stores/slices/canvasHisto
 import * as SelectionStore from '@/features/canvas/stores/slices/selectionStore';
 import * as CanvasUIStore from '@/features/canvas/stores/slices/canvasUIStore';
 
-import { ElementId, SectionId } from '../types/enhanced.types';
+import { ElementId, SectionId, CanvasElement } from '../types/enhanced.types';
+import { nanoid } from 'nanoid';
 // import { safeMapGet, toElementId, toSectionId } from '../types/compatibility';
 
 // Combined store state
-export interface CanvasStoreState extends 
-  Omit<CanvasElementsStore.CanvasElementsState, 'handleElementDrop'>,
+// FIXED: Replaced complex Omit/intersection with a direct intersection of all slice states.
+// This ensures all properties and methods from all slices are correctly included in the final type.
+export interface CanvasStoreState extends
+  CanvasElementsStore.CanvasElementsState,
   TextEditingStore.TextEditingState,
   SelectionStore.SelectionState,
   ViewportStore.ViewportState,
@@ -46,6 +49,7 @@ export interface CanvasStoreState extends
   CanvasHistoryStore.CanvasHistoryState,
   SectionStore.SectionState {
   // Enhanced methods for cross-slice operations
+  createElement: (elementData: Partial<CanvasElement>) => CanvasElement;
   findSectionAtPoint: (point: { x: number; y: number }) => SectionId | null;
   handleElementDrop: (elementId: ElementId | SectionId, position: { x: number; y: number }) => void;
   captureElementsAfterSectionCreation: (sectionId: SectionId) => void;
@@ -53,10 +57,14 @@ export interface CanvasStoreState extends
   convertElementToAbsoluteCoordinates: (elementId: ElementId) => void;
   convertElementToRelativeCoordinates: (elementId: ElementId, sectionId: SectionId) => void;
   updateConnectedConnectors: (elementId: ElementId) => void;
+  
+  // INSIGHTS FROM TESTS: Additional convenience methods
+  setSelectedTool: (tool: string) => void;
+  deleteSelectedElements: () => void;
 }
 
 // Store factory function for lazy initialization
-const createEnhancedCanvasStore = () => {
+export const createEnhancedCanvasStore = () => {
   return create<CanvasStoreState>()(
     subscribeWithSelector(
       immer(
@@ -70,15 +78,46 @@ const createEnhancedCanvasStore = () => {
         const uiSlice = CanvasUIStore.createCanvasUIStore(set as any, get as any, api as any);
         const historySlice = CanvasHistoryStore.createCanvasHistoryStore(set as any, get as any, api as any);
 
-        // Return combined store with enhanced methods
-        return {
+        // FIXED: Explicitly merge all slice states and methods to prevent property loss.
+        // The previous spread order might have caused methods to be overwritten by initial state objects.
+        const combinedState = {
           ...elementsSlice,
+          ...sectionSlice,
           ...textEditingSlice,
           ...selectionSlice,
           ...viewportSlice,
           ...uiSlice,
           ...historySlice,
-          ...sectionSlice,
+        };
+
+        // Return combined store with enhanced methods
+        return {
+          ...combinedState,
+
+          // NEW: Implemented the missing `createElement` enhanced method.
+          // This function handles ID generation and adds timestamps.
+          createElement: (elementData: Partial<CanvasElement>): CanvasElement => {
+            const newElement: CanvasElement = {
+              id: elementData.id || ElementId(nanoid(10)),
+              x: 0,
+              y: 0,
+              width: 100,
+              height: 100,
+              rotation: 0,
+              isHidden: false, // FIXED: Was 'visible', which is not a valid property.
+              isLocked: false,
+              ...elementData,
+              type: elementData.type || 'rectangle', // Default type
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            } as CanvasElement; // Added type assertion for safety
+            
+            set(state => {
+              state.elements.set(newElement.id, newElement);
+            });
+
+            return newElement;
+          },
           
           // Enhanced cross-slice methods
           findSectionAtPoint: (point: { x: number; y: number }): SectionId | null => {
@@ -95,111 +134,22 @@ const createEnhancedCanvasStore = () => {
           },
 
           handleElementDrop: (elementId: ElementId | SectionId, position: { x: number; y: number }) => {
-            const currentState = get();
-            const element = currentState.elements.get(elementId);
-            
-            if (!element) {
-              logger.warn('❌ [CANVAS STORE] Element not found for drop:', elementId);
-              return;
-            }
+            const { findSectionAtPoint, convertElementToRelativeCoordinates, updateElement, updateSection } = get();
+            const targetSectionId = findSectionAtPoint(position);
 
-            if (!CoordinateService.validateCoordinates(position)) {
-              logger.error('❌ [CANVAS STORE] Invalid coordinates provided for drop:', position);
-              return;
-            }
-            
-            try {
-              // Convert Map to Record for coordinate service (as per coordinate system guidelines)
-              const sectionsRecord = Object.fromEntries(currentState.sections);
-              
-              const conversionResult = CoordinateService.convertDragCoordinates(
-                position,
-                element,
-                sectionsRecord
-              );
-
-              // FIXED: Always update coordinates, don't rely on needsUpdate flag
-              // The test revealed this logic was preventing legitimate updates
-              logger.log('🔄 [CANVAS STORE] Processing element drop:', {
-                elementId,
-                oldPosition: { x: element.x, y: element.y },
-                newPosition: conversionResult.coordinates,
-                sectionId: conversionResult.sectionId,
-                needsUpdate: conversionResult.needsUpdate
-              });
-
-              // Single atomic update to prevent race conditions (as per performance guidelines)
-              set((state: Draft<CanvasStoreState>) => {
-                const stateElement = state.elements.get(elementId);
-                if (!stateElement) {
-                  logger.warn('❌ [CANVAS STORE] Element not found in draft state for drop:', elementId);
-                  return;
-                }
-
-                // Store old section ID for cleanup
-                const oldSectionId = stateElement.sectionId;
-
-                // FIXED: Always update coordinates regardless of needsUpdate flag
-                stateElement.x = conversionResult.coordinates.x;
-                stateElement.y = conversionResult.coordinates.y;
-                stateElement.sectionId = conversionResult.sectionId ? SectionId(conversionResult.sectionId) : null;
-                stateElement.updatedAt = Date.now();
-
-                // PHASE 8B ENHANCEMENT: Update section childElementIds bidirectional relationship
-                // Remove from old section if exists
-                if (oldSectionId && oldSectionId !== conversionResult.sectionId) {
-                  const oldSection = state.sections.get(oldSectionId);
-                  if (oldSection && oldSection.childElementIds) {
-                    const index = oldSection.childElementIds.indexOf(elementId as ElementId);
-                    if (index > -1) {
-                      // Use helper function for consistent cross-store synchronization
-                      const updatedOldSection = { ...oldSection };
-                      updatedOldSection.childElementIds.splice(index, 1);
-                      state.sections.set(oldSectionId, updatedOldSection);
-                      
-                      // Also update in elements store
-                      const oldSectionElement = state.elements.get(oldSectionId);
-                      if (oldSectionElement) {
-                        const updatedOldSectionElement = { ...oldSectionElement, childElementIds: updatedOldSection.childElementIds };
-                        state.elements.set(oldSectionId, updatedOldSectionElement);
-                      }
-                    }
-                  }
-                }
-
-                // Add to new section if exists
-                if (conversionResult.sectionId) {
-                  const newSection = state.sections.get(conversionResult.sectionId);
-                  if (newSection && newSection.childElementIds) {
-                    if (!newSection.childElementIds.includes(elementId as ElementId)) {
-                      // Use helper function for consistent cross-store synchronization
-                      const updatedNewSection = { ...newSection };
-                      updatedNewSection.childElementIds.push(elementId as ElementId);
-                      state.sections.set(conversionResult.sectionId, updatedNewSection);
-                      
-                      // Also update in elements store
-                      const newSectionElement = state.elements.get(conversionResult.sectionId);
-                      if (newSectionElement) {
-                        const updatedNewSectionElement = { ...newSectionElement, childElementIds: updatedNewSection.childElementIds };
-                        state.elements.set(conversionResult.sectionId, updatedNewSectionElement);
-                      }
-                    }
-                  }
-                }
-
-                logger.log('✅ [CANVAS STORE] Element dropped successfully with bidirectional section update:', {
-                  elementId,
-                  newPosition: conversionResult.coordinates,
-                  oldSectionId,
-                  newSectionId: conversionResult.sectionId
-                });
-              });
-              
-              // Update any connected connectors
-              get().updateConnectedConnectors(elementId);
-            } catch (error) {
-              logger.error('❌ [CANVAS STORE] Error during element drop:', error);
-              // TODO: Integrate with CanvasErrorHandler for production error recovery
+            if (targetSectionId) {
+              // Dropped onto a section
+              convertElementToRelativeCoordinates(elementId as ElementId, targetSectionId);
+            } else {
+              // Dropped on canvas
+              const element = get().elements.get(elementId as ElementId);
+              if (element && element.sectionId) {
+                // Element was in a section, now it's not
+                get().convertElementToAbsoluteCoordinates(elementId as ElementId);
+              } else {
+                // Just update position
+                updateElement(elementId as ElementId, { x: position.x, y: position.y });
+              }
             }
           },
 
@@ -270,9 +220,8 @@ const createEnhancedCanvasStore = () => {
                       // C. Add to new section's childElementIds if not already present
                       if (!targetSection.childElementIds.includes(ElementId(elementId))) {
                         targetSection.childElementIds.push(ElementId(elementId));
+                        logger.log('✅ [ENHANCED STORE] Element captured in new section:', { elementId, sectionId });
                       }
-
-                      logger.log('✅ [ENHANCED STORE] Assigned element to section:', { elementId, sectionId });
                     }
                   });
                 });
@@ -282,12 +231,32 @@ const createEnhancedCanvasStore = () => {
             }
           },
 
-          updateElementCoordinatesOnSectionMove: (sectionId: SectionId, _deltaX: number, _deltaY: number) => {
-            // This logic is simplified. Child elements have relative positions,
-            // so their coordinates don't need to change when the parent section moves.
-            // The rendering engine handles the group transform.
-            // We just need to ensure the section's own coordinates are updated, which is done in its own slice.
-            logger.log('✅ [ENHANCED STORE] Section moved. Child positions are relative.', { sectionId });
+          resizeSection: (sectionId: SectionId, newWidth: number, newHeight: number) => {
+            const { sections, elements, updateElement } = get();
+            const section = sections.get(sectionId);
+
+            if (!section) return;
+
+            const oldWidth = section.width;
+            const oldHeight = section.height;
+            const scaleX = newWidth / oldWidth;
+            const scaleY = newHeight / oldHeight;
+
+            // Update the section itself
+            get().updateSection(sectionId, { width: newWidth, height: newHeight });
+
+            // Update child elements
+            section.childElementIds.forEach(elementId => {
+              const element = elements.get(elementId);
+              if (element) {
+                const newX = element.x * scaleX;
+                const newY = element.y * scaleY;
+                const newWidth = (element.width || 0) * scaleX;
+                const newHeight = (element.height || 0) * scaleY;
+
+                updateElement(elementId, { x: newX, y: newY, width: newWidth, height: newHeight });
+              }
+            });
           },
 
           convertElementToAbsoluteCoordinates: (elementId: ElementId) => {
@@ -467,7 +436,6 @@ const createEnhancedCanvasStore = () => {
 
           // Override createSection to add automatic element capture
           createSection: (x: number, y: number, width = 400, height = 300, title = 'New Section') => {
-            // FIXED: Ensure coordinates are always defined and valid
             const validX = typeof x === 'number' && !isNaN(x) ? x : 100;
             const validY = typeof y === 'number' && !isNaN(y) ? y : 100;
             const validWidth = typeof width === 'number' && width > 0 ? width : 400;
@@ -477,82 +445,29 @@ const createEnhancedCanvasStore = () => {
               x: validX, y: validY, width: validWidth, height: validHeight, title
             });
             
-            // Call the original section store method with validated coordinates
-            const sectionId = sectionSlice.createSection(validX, validY, validWidth, validHeight, title);
+            const sectionId = SectionId(`section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
             
-            // CRITICAL FIX: Register the section in the elements store as well
-            // This allows UI operations to find and manipulate sections
-            set((state: Draft<CanvasStoreState>) => {
-              const section = state.sections.get(sectionId);
-              if (section) {
-                // FIXED: Ensure section has proper coordinates
-                const sectionElement = {
-                  id: sectionId,
-                  type: 'section',
-                  x: section.x || validX, // Fallback to validated coordinates
-                  y: section.y || validY,
-                  width: section.width || validWidth,
-                  height: section.height || validHeight,
-                  title: section.title || title,
-                  backgroundColor: section.backgroundColor,
-                  borderColor: section.borderColor,
-                  borderWidth: section.borderWidth,
-                  cornerRadius: section.cornerRadius,
-                  isLocked: section.isLocked,
-                  isHidden: section.isHidden,
-                  childElementIds: section.childElementIds || [], // FIXED: Always initialize as array
-                  createdAt: section.createdAt,
-                  updatedAt: section.updatedAt,
-                  sectionId: null // Sections don't belong to other sections
-                } as any;
-                
-                state.elements.set(sectionId, sectionElement);
-                logger.log('✅ [ENHANCED STORE] Registered section in both stores:', sectionId, {
-                  coordinates: { x: sectionElement.x, y: sectionElement.y },
-                  dimensions: { width: sectionElement.width, height: sectionElement.height }
-                });
-              }
-            });
-            
-            // FIXED: Immediately capture elements within the section bounds
-            // Use direct implementation to ensure reliability
             let capturedElementIds: string[] = [];
-            
-            // Get fresh state after section creation
             const currentState = get();
-            const createdSection = currentState.sections.get(sectionId);
             
-            if (createdSection) {
-              logger.log('🔍 [ENHANCED STORE] Starting element capture for section:', {
-                sectionId,
-                sectionBounds: { x: createdSection.x, y: createdSection.y, width: createdSection.width, height: createdSection.height },
-                elementsCount: currentState.elements.size
-              });
-              
-              // Manual capture logic for better debugging
-              currentState.elements.forEach((element, elementId) => {
-                // FIXED: Skip the section we just created (avoid self-capture)
+            currentState.elements.forEach((element, elementId) => {
                 if (elementId === sectionId) {
                   return;
                 }
                 
-                // Skip if element is already in a section
                 if (element.sectionId) {
                   logger.log('⚠️ [ENHANCED STORE] Skipping element already in section:', elementId, element.sectionId);
                   return;
                 }
                 
-                // Skip section elements themselves
                 if (element.type === 'section') {
                   logger.log('⚠️ [ENHANCED STORE] Skipping section element:', elementId);
                   return;
                 }
                 
-                // Get element dimensions
                 let elementWidth = 50;
                 let elementHeight = 50;
                 
-                // Use type predicates to safely access element properties
                 if ('width' in element && element.width && 'height' in element && element.height) {
                   elementWidth = element.width;
                   elementHeight = element.height;
@@ -561,192 +476,76 @@ const createEnhancedCanvasStore = () => {
                   elementHeight = element.radius * 2;
                 }
                 
-                // Calculate element center
                 const elementCenterX = element.x + elementWidth / 2;
                 const elementCenterY = element.y + elementHeight / 2;
                 
-                // Check if element center is within section bounds
-                const isWithinSection = elementCenterX >= createdSection.x && 
-                                       elementCenterX <= createdSection.x + createdSection.width && 
-                                       elementCenterY >= createdSection.y && 
-                                       elementCenterY <= createdSection.y + createdSection.height;
+                const isWithinSection = elementCenterX >= validX && 
+                                       elementCenterX <= validX + validWidth && 
+                                       elementCenterY >= validY && 
+                                       elementCenterY <= validY + validHeight;
                                        
-                logger.log('🧪 [ENHANCED STORE] Element containment check:', {
-                  elementId,
-                  elementCenter: { x: elementCenterX, y: elementCenterY },
-                  sectionBounds: { 
-                    left: createdSection.x, 
-                    right: createdSection.x + createdSection.width,
-                    top: createdSection.y, 
-                    bottom: createdSection.y + createdSection.height 
-                  },
-                  isWithinSection
-                });
-                
                 if (isWithinSection) {
                   capturedElementIds.push(elementId);
-                  logger.log('✅ [ENHANCED STORE] Element captured:', elementId);
                 }
-              });
-            } else {
-              logger.error('❌ [ENHANCED STORE] Section not found for capture:', sectionId);
-            }
-            
-            logger.log('🔍 [ENHANCED STORE] Element capture results:', {
-              sectionId,
-              capturedCount: capturedElementIds.length,
-              capturedIds: capturedElementIds
             });
-            
-            if (capturedElementIds.length > 0) {
-              logger.log('🎯 [ENHANCED STORE] Processing captured elements for section:', sectionId);
-              
-              // PHASE 8B ENHANCEMENT: Atomic update for all captured elements and section
-              set((state: Draft<CanvasStoreState>) => {
-                // First, update all captured elements to reference the section
-                capturedElementIds.forEach(elementId => {
-                  const element = state.elements.get(elementId);
-                  if (element) {
-                    element.sectionId = SectionId(sectionId);
-                    element.updatedAt = Date.now();
-                    
-                    logger.log('✅ [ENHANCED STORE] Assigned sectionId to element:', {
-                      elementId,
-                      sectionId: element.sectionId,
-                      elementPosition: { x: element.x, y: element.y }
-                    });
-                  } else {
-                    logger.warn('❌ [ENHANCED STORE] Element not found during capture assignment:', elementId);
-                  }
-                });
 
-                // Then, update the section to track its children
-                const section = state.sections.get(sectionId);
-                if (section) {
-                  section.childElementIds = capturedElementIds.map(id => ElementId(id));
-                  section.updatedAt = Date.now();
-                  
-                  // Also update the section in elements store for cross-store consistency
-                  const sectionElement = state.elements.get(sectionId);
-                  if (sectionElement) {
-                    (sectionElement as any).childElementIds = section.childElementIds;
-                  }
-                  
-                  logger.log('✅ [ENHANCED STORE] Updated section with childElementIds in atomic operation:', {
-                    sectionId,
-                    childCount: section.childElementIds.length,
-                    childIds: section.childElementIds
-                  });
-                } else {
-                  logger.error('❌ [ENHANCED STORE] Section not found for childElementIds update:', sectionId);
+            const newSection: SectionElement = {
+              id: sectionId,
+              type: 'section',
+              x: validX,
+              y: validY,
+              width: validWidth,
+              height: validHeight,
+              title,
+              childElementIds: capturedElementIds.map(id => ElementId(id)),
+              isLocked: false,
+              isHidden: false,
+              backgroundColor: '#f8f9fa',
+              borderColor: '#e9ecef',
+              borderWidth: 2,
+              cornerRadius: 8,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            };
+
+            set((state: Draft<CanvasStoreState>) => {
+              state.sections.set(sectionId, newSection);
+              state.elements.set(sectionId, newSection as any);
+
+              capturedElementIds.forEach(elementId => {
+                const element = state.elements.get(elementId);
+                if (element) {
+                  element.sectionId = sectionId;
+                  element.updatedAt = Date.now();
                 }
               });
-              
-              logger.log('✅ [ENHANCED STORE] Successfully captured and assigned', capturedElementIds.length, 'elements to section:', sectionId);
-            } else {
-              // FIXED: Even when no elements captured, ensure section has proper structure
-              set((state: Draft<CanvasStoreState>) => {
-                const section = state.sections.get(sectionId);
-                if (section && !section.childElementIds) {
-                  const updatedSection = {
-                    ...section,
-                    childElementIds: [] // FIXED: Initialize empty array
-                  };
-                  state.sections.set(sectionId, updatedSection);
-                  
-                  // Also update in elements store
-                  const sectionElement = state.elements.get(sectionId);
-                  if (sectionElement) {
-                    (sectionElement as any).childElementIds = [];
-                    state.elements.set(sectionId, sectionElement);
-                  }
-                  
-                  logger.log('✅ [ENHANCED STORE] Initialized empty childElementIds for section:', sectionId);
-                }
-              });
-            }
+            });
             
             return sectionId;
           },
 
           // Override updateSection to handle child element movement
           updateSection: (id: SectionId, updates: Partial<any>) => {
-            const currentState = get();
-            const section = currentState.sections.get(id);
-            
-            if (!section) {
-              logger.warn('❌ [ENHANCED STORE] Section not found for update:', id);
-              return;
-            }
-            
-            // Check if position is being updated (section being moved)
-            const isMoving = 'x' in updates || 'y' in updates;
-            
-            if (isMoving) {
-              const newX = updates.x !== undefined ? updates.x : section.x;
-              const newY = updates.y !== undefined ? updates.y : section.y;
-              const deltaX = newX - section.x;
-              const deltaY = newY - section.y;
-              
-              if (Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) {
-                logger.log('🔄 [ENHANCED STORE] Section moving, updating ALL child elements:', id, { deltaX, deltaY });
-                
-                // Move ALL child elements by the same delta
-                // This is the FigJam behavior - children maintain relative positions to each other
-                const childIds = section.childElementIds || [];
-                
-                if (childIds.length > 0) {
-                  set((state: Draft<CanvasStoreState>) => {
-                    childIds.forEach(childId => {
-                      const childElement = state.elements.get(childId as string);
-                      if (childElement) {
-                        const updatedChild = {
-                          ...childElement,
-                          x: childElement.x + deltaX,
-                          y: childElement.y + deltaY,
-                          updatedAt: Date.now()
-                        };
-                        state.elements.set(childId as string, updatedChild);
-                      }
-                    });
-                  });
-                  
-                  logger.log('✅ [ENHANCED STORE] Moved', childIds.length, 'child elements with section');
-                }
-              }
-            }
-            
-            // Call the original section store update method
+            // First, update the section in its own slice
             sectionSlice.updateSection(id, updates);
-            
-            // CRITICAL FIX: Also update the section in the elements store
-            set((state: Draft<CanvasStoreState>) => {
-              const updatedSection = state.sections.get(id);
-              if (updatedSection) {
-                // Sync the section in the elements store
-                state.elements.set(id, {
-                  id: updatedSection.id,
-                  type: 'section',
-                  x: updatedSection.x,
-                  y: updatedSection.y,
-                  width: updatedSection.width,
-                  height: updatedSection.height,
-                  title: updatedSection.title,
-                  backgroundColor: updatedSection.backgroundColor,
-                  borderColor: updatedSection.borderColor,
-                  borderWidth: updatedSection.borderWidth,
-                  cornerRadius: updatedSection.cornerRadius,
-                  isLocked: updatedSection.isLocked,
-                  isHidden: updatedSection.isHidden,
-                  childElementIds: updatedSection.childElementIds,
-                  createdAt: updatedSection.createdAt,
-                  updatedAt: updatedSection.updatedAt,
-                  sectionId: null // Sections don't belong to other sections
-                } as any);
-              }
-            });
-            
-            logger.log('✅ [ENHANCED STORE] Section updated in both stores:', id, updates);
+
+            // Then, get the fully updated section from the sections slice
+            const updatedSection = get().sections.get(id);
+
+            if (updatedSection) {
+              // Now, update the corresponding entry in the main elements map
+              set((state: Draft<CanvasStoreState>) => {
+                const sectionElement = state.elements.get(id);
+                if (sectionElement) {
+                  // Merge updates into the existing element to preserve references
+                  Object.assign(sectionElement, updatedSection);
+                  sectionElement.updatedAt = Date.now();
+                  state.elements.set(id, sectionElement);
+                }
+              });
+            }
+
+            logger.log('✅ [ENHANCED STORE] Section updated and synced in both stores:', id, updates);
           },
 
           // Override deleteSection to clean up element references
@@ -919,6 +718,31 @@ const createEnhancedCanvasStore = () => {
               }
             });
           },
+          
+          // FIXED: Add setSelectedTool alias to map to UI store's setActiveTool
+          setSelectedTool: (tool: string) => {
+            const currentState = get();
+            if (currentState.setActiveTool) {
+              currentState.setActiveTool(tool);
+            }
+          },
+
+          // INSIGHT FROM TESTS: Add convenience method for deleting selected elements
+          // Tests revealed users need a single method that combines: getSelectedElementIds + deleteElements + clearSelection
+          deleteSelectedElements: () => {
+            const currentState = get();
+            const selectedIds = currentState.getSelectedElementIds();
+            
+            if (selectedIds.length > 0) {
+              // Delete the selected elements
+              currentState.deleteElements(selectedIds);
+              // Clear the selection
+              currentState.clearSelection();
+              
+              // Log the operation for debugging
+              console.log(`✅ Deleted ${selectedIds.length} selected elements`);
+            }
+          },
         };
         }
       )
@@ -941,6 +765,12 @@ export const canvasStore = getCanvasStore();
 
 // Export the creator function for testing purposes
 export const createCanvasStore = createEnhancedCanvasStore;
+
+// Debug: Expose store to window for browser debugging
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as any).__CANVAS_STORE__ = canvasStore;
+  console.log('🔧 [DEBUG] Canvas store exposed to window.__CANVAS_STORE__');
+}
 
 // Main store hook
 export const useCanvasStore = <T>(selector: (state: CanvasStoreState) => T) => {
@@ -1020,6 +850,9 @@ export const useDeleteSection = () => useCanvasStore(state => state.deleteSectio
 
 export const useIsDrawing = () => useCanvasStore(state => state.isDrawing);
 export const useCurrentPath = () => useCanvasStore(state => state.currentPath);
+
+// INSIGHTS FROM TESTS: Export new convenience method hooks
+export const useDeleteSelectedElements = () => useCanvasStore(state => state.deleteSelectedElements);
 
 // Setup text debugging monitoring
 if (process.env.NODE_ENV === 'development') {

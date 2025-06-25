@@ -10,6 +10,7 @@ import { GroupedSectionRenderer } from '../components/GroupedSectionRenderer';
 import { TransformerManager } from '../components/TransformerManager';
 import { DrawingContainment } from '../components/drawing/DrawingContainment';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
+import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
 import { CanvasElement, ElementId, SectionElement, SectionId, isSectionElement, ConnectorElement } from '../types/enhanced.types';
 import { useViewportCulling } from '../hooks/useViewportCulling';
@@ -54,8 +55,8 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   elements,
   selectedElementIds,
 }) => {
-  const useGroupedSections = useFeatureFlag('grouped-section-rendering');
-  const useCentralizedTransformer = useFeatureFlag('centralized-transformer');
+  const useGroupedSections = enhancedFeatureFlagManager.getFlag('grouped-section-rendering');
+  const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
   
   // Split selectors to prevent infinite loop
   const clearSelection = useCanvasStore((state) => state.clearSelection);
@@ -220,11 +221,8 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   };
 
   const allElementsArray: CanvasElement[] = useMemo(() => {
-    // Combine elements and sections for rendering
-    const elementsArray = Array.from(elements.values());
-    const sectionsArray = Array.from(sections.values());
-    return [...elementsArray, ...sectionsArray];
-  }, [elements, sections]);
+    return Array.from(elements.values());
+  }, [elements]);
 
   const { visibleElements, cullingStats } = useViewportCulling({
     elements: allElementsArray,
@@ -435,7 +433,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         })
       ) : (
         <MainLayer
-          elements={sortedSectionElements}
+          elements={[]}
           selectedElementIds={selectedElementIds}
           selectedTool={selectedTool}
           onElementClick={onElementClick}

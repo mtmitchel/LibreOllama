@@ -10,16 +10,17 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "Node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["vitest/globals"],
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"]
     }
   },
-  "include": ["src", "src-tauri"],
+  "include": ["src", "vite.config.ts", "vitest.config.ts", "vitest.setup.ts", "vitest.hoisted.setup.ts", "src/tests"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -49,6 +49,22 @@ export {
   type PerformanceAlert
 } from './MetricsCollector';
 
+// Memory leak detection
+export {
+  MemoryLeakDetector,
+  useMemoryLeakDetector,
+  type LeakReport,
+  type TrackedResource
+} from './MemoryLeakDetector';
+
+// Canvas performance profiling
+export {
+  CanvasPerformanceProfiler,
+  profileCanvasOperation,
+  profileCanvasOperationAsync,
+  type PerformanceProfile
+} from './CanvasPerformanceProfiler';
+
 // Convenience function to enable all monitoring
 export function enableAllPerformanceMonitoring(): void {
   if (typeof window !== 'undefined') {

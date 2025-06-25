@@ -158,14 +158,19 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   return (
     <div className="konva-canvas-container relative" style={{ width, height }}>
       <Stage
-        ref={internalStageRef}
+        ref={(node) => {
+          internalStageRef.current = node;
+          if (externalStageRef) {
+            externalStageRef.current = node;
+          }
+        }}
         {...stageConfig}
         onWheel={handleStageWheel}
         onTouchMove={handleStageTouch}
         onTouchEnd={handleStageTouch}
       >
         <CanvasEventHandler 
-          stageRef={internalStageRef as React.RefObject<Konva.Stage>} 
+          stageRef={internalStageRef} 
           currentTool={currentTool as CanvasTool}
           isDrawingConnector={isDrawingConnector}
           setIsDrawingConnector={setIsDrawingConnector}

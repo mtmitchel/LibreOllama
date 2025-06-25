@@ -47,27 +47,13 @@ export const GroupedSectionRenderer: React.FC<GroupedSectionRendererProps> = ({
 }) => {
   const createChildDragBoundFunc = useCallback((childElement: CanvasElement) => {
     return (pos: { x: number; y: number }) => {
-      const sectionX = section.x || 0;
-      const sectionY = section.y || 0;
-      
-      const sectionRelativePos = {
-        x: pos.x - sectionX,
-        y: pos.y - sectionY
-      };
-      
       const constrainedPos = CoordinateService.constrainToSection(
-        sectionRelativePos,
+        pos,
         childElement,
         section,
         5
       );
-
-      const finalPos = {
-        x: constrainedPos.x + sectionX,
-        y: constrainedPos.y + sectionY
-      };
-      
-      return finalPos;
+      return constrainedPos;
     };
   }, [section]);
 
@@ -133,11 +119,11 @@ export const GroupedSectionRenderer: React.FC<GroupedSectionRendererProps> = ({
 
   return (
     <Group
-      id={`section-group-${section.id}`}
       x={section.x || 0}
       y={section.y || 0}
       draggable={true}
       onDragEnd={(e) => {
+        e.cancelBubble = true; // Stop event from bubbling to the stage
         const node = e.target;
         onSectionUpdate(section.id, {
           x: node.x(),

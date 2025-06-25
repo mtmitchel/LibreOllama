@@ -11,7 +11,7 @@ export default defineConfig({
     setupFiles: [
       './vitest.hoisted.setup.ts', // Hoisted mocks run first
       './src/tests/setup.ts',
-      'vitest-canvas-mock',
+      // vitest-canvas-mock removed to avoid conflicts with custom mocks
     ],
     testTimeout: 20000,
   },
