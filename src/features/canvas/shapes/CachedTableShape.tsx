@@ -66,7 +66,8 @@ export const CachedTableShape: React.FC<CachedTableShapeProps> = React.memo(({
       for (let col = 0; col < cols; col++) {
         const cellX = col * cellWidth;
         const cellY = row * cellHeight;
-        const cellText = tableData[row]?.[col] || '';
+        const cellData = tableData[row]?.[col];
+        const cellText = cellData && typeof cellData === 'object' ? cellData.content : (typeof cellData === 'string' ? cellData : `R${row + 1}C${col + 1}`);
         
         cells.push(
           <Group key={`cell-${row}-${col}`}>

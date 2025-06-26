@@ -6,7 +6,8 @@
  */
 
 import { PerformanceMonitor, recordMetric } from '../performance';
-import type { CanvasElement } from '../../stores/types';
+import type { CanvasElement } from '../../types/enhanced.types';
+import { isRichTextElement } from '../../types/enhanced.types';
 
 export interface RenderTask {
   id: string;
@@ -522,7 +523,7 @@ class RenderOptimizerImpl {
       switch (element.type) {
         case 'text':
         case 'rich-text':
-          duration += 2 + (element.segments?.length || 0) * 0.5;
+          duration += 2 + (isRichTextElement(element) ? (element.segments?.length || 0) * 0.5 : 0);
           break;
         case 'table':
           duration += 5 + ((element.rows || 1) * (element.cols || 1)) * 0.2;

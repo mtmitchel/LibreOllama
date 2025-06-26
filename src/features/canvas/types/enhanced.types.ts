@@ -150,6 +150,8 @@ export interface TableElement extends BaseElement {
   cols: number;
   width: number;
   height: number;
+  cellWidth?: number;
+  cellHeight?: number;
   tableData?: TableCell[][];
   enhancedTableData?: EnhancedTableData;
   cellPadding?: number;
@@ -176,12 +178,17 @@ export interface TableCell {
 
 export interface StickyNoteElement extends BaseElement {
   type: 'sticky-note';
-  text: string;
+  text?: string;
   width: number;
   height: number;
   backgroundColor?: string;
   textColor?: string;
   fontSize?: number;
+  fontFamily?: string;
+  fontStyle?: string;
+  textDecoration?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  richTextSegments?: RichTextSegment[];
 }
 
 export interface PenElement extends BaseElement {

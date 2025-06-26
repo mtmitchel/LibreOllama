@@ -7,7 +7,8 @@
 
 import { PerformanceMonitor, recordMetric } from '../performance';
 import { MemoryUsageMonitor } from '../performance/MemoryUsageMonitor';
-import type { CanvasElement, TextElement, RichTextElement, isTextElement, isRichTextElement } from '../../types/enhanced.types';
+import type { CanvasElement, TextElement, RichTextElement } from '../../types/enhanced.types';
+import { isTextElement, isRichTextElement, isRectangleElement, isCircleElement, isPenElement, isConnectorElement, isTableElement } from '../../types/enhanced.types';
 
 export interface CacheEntry {
   id: string;
@@ -117,7 +118,7 @@ class CacheManagerImpl {
       case 'text':
       case 'rich-text':
         complexity += 20;
-        if (element.segments && element.segments.length > 5) {
+        if (isRichTextElement(element) && element.segments && element.segments.length > 5) {
           complexity += element.segments.length * 5;
         }
         break;
@@ -148,7 +149,8 @@ class CacheManagerImpl {
 
     // Add complexity for effects
     if (element.rotation) complexity += 10;
-    if (element.stroke && element.strokeWidth && element.strokeWidth > 1) {
+    if ((isRectangleElement(element) || isCircleElement(element) || isPenElement(element) || isConnectorElement(element)) && 
+        element.stroke && element.strokeWidth && element.strokeWidth > 1) {
       complexity += element.strokeWidth * 2;
     }
 
@@ -167,8 +169,8 @@ class CacheManagerImpl {
         element.rows * element.cols > 50) return true;
 
     // Large text blocks with rich formatting
-    if ((element.type === 'text' || element.type === 'rich-text') && 
-        element.segments && element.segments.length > 10) return true;
+    if ((isTextElement(element) || isRichTextElement(element)) && 
+        isRichTextElement(element) && element.segments && element.segments.length > 10) return true;
 
     return false;
   }
@@ -177,19 +179,34 @@ class CacheManagerImpl {
    * Generate a hash for element to detect changes
    */
   private generateElementHash(element: CanvasElement): string {
-    const hashData = {
+    const hashData: any = {
       type: element.type,
       x: element.x,
       y: element.y,
-      width: element.width,
-      height: element.height,
-      text: element.text,
-      fill: element.fill,
-      stroke: element.stroke,
-      rotation: element.rotation,
-      segments: element.segments?.length || 0,
-      points: element.points?.length || 0
+      rotation: element.rotation
     };
+    
+    // Add type-specific properties
+    if (isRectangleElement(element) || isTableElement(element)) {
+      hashData.width = element.width;
+      hashData.height = element.height;
+    }
+    if (isCircleElement(element)) {
+      hashData.radius = element.radius;
+    }
+    if (isTextElement(element)) {
+      hashData.text = element.text;
+    }
+    if (isRectangleElement(element) || isCircleElement(element)) {
+      hashData.fill = element.fill;
+      hashData.stroke = element.stroke;
+    }
+    if (isRichTextElement(element)) {
+      hashData.segments = element.segments?.length || 0;
+    }
+    if (isPenElement(element) || isConnectorElement(element)) {
+      hashData.points = element.points?.length || 0;
+    }
     
     return btoa(JSON.stringify(hashData));
   }
