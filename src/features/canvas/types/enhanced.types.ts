@@ -31,12 +31,14 @@ export type ElementId = Brand<string, 'ElementId'>;
 export type SectionId = Brand<string, 'SectionId'>;
 export type LayerId = Brand<string, 'LayerId'>;
 export type ConnectorId = Brand<string, 'ConnectorId'>;
+export type GroupId = Brand<string, 'GroupId'>;
 
 // Helper functions to create branded types safely
 export const ElementId = (id: string): ElementId => id as ElementId;
 export const SectionId = (id: string): SectionId => id as SectionId;
 export const LayerId = (id: string): LayerId => id as LayerId;
 export const ConnectorId = (id: string): ConnectorId => id as ConnectorId;
+export const GroupId = (id: string): GroupId => id as GroupId;
 
 // Base element interface with enhanced typing
 export interface BaseElement {
@@ -49,6 +51,7 @@ export interface BaseElement {
   isHidden?: boolean;
   sectionId?: SectionId | null;
   layerId?: LayerId;
+  groupId?: ElementId | null;
   zIndex?: number;
   createdAt: number;
   updatedAt: number;
@@ -222,6 +225,19 @@ export interface RichTextElement extends BaseElement {
   textAlign?: 'left' | 'center' | 'right';
 }
 
+export interface GroupElement extends BaseElement {
+  type: 'group';
+  childElementIds: ElementId[];
+  width: number;
+  height: number;
+  groupName?: string;
+  isExpanded?: boolean;
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  opacity?: number;
+}
+
 // Main discriminated union for all canvas elements
 export type CanvasElement = 
   | TextElement
@@ -235,7 +251,8 @@ export type CanvasElement =
   | PenElement
   | TriangleElement
   | StarElement
-  | RichTextElement;
+  | RichTextElement
+  | GroupElement;
 
 // Type Predicates provide safe type narrowing within the code.
 // No more `(element as RectangleElement).width`.
@@ -291,6 +308,10 @@ export function isRichTextElement(el: CanvasElement): el is RichTextElement {
   return el.type === 'rich-text';
 }
 
+export function isGroupElement(el: CanvasElement): el is GroupElement {
+  return el.type === 'group';
+}
+
 // Strict event map ensures all event payloads are correctly typed
 export interface CanvasEventMap {
   'element:add': { element: CanvasElement };
@@ -302,6 +323,10 @@ export interface CanvasEventMap {
   'section:add': { section: SectionElement };
   'section:update': { id: SectionId; changes: Partial<SectionElement> };
   'section:delete': { id: SectionId };
+  'group:create': { groupId: GroupId; elementIds: ElementId[] };
+  'group:ungroup': { groupId: GroupId; elementIds: ElementId[] };
+  'group:add-element': { groupId: GroupId; elementId: ElementId };
+  'group:remove-element': { groupId: GroupId; elementId: ElementId };
   'viewport:change': { scale: number; position: { x: number; y: number } };
   'tool:change': { tool: string };
   'history:undo': { operation: string };

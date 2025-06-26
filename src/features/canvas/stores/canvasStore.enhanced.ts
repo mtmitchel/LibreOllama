@@ -32,6 +32,8 @@ import * as ViewportStore from './slices/viewportStore';
 import * as CanvasHistoryStore from './slices/canvasHistoryStore';
 import * as SelectionStore from './slices/selectionStore';
 import * as CanvasUIStore from './slices/canvasUIStore';
+import * as LayerStore from './slices/layerStore';
+import * as SnappingStore from './slices/snappingStore';
 
 import { ElementId, SectionId, CanvasElement, SectionElement } from '../types/enhanced.types';
 import { nanoid } from 'nanoid';
@@ -47,7 +49,9 @@ export interface CanvasStoreState extends
   ViewportStore.ViewportState,
   CanvasUIStore.CanvasUIState,
   CanvasHistoryStore.CanvasHistoryState,
-  SectionStore.SectionState {
+  SectionStore.SectionState,
+  LayerStore.LayerState,
+  SnappingStore.SnappingState {
   // Enhanced methods for cross-slice operations
   createElement: (elementData: Partial<CanvasElement>) => CanvasElement;
   findSectionAtPoint: (point: { x: number; y: number }) => SectionId | null;
@@ -77,6 +81,8 @@ export const createEnhancedCanvasStore = () => {
         const viewportSlice = ViewportStore.createViewportStore(set as any, get as any, api as any);
         const uiSlice = CanvasUIStore.createCanvasUIStore(set as any, get as any, api as any);
         const historySlice = CanvasHistoryStore.createCanvasHistoryStore(set as any, get as any, api as any);
+        const layerSlice = LayerStore.createLayerSlice(set as any, get as any, api as any);
+        const snappingSlice = SnappingStore.createSnappingSlice(set as any, get as any, api as any);
 
         // FIXED: Explicitly merge all slice states and methods to prevent property loss.
         // The previous spread order might have caused methods to be overwritten by initial state objects.
@@ -88,6 +94,8 @@ export const createEnhancedCanvasStore = () => {
           ...viewportSlice,
           ...uiSlice,
           ...historySlice,
+          ...layerSlice,
+          ...snappingSlice,
         };
 
         // Return combined store with enhanced methods

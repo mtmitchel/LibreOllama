@@ -2,6 +2,7 @@
 import React from 'react';
 import {
   CanvasElement,
+  SectionElement,
   isCircleElement,
   isImageElement,
   isPenElement,
@@ -23,11 +24,17 @@ import { ImageShape } from '../shapes/ImageShape';
 import { PenShape } from '../shapes/PenShape';
 import { EnhancedTableElement } from '../components/EnhancedTableElement';
 import Konva from 'konva';
+import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { calculateSnapLines } from '../utils/snappingUtils';
+import { Line } from 'react-konva';
+
+// Type for elements that are not sections (ElementRenderer should only handle these)
+type NonSectionElement = Exclude<CanvasElement, SectionElement>;
 
 interface ElementRendererProps {
-  element: CanvasElement;
+  element: NonSectionElement;
   isSelected: boolean;
-  onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
+  onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: NonSectionElement) => void;
   onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId) => void;
   onElementUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   onStartTextEdit: (elementId: ElementId) => void;
@@ -43,14 +50,50 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   onStartTextEdit,
   overrideKonvaProps
 }) => {
+  const { elements, isSnappingEnabled, snapTolerance, snapLines, snappingActions } = useCanvasStore((state) => ({
+    elements: Array.from(state.elements.values()),
+    isSnappingEnabled: state.isSnappingEnabled,
+    snapTolerance: state.snapTolerance,
+    snapLines: state.snapLines,
+    snappingActions: state.snappingActions,
+  }));
+
+  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    if (!isSnappingEnabled) return;
+
+    const draggedElement = { ...element, x: e.target.x(), y: e.target.y() };
+    const newSnapLines = calculateSnapLines(draggedElement, elements, snapTolerance);
+    snappingActions.setSnapLines(newSnapLines);
+
+    let snappedX = e.target.x();
+    let snappedY = e.target.y();
+
+    newSnapLines.forEach(line => {
+      if (line.points[0] === line.points[2]) { // Vertical line
+        snappedX = line.points[0] - (draggedElement.x - e.target.x());
+      } else { // Horizontal line
+        snappedY = line.points[1] - (draggedElement.y - e.target.y());
+      }
+    });
+
+    e.target.position({ x: snappedX, y: snappedY });
+  };
+
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    snappingActions.clearSnapLines();
+    onElementDragEnd(e, element.id);
+  };
+
   // CRITICAL FIX: Use element coordinates directly since they're already relative when inside sections
   // The SectionHandler's Group component handles the coordinate transformation automatically
   const konvaProps = {
       id: element.id,
       x: element.x, // These are relative coordinates when inside a section
       y: element.y, // These are relative coordinates when inside a section
-      rotation: element.rotation,
+      rotation: element.rotation || 0,
       draggable: !element.isLocked,
+      onDragMove: handleDragMove,
+      onDragEnd: handleDragEnd,
       ...overrideKonvaProps
   };
 
@@ -60,7 +103,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
     onStartTextEdit: onStartTextEdit,
     konvaProps,
     // Add missing handlers expected by BaseShapeProps
-    onSelect: (elementId: ElementId) => onElementClick({ target: { id: () => elementId } } as any, element),
+    onSelect: (elementId: ElementId) => onElementClick({ target: { id: () => elementId } } as any, element as NonSectionElement),
     onDragEnd: (elementId: ElementId) => onElementDragEnd({ target: { id: () => elementId } } as any, elementId)
   };
 
@@ -92,7 +135,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       <EnhancedTableElement 
         element={element} 
         isSelected={isSelected}
-        onSelect={(el) => onElementClick({} as any, el)}
+        onSelect={(el) => onElementClick({} as any, el as NonSectionElement)}
         onUpdate={(updates) => onElementUpdate(element.id, updates)}
         onDragEnd={(e) => onElementDragEnd(e, element.id)}
         stageRef={{ current: null }}

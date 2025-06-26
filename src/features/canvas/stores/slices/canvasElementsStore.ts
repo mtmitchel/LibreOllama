@@ -12,9 +12,9 @@ import { logger } from '../../../../lib/logger';
 
 // Enable Immer MapSet plugin for Map/Set support
 enableMapSet();
-import type { CanvasElement, SectionElement } from '../../types/enhanced.types';
-import { ElementId, SectionId } from '../../types/enhanced.types';
-import { isCircleElement, isStarElement, isTextElement, isPenElement, isTableElement, isSectionElement, isConnectorElement, isTriangleElement, isRectangularElement } from '../../types/enhanced.types';
+import type { CanvasElement, SectionElement, GroupElement } from '../../types/enhanced.types';
+import { ElementId, SectionId, GroupId } from '../../types/enhanced.types';
+import { isCircleElement, isStarElement, isTextElement, isPenElement, isTableElement, isSectionElement, isConnectorElement, isTriangleElement, isRectangularElement, isGroupElement } from '../../types/enhanced.types';
 import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 
 export interface CanvasElementsState {
@@ -74,6 +74,16 @@ export interface CanvasElementsState {
   getElementsByType: (type: string) => CanvasElement[];
   getElementsByIds: (ids: ElementId[]) => CanvasElement[];
   getAllElements: () => CanvasElement[];
+  
+  // Group operations - NEW
+  groupElements: (elementIds: ElementId[], groupName?: string) => ElementId;
+  ungroupElements: (groupId: ElementId) => ElementId[];
+  addElementToGroup: (groupId: ElementId, elementId: ElementId) => void;
+  removeElementFromGroup: (groupId: ElementId, elementId: ElementId) => void;
+  getGroupMembers: (groupId: ElementId) => ElementId[];
+  isElementInGroup: (elementId: ElementId) => ElementId | null;
+  updateGroupTransform: (groupId: ElementId, deltaX: number, deltaY: number, scaleX?: number, scaleY?: number) => void;
+  calculateGroupBounds: (groupId: ElementId) => { x: number; y: number; width: number; height: number } | null;
   
   // Element utilities
   clearAllElements: () => void;
@@ -966,6 +976,23 @@ export const createCanvasElementsStore: StateCreator<
           return false;
         }
         logger.log('✅ [ELEMENTS STORE] Triangle validation passed');
+      } else if (isGroupElement(element)) {
+        // Group elements need width, height, and childElementIds array
+        if (typeof element.width !== 'number' || typeof element.height !== 'number' ||
+            element.width <= 0 || element.height <= 0) {
+          console.error('🔧 [ELEMENTS STORE] Invalid group: missing or invalid dimensions', {
+            width: element.width,
+            height: element.height
+          });
+          return false;
+        }
+        if (!Array.isArray(element.childElementIds) || element.childElementIds.length === 0) {
+          console.error('🔧 [ELEMENTS STORE] Invalid group: missing or invalid childElementIds', {
+            childElementIds: element.childElementIds
+          });
+          return false;
+        }
+        logger.log('✅ [ELEMENTS STORE] Group validation passed');
       } else if (isRectangularElement(element)) {
         // Elements with width and height
         if (typeof element.width !== 'number' || typeof element.height !== 'number' ||
@@ -1312,6 +1339,283 @@ export const createCanvasElementsStore: StateCreator<
   moveElementToPosition: (id: ElementId, x: number, y: number) => {
     logger.log('📍 [ELEMENT] Moving element to position:', id, { x, y });
     get().updateElement(id, { x, y });
+  },
+
+  // Group operations implementation
+  groupElements: (elementIds: ElementId[], groupName?: string) => {
+    const endTiming = PerformanceMonitor.startTiming('groupElements');
+    
+    try {
+      logger.log('🔗 [GROUP] Grouping elements:', elementIds, { groupName });
+      
+      if (elementIds.length < 2) {
+        console.warn('🔗 [GROUP] Cannot group less than 2 elements');
+        return ElementId('');
+      }
+      
+      // Get all elements to calculate bounds
+      const elements = elementIds.map(id => get().elements.get(id as string)).filter(Boolean) as CanvasElement[];
+      if (elements.length !== elementIds.length) {
+        console.warn('🔗 [GROUP] Some elements not found for grouping');
+        return ElementId('');
+      }
+      
+      // Calculate group bounds
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      elements.forEach(element => {
+        const { x, y } = element;
+        const width = isRectangularElement(element) ? element.width : (isCircleElement(element) ? element.radius * 2 : 0);
+        const height = isRectangularElement(element) ? element.height : (isCircleElement(element) ? element.radius * 2 : 0);
+        
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + width);
+        maxY = Math.max(maxY, y + height);
+      });
+      
+      const groupId = ElementId(`group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+      
+      // Create group element
+      const groupElement: GroupElement = {
+        id: groupId,
+        type: 'group',
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+        childElementIds: [...elementIds],
+        groupName: groupName || `Group ${Date.now()}`,
+        isExpanded: true,
+        backgroundColor: 'transparent',
+        borderColor: '#007acc',
+        borderWidth: 1,
+        opacity: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      
+      // Add group to store
+      get().addElement(groupElement);
+      
+      // Update child elements to reference the group
+      elementIds.forEach(elementId => {
+        const element = get().elements.get(elementId as string);
+        if (element) {
+          get().updateElement(elementId, { 
+            x: element.x - minX, // Convert to relative coordinates
+            y: element.y - minY,
+            groupId: ElementId(groupId) 
+          });
+        }
+      });
+      
+      PerformanceMonitor.recordMetric('elementsGrouped', elementIds.length, 'canvas');
+      logger.log('✅ [GROUP] Elements grouped successfully:', groupId, 'with', elementIds.length, 'elements');
+      
+      return groupId;
+    } finally {
+      endTiming();
+    }
+  },
+
+  ungroupElements: (groupId: ElementId) => {
+    const endTiming = PerformanceMonitor.startTiming('ungroupElements');
+    
+    try {
+      logger.log('🔗 [GROUP] Ungrouping elements:', groupId);
+      
+      const group = get().elements.get(groupId as string);
+      if (!group || !isGroupElement(group)) {
+        console.warn('🔗 [GROUP] Group not found or invalid:', groupId);
+        return [];
+      }
+      
+      const ungroupedIds = [...group.childElementIds];
+      
+      // Update child elements to absolute coordinates and remove group reference
+      ungroupedIds.forEach(elementId => {
+        const element = get().elements.get(elementId as string);
+        if (element) {
+          get().updateElement(elementId, { 
+            x: element.x + group.x, // Convert back to absolute coordinates
+            y: element.y + group.y,
+            groupId: undefined 
+          });
+        }
+      });
+      
+      // Remove the group element
+      get().deleteElement(groupId);
+      
+      PerformanceMonitor.recordMetric('elementsUngrouped', ungroupedIds.length, 'canvas');
+      logger.log('✅ [GROUP] Elements ungrouped successfully:', ungroupedIds.length, 'elements');
+      
+      return ungroupedIds;
+    } finally {
+      endTiming();
+    }
+  },
+
+  addElementToGroup: (groupId: ElementId, elementId: ElementId) => {
+    logger.log('🔗 [GROUP] Adding element to group:', { groupId, elementId });
+    
+    const group = get().elements.get(groupId as string);
+    const element = get().elements.get(elementId as string);
+    
+    if (!group || !isGroupElement(group)) {
+      console.warn('🔗 [GROUP] Group not found:', groupId);
+      return;
+    }
+    
+    if (!element) {
+      console.warn('🔗 [GROUP] Element not found:', elementId);
+      return;
+    }
+    
+    // Update group to include new element
+    const updatedChildIds = [...group.childElementIds, elementId];
+    get().updateElement(groupId, { childElementIds: updatedChildIds });
+    
+    // Update element to reference group and convert to relative coordinates
+    get().updateElement(elementId, { 
+      x: element.x - group.x,
+      y: element.y - group.y,
+      groupId: ElementId(groupId)
+    });
+    
+    logger.log('✅ [GROUP] Element added to group successfully');
+  },
+
+  removeElementFromGroup: (groupId: ElementId, elementId: ElementId) => {
+    logger.log('🔗 [GROUP] Removing element from group:', { groupId, elementId });
+    
+    const group = get().elements.get(groupId as string);
+    const element = get().elements.get(elementId as string);
+    
+    if (!group || !isGroupElement(group)) {
+      console.warn('🔗 [GROUP] Group not found:', groupId);
+      return;
+    }
+    
+    if (!element) {
+      console.warn('🔗 [GROUP] Element not found:', elementId);
+      return;
+    }
+    
+    // Update group to remove element
+    const updatedChildIds = group.childElementIds.filter(id => id !== elementId);
+    get().updateElement(groupId, { childElementIds: updatedChildIds });
+    
+    // Update element to remove group reference and convert to absolute coordinates
+    get().updateElement(elementId, { 
+      x: element.x + group.x,
+      y: element.y + group.y,
+      groupId: undefined
+    });
+    
+    logger.log('✅ [GROUP] Element removed from group successfully');
+  },
+
+  getGroupMembers: (groupId: ElementId) => {
+    const group = get().elements.get(groupId as string);
+    if (!group || !isGroupElement(group)) {
+      return [];
+    }
+    return [...group.childElementIds];
+  },
+
+  isElementInGroup: (elementId: ElementId) => {
+    const element = get().elements.get(elementId as string);
+    if (!element || !element.groupId) {
+      return null;
+    }
+    return element.groupId as ElementId;
+  },
+
+  updateGroupTransform: (groupId: ElementId, deltaX: number, deltaY: number, scaleX = 1, scaleY = 1) => {
+    const endTiming = PerformanceMonitor.startTiming('updateGroupTransform');
+    
+    try {
+      logger.log('🔗 [GROUP] Updating group transform:', { groupId, deltaX, deltaY, scaleX, scaleY });
+      
+      const group = get().elements.get(groupId as string);
+      if (!group || !isGroupElement(group)) {
+        console.warn('🔗 [GROUP] Group not found:', groupId);
+        return;
+      }
+      
+      // Update group position
+      get().updateElement(groupId, { 
+        x: group.x + deltaX,
+        y: group.y + deltaY,
+        width: group.width * scaleX,
+        height: group.height * scaleY
+      });
+      
+      // Update child elements if they exist (relative transforms remain unchanged)
+      group.childElementIds.forEach(elementId => {
+        const element = get().elements.get(elementId as string);
+        if (element && scaleX !== 1 && scaleY !== 1) {
+          // Only apply scaling to relative positions if scaling is involved
+          if (isRectangularElement(element)) {
+            get().updateElement(elementId, {
+              x: element.x * scaleX,
+              y: element.y * scaleY,
+              width: element.width * scaleX,
+              height: element.height * scaleY
+            });
+          } else if (isCircleElement(element)) {
+            get().updateElement(elementId, {
+              x: element.x * scaleX,
+              y: element.y * scaleY,
+              radius: element.radius * Math.min(scaleX, scaleY)
+            });
+          }
+        }
+      });
+      
+      PerformanceMonitor.recordMetric('groupTransformed', 1, 'canvas');
+      logger.log('✅ [GROUP] Group transform updated successfully');
+    } finally {
+      endTiming();
+    }
+  },
+
+  calculateGroupBounds: (groupId: ElementId) => {
+    const group = get().elements.get(groupId as string);
+    if (!group || !isGroupElement(group)) {
+      return null;
+    }
+    
+    const elements = group.childElementIds
+      .map(id => get().elements.get(id as string))
+      .filter(Boolean) as CanvasElement[];
+    
+    if (elements.length === 0) {
+      return { x: group.x, y: group.y, width: group.width, height: group.height };
+    }
+    
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    elements.forEach(element => {
+      const absX = group.x + element.x;
+      const absY = group.y + element.y;
+      const width = isRectangularElement(element) ? element.width : (isCircleElement(element) ? element.radius * 2 : 0);
+      const height = isRectangularElement(element) ? element.height : (isCircleElement(element) ? element.radius * 2 : 0);
+      
+      minX = Math.min(minX, absX);
+      minY = Math.min(minY, absY);
+      maxX = Math.max(maxX, absX + width);
+      maxY = Math.max(maxY, absY + height);
+    });
+    
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY
+    };
   },
 
   // Placeholder for handleElementDrop - will be overridden in combined store

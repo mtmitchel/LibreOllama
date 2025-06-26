@@ -166,3 +166,25 @@ export type { CanvasHistoryState, HistoryEntry } from './slices/canvasHistorySto
 export type { CanvasUIState, ModalState, TooltipState } from './slices/canvasUIStore';
 export type { CanvasElementsState } from './slices/canvasElementsStore';
 export type { TextEditingState } from './slices/textEditingStore';
+export type { LayerState } from './slices/layerStore';
+export type { SnappingState } from './slices/snappingStore';
+
+// Main CanvasStore type
+import { ViewportState } from './slices/viewportStore';
+import { SelectionState } from './slices/selectionStore';
+import { CanvasHistoryState } from './slices/canvasHistoryStore';
+import { CanvasUIState } from './slices/canvasUIStore';
+import { CanvasElementsState } from './slices/canvasElementsStore';
+import { TextEditingState } from './slices/textEditingStore';
+import { LayerState } from './slices/layerStore';
+import { SnappingState } from './slices/snappingStore';
+
+export interface CanvasStore extends
+  ViewportState,
+  SelectionState,
+  CanvasHistoryState,
+  CanvasUIState,
+  CanvasElementsState,
+  TextEditingState,
+  LayerState,
+  SnappingState {}

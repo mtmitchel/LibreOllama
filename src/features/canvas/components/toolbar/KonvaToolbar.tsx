@@ -24,7 +24,10 @@ import {
   Layout,
   Table,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Group,
+  Ungroup,
+  Layers
 } from 'lucide-react';
 import '../../../../design-system/globals.css';
 import ColorPicker from '../ColorPicker';
@@ -86,6 +89,10 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
   const sections = useCanvasStore((state) => state.sections);
   const addElementToSection = useCanvasStore((state) => state.addElementToSection);
   const createSection = useCanvasStore((state) => state.createSection);
+  const groupElements = useCanvasStore((state) => state.groupElements);
+  const ungroupElements = useCanvasStore((state) => state.ungroupElements);
+  const isElementInGroup = useCanvasStore((state) => state.isElementInGroup);
+  const toggleLayersPanel = useCanvasStore((state) => state.toggleLayersPanel);
   
   const selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
   const selectedElement = selectedElementId ? elements.get(selectedElementId) : null;
@@ -128,6 +135,36 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
       reader.readAsText(file);
     }
   };
+
+  const handleGroupElements = () => {
+    const selectedIds = Array.from(selectedElementIds);
+    if (selectedIds.length >= 2) {
+      const groupId = groupElements(selectedIds);
+      if (groupId) {
+        // Select the newly created group
+        selectElement(groupId);
+      }
+    }
+  };
+
+  const handleUngroupElements = () => {
+    if (selectedElementId) {
+      const groupId = isElementInGroup(selectedElementId);
+      if (groupId) {
+        const ungroupedIds = ungroupElements(groupId);
+        // Select the ungrouped elements
+        if (ungroupedIds.length > 0) {
+          ungroupedIds.forEach((id, index) => {
+            selectElement(id, index > 0); // Add to selection for all except first
+          });
+        }
+      }
+    }
+  };
+
+  // Check if current selection can be grouped/ungrouped
+  const canGroup = selectedElementIds.size >= 2;
+  const canUngroup = selectedElementId ? !!isElementInGroup(selectedElementId) : false;
 
   const handleToolClick = (toolId: string) => {
     // All tools now use drawing mode - click tool, then click canvas to create
@@ -303,6 +340,26 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
           <Trash2 size={16} />
         </button>
         
+        {/* Group Elements */}
+        <button
+          onClick={handleGroupElements}
+          disabled={!canGroup}
+          className={`konva-toolbar-action-btn ${!canGroup ? 'disabled' : ''}`}
+          title="Group Selected Elements (Ctrl+G)"
+        >
+          <Group size={16} />
+        </button>
+        
+        {/* Ungroup Elements */}
+        <button
+          onClick={handleUngroupElements}
+          disabled={!canUngroup}
+          className={`konva-toolbar-action-btn ${!canUngroup ? 'disabled' : ''}`}
+          title="Ungroup Selected Elements (Ctrl+Shift+G)"
+        >
+          <Ungroup size={16} />
+        </button>
+        
         {/* Clear Canvas */}
         <button
           onClick={clearAllElements}
@@ -353,6 +410,15 @@ const KonvaToolbar: React.FC<KonvaToolbarProps> = ({
             style={{ display: 'none' }}
           />
         </label>
+
+        {/* Layers Panel Toggle */}
+        <button
+          onClick={toggleLayersPanel}
+          className="konva-toolbar-action-btn"
+          title="Toggle Layers Panel"
+        >
+          <Layers size={16} />
+        </button>
       </div>
     </div>
   );

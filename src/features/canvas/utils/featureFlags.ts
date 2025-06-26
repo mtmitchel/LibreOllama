@@ -7,7 +7,6 @@ export interface CanvasFeatureFlags {
   useRefactoredCanvas: boolean;
   useEnhancedEventHandler: boolean;
   useOptimizedCoordinateService: boolean;
-  useEnhancedCacheManager: boolean;
   enablePerformanceMonitoring: boolean;
 }
 
@@ -16,7 +15,6 @@ const DEFAULT_FLAGS: CanvasFeatureFlags = {
   useRefactoredCanvas: true, // Re-enabled - we'll fix the refactored canvas properly
   useEnhancedEventHandler: true, // Safe to enable immediately
   useOptimizedCoordinateService: true, // Safe to enable immediately
-  useEnhancedCacheManager: true, // Safe to enable immediately
   enablePerformanceMonitoring: true, // Helpful for validation
 };
 
@@ -30,7 +28,6 @@ const getEnvironmentFlags = (): Partial<CanvasFeatureFlags> => {
       useRefactoredCanvas: urlParams.get('refactored-canvas') !== 'false',
       useEnhancedEventHandler: urlParams.get('enhanced-events') !== 'false',
       useOptimizedCoordinateService: urlParams.get('optimized-coords') !== 'false',
-      useEnhancedCacheManager: urlParams.get('enhanced-cache') !== 'false',
       enablePerformanceMonitoring: urlParams.get('performance-monitoring') !== 'false',
     };
     

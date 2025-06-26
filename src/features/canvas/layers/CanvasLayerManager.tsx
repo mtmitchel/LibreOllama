@@ -14,6 +14,8 @@ import { DrawingContainment } from '../components/drawing/DrawingContainment';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { Line } from 'react-konva';
+import { Layer as LayerData } from '../stores/slices/layerStore';
 import { CanvasElement, ElementId, SectionElement as SectionElementType, SectionId, isSectionElement, ConnectorElement } from '../types/enhanced.types';
 import { useViewportCulling } from '../hooks/useViewportCulling';
 
@@ -80,6 +82,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   const currentPath = useCanvasStore((state) => state.currentPath);
   const sections = useCanvasStore((state) => state.sections);
   const captureElementsAfterSectionCreation = useCanvasStore((state) => state.captureElementsAfterSectionCreation);
+  const layers = useCanvasStore((state) => state.layers);
 
   const stage = stageRef.current;
   const stageSize = stage ? { width: stage.width(), height: stage.height() } : { width: 0, height: 0 };
@@ -403,121 +406,143 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     selectMultipleElements(selectedIds);
   };
 
-  const layers = [
-    <Layer key="content-layer">
-      <BackgroundLayer
-        width={stageSize.width}
-        height={stageSize.height}
-        // REMOVED onBackgroundClick - CanvasEventHandler handles all events
-        // onBackgroundClick={() => {
-        //   // Clear selection when clicking on background
-        //   clearSelection();
-        // }}
-      />
-      
-      {useGroupedSections ? (
-        sortedSectionElements.map(section => {
-          const isSelected = selectedElementIds.has(section.id) || (section.childElementIds ?? []).some(id => selectedElementIds.has(id));
-          return (
-            <SectionHandler
-              key={section.id}
-              section={section}
-              isSelected={isSelected}
-              onSelect={(id) => selectElement(id as any)}
-            >
-              {(sortedElementsBySection.get(section.id) || []).map(element => (
-                <ElementRenderer
-                  key={element.id}
-                  element={element}
-                  isSelected={selectedElementIds.has(element.id)}
-                  onElementClick={onElementClick}
-                  onElementDragEnd={onElementDragEnd}
-                  onElementUpdate={onElementUpdate}
-                  onStartTextEdit={onStartTextEdit}
-                />
-              ))}
-            </SectionHandler>
-          );
-        })
-      ) : (
-        <MainLayer
-          elements={[]}
-          selectedElementIds={selectedElementIds}
-          selectedTool={selectedTool}
-          onElementClick={onElementClick}
-          onElementDragEnd={onElementDragEnd}
-          onElementUpdate={onElementUpdate}
-          onStartTextEdit={onStartTextEdit}
-          stageRef={stageRef}
-          isDrawing={storeIsDrawing}
-          currentPath={currentPath}
-          elementsBySection={sortedElementsBySection}
-          {...(onElementDragStart && { onElementDragStart })}
-          {...(onElementDragMove && { onElementDragMove })}
-          onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
-        />
-      )}
-      
-      <MainLayer
-        name="main-layer"
-        elements={sortedMainElements}
-        selectedElementIds={selectedElementIds}
-        selectedTool={selectedTool}
-        onElementClick={onElementClick}
-        onElementDragEnd={onElementDragEnd}
-        onElementUpdate={onElementUpdate}
-        onStartTextEdit={onStartTextEdit}
-        stageRef={stageRef}
-        isDrawing={storeIsDrawing}
-        currentPath={currentPath}
-        {...(onElementDragStart && { onElementDragStart })}
-        {...(onElementDragMove && { onElementDragMove })}
-        onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
-      />
-      
-      <ConnectorLayer
-        elements={connectorElementsMap}
-        selectedElementIds={selectedElementIdsOnly}
-        onElementClick={onElementClick}
-        isDrawingConnector={isDrawingConnector ?? false}
-        connectorStart={connectorStart ?? null}
-        connectorEnd={connectorEnd ?? null}
-        selectedTool={selectedTool}
-      />
-      
-      <DrawingContainment
-        isDrawing={storeIsDrawing}
-        currentTool={selectedTool}
-        stageRef={stageRef}
-      />
-    </Layer>,
-    
-    <UILayer
-      key="ui"
-      stageRef={stageRef}
-      selectedElementIds={selectedElementIdsOnly}
-      elements={elements}
-      sections={sectionElementsMap}
-      isDrawingSection={isDrawingSection ?? false}
-      previewSection={previewSection ?? null}
-      selectionBox={selectionBox}
-      hoveredSnapPoint={hoveredSnapPoint as { x: number; y: number; elementId?: ElementId; anchor?: string } | null}
-      // REMOVED conflicting mouse handlers - CanvasEventHandler handles all events
-      // onMouseDown={handleMouseDown}
-      // onMouseMove={handleMouseMove}
-      // onMouseUp={handleMouseUp}
-      onElementUpdate={onElementUpdate}
-      addHistoryEntry={addHistoryEntry}
-    />,
-    
-    ...(useCentralizedTransformer ? [
-      <Layer key="centralized-transformer">
-        <TransformerManager stageRef={stageRef} />
-      </Layer>
-    ] : [])
-  ];
+  const renderLayerContent = () => {
+    const contentLayerComponents: React.ReactNode[] = [];
+    const otherLayers: React.ReactNode[] = [];
 
-  return <>{layers}</>;
+    const layerComponents: Record<string, React.ReactNode> = {
+      background: (
+        <BackgroundLayer
+          key="background"
+          width={stageSize.width}
+          height={stageSize.height}
+        />
+      ),
+      main: (
+        <React.Fragment key="main">
+          {useGroupedSections ? (
+            sortedSectionElements.map(section => {
+              const isSelected = selectedElementIds.has(section.id) || (section.childElementIds ?? []).some(id => selectedElementIds.has(id));
+              return (
+                <SectionHandler
+                  key={section.id}
+                  section={section}
+                  isSelected={isSelected}
+                  onSelect={(id) => selectElement(id as any)}
+                >
+                  {(sortedElementsBySection.get(section.id) || []).map(element => (
+                    <ElementRenderer
+                      key={element.id}
+                      element={element as any}
+                      isSelected={selectedElementIds.has(element.id)}
+                      onElementClick={onElementClick}
+                      onElementDragEnd={onElementDragEnd}
+                      onElementUpdate={onElementUpdate}
+                      onStartTextEdit={onStartTextEdit}
+                    />
+                  ))}
+                </SectionHandler>
+              );
+            })
+          ) : (
+            <MainLayer
+              elements={[]}
+              selectedElementIds={selectedElementIds}
+              selectedTool={selectedTool}
+              onElementClick={onElementClick}
+              onElementDragEnd={onElementDragEnd}
+              onElementUpdate={onElementUpdate}
+              onStartTextEdit={onStartTextEdit}
+              stageRef={stageRef}
+              isDrawing={storeIsDrawing}
+              currentPath={currentPath}
+              elementsBySection={sortedElementsBySection}
+              {...(onElementDragStart && { onElementDragStart })}
+              {...(onElementDragMove && { onElementDragMove })}
+              onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
+            />
+          )}
+          <MainLayer
+            name="main-layer"
+            elements={sortedMainElements}
+            selectedElementIds={selectedElementIds}
+            selectedTool={selectedTool}
+            onElementClick={onElementClick}
+            onElementDragEnd={onElementDragEnd}
+            onElementUpdate={onElementUpdate}
+            onStartTextEdit={onStartTextEdit}
+            stageRef={stageRef}
+            isDrawing={storeIsDrawing}
+            currentPath={currentPath}
+            {...(onElementDragStart && { onElementDragStart })}
+            {...(onElementDragMove && { onElementDragMove })}
+            onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
+          />
+        </React.Fragment>
+      ),
+      connector: (
+        <ConnectorLayer
+          key="connector"
+          elements={connectorElementsMap}
+          selectedElementIds={selectedElementIdsOnly}
+          onElementClick={onElementClick}
+          isDrawingConnector={isDrawingConnector ?? false}
+          connectorStart={connectorStart ?? null}
+          connectorEnd={connectorEnd ?? null}
+          selectedTool={selectedTool}
+        />
+      ),
+      ui: (
+        <UILayer
+          key="ui"
+          stageRef={stageRef}
+          selectedElementIds={selectedElementIdsOnly}
+          elements={elements}
+          sections={sectionElementsMap}
+          isDrawingSection={isDrawingSection ?? false}
+          previewSection={previewSection ?? null}
+          selectionBox={selectionBox}
+          hoveredSnapPoint={hoveredSnapPoint as { x: number; y: number; elementId?: ElementId; anchor?: string } | null}
+          onElementUpdate={onElementUpdate}
+          addHistoryEntry={addHistoryEntry}
+        />
+      ),
+    };
+
+    layers.forEach(layerData => {
+      if (!layerData.visible) return;
+
+      const component = layerComponents[layerData.id];
+      if (!component) return;
+
+      if (['background', 'main', 'connector'].includes(layerData.id)) {
+        contentLayerComponents.push(component);
+      } else {
+        otherLayers.push(component);
+      }
+    });
+
+    const finalLayers = [
+      <Layer key="content-layer">
+        {contentLayerComponents}
+        <DrawingContainment
+          isDrawing={storeIsDrawing}
+          currentTool={selectedTool}
+          stageRef={stageRef}
+        />
+      </Layer>,
+      ...otherLayers,
+      ...(useCentralizedTransformer ? [
+        <Layer key="centralized-transformer">
+          <TransformerManager stageRef={stageRef} />
+        </Layer>
+      ] : [])
+    ];
+
+    return <>{finalLayers}</>;
+  };
+
+  return renderLayerContent();
 };
 
 CanvasLayerManager.displayName = 'CanvasLayerManager';

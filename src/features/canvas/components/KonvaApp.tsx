@@ -7,6 +7,8 @@ import CanvasSidebar from './CanvasSidebar';
 import { designSystem } from '../../../design-system';
 import { useViewportControls } from '../hooks/useViewportControls';
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts';
+import { LayersPanel } from './ui/LayersPanel';
+import { useCanvasStore } from '../../../stores';
 
 const KonvaApp: React.FC = () => {
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -23,6 +25,7 @@ const KonvaApp: React.FC = () => {
   useKeyboardShortcuts();
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [sidebarOpen, setSidebarOpen] = useState(true);  // Keyboard shortcuts enabled
+  const layersPanelOpen = useCanvasStore((state) => state.layersPanelOpen);
   useKeyboardShortcuts();
 
   useEffect(() => {
@@ -90,8 +93,12 @@ const KonvaApp: React.FC = () => {
             }}
           />
         </div>
-      </div>      {/* Text Editor Overlay - Rendered outside Konva to avoid conflicts */}
-      {/* <SimpleTextEditor stageRef={stageRef} /> */}
+        {layersPanelOpen && (
+          <div className="absolute top-16 right-4 z-10">
+            <LayersPanel />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
