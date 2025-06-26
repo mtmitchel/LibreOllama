@@ -1,0 +1,200 @@
+/* Modern Bottom-Center Floating Toolbar (FigJam-style) */
+
+.modernToolbar {
+  /* Fixed positioning to prevent viewport jumping */
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  
+  /* Floating island design */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  /* Compact horizontal layout */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  
+  /* Smooth animations */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Prevent layout shift */
+  pointer-events: auto;
+}
+
+.modernToolbar:hover {
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .modernToolbar {
+    background: rgba(31, 41, 55, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  
+  .modernToolbar:hover {
+    box-shadow: 
+      0 12px 40px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Toolbar groups with refined spacing */
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.toolbarGroup:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  .toolbarGroup {
+    background: rgba(255, 255, 255, 0.04);
+  }
+  
+  .toolbarGroup:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Modern tool buttons */
+.toolButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  outline: none;
+}
+
+.toolButton:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.toolButton:active {
+  transform: translateY(0);
+}
+
+.toolButton.active {
+  background: #2563eb;
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.toolButton.active:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .toolButton {
+    color: #e5e7eb;
+  }
+  
+  .toolButton:hover {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+  
+  .toolButton.active {
+    background: #3b82f6;
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  }
+}
+
+/* Separator between tool groups */
+.separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .separator {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .modernToolbar {
+    bottom: 16px;
+    padding: 10px 16px;
+    gap: 6px;
+  }
+  
+  .toolButton {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .toolbarGroup {
+    padding: 4px;
+    gap: 1px;
+  }
+}
+
+/* Animation for toolbar appearance */
+@keyframes toolbarSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.modernToolbar {
+  animation: toolbarSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Special styling for dropdown containers */
+.dropdownContainer {
+  position: relative;
+}
+
+/* Color picker special styling */
+.colorPickerContainer {
+  position: relative;
+  z-index: 1001;
+}

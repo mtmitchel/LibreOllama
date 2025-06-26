@@ -46,16 +46,19 @@ export const designSystem = {
       700: '#B91C1C'
     },
     stickyNote: {
-      yellow: '#FFEB3B',
-      yellowBorder: '#FBC02D',
-      green: '#C8E6C9',
-      greenBorder: '#4CAF50',
-      blue: '#BBDEFB',
-      blueBorder: '#2196F3',
-      purple: '#E1BEE7',
-      purpleBorder: '#9C27B0',
-      orange: '#FFE0B2',
-      orangeBorder: '#FF9800'
+      // Modern calm pastels for better UX
+      yellow: '#FEF7CD',      // Soft butter yellow
+      yellowBorder: '#F3E8A6',
+      green: '#E8F5E8',       // Gentle mint
+      greenBorder: '#C3E6C3',
+      blue: '#E3F2FD',        // Calm sky blue
+      blueBorder: '#BBDEFB',
+      purple: '#F3E5F5',      // Soft lavender
+      purpleBorder: '#E1BEE7',
+      orange: '#FFF3E0',      // Warm peach
+      orangeBorder: '#FFE0B2',
+      pink: '#FCE4EC',        // Gentle rose (new)
+      pinkBorder: '#F8BBD9'
     }
   },
   

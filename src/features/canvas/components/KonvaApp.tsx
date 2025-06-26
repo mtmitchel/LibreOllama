@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Konva from 'konva';
 import CanvasIntegrationWrapper from './CanvasIntegrationWrapper';
-import KonvaToolbar from './toolbar/KonvaToolbar';
+import ModernKonvaToolbar from './toolbar/ModernKonvaToolbar';
 import CanvasSidebar from './CanvasSidebar';
 import { designSystem } from '../../../design-system';
 import { useViewportControls } from '../hooks/useViewportControls';
@@ -52,14 +52,7 @@ const KonvaApp: React.FC = () => {
         backgroundColor: designSystem.colors.secondary[50] 
       }}
     >
-      <KonvaToolbar
-        onZoomIn={() => zoomIn()}
-        onZoomOut={() => zoomOut()}
-        onResetZoom={() => resetViewport()}
-        onZoomToFit={() => zoomToFit([])}
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-      />
+      {/* Modern floating toolbar will be positioned at bottom-center */}
         <div className="flex h-full">
         <CanvasSidebar 
           isOpen={sidebarOpen} 
@@ -98,6 +91,14 @@ const KonvaApp: React.FC = () => {
             <LayersPanel />
           </div>
         )}
+        
+        {/* Modern floating toolbar at bottom-center */}
+        <ModernKonvaToolbar
+          onUndo={() => {}}
+          onRedo={() => {}}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
       </div>
     </div>
   );

@@ -70,7 +70,7 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
       </button>
       
       {isOpen && (
-        <div className="shapes-dropdown-menu" role="menu">
+        <div className="shapes-dropdown-content" role="menu">
           {shapeTools.map(tool => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
