@@ -1,6 +1,7 @@
 // Canvas feature types - re-exports from main types directory
 import type { BoundingBox } from './types/enhanced.types';
 
+// Re-export all canvas element types from enhanced.types.ts
 export type {
   CanvasElement,
   TextElement,
@@ -15,18 +16,27 @@ export type {
   TriangleElement,
   StarElement,
   RichTextElement,
+  GroupElement,
+  ElementId,
+  SectionId,
+  LayerId,
+  ConnectorId,
+  GroupId,
+  BaseElement,
+  BoundingBox,
+  ViewportBounds,
+  Coordinates
+} from './types/enhanced.types';
+
+// Re-export store types
+export type {
   EnhancedTableData,
   TableCell,
   TableRow,
   TableColumn,
   TableDataModel,
   TableSelection,
-  PanZoom,  Size,
-  ViewportBounds,
-  Coordinates,
-  BaseElement,
-  ElementPosition,
-  CoordinateSpace,  ViewportState,
+  ViewportState,
   SelectionState,
   CanvasHistoryState,
   HistoryEntry,
@@ -36,8 +46,15 @@ export type {
   CanvasElementsState,
   TextEditingState,
   HistoryState,
-  Canvas,
-  BoundingBox
+  Canvas
+} from './stores/types';
+
+// Re-export other utility types
+export type {
+  PanZoom,
+  Size,
+  ElementPosition,
+  CoordinateSpace
 } from '../../types';
 
 export type {

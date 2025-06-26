@@ -6,6 +6,7 @@
 
 import type { RichTextSegment } from '../types/richText';
 import type { ConnectorEndpoint, ConnectorStyle } from '../types/connector';
+import type { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 
 export interface TableCell {
   id: string;
@@ -78,70 +79,10 @@ export type { ConnectorEndpoint, ConnectorStyle } from '../types/connector';
 // Re-export section types
 export type { SectionElement } from '../types/section';
 
-export interface CanvasElement {
-  id: string;
-  type: 'text' | 'rectangle' | 'circle' | 'line' | 'arrow' | 'pen' | 'triangle' | 'star' | 'sticky-note' | 'rich-text' | 'image' | 'connector' | 'section' | 'table';
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  radius?: number;
-  innerRadius?: number;
-  numPoints?: number;
-  text?: string;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-  points?: number[];
-  sides?: number;
-  backgroundColor?: string;
-  textColor?: string;
-  fontSize?: number;
-  fontFamily?: string;
-  fontStyle?: string;
-  textAlign?: 'left' | 'center' | 'right';
-  textDecoration?: string;
-  listType?: string;
-  isHyperlink?: boolean;
-  hyperlinkUrl?: string;
-  segments?: RichTextSegment[];
-  richTextSegments?: RichTextSegment[];
-  imageUrl?: string;
-  arrowStart?: boolean;
-  arrowEnd?: boolean;
-  color?: string;
-  rotation?: number;    // Connector properties
-  subType?: 'line' | 'arrow' | 'straight' | 'bent' | 'curved';
-  startPoint?: ConnectorEndpoint;
-  endPoint?: ConnectorEndpoint;
-  intermediatePoints?: { x: number; y: number }[];
-  connectorStyle?: ConnectorStyle;
-  pathPoints?: number[];
-  
-  // Section properties
-  sectionId?: string | null;
-  
-  // State properties
-  isLocked?: boolean;
-  isHidden?: boolean;
-  
-  // Z-Index for proper layering
-  zIndex?: number;
-  
-  // Table properties
-  rows?: number;
-  cols?: number;
-  cellWidth?: number;
-  cellHeight?: number;
-  tableData?: string[][];
-  borderColor?: string;
-  headerBackgroundColor?: string;
-  cellBackgroundColor?: string;
-  enhancedTableData?: EnhancedTableData;
-}
+// CanvasElement is now imported from enhanced.types.ts - no longer duplicated here
 
 export interface HistoryState {
-  elements: Record<string, CanvasElement>;
+  elements: Record<ElementId, CanvasElement>;
   timestamp: number;
   action: string;
 }
@@ -149,8 +90,8 @@ export interface HistoryState {
 export interface Canvas {
   id: string;
   name: string;
-  elements: Record<string, CanvasElement>;
-  sections: Record<string, any>; // SectionElement
+  elements: Record<ElementId, CanvasElement>;
+  sections: Record<SectionId, any>; // SectionElement
   createdAt: number;
   updatedAt: number;
   thumbnail?: string;
@@ -158,6 +99,9 @@ export interface Canvas {
 
 // Re-export rich text segment
 export type { RichTextSegment };
+
+// Re-export canvas element types from enhanced.types.ts
+export type { CanvasElement, ElementId, SectionId };
 
 // Export all store state types
 export type { ViewportState } from './slices/viewportStore';
