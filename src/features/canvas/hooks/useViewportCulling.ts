@@ -135,16 +135,16 @@ export const useViewportCulling = ({
     enableLOD: true,
     enableIntersectionObserver: false, // Disabled by default for canvas elements
     enableQuadtree: true,
-    bufferMultiplier: 1.2,
+    bufferMultiplier: 0.5, // MEMORY OPTIMIZATION: Reduced from 1.2 to 0.5
     lodThresholds: {
-      high: 2.0,   // Zoom > 2x = high detail
-      medium: 0.5, // Zoom 0.5x-2x = medium detail
-      low: 0.1     // Zoom < 0.5x = low detail
+      high: 1.5,   // MEMORY OPTIMIZATION: Reduced from 2.0 to 1.5
+      medium: 0.3, // MEMORY OPTIMIZATION: Reduced from 0.5 to 0.3
+      low: 0.05    // MEMORY OPTIMIZATION: Reduced from 0.1 to 0.05
     },
-    maxElementsPerGroup: 50,
+    maxElementsPerGroup: 30, // MEMORY OPTIMIZATION: Reduced from 50 to 30
     quadtreeConfig: {
       maxDepth: 8,
-      maxElementsPerNode: 10,
+      maxElementsPerNode: 5, // MEMORY OPTIMIZATION: Reduced from 10 to 5
       minNodeSize: 50
     },
     ...config

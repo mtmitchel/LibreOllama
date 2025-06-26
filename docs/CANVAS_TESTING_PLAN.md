@@ -150,6 +150,91 @@ describe('CanvasPerformanceProfiler', () => {
 - **Comprehensive Coverage**: Include error injection and edge case testing
 - **Performance Focus**: Optimize for fast, reliable test execution
 
+## 🧪 **Critical Fixes Testing (June 25, 2025)**
+
+### **Memory Leak Detection Testing**
+```javascript
+describe('MemoryLeakDetector', () => {
+  test('should track and untrack event listeners', () => {
+    const id = MemoryLeakDetector.trackEventListener('Stage', 'click', 'handler');
+    expect(id).toBeTruthy();
+    expect(MemoryLeakDetector.getResourceCount()).toBeGreaterThan(0);
+    
+    MemoryLeakDetector.untrackResource(id);
+    expect(MemoryLeakDetector.getResourceCount()).toBe(0);
+  });
+});
+```
+
+### **Section Creation Testing**
+```javascript
+describe('Section Creation', () => {
+  test('should create default section on click', () => {
+    // Simulate click (minimal movement)
+    const result = simulatePointerEvent('pointerdown', { x: 100, y: 100 });
+    simulatePointerEvent('pointerup', { x: 101, y: 101 });
+    
+    expect(result.section).toBeDefined();
+    expect(result.section.width).toBe(200);
+    expect(result.section.height).toBe(150);
+  });
+  
+  test('should create custom section on drag', () => {
+    // Simulate drag
+    simulatePointerEvent('pointerdown', { x: 100, y: 100 });
+    simulatePointerEvent('pointermove', { x: 200, y: 150 });
+    simulatePointerEvent('pointerup', { x: 200, y: 150 });
+    
+    const section = getLastCreatedSection();
+    expect(section.width).toBe(100);
+    expect(section.height).toBe(50);
+  });
+});
+```
+
+### **Dynamic Parent Assignment Testing**
+```javascript
+describe('Dynamic Parent Assignment', () => {
+  test('should update element parent during drag', () => {
+    const elementId = createTestElement({ x: 50, y: 50 });
+    const sectionId = createTestSection({ x: 100, y: 100, width: 200, height: 150 });
+    
+    // Drag element into section
+    simulateDrag(elementId, { x: 150, y: 125 });
+    
+    const element = getElement(elementId);
+    expect(element.sectionId).toBe(sectionId);
+  });
+});
+```
+
+### **Drawing State Management Testing**
+```javascript
+describe('Drawing State Management', () => {
+  test('should handle invalid state gracefully', () => {
+    // Force invalid state
+    drawingStateManager.corruptState();
+    
+    // Attempt section creation
+    const result = attemptSectionCreation({ x: 100, y: 100 });
+    
+    // Should fallback to mouse position creation
+    expect(result.success).toBe(true);
+    expect(result.fallbackUsed).toBe(true);
+  });
+});
+```
+
+### **Integration Testing Checklist**
+- [✅] **Canvas Loading**: Verify canvas loads without import errors
+- [✅] **Section Click**: Test click-to-create functionality
+- [✅] **Section Drag**: Test drag-to-create with custom dimensions
+- [✅] **Element Movement**: Test free movement between sections
+- [✅] **Parent Updates**: Verify real-time parent assignment during drag
+- [✅] **Console Clean**: Ensure no repeated error messages
+- [✅] **Memory Tracking**: Verify memory leak detection works
+- [✅] **State Recovery**: Test graceful handling of invalid states
+
 ---
 
 *This testing plan provides the technical foundation for reliable, fast, and comprehensive testing of the LibreOllama Canvas system. All patterns and methodologies have been validated through implementation and proven effective in production development.*

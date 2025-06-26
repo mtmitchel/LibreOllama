@@ -1,8 +1,9 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, memo } from 'react';
 import { Line, Arrow, Path } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, ElementId, SectionId, ConnectorElement } from '../types/enhanced.types';
 import { getElementSnapPoints, calculateConnectorPath } from '../utils/connectorUtils';
+import type { AttachmentPoint } from '../types/connector';
 
 interface ConnectorRendererProps {
   element: ConnectorElement;
@@ -13,7 +14,7 @@ interface ConnectorRendererProps {
   sections?: Map<SectionId, any>; // Sections for coordinate conversion
 }
 
-export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, ConnectorRendererProps>(
+export const ConnectorRenderer = memo(React.forwardRef<Konva.Line | Konva.Arrow, ConnectorRendererProps>(
   ({ element, isSelected, onSelect, onUpdate, elements, sections = new Map() }, ref) => {
     // Only render if this is a connector element
     if (element.type !== 'connector' || !element.startPoint || !element.endPoint) {
@@ -105,8 +106,8 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
         startResult.endpoint,
         endResult.endpoint,
         routingType,
-        element.startPoint.attachmentPoint,
-        element.endPoint.attachmentPoint
+        ('anchorPoint' in element.startPoint ? element.startPoint.anchorPoint : undefined) as AttachmentPoint | undefined,
+        ('anchorPoint' in element.endPoint ? element.endPoint.anchorPoint : undefined) as AttachmentPoint | undefined
       );
       
       return {
@@ -148,7 +149,7 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
     };
 
     // Render based on connector type
-    const isArrowType = element.subType === 'arrow' || element.subType === 'connector-arrow';
+    const isArrowType = element.subType === 'arrow';
     const isCurvedType = element.subType === 'curved';
     
     // For curved connectors, use Path instead of Line/Arrow
@@ -189,7 +190,7 @@ export const ConnectorRenderer = React.forwardRef<Konva.Line | Konva.Arrow, Conn
     // Default to line
     return <Line ref={ref as React.RefObject<Konva.Line>} {...commonProps} />;
   }
-);
+));
 
 ConnectorRenderer.displayName = 'ConnectorRenderer';
 

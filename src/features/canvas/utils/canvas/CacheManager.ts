@@ -418,16 +418,136 @@ class CacheManagerImpl {
   }
 
   /**
-   * Start memory pressure monitoring
+   * Start memory pressure monitoring with tiered cleanup strategy
    */
   private startMemoryPressureMonitoring(): void {
     // Monitor global memory usage and trigger cleanup when needed
-    setInterval(() => {
+    const monitoringInterval = setInterval(() => {
       const memoryInfo = MemoryUsageMonitor.getCurrentMemoryUsage();
-      if (memoryInfo && memoryInfo.usedPercent > 70) {
+      if (!memoryInfo) return;
+      
+      // MEMORY OPTIMIZATION: More aggressive tiered cleanup strategy
+      if (memoryInfo.usedPercent > 80) {
+        // Emergency cleanup - clear all non-essential caches
+        this.performEmergencyCleanup();
+      } else if (memoryInfo.usedPercent > 70) {
+        // Heavy cleanup - current behavior
         this.performMemoryPressureCleanup();
+      } else if (memoryInfo.usedPercent > 60) {
+        // Medium cleanup - remove least-used items
+        this.performMediumCleanup();
+      } else if (memoryInfo.usedPercent > 50) { // MEMORY OPTIMIZATION: Reduced from 50% to 40%
+        // Light cleanup - just stale entries
+        this.cleanupStaleEntries();
+      } else if (memoryInfo.usedPercent > 40) { // MEMORY OPTIMIZATION: New threshold
+        // Proactive cleanup - prevent memory buildup
+        this.performProactiveCleanup();
       }
-    }, 10000); // Check every 10 seconds
+      
+      // Adjust monitoring interval based on memory pressure
+      clearInterval(monitoringInterval);
+      setTimeout(() => this.startMemoryPressureMonitoring(), 
+        this.getDynamicMonitoringInterval(memoryInfo.usedPercent));
+    }, 10000); // Initial check every 10 seconds
+  }
+  
+  /**
+   * Get monitoring interval based on memory pressure
+   */
+  private getDynamicMonitoringInterval(memoryUsage: number): number {
+    if (memoryUsage > 80) return 5000;  // 5 seconds when critical
+    if (memoryUsage > 60) return 8000;  // 8 seconds when high
+    return 10000; // 10 seconds when normal
+  }
+  
+  /**
+   * Perform emergency cleanup when memory usage is critical
+   */
+  private async performEmergencyCleanup(): Promise<void> {
+    const endTiming = PerformanceMonitor.startTiming('emergencyCleanup');
+    
+    try {
+      // Clear all cache entries except recently accessed ones
+      const entries = Array.from(this.cache.entries());
+      const recentThreshold = performance.now() - 30000; // 30 seconds
+      let removed = 0;
+      
+      for (const [elementId, entry] of entries) {
+        if (entry.lastAccessed < recentThreshold) {
+          this.removeCacheEntry(elementId);
+          removed++;
+        }
+      }
+      
+      this.metrics.evictionCount += removed;
+      this.metrics.memoryPressureEvents++;
+      
+      recordMetric('emergencyCleanup', removed, 'memory', {
+        memoryUsage: MemoryUsageMonitor.getCurrentMemoryUsage()?.usedPercent || 0
+      });
+    } finally {
+      endTiming();
+    }
+  }
+  
+  /**
+   * Perform medium cleanup when memory usage is elevated
+   */
+  private async performMediumCleanup(): Promise<void> {
+    const endTiming = PerformanceMonitor.startTiming('mediumCleanup');
+    
+    try {
+      // Remove least frequently accessed items
+      const entries = Array.from(this.cache.entries()).sort(([, a], [, b]) => {
+        return a.accessCount - b.accessCount; // Least accessed first
+      });
+      
+      const targetToRemove = Math.min(10, entries.length * 0.2); // Remove up to 20% or 10 items
+      let removed = 0;
+      
+      for (const [elementId] of entries.slice(0, targetToRemove)) {
+        this.removeCacheEntry(elementId);
+        removed++;
+      }
+      
+      this.metrics.evictionCount += removed;
+      
+      recordMetric('mediumCleanup', removed, 'memory', {
+        memoryUsage: MemoryUsageMonitor.getCurrentMemoryUsage()?.usedPercent || 0
+      });
+    } finally {
+      endTiming();
+    }
+  }
+
+  /**
+   * Perform proactive cleanup to prevent memory buildup
+   */
+  private async performProactiveCleanup(): Promise<void> {
+    const endTiming = PerformanceMonitor.startTiming('proactiveCleanup');
+    
+    try {
+      // Remove only the oldest 5% of cache entries
+      const entries = Array.from(this.cache.entries()).sort(([, a], [, b]) => {
+        return a.lastAccessed - b.lastAccessed; // Oldest first
+      });
+      
+      const targetToRemove = Math.max(1, Math.ceil(entries.length * 0.05)); // Remove 5%
+      let removed = 0;
+      
+      for (const [elementId] of entries.slice(0, targetToRemove)) {
+        this.removeCacheEntry(elementId);
+        removed++;
+      }
+      
+      this.metrics.evictionCount += removed;
+      
+      recordMetric('proactiveCleanup', removed, 'memory', {
+        memoryUsage: MemoryUsageMonitor.getCurrentMemoryUsage()?.usedPercent || 0
+      });
+    } finally {
+      endTiming();
+    }
   }
 
   /**

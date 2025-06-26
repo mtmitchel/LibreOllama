@@ -659,8 +659,8 @@ export const createCanvasElementsStore: StateCreator<
 
   finishDrawing: () => {
     const state = get();
-    if (!state.isDrawing || state.currentPath.length < 2) {
-      logger.log('🖊️ [DRAWING] Cannot finish drawing - insufficient points (need at least 1 point)');
+    if (!state.isDrawing || state.currentPath.length < 4) { // FIX: Ensure at least two points (4 numbers)
+      logger.log('🖊️ [DRAWING] Cannot finish drawing - insufficient points (need at least 2 points)');
       get().cancelDrawing();
       return;
     }

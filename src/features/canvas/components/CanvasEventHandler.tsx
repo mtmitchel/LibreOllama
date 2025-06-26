@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
-import { CanvasTool, ElementId } from '../types/enhanced.types';
+import { CanvasTool, ElementId, SectionId } from '../types/enhanced.types';
 import { useCanvasStore, canvasStore } from '../stores';
 import { toElementId } from '../types/compatibility';
 import { logger } from '@/lib/logger';
@@ -393,13 +393,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         return;
       }
 
-      // This handler should only deal with top-level elements or sections.
-      // Child elements of sections are handled in GroupedSectionRenderer.
-      if (element.sectionId) {
-        // This case should now be handled by GroupedSectionRenderer, but as a safeguard:
-        logger.log(`[CanvasEventHandler] Ignoring dragend for element ${id} as it belongs to a section.`);
-        return;
-      }
+      // FIXED: Don't ignore elements in sections anymore - SectionHandler now properly handles them
+      // Elements in sections will be handled by SectionHandler's child dragend handler
+      // This handler now only deals with free elements and sections themselves
 
       const absolutePos = targetNode.absolutePosition();
       if (isNaN(absolutePos.x) || isNaN(absolutePos.y)) {
@@ -478,20 +474,55 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const sections = canvasStore.getState().sections;
       let newSectionId = null;
 
+      // Find which section (if any) the element center is over
+      // Use element center point for more intuitive behavior
+      const elementBounds = (() => {
+        switch (element.type) {
+          case 'circle':
+            const radius = element.radius || 50;
+            return { width: radius * 2, height: radius * 2 };
+          case 'star':
+            const outerRadius = element.outerRadius || 50;
+            return { width: outerRadius * 2, height: outerRadius * 2 };
+          case 'triangle':
+            return { width: element.width || 100, height: element.height || 100 };
+          case 'rectangle':
+          case 'image':
+          case 'text':
+          case 'rich-text':
+          case 'sticky-note':
+          case 'table':
+            return { width: element.width || 100, height: element.height || 100 };
+          default:
+            return { width: 100, height: 100 };
+        }
+      })();
+      
+      const elementCenterX = absolutePos.x + (elementBounds.width || 100) / 2;
+      const elementCenterY = absolutePos.y + (elementBounds.height || 100) / 2;
+
       for (const section of sections.values()) {
         if (
-          absolutePos.x >= section.x &&
-          absolutePos.x <= section.x + section.width &&
-          absolutePos.y >= section.y &&
-          absolutePos.y <= section.y + section.height
+          elementCenterX >= section.x &&
+          elementCenterX <= section.x + section.width &&
+          elementCenterY >= section.y &&
+          elementCenterY <= section.y + section.height
         ) {
           newSectionId = section.id;
           break;
         }
       }
 
+      // Update parent immediately during drag (FigJam-style behavior)
       if (element.sectionId !== newSectionId) {
         updateElement(id, { sectionId: newSectionId });
+        
+        // Log the parent change for debugging
+        if (newSectionId) {
+          logger.debug(`🔄 Element ${id} moved into section ${newSectionId}`);
+        } else {
+          logger.debug(`🔄 Element ${id} moved out of section ${element.sectionId}`);
+        }
       }
     };
 
@@ -560,7 +591,6 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       toolValidator
     );
   }, [stageRef, clearSelection, selectElement, deselectElement, selectedElementIds]);
-""
 
   // Enhanced pan mouse handlers with error handling
   const handlePanMouseDown = useMemo(() => {
@@ -1201,49 +1231,104 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
   // Enhanced section mouse handlers with error handling
   const handleSectionMouseDown = useMemo(() => {
-    return eventHandlerManager.createSectionMouseDownHandler(
-      stageRef,
-      (operationId) => {
-        setIsDrawingSection(true);
-        setPreviewSection({ x: 0, y: 0, width: 0, height: 0 }); // Reset preview
-        setCurrentOperationId(operationId);
-      },
-      lastMousePosRef
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (e.target !== stageRef.current) return;
+
+      setIsDrawingSection(true);
+      const pos = stageRef.current?.getPointerPosition();
+      if (pos) {
+        lastMousePosRef.current = pos;
+        setPreviewSection({ x: pos.x, y: pos.y, width: 0, height: 0 });
+      }
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingSection(false);
+      setPreviewSection(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'section';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'sectionMouseDown',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
     );
-  }, [stageRef, setIsDrawingSection, setPreviewSection, setCurrentOperationId]);
+  }, [stageRef, setIsDrawingSection, setPreviewSection]);
 
   const handleSectionMouseUp = useMemo(() => {
-    return eventHandlerManager.createSectionMouseUpHandler(
-      stageRef,
-      currentOperationId,
-      () => {
-        setIsDrawingSection(false);
-        setPreviewSection(null);
-        setCurrentOperationId(null);
-      },
-      createSection,
-      (sectionId: string) => captureElementsAfterSectionCreation(sectionId as any),
-      setSelectedTool
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!isDrawingSection || !previewSection) return;
+
+      setIsDrawingSection(false);
+
+      if (previewSection.width > 10 && previewSection.height > 10) {
+        const newSectionId = createSection(
+          previewSection.x,
+          previewSection.y,
+          previewSection.width,
+          previewSection.height,
+          'New Section'
+        );
+        captureElementsAfterSectionCreation(newSectionId);
+      }
+
+      setPreviewSection(null);
+      setSelectedTool('select');
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingSection(false);
+      setPreviewSection(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'section';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'sectionMouseUp',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
     );
   }, [
-    stageRef, 
-    currentOperationId, 
-    setIsDrawingSection, 
-    setPreviewSection, 
-    setCurrentOperationId,
-    createSection, 
+    isDrawingSection,
+    previewSection,
+    setIsDrawingSection,
+    setPreviewSection,
+    createSection,
     captureElementsAfterSectionCreation,
-    setSelectedTool
+    setSelectedTool,
   ]);
 
   const handleSectionMouseMove = useMemo(() => {
-    return eventHandlerManager.createSectionMouseMoveHandler(
-      stageRef,
-      isDrawingSection,
-      currentOperationId,
-      setPreviewSection
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!isDrawingSection || !lastMousePosRef.current) return;
+      const pos = stageRef.current?.getPointerPosition();
+      if (pos) {
+        const startPos = lastMousePosRef.current;
+        const x = Math.min(pos.x, startPos.x);
+        const y = Math.min(pos.y, startPos.y);
+        const width = Math.abs(pos.x - startPos.x);
+        const height = Math.abs(pos.y - startPos.y);
+        setPreviewSection({ x, y, width, height });
+      }
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingSection(false);
+      setPreviewSection(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'section';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'sectionMouseMove',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
     );
-  }, [stageRef, isDrawingSection, currentOperationId, setPreviewSection]);
+  }, [stageRef, isDrawingSection, setPreviewSection, setIsDrawingSection]);
 
   // Enhanced sticky note click handler with error handling
   const handleStickyNoteClick = useMemo(() => {
@@ -1956,23 +2041,16 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
   // CRITICAL: Register event handlers based on current tool
   // This useEffect maps the defined handlers to the currentToolHandlersRef based on the selected tool
-  // CRITICAL: Register event handlers based on current tool
-  // This useEffect maps the defined handlers to the currentToolHandlersRef based on the selected tool
   useEffect(() => {
     const toolHandlerMap = new Map<string, EventHandler>();
 
-    // Get current tool and validate it
-    const currentTool = validateToolState(selectedTool as CanvasTool);
-
-    // Register handlers based on current tool
-    switch (currentTool) {
+    switch (selectedTool) {
       case 'select':
         toolHandlerMap.set('mousedown', handleSelectMouseDown);
         toolHandlerMap.set('mousemove', handleSelectMouseMove);
         toolHandlerMap.set('mouseup', handleSelectMouseUp);
         toolHandlerMap.set('click', handleSelectClick);
         toolHandlerMap.set('dragmove', handleElementDragMove);
-
         break;
 
       case 'pan':
@@ -1983,19 +2061,16 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
       case 'text':
         toolHandlerMap.set('click', handleTextClick);
-
         break;
 
       case 'rectangle':
       case 'circle':
       case 'triangle':
       case 'star':
-        // All shape tools use the generic shape handlers
         toolHandlerMap.set('mousedown', handleShapeMouseDown);
         toolHandlerMap.set('mousemove', handleShapeMouseMove);
         toolHandlerMap.set('mouseup', handleShapeMouseUp);
         toolHandlerMap.set('click', handleShapeClick);
-
         break;
 
       case 'pen':
@@ -2003,7 +2078,6 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         toolHandlerMap.set('mousemove', handlePenMouseMove);
         toolHandlerMap.set('mouseup', handlePenMouseUp);
         toolHandlerMap.set('click', handlePenClick);
-
         break;
 
       case 'connector':
@@ -2014,7 +2088,6 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         toolHandlerMap.set('mousemove', handleConnectorMouseMove);
         toolHandlerMap.set('mouseup', handleConnectorMouseUp);
         toolHandlerMap.set('click', handleConnectorClick);
-
         break;
 
       case 'section':
@@ -2022,50 +2095,45 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         toolHandlerMap.set('mousemove', handleSectionMouseMove);
         toolHandlerMap.set('mouseup', handleSectionMouseUp);
         toolHandlerMap.set('click', handleSectionClick);
-
         break;
 
       case 'sticky-note':
-        toolHandlerMap.set('click', handleStickyNoteClick);
         toolHandlerMap.set('mousedown', handleStickyNoteMouseDown);
         toolHandlerMap.set('mousemove', handleStickyNoteMouseMove);
         toolHandlerMap.set('mouseup', handleStickyNoteMouseUp);
-
+        toolHandlerMap.set('click', handleStickyNoteClick);
         break;
 
       case 'image':
-        toolHandlerMap.set('click', handleImageClick);
         toolHandlerMap.set('mousedown', handleImageMouseDown);
         toolHandlerMap.set('mousemove', handleImageMouseMove);
         toolHandlerMap.set('mouseup', handleImageMouseUp);
-
+        toolHandlerMap.set('click', handleImageClick);
         break;
 
       case 'table':
-        toolHandlerMap.set('click', handleTableClick);
         toolHandlerMap.set('mousedown', handleTableMouseDown);
         toolHandlerMap.set('mousemove', handleTableMouseMove);
         toolHandlerMap.set('mouseup', handleTableMouseUp);
-
+        toolHandlerMap.set('click', handleTableClick);
         break;
 
       default:
-        // Fallback to select tool handlers
+        // Fallback to select tool handlers for any unhandled tool
         toolHandlerMap.set('mousedown', handleSelectMouseDown);
         toolHandlerMap.set('mousemove', handleSelectMouseMove);
         toolHandlerMap.set('mouseup', handleSelectMouseUp);
         toolHandlerMap.set('click', handleSelectClick);
-
+        toolHandlerMap.set('dragmove', handleElementDragMove);
         break;
     }
 
-    // Always register wheel handler (for pan/zoom)
     toolHandlerMap.set('wheel', handleWheel);
 
     // Update the ref with new handlers
     currentToolHandlersRef.current = toolHandlerMap;
 
-    logger.log('🔄 [CanvasEventHandler] Tool handlers registered for:', currentTool, 'handlers:', Array.from(toolHandlerMap.keys()));
+    logger.log('🔄 [CanvasEventHandler] Tool handlers registered for:', selectedTool, 'handlers:', Array.from(toolHandlerMap.keys()));
 
   }, [selectedTool, stageRef, handleSelectMouseDown, handleSelectMouseMove, handleSelectMouseUp, handleSelectClick, handleElementDragEnd, handlePanMouseDown, handlePanMouseMove, handlePanMouseUp, handleTextClick, handleShapeMouseDown, handleShapeMouseMove, handleShapeMouseUp, handleShapeClick, handlePenMouseDown, handlePenMouseMove, handlePenMouseUp, handlePenClick, handleConnectorMouseDown, handleConnectorMouseMove, handleConnectorMouseUp, handleConnectorClick, handleSectionMouseDown, handleSectionMouseMove, handleSectionMouseUp, handleSectionClick, handleStickyNoteClick, handleStickyNoteMouseDown, handleStickyNoteMouseMove, handleStickyNoteMouseUp, handleImageClick, handleImageMouseDown, handleImageMouseMove, handleImageMouseUp, handleTableClick, handleTableMouseDown, handleTableMouseMove, handleTableMouseUp, handleWheel]);
 
@@ -2158,7 +2226,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       });
       eventListenerIds.current = [];
     };
-  }, []);
+  }, [memoryTracker]); // Add memoryTracker to dependencies
 
   // FIXED: Set up event delegation with stable event listeners
   useEffect(() => {

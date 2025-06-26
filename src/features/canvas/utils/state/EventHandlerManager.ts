@@ -348,8 +348,46 @@ export class EventHandlerManager {
 
         const finalState = drawingStateManager.completeDrawing(operationId);
 
+        // Enhanced fallback: if drawing state is invalid, try to create section from mouse position
         if (!finalState || finalState.tool !== 'section' || !finalState.startPoint || !finalState.currentPoint) {
           logger.warn('Section mouse up: No valid section drawing operation to complete.');
+          
+          // Try to get current mouse position as fallback
+          const stage = stageRef.current;
+          if (stage) {
+            const pointer = stage.getPointerPosition();
+            if (pointer) {
+              // Create default-sized section at current mouse position
+              const defaultWidth = 200;
+              const defaultHeight = 150;
+              
+              const newSection = {
+                x: pointer.x - defaultWidth / 2,
+                y: pointer.y - defaultHeight / 2,
+                width: defaultWidth,
+                height: defaultHeight,
+                title: 'New Section',
+              };
+
+              const sectionId = createSection(
+                newSection.x,
+                newSection.y,
+                newSection.width,
+                newSection.height,
+                newSection.title
+              );
+
+              captureElementsAfterSectionCreation(sectionId);
+              setSelectedTool('select');
+              
+              logger.log('✅ Section created from fallback (current mouse position):', { 
+                sectionId, 
+                dimensions: newSection,
+                reason: 'Invalid drawing state'
+              });
+            }
+          }
+          
           onDrawingEnd();
           return;
         }
@@ -358,18 +396,70 @@ export class EventHandlerManager {
         const width = currentPoint.x - startPoint.x;
         const height = currentPoint.y - startPoint.y;
 
-        const minWidth = 10;
-        const minHeight = 10;
+        const minWidth = 5;
+        const minHeight = 5;
         const actualWidth = Math.abs(width);
         const actualHeight = Math.abs(height);
 
+        // Distinguish between clicks and intentional drags using total distance
+        const totalDistance = Math.sqrt(
+          Math.pow(currentPoint.x - startPoint.x, 2) + 
+          Math.pow(currentPoint.y - startPoint.y, 2)
+        );
+
+        // Click detection: Very small movement indicates click, not intentional drag
+        const clickDistanceThreshold = 2; // Reduced from 3 to 2 pixels
+        const isActualClick = totalDistance <= clickDistanceThreshold;
+
+        if (isActualClick) {
+          // This is a genuine click - create default-sized section
+          const defaultWidth = 200;
+          const defaultHeight = 150;
+          
+          const newSection = {
+            x: startPoint.x - defaultWidth / 2,
+            y: startPoint.y - defaultHeight / 2,
+            width: defaultWidth,
+            height: defaultHeight,
+            title: 'New Section',
+          };
+
+          const sectionId = createSection(
+            newSection.x,
+            newSection.y,
+            newSection.width,
+            newSection.height,
+            newSection.title
+          );
+
+          captureElementsAfterSectionCreation(sectionId);
+          onDrawingEnd();
+          setSelectedTool('select');
+
+          logger.log('✅ Section created from click (default size):', { 
+            sectionId, 
+            dimensions: newSection, 
+            originalAttempt: `${actualWidth.toFixed(0)}x${actualHeight.toFixed(0)}`,
+            totalDistance: totalDistance.toFixed(1),
+            reason: 'Genuine click detected'
+          });
+          return;
+        }
+
+        // This is an intentional drag - check if it meets minimum size requirements
         if (actualWidth < minWidth || actualHeight < minHeight) {
-          const errorMsg = `Section too small. Min size: ${minWidth}x${minHeight}, attempted: ${actualWidth.toFixed(0)}x${actualHeight.toFixed(0)}`;
-          console.warn('🚫 Section creation blocked:', { reason: errorMsg });
+          // User dragged but the result is too small - provide helpful error
+          const errorMsg = `Section too small. Minimum size: ${minWidth}x${minHeight}, attempted: ${actualWidth.toFixed(0)}x${actualHeight.toFixed(0)}. Drag further to create a larger section, or click without dragging for a default-sized section.`;
+          console.warn('🚫 Section creation blocked (intentional drag too small):', { 
+            reason: errorMsg,
+            totalDistance: totalDistance.toFixed(1),
+            dimensions: `${actualWidth.toFixed(0)}x${actualHeight.toFixed(0)}`
+          });
           onDrawingEnd();
           throw new Error(errorMsg);
         }
 
+        // Valid drag - create section with user's dimensions
         const newSection = {
           x: width > 0 ? startPoint.x : currentPoint.x,
           y: height > 0 ? startPoint.y : currentPoint.y,
@@ -390,7 +480,12 @@ export class EventHandlerManager {
         onDrawingEnd();
         setSelectedTool('select');
 
-        logger.log('✅ Section created successfully:', { sectionId, dimensions: newSection });
+        logger.log('✅ Section created from drag (custom size):', { 
+          sectionId, 
+          dimensions: newSection,
+          totalDistance: totalDistance.toFixed(1),
+          reason: 'Valid intentional drag'
+        });
       },
       (e: Konva.KonvaEventObject<MouseEvent>) => {
         logger.warn('Using fallback for section mouse up');
@@ -475,14 +570,18 @@ export class EventHandlerManager {
         const startPoint = drawingStateManager.getCurrentState().startPoint;
         if (!startPoint) return;
 
-        const newWidth = pointer.x - startPoint.x;
-        const newHeight = pointer.y - startPoint.y;
+        // Calculate proper rectangle bounds to handle negative dimensions
+        // When dragging up or left, we need to adjust the starting position
+        const x = Math.min(startPoint.x, pointer.x);
+        const y = Math.min(startPoint.y, pointer.y);
+        const width = Math.abs(pointer.x - startPoint.x);
+        const height = Math.abs(pointer.y - startPoint.y);
 
         setPreviewSection({
-          x: startPoint.x,
-          y: startPoint.y,
-          width: newWidth,
-          height: newHeight,
+          x: x,
+          y: y,
+          width: width,
+          height: height,
         });
       },
       (e: Konva.KonvaEventObject<MouseEvent>) => {

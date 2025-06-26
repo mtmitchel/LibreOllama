@@ -4,7 +4,7 @@
 import React from 'react';
 import { Layer, Group, Transformer, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
+import { CanvasElement, ElementId, SectionId, isRectangularElement } from '../types/enhanced.types';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 
@@ -98,8 +98,8 @@ export const UILayer: React.FC<UILayerProps> = ({
     const firstSelectedId = Array.from(selectedElementIds)[0];
     if (!firstSelectedId) return { enabledAnchors: [] };
 
-    // TODO: Fix type safety - temporarily using any to avoid cascading type errors
-    const selectedElement = (elements as any).get(firstSelectedId) || (sections as any).get(firstSelectedId);
+    // Get element with proper type safety - check both maps
+    const selectedElement = elements.get(firstSelectedId) || sections.get(firstSelectedId as unknown as SectionId);
     if (!selectedElement) return { enabledAnchors: [] };
 
     switch (selectedElement.type) {
@@ -122,7 +122,8 @@ export const UILayer: React.FC<UILayerProps> = ({
       case 'pen':
       case 'connector':
         // Line-based elements: disable transformer (points-based positioning)
-        return { enabledAnchors: [] };      case 'section':
+        return { enabledAnchors: [] };
+      case 'section':
         // Sections: disable transformer (use custom resize handles in SectionShape)
         return { enabledAnchors: [] };
       default:
@@ -137,7 +138,9 @@ export const UILayer: React.FC<UILayerProps> = ({
     }
   }, [selectedElementIds, elements, sections]);
 
-  const transformerConfig = getTransformerConfig();  // Handle transform end - when user finishes resizing/rotating elements
+  const transformerConfig = getTransformerConfig();
+
+  // Handle transform end - when user finishes resizing/rotating elements
   const handleTransformEnd = React.useCallback(() => {
     const transformer = transformerRef.current;
     if (!transformer || !onElementUpdate) return;
@@ -147,8 +150,8 @@ export const UILayer: React.FC<UILayerProps> = ({
 
     nodes.forEach((node) => {
       const elementId = node.id();
-      // TODO: Fix type safety - temporarily using any to avoid cascading type errors during refactor
-      const element = (elements as any).get(elementId) || (sections as any).get(elementId);
+      // Get element with proper type safety
+      const element = elements.get(elementId as ElementId) || sections.get(elementId as unknown as SectionId);
       if (!element) return;
 
       // Get transform values
@@ -163,60 +166,56 @@ export const UILayer: React.FC<UILayerProps> = ({
       node.scaleY(1);
       node.rotation(0);
 
-      // TODO: Use proper type guards and discriminated unions
-      const updates: any = { x, y, rotation };
+      // Handle element-specific transforms with proper type checking
+      const updates: Partial<CanvasElement> = { x, y, rotation };
 
       // Handle element-specific transforms
       switch (element.type) {
         case 'rectangle':
         case 'image':
-          updates.width = Math.max(5, (element.width || 100) * scaleX);
-          updates.height = Math.max(5, (element.height || 100) * scaleY);
+        case 'text':
+        case 'rich-text':
+        case 'sticky-note':
+        case 'table':
+          if (isRectangularElement(element)) {
+            (updates as any).width = Math.max(5, element.width * scaleX);
+            (updates as any).height = Math.max(5, element.height * scaleY);
+          }
           break;
         case 'circle':
-          const avgScale = (scaleX + scaleY) / 2;
-          const newRadius = Math.max(5, (element.radius || 50) * avgScale);
-          updates.radius = newRadius;
-          break;
-        case 'text':
-          updates.width = Math.max(20, (element.width || 120) * scaleX);
-          updates.height = Math.max(15, (element.height || 30) * scaleY);
-          break;
-        case 'sticky-note':
-          updates.width = Math.max(160, (element.width || 300) * scaleX);
-          updates.height = Math.max(80, (element.height || 200) * scaleY);
+          if (element.type === 'circle') {
+            const avgScale = (scaleX + scaleY) / 2;
+            const newRadius = Math.max(5, element.radius * avgScale);
+            (updates as any).radius = newRadius;
+          }
           break;
         case 'star':
-          updates.width = Math.max(20, (element.width || 100) * scaleX);
-          updates.height = Math.max(20, (element.height || 100) * scaleY);
-          const avgStarScale = (scaleX + scaleY) / 2;
-          const newStarRadius = Math.max(5, (element.outerRadius || 50) * avgStarScale);
-          updates.outerRadius = newStarRadius;
-          if (element.innerRadius) {
-            updates.innerRadius = element.innerRadius * Math.max(scaleX, scaleY);
+          if (element.type === 'star') {
+            const avgScale = (scaleX + scaleY) / 2;
+            const newOuterRadius = Math.max(5, element.outerRadius * avgScale);
+            (updates as any).outerRadius = newOuterRadius;
+            if (element.innerRadius) {
+              (updates as any).innerRadius = element.innerRadius * avgScale;
+            }
           }
           break;
         case 'triangle':
-          updates.width = Math.max(5, (element.width || 100) * scaleX);
-          updates.height = Math.max(5, (element.height || 60) * scaleY);
-          // Scale triangle points if they exist
-          if (element.points && Array.isArray(element.points)) {
-            const scaledPoints = element.points.map((point: number, index: number) => {
-              return index % 2 === 0 ? point * scaleX : point * scaleY;
-            });
-            updates.points = scaledPoints;
+          if (element.type === 'triangle') {
+            (updates as any).width = Math.max(5, (element.width || 100) * scaleX);
+            (updates as any).height = Math.max(5, (element.height || 100) * scaleY);
+            // Scale triangle points if they exist
+            if (element.points && Array.isArray(element.points)) {
+              const scaledPoints = element.points.map((point: number, index: number) => {
+                return index % 2 === 0 ? point * scaleX : point * scaleY;
+              });
+              (updates as any).points = scaledPoints;
+            }
           }
-          break;
-        case 'table':
-          updates.width = Math.max(100, (element.width || 200) * scaleX);
-          updates.height = Math.max(50, (element.height || 150) * scaleY);
           break;
         case 'section':
-          if (element.width && element.height) {
-            updates.width = Math.max(5, element.width * scaleX);
-          }
-          if (element.height) {
-            updates.height = Math.max(5, element.height * scaleY);
+          if (element.type === 'section') {
+            (updates as any).width = Math.max(5, element.width * scaleX);
+            (updates as any).height = Math.max(5, element.height * scaleY);
           }
           break;
       }
@@ -254,87 +253,90 @@ export const UILayer: React.FC<UILayerProps> = ({
         {/* Selection and transform controls - only render if centralized transformer is disabled */}
         {!useCentralizedTransformer && (
           <Transformer
-          ref={transformerRef}
-          rotateEnabled={true}
-          enabledAnchors={transformerConfig.enabledAnchors}
-          borderStroke="#3B82F6"
-          borderStrokeWidth={2}
-          borderDash={[8, 4]}
-          anchorFill="#FFFFFF"
-          anchorStroke="#3B82F6"
-          anchorStrokeWidth={2}
-          anchorSize={14}
-          anchorCornerRadius={7}
-          rotateAnchorOffset={35}
-          rotationSnapTolerance={5}
-          rotateAnchorSize={20}
-          rotateAnchorFill="#3B82F6"
-          rotateAnchorStroke="#FFFFFF"
-          rotateAnchorStrokeWidth={2}
-          padding={8}
-          shadowColor="rgba(59, 130, 246, 0.3)"
-          shadowBlur={12}
-          shadowOffset={{ x: 0, y: 4 }}
-          shadowOpacity={0.5}
-          boundBoxFunc={(oldBox, newBox) => {
-            // Limit resize to minimum size
-            if (newBox.width < 5 || newBox.height < 5) {
-              return oldBox;
-            }
-            return newBox;
-          }}
-          onTransformEnd={handleTransformEnd}
-        />
+            ref={transformerRef}
+            rotateEnabled={true}
+            enabledAnchors={transformerConfig.enabledAnchors}
+            borderStroke="#3B82F6"
+            borderStrokeWidth={2}
+            borderDash={[8, 4]}
+            anchorFill="#FFFFFF"
+            anchorStroke="#3B82F6"
+            anchorStrokeWidth={2}
+            anchorSize={14}
+            anchorCornerRadius={7}
+            rotateAnchorOffset={35}
+            rotationSnapTolerance={5}
+            rotateAnchorSize={20}
+            rotateAnchorFill="#3B82F6"
+            rotateAnchorStroke="#FFFFFF"
+            rotateAnchorStrokeWidth={2}
+            padding={8}
+            shadowColor="rgba(59, 130, 246, 0.3)"
+            shadowBlur={12}
+            shadowOffset={{ x: 0, y: 4 }}
+            shadowOpacity={0.5}
+            boundBoxFunc={(oldBox, newBox) => {
+              // Limit resize to minimum size
+              if (newBox.width < 5 || newBox.height < 5) {
+                return oldBox;
+              }
+              return newBox;
+            }}
+            onTransformEnd={handleTransformEnd}
+          />
         )}
 
-      {/* Section preview during drawing */}
-      {isDrawingSection && previewSection && (
-        <Rect
-          x={previewSection.x}
-          y={previewSection.y}
-          width={previewSection.width}
-          height={previewSection.height}
-          fill="rgba(59, 130, 246, 0.1)"
-          stroke="#3B82F6"
-          strokeWidth={2}
-          dash={[5, 5]}
-          opacity={0.7}
-          listening={false}        />
-      )}
-      {/* Selection box for multi-select */}
-      {selectionBox?.visible && (
-        <Rect
-          x={selectionBox.x}
-          y={selectionBox.y}
-          width={selectionBox.width}
-          height={selectionBox.height}          fill="rgba(0, 161, 255, 0.2)"
-          stroke="rgba(0, 161, 255, 0.8)"
-          strokeWidth={1}
-          listening={false}        />
-      )}
+        {/* Section preview during drawing */}
+        {isDrawingSection && previewSection && (
+          <Rect
+            x={previewSection.x}
+            y={previewSection.y}
+            width={previewSection.width}
+            height={previewSection.height}
+            fill="rgba(59, 130, 246, 0.1)"
+            stroke="#3B82F6"
+            strokeWidth={2}
+            dash={[5, 5]}
+            opacity={0.7}
+            listening={false}
+          />
+        )}
+
+        {/* Selection box for multi-select */}
+        {selectionBox?.visible && (
+          <Rect
+            x={selectionBox.x}
+            y={selectionBox.y}
+            width={selectionBox.width}
+            height={selectionBox.height}
+            fill="rgba(0, 161, 255, 0.2)"
+            stroke="rgba(0, 161, 255, 0.8)"
+            strokeWidth={1}
+            listening={false}
+          />
+        )}
+
         {/* Snap point indicator */}
         {hoveredSnapPoint && (
-        <Group
-          x={hoveredSnapPoint.x}
-          y={hoveredSnapPoint.y}
-          listening={false}
-        >
-          {/* Outer glow circle */}
-          <Circle
-            radius={12}
-            fill="rgba(59, 130, 246, 0.2)"
-            stroke="rgba(59, 130, 246, 0.4)"
-            strokeWidth={2}
-          />
-          {/* Inner snap point */}
-          <Circle
-            radius={6}
-            fill="#3B82F6"
-            stroke="#FFFFFF"
-            strokeWidth={2}
-          />
-        </Group>
-      )}
+          <Group
+            x={hoveredSnapPoint.x}
+            y={hoveredSnapPoint.y}
+            listening={false}
+          >
+            <Circle
+              radius={12}
+              fill="rgba(59, 130, 246, 0.2)"
+              stroke="rgba(59, 130, 246, 0.4)"
+              strokeWidth={2}
+            />
+            <Circle
+              radius={6}
+              fill="#3B82F6"
+              stroke="#FFFFFF"
+              strokeWidth={2}
+            />
+          </Group>
+        )}
       </Group>
     </Layer>
   );

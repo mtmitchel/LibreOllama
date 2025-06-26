@@ -4,11 +4,11 @@
  * 
  * Part of LibreOllama Canvas Coordinate System Fixes - Priority 1
  */
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, memo } from 'react';
 import { Group, Rect, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { useCanvasStore } from '../../stores/canvasStore.enhanced';
-import type { SectionElement, SectionId } from '../../types/enhanced.types';
+import type { SectionElement, SectionId, ElementId } from '../../types/enhanced.types';
 
 interface SectionHandlerProps {
   section: SectionElement;
@@ -17,7 +17,7 @@ interface SectionHandlerProps {
   onSelect: (id: SectionId) => void;
 }
 
-const SectionHandler: React.FC<SectionHandlerProps> = ({ 
+const SectionHandlerComponent: React.FC<SectionHandlerProps> = ({ 
   section, 
   children, 
   isSelected, 
@@ -28,6 +28,8 @@ const SectionHandler: React.FC<SectionHandlerProps> = ({
   
   // Get section-specific update function instead of element update
   const updateSection = useCanvasStore(state => state.updateSection);
+  const updateElement = useCanvasStore(state => state.updateElement);
+  
   // When a section is dragged, only its own absolute position is updated.
   // Children move with it automatically thanks to the <Group> transform.
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
@@ -37,6 +39,29 @@ const SectionHandler: React.FC<SectionHandlerProps> = ({
       y: target.y() 
     });
   }, [section.id, updateSection]);
+
+  // Handle child element drag end - this fixes the coordinate jumping issue
+  const handleChildElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    const targetNode = e.target;
+    const elementId = targetNode.id() as ElementId;
+    
+    // Only handle child elements, not the section itself
+    if (elementId === (section.id as string) || !elementId) {
+      return;
+    }
+    
+    // Get the element's position relative to the section group
+    const relativePos = targetNode.position();
+    
+    // Update the element with its new relative position within the section
+    updateElement(elementId, {
+      x: relativePos.x,
+      y: relativePos.y,
+      updatedAt: Date.now()
+    });
+    
+    console.log(`[SectionHandler] Updated child element ${elementId} position:`, relativePos);
+  }, [section.id, updateElement]);
 
   // When resizing, update the section's dimensions and reset the node's scale.
   const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
@@ -116,7 +141,10 @@ const SectionHandler: React.FC<SectionHandlerProps> = ({
         )}
 
         {/* Children are rendered inside this group and automatically transformed */}
-        {children}
+        {/* We need to wrap children to add dragend handler for child elements */}
+        <Group onDragEnd={handleChildElementDragEnd}>
+          {children}
+        </Group>
       </Group>
 
       {/* Transformer is placed outside the group and attached when needed */}
@@ -143,4 +171,21 @@ const SectionHandler: React.FC<SectionHandlerProps> = ({
   );
 };
 
+// Memoize component for better performance
+const SectionHandler = memo(SectionHandlerComponent, (prevProps, nextProps) => {
+  // Custom comparison for optimal re-rendering
+  return (
+    prevProps.section.id === nextProps.section.id &&
+    prevProps.section.x === nextProps.section.x &&
+    prevProps.section.y === nextProps.section.y &&
+    prevProps.section.width === nextProps.section.width &&
+    prevProps.section.height === nextProps.section.height &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.children === nextProps.children
+  );
+});
+
+SectionHandler.displayName = 'SectionHandler';
+
 export default SectionHandler;
+export { SectionHandler };

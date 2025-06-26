@@ -1,31 +1,36 @@
-// src/features/canvas/shapes/SectionShape.tsx
+
 import React from 'react';
-import { Rect } from 'react-konva';
-import { SectionElement } from '../types/section';
-import { designSystem } from '../../../design-system';
+import { Group, Rect, Text } from 'react-konva';
+import { SectionElement } from '../types/enhanced.types';
+import Konva from 'konva';
 
 interface SectionShapeProps {
   element: SectionElement;
-  konvaProps: any;
+  konvaProps: Partial<Konva.NodeConfig>;
+  children: React.ReactNode;
 }
 
-export const SectionShape: React.FC<SectionShapeProps> = React.memo(({
-  element,
-  konvaProps,
-}) => {
+export const SectionShape: React.FC<SectionShapeProps> = ({ element, konvaProps, children }) => {
   return (
-    <Rect
-      {...konvaProps}
-      id={element.id}
-      width={element.width}
-      height={element.height}
-      fill={element.backgroundColor || 'rgba(59, 130, 246, 0.1)'}
-      stroke={element.borderColor || '#3B82F6'}
-      strokeWidth={element.borderWidth || 2}
-      cornerRadius={element.cornerRadius || 8}
-      listening={true}
-    />
+    <Group {...konvaProps}>
+      <Rect
+        width={element.width}
+        height={element.height}
+        fill={element.backgroundColor}
+        stroke={element.borderColor}
+        strokeWidth={element.borderWidth}
+        cornerRadius={element.cornerRadius}
+      />
+      <Text
+        text={element.title}
+        fontSize={14}
+        fontFamily="Arial"
+        fill="#333"
+        width={element.width}
+        padding={10}
+        align="center"
+      />
+      {children}
+    </Group>
   );
-});
-
-SectionShape.displayName = 'SectionShape';
+};

@@ -6,7 +6,7 @@ import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
 import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
-import { GroupedSectionRenderer } from '../components/GroupedSectionRenderer';
+import { SectionHandler } from '../components/sections/SectionHandler';
 import SectionElement from '../components/SectionElement';
 import { ElementRenderer } from '../components/ElementRenderer';
 import { TransformerManager } from '../components/TransformerManager';
@@ -63,6 +63,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   // Split selectors to prevent infinite loop
   const clearSelection = useCanvasStore((state) => state.clearSelection);
   const selectMultipleElements = useCanvasStore((state) => state.selectMultipleElements);
+  const selectElement = useCanvasStore((state) => state.selectElement);
   const selectedTool = useCanvasStore((state) => state.selectedTool);
   const hoveredSnapPoint = useCanvasStore((state) => state.hoveredSnapPoint);
   const zoom = useCanvasStore((state) => state.zoom);
@@ -71,7 +72,6 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
   const addElement = useCanvasStore((state) => state.addElement);
   const addElementToSection = useCanvasStore((state) => state.addElementToSection);
-  const selectElement = useCanvasStore((state) => state.selectElement);
   const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
   const storeIsDrawing = useCanvasStore((state) => state.isDrawing);
   const startDrawing = useCanvasStore((state) => state.startDrawing);
@@ -419,11 +419,11 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         sortedSectionElements.map(section => {
           const isSelected = selectedElementIds.has(section.id) || (section.childElementIds ?? []).some(id => selectedElementIds.has(id));
           return (
-            <SectionElement
+            <SectionHandler
               key={section.id}
               section={section}
-              onUpdate={updateSection}
-              onDragEnd={onElementDragEnd}
+              isSelected={isSelected}
+              onSelect={(id) => selectElement(id as any)}
             >
               {(sortedElementsBySection.get(section.id) || []).map(element => (
                 <ElementRenderer
@@ -436,7 +436,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
                   onStartTextEdit={onStartTextEdit}
                 />
               ))}
-            </SectionElement>
+            </SectionHandler>
           );
         })
       ) : (

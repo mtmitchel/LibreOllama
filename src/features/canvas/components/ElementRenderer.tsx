@@ -42,10 +42,13 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   onElementUpdate,
   onStartTextEdit,
   overrideKonvaProps
-}) => {  const konvaProps = {
+}) => {
+  // CRITICAL FIX: Use element coordinates directly since they're already relative when inside sections
+  // The SectionHandler's Group component handles the coordinate transformation automatically
+  const konvaProps = {
       id: element.id,
-      x: element.x,
-      y: element.y,
+      x: element.x, // These are relative coordinates when inside a section
+      y: element.y, // These are relative coordinates when inside a section
       rotation: element.rotation,
       draggable: !element.isLocked,
       onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),

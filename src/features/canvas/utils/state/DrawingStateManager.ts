@@ -213,19 +213,20 @@ export class DrawingStateManager {
    * Validate that drawing can be completed successfully
    */
   private isValidDrawingCompletion(): boolean {
-    const { startPoint, currentPoint, preview } = this.currentState;
+    const { startPoint, currentPoint, tool } = this.currentState;
     
     if (!startPoint || !currentPoint) {
       return false;
     }
 
-    // For section drawing, ensure minimum size
-    if (preview) {
-      const minSize = 2; // Matches the existing validation
-      return Math.abs(preview.width) >= minSize && Math.abs(preview.height) >= minSize;
+    // For section drawing, be very permissive - let the section creation logic handle sizing
+    if (tool === 'section') {
+      // Just ensure we have valid coordinates, regardless of size
+      return !isNaN(startPoint.x) && !isNaN(startPoint.y) && 
+             !isNaN(currentPoint.x) && !isNaN(currentPoint.y);
     }
 
-    // For other drawing types, ensure points are different
+    // For other drawing types (pen, connectors, etc.), ensure minimum movement
     const distance = Math.sqrt(
       Math.pow(currentPoint.x - startPoint.x, 2) + 
       Math.pow(currentPoint.y - startPoint.y, 2)
