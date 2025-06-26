@@ -9,7 +9,7 @@ import { Draft } from 'immer';
 import { logger } from '../../../../lib/logger';
 import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 import { ViewportCuller } from '../../utils/viewport/viewportCuller';
-import { CanvasElement } from '../types';
+import { CanvasElement } from '../../types/enhanced.types';
 import Konva from 'konva';
 
 export interface ViewportState {

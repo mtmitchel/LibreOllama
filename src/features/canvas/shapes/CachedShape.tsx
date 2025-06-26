@@ -11,7 +11,7 @@ import { Group } from 'react-konva';
 import { logger } from '@/lib/logger';
 import Konva from 'konva';
 import { useShapeCaching } from '../hooks/useShapeCaching';
-import { CanvasElement } from '../stores/types';
+import { CanvasElement } from '../types/enhanced.types';
 
 interface CachedShapeProps {
   /** The element data for caching decisions */

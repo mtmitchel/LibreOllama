@@ -2,14 +2,15 @@
 import React, { useRef, useCallback } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement } from '../types';
+import type { CanvasElement, StickyNoteElement } from '../types';
+import { isStickyNoteElement } from '../types/enhanced.types';
 import type { StandardTextFormat } from '../types/richText';
 import { designSystem, getStickyNoteColors } from '../../../design-system';
 import { richTextManager as UnifiedRichTextManager } from './RichTextSystem/UnifiedRichTextManager'; // Corrected import alias
 import { triggerLayerRedraw } from '../utils/canvasRedrawUtils';
 
 interface StickyNoteElementProps {
-  element: CanvasElement & { textStyle?: StandardTextFormat };
+  element: StickyNoteElement & { textStyle?: StandardTextFormat };
   isSelected: boolean;
   isEditing?: boolean;
   isDraggable?: boolean;

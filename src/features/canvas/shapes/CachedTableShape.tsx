@@ -9,12 +9,12 @@
 
 import React, { useMemo } from 'react';
 import { Group, Rect, Text } from 'react-konva';
-import { CanvasElement } from '../stores/types';
+import { CanvasElement, TableElement, isTableElement } from '../types/enhanced.types';
 import { designSystem } from '../../../design-system';
 import { CachedShape } from './CachedShape';
 
 interface CachedTableShapeProps {
-  element: CanvasElement;
+  element: TableElement;
   isSelected: boolean;
   konvaProps: any;
   onUpdate: (id: string, updates: Partial<CanvasElement>) => void;

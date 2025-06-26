@@ -1,7 +1,7 @@
 // Granular Selectors for Canvas State Management
 // Optimized selectors to prevent unnecessary re-renders
 
-import type { CanvasElement } from '../stores/types';
+import type { CanvasElement } from '../types/enhanced.types';
 import type { ElementId } from '../types/enhanced.types';
 import { 
   useCanvasStore, 

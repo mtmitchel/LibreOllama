@@ -7,7 +7,7 @@
 
 import { PerformanceMonitor, recordMetric } from '../performance';
 import { MemoryUsageMonitor } from '../performance/MemoryUsageMonitor';
-import type { CanvasElement } from '../../stores/types';
+import type { CanvasElement, TextElement, RichTextElement, isTextElement, isRichTextElement } from '../../types/enhanced.types';
 
 export interface CacheEntry {
   id: string;

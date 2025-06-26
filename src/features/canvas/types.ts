@@ -34,7 +34,6 @@ export type {
   TableCell,
   TableRow,
   TableColumn,
-  TableDataModel,
   TableSelection,
   ViewportState,
   SelectionState,
@@ -48,6 +47,9 @@ export type {
   HistoryState,
   Canvas
 } from './stores/types';
+
+// Re-export TableDataModel from root types
+export type { TableDataModel } from '../../types';
 
 // Re-export other utility types
 export type {
