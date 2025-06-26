@@ -3,7 +3,7 @@ import { canvasStore } from '../features/canvas/stores/canvasStore.enhanced';
 import { ElementId, SectionId } from '../features/canvas/types/enhanced.types';
 
 describe('FigJam-Style Section Functionality', () => {
-  let store: ReturnType<typeof canvasStore>;
+  let store: typeof canvasStore;
 
   beforeEach(() => {
     store = canvasStore;

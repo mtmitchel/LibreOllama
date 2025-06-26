@@ -6,14 +6,16 @@
 
 import { vi } from 'vitest';
 import React from 'react';
+import Konva from 'konva';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import { CanvasLayerManager } from '@/features/canvas/layers/CanvasLayerManager';
+import { ElementId, SectionId } from '@/features/canvas/types/enhanced.types';
 
 // Mock the enhanced store
 const mockEnhancedStore = {
   elements: new Map(),
   sections: new Map(),
-  selectedElementIds: new Set(),
+  selectedElementIds: new Set<ElementId | SectionId>(),
   zoom: 1,
   pan: { x: 0, y: 0 },
   
@@ -57,7 +59,7 @@ describe('UI Enhanced Store Integration Validation', () => {
   });
 
   test('should render CanvasLayerManager without errors', () => {
-    const mockStageRef = { 
+    const mockStageRef = ({ 
       current: {
         getPointerPosition: vi.fn(() => ({ x: 0, y: 0 })),
         width: vi.fn(() => 800),
@@ -70,7 +72,7 @@ describe('UI Enhanced Store Integration Validation', () => {
           getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
         }))
       }
-    };
+    } as unknown) as React.MutableRefObject<Konva.Stage | null>;
     
     expect(() => {
       renderWithKonva(

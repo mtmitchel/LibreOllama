@@ -252,12 +252,8 @@ const createMockElement = (type: string, overrides = {}): CanvasElement => ({
   y: 100,
   createdAt: Date.now(),
   updatedAt: Date.now(),
-  visible: true,
-  draggable: true,
-  opacity: 1,
-  rotation: 0,
   ...overrides,
-});
+} as CanvasElement);
 
 describe('Complete User Workflow Test Suite', () => {
   beforeEach(() => {
@@ -1165,7 +1161,11 @@ describe('Complete User Workflow Test Suite', () => {
       
       // Add all elements
       elements.forEach(element => {
-        mockStore.elements.set(element.id, element);
+        if ('type' in element && element.type === 'section') {
+          mockStore.sections.set(element.id as SectionId, element as any);
+        } else {
+          mockStore.elements.set(element.id as ElementId, element);
+        }
       });
       
       // Perform bulk operations
@@ -1490,7 +1490,11 @@ describe('Complete User Workflow Test Suite', () => {
       
       // Add elements to store
       complexElements.forEach(element => {
-        mockStore.elements.set(element.id, element);
+        if ('type' in element && element.type === 'section') {
+          mockStore.sections.set(element.id as SectionId, element as any);
+        } else {
+          mockStore.elements.set(element.id as ElementId, element);
+        }
       });
       
       // Create sections

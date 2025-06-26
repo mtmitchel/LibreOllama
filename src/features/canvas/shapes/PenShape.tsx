@@ -9,17 +9,27 @@ interface PenShapeProps {
 }
 
 export const PenShape: React.FC<PenShapeProps> = ({ element, konvaProps }) => {
+  // Ensure we have valid points and stroke properties
+  const points = element.points || [];
+  const stroke = element.stroke || '#000000'; // Default to black if not set
+  const strokeWidth = element.strokeWidth || 2; // Default to 2px if not set
+  
+  // Don't render if we don't have enough points
+  if (points.length < 4) {
+    return null;
+  }
+  
   return (
     <Line
       {...konvaProps}
-      points={element.points}
-      stroke={element.stroke}
-      strokeWidth={element.strokeWidth}
+      points={points}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
       tension={0.5}
       lineCap="round"
       lineJoin="round"
       globalCompositeOperation={
-        element.stroke === 'erase' ? 'destination-out' : 'source-over'
+        stroke === 'erase' ? 'destination-out' : 'source-over'
       }
     />
   );

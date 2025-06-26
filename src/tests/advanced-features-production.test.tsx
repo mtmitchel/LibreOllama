@@ -17,9 +17,7 @@ import {
   SectionElement, 
   TextElement, 
   RectangleElement,
-  ConnectorElement,
-  toElementId,
-  toSectionId 
+  ConnectorElement
 } from '@/features/canvas/types/enhanced.types';
 import { toElementId as compatToElementId, toSectionId as compatToSectionId } from '@/features/canvas/types/compatibility';
 
@@ -91,9 +89,8 @@ describe('Advanced Canvas Features - Production Readiness', () => {
     test('should create section with proper containment boundaries', () => {
       const sectionId = compatToSectionId('section-1');
       const mockSection: SectionElement = {
-        id: compatToElementId('section-1'),
+        id: compatToSectionId('section-1'),
         type: 'section',
-        tool: 'section',
         x: 100,
         y: 100,
         width: 400,
@@ -106,11 +103,7 @@ describe('Advanced Canvas Features - Production Readiness', () => {
         collapsed: false,
         childElementIds: [],
         createdAt: Date.now(),
-        updatedAt: Date.now(),
-        visible: true,
-        draggable: true,
-        opacity: 1,
-        rotation: 0
+        updatedAt: Date.now()
       };
 
       act(() => {
@@ -130,7 +123,6 @@ describe('Advanced Canvas Features - Production Readiness', () => {
       const mockElement: RectangleElement = {
         id: elementId,
         type: 'rectangle',
-        tool: 'rectangle',
         x: 150, // Inside section bounds (100-500)
         y: 150, // Inside section bounds (100-400)
         width: 100,
@@ -140,11 +132,7 @@ describe('Advanced Canvas Features - Production Readiness', () => {
         strokeWidth: 2,
         cornerRadius: 4,
         createdAt: Date.now(),
-        updatedAt: Date.now(),
-        visible: true,
-        draggable: true,
-        opacity: 1,
-        rotation: 0
+        updatedAt: Date.now()
       };
 
       act(() => {
@@ -387,9 +375,7 @@ describe('Advanced Canvas Features - Production Readiness', () => {
         id: connectorId,
         type: 'connector',
         startElementId,
-        endElementId,
-        pathType: 'orthogonal',
-        autoRoute: true
+        endElementId
       };
 
       act(() => {

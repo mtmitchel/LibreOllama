@@ -7,7 +7,7 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import { logger } from '@/lib/logger';
+import { logger } from '../../../../lib/logger';
 import type { RichTextSegment } from '../../types/richText';
 import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 

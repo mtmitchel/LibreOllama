@@ -1,0 +1,37 @@
+# Developer Checklist: Do’s and Don’ts
+
+## Do’s  
+- Establish a **store-first architecture**: Implement core logic and operations in your central state store (Zustand/Yjs) and write unit tests against it rather than UI components.  
+- Normalize **virtual vs. screen coordinates**: Always convert pointer events to virtual canvas coordinates and back using consistent formulas to avoid misalignment.  
+- Use **spatial indexing** (quadtrees) for viewport culling: Query only visible elements each frame to minimize Konva node count and GPU memory use.  
+- Separate content into **logical layers**: Keep static guides, annotations, and dynamic drawings on distinct Konva layers to optimize redraws with `batchDraw()`.  
+- Implement **node pooling**: Recycle Konva shape instances instead of destroying and recreating them to reduce garbage collection overhead.  
+- Leverage **CRDT (Yjs)** for real-time sync: Maintain a shared document state, apply changes via transactions, and use the awareness API for cursors and chat.  
+- Adopt **automatic tool switching**: After completing actions like drawing sections or connectors, switch back to the Select tool for seamless workflows.  
+- Provide **post-creation editability** for strokes and shapes: Allow resizing, recoloring, and repositioning of drawn objects.  
+- Employ **LRU or proactive cache management**: Use memory-aware culling and dynamic LOD thresholds to adapt quadtree and rendering parameters under pressure.  
+- Expose a **plugin API** with clear lifecycle hooks (`initialize`, `activate`, `deactivate`, `dispose`) and a well-documented CanvasAPI for extensibility.  
+- Centralize **OS-specific logic** in Rust commands behind Tauri’s IPC; keep the frontend sandboxed and platform-agnostic.  
+- Use **typed schemas** (TypeScript discriminated unions, branded IDs) for element definitions and API contracts to catch errors at compile time.  
+- Implement **undo/redo and autosave**: Persist snapshots in JSON or SQLite diff tables and integrate with Tauri’s file dialogs for crash recovery.  
+- Follow a **modular test structure**: Organize store unit tests by feature (coordinate conversion, connectors, sections) and maintain a small suite of end-to-end smoke tests for critical flows.  
+- Enforce **performance monitoring** in development: Integrate lightweight FPS counters and memory monitors to catch regressions early.  
+
+## Don’ts  
+- Don’t rely on **global mocks** for store logic tests; avoid brittle, non-functional stubs that mask real issues.  
+- Don’t mix UI and business logic: Keep event handlers thin and delegate operations to the store or plugin API.  
+- Don’t create unbounded canvas buffers: Always size the canvas to the viewport and use transforms for panning/zooming to avoid GPU exhaustion.  
+- Don’t redraw the entire scene on every change: Restrict redraws to affected layers and elements.  
+- Don’t hardcode coordinate math in multiple places: Encapsulate conversion utilities to prevent drift and duplication.  
+- Don’t operate on large element sets without culling: Avoid queries or transforms on elements outside the viewport.  
+- Don’t ignore memory leaks: Destroy Konva nodes and offload listeners on element removal; use `WeakMap` for auxiliary data.  
+- Don’t bypass CRDT transactions for collaborative updates; mixing local store mutations and CRDT state leads to divergence.  
+- Don’t allow unchecked plugin code to run in the main context; sandbox plugins and limit their API surface to prevent crashes or data corruption.  
+- Don’t package all logic in the frontend: Offload file I/O, signing, and security-sensitive operations to Rust via Tauri commands.  
+- Don’t neglect batch updates: Debounce frequent input (pan, zoom, freehand strokes) into `requestAnimationFrame`-timed store actions.  
+- Don’t embed large datasets into the canvas at full resolution; implement **progressive loading** or **tiling** for expansive boards.  
+- Don’t ignore accessibility and keyboard navigation: Implement standard shortcuts (Esc, Shift+Click, A for select all, Delete) and ensure focus management.  
+- Don’t ship without code‐signing and notarization: Secure installers on Windows and macOS and configure auto‐update endpoints with signed manifests.  
+- Don’t compromise on test coverage: Aim for ≥ 90% coverage of store modules and maintain sub-100 ms integration tests to keep CI feedback fast.
+
+[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/21494092/03b18dc2-e7ca-4858-b2b1-d66e6dacacc0/paste.txt

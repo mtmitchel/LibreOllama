@@ -12,7 +12,7 @@ import type {
   ConnectorElement,
   PenElement,
   StickyNoteElement
-} from '@features/canvas/types/enhanced.types';
+} from '@/features/canvas/types/enhanced.types';
 
 /**
  * Canvas Element Types Validation Tests
@@ -223,7 +223,7 @@ describe('Canvas Element Types Validation', () => {
       expect(element.rows).toBe(3);
       expect(element.cols).toBe(3);
       expect(element.tableData).toHaveLength(3);
-      expect(element.tableData[0]).toEqual(['A1', 'B1', 'C1']);
+      expect(element.tableData?.[0]).toEqual(['A1', 'B1', 'C1']);
       expect(element.cellPadding).toBe(8);
       expect(element.id).toBe('table-test');
     });

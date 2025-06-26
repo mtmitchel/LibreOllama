@@ -8,7 +8,7 @@
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
 import { enableMapSet } from 'immer';
-import { logger } from '@/lib/logger';
+import { logger } from '../../../../lib/logger';
 
 // Enable Immer MapSet plugin for Map/Set support
 enableMapSet();
@@ -24,8 +24,8 @@ export interface CanvasElementsState {
   
   // Drawing state
   isDrawing: boolean;
-  currentPath: number[];
-  drawingTool: 'pen' | 'pencil' | null;
+  currentPath?: number[];
+  drawingTool: 'pen' | 'pencil' | 'section' | null;
   
   // Element operations
   addElement: (element: CanvasElement) => void;
@@ -64,7 +64,7 @@ export interface CanvasElementsState {
   resizeTable: (tableId: ElementId, newWidth: number, newHeight: number) => void;
   
   // Drawing operations
-  startDrawing: (x: number, y: number, tool: 'pen' | 'pencil') => void;
+  startDrawing: (x: number, y: number, tool: 'pen' | 'pencil' | 'section') => void;
   updateDrawing: (x: number, y: number) => void;
   finishDrawing: () => void;
   cancelDrawing: () => void;
@@ -97,7 +97,7 @@ export const createCanvasElementsStore: StateCreator<
   
   // Drawing state
   isDrawing: false,
-  currentPath: [],
+  currentPath: undefined,
   drawingTool: null,
   
   // Element operations with performance monitoring
@@ -149,13 +149,12 @@ export const createCanvasElementsStore: StateCreator<
           throw new Error(errorMsg);
         }
         
-        // Prevent storing empty or whitespace-only text (React-Konva issue)
-        // TODO: Add proper type guards for text elements
-        if ('text' in updates && updates.text !== undefined) {
-          const trimmedText = (updates as any).text.trim();
+        // Use a type guard to safely handle text element updates
+        if (isTextElement(element) && 'text' in updates && typeof updates.text === 'string') {
+          const trimmedText = updates.text.trim();
           if (trimmedText.length === 0) {
             console.warn('🔧 [ELEMENTS STORE] Preventing whitespace-only text update for element:', id);
-            (updates as any).text = 'Text'; // Use default text instead
+            updates.text = 'Text'; // Use default text instead
           }
         }
         
@@ -639,7 +638,7 @@ export const createCanvasElementsStore: StateCreator<
   },
 
   // Drawing operations
-  startDrawing: (x: number, y: number, tool: 'pen' | 'pencil') => {
+  startDrawing: (x: number, y: number, tool: 'pen' | 'pencil' | 'section') => {
     logger.log('🖊️ [DRAWING] Starting drawing:', { x, y, tool });
     set((state: Draft<CanvasElementsState>) => {
       state.isDrawing = true;
@@ -650,16 +649,16 @@ export const createCanvasElementsStore: StateCreator<
 
   updateDrawing: (x: number, y: number) => {
     const state = get();
-    if (!state.isDrawing) return;
+    if (!state.isDrawing || !state.currentPath) return;
     
     set((state: Draft<CanvasElementsState>) => {
-      state.currentPath.push(x, y);
+      state.currentPath!.push(x, y);
     });
   },
 
   finishDrawing: () => {
     const state = get();
-    if (!state.isDrawing || state.currentPath.length < 4) { // FIX: Ensure at least two points (4 numbers)
+    if (!state.isDrawing || !state.currentPath || state.currentPath.length < 4) { // FIX: Ensure at least two points (4 numbers)
       logger.log('🖊️ [DRAWING] Cannot finish drawing - insufficient points (need at least 2 points)');
       get().cancelDrawing();
       return;
@@ -692,7 +691,7 @@ export const createCanvasElementsStore: StateCreator<
     // Reset drawing state
     set((state: Draft<CanvasElementsState>) => {
       state.isDrawing = false;
-      state.currentPath = [];
+      state.currentPath = undefined;
       state.drawingTool = null;
     });
 
@@ -703,7 +702,7 @@ export const createCanvasElementsStore: StateCreator<
     logger.log('🖊️ [DRAWING] Canceling drawing');
     set((state: Draft<CanvasElementsState>) => {
       state.isDrawing = false;
-      state.currentPath = [];
+      state.currentPath = undefined;
       state.drawingTool = null;
     });
   },
@@ -769,7 +768,7 @@ export const createCanvasElementsStore: StateCreator<
         
         // Reset drawing state
         state.isDrawing = false;
-        state.currentPath = [];
+        state.currentPath = undefined;
         state.drawingTool = null;
       });
       

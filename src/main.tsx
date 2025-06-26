@@ -4,7 +4,6 @@ import { enableMapSet } from "immer";
 import App from "./App";
 import { ThemeProvider } from "./components/ThemeProvider";
 import "./design-system/globals.css";
-import "./styles/App.css";
 
 // Enable Immer MapSet plugin to support Map and Set data structures
 enableMapSet();

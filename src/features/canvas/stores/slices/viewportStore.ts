@@ -6,7 +6,7 @@
 
 import { StateCreator } from 'zustand';
 import { Draft } from 'immer';
-import { logger } from '@/lib/logger';
+import { logger } from '../../../../lib/logger';
 import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 import { ViewportCuller } from '../../utils/viewport/viewportCuller';
 import { CanvasElement } from '../types';

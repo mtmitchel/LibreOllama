@@ -1,6 +1,6 @@
 // src/hooks/canvas/useSelectionManager.ts
 import { useCallback } from 'react';
-import { useCanvasStore } from '../stores';
+import { useCanvasStore } from '../../../stores';
 import { toElementId, arrayToElementIds } from '../types/compatibility';
 
 /**

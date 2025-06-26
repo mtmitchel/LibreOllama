@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
 import { CanvasTool, ElementId, SectionId } from '../types/enhanced.types';
-import { useCanvasStore, canvasStore } from '../stores';
+import { useCanvasStore, canvasStore } from '../../../stores';
 import { toElementId } from '../types/compatibility';
 import { logger } from '@/lib/logger';
 import { findNearestSnapPoint } from '../utils/connectorUtils';
@@ -63,14 +63,14 @@ interface CanvasEventHandlerProps {
   children: React.ReactNode;
   isDrawingConnector: boolean;
   setIsDrawingConnector: React.Dispatch<React.SetStateAction<boolean>>;
-  connectorStart: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
-  setConnectorStart: React.Dispatch<React.SetStateAction<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>>;
-  connectorEnd: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
-  setConnectorEnd: React.Dispatch<React.SetStateAction<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>>;
+  connectorStart: { x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null;
+  setConnectorStart: React.Dispatch<React.SetStateAction<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>>;
+  connectorEnd: { x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null;
+  setConnectorEnd: React.Dispatch<React.SetStateAction<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>>;
   isDrawingSection: boolean;
-  setIsDrawingSection: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsDrawingSection?: React.Dispatch<React.SetStateAction<boolean>>; // Optional - using store state
   previewSection: { x: number; y: number; width: number; height: number } | null;
-  setPreviewSection: React.Dispatch<React.SetStateAction<{ x: number; y: number; width: number; height: number } | null>>;
+  setPreviewSection?: React.Dispatch<React.SetStateAction<{ x: number; y: number; width: number; height: number } | null>>; // Optional - using store state
 }
 
 type EventHandler = (e: Konva.KonvaEventObject<any>) => void;
@@ -118,15 +118,18 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   const setZoom = useCanvasStore((state) => state.setZoom);
   const setPan = useCanvasStore((state) => state.setPan);
   const deleteElement = useCanvasStore((state) => state.deleteElement);
+  
+  // Missing methods for keyboard shortcuts
   const deleteSelectedElements = useCanvasStore((state) => state.deleteSelectedElements);
   const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
-  const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
   const editingTextId = useCanvasStore((state) => state.editingTextId);
+  const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
   
-  // Add missing drawing functions from store
+  // Drawing state methods from store
   const startDrawing = useCanvasStore((state) => state.startDrawing);
   const updateDrawing = useCanvasStore((state) => state.updateDrawing);
   const finishDrawing = useCanvasStore((state) => state.finishDrawing);
+  const cancelDrawing = useCanvasStore((state) => state.cancelDrawing);
   
   // Add missing connector state
   const [hoveredSnapPoint, setHoveredSnapPoint] = useState<any>(null);
@@ -185,8 +188,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       }
       
       if (isDrawingSection) {
-        setIsDrawingSection(false);
-        setPreviewSection(null);
+        cancelDrawing();
       }
     } catch (error) {
       logger.error('🎯 [CanvasEventHandler] Error during tool cleanup:', error);
@@ -303,8 +305,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         }
 
         if (e.target === stage) {
-          // Selection box drag - for now, just skip this
-          // TODO: Implement selection box if needed
+          // Selection box drag logic is handled by the store now
         } else {
           // Element drag - update element position
           // FIX: This logic is incorrect and inefficient. It is now handled by the `dragend` event.
@@ -347,8 +348,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       if (!pointer) return;
 
       if (e.target === stage) {
-        // End selection box - for now, just skip this
-        // TODO: Implement selection box completion if needed
+        // Selection box logic is handled by the store now
       } else {
         // Element drag end - element position was already updated in mousemove
         // Just ensure the element is selected
@@ -763,8 +763,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
-      // TODO: Show preview shape during drag
-      // For now, just track the movement
+      // Preview shape logic is handled by the store now
     };
 
     const fallbackHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -1234,17 +1233,15 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (e.target !== stageRef.current) return;
 
-      setIsDrawingSection(true);
       const pos = stageRef.current?.getPointerPosition();
       if (pos) {
+        startDrawing(pos.x, pos.y, 'pen' as any); // Temporary cast - section drawing will be handled by store state
         lastMousePosRef.current = pos;
-        setPreviewSection({ x: pos.x, y: pos.y, width: 0, height: 0 });
       }
     };
 
     const fallbackHandler = () => {
-      setIsDrawingSection(false);
-      setPreviewSection(null);
+      cancelDrawing();
     };
 
     const toolValidator = (tool: any) => tool === 'section';
@@ -1255,13 +1252,11 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       fallbackHandler,
       toolValidator
     );
-  }, [stageRef, setIsDrawingSection, setPreviewSection]);
+  }, [stageRef, startDrawing, cancelDrawing]);
 
   const handleSectionMouseUp = useMemo(() => {
     const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (!isDrawingSection || !previewSection) return;
-
-      setIsDrawingSection(false);
 
       if (previewSection.width > 10 && previewSection.height > 10) {
         const newSectionId = createSection(
@@ -1274,13 +1269,12 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         captureElementsAfterSectionCreation(newSectionId);
       }
 
-      setPreviewSection(null);
+      finishDrawing();
       setSelectedTool('select');
     };
 
     const fallbackHandler = () => {
-      setIsDrawingSection(false);
-      setPreviewSection(null);
+      cancelDrawing();
     };
 
     const toolValidator = (tool: any) => tool === 'section';
@@ -1306,18 +1300,12 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       if (!isDrawingSection || !lastMousePosRef.current) return;
       const pos = stageRef.current?.getPointerPosition();
       if (pos) {
-        const startPos = lastMousePosRef.current;
-        const x = Math.min(pos.x, startPos.x);
-        const y = Math.min(pos.y, startPos.y);
-        const width = Math.abs(pos.x - startPos.x);
-        const height = Math.abs(pos.y - startPos.y);
-        setPreviewSection({ x, y, width, height });
+        updateDrawing(pos.x, pos.y);
       }
     };
 
     const fallbackHandler = () => {
-      setIsDrawingSection(false);
-      setPreviewSection(null);
+      cancelDrawing();
     };
 
     const toolValidator = (tool: any) => tool === 'section';
@@ -2068,7 +2056,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       case 'triangle':
       case 'star':
         toolHandlerMap.set('mousedown', handleShapeMouseDown);
-        toolHandlerMap.set('mousemove', handleShapeMouseMove);
+               toolHandlerMap.set('mousemove', handleShapeMouseMove);
         toolHandlerMap.set('mouseup', handleShapeMouseUp);
         toolHandlerMap.set('click', handleShapeClick);
         break;

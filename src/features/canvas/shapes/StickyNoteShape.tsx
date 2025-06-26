@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { StickyNoteElement, ElementId, CanvasElement } from '../types/enhanced.types';
-import { useCanvasStore } from '../stores';
+import { useCanvasStore } from '../../../stores';
 import { designSystem } from '../../../design-system';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';

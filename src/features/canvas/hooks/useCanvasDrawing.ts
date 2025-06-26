@@ -1,6 +1,6 @@
 // src/features/canvas/hooks/useCanvasDrawing.ts
 import { useEffect } from 'react';
-import { useCanvasStore } from '../stores';
+import { useCanvasStore } from '../../../stores';
 import Konva from 'konva';
 
 export const useCanvasDrawing = (stage: Konva.Stage | null) => {

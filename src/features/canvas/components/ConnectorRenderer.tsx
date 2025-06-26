@@ -40,7 +40,7 @@ export const ConnectorRenderer = memo(React.forwardRef<Konva.Line | Konva.Arrow,
     // Memoize endpoint calculations for performance
     const { updatedStartPoint, updatedEndPoint, pathPoints, isValid } = useMemo(() => {
       // Update connector path if connected to elements
-      const getUpdatedEndpoint = (point: { x: number; y: number; attachmentPoint?: any }, elementId?: ElementId) => {
+      const getUpdatedEndpoint = (point: { x: number; y: number; attachmentPoint?: any }, elementId?: ElementId | SectionId) => {
         if (!elementId) {
           return { 
             endpoint: point, 
@@ -49,7 +49,7 @@ export const ConnectorRenderer = memo(React.forwardRef<Konva.Line | Konva.Arrow,
           };
         }
         
-        const connectedElement = elements.get(elementId);
+        const connectedElement = elements.get(elementId as ElementId);
         if (!connectedElement) {
           // Element was deleted - mark as invalid for cleanup
           return { 

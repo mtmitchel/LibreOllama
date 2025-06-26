@@ -51,7 +51,7 @@ export class EventHandlerManager {
     originalHandler: (e: T) => void,
     fallbackHandler?: (e: T) => void,
     toolValidator?: (currentTool: CanvasTool) => boolean
-  ): (e: T) => void {
+  ): (e: T) => Promise<void> {
     return (e: T) => {
       const startTime = performance.now();
       let attempts = 0;
@@ -110,12 +110,16 @@ export class EventHandlerManager {
           } else {
             this.activateEmergencyMode(handlerName, error);
           }
+
+          // Always re-throw the original error to ensure the caller's promise is rejected
+          throw error;
         }
       };
 
-      executeHandler().catch((error) => {
+      return executeHandler().catch((error) => {
         logger.error(`Fatal error in event handler manager for ${handlerName}:`, error);
         this.activateEmergencyMode(handlerName, error);
+        throw error; // Re-throw to ensure the caller's promise is rejected
       });
     };
   }
@@ -140,11 +144,13 @@ export class EventHandlerManager {
         return false;
       }
 
-      // Check if stage is accessible
-      const stage = event.target.getStage();
-      if (!stage) {
-        logger.warn(`Cannot access stage for ${handlerName}`);
-        return false;
+      // Check if stage is accessible, but only if the target is a real Konva node
+      if (typeof event.target.getStage === 'function') {
+        const stage = event.target.getStage();
+        if (!stage) {
+          logger.warn(`Cannot access stage for ${handlerName}`);
+          return false;
+        }
       }
 
       return true;

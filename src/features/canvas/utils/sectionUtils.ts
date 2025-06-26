@@ -1,4 +1,4 @@
-import { SectionElement } from '../types/section';
+import { SectionElement } from '../types/enhanced.types';
 import { Vector2d } from 'konva/lib/types';
 
 export const findSectionByPosition = (sections: Map<string, SectionElement>, position: Vector2d): string | null => {

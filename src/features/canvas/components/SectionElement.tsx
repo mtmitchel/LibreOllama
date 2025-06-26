@@ -1,9 +1,10 @@
 import React from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { SectionElement as SectionType } from '../types/section';
+import { SectionElement as SectionType } from '../types/enhanced.types';
+import { ElementId, SectionId } from '../types/enhanced.types';
 import { findSectionByPosition } from '../utils/sectionUtils';
-import { useCanvasStore } from '../stores';
+import { useCanvasStore, canvasStore } from '../../../stores';
 
 interface SectionElementProps {
   section: SectionType;
@@ -11,6 +12,11 @@ interface SectionElementProps {
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>, id: string) => void;
   onSectionChange: (elementId: string, newSectionId: string | null) => void;
   children: React.ReactNode;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  isDraggable?: boolean;
+  elements?: any;
+  renderElement?: () => React.ReactNode;
 }
 
 const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(({ section, onUpdate, onDragEnd, onSectionChange, children }, ref) => {
@@ -19,8 +25,8 @@ const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(({ sec
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     const position = e.target.getAbsolutePosition();
     const newSectionId = findSectionByPosition(sections, position);
-    if (newSectionId !== section.id) {
-      useCanvasStore.getState().moveElementBetweenSections(e.target.id(), section.id, newSectionId);
+    if (newSectionId && newSectionId !== section.id) {
+      canvasStore.getState().moveElementBetweenSections(ElementId(e.target.id()), section.id, SectionId(newSectionId));
     }
   };
 

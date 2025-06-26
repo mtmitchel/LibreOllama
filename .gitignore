@@ -22,3 +22,67 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+coverage/
+*.tsbuildinfo
+.nyc_output/
+test-results/
+playwright-report/
+
+# AI/Claude specific files
+.claude/
+.agent.md
+
+# Vitest coverage
+coverage/
+.vitest/
+
+# Build artifacts
+build/
+out/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+[Tt]humbs.db
+
+# Tauri build outputs (in addition to src-tauri/.gitignore)
+*.exe
+*.msi
+*.dmg
+*.deb
+*.AppImage
+
+# Lock files (if using alternative package managers)
+yarn.lock
+pnpm-lock.yaml
+
+# IDE files
+*.sublime-project
+*.sublime-workspace
+.project
+.metadata
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db

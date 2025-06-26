@@ -115,8 +115,8 @@ export interface ConnectorStyle {
 export interface ConnectorElement extends BaseElement {
   type: 'connector';
   subType: 'line' | 'arrow' | 'straight' | 'bent' | 'curved';
-  startElementId?: ElementId | undefined;
-  endElementId?: ElementId | undefined;
+  startElementId?: ElementId | SectionId | undefined;
+  endElementId?: ElementId | SectionId | undefined;
   startPoint: { x: number; y: number };
   endPoint: { x: number; y: number };
   intermediatePoints?: { x: number; y: number }[];

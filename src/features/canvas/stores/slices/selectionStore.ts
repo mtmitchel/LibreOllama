@@ -12,7 +12,7 @@ import { immer } from 'zustand/middleware/immer';
 import { Draft } from 'immer';
 import { PerformanceMonitor } from '../../utils/performance/PerformanceMonitor';
 import { ElementId } from '../../types/enhanced.types';
-import { logger } from '@/lib/logger';
+import { logger } from '../../../../lib/logger';
 
 export interface SelectionState {
   // Selected element tracking
@@ -221,7 +221,7 @@ export const createSelectionStore: StateCreator<
   },
 
   getSelectedElementIds: () => {
-    return [...get().selectedElementIds]; // Return a copy
+    return Array.from(get().selectedElementIds); // Return a copy
   },
 
   getSelectedElementCount: () => {
@@ -374,7 +374,7 @@ export const createSelectionStore: StateCreator<
         const currentSelection = state.selectedElementIds;
         let changed = false;
         
-        for (const selectedId of currentSelection) {
+        for (const selectedId of Array.from(currentSelection)) {
           if (!validElementIds.has(selectedId)) {
             currentSelection.delete(selectedId);
             changed = true;

@@ -1,6 +1,6 @@
 // src/hooks/useTauriCanvas.ts
 import { invoke } from '@tauri-apps/api/core';
-import { useCanvasStore } from '../stores';
+import { useCanvasStore } from '../../../stores';
 import { useCallback, useMemo } from 'react';
 
 export const useTauriCanvas = () => {

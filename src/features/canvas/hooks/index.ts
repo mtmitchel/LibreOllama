@@ -9,7 +9,6 @@ export * from './useTauriCanvas';
 export * from './useViewportCulling';
 
 // Canvas-specific hooks
-export * from './useCanvasEvents';
 export * from './useCanvasHistory';
 export * from './useCanvasPerformance';
 export * from './useCanvasSizing';

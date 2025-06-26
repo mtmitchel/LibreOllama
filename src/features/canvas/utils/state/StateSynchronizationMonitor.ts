@@ -90,6 +90,21 @@ export class StateSynchronizationMonitor {
   }
 
   /**
+   * Get the current system status for testing and debugging
+   */
+  getSystemStatus(): {
+    isMonitoring: boolean;
+    snapshots: StateSnapshot[];
+    issues: SynchronizationIssue[];
+  } {
+    return {
+      isMonitoring: this.isMonitoring,
+      snapshots: [...this.snapshots],
+      issues: [...this.synchronizationIssues],
+    };
+  }
+
+  /**
    * Record current state snapshot
    */
   recordStateSnapshot(

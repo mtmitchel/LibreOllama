@@ -33,9 +33,9 @@ export type {
   ShapeComponentProps
 } from './layers/types';
 
-// Canvas Stores
-export { useCanvasStore as useKonvaCanvasStore } from './stores';
-export type { CanvasState } from './hooks/useGranularSelectors';
+// DO NOT EXPORT useCanvasStore HERE - import it from src/stores
+// REMOVED: export { useCanvasStore as useKonvaCanvasStore } from './stores';
+// REMOVED: export type { CanvasState } from './hooks/useGranularSelectors';
 
 // Granular Selectors (Phase 2 Optimization)
 export {
@@ -45,15 +45,12 @@ export {
   useElementStyle,
   useIsElementSelected,
   useSelectedElements,
-  useViewportElements,
   useElementCount,
-  useSelectedElementCount,
   useElementsByType,
-  useCanUndoRedo,
   useCurrentTool,
   useIsDrawing,
-  useViewportTransform,
-  useElementsInRegion
+  useCanUndo,
+  useCanRedo
 } from './hooks/useGranularSelectors';
 
 // Performance Optimization Hooks (Phase 4)
@@ -86,7 +83,7 @@ export {
   assert,
   devLog,
   Logger
-} from './utils/logger';
+} from '../../lib/logger';
 
 // Core Components
 export { EditableNode } from './shapes/EditableNode';

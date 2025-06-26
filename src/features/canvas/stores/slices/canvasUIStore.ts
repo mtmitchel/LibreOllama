@@ -34,6 +34,13 @@ export interface CanvasUIState {
   availableTools: string[];
   toolGroups: Record<string, string[]>;
   
+  // Drawing state - for preview and live drawing feedback
+  isDrawing: boolean;
+  isDrawingSection: boolean;
+  drawingStartPoint: { x: number; y: number } | null;
+  drawingCurrentPoint: { x: number; y: number } | null;
+  currentPath?: number[]; // For pen/pencil tools
+  
   // Tool settings for different tools
   toolSettings: {
     pen?: {
@@ -131,6 +138,12 @@ export interface CanvasUIState {
   setPenColor: (color: string) => void;
   setPenWidth: (width: number) => void;
   
+  // Drawing operations - for real-time drawing feedback
+  startDrawing: (x: number, y: number, tool: 'pen' | 'pencil' | 'section') => void;
+  updateDrawing: (x: number, y: number) => void;
+  finishDrawing: () => void;
+  cancelDrawing: () => void;
+  
   // Panel operations
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
@@ -203,6 +216,13 @@ export const createCanvasUIStore: StateCreator<
     text: ['text', 'sticky-note'],
     connectors: ['arrow', 'line', 'connector']
   },
+  
+  // Drawing state - initial values
+  isDrawing: false,
+  isDrawingSection: false,
+  drawingStartPoint: null,
+  drawingCurrentPoint: null,
+  currentPath: undefined,
   
   // Tool settings
   toolSettings: {
@@ -302,6 +322,61 @@ export const createCanvasUIStore: StateCreator<
         state.toolSettings.pen = { color: '#000000', width: 5 }; // Initialize if not present
       }
       state.toolSettings.pen.width = width;
+    });
+  },
+
+  // Drawing operations - for real-time drawing feedback
+  startDrawing: (x: number, y: number, tool: 'pen' | 'pencil' | 'section') => {
+    set((state: Draft<CanvasUIState>) => {
+      state.isDrawing = true;
+      state.drawingStartPoint = { x, y };
+      state.drawingCurrentPoint = { x, y };
+      
+      if (tool === 'pen' || tool === 'pencil') {
+        // Initialize path for pen/pencil tools
+        state.currentPath = [x, y];
+      } else if (tool === 'section') {
+        state.isDrawingSection = true;
+      }
+      
+      console.log('🎨 [UI STORE] Started drawing with', tool, 'at', { x, y });
+    });
+  },
+
+  updateDrawing: (x: number, y: number) => {
+    set((state: Draft<CanvasUIState>) => {
+      if (!state.isDrawing) return;
+      
+      state.drawingCurrentPoint = { x, y };
+      
+      // Update path for pen/pencil tools
+      if (state.currentPath && (get().selectedTool === 'pen' || get().selectedTool === 'pencil')) {
+        state.currentPath.push(x, y);
+      }
+      
+      // No console.log here to avoid spam during mouse movement
+    });
+  },
+
+  finishDrawing: () => {
+    set((state: Draft<CanvasUIState>) => {
+      console.log('🎨 [UI STORE] Finished drawing');
+      state.isDrawing = false;
+      state.isDrawingSection = false;
+      state.drawingStartPoint = null;
+      state.drawingCurrentPoint = null;
+      state.currentPath = undefined;
+    });
+  },
+
+  cancelDrawing: () => {
+    set((state: Draft<CanvasUIState>) => {
+      console.log('🎨 [UI STORE] Cancelled drawing');
+      state.isDrawing = false;
+      state.isDrawingSection = false;
+      state.drawingStartPoint = null;
+      state.drawingCurrentPoint = null;
+      state.currentPath = undefined;
     });
   },
 

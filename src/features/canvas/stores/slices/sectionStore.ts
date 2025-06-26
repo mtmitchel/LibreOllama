@@ -11,7 +11,7 @@ import { Draft } from 'immer';
 import type { SectionElement, CanvasElement } from '../../types/enhanced.types';
 import { ElementId, SectionId } from '../../types/enhanced.types';
 import { isRectangularElement, isCircleElement } from '../../types/enhanced.types';
-import { logger } from '@/lib/logger';
+import { logger } from '../../../../lib/logger';
 
 export interface SectionState {
   // Section data - Updated to use Map for O(1) operations
@@ -196,7 +196,7 @@ export const createSectionStore: StateCreator<
     getSectionForElement: (elementId) => {
     const sections = get().sections;
     
-    for (const [sectionId, section] of sections) {
+    for (const [sectionId, section] of Array.from(sections)) {
       if (section.childElementIds.includes(elementId)) {
         return SectionId(sectionId);
       }

@@ -1,16 +1,13 @@
 // src/components/canvas/CanvasContainer.tsx
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { CanvasEventHandler } from './CanvasEventHandler';
-// import { useCanvasPerformance } from '../hooks/canvas/useCanvasPerformance';
 import { useViewportControls } from '../hooks/useViewportControls';
 import { useSelectionManager } from '../hooks/useSelectionManager';
 import { useCanvasHistory } from '../hooks/useCanvasHistory';
-// FIXED: Use the new modular store consistently
-import { useCanvasStore } from '../stores';
-import { useCanvasDrawing } from '../hooks/useCanvasDrawing';
+import { useCanvasStore } from '../../../stores';
 import type { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import { toElementId } from '../types/compatibility';
 import { designSystem } from '../../../design-system';
@@ -36,32 +33,27 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onElementSelect,
   onStartTextEdit,
   className = ''
-}) => {
-  // Stage reference
-  const stageRef = useRef<Konva.Stage | null>(null);
+}) => {  // Stage reference
+  const stageRef = useRef<Konva.Stage>(null);
 
-  // Custom hook for drawing
-  useCanvasDrawing(stageRef.current);
-
-  // Canvas state
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPath, setCurrentPath] = useState<number[]>([]);
-  const [isDrawingConnector, setIsDrawingConnector] = useState(false);  const [connectorStart, setConnectorStart] = useState<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>(null);
-  const [connectorEnd, setConnectorEnd] = useState<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>(null);
-  const [isDrawingSection, setIsDrawingSection] = useState(false);
-  const [previewSection, setPreviewSection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);  // Custom hooks
-  const { zoom, pan, zoomIn, zoomOut } = useViewportControls();
-  const { selectSingle, clear: clearSelection, selectedElementIds } = useSelectionManager();
+  // Custom hooks
+  const { zoom, pan } = useViewportControls();
+  const { selectedElementIds } = useSelectionManager();
   const { addToHistory } = useCanvasHistory();
+
   // Store hooks - FIXED: Use the new modular store consistently
   const elementsMap = useCanvasStore((state) => state.elements);
-  // const elements = useCanvasStore((state) => Object.values(state.elements));
   const updateElement = useCanvasStore((state) => state.updateElement);
   const updateSection = useCanvasStore((state) => state.updateSection);
-  const addElement = useCanvasStore((state) => state.addElement);
   const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
-  const selectedTool = useCanvasStore((state) => state.selectedTool);
-  const createSection = useCanvasStore((state) => state.createSection);
+  const selectedTool = useCanvasStore((state) => state.selectedTool) as any; // Temporary type assertion
+
+  // Drawing state for CanvasEventHandler
+  const [isDrawingConnector, setIsDrawingConnector] = useState(false);
+  const [connectorStart, setConnectorStart] = useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
+  const [connectorEnd, setConnectorEnd] = useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
+  const [isDrawingSection, setIsDrawingSection] = useState(false);
+  const [previewSection, setPreviewSection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
   // Combined update function for elements and sections
   const handleElementOrSectionUpdate = useCallback((id: ElementId | SectionId, updates: Partial<CanvasElement>) => {
@@ -73,15 +65,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       updateElement(id as ElementId, updates);
     }
   }, [updateElement, updateSection]);
-  // Performance monitoring
-  // const performance = useCanvasPerformance(elements.length);
 
-  // Handle element selection
-  const handleElementClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => {
-    e.cancelBubble = true;
-    selectSingle(element.id);
-    onElementSelect?.(element);
-  }, [selectSingle, onElementSelect]);
   // Handle element drag end
   const handleElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: string) => {
     const node = e.target;
@@ -102,83 +86,17 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     setEditingTextId(elementId);
     onStartTextEdit?.(elementId);
   }, [setEditingTextId, onStartTextEdit]);
-  // Handle stage click (deselection)
-  const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Only deselect if clicking on empty space (stage itself or background layer)
-    const targetName = e.target.name?.() || '';
-    const targetId = e.target.id?.() || '';
-    
-    // Deselect if clicking on:
-    // 1. The stage itself
-    // 2. Background layer
-    // 3. Any layer that's not an interactive element
-    if (e.target === stageRef.current || 
-        targetName === 'background-layer' ||
-        targetName === 'background-rect' ||
-        (!targetId || targetId === '') ||
-        e.target.getType() === 'Stage') {
-      clearSelection();
-    }
-  }, [clearSelection]);
 
-  // Handle wheel events for zoom
-  const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
-    e.evt.preventDefault();
-    
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    const scaleBy = 1.1;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
-    if (e.evt.deltaY < 0) {
-      zoomIn(scaleBy);
-    } else {
-      zoomOut(scaleBy);
-    }
-  }, [zoomIn, zoomOut]);
-
-  // NOTE: Legacy event handlers removed - all event handling delegated to CanvasEventHandler
-
-
-
-
-
-  // Keyboard event handling
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Handle delete key
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementIds.size > 0) {        selectedElementIds.forEach((id: string) => {
-          updateElement(toElementId(id), { deleted: true } as any); // Mark as deleted
-        });
-          addToHistory(`Delete ${selectedElementIds.size} elements`, [], [], {
-          elementIds: Array.from(selectedElementIds),
-          operationType: 'delete',
-          affectedCount: selectedElementIds.size
-        });
-        
-        clearSelection();
-      }
-      
-      // Handle escape key
-      if (e.key === 'Escape') {
-        clearSelection();
-        setIsDrawing(false);
-        setIsDrawingConnector(false);
-        setIsDrawingSection(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementIds, updateElement, addToHistory, clearSelection]);
+  // Handle element selection (called by CanvasEventHandler)
+  const handleElementClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => {
+    e.cancelBubble = true;
+    onElementSelect?.(element);
+  }, [onElementSelect]);
 
   return (
-    <div className={`canvas-container ${className}`}>
-      <CanvasEventHandler
+    <div className={`canvas-container ${className}`}>      <CanvasEventHandler
         stageRef={stageRef as React.RefObject<Konva.Stage>}
-        currentTool={selectedTool as any}
+        currentTool={selectedTool}
         isDrawingConnector={isDrawingConnector}
         setIsDrawingConnector={setIsDrawingConnector}
         connectorStart={connectorStart}

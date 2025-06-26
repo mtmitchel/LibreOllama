@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
 import { designSystem } from '../../../design-system';
-import "./CanvasSidebar.css";
+import '../../../design-system/globals.css';
 
 interface CanvasItem {
   id: string;

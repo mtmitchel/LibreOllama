@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { logger } from '@/lib/logger';
+import { logger } from '../../../../lib/logger';
 
 export interface TrackedResource {
   id: string;

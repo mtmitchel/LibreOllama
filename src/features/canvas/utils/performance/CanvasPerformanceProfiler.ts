@@ -3,7 +3,7 @@
  * Profiles canvas operations to identify performance bottlenecks
  */
 
-import { logger } from '@/lib/logger';
+import { logger } from '../../../../lib/logger';
 import { PerformanceMonitor } from './PerformanceMonitor';
 
 interface PerformanceMark {
@@ -12,7 +12,7 @@ interface PerformanceMark {
   metadata?: Record<string, any>;
 }
 
-interface PerformanceProfile {
+export interface PerformanceProfile {
   operation: string;
   startTime: number;
   endTime?: number;
@@ -224,11 +224,23 @@ class CanvasPerformanceProfilerImpl {
   generateReport(): {
     totalProfiles: number;
     activeProfiles: number;
-    operationStats: Record<string, ReturnType<typeof this.getOperationStats>>;
+    operationStats: Record<string, {
+      count: number;
+      avgDuration: number;
+      minDuration: number;
+      maxDuration: number;
+      p95Duration: number;
+    }>;
     slowOperations: Array<{ operation: string; duration: number; metadata: any }>;
     recommendations: string[];
   } {
-    const operationStats: Record<string, ReturnType<typeof this.getOperationStats>> = {};
+    const operationStats: Record<string, {
+      count: number;
+      avgDuration: number;
+      minDuration: number;
+      maxDuration: number;
+      p95Duration: number;
+    }> = {};
     const operations = new Set(this.completedProfiles.map(p => p.operation));
     
     operations.forEach(op => {

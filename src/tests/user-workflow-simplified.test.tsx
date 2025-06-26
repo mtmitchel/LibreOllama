@@ -152,12 +152,8 @@ const createMockElement = (type: string, overrides = {}): CanvasElement => ({
   y: 100,
   createdAt: Date.now(),
   updatedAt: Date.now(),
-  visible: true,
-  draggable: true,
-  opacity: 1,
-  rotation: 0,
   ...overrides,
-});
+} as CanvasElement);
 
 describe('User Workflow Test Suite - Store Logic', () => {
   let mockStore: ReturnType<typeof createComprehensiveMockStore>;

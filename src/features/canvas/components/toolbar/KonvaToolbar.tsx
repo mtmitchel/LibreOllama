@@ -1,6 +1,6 @@
 // src/features/canvas/components/toolbar/KonvaToolbar.tsx
 import React from 'react';
-import { useCanvasStore } from '../../stores';
+import { useCanvasStore } from '../../../../stores';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
 import { ElementId } from '../../types/enhanced.types';
 import { 
@@ -26,7 +26,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import './KonvaToolbar.css';
+import '../../../../design-system/globals.css';
 import ColorPicker from '../ColorPicker';
 import ShapesDropdown from './ShapesDropdown';
 

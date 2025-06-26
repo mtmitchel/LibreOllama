@@ -15,8 +15,7 @@ import { useCanvasStore, canvasStore } from '../stores/canvasStore.enhanced';
 import { useCurrentTool } from '../hooks/useGranularSelectors';
 // import { useCanvasSetup } from './useCanvasSetup';
 import { CanvasTool, ElementId, SectionId, CanvasElement } from '../types/enhanced.types';
-import '../../../styles/konvaCanvas.css';
-import '../../../styles/multiDrag.css';
+import DebugOverlay from './DebugOverlay';
 
 // Simplified props interface
 interface KonvaCanvasProps {
@@ -74,6 +73,9 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   const selectedElementIds = useCanvasStore(state => state.selectedElementIds);
   const currentTool = useCurrentTool();
   const isDrawing = useCanvasStore(state => state.isDrawing);
+  const drawingStartPoint = useCanvasStore(state => state.drawingStartPoint);
+  const drawingCurrentPoint = useCanvasStore(state => state.drawingCurrentPoint);
+  const currentPath = useCanvasStore(state => state.currentPath);
   const setSelectedTool = useCanvasStore(state => state.setSelectedTool);
   
   // Debug logging for tool state
@@ -102,10 +104,21 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
 
   // Tool-specific state for preview overlays
   const [isDrawingConnector, setIsDrawingConnector] = React.useState(false);
-  const [connectorStart, setConnectorStart] = React.useState<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>(null);
-  const [connectorEnd, setConnectorEnd] = React.useState<{ x: number; y: number; elementId?: ElementId; anchor?: string } | null>(null);
-  const [isDrawingSection, setIsDrawingSection] = React.useState(false);
-  const [previewSection, setPreviewSection] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [connectorStart, setConnectorStart] = React.useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
+  const [connectorEnd, setConnectorEnd] = React.useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
+  
+  // Calculate drawing preview states from store
+  const isDrawingSection = isDrawing && currentTool === 'section';
+  const previewSection = React.useMemo(() => {
+    if (!isDrawingSection || !drawingStartPoint || !drawingCurrentPoint) return null;
+    
+    const x = Math.min(drawingStartPoint.x, drawingCurrentPoint.x);
+    const y = Math.min(drawingStartPoint.y, drawingCurrentPoint.y);
+    const width = Math.abs(drawingCurrentPoint.x - drawingStartPoint.x);
+    const height = Math.abs(drawingCurrentPoint.y - drawingStartPoint.y);
+    
+    return { x, y, width, height };
+  }, [isDrawingSection, drawingStartPoint, drawingCurrentPoint]);
 
   // Sync external and internal stage refs
   useEffect(() => {
@@ -156,7 +169,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   }
 
   return (
-    <div className="konva-canvas-container relative" style={{ width, height }}>
+    <>
       <Stage
         ref={(node) => {
           internalStageRef.current = node;
@@ -179,9 +192,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
           connectorEnd={connectorEnd}
           setConnectorEnd={setConnectorEnd}
           isDrawingSection={isDrawingSection}
-          setIsDrawingSection={setIsDrawingSection}
           previewSection={previewSection}
-          setPreviewSection={setPreviewSection}
         >
           <CanvasLayerManager 
             stageWidth={width}
@@ -286,15 +297,8 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
           />
         </CanvasEventHandler>
       </Stage>
-      
-      {/* Canvas UI overlays (outside Konva for better performance) */}
-      {onElementSelect && (
-        <CanvasUIOverlays 
-          canvasRect={{ width, height }}
-          onElementSelect={onElementSelect}
-        />
-      )}
-    </div>
+      <DebugOverlay />
+    </>
   );
 });
 
@@ -306,23 +310,29 @@ const ToolOverlayManager: React.FC<{
   stageRef: React.RefObject<Konva.Stage>;
   viewport: { scale: number; position: { x: number; y: number } };
   isDrawingConnector: boolean;
-  connectorStart: { x: number; y: number; elementId?: string } | null;
-  connectorEnd: { x: number; y: number; elementId?: string } | null;
+  connectorStart: { x: number; y: number; elementId?: ElementId | SectionId } | null;
+  connectorEnd: { x: number; y: number; elementId?: ElementId | SectionId } | null;
   isDrawingSection: boolean;
   previewSection: { x: number; y: number; width: number; height: number } | null;
 }> = ({ tool, isDrawingConnector, connectorStart, connectorEnd, isDrawingSection, previewSection }) => {
+  // Get drawing state from store for pen tool preview
+  const isDrawing = useCanvasStore(state => state.isDrawing);
+  const currentPath = useCanvasStore(state => state.currentPath);
+  
   // Drawing tool overlays
-  if (tool === 'pen' && isDrawingConnector) {
+  if (tool === 'pen' && isDrawing && currentPath && currentPath.length >= 4) {
     return (
       <React.Fragment>
         {/* Current drawing path */}
         <Line
-          points={[0, 0, 100, 100]} // Simplified for now
-          stroke="#3B82F6"
-          strokeWidth={3}
+          points={currentPath}
+          stroke="#000000"
+          strokeWidth={2}
           lineCap="round"
           lineJoin="round"
+          tension={0.5}
           globalCompositeOperation={'source-over'}
+          listening={false}
         />
       </React.Fragment>
     );

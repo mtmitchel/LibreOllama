@@ -51,8 +51,6 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
       y: element.y, // These are relative coordinates when inside a section
       rotation: element.rotation,
       draggable: !element.isLocked,
-      onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
-      onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id as ElementId),
       ...overrideKonvaProps
   };
 
@@ -60,20 +58,23 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
     isSelected,
     onUpdate: onElementUpdate,
     onStartTextEdit: onStartTextEdit,
-    konvaProps
+    konvaProps,
+    // Add missing handlers expected by BaseShapeProps
+    onSelect: (elementId: ElementId) => onElementClick({ target: { id: () => elementId } } as any, element),
+    onDragEnd: (elementId: ElementId) => onElementDragEnd({ target: { id: () => elementId } } as any, elementId)
   };
 
   if (isRectangleElement(element)) {
-    return <RectangleShape {...commonShapeProps} element={element} />;
+    return <RectangleShape {...(commonShapeProps as any)} element={element} />;
   }
   if (isCircleElement(element)) {
-    return <CircleShape {...commonShapeProps} element={element} />;
+    return <CircleShape {...(commonShapeProps as any)} element={element} />;
   }
   if (isStarElement(element)) {
-    return <StarShape {...commonShapeProps} element={element} />;
+    return <StarShape {...(commonShapeProps as any)} element={element} />;
   }
   if (isTriangleElement(element)) {
-    return <TriangleShape {...commonShapeProps} element={element} />;
+    return <TriangleShape {...(commonShapeProps as any)} element={element} />;
   }
   if (isStickyNoteElement(element)) {
     return <StickyNoteShape {...commonShapeProps} element={element} />;

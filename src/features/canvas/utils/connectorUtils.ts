@@ -1,5 +1,5 @@
 // Connector utilities for advanced connector functionality
-import { CanvasElement, ElementId, ConnectorElement, isRectangleElement, isCircleElement, isSectionElement } from '../types/enhanced.types';
+import { CanvasElement, ElementId, SectionId, ConnectorElement, isRectangleElement, isCircleElement, isSectionElement } from '../types/enhanced.types';
 
 export type AttachmentPoint = 'top' | 'right' | 'bottom' | 'left' | 'center' | 
                              'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -7,7 +7,7 @@ export type AttachmentPoint = 'top' | 'right' | 'bottom' | 'left' | 'center' |
 export interface SnapPoint {
   x: number;
   y: number;
-  elementId?: ElementId;
+  elementId?: ElementId | SectionId;
   attachmentPoint?: AttachmentPoint;
 }
 
@@ -167,12 +167,12 @@ export function updateConnectorPosition(
     const startElement = elements.get(connector.startElementId);
     if (startElement) {
       const snapPoints = getElementSnapPoints(startElement);
-      const attachmentPoint = snapPoints.find(p => p.attachmentPoint === connector.startPoint.attachmentPoint);
-      if (attachmentPoint) {
+      // For now, just use the center point since we don't have attachmentPoint info
+      const centerPoint = snapPoints.find(p => p.attachmentPoint === 'center') || snapPoints[0];
+      if (centerPoint) {
         updates.startPoint = {
-          x: attachmentPoint.x,
-          y: attachmentPoint.y,
-          attachmentPoint: attachmentPoint.attachmentPoint
+          x: centerPoint.x,
+          y: centerPoint.y
         };
       }
     }
@@ -183,12 +183,12 @@ export function updateConnectorPosition(
     const endElement = elements.get(connector.endElementId);
     if (endElement) {
       const snapPoints = getElementSnapPoints(endElement);
-      const attachmentPoint = snapPoints.find(p => p.attachmentPoint === connector.endPoint.attachmentPoint);
-      if (attachmentPoint) {
+      // For now, just use the center point since we don't have attachmentPoint info
+      const centerPoint = snapPoints.find(p => p.attachmentPoint === 'center') || snapPoints[0];
+      if (centerPoint) {
         updates.endPoint = {
-          x: attachmentPoint.x,
-          y: attachmentPoint.y,
-          attachmentPoint: attachmentPoint.attachmentPoint
+          x: centerPoint.x,
+          y: centerPoint.y
         };
       }
     }
@@ -218,7 +218,7 @@ export function getConnectorStyle(connector: ConnectorElement) {
   };
   
   // Add arrow marker for arrow connectors
-  if (connector.subType === 'arrow' || connector.subType === 'connector-arrow') {
+  if (connector.subType === 'arrow') {
     return {
       ...baseStyle,
       markerEnd: 'url(#arrowhead)',

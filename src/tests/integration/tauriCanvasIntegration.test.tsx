@@ -13,7 +13,7 @@ import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
-import { KonvaCanvas } from '@/features/canvas/components/KonvaCanvas';
+import KonvaCanvas from '@/features/canvas/components/KonvaCanvas';
 import { canvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
 import { ElementId } from '@/features/canvas/types/enhanced.types';
 
@@ -31,9 +31,9 @@ vi.mock('@tauri-apps/api/event', () => ({
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 
-const mockInvoke = invoke as vi.MockedFunction<typeof invoke>;
-const mockListen = listen as vi.MockedFunction<typeof listen>;
-const mockEmit = emit as vi.MockedFunction<typeof emit>;
+const mockInvoke = invoke as any;
+const mockListen = listen as any;
+const mockEmit = emit as any;
 
 // Fix the mock setup
 mockListen.mockImplementation(() => Promise.resolve(vi.fn()));
@@ -41,7 +41,7 @@ mockListen.mockImplementation(() => Promise.resolve(vi.fn()));
 vi.unmock('@/features/canvas/stores/canvasStore.enhanced');
 
 describe('Tauri Canvas Integration - End to End', () => {
-  let mockUnlisten: vi.Mock = vi.fn(); // Initialize at top level to avoid undefined issues
+  let mockUnlisten: any = vi.fn(); // Initialize at top level to avoid undefined issues
 
   beforeEach(() => {
     // Reset mocks
@@ -131,7 +131,7 @@ describe('Tauri Canvas Integration - End to End', () => {
       React.useEffect(() => {
         if (loadOnMount) {
           // Simulate loading data
-          mockInvoke('load_canvas_data', { filename }).then((data) => {
+          mockInvoke('load_canvas_data', { filename }).then((data: any) => {
             const parsed = JSON.parse(data as string);
             // Load elements into store using direct access
             const store = canvasStore.getState();
@@ -180,7 +180,6 @@ describe('Tauri Canvas Integration - End to End', () => {
     store.addElement({
       id: ElementId('new-rect-1'),
       type: 'rectangle',
-      tool: 'rectangle',
       x: 400,
       y: 300,
       width: 100,
@@ -213,7 +212,7 @@ describe('Tauri Canvas Integration - End to End', () => {
     const modifiedRect = store.elements.get(ElementId('loaded-rect-1'));
     expect(modifiedRect?.x).toBe(100);
     expect(modifiedRect?.y).toBe(100);
-    expect(modifiedRect?.fill).toBe('#0000ff');
+    expect((modifiedRect as any)?.fill).toBe('#0000ff');
 
     // Step 4: Simulate save
     const saveData = {
@@ -269,8 +268,14 @@ describe('Tauri Canvas Integration - End to End', () => {
 
     // Add element to store as if received from collaboration
     store.addElement({
-      ...collaborativeEdit.element,
-      id: ElementId(collaborativeEdit.element.id)
+      id: ElementId(collaborativeEdit.element.id),
+      type: 'circle',
+      x: collaborativeEdit.element.x,
+      y: collaborativeEdit.element.y,
+      radius: collaborativeEdit.element.radius,
+      fill: collaborativeEdit.element.fill,
+      createdAt: collaborativeEdit.element.createdAt,
+      updatedAt: collaborativeEdit.element.updatedAt,
     });
 
     // Verify the collaborative element was added

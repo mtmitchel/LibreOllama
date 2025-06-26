@@ -9,7 +9,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useCanvasStore } from '../../stores/canvasStore.enhanced';
-import './ShapesDropdown.css';
+import '../../../../design-system/globals.css';
 
 const shapeTools = [
   { id: 'rectangle', name: 'Rectangle', icon: Square },

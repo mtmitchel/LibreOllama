@@ -2,7 +2,7 @@
 import React from 'react';
 import { Group, Line, Arrow, Circle } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement, ElementId, ConnectorElement, isConnectorElement } from '../types/enhanced.types';
+import { CanvasElement, ElementId, SectionId, ConnectorElement, isConnectorElement } from '../types/enhanced.types';
 import ConnectorRenderer from '../components/ConnectorRenderer';
 
 interface ConnectorLayerProps {
@@ -11,8 +11,8 @@ interface ConnectorLayerProps {
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
   onElementUpdate?: (id: ElementId, updates: Partial<CanvasElement>) => void;
   isDrawingConnector?: boolean;
-  connectorStart?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
-  connectorEnd?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
+  connectorStart?: { x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null;
+  connectorEnd?: { x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null;
   selectedTool: string;
 }
 

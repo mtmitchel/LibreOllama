@@ -1,16 +1,28 @@
 
 import React from 'react';
 import { Group, Rect, Text } from 'react-konva';
-import { SectionElement } from '../types/enhanced.types';
+import { SectionElement, SectionId, ElementId } from '../types/enhanced.types';
 import Konva from 'konva';
 
 interface SectionShapeProps {
   element: SectionElement;
   konvaProps: Partial<Konva.NodeConfig>;
   children: React.ReactNode;
+  isSelected?: boolean;
+  onUpdate?: (id: SectionId, updates: any) => void;
+  onStartTextEdit?: (id: ElementId) => void;
+  onSectionResize?: (id: SectionId, w: number, h: number) => void;
 }
 
-export const SectionShape: React.FC<SectionShapeProps> = ({ element, konvaProps, children }) => {
+export const SectionShape: React.FC<SectionShapeProps> = ({ 
+  element, 
+  konvaProps, 
+  children, 
+  isSelected, 
+  onUpdate, 
+  onStartTextEdit, 
+  onSectionResize 
+}) => {
   return (
     <Group {...konvaProps}>
       <Rect

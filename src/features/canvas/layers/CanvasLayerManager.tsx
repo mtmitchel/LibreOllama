@@ -29,8 +29,8 @@ interface CanvasLayerManagerProps {
   onStartTextEdit: (elementId: ElementId) => void;
   _onTransformEnd?: (id: SectionId, props: { x: number; y: number; width: number; height: number }) => void;
   isDrawingConnector?: boolean;
-  connectorStart?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
-  connectorEnd?: { x: number; y: number; elementId?: ElementId; anchor?: string } | null;
+  connectorStart?: { x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null;
+  connectorEnd?: { x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null;
   previewSection?: { x: number; y: number; width: number; height: number } | null;
   isDrawing?: boolean;
   currentPath?: number[];

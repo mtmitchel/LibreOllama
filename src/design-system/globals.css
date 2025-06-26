@@ -131,37 +131,649 @@ body {
   -webkit-font-smoothing: antialiased; 
 }
 
-/* Canvas text editor styles - consolidated from canvas-text-editor.css */
+/* =============================================================================
+   CONSOLIDATED STYLES FROM MULTIPLE CSS FILES
+   ============================================================================= */
+
+/* FOCUS MODE STYLES - from App.css */
+.focus-mode-active .sidebar,
+.focus-mode-active .top-bar-left,
+.focus-mode-active .search-bar,
+.focus-mode-active .top-bar-actions .action-btn:not(.focus-mode-toggle-btn) {
+  display: none;
+}
+
+.focus-mode-active .top-bar {
+  justify-content: flex-end;
+}
+
+.focus-mode-active .main-content-wrapper {
+  margin-left: 0;
+  padding-top: 0;
+}
+
+.focus-mode-active .content-area {
+  padding: 1.25rem;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* CANVAS TEXT EDITOR STYLES - Enhanced from App.css */
 .canvas-text-editor {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  background-color: rgba(173, 216, 230, 0.2) !important;
+  border: 1px dashed rgba(0, 0, 255, 0.5) !important;
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+  color: #000000 !important;
+  pointer-events: auto !important;
+  cursor: text !important;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
   border-radius: 4px;
   box-shadow: var(--canvas-editor-shadow);
   resize: none;
   transition: all 0.2s ease;
-  pointer-events: auto;
 }
 
 .canvas-text-editor:focus {
+  background-color: rgba(173, 216, 230, 0.3) !important;
+  border-color: rgba(0, 0, 255, 0.8) !important;
+  outline: none !important;
+  user-select: text !important;
+  cursor: text !important;
   box-shadow: var(--canvas-editor-focus-shadow);
   border-color: var(--canvas-editor-border-focus);
 }
 
-/* Scrollbar styles */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* CANVAS WORKSPACE STYLES - from App.css */
+.canvas-workspace {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+.canvas-text-editor * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
+.canvas-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas-workspace canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* KONVA CANVAS CONTAINER - Modern enhancements from canvas-enhancements.css */
+.konva-canvas-container {
+  position: relative;
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-radius: 16px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    inset 0 2px 4px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-canvas-container {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 2px 4px -1px rgba(0, 0, 0, 0.2),
+      inset 0 2px 4px 0 rgba(255, 255, 255, 0.05);
+  }
+}
+
+.konva-canvas-container:hover {
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05),
+    inset 0 2px 4px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* KONVA CONTENT STYLES - from konvaCanvas.css */
+.konvajs-content {
+  border-radius: 12px !important;
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+  transition: box-shadow 0.3s ease;
+}
+
+.konvajs-content:hover {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* CANVAS READY INDICATOR - from konvaCanvas.css */
+.canvas-ready-indicator {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  animation: slideInBounce 0.5s ease;
+}
+
+@keyframes slideInBounce {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9);
+  }
+  60% {
+    transform: translateY(5px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* GLASSMORPHISM FLOATING ELEMENTS - from canvas-enhancements.css */
+.floating-text-toolbar,
+.text-formatting-menu {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 32px 0 rgba(31, 38, 135, 0.15),
+    0 2px 8px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .floating-text-toolbar,
+  .text-formatting-menu {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* MODERN CANVAS BUTTONS - from canvas-enhancements.css */
+.canvas-button {
+  position: relative;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.canvas-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.canvas-button:hover::before {
+  transform: translateX(100%);
+}
+
+.canvas-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 10px 20px -5px rgba(59, 130, 246, 0.4),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.canvas-button:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 5px 10px -3px rgba(59, 130, 246, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* SELECTION INDICATORS - from canvas-enhancements.css */
+.selection-indicator {
+  position: absolute;
+  border: 2px solid #3B82F6;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.05);
+  pointer-events: none;
+  animation: selectionPulse 2s ease-in-out infinite;
+}
+
+@keyframes selectionPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+/* TRANSFORM HANDLES - from canvas-enhancements.css */
+.transform-handle {
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: 2px solid #3B82F6;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.transform-handle:hover {
+  transform: scale(1.2);
+  background: #3B82F6;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* CONTEXT MENU - from canvas-enhancements.css */
+.canvas-context-menu {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 8px;
+  min-width: 200px;
+  animation: contextMenuSlide 0.2s ease;
+}
+
+@keyframes contextMenuSlide {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.canvas-context-menu-item {
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #1E293B;
+}
+
+.canvas-context-menu-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  transform: translateX(4px);
+}
+
+/* TOOLTIPS - from canvas-enhancements.css */
+.canvas-tooltip {
+  background: #1E293B;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  animation: tooltipBounce 0.3s ease;
+}
+
+@keyframes tooltipBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+  }
+  70% {
+    transform: scale(1.05) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* MULTI-DRAG STYLES - from multiDrag.css */
+.multi-drag-active {
+  cursor: move !important;
+}
+
+.multi-drag-active .konvajs-content {
+  filter: brightness(1.05);
+  transition: filter 0.1s ease;
+}
+
+.multi-drag-active .selected-element {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--bg-elevated);
+.multi-drag-active * {
+  pointer-events: none;
+}
+
+.multi-drag-active .konvajs-content canvas {
+  pointer-events: auto;
+}
+
+/* DARK THEME SCROLLBAR OVERRIDES - from App.css */
+.dark *::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* =============================================================================
+   REMAINING COMPONENT-SPECIFIC STYLES
+   ============================================================================= */
+
+/* KONVA TOOLBAR STYLES - from KonvaToolbar.css */
+.konva-toolbar {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar {
+    background: rgba(31, 41, 55, 0.9);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.konva-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-group {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.konva-toolbar-group:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-group:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.konva-toolbar-btn,
+.konva-toolbar-tool-btn,
+.konva-toolbar-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 36px;
+  height: 36px;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .konva-toolbar-btn,
+  .konva-toolbar-tool-btn,
+  .konva-toolbar-action-btn {
+    color: #94A3B8;
+  }
+}
+
+.konva-toolbar-btn::before,
+.konva-toolbar-tool-btn::before,
+.konva-toolbar-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+  transition: width 0.3s, height 0.3s, top 0.3s, left 0.3s;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.konva-toolbar-btn:active::before,
+.konva-toolbar-tool-btn:active::before,
+.konva-toolbar-action-btn:active::before {
+  width: 40px;
+  height: 40px;
+  top: calc(50% - 20px);
+  left: calc(50% - 20px);
+}
+
+.konva-toolbar-btn:hover,
+.konva-toolbar-tool-btn:hover,
+.konva-toolbar-action-btn:hover {
+  background: rgba(59, 130, 246, 0.05);
+  color: #3B82F6;
+  transform: translateY(-1px);
+}
+
+.konva-toolbar-btn.active,
+.konva-toolbar-tool-btn.active,
+.konva-toolbar-action-btn.active {
+  background: #3B82F6;
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* CANVAS LOADING OVERLAY STYLES - from LoadingOverlay.css */
+.canvas-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .loading-backdrop {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.9) 100%);
+  }
+}
+
+.loading-content {
+  position: relative;
+  z-index: 1001;
+  text-align: center;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+  .loading-content {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* CANVAS SIDEBAR STYLES - from CanvasSidebar.css */
+.canvas-sidebar {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 200;
+  overflow-y: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  .canvas-sidebar {
+    background: rgba(15, 23, 42, 0.95);
+    border-left-color: rgba(255, 255, 255, 0.08);
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.canvas-sidebar.open {
+  transform: translateX(0);
+}
+
+/* SHAPES DROPDOWN STYLES - from ShapesDropdown.css */
+.shapes-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.shapes-dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.95);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .shapes-dropdown-content {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.shapes-dropdown.open .shapes-dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.shape-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #64748B;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  .shape-option {
+    color: #94A3B8;
+  }
+}
+
+.shape-option:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: #3B82F6;
+  transform: translateX(4px);
 }
 

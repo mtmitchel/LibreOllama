@@ -216,10 +216,13 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           onUpdate={(id: string, updates: any) => onElementUpdate(id, updates as Partial<CanvasElement>)}
           onSelect={() => {}} // Handled by parent
           onDragEnd={onElementDragEnd}
+          onSectionChange={() => {}} // No-op for now
           isDraggable={isDraggable}
           elements={{}} // Will be passed from parent
           renderElement={() => null} // Will be handled by layer manager
-        />
+        >
+          {null}
+        </SectionElement>
       );
 
     case 'table':

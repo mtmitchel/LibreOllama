@@ -229,7 +229,7 @@ export class Quadtree {
     this.queryNode(this.root, viewportBox, results);
     
     // Remove duplicates (element might be in multiple nodes)
-    return [...new Set(results)];
+    return Array.from(new Set(results));
   }
   
   /**

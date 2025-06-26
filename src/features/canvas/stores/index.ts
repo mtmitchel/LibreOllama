@@ -1,8 +1,7 @@
 /**
- * Canvas Stores - Export Module  
- * Phase 5.1: Feature-Based Directory Structure
+ * Canvas Stores - Internal Feature Module
+ * DO NOT export useCanvasStore here - it's exported from src/stores/index.ts
  */
 
-// Main canvas store - exports all hooks and types
-export * from './canvasStore.enhanced';
+// Only export slice types and creators for internal use
 export * from './slices';

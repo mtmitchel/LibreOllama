@@ -21,10 +21,10 @@ export const DrawingContainment: React.FC<DrawingContainmentProps> = ({
   currentTool 
 }) => {
   // Get drawing state from store
-  const { currentPath, drawingTool } = useCanvasStore(
+  const { currentPath, selectedTool } = useCanvasStore(
     useShallow((state) => ({
       currentPath: state.currentPath,
-      drawingTool: state.drawingTool
+      selectedTool: state.selectedTool
     }))
   );
 
@@ -33,14 +33,15 @@ export const DrawingContainment: React.FC<DrawingContainmentProps> = ({
     console.log('🎨 [DrawingContainment] State:', {
       isDrawing,
       currentTool,
-      drawingTool,
-      pathLength: currentPath.length,
-      firstPoints: currentPath.slice(0, 4)
+      selectedTool,
+      pathLength: currentPath?.length || 0,
+      firstPoints: currentPath?.slice(0, 4) || []
     });
-  }, [isDrawing, currentTool, drawingTool, currentPath]);
+  }, [isDrawing, currentTool, selectedTool, currentPath]);
 
-  // Don't render anything if not actively drawing
-  if (!isDrawing || !drawingTool || currentPath.length < 2) {
+  // Don't render anything if not actively drawing with a pen/pencil tool
+  const isPenTool = selectedTool === 'pen' || selectedTool === 'pencil';
+  if (!isDrawing || !isPenTool || !currentPath || currentPath.length < 2) {
     return null;
   }
 
@@ -49,8 +50,8 @@ export const DrawingContainment: React.FC<DrawingContainmentProps> = ({
     <Group>
       <Line 
         points={currentPath} 
-        stroke={drawingTool === 'pen' ? '#000000' : '#666666'} 
-        strokeWidth={drawingTool === 'pen' ? 2 : 1} 
+        stroke={selectedTool === 'pen' ? '#000000' : '#666666'} 
+        strokeWidth={selectedTool === 'pen' ? 2 : 1} 
         tension={0.5}
         lineCap="round"
         lineJoin="round"

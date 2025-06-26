@@ -7,8 +7,6 @@ import CanvasSidebar from './CanvasSidebar';
 import { designSystem } from '../../../design-system';
 import { useViewportControls } from '../hooks/useViewportControls';
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts';
-import '../../../styles/konvaCanvas.css';
-import '../../../styles/canvas-enhancements.css';
 
 const KonvaApp: React.FC = () => {
   const stageRef = useRef<Konva.Stage | null>(null);

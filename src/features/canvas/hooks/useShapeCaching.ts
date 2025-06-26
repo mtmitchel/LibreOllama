@@ -52,7 +52,7 @@ const shouldCacheShape = (element: CanvasElement, config: CacheConfig): boolean 
   // Cache large shapes (use type-safe property access)
   const width = 'width' in element ? element.width : ('radius' in element ? element.radius * 2 : 0);
   const height = 'height' in element ? element.height : ('radius' in element ? element.radius * 2 : 0);
-  const size = width * height;
+  const size = (width || 0) * (height || 0);
   if (size > config.sizeThreshold) return true;
   
   // Cache shapes with multiple visual properties (complexity heuristic)

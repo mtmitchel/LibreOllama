@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Transformer } from 'react-konva';
 import Konva from 'konva';
-import { useCanvasStore as useEnhancedStore } from '../stores';
+import { useCanvasStore as useEnhancedStore } from '../../../stores';
 import { CanvasElement, ElementId } from '../types/enhanced.types';
 
 interface TransformerManagerProps {
