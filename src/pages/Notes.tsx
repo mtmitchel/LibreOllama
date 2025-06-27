@@ -610,7 +610,7 @@ export function Notes() {
     }, [selectedNote]);
 
     return (
-        <div className="flex h-full bg-bg-primary p-2 gap-2"> 
+        <div className="flex h-full bg-bg-primary p-4 md:p-6 gap-4 md:gap-6"> 
             <aside className={`w-[340px] flex-shrink-0 border border-border-subtle p-4 flex flex-col bg-bg-surface rounded-lg`}>
                 <div className="flex justify-between items-center mb-4 flex-shrink-0">
                     <h1 className="text-xl font-semibold text-text-primary">Notes</h1>

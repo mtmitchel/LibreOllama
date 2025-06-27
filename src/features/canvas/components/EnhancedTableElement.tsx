@@ -15,12 +15,13 @@ interface EnhancedTableElementProps {
   isSelected: boolean;
   onSelect: (element: CanvasElement) => void;
   onUpdate: (updates: Partial<CanvasElement>) => void;
-  onDragEnd?: (e: Konva.KonvaEventObject<DragEvent>) => void;
+  // ARCHITECTURAL FIX: Remove drag handler prop to centralize in CanvasEventHandler
+  // onDragEnd?: (e: Konva.KonvaEventObject<DragEvent>) => void; // DISABLED per Friday Review
   stageRef: React.RefObject<Konva.Stage | null>;
 }
 
 export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableElementProps>(
-  ({ element, isSelected, onSelect, onUpdate, onDragEnd, stageRef }, ref) => {
+  ({ element, isSelected, onSelect, onUpdate, /* onDragEnd, */ stageRef }, ref) => {
   
   // Type safety: Ensure we're working with a table element
   if (!isTableElement(element)) {
@@ -69,6 +70,7 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
   const totalHeight = tableRows.reduce((sum, row) => sum + (row?.height || 40), 0);
 
   // Handle drag end - memoized to prevent render loops
+  // FIXED: Removed onDragEnd dependency as per Phase 3 centralized event handling
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     try {
       const node = e.target;
@@ -76,13 +78,11 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
         x: node.x(),
         y: node.y()
       });
-      if (onDragEnd) {
-        onDragEnd(e);
-      }
+      // onDragEnd removed - handled by centralized event system
     } catch (error) {
       console.error("An error occurred in EnhancedTableElement:", error);
     }
-  }, [onUpdate, onDragEnd]);
+  }, [onUpdate]);
 
   // Render table cells using the interaction handlers
   const renderCells = () => {

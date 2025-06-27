@@ -57,6 +57,9 @@ export interface CanvasUIState {
       fontFamily: string;
       color: string;
     };
+    stickyNote?: {
+      backgroundColor: string;
+    };
   };
   
   // Sidebar and panel states
@@ -137,6 +140,7 @@ export interface CanvasUIState {
   setActiveTool: (tool: string) => void;
   setPenColor: (color: string) => void;
   setPenWidth: (width: number) => void;
+  setStickyNoteColor: (color: string) => void;
   
   // Drawing operations - for real-time drawing feedback
   startDrawing: (x: number, y: number, tool: 'pen' | 'pencil' | 'section') => void;
@@ -229,6 +233,9 @@ export const createCanvasUIStore: StateCreator<
     pen: {
       color: '#000000',
       width: 5
+    },
+    stickyNote: {
+      backgroundColor: '#FFE299' // Default to user's preferred butter yellow
     }
   },
   
@@ -322,6 +329,16 @@ export const createCanvasUIStore: StateCreator<
         state.toolSettings.pen = { color: '#000000', width: 5 }; // Initialize if not present
       }
       state.toolSettings.pen.width = width;
+    });
+  },
+
+  setStickyNoteColor: (color: string) => {
+    set((state: Draft<CanvasUIState>) => {
+      if (!state.toolSettings.stickyNote) {
+        state.toolSettings.stickyNote = { backgroundColor: '#FFE299' }; // Initialize if not present
+      }
+      state.toolSettings.stickyNote.backgroundColor = color;
+      console.log('🎨 [UI STORE] Sticky note default color set to:', color);
     });
   },
 

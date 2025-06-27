@@ -8,7 +8,7 @@ LibreOllama is a Tauri-based desktop application**📋 Key Documentation**:
 - **docs/README.md** - Documentation guidelines and hierarchy (READ FIRST for new docs)
 - **CANVAS_TESTING_PLAN.md** - Comprehensive testing methodology (MUST READ)
 - **CANVAS_IMPLEMENTATION_CHECKLIST.md** - Detailed implementation status
-- **CANVAS_DEVELOPMENT_ROADMAP.md** - Project phases and achievements
+- **CANVAS_DEVELOPMENT_ROADMAP_REVISED.md** - Project phases and achievements
 
 **🚨 Documentation Guidelines**:
 - **DO NOT create new documentation files** unless absolutely necessary
@@ -188,7 +188,7 @@ npm run test:ui
 When working on canvas functionality, ALWAYS:
 1. **Read the Canvas Testing Plan** (`/docs/CANVAS_TESTING_PLAN.md`) line by line
 2. **Read the Canvas Implementation Checklist** (`/docs/CANVAS_IMPLEMENTATION_CHECKLIST.md`) for current status
-3. **Read the Canvas Development Roadmap** (`/docs/CANVAS_DEVELOPMENT_ROADMAP.md`) for overall project status
+3. **Read the Canvas Development Roadmap** (`/docs/CANVAS_DEVELOPMENT_ROADMAP_REVISED.md`) for overall project status
 4. **Use vanilla Zustand testing patterns** with real store instances (not mocked stores)
 5. **Run robust integration tests** to expose real implementation issues
 6. **Fix actual bugs** identified by failing tests (not test framework issues)
@@ -204,7 +204,7 @@ When working on canvas functionality, ALWAYS:
 - **CANVAS_TOOL_STATUS.md** - Current tool functionality and usage instructions
 - **CANVAS_TESTING_PLAN.md** - Comprehensive testing methodology (MUST READ)
 - **CANVAS_IMPLEMENTATION_CHECKLIST.md** - Detailed implementation status
-- **CANVAS_DEVELOPMENT_ROADMAP.md** - Project phases and achievements
+- **CANVAS_DEVELOPMENT_ROADMAP_REVISED.md** - Project phases and achievements
 
 ## Canvas Development Guidelines
 

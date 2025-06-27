@@ -19,6 +19,9 @@ export interface SelectionState {
   selectedElementIds: Set<ElementId>;
   lastSelectedElementId: ElementId | null;
   
+  // REFACTORING: Store accessor to prevent state duplication
+  getElementsFromStore?: () => Map<string, any>;
+  
   // Selection rectangle for multi-selection
   selectionRectangle: {
     startX: number;
@@ -62,15 +65,16 @@ export interface SelectionState {
   selectAllElements: (elementIds?: ElementId[]) => void;
   invertSelection: (allElementIds: ElementId[]) => void;
   
-  // Advanced selection operations - NEW
-  selectElementsByType: (elementType: string, allElements: any[]) => void;
-  selectElementsInArea: (area: { x: number; y: number; width: number; height: number }, allElements: any[]) => void;
-  selectElementsInRadius: (center: { x: number; y: number }, radius: number, allElements: any[]) => void;
-  getSelectionBounds: (allElements: any[]) => { x: number; y: number; width: number; height: number } | null;
-  selectChildElements: (parentElementId: ElementId, allElements: any[]) => void;
-  selectSiblingElements: (elementId: ElementId, allElements: any[]) => void;
-  selectByProperty: (property: string, value: any, allElements: any[]) => void;
-  getSelectionCenter: (allElements: any[]) => { x: number; y: number } | null;
+  // REFACTORED: Remove state duplication - use element store via selectors
+  // These methods now work with element IDs only, getting data from element store
+  selectElementsByType: (elementType: string) => void;
+  selectElementsInArea: (area: { x: number; y: number; width: number; height: number }) => void;
+  selectElementsInRadius: (center: { x: number; y: number }, radius: number) => void;
+  getSelectionBounds: () => { x: number; y: number; width: number; height: number } | null;
+  selectChildElements: (parentElementId: ElementId) => void;
+  selectSiblingElements: (elementId: ElementId) => void;
+  selectByProperty: (property: string, value: any) => void;
+  getSelectionCenter: () => { x: number; y: number } | null;
   
   // Selection rectangle operations
   startSelectionRectangle: (startX: number, startY: number) => void;
@@ -400,13 +404,15 @@ export const createSelectionStore: StateCreator<
   },
 
   // Advanced selection operations implementation
-  selectElementsByType: (elementType: string, allElements: any[]) => {
+  selectElementsByType: (elementType: string) => {
     const endTiming = PerformanceMonitor.startTiming('selectElementsByType');
     
     try {
       logger.log('🎯 [SELECTION STORE] Selecting elements by type:', elementType);
       
-      const elementsOfType = allElements
+      // FIXED: Use store accessor instead of duplicated allElements parameter
+      const elements = get().getElementsFromStore?.() || new Map();
+      const elementsOfType = Array.from(elements.values())
         .filter(element => element.type === elementType)
         .map(element => element.id as ElementId);
       
@@ -419,13 +425,15 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  selectElementsInArea: (area: { x: number; y: number; width: number; height: number }, allElements: any[]) => {
+  selectElementsInArea: (area: { x: number; y: number; width: number; height: number }) => {
     const endTiming = PerformanceMonitor.startTiming('selectElementsInArea');
     
     try {
       logger.log('🎯 [SELECTION STORE] Selecting elements in area:', area);
       
-      const elementsInArea = allElements.filter(element => {
+      // FIXED: Use store accessor instead of duplicated allElements parameter
+      const elements = get().getElementsFromStore?.() || new Map();
+      const elementsInArea = Array.from(elements.values()).filter(element => {
         // Check if element overlaps with area
         const elementRight = element.x + (element.width || element.radius * 2 || 100);
         const elementBottom = element.y + (element.height || element.radius * 2 || 100);
@@ -447,13 +455,15 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  selectElementsInRadius: (center: { x: number; y: number }, radius: number, allElements: any[]) => {
+  selectElementsInRadius: (center: { x: number; y: number }, radius: number) => {
     const endTiming = PerformanceMonitor.startTiming('selectElementsInRadius');
     
     try {
       logger.log('🎯 [SELECTION STORE] Selecting elements in radius:', { center, radius });
       
-      const elementsInRadius = allElements.filter(element => {
+      // FIXED: Use store accessor instead of duplicated allElements parameter
+      const elements = get().getElementsFromStore?.() || new Map();
+      const elementsInRadius = Array.from(elements.values()).filter(element => {
         const elementCenterX = element.x + (element.width ? element.width / 2 : element.radius || 50);
         const elementCenterY = element.y + (element.height ? element.height / 2 : element.radius || 50);
         
@@ -474,14 +484,16 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  getSelectionBounds: (allElements: any[]) => {
+  getSelectionBounds: () => {
     const endTiming = PerformanceMonitor.startTiming('getSelectionBounds');
     
     try {
       const selectedIds = get().getSelectedElementIds();
       if (selectedIds.length === 0) return null;
       
-      const selectedElements = allElements.filter(element => 
+      // FIXED: Use store accessor instead of duplicated allElements parameter
+      const elements = get().getElementsFromStore?.() || new Map();
+      const selectedElements = Array.from(elements.values()).filter(element => 
         selectedIds.includes(element.id as ElementId)
       );
       
@@ -515,14 +527,17 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  selectChildElements: (parentElementId: ElementId, allElements: any[]) => {
+  selectChildElements: (parentElementId: ElementId) => {
     const endTiming = PerformanceMonitor.startTiming('selectChildElements');
     
     try {
       logger.log('🎯 [SELECTION STORE] Selecting child elements of:', parentElementId);
       
-      const childElements = allElements.filter(element => 
-        element.parentId === parentElementId || element.sectionId === parentElementId
+      // FIXED: Use store accessor instead of duplicated allElements parameter
+      const elements = get().getElementsFromStore?.() || new Map();
+      const childElements = Array.from(elements.values()).filter(element => 
+        ('parentId' in element && element.parentId === parentElementId) || 
+        ('sectionId' in element && element.sectionId === parentElementId)
       ).map(element => element.id as ElementId);
       
       get().selectMultipleElements(childElements, false); // Add to existing selection
@@ -534,20 +549,22 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  selectSiblingElements: (elementId: ElementId, allElements: any[]) => {
+  selectSiblingElements: (elementId: ElementId) => {
     const endTiming = PerformanceMonitor.startTiming('selectSiblingElements');
     
     try {
       logger.log('🎯 [SELECTION STORE] Selecting sibling elements of:', elementId);
       
-      const element = allElements.find(el => el.id === elementId);
+      // FIXED: Use store accessor instead of duplicated allElements parameter
+      const elements = get().getElementsFromStore?.() || new Map();
+      const element = elements.get(elementId);
       if (!element) return;
       
-      const siblingElements = allElements.filter(el => 
+      const siblingElements = Array.from(elements.values()).filter((el: any) => 
         el.id !== elementId && 
         ((element.parentId && el.parentId === element.parentId) || 
          (element.sectionId && el.sectionId === element.sectionId))
-      ).map(el => el.id as ElementId);
+      ).map((el: any) => el.id as ElementId);
       
       get().selectMultipleElements(siblingElements, false); // Add to existing selection
       
@@ -558,30 +575,32 @@ export const createSelectionStore: StateCreator<
     }
   },
 
-  selectByProperty: (property: string, value: any, allElements: any[]) => {
+  selectByProperty: (property: string, value: any) => {
     const endTiming = PerformanceMonitor.startTiming('selectByProperty');
     
     try {
-      console.log('🎯 [SELECTION STORE] Selecting elements by property:', { property, value });
+      logger.log('🎯 [SELECTION STORE] Selecting elements by property:', { property, value });
       
-      const matchingElements = allElements.filter(element => 
+      // FIXED: Use store accessor instead of duplicated allElements parameter
+      const elements = get().getElementsFromStore?.() || new Map();
+      const matchingElements = Array.from(elements.values()).filter((element: any) => 
         element[property] === value
-      ).map(element => element.id as ElementId);
+      ).map((element: any) => element.id as ElementId);
       
       get().selectMultipleElements(matchingElements, true);
       
       PerformanceMonitor.recordMetric('elementsByPropertySelected', matchingElements.length, 'interaction', { property });
-      console.log('✅ [SELECTION STORE] Selected elements by property:', matchingElements.length);
+      logger.log('✅ [SELECTION STORE] Selected elements by property:', matchingElements.length);
     } finally {
       endTiming();
     }
   },
 
-  getSelectionCenter: (allElements: any[]) => {
+  getSelectionCenter: () => {
     const endTiming = PerformanceMonitor.startTiming('getSelectionCenter');
     
     try {
-      const bounds = get().getSelectionBounds(allElements);
+      const bounds = get().getSelectionBounds();
       if (!bounds) return null;
       
       const center = {

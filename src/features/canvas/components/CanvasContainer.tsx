@@ -48,12 +48,35 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
   const selectedTool = useCanvasStore((state) => state.selectedTool) as any; // Temporary type assertion
 
-  // Drawing state for CanvasEventHandler
+  // Drawing state for CanvasEventHandler - use store state instead of local state
   const [isDrawingConnector, setIsDrawingConnector] = useState(false);
   const [connectorStart, setConnectorStart] = useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
   const [connectorEnd, setConnectorEnd] = useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
-  const [isDrawingSection, setIsDrawingSection] = useState(false);
-  const [previewSection, setPreviewSection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  
+  // Use store state for section drawing instead of local state
+  const isDrawingSection = useCanvasStore((state) => state.isDrawingSection);
+  const drawingStartPoint = useCanvasStore((state) => state.drawingStartPoint);
+  const drawingCurrentPoint = useCanvasStore((state) => state.drawingCurrentPoint);
+  
+  // Calculate preview section from store state
+  const previewSection = React.useMemo(() => {
+    if (!isDrawingSection || !drawingStartPoint || !drawingCurrentPoint) return null;
+    
+    const x = Math.min(drawingStartPoint.x, drawingCurrentPoint.x);
+    const y = Math.min(drawingStartPoint.y, drawingCurrentPoint.y);
+    const width = Math.abs(drawingCurrentPoint.x - drawingStartPoint.x);
+    const height = Math.abs(drawingCurrentPoint.y - drawingStartPoint.y);
+    
+    return { x, y, width, height };
+  }, [isDrawingSection, drawingStartPoint, drawingCurrentPoint]);
+  
+  // New drawing states for text, table, and sticky note
+  const [isDrawingText, setIsDrawingText] = useState(false);
+  const [previewText, setPreviewText] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isDrawingTable, setIsDrawingTable] = useState(false);
+  const [previewTable, setPreviewTable] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isDrawingStickyNote, setIsDrawingStickyNote] = useState(false);
+  const [previewStickyNote, setPreviewStickyNote] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
   // Combined update function for elements and sections
   const handleElementOrSectionUpdate = useCallback((id: ElementId | SectionId, updates: Partial<CanvasElement>) => {
@@ -104,9 +127,19 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         connectorEnd={connectorEnd}
         setConnectorEnd={setConnectorEnd}
         isDrawingSection={isDrawingSection}
-        setIsDrawingSection={setIsDrawingSection}
         previewSection={previewSection}
-        setPreviewSection={setPreviewSection}
+        isDrawingText={isDrawingText}
+        setIsDrawingText={setIsDrawingText}
+        previewText={previewText}
+        setPreviewText={setPreviewText}
+        isDrawingTable={isDrawingTable}
+        setIsDrawingTable={setIsDrawingTable}
+        previewTable={previewTable}
+        setPreviewTable={setPreviewTable}
+        isDrawingStickyNote={isDrawingStickyNote}
+        setIsDrawingStickyNote={setIsDrawingStickyNote}
+        previewStickyNote={previewStickyNote}
+        setPreviewStickyNote={setPreviewStickyNote}
       >
         <Stage
           ref={stageRef}
@@ -121,7 +154,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
             display: 'block',
             backgroundColor: designSystem.canvasStyles.background,
             cursor: selectedTool === 'pan' ? 'grab' : 
-                    selectedTool.startsWith('connector-') ? 'crosshair' : 'default',
+                    selectedTool.startsWith('connector-') ? 'crosshair' :
+                    selectedTool === 'section' ? 'crosshair' :
+                    selectedTool === 'pen' ? 'crosshair' : 'default',
             userSelect: 'none',
             WebkitUserSelect: 'none',
           }}

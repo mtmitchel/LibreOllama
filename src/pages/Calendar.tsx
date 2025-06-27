@@ -186,7 +186,7 @@ const Calendar: React.FC = () => {
   return (
     <PageLayout headerProps={headerProps}>
       {/* Standardized gap and padding for consistency */}
-      <div className="flex flex-1 gap-6 p-0 md:p-0"> {/* Removed outer padding, PageLayout handles it */}
+      <div className="flex flex-1 gap-6 p-4 md:p-6"> {/* Moved padding here */}
         <div className="flex-1 flex flex-col gap-6"> {/* Added flex-col and gap for consistent spacing */}
           {/* Calendar Navigation */}
           <Card> {/* Using Card from ui/index.tsx, default padding will apply */}

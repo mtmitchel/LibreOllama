@@ -52,12 +52,12 @@ const PortalColorPicker: React.FC<PortalColorPickerProps> = ({
 
   // Get colors based on element type
   const colors = selectedElement.type === 'sticky-note' ? [
-    { value: '#FEF7CD', label: 'Soft Yellow' },      // Lighter, calmer
-    { value: '#E8F5E8', label: 'Gentle Mint' },      // Softer green
-    { value: '#E3F2FD', label: 'Calm Sky' },         // Lighter blue
-    { value: '#F3E5F5', label: 'Soft Lavender' },    // Gentle purple
-    { value: '#FFF3E0', label: 'Warm Peach' },       // Softer orange
-    { value: '#FCE4EC', label: 'Gentle Rose' }       // Added pink
+    { value: '#FFE299', label: 'Butter Yellow' },    // User requested
+    { value: '#A8DAFF', label: 'Sky Blue' },         // User requested
+    { value: '#FFB3BA', label: 'Soft Pink' },        // Complement
+    { value: '#BAFFC9', label: 'Mint Green' },       // Complement
+    { value: '#FFDFBA', label: 'Peach' },            // Complement
+    { value: '#E6BAFF', label: 'Lavender' }          // Complement
   ] : [
     { value: '#3B82F6', label: 'Blue' },
     { value: '#10B981', label: 'Green' },
@@ -101,14 +101,14 @@ const PortalColorPicker: React.FC<PortalColorPickerProps> = ({
         position: 'fixed',
         ...position,
         zIndex: 2000,
-        background: 'rgba(255, 255, 255, 0.95)',
+        background: 'rgba(255, 255, 255, 0.98)',
         backdropFilter: 'blur(20px)',
         borderRadius: '12px',
         padding: '16px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.2)',
+        border: '2px solid rgba(255, 255, 255, 0.8)',
         animation: 'colorPickerSlideUp 0.2s ease',
-        minWidth: '200px'
+        minWidth: '220px'
       }}
     >
       <style>

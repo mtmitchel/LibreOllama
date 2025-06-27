@@ -2,7 +2,7 @@
 
 ## 🎉 **TESTING INFRASTRUCTURE: PRODUCTION-READY** ✅
 
-**Current Status (June 25, 2025)**: Comprehensive testing framework operational with zero TypeScript errors, reliability systems validated, and 95%+ performance improvements achieved. See [Canvas Development Roadmap](CANVAS_DEVELOPMENT_ROADMAP.md) for complete type system resolution details.
+**Current Status (June 25, 2025)**: Comprehensive testing framework operational with zero TypeScript errors, reliability systems validated, and 95%+ performance improvements achieved. See [Canvas Development Roadmap](CANVAS_DEVELOPMENT_ROADMAP_REVISED.md) for complete type system resolution details.
 
 ### **� Test Type System Updates**:
 ```typescript
@@ -70,7 +70,7 @@ Create targeted tests for specific fixes with proper type usage:
 
 > **📋 Documentation Navigation**:
 > - **This Document**: Technical testing methodology, patterns, detailed technical procedures
-> - **[CANVAS_DEVELOPMENT_ROADMAP.md](CANVAS_DEVELOPMENT_ROADMAP.md)**: Project phases, business impact, executive summary
+> - **[CANVAS_DEVELOPMENT_ROADMAP_REVISED.md](CANVAS_DEVELOPMENT_ROADMAP_REVISED.md)**: Project phases, business impact, executive summary
 > - **[CANVAS_IMPLEMENTATION_CHECKLIST.md](CANVAS_IMPLEMENTATION_CHECKLIST.md)**: Current integration issues and implementation status
 
 > **🔧 CURRENT STATUS (June 25, 2025)**: 
@@ -232,7 +232,7 @@ describe('CanvasPerformanceProfiler', () => {
 - **Test Reliability**: 100% consistent execution, zero hangs/timeouts
 - **Mock Efficiency**: Complete canvas abstraction with minimal overhead
 
-For complete performance metrics and technical details, see [Canvas Development Roadmap](CANVAS_DEVELOPMENT_ROADMAP.md).
+For complete performance metrics and technical details, see [Canvas Development Roadmap](CANVAS_DEVELOPMENT_ROADMAP_REVISED.md).
 
 ## 🔧 **Implementation Guidelines**
 

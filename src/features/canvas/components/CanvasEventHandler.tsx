@@ -6,7 +6,7 @@
  * A single listener per event type is attached to the stage, dramatically reducing overhead.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
 import { CanvasTool, ElementId, SectionId } from '../types/enhanced.types';
 import { useCanvasStore, canvasStore } from '../../../stores';
@@ -71,6 +71,20 @@ interface CanvasEventHandlerProps {
   setIsDrawingSection?: React.Dispatch<React.SetStateAction<boolean>>; // Optional - using store state
   previewSection: { x: number; y: number; width: number; height: number } | null;
   setPreviewSection?: React.Dispatch<React.SetStateAction<{ x: number; y: number; width: number; height: number } | null>>; // Optional - using store state
+  
+  // New text and table drawing props
+  isDrawingText: boolean;
+  setIsDrawingText: React.Dispatch<React.SetStateAction<boolean>>;
+  previewText: { x: number; y: number; width: number; height: number } | null;
+  setPreviewText: React.Dispatch<React.SetStateAction<{ x: number; y: number; width: number; height: number } | null>>;
+  isDrawingTable: boolean;
+  setIsDrawingTable: React.Dispatch<React.SetStateAction<boolean>>;
+  previewTable: { x: number; y: number; width: number; height: number } | null;
+  setPreviewTable: React.Dispatch<React.SetStateAction<{ x: number; y: number; width: number; height: number } | null>>;
+  isDrawingStickyNote: boolean;
+  setIsDrawingStickyNote: React.Dispatch<React.SetStateAction<boolean>>;
+  previewStickyNote: { x: number; y: number; width: number; height: number } | null;
+  setPreviewStickyNote: React.Dispatch<React.SetStateAction<{ x: number; y: number; width: number; height: number } | null>>;
 }
 
 type EventHandler = (e: Konva.KonvaEventObject<any>) => void;
@@ -89,6 +103,18 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   setIsDrawingSection,
   previewSection,
   setPreviewSection,
+  isDrawingText,
+  setIsDrawingText,
+  previewText,
+  setPreviewText,
+  isDrawingTable,
+  setIsDrawingTable,
+  previewTable,
+  setPreviewTable,
+  isDrawingStickyNote,
+  setIsDrawingStickyNote,
+  previewStickyNote,
+  setPreviewStickyNote,
 }) => {
   const isPointerDownRef = useRef(false);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
@@ -99,6 +125,17 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   // Memory leak tracking
   const memoryTracker = useMemoryLeakDetector('CanvasEventHandler');
   const eventListenerIds = useRef<string[]>([]);
+
+  // Coordinate conversion utility - converts screen coordinates to canvas coordinates
+  const getCanvasCoordinates = useCallback((stage: Konva.Stage): { x: number; y: number } | null => {
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return null;
+    
+    // Convert screen coordinates to canvas coordinates
+    const transform = stage.getAbsoluteTransform().copy();
+    transform.invert();
+    return transform.point(pointer);
+  }, []);
 
   // Access canvas store for drawing functions - split selectors
   const selectedTool = useCanvasStore((state) => state.selectedTool);
@@ -397,9 +434,13 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       // Elements in sections will be handled by SectionHandler's child dragend handler
       // This handler now only deals with free elements and sections themselves
 
-      const absolutePos = targetNode.absolutePosition();
-      if (isNaN(absolutePos.x) || isNaN(absolutePos.y)) {
-        logger.warn('[CanvasEventHandler] Invalid position values:', absolutePos);
+      // FIXED: Use proper coordinate conversion instead of raw absolutePosition
+      const stage = stageRef.current;
+      if (!stage) return;
+      
+      const canvasPos = getCanvasCoordinates(stage);
+      if (!canvasPos || isNaN(canvasPos.x) || isNaN(canvasPos.y)) {
+        logger.warn('[CanvasEventHandler] Invalid canvas position values:', canvasPos);
         return;
       }
 
@@ -409,10 +450,10 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       if (element.type !== 'section') {
         for (const section of sections.values()) {
           if (
-            absolutePos.x >= section.x &&
-            absolutePos.x <= section.x + section.width &&
-            absolutePos.y >= section.y &&
-            absolutePos.y <= section.y + section.height
+            canvasPos.x >= section.x &&
+            canvasPos.x <= section.x + section.width &&
+            canvasPos.y >= section.y &&
+            canvasPos.y <= section.y + section.height
           ) {
             droppedInSection = section;
             break;
@@ -421,12 +462,12 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       }
 
       if (element.type === 'section') {
-        canvasStore.getState().updateSection(element.id as SectionId, { ...absolutePos, updatedAt: Date.now() });
+        canvasStore.getState().updateSection(element.id as SectionId, { ...canvasPos, updatedAt: Date.now() });
       } else if (droppedInSection) {
-        const newPosition = { x: absolutePos.x - droppedInSection.x, y: absolutePos.y - droppedInSection.y };
+        const newPosition = { x: canvasPos.x - droppedInSection.x, y: canvasPos.y - droppedInSection.y };
         updateElement(id, { ...newPosition, sectionId: droppedInSection.id, updatedAt: Date.now() });
       } else {
-        updateElement(id, { ...absolutePos, sectionId: null, updatedAt: Date.now() });
+        updateElement(id, { ...canvasPos, sectionId: null, updatedAt: Date.now() });
       }
     };
 
@@ -466,8 +507,12 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         return;
       }
 
-      const absolutePos = targetNode.absolutePosition();
-      if (isNaN(absolutePos.x) || isNaN(absolutePos.y)) {
+      // FIXED: Use proper coordinate conversion instead of raw absolutePosition
+      const stage = stageRef.current;
+      if (!stage) return;
+      
+      const canvasPos = getCanvasCoordinates(stage);
+      if (!canvasPos || isNaN(canvasPos.x) || isNaN(canvasPos.y)) {
         return;
       }
 
@@ -498,8 +543,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         }
       })();
       
-      const elementCenterX = absolutePos.x + (elementBounds.width || 100) / 2;
-      const elementCenterY = absolutePos.y + (elementBounds.height || 100) / 2;
+      const elementCenterX = canvasPos.x + (elementBounds.width || 100) / 2;
+      const elementCenterY = canvasPos.y + (elementBounds.height || 100) / 2;
 
       for (const section of sections.values()) {
         if (
@@ -650,50 +695,135 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     );
   }, []);
 
-  // Enhanced text click handler with error handling
+  // Enhanced text drawing handlers (draw-to-size like Figma/FigJam)
+
+  const handleTextMouseDown = useMemo(() => {
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (e.target !== stageRef.current) return;
+
+      const canvasPoint = getCanvasCoordinates(stageRef.current!);
+      if (canvasPoint) {
+        setIsDrawingText(true);
+        setPreviewText({ x: canvasPoint.x, y: canvasPoint.y, width: 0, height: 0 });
+        lastMousePosRef.current = canvasPoint;
+      }
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingText(false);
+      setPreviewText(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'text';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'textMouseDown',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
+    );
+  }, [stageRef]);
+
+  const handleTextMouseMove = useMemo(() => {
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!isDrawingText || !previewText || !lastMousePosRef.current) return;
+
+      const canvasPoint = getCanvasCoordinates(stageRef.current!);
+      if (canvasPoint) {
+        const startX = lastMousePosRef.current.x;
+        const startY = lastMousePosRef.current.y;
+        const width = Math.abs(canvasPoint.x - startX);
+        const height = Math.abs(canvasPoint.y - startY);
+        const x = Math.min(startX, canvasPoint.x);
+        const y = Math.min(startY, canvasPoint.y);
+
+        setPreviewText({ x, y, width, height });
+      }
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingText(false);
+      setPreviewText(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'text';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'textMouseMove',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
+    );
+  }, [isDrawingText, previewText]);
+
+  const handleTextMouseUp = useMemo(() => {
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!isDrawingText || !previewText) return;
+
+      // Create text box with minimum size
+      const minWidth = 100;
+      const minHeight = 24;
+      const finalWidth = Math.max(previewText.width, minWidth);
+      const finalHeight = Math.max(previewText.height, minHeight);
+
+      if (finalWidth >= minWidth || finalHeight >= minHeight) {
+        const sectionsMap = canvasStore.getState().sections;
+        const targetSection = Array.from(sectionsMap.values()).find(s => 
+          previewText.x >= s.x && previewText.x <= s.x + s.width &&
+          previewText.y >= s.y && previewText.y <= s.y + s.height
+        );
+
+        const position = targetSection 
+          ? { x: previewText.x - targetSection.x, y: previewText.y - targetSection.y } 
+          : { x: previewText.x, y: previewText.y };
+        const sectionId = targetSection ? targetSection.id : null;
+
+        const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newText = {
+          id: toElementId(generateId()),
+          type: 'text' as const,
+          x: position.x,
+          y: position.y,
+          text: 'Double-click to edit',
+          fontSize: 16,
+          fontFamily: 'Inter, sans-serif',
+          fill: '#1F2937',
+          width: finalWidth,
+          height: finalHeight,
+          sectionId: sectionId,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        
+        addElement(newText);
+        selectElement(newText.id);
+      }
+
+      setIsDrawingText(false);
+      setPreviewText(null);
+      setSelectedTool('select');
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingText(false);
+      setPreviewText(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'text';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'textMouseUp',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
+    );
+  }, [isDrawingText, previewText, addElement, selectElement, setSelectedTool]);
+
+  // Legacy text click handler (fallback)
   const handleTextClick = useMemo(() => {
     const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      const stage = stageRef.current;
-      if (!stage) return;
-
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
-
-      const sectionsMap = canvasStore.getState().sections;
-      const targetSection = Array.from(sectionsMap.values()).find(s => 
-        pointer.x >= s.x && pointer.x <= s.x + s.width &&
-        pointer.y >= s.y && pointer.y <= s.y + s.height
-      );
-
-      const position = targetSection 
-        ? { x: pointer.x - targetSection.x, y: pointer.y - targetSection.y } 
-        : pointer;
-      const sectionId = targetSection ? targetSection.id : null;
-
-      console.log('📝 [CanvasEventHandler] TEXT CLICK - Creating text at:', pointer);
-      logger.log('📝 [CanvasEventHandler] Creating text at:', pointer);
-      
-      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const newText = {
-        id: toElementId(generateId()),
-        type: 'text' as const,
-        x: position.x,
-        y: position.y,
-        text: 'Double-click to edit',
-        fontSize: 16,
-        fontFamily: 'Inter, sans-serif',
-        fill: '#1F2937',
-        width: 200,
-        height: 24,
-        sectionId: sectionId,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      
-      logger.log('📝 [CanvasEventHandler] Creating text element:', newText);
-      addElement(newText);
-      selectElement(newText.id);
-      setSelectedTool('select');
+      // This is now handled by mouse down/up for drawing
+      logger.log('📝 [CanvasEventHandler] Text click - handled by mouse events');
     };
 
     const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -1015,6 +1145,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
       logger.log('🖊️ [CanvasEventHandler] Finishing pen drawing');
       finishDrawing();
+      setSelectedTool('select');
     };
 
     const fallbackHandler = () => {
@@ -1233,10 +1364,10 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (e.target !== stageRef.current) return;
 
-      const pos = stageRef.current?.getPointerPosition();
-      if (pos) {
-        startDrawing(pos.x, pos.y, 'pen' as any); // Temporary cast - section drawing will be handled by store state
-        lastMousePosRef.current = pos;
+      const canvasPoint = getCanvasCoordinates(stageRef.current!);
+      if (canvasPoint) {
+        startDrawing(canvasPoint.x, canvasPoint.y, 'section');
+        lastMousePosRef.current = canvasPoint;
       }
     };
 
@@ -1298,9 +1429,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   const handleSectionMouseMove = useMemo(() => {
     const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (!isDrawingSection || !lastMousePosRef.current) return;
-      const pos = stageRef.current?.getPointerPosition();
-      if (pos) {
-        updateDrawing(pos.x, pos.y);
+      const canvasPoint = getCanvasCoordinates(stageRef.current!);
+      if (canvasPoint) {
+        updateDrawing(canvasPoint.x, canvasPoint.y);
       }
     };
 
@@ -1318,69 +1449,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     );
   }, [stageRef, isDrawingSection, setPreviewSection, setIsDrawingSection]);
 
-  // Enhanced sticky note click handler with error handling
-  const handleStickyNoteClick = useMemo(() => {
-    const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      const stage = stageRef.current;
-      if (!stage) return;
+  
 
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
-
-      const sectionsMap = canvasStore.getState().sections;
-      const targetSection = Array.from(sectionsMap.values()).find(s => 
-        pointer.x >= s.x && pointer.x <= s.x + s.width &&
-        pointer.y >= s.y && pointer.y <= s.y + s.height
-      );
-
-      const position = targetSection 
-        ? { x: pointer.x - targetSection.x, y: pointer.y - targetSection.y } 
-        : pointer;
-      const sectionId = targetSection ? targetSection.id : null;
-
-      console.log('🗒️ [CanvasEventHandler] STICKY NOTE CLICK - Creating sticky note at:', pointer);
-      logger.log('🗒️ [CanvasEventHandler] Creating sticky note at:', pointer);
-      
-      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const newStickyNote = {
-        id: toElementId(generateId()),
-        type: 'sticky-note' as const,
-        x: position.x,
-        y: position.y,
-        width: 150,
-        height: 150,
-        backgroundColor: '#FEF3C7',
-        text: 'Type your note here...',
-        fontSize: 12,
-        fontFamily: 'Inter, sans-serif',
-        textColor: '#92400E',
-        sectionId: sectionId,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      
-      logger.log('🗒️ [CanvasEventHandler] Creating sticky note element:', newStickyNote);
-      addElement(newStickyNote);
-      selectElement(newStickyNote.id);
-      setSelectedTool('select');
-    };
-
-    const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      logger.warn('🗒️ [CanvasEventHandler] Sticky note click fallback handler activated');
-      setSelectedTool('select');
-    };
-
-    const toolValidator = (tool: any) => {
-      return tool === 'sticky-note';
-    };
-
-    return eventHandlerManager.createSafeEventHandler(
-      'stickyNoteClick',
-      originalHandler,
-      fallbackHandler,
-      toolValidator
-    );
-  }, [stageRef, addElement, selectElement, setSelectedTool]);
+  
 
   // Enhanced image click handler with error handling
   const handleImageClick = useMemo(() => {
@@ -1499,10 +1570,26 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
           reader.readAsDataURL(file);
         }
 
-        document.body.removeChild(fileInput);
+        // FIXED: Check if fileInput is still in DOM before removing
+        if (document.body.contains(fileInput)) {
+          document.body.removeChild(fileInput);
+        }
+      };
+
+      // Handle file dialog cancellation
+      const handleDialogCancel = () => {
+        setTimeout(() => {
+          if (document.body.contains(fileInput)) {
+            document.body.removeChild(fileInput);
+            setSelectedTool('select'); // Auto-switch to select tool when canceled
+            logger.log('🖼️ [CanvasEventHandler] Image dialog canceled, switched to select tool');
+          }
+        }, 100); // Small delay to ensure change event has chance to fire
       };
 
       fileInput.addEventListener('change', handleFileSelect);
+      fileInput.addEventListener('cancel', handleDialogCancel);
+      window.addEventListener('focus', handleDialogCancel, { once: true });
       document.body.appendChild(fileInput);
       fileInput.click();
     };
@@ -1524,54 +1611,144 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     );
   }, [stageRef, addElement, selectElement, setSelectedTool]);
 
-  // Enhanced table click handler with error handling
-  const handleTableClick = useMemo(() => {
-    const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      const stage = stageRef.current;
-      if (!stage) return;
+  // Enhanced table drawing handlers (draw-to-size like Figma/FigJam)
 
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
+  const handleTableMouseDown = useMemo(() => {
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (e.target !== stageRef.current) return;
 
-      const sectionsMap = canvasStore.getState().sections;
-      const targetSection = Array.from(sectionsMap.values()).find(s => 
-        pointer.x >= s.x && pointer.x <= s.x + s.width &&
-        pointer.y >= s.y && pointer.y <= s.y + s.height
-      );
+      const pos = stageRef.current?.getPointerPosition();
+      if (pos) {
+        setIsDrawingTable(true);
+        setPreviewTable({ x: pos.x, y: pos.y, width: 0, height: 0 });
+        lastMousePosRef.current = pos;
+      }
+    };
 
-      const position = targetSection 
-        ? { x: pointer.x - targetSection.x, y: pointer.y - targetSection.y } 
-        : pointer;
-      const sectionId = targetSection ? targetSection.id : null;
+    const fallbackHandler = () => {
+      setIsDrawingTable(false);
+      setPreviewTable(null);
+    };
 
-      console.log('📊 [CanvasEventHandler] TABLE CLICK - Creating table at:', pointer);
+    const toolValidator = (tool: any) => tool === 'table';
 
-      const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const tableId = generateId();
-      
-      const enhancedTableData = createTableData(tableId, 3, 3);
-      
-      const initialWidth = enhancedTableData.columns.reduce((sum, col) => sum + col.width, 0);
-      const initialHeight = enhancedTableData.rows.reduce((sum, row) => sum + row.height, 0);
-      
-      const newTable = {
+    return eventHandlerManager.createSafeEventHandler(
+      'tableMouseDown',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
+    );
+  }, [stageRef]);
+
+  const handleTableMouseMove = useMemo(() => {
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!isDrawingTable || !previewTable || !lastMousePosRef.current) return;
+
+      const pos = stageRef.current?.getPointerPosition();
+      if (pos) {
+        const startX = lastMousePosRef.current.x;
+        const startY = lastMousePosRef.current.y;
+        const width = Math.abs(pos.x - startX);
+        const height = Math.abs(pos.y - startY);
+        const x = Math.min(startX, pos.x);
+        const y = Math.min(startY, pos.y);
+
+        setPreviewTable({ x, y, width, height });
+      }
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingTable(false);
+      setPreviewTable(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'table';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'tableMouseMove',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
+    );
+  }, [isDrawingTable, previewTable]);
+
+  const handleTableMouseUp = useMemo(() => {
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (!isDrawingTable || !previewTable) return;
+
+      // Create table with minimum size
+      const minWidth = 200;
+      const minHeight = 100;
+      const finalWidth = Math.max(previewTable.width, minWidth);
+      const finalHeight = Math.max(previewTable.height, minHeight);
+
+      if (finalWidth >= minWidth || finalHeight >= minHeight) {
+        const sectionsMap = canvasStore.getState().sections;
+        const targetSection = Array.from(sectionsMap.values()).find(s => 
+          previewTable.x >= s.x && previewTable.x <= s.x + s.width &&
+          previewTable.y >= s.y && previewTable.y <= s.y + s.height
+        );
+
+        const position = targetSection 
+          ? { x: previewTable.x - targetSection.x, y: previewTable.y - targetSection.y } 
+          : { x: previewTable.x, y: previewTable.y };
+        const sectionId = targetSection ? targetSection.id : null;
+
+        const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const tableId = generateId();
+        
+        // Calculate rows and cols based on size
+        const cellWidth = 120;
+        const cellHeight = 40;
+        const cols = Math.max(2, Math.floor(finalWidth / cellWidth));
+        const rows = Math.max(2, Math.floor(finalHeight / cellHeight));
+        
+        const enhancedTableData = createTableData(tableId, rows, cols);
+        
+        const newTable = {
           id: toElementId(tableId),
           type: 'table' as const,
           x: position.x,
           y: position.y,
-          width: initialWidth,
-          height: initialHeight,
-          rows: 3,
-          cols: 3,
+          width: finalWidth,
+          height: finalHeight,
+          rows: rows,
+          cols: cols,
           enhancedTableData,
           sectionId: sectionId,
           createdAt: Date.now(),
           updatedAt: Date.now(),
-      };
+        };
 
-      addElement(newTable);
-      selectElement(newTable.id);
+        addElement(newTable);
+        selectElement(newTable.id);
+      }
+
+      setIsDrawingTable(false);
+      setPreviewTable(null);
       setSelectedTool('select');
+    };
+
+    const fallbackHandler = () => {
+      setIsDrawingTable(false);
+      setPreviewTable(null);
+    };
+
+    const toolValidator = (tool: any) => tool === 'table';
+
+    return eventHandlerManager.createSafeEventHandler(
+      'tableMouseUp',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
+    );
+  }, [isDrawingTable, previewTable, addElement, selectElement, setSelectedTool]);
+
+  // Legacy table click handler (fallback)
+  const handleTableClick = useMemo(() => {
+    const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
+      // This is now handled by mouse down/up for drawing
+      logger.log('📊 [CanvasEventHandler] Table click - handled by mouse events');
     };
 
     const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -1851,6 +2028,71 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     );
   }, []);
 
+  const handleStickyNoteClick = useMemo(() => {
+    const originalHandler = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      logger.log('📝 [CanvasEventHandler] Sticky note click - creating sticky note');
+      
+      const stage = stageRef.current;
+      if (!stage) return;
+
+      const canvasPoint = getCanvasCoordinates(stage);
+      if (!canvasPoint) return;
+      
+      // Create sticky note element
+      // Get default sticky note color from store
+      const currentState = canvasStore.getState();
+      const defaultColor = currentState.toolSettings?.stickyNote?.backgroundColor || '#FFE299';
+      
+      const stickyNoteElement = {
+        id: `sticky-note-${Date.now()}` as ElementId,
+        type: 'sticky-note' as const,
+        x: canvasPoint.x,
+        y: canvasPoint.y,
+        width: 200,
+        height: 150,
+        text: 'New Note',
+        backgroundColor: defaultColor,
+        textColor: '#000000',
+        fontSize: 14,
+        fontFamily: 'Arial',
+        rotation: 0,
+        isHidden: false,
+        isLocked: false,
+        opacity: 1,
+        zIndex: 0, // Will be set by store
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      // Add element to canvas
+      addElement(stickyNoteElement);
+      
+      // Select the new element
+      clearSelection();
+      selectElement(stickyNoteElement.id);
+      
+      // Auto-switch to select tool for immediate interaction
+      setSelectedTool('select');
+    };
+
+    const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
+      logger.warn('📝 [CanvasEventHandler] Sticky note click fallback handler activated');
+    };
+
+    const toolValidator = (tool: any) => {
+      return tool === 'sticky-note';
+    };
+
+    return eventHandlerManager.createSafeEventHandler(
+      'stickyNoteClick',
+      originalHandler,
+      fallbackHandler,
+      toolValidator
+    );
+  }, [stageRef, addElement, clearSelection, selectElement]);
+
+  
+
   // Enhanced image mouse handlers with error handling
   const handleImageMouseDown = useMemo(() => {
     const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -1918,72 +2160,6 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
     );
   }, []);
 
-  // Enhanced table mouse handlers with error handling
-  const handleTableMouseDown = useMemo(() => {
-    const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      // Table uses click for creation, these are just for event handling consistency
-      logger.log('📊 [CanvasEventHandler] Table mouse down - handled by click');
-    };
-
-    const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      logger.warn('📊 [CanvasEventHandler] Table mouse down fallback handler activated');
-    };
-
-    const toolValidator = (tool: any) => {
-      return tool === 'table';
-    };
-
-    return eventHandlerManager.createSafeEventHandler(
-      'tableMouseDown',
-      originalHandler,
-      fallbackHandler,
-      toolValidator
-    );
-  }, []);
-
-  const handleTableMouseMove = useMemo(() => {
-    const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      // Table uses click for creation, these are just for event handling consistency
-      logger.log('📊 [CanvasEventHandler] Table mouse move - handled by click');
-    };
-
-    const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      logger.warn('📊 [CanvasEventHandler] Table mouse move fallback handler activated');
-    };
-
-    const toolValidator = (tool: any) => {
-      return tool === 'table';
-    };
-
-    return eventHandlerManager.createSafeEventHandler(
-      'tableMouseMove',
-      originalHandler,
-      fallbackHandler,
-      toolValidator
-    );
-  }, []);
-
-  const handleTableMouseUp = useMemo(() => {
-    const originalHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      // Table uses click for creation, these are just for event handling consistency
-      logger.log('📊 [CanvasEventHandler] Table mouse up - handled by click');
-    };
-
-    const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
-      logger.warn('📊 [CanvasEventHandler] Table mouse up fallback handler activated');
-    };
-
-    const toolValidator = (tool: any) => {
-      return tool === 'table';
-    };
-
-    return eventHandlerManager.createSafeEventHandler(
-      'tableMouseUp',
-      originalHandler,
-      fallbackHandler,
-      toolValidator
-    );
-  }, []);
 
   // Enhanced wheel handler with error handling
   const handleWheel = useMemo(() => {
@@ -2048,7 +2224,10 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         break;
 
       case 'text':
-        toolHandlerMap.set('click', handleTextClick);
+        toolHandlerMap.set('mousedown', handleTextMouseDown);
+        toolHandlerMap.set('mousemove', handleTextMouseMove);
+        toolHandlerMap.set('mouseup', handleTextMouseUp);
+        toolHandlerMap.set('click', handleTextClick); // Fallback
         break;
 
       case 'rectangle':
@@ -2103,7 +2282,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         toolHandlerMap.set('mousedown', handleTableMouseDown);
         toolHandlerMap.set('mousemove', handleTableMouseMove);
         toolHandlerMap.set('mouseup', handleTableMouseUp);
-        toolHandlerMap.set('click', handleTableClick);
+        toolHandlerMap.set('click', handleTableClick); // Fallback
         break;
 
       default:

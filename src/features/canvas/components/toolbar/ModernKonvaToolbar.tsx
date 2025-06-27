@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useCanvasStore } from '../../../../stores';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
+import { canvasStore } from '../../../../stores';
 import { ElementId } from '../../types/enhanced.types';
 import { 
   MousePointer2, 
@@ -45,13 +46,15 @@ interface ModernKonvaToolbarProps {
   onRedo: () => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  appSidebarOpen?: boolean; // For app-level sidebar if present
 }
 
 const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   onUndo,
   onRedo,
   sidebarOpen,
-  onToggleSidebar
+  onToggleSidebar,
+  appSidebarOpen = false
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -59,6 +62,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   // Canvas store hooks
   const selectedTool = useCanvasStore((state) => state.selectedTool);
   const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
+  const setStickyNoteColor = useCanvasStore((state) => state.setStickyNoteColor);
   const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
   const selectedElementId = selectedElementIds.size > 0 ? 
     Array.from(selectedElementIds)[0] as ElementId : null;
@@ -129,179 +133,173 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const canUngroup = selectedElementId ? !!isElementInGroup(selectedElementId) : false;
 
   return (
-    <div className={styles.modernToolbar}>
-      {/* Basic Tools */}
-      <div className={styles.toolbarGroup}>
-        {basicTools.map(tool => {
-          const IconComponent = tool.icon;
-          const isActive = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              onClick={() => handleToolClick(tool.id)}
-              className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
-              title={tool.name}
-              aria-label={tool.name}
-            >
-              <IconComponent size={16} />
-            </button>
-          );
-        })}
-      </div>
-
-      <div className={styles.separator} />
-
-      {/* Content Tools */}
-      <div className={styles.toolbarGroup}>
-        {contentTools.map(tool => {
-          const IconComponent = tool.icon;
-          const isActive = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              onClick={() => handleToolClick(tool.id)}
-              className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
-              title={tool.name}
-              aria-label={tool.name}
-            >
-              <IconComponent size={16} />
-            </button>
-          );
-        })}
-      </div>
-
-      <div className={styles.separator} />
-
-      {/* Shapes & Drawing Tools */}
-      <div className={styles.toolbarGroup}>
-        <div className={styles.dropdownContainer}>
-          <ShapesDropdown onToolSelect={handleToolClick} />
+    <div className={styles.toolbarContainer}>
+      <div className={styles.modernToolbar}>
+        {/* Basic Tools */}
+        <div className={styles.toolbarGroup}>
+          {basicTools.map(tool => {
+            const IconComponent = tool.icon;
+            const isActive = selectedTool === tool.id;
+            return (
+              <button
+                key={tool.id}
+                onClick={() => handleToolClick(tool.id)}
+                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                title={tool.name}
+                aria-label={tool.name}
+              >
+                <IconComponent size={16} />
+              </button>
+            );
+          })}
         </div>
-        
-        {drawingTools.map(tool => {
-          const IconComponent = tool.icon;
-          const isActive = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              onClick={() => handleToolClick(tool.id)}
-              className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
-              title={tool.name}
-              aria-label={tool.name}
-            >
-              <IconComponent size={16} />
-            </button>
-          );
-        })}
-      </div>
 
-      <div className={styles.separator} />
+        <div className={styles.separator} />
 
-      {/* Action Tools */}
-      <div className={styles.toolbarGroup}>
-        <button
-          onClick={onUndo}
-          className={styles.toolButton}
-          title="Undo"
-          aria-label="Undo"
-        >
-          <Undo2 size={16} />
-        </button>
-        
-        <button
-          onClick={onRedo}
-          className={styles.toolButton}
-          title="Redo"
-          aria-label="Redo"
-        >
-          <Redo2 size={16} />
-        </button>
-        
-        {selectedElementId && (
-          <button
-            onClick={handleDeleteSelected}
-            className={styles.toolButton}
-            title="Delete Selected"
-            aria-label="Delete Selected"
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
-      </div>
+        {/* Content Tools */}
+        <div className={styles.toolbarGroup}>
+          {contentTools.map(tool => {
+            const IconComponent = tool.icon;
+            const isActive = selectedTool === tool.id;
+            return (
+              <div key={tool.id} className={styles.toolContainer}>
+                <button
+                  onClick={() => handleToolClick(tool.id)}
+                  className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                  title={tool.name}
+                  aria-label={tool.name}
+                >
+                  <IconComponent size={16} />
+                </button>
+                
+                {/* Color bar for sticky note tool when active */}
+                {tool.id === 'sticky-note' && isActive && (
+                  <div className={styles.stickyColorBar}>
+                    {[
+                      { color: '#FFE299', label: 'Yellow' },
+                      { color: '#A8DAFF', label: 'Blue' },
+                      { color: '#FFB3BA', label: 'Pink' },
+                      { color: '#BAFFC9', label: 'Green' },
+                      { color: '#FFDFBA', label: 'Peach' },
+                      { color: '#E6BAFF', label: 'Purple' }
+                    ].map((colorOption, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Set the default sticky note color using the store
+                          setStickyNoteColor(colorOption.color);
+                          console.log('🎨 [MODERN TOOLBAR] Sticky note color selected:', colorOption.color);
+                        }}
+                        className={styles.colorButton}
+                        style={{ backgroundColor: colorOption.color }}
+                        title={colorOption.label}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-      <div className={styles.separator} />
+        <div className={styles.separator} />
 
-      {/* Group/Ungroup Tools */}
-      <div className={styles.toolbarGroup}>
-        {canGroup && (
-          <button
-            onClick={handleGroupElements}
-            className={styles.toolButton}
-            title="Group Elements"
-            aria-label="Group Elements"
-          >
-            <Group size={16} />
-          </button>
-        )}
-        
-        {canUngroup && (
-          <button
-            onClick={handleUngroupElements}
-            className={styles.toolButton}
-            title="Ungroup Elements"
-            aria-label="Ungroup Elements"
-          >
-            <Ungroup size={16} />
-          </button>
-        )}
-        
-        <button
-          onClick={() => setShowLayersPanel()}
-          className={`${styles.toolButton} ${showLayersPanel ? styles.active : ''}`}
-          title="Toggle Layers Panel"
-          aria-label="Toggle Layers Panel"
-        >
-          <Layers size={16} />
-        </button>
-      </div>
-
-      {/* Color Picker - Only show when element supports color */}
-      {canShowColorPicker && (
-        <>
-          <div className={styles.separator} />
-          <div className={`${styles.toolbarGroup} ${styles.colorPickerContainer}`}>
-            <button
-              ref={colorButtonRef}
-              onClick={() => setShowColorPicker(!showColorPicker)}
-              className={`${styles.toolButton} ${showColorPicker ? styles.active : ''}`}
-              title="Colors"
-              aria-label="Choose color"
-              style={{
-                background: selectedElement?.type === 'sticky-note' 
-                  ? selectedElement.backgroundColor || '#FEF7CD'
-                  : ('fill' in selectedElement ? selectedElement.fill : '#3B82F6') || '#3B82F6'
-              }}
-            >
-              <div style={{ 
-                width: 16, 
-                height: 16, 
-                borderRadius: '50%', 
-                background: 'currentColor',
-                border: '2px solid rgba(255,255,255,0.8)'
-              }} />
-            </button>
-            
-            {showColorPicker && selectedElement && (
-              <PortalColorPicker
-                selectedElement={selectedElement}
-                onColorChange={handleColorChange}
-                onClose={() => setShowColorPicker(false)}
-                triggerRef={colorButtonRef as React.RefObject<HTMLElement>}
-              />
-            )}
+        {/* Shapes & Drawing Tools */}
+        <div className={styles.toolbarGroup}>
+          <div className={styles.dropdownContainer}>
+            <ShapesDropdown onToolSelect={handleToolClick} />
           </div>
-        </>
-      )}
+          
+          {drawingTools.map(tool => {
+            const IconComponent = tool.icon;
+            const isActive = selectedTool === tool.id;
+            return (
+              <button
+                key={tool.id}
+                onClick={() => handleToolClick(tool.id)}
+                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                title={tool.name}
+                aria-label={tool.name}
+              >
+                <IconComponent size={16} />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={styles.separator} />
+
+        {/* Action Tools */}
+        <div className={styles.toolbarGroup}>
+          <button
+            onClick={onUndo}
+            className={styles.toolButton}
+            title="Undo"
+            aria-label="Undo"
+          >
+            <Undo2 size={16} />
+          </button>
+          
+          <button
+            onClick={onRedo}
+            className={styles.toolButton}
+            title="Redo"
+            aria-label="Redo"
+          >
+            <Redo2 size={16} />
+          </button>
+          
+          {selectedElementId && (
+            <button
+              onClick={handleDeleteSelected}
+              className={styles.toolButton}
+              title="Delete Selected"
+              aria-label="Delete Selected"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+
+        <div className={styles.separator} />
+
+        {/* Group/Ungroup Tools */}
+        <div className={styles.toolbarGroup}>
+          {canGroup && (
+            <button
+              onClick={handleGroupElements}
+              className={styles.toolButton}
+              title="Group Elements"
+              aria-label="Group Elements"
+            >
+              <Group size={16} />
+            </button>
+          )}
+          
+          {canUngroup && (
+            <button
+              onClick={handleUngroupElements}
+              className={styles.toolButton}
+              title="Ungroup Elements"
+              aria-label="Ungroup Elements"
+            >
+              <Ungroup size={16} />
+            </button>
+          )}
+          
+          <button
+            onClick={() => setShowLayersPanel()}
+            className={`${styles.toolButton} ${showLayersPanel ? styles.active : ''}`}
+            title="Toggle Layers Panel"
+            aria-label="Toggle Layers Panel"
+          >
+            <Layers size={16} />
+          </button>
+        </div>
+
+        {/* Removed duplicate color picker - sticky notes now use inline color picker */}
+      </div>
     </div>
   );
 };

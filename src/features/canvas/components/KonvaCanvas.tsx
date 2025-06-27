@@ -106,6 +106,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   const [isDrawingConnector, setIsDrawingConnector] = React.useState(false);
   const [connectorStart, setConnectorStart] = React.useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
   const [connectorEnd, setConnectorEnd] = React.useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
+  const [isDrawingText, setIsDrawingText] = React.useState(false);
+  const [previewText, setPreviewText] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isDrawingTable, setIsDrawingTable] = React.useState(false);
+  const [previewTable, setPreviewTable] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isDrawingStickyNote, setIsDrawingStickyNote] = React.useState(false);
+  const [previewStickyNote, setPreviewStickyNote] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
   // Calculate drawing preview states from store
   const isDrawingSection = isDrawing && currentTool === 'section';
@@ -178,6 +184,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
           }
         }}
         {...stageConfig}
+        style={{ backgroundColor: 'var(--canvas-bg)' }}
         onWheel={handleStageWheel}
         onTouchMove={handleStageTouch}
         onTouchEnd={handleStageTouch}
@@ -193,6 +200,18 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
           setConnectorEnd={setConnectorEnd}
           isDrawingSection={isDrawingSection}
           previewSection={previewSection}
+          isDrawingText={isDrawingText}
+          setIsDrawingText={setIsDrawingText}
+          previewText={previewText}
+          setPreviewText={setPreviewText}
+          isDrawingTable={isDrawingTable}
+          setIsDrawingTable={setIsDrawingTable}
+          previewTable={previewTable}
+          setPreviewTable={setPreviewTable}
+          isDrawingStickyNote={isDrawingStickyNote}
+          setIsDrawingStickyNote={setIsDrawingStickyNote}
+          previewStickyNote={previewStickyNote}
+          setPreviewStickyNote={setPreviewStickyNote}
         >
           <CanvasLayerManager 
             stageWidth={width}

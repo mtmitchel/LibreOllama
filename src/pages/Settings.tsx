@@ -301,7 +301,7 @@ const Settings: React.FC = () => {
   }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="w-full flex gap-6 p-0"> {/* Removed outer padding, will be handled by Cards */}
+    <div className="w-full flex gap-4 md:gap-6 p-4 md:p-6"> {/* Removed outer padding, will be handled by Cards */}
       {/* Left Navigation */}
       <div className="w-64 flex-shrink-0">
         <Card padding="default"> {/* Changed to default padding */}

@@ -137,7 +137,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
         isSelected={isSelected}
         onSelect={(el) => onElementClick({} as any, el as NonSectionElement)}
         onUpdate={(updates) => onElementUpdate(element.id, updates)}
-        onDragEnd={(e) => onElementDragEnd(e, element.id)}
+        // ARCHITECTURAL FIX: Remove drag handler to centralize in CanvasEventHandler
+        // onDragEnd={(e) => onElementDragEnd(e, element.id)} // DISABLED per Friday Review
         stageRef={{ current: null }}
       />
     );

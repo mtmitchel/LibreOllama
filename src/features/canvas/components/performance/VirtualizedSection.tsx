@@ -112,15 +112,19 @@ export const VirtualizedSection: React.FC<VirtualizedSectionProps> = ({
 }) => {
   const viewportBounds = useCanvasStore(state => state.viewportBounds);
 
-  // If below threshold or forced, render all children normally
+  // ARCHITECTURAL FIX: Remove duplicate rendering system per Friday Review
+  // VirtualizedSection should not bypass main ElementRenderer and viewport culling
   if (children.length <= VIRTUALIZATION_THRESHOLD || forceRender) {
+    // DISABLED: SimpleElementRenderer creates duplicate rendering pathway
+    console.warn('🚨 [VIRTUALIZED SECTION] Duplicate rendering system disabled per Friday Konva Review');
+    console.warn('Elements should render through main ElementRenderer with proper viewport culling');
+    return null; // Disable duplicate rendering
+    
+    /* ORIGINAL DUPLICATE RENDERING CODE DISABLED:
     return (
       <>
         {children.map(child => {
-          // Create a simple renderer component for virtualized section
           const SimpleElementRenderer: React.FC<{ element: CanvasElement }> = ({ element }) => {
-            // For now, use a basic implementation - this would need to be expanded
-            // to use the full renderElement function with proper props
             return (
               <Text
                 key={element.id}
@@ -132,11 +136,11 @@ export const VirtualizedSection: React.FC<VirtualizedSectionProps> = ({
               />
             );
           };
-          
           return <SimpleElementRenderer key={child.id} element={child} />;
         })}
       </>
     );
+    */
   }
 
   // Calculate section bounds with overscan for better UX

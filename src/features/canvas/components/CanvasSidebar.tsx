@@ -6,10 +6,11 @@ import {
   Edit2,
   Copy,
   Search,
+  PanelLeftClose,
+  PanelRightClose
 } from "lucide-react";
 import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
-import { designSystem } from '../../../design-system';
-import '../../../design-system/globals.css';
+import { Button, Input } from "../../../shared/ui";
 
 interface CanvasItem {
   id: string;
@@ -25,7 +26,7 @@ interface CanvasSidebarProps {
   onToggle: () => void;
 }
 
-const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
+const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   const [canvases, setCanvases] = useState<CanvasItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCanvasId, setSelectedCanvasId] = useState<string | null>(null);
@@ -33,37 +34,31 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  // Fixed: Use specific selectors to prevent infinite re-renders
   const elements = useEnhancedStore((state) => state.elements);
   const clearCanvas = useEnhancedStore((state) => state.clearCanvas);
   const addElement = useEnhancedStore((state) => state.addElement);
   const createSection = useEnhancedStore((state) => state.createSection);
 
-  // Load canvases from localStorage on mount
   useEffect(() => {
     loadCanvasesFromStorage();
   }, []);
 
-  // TEMPORARY: Function to clear all canvas localStorage data
   const clearAllCanvasData = () => {
     const confirmed = window.confirm(
       "This will permanently delete ALL canvas data. Are you sure?"
     );
     if (!confirmed) return;
 
-    // Clear all libreollama canvas keys from localStorage
     Object.keys(localStorage).forEach((key) => {
       if (key.startsWith("libreollama_canvas")) {
         localStorage.removeItem(key);
       }
     });
 
-    // Reset state
     setCanvases([]);
     setSelectedCanvasId(null);
     clearCanvas();
 
-    // Create fresh canvas
     const initialCanvas = createNewCanvas();
     setCanvases([initialCanvas]);
     setSelectedCanvasId(initialCanvas.id);
@@ -78,23 +73,19 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
       const parsed = JSON.parse(storedCanvases);
       setCanvases(parsed);
 
-      // Set the first canvas as selected if none selected and no canvas is currently loading
       if (parsed.length > 0 && !selectedCanvasId) {
         const firstCanvas = parsed[0];
         if (firstCanvas) {
           setSelectedCanvasId(firstCanvas.id);
-          // Use setTimeout to prevent infinite loop by deferring the load
           setTimeout(() => {
             loadCanvas(firstCanvas.id);
           }, 0);
         }
       }
     } else {
-      // Create initial canvas if none exist
       const initialCanvas = createNewCanvas();
       setCanvases([initialCanvas]);
       setSelectedCanvasId(initialCanvas.id);
-      // No need to load since it's a new canvas
     }
   }, [selectedCanvasId]);
 
@@ -119,18 +110,15 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
   const saveCurrentCanvas = useCallback(() => {
     if (!selectedCanvasId) return;
 
-    // Export current canvas data
     const canvasData = {
       elements: elements,
     };
 
-    // Save to localStorage with canvas ID
     localStorage.setItem(
       `libreollama_canvas_${selectedCanvasId}`,
       JSON.stringify(canvasData)
     );
 
-    // Update canvas metadata
     const updatedCanvases = canvases.map((canvas) => {
       if (canvas.id === selectedCanvasId) {
         return {
@@ -147,39 +135,29 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
   }, [selectedCanvasId, elements, canvases]);
 
   const loadCanvas = useCallback((canvasId: string) => {
-    // Prevent infinite loops by checking if we're already loading this canvas
     if (selectedCanvasId === canvasId) {
       return;
     }
 
-    // Save current canvas before switching
-    if (selectedCanvasId && selectedCanvasId !== canvasId) {
+    if (selectedCanvasId) {
       saveCurrentCanvas();
     }
 
-    // Load new canvas data
     const canvasData = localStorage.getItem(`libreollama_canvas_${canvasId}`);
     if (canvasData) {
       const parsed = JSON.parse(canvasData);
-      
-      // Clear canvas first
       clearCanvas();
-
-      // Batch the element additions to avoid multiple renders
       if (parsed.elements) {
         Object.values(parsed.elements).forEach((element: any) => {
           addElement(element);
         });
       }
-
-      // Import sections
       if (parsed.sections && createSection) {
         Object.values(parsed.sections).forEach((section: any) => {
           createSection(section.x, section.y, section.width, section.height, section.title);
         });
       }
     } else {
-      // New canvas - clear everything
       clearCanvas();
     }
 
@@ -206,15 +184,12 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
     );
     if (!confirmed) return;
 
-    // Remove from localStorage
     localStorage.removeItem(`libreollama_canvas_${canvasId}`);
 
-    // Update canvases list
     const updatedCanvases = canvases.filter((c) => c.id !== canvasId);
     setCanvases(updatedCanvases);
     saveCanvasesToStorage(updatedCanvases);
 
-    // If deleting current canvas, switch to another
     if (canvasId === selectedCanvasId && updatedCanvases.length > 0) {
       const firstCanvas = updatedCanvases[0];
       if (firstCanvas) {
@@ -234,7 +209,6 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
       name: `${canvasToDuplicate.name} (Copy)`,
     };
 
-    // Copy canvas data
     const originalData = localStorage.getItem(`libreollama_canvas_${canvasId}`);
     if (originalData) {
       localStorage.setItem(`libreollama_canvas_${newCanvas.id}`, originalData);
@@ -292,219 +266,106 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen }) => {
   );
 
   return (
-    <>
-      {/* Sidebar */}
-      <div
-        className={`canvas-sidebar ${isOpen ? "open" : ""}`}
-        style={{
-          backgroundColor: designSystem.colors.secondary[50],
-          borderRight: `1px solid ${designSystem.colors.secondary[200]}`,
-          position: "relative", // Ensure proper positioning context
-          display: isOpen ? "block" : "none", // Hide when closed to prevent unnecessary rendering
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: `${designSystem.spacing.md}px ${designSystem.spacing.lg}px`,
-            borderBottom: `1px solid ${designSystem.colors.secondary[200]}`,
-          }}
-        >
-          <h2
-            style={{
-              fontSize: designSystem.typography.fontSize.lg,
-              fontWeight: designSystem.typography.fontWeight.semibold,
-              color: designSystem.colors.secondary[700],
-            }}
-          >
-            Canvases
-          </h2>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: designSystem.spacing.sm,
-            }}
-          >
-            <button
-              onClick={handleCreateCanvas}
-              style={{
-                background: designSystem.colors.primary[500],
-                color: "white",
-                border: "none",
-                padding: `${designSystem.spacing.xs}px ${designSystem.spacing.sm}px`,
-                borderRadius: designSystem.borderRadius.md,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: designSystem.spacing.xs,
-                transition: "background-color 0.2s ease",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  designSystem.colors.primary[600])
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  designSystem.colors.primary[500])
-              }
-            >
-              <Plus size={16} />
-              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>
-                New
-              </span>
-            </button>
-            <button
-              className="canvas-sidebar-new-btn"
-              onClick={clearAllCanvasData}
-              style={{
-                backgroundColor: designSystem.colors.error[600],
-                color: "#ffffff",
-                fontWeight: designSystem.typography.fontWeight.medium,
-                padding: `${designSystem.spacing.xs}px ${designSystem.spacing.sm}px`,
-                borderRadius: designSystem.borderRadius.md,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: designSystem.spacing.xs,
-                transition: "background-color 0.2s ease",
-                marginLeft: "8px",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  designSystem.colors.error[700])
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  designSystem.colors.error[600])
-              }
-            >
-              <Trash2 size={16} />
-              <span style={{ fontSize: designSystem.typography.fontSize.sm }}>
-                Clear All
-              </span>
-            </button>
+    <aside
+      className={`transition-all duration-300 ease-in-out flex flex-col ${isOpen ? 'w-80' : 'w-0'} overflow-hidden bg-surface/80 border border-border-subtle rounded-lg`}
+      style={{
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      }}
+    >
+        <div className={`flex items-center justify-between p-3 border-b border-border-subtle flex-shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+          <h2 className="text-lg font-semibold text-text-primary">Canvases</h2>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={handleCreateCanvas}>
+              <Plus size={16} className="mr-1.5" />
+              New
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onToggle} className="text-text-secondary">
+              <PanelLeftClose size={20} />
+            </Button>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="canvas-sidebar-search">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search canvases..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              fontFamily: designSystem.typography.fontFamily.sans,
-              fontSize: designSystem.typography.fontSize.sm,
-            }}
-          />
+        <div className={`p-3 flex-shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="relative">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <Input
+              type="text"
+              placeholder="Search canvases..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full"
+            />
+          </div>
         </div>
 
-        {/* Canvas List */}
-        <div className="canvas-sidebar-list">
-          {filteredCanvases.map((canvas) => (
-            <div
-              key={canvas.id}
-              className={`canvas-sidebar-item ${
-                selectedCanvasId === canvas.id ? "selected" : ""
-              }`}
-              onClick={() => loadCanvas(canvas.id)}
-              style={{
-                backgroundColor:
-                  selectedCanvasId === canvas.id
-                    ? designSystem.colors.primary[100]
-                    : "transparent",
-              }}
-            >
-              {/* Thumbnail or placeholder */}
-              <div className="canvas-sidebar-thumbnail">
-                {canvas.thumbnail ? (
-                  <img src={canvas.thumbnail} alt={canvas.name} />
-                ) : (
-                  <div className="canvas-sidebar-placeholder">
-                    <div className="placeholder-grid">
-                      <div></div>
-                      <div></div>
-                      <div></div>
-                      <div></div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Canvas info */}
-              <div className="canvas-sidebar-info">
-                {editingId === canvas.id ? (
-                  <input
-                    type="text"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={handleSaveRename}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSaveRename();
-                      if (e.key === "Escape") {
-                        setEditingId(null);
-                        setEditingName("");
-                      }
+        <div className={`flex-1 overflow-y-auto px-3 pb-3 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="space-y-1">
+            {filteredCanvases.map((canvas) => (
+              <div
+                key={canvas.id}
+                className={`group flex items-center p-2 rounded-md cursor-pointer transition-colors ${
+                  selectedCanvasId === canvas.id ? "bg-accent-soft" : "hover:bg-bg-secondary"
+                }`}
+                onClick={() => loadCanvas(canvas.id)}
+              >
+                <div className="flex-shrink-0 w-10 h-10 bg-bg-tertiary rounded-md mr-3 flex items-center justify-center">
+                  <div className="w-6 h-6 bg-bg-surface rounded-sm"></div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  {editingId === canvas.id ? (
+                    <Input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={handleSaveRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveRename();
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-8 text-sm"
+                    />
+                  ) : (
+                    <h4 className="font-medium text-sm text-text-primary truncate">{canvas.name}</h4>
+                  )}
+                  <p className="text-xs text-text-secondary truncate">
+                    {formatDate(canvas.updatedAt)} • {canvas.elementCount} elements
+                  </p>
+                </div>
+                <div className="relative ml-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-text-secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenId(menuOpenId === canvas.id ? null : canvas.id);
                     }}
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                    className="canvas-rename-input"
-                  />
-                ) : (
-                  <h4>{canvas.name}</h4>
-                )}
-                <div className="canvas-sidebar-meta">
-                  <span>{formatDate(canvas.updatedAt)}</span>
-                  <span>•</span>
-                  <span>{canvas.elementCount} elements</span>
+                  >
+                    <MoreVertical size={16} />
+                  </Button>
+                  {menuOpenId === canvas.id && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-bg-elevated border border-border-subtle rounded-lg shadow-lg z-10 py-1">
+                      <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => handleRenameCanvas(canvas.id)}>
+                        <Edit2 size={14} className="mr-2" /> Rename
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => handleDuplicateCanvas(canvas.id)}>
+                        <Copy size={14} className="mr-2" /> Duplicate
+                      </Button>
+                      <div className="my-1 h-px bg-border-subtle"></div>
+                      <Button variant="ghost" className="w-full justify-start text-sm text-error hover:text-error hover:bg-error/10" onClick={() => handleDeleteCanvas(canvas.id)}>
+                        <Trash2 size={14} className="mr-2" /> Delete
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Actions menu */}
-              <div className="canvas-sidebar-actions">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpenId(menuOpenId === canvas.id ? null : canvas.id);
-                  }}
-                  className="canvas-actions-btn"
-                >
-                  <MoreVertical size={16} />
-                </button>
-
-                {menuOpenId === canvas.id && (
-                  <div className="canvas-actions-menu">
-                    <button onClick={() => handleRenameCanvas(canvas.id)}>
-                      <Edit2 size={14} />
-                      Rename
-                    </button>
-                    <button onClick={() => handleDuplicateCanvas(canvas.id)}>
-                      <Copy size={14} />
-                      Duplicate
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCanvas(canvas.id)}
-                      className="danger"
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    </>
+    </aside>
   );
 };
-
-export default CanvasSidebar;
-
+  export default CanvasSidebar;

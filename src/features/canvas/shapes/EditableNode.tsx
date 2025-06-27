@@ -130,7 +130,8 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           isEditing={false} // Will be managed by parent
           isDraggable={isDraggable}
           onSelect={(_, e) => onElementClick(e, element)}
-          onDragEnd={(e) => onElementDragEnd(e, element.id)}
+          // FIXED: Add no-op onDragEnd to satisfy interface while centralizing event handling
+          onDragEnd={() => {/* Handled by centralized event system */}}
           onDoubleClick={(e) => {
             e.cancelBubble = true;
             onStartTextEdit(element.id);
@@ -232,7 +233,8 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           isSelected={isSelected}
           onSelect={(element) => onElementClick({} as any, element)}
           onUpdate={(updates) => onElementUpdate(element.id, updates)}
-          onDragEnd={(e) => onElementDragEnd(e, element.id)}
+          // ARCHITECTURAL FIX: Remove drag handler to centralize in CanvasEventHandler
+          // onDragEnd={(e) => onElementDragEnd(e, element.id)} // DISABLED per Friday Review
           stageRef={{ current: null }} // Will be passed from parent
         />
       );

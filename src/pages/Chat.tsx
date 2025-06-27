@@ -120,7 +120,7 @@ export function Chat() {
   const selectedChat = conversations.find(c => c.id === selectedChatId);
 
   return (
-    <div className="w-full h-full flex gap-4">
+    <div className="w-full h-full flex gap-4 md:gap-6 p-4 md:p-6">
       {/* SIDEBAR: CONVERSATION LIST */}
       {isConvoListOpen && (
         <ConversationList

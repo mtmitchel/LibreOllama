@@ -131,8 +131,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
       onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id),
       opacity: 1,
-      stroke: isSelected ? designSystem.colors.primary[500] : (element as any).stroke,
-      strokeWidth: isSelected ? (((element as any).strokeWidth || 1) + 1.5) : ((element as any).strokeWidth || 1),
+      stroke: isSelected ? designSystem.colors.primary[500] : ('stroke' in element ? element.stroke : undefined),
+      strokeWidth: isSelected ? ((('strokeWidth' in element ? element.strokeWidth : undefined) || 1) + 1.5) : (('strokeWidth' in element ? element.strokeWidth : undefined) || 1),
       shadowColor: isSelected ? designSystem.colors.primary[300] : undefined,
       shadowBlur: isSelected ? 10 : 0,
       shadowOpacity: isSelected ? 0.7 : 0,
@@ -180,12 +180,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
           <KonvaErrorBoundary key={`${element.id}-sticky-boundary`}>
             <StickyNoteShape
               key={element.id}
-              element={element as any}
+              element={element}
               konvaProps={konvaElementProps}
-              onUpdate={onElementUpdate as any}
+              onUpdate={onElementUpdate}
               stageRef={stageRef}
               isSelected={isSelected}
-              onStartTextEdit={onStartTextEdit as any}
+              onStartTextEdit={onStartTextEdit}
             />
           </KonvaErrorBoundary>
         );
@@ -284,13 +284,14 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onUpdate={(updates) => {
                 onElementUpdate(element.id, updates as Partial<CanvasElement>);
               }}
-              onDragEnd={(e) => onElementDragEnd(e, element.id)}
+              // ARCHITECTURAL FIX: Remove drag handler to centralize in CanvasEventHandler
+              // onDragEnd={(e) => onElementDragEnd(e, element.id)} // DISABLED per Friday Review
               stageRef={stageRef || { current: null }}
             />
           </KonvaErrorBoundary>
         );
       default:
-        console.warn('Unhandled element type in MainLayer:', (element as any).type);
+        console.warn('Unhandled element type in MainLayer:', element.type);
         return null;
     }
   }, [selectedElementIds, selectedTool, onElementClick, onElementDragEnd, onElementUpdate, onStartTextEdit, onSectionResize, stageRef, elementsMap, elementsBySection, getSection, createDragBoundFunc]);

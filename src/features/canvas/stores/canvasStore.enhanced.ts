@@ -65,6 +65,7 @@ export interface CanvasStoreState extends
   // INSIGHTS FROM TESTS: Additional convenience methods
   setSelectedTool: (tool: string) => void;
   deleteSelectedElements: () => void;
+  setStickyNoteColor: (color: string) => void;
 }
 
 // Store factory function for lazy initialization
@@ -98,6 +99,12 @@ export const createEnhancedCanvasStore = () => {
           ...snappingSlice,
         };
 
+        // ARCHITECTURAL FIX: Wire store accessor to prevent state duplication
+        // Set up element store accessor for selection store
+        if (combinedState.getElementsFromStore === undefined) {
+          combinedState.getElementsFromStore = () => combinedState.elements;
+        }
+        
         // Return combined store with enhanced methods
         return {
           ...combinedState,
@@ -487,9 +494,13 @@ export const createEnhancedCanvasStore = () => {
 
           // Convenience methods required by interface
           setSelectedTool: (tool: string) => {
+            console.log('🔧 [ENHANCED STORE] setSelectedTool called with:', tool);
             const currentState = get();
             if (currentState.setActiveTool) {
               currentState.setActiveTool(tool);
+              console.log('✅ [ENHANCED STORE] Tool delegated to setActiveTool');
+            } else {
+              console.error('❌ [ENHANCED STORE] setActiveTool method not found in current state');
             }
           },
 
@@ -501,6 +512,18 @@ export const createEnhancedCanvasStore = () => {
               currentState.deleteElements ? currentState.deleteElements(selectedIds) : null;
               currentState.clearSelection ? currentState.clearSelection() : null;
             }
+          },
+
+          setStickyNoteColor: (color: string) => {
+            console.log('🔧 [ENHANCED STORE] setStickyNoteColor delegating to UI store:', color);
+            // FIXED: Delegate to UI store slice method directly
+            set((state: Draft<CanvasStoreState>) => {
+              if (!state.toolSettings.stickyNote) {
+                state.toolSettings.stickyNote = { backgroundColor: '#FFE299' };
+              }
+              state.toolSettings.stickyNote.backgroundColor = color;
+              console.log('✅ [ENHANCED STORE] Sticky note color set to:', color);
+            });
           },
         };
         }

@@ -102,7 +102,7 @@ const Agents: React.FC = () => {
   }, [newHeaderProps, setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="w-full">
+    <div className="w-full p-4 md:p-6">
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredAgents.map((agent) => (

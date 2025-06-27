@@ -89,7 +89,15 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   
   const [selectionBox, setSelectionBox] = React.useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
 
+  // DISABLED: Duplicate element creation system that conflicts with CanvasEventHandler
+  // This violates the Friday Konva review's "store-first architecture" principle
+  // All element creation must go through CanvasEventHandler -> Enhanced Store pipeline
   const handleCanvasElementCreation = (pos: { x: number; y: number }) => {
+    console.warn('❌ [CANVAS LAYER MANAGER] handleCanvasElementCreation called - this should be disabled');
+    console.warn('❌ Element creation should go through CanvasEventHandler -> Enhanced Store pipeline');
+    return; // DISABLED to prevent race conditions
+    
+    /* ORIGINAL CODE COMMENTED OUT TO PREVENT CONFLICTS:
     const now = Date.now();
     const generateId = (): ElementId => `element_${now}_${Math.random().toString(36).substr(2, 9)}` as ElementId;
     
@@ -223,6 +231,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       selectElement(newElement.id as ElementId);
       setSelectedTool('select');
     }
+    */
   };
 
   const allElementsArray: CanvasElement[] = useMemo(() => {
@@ -336,10 +345,12 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
     
-    if (['rectangle', 'circle', 'triangle', 'star', 'text', 'sticky-note'].includes(selectedTool)) {
-      handleCanvasElementCreation(pos);
-      return;
-    }
+    // DISABLED: Conflicting with CanvasEventHandler's draw-to-size workflow
+    // The CanvasEventHandler should be the single source of truth for element creation
+    // if (['rectangle', 'circle', 'triangle', 'star', 'text', 'sticky-note'].includes(selectedTool)) {
+    //   handleCanvasElementCreation(pos);
+    //   return;
+    // }
     
     if (selectedTool === 'pen' || selectedTool === 'pencil') {
       e.evt.preventDefault();

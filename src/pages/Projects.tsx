@@ -401,7 +401,7 @@ export function Projects() {
   }, {} as Record<string, Project[]>);
 
   return (
-    <div className="flex h-full gap-8">
+    <div className="flex h-full gap-4 md:gap-6 p-4 md:p-6">
       {/* === Left Panel: Project List === */}
       <aside className="w-1/3 max-w-sm flex flex-col">
         <div className="flex justify-between items-center mb-4">

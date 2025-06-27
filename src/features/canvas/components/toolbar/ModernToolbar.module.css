@@ -1,200 +1,163 @@
-/* Modern Bottom-Center Floating Toolbar (FigJam-style) */
+.toolbarContainer {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none; /* Allow clicks to pass through the container */
+}
 
 .modernToolbar {
-  /* Fixed positioning to prevent viewport jumping */
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  
-  /* Floating island design */
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 16px;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  
-  /* Compact horizontal layout */
+  pointer-events: auto; /* Re-enable pointer events for the toolbar itself */
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  
-  /* Smooth animations */
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Prevent layout shift */
-  pointer-events: auto;
+  gap: 0.375rem; /* 6px */
+  padding: 0.5rem; /* 8px */
+  background-color: hsl(224, 27%, 15%); /* Corresponds to bg-surface or similar dark theme color */
+  border: 1px solid hsl(224, 14%, 25%); /* Corresponds to border-border-subtle */
+  border-radius: 0.875rem; /* 14px - more rounded like Figma */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease-in-out;
 }
 
-.modernToolbar:hover {
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.12),
-    0 4px 12px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .modernToolbar {
-    background: rgba(31, 41, 55, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.3),
-      0 2px 8px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-  
-  .modernToolbar:hover {
-    box-shadow: 
-      0 12px 40px rgba(0, 0, 0, 0.4),
-      0 4px 12px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  }
-}
-
-/* Toolbar groups with refined spacing */
 .toolbarGroup {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 6px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid transparent;
-  transition: all 0.15s ease;
+  gap: 0.25rem; /* 4px */
 }
 
-.toolbarGroup:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-@media (prefers-color-scheme: dark) {
-  .toolbarGroup {
-    background: rgba(255, 255, 255, 0.04);
-  }
-  
-  .toolbarGroup:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
-/* Modern tool buttons */
 .toolButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 2.25rem; /* 36px */
+  height: 2.25rem; /* 36px */
+  background-color: transparent;
   border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #374151;
+  border-radius: 0.5rem; /* 8px */
+  color: hsl(210, 10%, 62%); /* text-text-secondary */
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   position: relative;
-  outline: none;
 }
 
 .toolButton:hover {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
-  transform: translateY(-1px);
-}
-
-.toolButton:active {
-  transform: translateY(0);
+  background-color: hsl(224, 27%, 20%); /* A slightly lighter surface color */
+  color: hsl(210, 40%, 98%); /* text-text-primary */
 }
 
 .toolButton.active {
-  background: #2563eb;
+  background-color: hsl(221, 83%, 53%); /* primary color */
   color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 0 0 1px hsl(221, 83%, 53%), 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.toolButton.active:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
-}
-
-@media (prefers-color-scheme: dark) {
-  .toolButton {
-    color: #e5e7eb;
-  }
-  
-  .toolButton:hover {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-  }
-  
-  .toolButton.active {
-    background: #3b82f6;
-    color: white;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-  }
-}
-
-/* Separator between tool groups */
 .separator {
   width: 1px;
-  height: 24px;
-  background: rgba(0, 0, 0, 0.1);
-  margin: 0 4px;
+  height: 1.5rem; /* 24px */
+  background-color: hsl(224, 14%, 25%); /* border-border-subtle */
 }
 
-@media (prefers-color-scheme: dark) {
-  .separator {
-    background: rgba(255, 255, 255, 0.1);
-  }
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-  .modernToolbar {
-    bottom: 16px;
-    padding: 10px 16px;
-    gap: 6px;
-  }
-  
-  .toolButton {
-    width: 32px;
-    height: 32px;
-  }
-  
-  .toolbarGroup {
-    padding: 4px;
-    gap: 1px;
-  }
-}
-
-/* Animation for toolbar appearance */
-@keyframes toolbarSlideUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-.modernToolbar {
-  animation: toolbarSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Special styling for dropdown containers */
-.dropdownContainer {
+.dropdownContainer, .toolContainer {
   position: relative;
 }
 
-/* Color picker special styling */
+.stickyColorBar {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  display: flex;
+  gap: 4px;
+  padding: 0.5rem;
+  background-color: hsl(224, 27%, 15%);
+  border: 1px solid hsl(224, 14%, 25%);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+}
+
+.colorButton {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid white;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.colorButton:hover {
+  transform: scale(1.1);
+}
+
 .colorPickerContainer {
   position: relative;
-  z-index: 1001;
+}
+
+.shapesDropdownContent {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  background-color: hsl(224, 27%, 15%);
+  border: 1px solid hsl(224, 14%, 25%);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 10;
+  width: 200px;
+  min-width: 180px;
+}
+
+.shapesDropdownSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shapesDropdownHeader {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: hsl(210, 10%, 62%);
+  padding: 0.25rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.shapesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.25rem;
+}
+
+.shapesDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem;
+  background-color: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  color: hsl(210, 10%, 62%);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.shapesDropdownItem:hover {
+  background-color: hsl(224, 27%, 20%);
+  color: hsl(210, 40%, 98%);
+}
+
+.shapesDropdownItem.active {
+  background-color: hsl(221, 83%, 53%);
+  color: white;
 }
