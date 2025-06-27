@@ -498,7 +498,8 @@ export const useUnifiedCanvasStore = create<UnifiedCanvasState & UnifiedCanvasAc
             height,
             title: 'New Section',
             backgroundColor: '#f8f9fa',
-            borderColor: '#dee2e6'
+            borderColor: '#dee2e6',
+            childElementIds: []
           };
           
           set((draft) => {
@@ -582,4 +583,4 @@ export const canvasSelectors = {
   canRedo: (state: UnifiedCanvasState) => state.currentHistoryIndex < state.history.length - 1
 };
 
-logger.info('[UnifiedCanvasStore] Store architecture initialized - Phase 4 complete');
+logger.log('[UnifiedCanvasStore] Store architecture initialized - Phase 4 complete');
