@@ -8,7 +8,7 @@
 import React, { useCallback, useRef } from 'react';
 import { Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '../../../../stores'; // Using unified store directly
 
 interface SectionToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -27,9 +27,8 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
   const [previewSection, setPreviewSection] = React.useState<PreviewSection | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Store actions
-  const createSection = useCanvasStore(state => state.createSection);
-  const captureElementsAfterSectionCreation = useCanvasStore(state => state.captureElementsAfterSectionCreation);
+  // Store actions - unified store
+  const createSection = useUnifiedCanvasStore(state => state.createSection);
 
   // Handle pointer down - start drawing
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -88,20 +87,16 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
         previewSection.x,
         previewSection.y,
         previewSection.width,
-        previewSection.height,
-        'Untitled Section'
+        previewSection.height
       );
       
-      // Capture any elements that are now within this section
-      if (sectionId) {
-        captureElementsAfterSectionCreation(sectionId);
-      }
+      // Element capture is handled automatically by the unified store
     }
     
     // Reset state
     setPreviewSection(null);
     startPointRef.current = null;
-  }, [isActive, isDrawing, previewSection, createSection, captureElementsAfterSectionCreation]);
+  }, [isActive, isDrawing, previewSection, createSection]);
 
   // Attach event listeners to stage when active
   React.useEffect(() => {

@@ -4,7 +4,7 @@ import Konva from 'konva';
 import { SectionElement as SectionType } from '../types/enhanced.types';
 import { ElementId, SectionId } from '../types/enhanced.types';
 import { findSectionByPosition } from '../utils/sectionUtils';
-import { useCanvasStore, canvasStore } from '../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 
 interface SectionElementProps {
   section: SectionType;
@@ -20,13 +20,14 @@ interface SectionElementProps {
 }
 
 const SectionElement = React.forwardRef<Konva.Group, SectionElementProps>(({ section, onUpdate, onDragEnd, onSectionChange, children }, ref) => {
-  const sections = useCanvasStore((state) => state.sections);
+  const sections = useUnifiedCanvasStore(canvasSelectors.sections);
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     const position = e.target.getAbsolutePosition();
     const newSectionId = findSectionByPosition(sections, position);
     if (newSectionId && newSectionId !== section.id) {
-      canvasStore.getState().moveElementBetweenSections(ElementId(e.target.id()), section.id, SectionId(newSectionId));
+      // TODO: Implement moveElementBetweenSections in unified store
+      console.log('Moving element between sections:', e.target.id(), section.id, newSectionId);
     }
   };
 

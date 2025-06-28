@@ -22,6 +22,8 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   isSelected,
   konvaProps
 }) => {
+  console.log('🟨 [RectangleShape] Rendering rectangle:', element.id, { element, isSelected, konvaProps });
+  
   // Apply shape caching for large rectangles or when they have both fill and stroke
   const shouldCache = ((element.width || 100) * (element.height || 100) > 10000) || 
                      !!(element.fill && element.stroke);
@@ -35,24 +37,30 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     },
     dependencies: [element.fill, element.stroke, element.width, element.height, isSelected]
   });
+  // TEMPORARY: Bypass caching for debugging
+  const finalProps = {
+    ...konvaProps,
+    id: element.id,
+    x: element.x,
+    y: element.y,
+    width: element.width || 100,
+    height: element.height || 100,
+    rotation: element.rotation || 0,
+    fill: element.fill || designSystem.colors.primary[100],
+    stroke: isSelected ? designSystem.colors.primary[500] : (element.stroke || '#333333'),
+    strokeWidth: isSelected ? 2 : (element.strokeWidth || 1),
+    cornerRadius: designSystem.borderRadius.md,
+    perfectDrawEnabled: false,
+    shadowForStrokeEnabled: false,
+    listening: true
+  };
+  
+  console.log('🟨 [RectangleShape] Final props for Rect:', finalProps);
+  
   return (
     <Rect
-      {...konvaProps}
+      {...finalProps}
       ref={nodeRef as React.RefObject<Konva.Rect>}
-      id={element.id}
-      x={element.x}
-      y={element.y}
-      width={element.width || 100}
-      height={element.height || 100}
-      rotation={element.rotation || 0}
-      fill={element.fill || designSystem.colors.primary[100]}
-      stroke={isSelected ? designSystem.colors.primary[500] : (element.stroke || '')}
-      strokeWidth={isSelected ? 2 : (element.strokeWidth || 0)}
-      cornerRadius={designSystem.borderRadius.md}
-      // Konva performance optimizations
-      perfectDrawEnabled={false} // Disable perfect drawing for fill+stroke rectangles
-      shadowForStrokeEnabled={false} // Disable shadow for stroke to prevent extra rendering pass
-      listening={true} // Keep listening enabled for interactive rectangles
     />
   );
 });

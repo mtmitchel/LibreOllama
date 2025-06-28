@@ -1,6 +1,6 @@
 // src/hooks/useKeyboardShortcuts.ts
 import { useEffect } from 'react';
-import { useCanvasStore } from '../features/canvas/stores/canvasStore.enhanced';
+import { useCanvasStore } from '../stores';
 import { ElementId } from '../features/canvas/types/enhanced.types';
 
 export const useKeyboardShortcuts = () => {
@@ -8,11 +8,32 @@ export const useKeyboardShortcuts = () => {
   const redo = useCanvasStore((state) => state.redo);
   const canUndo = useCanvasStore((state) => state.canUndo);
   const canRedo = useCanvasStore((state) => state.canRedo);
-  const deleteElements = useCanvasStore((state) => state.deleteElements);
-  const duplicateElement = useCanvasStore((state) => state.duplicateElement);
+  const deleteElement = useCanvasStore((state) => state.deleteElement);
+  const addElement = useCanvasStore((state) => state.addElement);
+  const getElementById = useCanvasStore((state) => state.getElementById);
   const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
   const clearSelection = useCanvasStore((state) => state.clearSelection);
   const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
+
+  // Helper function to delete multiple elements
+  const deleteElements = (ids: ElementId[]) => {
+    ids.forEach(id => deleteElement(id));
+  };
+
+  // Helper function to duplicate an element (simplified implementation)
+  const duplicateElement = (id: ElementId) => {
+    const element = getElementById(id);
+    if (element) {
+      const newElement = {
+        ...element,
+        id: `${element.id}-copy-${Date.now()}` as ElementId,
+        x: element.x + 20,
+        y: element.y + 20,
+        updatedAt: Date.now()
+      };
+      addElement(newElement);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -31,15 +52,15 @@ export const useKeyboardShortcuts = () => {
         switch (e.key.toLowerCase()) {
           case 'z':
             e.preventDefault();
-            if (e.shiftKey && canRedo()) {
+            if (e.shiftKey && canRedo) {
               redo();
-            } else if (canUndo()) {
+            } else if (canUndo) {
               undo();
             }
             break;
           case 'y':
             e.preventDefault();
-            if (canRedo()) {
+            if (canRedo) {
               redo();
             }
             break;

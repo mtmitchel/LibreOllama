@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Text } from 'react-konva';
 import { SectionElement, CanvasElement, isPenElement } from '../../types/enhanced.types';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useCanvasStore } from '../../../../stores';
 
 interface VirtualizedSectionProps {
   section: SectionElement;

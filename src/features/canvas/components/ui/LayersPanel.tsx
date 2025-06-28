@@ -1,10 +1,25 @@
 // src/features/canvas/components/ui/LayersPanel.tsx
 import React, { useState } from 'react';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '../../../../stores';
 import { Layer } from '../../stores/slices/layerStore';
 
 export const LayersPanel: React.FC = () => {
-  const { layers, layerActions } = useCanvasStore((state) => state);
+  // Simplified layers for unified store - TODO: implement full layer system
+  const layers: Layer[] = [];
+  const layerActions = {
+    moveLayer: (fromIndex: number, toIndex: number) => {
+      console.log('🔄 [LayersPanel] Moving layer from', fromIndex, 'to', toIndex);
+      // TODO: Implement in unified store
+    },
+    toggleLayerVisibility: (layerId: string) => {
+      console.log('👁️ [LayersPanel] Toggling visibility for layer:', layerId);
+      // TODO: Implement in unified store
+    },
+    setLayerLocked: (layerId: string, locked: boolean) => {
+      console.log('🔒 [LayersPanel] Setting layer lock:', layerId, locked);
+      // TODO: Implement in unified store
+    }
+  };
   const [draggedLayer, setDraggedLayer] = useState<Layer | null>(null);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, layer: Layer) => {

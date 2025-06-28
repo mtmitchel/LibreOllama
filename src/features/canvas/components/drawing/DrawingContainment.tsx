@@ -7,8 +7,7 @@
 import React from 'react';
 import { Group, Line } from 'react-konva';
 import Konva from 'konva';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
-import { useShallow } from 'zustand/react/shallow';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../../stores';
 
 interface DrawingContainmentProps {
   stageRef: React.MutableRefObject<Konva.Stage | null>;
@@ -20,13 +19,9 @@ export const DrawingContainment: React.FC<DrawingContainmentProps> = ({
   isDrawing, 
   currentTool 
 }) => {
-  // Get drawing state from store
-  const { currentPath, selectedTool } = useCanvasStore(
-    useShallow((state) => ({
-      currentPath: state.currentPath,
-      selectedTool: state.selectedTool
-    }))
-  );
+  // Get drawing state from unified store
+  const currentPath = useUnifiedCanvasStore((state) => state.currentPath);
+  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
 
   // Debug logging
   React.useEffect(() => {
@@ -34,14 +29,14 @@ export const DrawingContainment: React.FC<DrawingContainmentProps> = ({
       isDrawing,
       currentTool,
       selectedTool,
-      pathLength: currentPath?.length || 0,
-      firstPoints: currentPath?.slice(0, 4) || []
+      pathLength: Array.isArray(currentPath) ? currentPath.length : 0,
+      firstPoints: Array.isArray(currentPath) ? currentPath.slice(0, 4) : []
     });
   }, [isDrawing, currentTool, selectedTool, currentPath]);
 
   // Don't render anything if not actively drawing with a pen/pencil tool
   const isPenTool = selectedTool === 'pen' || selectedTool === 'pencil';
-  if (!isDrawing || !isPenTool || !currentPath || currentPath.length < 2) {
+  if (!isDrawing || !isPenTool || !Array.isArray(currentPath) || currentPath.length < 2) {
     return null;
   }
 

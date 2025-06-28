@@ -8,7 +8,7 @@
 import React, { useCallback, useRef } from 'react';
 import { Line } from 'react-konva';
 import Konva from 'konva';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '../../../../stores'; // Using unified store directly
 
 interface PenToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -18,12 +18,12 @@ interface PenToolProps {
 export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
   const isDrawingRef = useRef(false);
 
-  // Store selectors and actions
-  const isDrawingStore = useCanvasStore(state => state.isDrawing);
-  const currentPath = useCanvasStore(state => state.currentPath);
-  const startDrawing = useCanvasStore(state => state.startDrawing);
-  const updateDrawing = useCanvasStore(state => state.updateDrawing);
-  const finishDrawing = useCanvasStore(state => state.finishDrawing);
+  // Store selectors and actions - unified store
+  const isDrawingStore = useUnifiedCanvasStore(state => state.isDrawing);
+  const currentPath = useUnifiedCanvasStore(state => state.currentPath);
+  const startDrawing = useUnifiedCanvasStore(state => state.startDrawing);
+  const updateDrawing = useUnifiedCanvasStore(state => state.updateDrawing);
+  const finishDrawing = useUnifiedCanvasStore(state => state.endDrawing); // Unified store uses endDrawing
 
   // Handle pointer down - start drawing
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -38,7 +38,7 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
 
     isDrawingRef.current = true;
     console.log('🖊️ [PenTool] Starting drawing at:', pointer);
-    startDrawing(pointer.x, pointer.y, 'pen');
+    startDrawing('pen', [pointer.x, pointer.y]);
   }, [isActive, stageRef, startDrawing]);
 
   // Handle pointer move - update drawing
@@ -50,7 +50,7 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     if (!pointer) return;
 
     console.log('🖊️ [PenTool] Updating drawing at:', pointer);
-    updateDrawing(pointer.x, pointer.y);
+    updateDrawing([pointer.x, pointer.y]);
   }, [isActive, stageRef, updateDrawing]);
 
   // Handle pointer up - finish drawing

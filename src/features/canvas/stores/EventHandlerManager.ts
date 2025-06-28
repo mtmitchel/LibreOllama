@@ -56,6 +56,7 @@ export function createEventHandlerManager(
     clearSelection: () => void;
     setTextEditingElement: (id: ElementId | null) => void;
     addToHistory: (operation: string) => void;
+    createElement: (type: string, position: { x: number; y: number }) => void;
   }
 ): EventHandlerManager {
   
@@ -169,9 +170,48 @@ export function createEventHandlerManager(
     handleCanvasClick: (e: Konva.KonvaEventObject<MouseEvent>) => {
       logger.debug('[EventHandlerManager] Canvas clicked');
       
-      // Only clear selection if we didn't click on an element
-      if (e.target === e.target.getStage()) {
+      // Only process if we clicked on the stage (not an element)
+      if (e.target !== e.target.getStage()) {
+        return;
+      }
+      
+      const stage = e.target.getStage();
+      const position = stage?.getPointerPosition();
+      
+      if (!stage || !position) {
         storeAPI.clearSelection();
+        return;
+      }
+      
+      const state = storeAPI.getState();
+      const currentTool = state.selectedTool;
+      
+      logger.debug(`[EventHandlerManager] Creating element with tool: ${currentTool} at:`, position);
+      
+      // Create element based on selected tool
+      switch (currentTool) {
+        case 'text':
+          storeAPI.createElement('text', position);
+          break;
+        case 'sticky-note':
+          storeAPI.createElement('sticky-note', position);
+          break;
+        case 'rectangle':
+          storeAPI.createElement('rectangle', position);
+          break;
+        case 'circle':
+          storeAPI.createElement('circle', position);
+          break;
+        case 'section':
+          storeAPI.createElement('section', position);
+          break;
+        case 'table':
+          storeAPI.createElement('table', position);
+          break;
+        default:
+          // For select tool or unknown tools, just clear selection
+          storeAPI.clearSelection();
+          break;
       }
     },
 

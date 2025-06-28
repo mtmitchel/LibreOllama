@@ -13,7 +13,7 @@ import { TransformerManager } from '../components/TransformerManager';
 import { DrawingContainment } from '../components/drawing/DrawingContainment';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores'; // Using unified store
 import { Line } from 'react-konva';
 import { Layer as LayerData } from '../stores/slices/layerStore';
 import { CanvasElement, ElementId, SectionElement as SectionElementType, SectionId, isSectionElement, ConnectorElement } from '../types/enhanced.types';
@@ -59,30 +59,38 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   elements,
   selectedElementIds,
 }) => {
-  const useGroupedSections = enhancedFeatureFlagManager.getFlag('grouped-section-rendering');
+  const useGroupedSections = false; // TEMP: Force disable to use MainLayer
+  console.log('🎛️ [CanvasLayerManager] useGroupedSections:', useGroupedSections);
   const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
   
   // Split selectors to prevent infinite loop
-  const clearSelection = useCanvasStore((state) => state.clearSelection);
-  const selectMultipleElements = useCanvasStore((state) => state.selectMultipleElements);
-  const selectElement = useCanvasStore((state) => state.selectElement);
-  const selectedTool = useCanvasStore((state) => state.selectedTool);
-  const hoveredSnapPoint = useCanvasStore((state) => state.hoveredSnapPoint);
-  const zoom = useCanvasStore((state) => state.zoom);
-  const pan = useCanvasStore((state) => state.pan);
-  const updateSection = useCanvasStore((state) => state.updateSection);
-  const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
-  const addElement = useCanvasStore((state) => state.addElement);
-  const addElementToSection = useCanvasStore((state) => state.addElementToSection);
-  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
-  const storeIsDrawing = useCanvasStore((state) => state.isDrawing);
-  const startDrawing = useCanvasStore((state) => state.startDrawing);
-  const updateDrawing = useCanvasStore((state) => state.updateDrawing);
-  const finishDrawing = useCanvasStore((state) => state.finishDrawing);
-  const currentPath = useCanvasStore((state) => state.currentPath);
-  const sections = useCanvasStore((state) => state.sections);
-  const captureElementsAfterSectionCreation = useCanvasStore((state) => state.captureElementsAfterSectionCreation);
-  const layers = useCanvasStore((state) => state.layers);
+  // Selection-related functions from unified store
+  const clearSelection = useUnifiedCanvasStore(state => state.clearSelection);
+  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
+  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  // All store access migrated to unified store
+  const hoveredSnapPoint = null; // TODO: Implement in unified store
+  const zoom = useUnifiedCanvasStore(state => state.viewport.scale);
+  const panX = useUnifiedCanvasStore(state => state.viewport.x);
+  const panY = useUnifiedCanvasStore(state => state.viewport.y);
+  const updateSection = useUnifiedCanvasStore(state => state.updateSection);
+  const addHistoryEntry = useUnifiedCanvasStore(state => state.addToHistory);
+  const addElement = useUnifiedCanvasStore(state => state.addElement);
+  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  const storeIsDrawing = useUnifiedCanvasStore(state => state.isDrawing);
+  const startDrawing = useUnifiedCanvasStore(state => state.startDrawing);
+  // Use unified store with proper selectors
+  const updateDrawing = useUnifiedCanvasStore(state => state.updateDrawing);
+  const finishDrawing = useUnifiedCanvasStore(state => state.endDrawing); // Unified store uses endDrawing
+  const currentPath = useUnifiedCanvasStore(state => state.currentPath);
+  const sections = useUnifiedCanvasStore(state => state.sections);
+  // TEMP FIX: Create basic layers configuration since unified store doesn't have it yet
+  const layers = new Map([
+    ['background', { id: 'background', visible: true, zIndex: 0 }],
+    ['main', { id: 'main', visible: true, zIndex: 1 }],
+    ['connector', { id: 'connector', visible: true, zIndex: 2 }],
+    ['ui', { id: 'ui', visible: true, zIndex: 3 }]
+  ]);
 
   const stage = stageRef.current;
   const stageSize = stage ? { width: stage.width(), height: stage.height() } : { width: 0, height: 0 };
@@ -235,13 +243,15 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   };
 
   const allElementsArray: CanvasElement[] = useMemo(() => {
-    return Array.from(elements.values());
+    const elementsArray = Array.from(elements.values());
+    console.log('🗂️ [CanvasLayerManager] All elements from store:', elementsArray.length, elementsArray);
+    return elementsArray;
   }, [elements]);
 
   const { visibleElements, cullingStats } = useViewportCulling({
     elements: allElementsArray,
     zoomLevel: zoom,
-    panOffset: pan,
+    panOffset: { x: panX, y: panY },
     canvasSize: stageSize
   });
 
@@ -290,7 +300,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   }, [visibleElements]);
 
   const sortedMainElements = useMemo(() => {
-    return [...mainElements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    const sorted = [...mainElements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    console.log('🎨 [CanvasLayerManager] Sorted main elements:', sorted.length, sorted);
+    return sorted;
   }, [mainElements]);
 
   const sortedConnectorElements = useMemo(() => {
@@ -354,7 +366,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     
     if (selectedTool === 'pen' || selectedTool === 'pencil') {
       e.evt.preventDefault();
-      startDrawing(pos.x, pos.y, selectedTool as 'pen' | 'pencil');
+      startDrawing(selectedTool as 'pen' | 'pencil', [pos.x, pos.y]);
       return;
     }
     
@@ -370,7 +382,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     if (!pos) return;
     
     if ((selectedTool === 'pen' || selectedTool === 'pencil') && storeIsDrawing) {
-      updateDrawing(pos.x, pos.y);
+      updateDrawing([pos.x, pos.y]);
       return;
     }
     
@@ -414,7 +426,10 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     });
 
     const selectedIds = selected.map(el => el.id as ElementId);
-    selectMultipleElements(selectedIds);
+    // Use individual selectElement calls since unified store doesn't have selectMultipleElements yet
+    selectedIds.forEach((id, index) => {
+      selectElement(id, index > 0); // multiSelect = true for subsequent elements
+    });
   };
 
   const renderLayerContent = () => {
@@ -431,6 +446,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       ),
       main: (
         <React.Fragment key="main">
+          {console.log('🎨 [CanvasLayerManager] Rendering decision - useGroupedSections:', useGroupedSections)}
           {useGroupedSections ? (
             sortedSectionElements.map(section => {
               const isSelected = selectedElementIds.has(section.id) || (section.childElementIds ?? []).some(id => selectedElementIds.has(id));
@@ -457,38 +473,22 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
             })
           ) : (
             <MainLayer
-              elements={[]}
-              selectedElementIds={selectedElementIds}
-              selectedTool={selectedTool}
-              onElementClick={onElementClick}
-              onElementDragEnd={onElementDragEnd}
-              onElementUpdate={onElementUpdate}
-              onStartTextEdit={onStartTextEdit}
-              stageRef={stageRef}
-              isDrawing={storeIsDrawing}
-              currentPath={currentPath}
-              elementsBySection={sortedElementsBySection}
-              {...(onElementDragStart && { onElementDragStart })}
-              {...(onElementDragMove && { onElementDragMove })}
-              onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
-            />
+                elements={sortedMainElements}
+                selectedElementIds={selectedElementIds}
+                selectedTool={selectedTool}
+                onElementClick={onElementClick}
+                onElementDragEnd={onElementDragEnd}
+                onElementUpdate={onElementUpdate}
+                onStartTextEdit={onStartTextEdit}
+                stageRef={stageRef}
+                isDrawing={storeIsDrawing}
+                currentPath={currentPath}
+                elementsBySection={sortedElementsBySection}
+                {...(onElementDragStart && { onElementDragStart })}
+                {...(onElementDragMove && { onElementDragMove })}
+                onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
+              />
           )}
-          <MainLayer
-            name="main-layer"
-            elements={sortedMainElements}
-            selectedElementIds={selectedElementIds}
-            selectedTool={selectedTool}
-            onElementClick={onElementClick}
-            onElementDragEnd={onElementDragEnd}
-            onElementUpdate={onElementUpdate}
-            onStartTextEdit={onStartTextEdit}
-            stageRef={stageRef}
-            isDrawing={storeIsDrawing}
-            currentPath={currentPath}
-            {...(onElementDragStart && { onElementDragStart })}
-            {...(onElementDragMove && { onElementDragMove })}
-            onSectionResize={(id, w, h) => updateSection(id, { width: w, height: h })}
-          />
         </React.Fragment>
       ),
       connector: (

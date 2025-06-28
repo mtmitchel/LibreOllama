@@ -1,9 +1,10 @@
-// src/pages/Canvas.tsx
-import React, { useState } from 'react';
-import KonvaApp from '../features/canvas/components/KonvaApp';
+// src/pages/Canvas.tsx - Updated to use Unified Store Architecture
+import React, { useState, useEffect } from 'react';
+import KonvaAppRefactored from '../features/canvas/components/KonvaAppRefactored';
 import CanvasSidebar from '../features/canvas/components/CanvasSidebar';
 import { PanelRightClose } from 'lucide-react';
 import { Button } from '../shared/ui';
+import { useUnifiedCanvasStore } from '../stores';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,
@@ -12,6 +13,19 @@ import { Button } from '../shared/ui';
  */
 export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
   const [isCanvasSidebarOpen, setCanvasSidebarOpen] = useState(true);
+
+  // Debug: Expose unified store to window for testing (development only)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      // Simple debug exposure without getState calls in render
+      (window as any).__CANVAS_STORE__ = {
+        getState: () => useUnifiedCanvasStore.getState(),
+        subscribe: useUnifiedCanvasStore.subscribe,
+        createTestElements: () => useUnifiedCanvasStore.getState().createTestElements()
+      };
+      console.log('🛠️ [Debug] Unified canvas store exposed to window.__CANVAS_STORE__');
+    }
+  }, []);
 
   return (
     <div className="flex h-full bg-bg-primary p-4 md:p-6 gap-4 md:gap-6 relative">
@@ -38,7 +52,7 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
       )}
 
       <main className="flex-1 flex flex-col min-w-0">
-        <KonvaApp
+        <KonvaAppRefactored
           appSidebarOpen={appSidebarOpen}
           canvasSidebarOpen={isCanvasSidebarOpen}
           toggleCanvasSidebar={() => setCanvasSidebarOpen(!isCanvasSidebarOpen)}

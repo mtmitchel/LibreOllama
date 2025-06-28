@@ -5,13 +5,13 @@
  */
 import React, { useEffect, useCallback } from 'react';
 import { Line } from 'react-konva';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../../stores';
 import type { ConnectorElement, Coordinates, CanvasElement, SectionId } from '../../types/enhanced.types';
 
 export const ConnectorManager: React.FC<{ connectors: ConnectorElement[] }> = ({ connectors }) => {
-  const elements = useCanvasStore(state => state.elements);
-  const sections = useCanvasStore(state => state.sections);
-  const updateElement = useCanvasStore(state => state.updateElement);  // Get element's absolute position, considering parent sections
+  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  const sections = useUnifiedCanvasStore(canvasSelectors.sections);
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);  // Get element's absolute position, considering parent sections
   const getElementAbsolutePosition = useCallback((element: CanvasElement | { x: number; y: number; sectionId?: SectionId | null }): Coordinates => {
     let pos = { x: element.x, y: element.y };
     

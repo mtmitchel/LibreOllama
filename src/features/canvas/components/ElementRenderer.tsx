@@ -24,7 +24,7 @@ import { ImageShape } from '../shapes/ImageShape';
 import { PenShape } from '../shapes/PenShape';
 import { EnhancedTableElement } from '../components/EnhancedTableElement';
 import Konva from 'konva';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores'; // Using unified store
 import { calculateSnapLines } from '../utils/snappingUtils';
 import { Line } from 'react-konva';
 
@@ -50,20 +50,23 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   onStartTextEdit,
   overrideKonvaProps
 }) => {
-  const { elements, isSnappingEnabled, snapTolerance, snapLines, snappingActions } = useCanvasStore((state) => ({
-    elements: Array.from(state.elements.values()),
-    isSnappingEnabled: state.isSnappingEnabled,
-    snapTolerance: state.snapTolerance,
-    snapLines: state.snapLines,
-    snappingActions: state.snappingActions,
-  }));
+  // Use unified store with proper selectors
+  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  const isSnappingEnabled = useUnifiedCanvasStore(state => state.snapToGrid || false);
+  const snapTolerance = useUnifiedCanvasStore(state => 10); // Default snap tolerance
+  // Snap lines functionality - temporarily disabled until unified store implements it
+  const snapLines: any[] = [];
+  const setSnapLines = (lines: any[]) => {
+    // TODO: Implement snap lines in unified store
+    console.log('Snap lines would be set:', lines);
+  };
 
   const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
     if (!isSnappingEnabled) return;
 
     const draggedElement = { ...element, x: e.target.x(), y: e.target.y() };
-    const newSnapLines = calculateSnapLines(draggedElement, elements, snapTolerance);
-    snappingActions.setSnapLines(newSnapLines);
+    const newSnapLines = calculateSnapLines(draggedElement, Array.from(elements.values()), snapTolerance);
+    setSnapLines(newSnapLines);
 
     let snappedX = e.target.x();
     let snappedY = e.target.y();
@@ -80,7 +83,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-    snappingActions.clearSnapLines();
+    setSnapLines([]); // Clear snap lines after drag
     onElementDragEnd(e, element.id);
   };
 

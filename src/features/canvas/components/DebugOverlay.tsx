@@ -1,23 +1,26 @@
 import * as React from 'react';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 import { useShallow } from 'zustand/react/shallow';
 
 export const DebugOverlay: React.FC = () => {
   const { 
     selectedTool, 
     isDrawing, 
-    isDrawingSection, 
-    drawingStartPoint, 
-    currentPath 
-  } = useCanvasStore(
+    currentPath,
+    drawingTool
+  } = useUnifiedCanvasStore(
     useShallow(state => ({
-      selectedTool: state.selectedTool,
-      isDrawing: state.isDrawing,
-      isDrawingSection: state.isDrawingSection,
-      drawingStartPoint: state.drawingStartPoint,
+      selectedTool: canvasSelectors.selectedTool(state),
+      isDrawing: canvasSelectors.isDrawing(state),
       currentPath: state.currentPath,
+      drawingTool: state.drawingTool
     }))
   );
+  
+  // Derive computed values from unified store state
+  const isDrawingSection = isDrawing && selectedTool === 'section';
+  const drawingStartPoint = currentPath && currentPath.length >= 2 ? 
+    { x: currentPath[0], y: currentPath[1] } : null;
   
   return (
     <div style={{

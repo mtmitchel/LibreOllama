@@ -7,7 +7,7 @@
 import React, { useRef, useCallback, useEffect, memo } from 'react';
 import { Group, Rect, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useCanvasStore } from '../../../../stores'; // Use adapter from main stores
 import type { SectionElement, SectionId, ElementId } from '../../types/enhanced.types';
 
 interface SectionHandlerProps {

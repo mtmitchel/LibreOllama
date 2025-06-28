@@ -9,7 +9,7 @@ import {
   PanelLeftClose,
   PanelRightClose
 } from "lucide-react";
-import { useCanvasStore as useEnhancedStore } from '../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 import { Button, Input } from "../../../shared/ui";
 
 interface CanvasItem {
@@ -34,10 +34,11 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const elements = useEnhancedStore((state) => state.elements);
-  const clearCanvas = useEnhancedStore((state) => state.clearCanvas);
-  const addElement = useEnhancedStore((state) => state.addElement);
-  const createSection = useEnhancedStore((state) => state.createSection);
+  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  // TODO: Implement clearCanvas in unified store
+  const clearCanvas = () => {}; // Stub function
+  const addElement = useUnifiedCanvasStore((state) => state.addElement);
+  const createSection = useUnifiedCanvasStore((state) => state.createSection);
 
   useEffect(() => {
     loadCanvasesFromStorage();

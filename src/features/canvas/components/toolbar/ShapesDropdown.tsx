@@ -8,7 +8,7 @@ import {
   ArrowRight,
   ChevronDown
 } from 'lucide-react';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../../stores';
 import styles from './ModernToolbar.module.css';
 import '../../../../design-system/globals.css';
 
@@ -33,7 +33,7 @@ interface ShapesDropdownProps {
 const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const selectedTool = useCanvasStore((state) => state.selectedTool);
+  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
   
   const currentShapeTool = allShapeTools.find(tool => tool.id === selectedTool) || basicShapes[0]!;
   const CurrentIcon = currentShapeTool.icon;

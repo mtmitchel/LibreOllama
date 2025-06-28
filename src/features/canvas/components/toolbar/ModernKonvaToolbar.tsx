@@ -1,8 +1,7 @@
 // Modern Bottom-Center Floating Toolbar (FigJam-style)
 import React, { useState } from 'react';
-import { useCanvasStore } from '../../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../../stores';
 import { useTauriCanvas } from '../../hooks/useTauriCanvas';
-import { canvasStore } from '../../../../stores';
 import { ElementId } from '../../types/enhanced.types';
 import { 
   MousePointer2, 
@@ -59,21 +58,36 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorButtonRef = React.useRef<HTMLButtonElement>(null);
   
-  // Canvas store hooks
-  const selectedTool = useCanvasStore((state) => state.selectedTool);
-  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
-  const setStickyNoteColor = useCanvasStore((state) => state.setStickyNoteColor);
-  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
+  // Unified store hooks
+  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
   const selectedElementId = selectedElementIds.size > 0 ? 
     Array.from(selectedElementIds)[0] as ElementId : null;
-  const selectedElement = useCanvasStore((state) => 
+  const selectedElement = useUnifiedCanvasStore(state => 
     selectedElementId ? state.elements.get(selectedElementId) || null : null
   );
-  const deleteElement = useCanvasStore((state) => state.deleteElement);
-  const updateElement = useCanvasStore((state) => state.updateElement);
-  const groupElements = useCanvasStore((state) => state.groupElements);
-  const ungroupElements = useCanvasStore((state) => state.ungroupElements);
-  const isElementInGroup = useCanvasStore((state) => state.isElementInGroup);
+  const deleteElement = useUnifiedCanvasStore(state => state.deleteElement);
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
+  
+  // Simplified functions for missing unified store features
+  const setStickyNoteColor = (color: string) => {
+    console.log('🎨 [ModernToolbar] Setting sticky note color:', color);
+    // TODO: Implement in unified store
+  };
+  const groupElements = (elementIds: string[]) => {
+    console.log('🔗 [ModernToolbar] Grouping elements:', elementIds);
+    // TODO: Implement in unified store
+    return null;
+  };
+  const ungroupElements = (elementId: string) => {
+    console.log('🔗 [ModernToolbar] Ungrouping element:', elementId);
+    // TODO: Implement in unified store
+  };
+  const isElementInGroup = (elementId: string) => {
+    // TODO: Implement in unified store
+    return false;
+  };
   // Note: Layer panel functionality needs to be implemented in store
   const showLayersPanel = false; // useCanvasStore((state) => state.showLayersPanel);
   const setShowLayersPanel = () => {}; // useCanvasStore((state) => state.setShowLayersPanel);

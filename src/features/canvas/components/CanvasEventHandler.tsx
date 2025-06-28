@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Konva from 'konva';
 import { CanvasTool, ElementId, SectionId } from '../types/enhanced.types';
-import { useCanvasStore, canvasStore } from '../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 import { toElementId } from '../types/compatibility';
 import { logger } from '@/lib/logger';
 import { findNearestSnapPoint } from '../utils/connectorUtils';
@@ -116,6 +116,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
   previewStickyNote,
   setPreviewStickyNote,
 }) => {
+  // Get unified store instance for direct state access - use ref to avoid re-renders
+  const unifiedStoreRef = useRef(useUnifiedCanvasStore.getState());
+  
   const isPointerDownRef = useRef(false);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -128,45 +131,62 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
   // Coordinate conversion utility - converts screen coordinates to canvas coordinates
   const getCanvasCoordinates = useCallback((stage: Konva.Stage): { x: number; y: number } | null => {
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return null;
+    // SAFETY: Check if stage is valid
+    if (!stage || typeof stage.getPointerPosition !== 'function') {
+      logger.warn('🚨 [CanvasEventHandler] Invalid stage reference in getCanvasCoordinates');
+      return null;
+    }
     
-    // Convert screen coordinates to canvas coordinates
-    const transform = stage.getAbsoluteTransform().copy();
-    transform.invert();
-    return transform.point(pointer);
+    const pointer = stage.getPointerPosition();
+    if (!pointer || typeof pointer.x !== 'number' || typeof pointer.y !== 'number') {
+      logger.warn('🚨 [CanvasEventHandler] Invalid pointer position');
+      return null;
+    }
+    
+    try {
+      // Convert screen coordinates to canvas coordinates
+      const transform = stage.getAbsoluteTransform().copy();
+      transform.invert();
+      return transform.point(pointer);
+    } catch (error) {
+      logger.error('🚨 [CanvasEventHandler] Error in coordinate conversion:', error);
+      return null;
+    }
   }, []);
 
-  // Access canvas store for drawing functions - split selectors
-  const selectedTool = useCanvasStore((state) => state.selectedTool);
-  const isDrawing = useCanvasStore((state) => state.isDrawing);
-  const addElement = useCanvasStore((state) => state.addElement);
-  const updateElement = useCanvasStore((state) => state.updateElement);
-  const selectElement = useCanvasStore((state) => state.selectElement);
-  const deselectElement = useCanvasStore((state) => state.deselectElement);
-  const clearSelection = useCanvasStore((state) => state.clearSelection);
-  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
-  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
-  const createSection = useCanvasStore((state) => state.createSection);
-  const captureElementsAfterSectionCreation = useCanvasStore((state) => state.captureElementsAfterSectionCreation);
-  const elements = useCanvasStore((state) => state.elements);
-  const zoom = useCanvasStore((state) => state.zoom);
-  const pan = useCanvasStore((state) => state.pan);
-  const setZoom = useCanvasStore((state) => state.setZoom);
-  const setPan = useCanvasStore((state) => state.setPan);
-  const deleteElement = useCanvasStore((state) => state.deleteElement);
+  // Access unified canvas store for drawing functions - split selectors
+  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  const isDrawing = useUnifiedCanvasStore((state) => state.isDrawing);
+  const addElement = useUnifiedCanvasStore((state) => state.addElement);
+  const updateElement = useUnifiedCanvasStore((state) => state.updateElement);
+  const selectElement = useUnifiedCanvasStore((state) => state.selectElement);
+  const deselectElement = useUnifiedCanvasStore((state) => state.deselectElement);
+  const clearSelection = useUnifiedCanvasStore((state) => state.clearSelection);
+  const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
+  const setSelectedTool = useUnifiedCanvasStore((state) => state.setSelectedTool);
+  const createSection = useUnifiedCanvasStore((state) => state.createSection);
+  // TODO: captureElementsAfterSectionCreation not yet implemented in unified store
+  const captureElementsAfterSectionCreation = () => {}; // Stub function
+  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  const zoom = useUnifiedCanvasStore((state) => state.viewport.scale);
+  const panX = useUnifiedCanvasStore((state) => state.viewport.x);
+  const panY = useUnifiedCanvasStore((state) => state.viewport.y);
+  const setZoom = useUnifiedCanvasStore((state) => state.setViewport);
+  const setPan = useUnifiedCanvasStore((state) => state.panViewport);
+  const deleteElement = useUnifiedCanvasStore((state) => state.deleteElement);
   
   // Missing methods for keyboard shortcuts
-  const deleteSelectedElements = useCanvasStore((state) => state.deleteSelectedElements);
-  const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
-  const editingTextId = useCanvasStore((state) => state.editingTextId);
-  const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
+  // TODO: deleteSelectedElements not yet implemented, use deleteElement for each selected
+  const deleteSelectedElements = () => {}; // Stub function
+  const addHistoryEntry = useUnifiedCanvasStore((state) => state.addToHistory);
+  const editingTextId = useUnifiedCanvasStore((state) => state.textEditingElementId);
+  const setEditingTextId = useUnifiedCanvasStore((state) => state.setTextEditingElement);
   
   // Drawing state methods from store
-  const startDrawing = useCanvasStore((state) => state.startDrawing);
-  const updateDrawing = useCanvasStore((state) => state.updateDrawing);
-  const finishDrawing = useCanvasStore((state) => state.finishDrawing);
-  const cancelDrawing = useCanvasStore((state) => state.cancelDrawing);
+  const startDrawing = useUnifiedCanvasStore((state) => state.startDrawing);
+  const updateDrawing = useUnifiedCanvasStore((state) => state.updateDrawing);
+  const finishDrawing = useUnifiedCanvasStore((state) => state.finishDrawing);
+  const cancelDrawing = useUnifiedCanvasStore((state) => state.cancelDrawing);
   
   // Add missing connector state
   const [hoveredSnapPoint, setHoveredSnapPoint] = useState<any>(null);
@@ -424,7 +444,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         return;
       }
 
-      const element = canvasStore.getState().elements.get(id) || canvasStore.getState().sections.get(id);
+      const element = unifiedStoreRef.current.elements.get(id) || unifiedStoreRef.current.sections.get(id as any as SectionId);
       if (!element) {
         logger.warn('[CanvasEventHandler] Cannot update non-existent element:', id);
         return;
@@ -444,7 +464,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         return;
       }
 
-      const sections = canvasStore.getState().sections;
+      const sections = unifiedStoreRef.current.sections;
       let droppedInSection = null;
 
       if (element.type !== 'section') {
@@ -462,7 +482,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       }
 
       if (element.type === 'section') {
-        canvasStore.getState().updateSection(element.id as SectionId, { ...canvasPos, updatedAt: Date.now() });
+        unifiedStoreRef.current.updateSection(element.id as SectionId, { ...canvasPos, updatedAt: Date.now() });
       } else if (droppedInSection) {
         const newPosition = { x: canvasPos.x - droppedInSection.x, y: canvasPos.y - droppedInSection.y };
         updateElement(id, { ...newPosition, sectionId: droppedInSection.id, updatedAt: Date.now() });
@@ -502,7 +522,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         return;
       }
 
-      const element = canvasStore.getState().elements.get(id);
+      const element = unifiedStoreRef.current.elements.get(id);
       if (!element || element.type === 'section') {
         return;
       }
@@ -516,7 +536,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         return;
       }
 
-      const sections = canvasStore.getState().sections;
+      const sections = unifiedStoreRef.current.sections;
       let newSectionId = null;
 
       // Find which section (if any) the element center is over
@@ -767,7 +787,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const finalHeight = Math.max(previewText.height, minHeight);
 
       if (finalWidth >= minWidth || finalHeight >= minHeight) {
-        const sectionsMap = canvasStore.getState().sections;
+        const sectionsMap = unifiedStoreRef.current.sections;
         const targetSection = Array.from(sectionsMap.values()).find(s => 
           previewText.x >= s.x && previewText.x <= s.x + s.width &&
           previewText.y >= s.y && previewText.y <= s.y + s.height
@@ -946,7 +966,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       logger.log('🎯 [CanvasEventHandler] Creating dragged shape:', currentTool, { x, y, width, height });
       
       // Get current tool from store to avoid stale closure values
-      const actualCurrentTool = canvasStore.getState().selectedTool;
+      const actualCurrentTool = unifiedStoreRef.current.selectedTool;
       
       const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       let newElement: any = null;
@@ -1084,9 +1104,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const pointer = stage.getPointerPosition();
       if (pointer) {
         // Get current tool from store to avoid stale closure values
-        const actualCurrentTool = canvasStore.getState().selectedTool;
+        const actualCurrentTool = unifiedStoreRef.current.selectedTool;
         logger.log('🖊️ [CanvasEventHandler] Starting pen drawing at:', pointer);
-        startDrawing(pointer.x, pointer.y, actualCurrentTool as 'pen' | 'pencil');
+        startDrawing(actualCurrentTool as 'pen' | 'pencil', [pointer.x, pointer.y]);
       }
     };
 
@@ -1119,7 +1139,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
       // For pen drawing, update immediately without throttling to avoid choppy lines
       logger.log('🖊️ [CanvasEventHandler] Updating pen drawing at:', pointer);
-      updateDrawing(pointer.x, pointer.y);
+      updateDrawing([pointer.x, pointer.y]);
     };
 
     const fallbackHandler = (_e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -1286,7 +1306,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Get current tool from store to avoid stale closure values
-      const actualCurrentTool = canvasStore.getState().selectedTool;
+      const actualCurrentTool = unifiedStoreRef.current.selectedTool;
       
       let subType: 'line' | 'arrow' | 'straight' | 'bent' | 'curved' = 'arrow'; // Default
       if (actualCurrentTool === 'connector-line' || actualCurrentTool === 'line') {
@@ -1366,7 +1386,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
       const canvasPoint = getCanvasCoordinates(stageRef.current!);
       if (canvasPoint) {
-        startDrawing(canvasPoint.x, canvasPoint.y, 'section');
+        startDrawing('section', [canvasPoint.x, canvasPoint.y]);
         lastMousePosRef.current = canvasPoint;
       }
     };
@@ -1394,10 +1414,9 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
           previewSection.x,
           previewSection.y,
           previewSection.width,
-          previewSection.height,
-          'New Section'
+          previewSection.height
         );
-        captureElementsAfterSectionCreation(newSectionId);
+        captureElementsAfterSectionCreation(); // TODO: Implement section element capture
       }
 
       finishDrawing();
@@ -1431,7 +1450,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       if (!isDrawingSection || !lastMousePosRef.current) return;
       const canvasPoint = getCanvasCoordinates(stageRef.current!);
       if (canvasPoint) {
-        updateDrawing(canvasPoint.x, canvasPoint.y);
+        updateDrawing([canvasPoint.x, canvasPoint.y]);
       }
     };
 
@@ -1462,7 +1481,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
-      const sectionsMap = canvasStore.getState().sections;
+      const sectionsMap = unifiedStoreRef.current.sections;
       const targetSection = Array.from(sectionsMap.values()).find(s => 
         pointer.x >= s.x && pointer.x <= s.x + s.width &&
         pointer.y >= s.y && pointer.y <= s.y + s.height
@@ -1683,7 +1702,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const finalHeight = Math.max(previewTable.height, minHeight);
 
       if (finalWidth >= minWidth || finalHeight >= minHeight) {
-        const sectionsMap = canvasStore.getState().sections;
+        const sectionsMap = unifiedStoreRef.current.sections;
         const targetSection = Array.from(sectionsMap.values()).find(s => 
           previewTable.x >= s.x && previewTable.x <= s.x + s.width &&
           previewTable.y >= s.y && previewTable.y <= s.y + s.height
@@ -1778,7 +1797,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
-      const sectionsMap = canvasStore.getState().sections;
+      const sectionsMap = unifiedStoreRef.current.sections;
       const targetSection = Array.from(sectionsMap.values()).find(s => 
         pointer.x >= s.x && pointer.x <= s.x + s.width &&
         pointer.y >= s.y && pointer.y <= s.y + s.height
@@ -1792,7 +1811,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       console.log('🎨 [CanvasEventHandler] SHAPE CLICK - Creating shape with default size:', currentTool);
       logger.log('🎨 [CanvasEventHandler] Creating shape with default size:', currentTool);
       
-      const actualCurrentTool = canvasStore.getState().selectedTool;
+      const actualCurrentTool = unifiedStoreRef.current.selectedTool;
       
       const generateId = () => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       let newElement: any = null;
@@ -2039,9 +2058,8 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       if (!canvasPoint) return;
       
       // Create sticky note element
-      // Get default sticky note color from store
-      const currentState = canvasStore.getState();
-      const defaultColor = currentState.toolSettings?.stickyNote?.backgroundColor || '#FFE299';
+      // Get default sticky note color
+      const defaultColor = '#FFE299'; // TODO: Add toolSettings to unified store
       
       const stickyNoteElement = {
         id: `sticky-note-${Date.now()}` as ElementId,
@@ -2175,14 +2193,14 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         const pointer = stage.getPointerPosition();
         if (pointer) {
           // Calculate new pan to keep mouse position fixed relative to canvas content
-          const newPanX = pointer.x - (pointer.x - pan.x) * (newZoom / zoom);
-          const newPanY = pointer.y - (pointer.y - pan.y) * (newZoom / zoom);
+          const newPanX = pointer.x - (pointer.x - panX) * (newZoom / zoom);
+          const newPanY = pointer.y - (pointer.y - panY) * (newZoom / zoom);
           
-          setZoom(newZoom);
-          setPan({ x: newPanX, y: newPanY });
+          setZoom({ scale: newZoom });
+          setPan(newPanX, newPanY);
         } else {
           // Fallback: just set zoom without adjusting pan
-          setZoom(newZoom);
+          setZoom({ scale: newZoom });
         }
       }
     };
@@ -2201,7 +2219,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
       fallbackHandler,
       toolValidator
     );
-  }, [zoom, pan, stageRef, setZoom, setPan]);
+  }, [zoom, panX, panY, stageRef, setZoom, setPan]);
 
   // CRITICAL: Register event handlers based on current tool
   // This useEffect maps the defined handlers to the currentToolHandlersRef based on the selected tool
@@ -2302,12 +2320,22 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
     logger.log('🔄 [CanvasEventHandler] Tool handlers registered for:', selectedTool, 'handlers:', Array.from(toolHandlerMap.keys()));
 
-  }, [selectedTool, stageRef, handleSelectMouseDown, handleSelectMouseMove, handleSelectMouseUp, handleSelectClick, handleElementDragEnd, handlePanMouseDown, handlePanMouseMove, handlePanMouseUp, handleTextClick, handleShapeMouseDown, handleShapeMouseMove, handleShapeMouseUp, handleShapeClick, handlePenMouseDown, handlePenMouseMove, handlePenMouseUp, handlePenClick, handleConnectorMouseDown, handleConnectorMouseMove, handleConnectorMouseUp, handleConnectorClick, handleSectionMouseDown, handleSectionMouseMove, handleSectionMouseUp, handleSectionClick, handleStickyNoteClick, handleStickyNoteMouseDown, handleStickyNoteMouseMove, handleStickyNoteMouseUp, handleImageClick, handleImageMouseDown, handleImageMouseMove, handleImageMouseUp, handleTableClick, handleTableMouseDown, handleTableMouseMove, handleTableMouseUp, handleWheel]);
+  }, [selectedTool]); // FIXED: Simplified dependencies to prevent constant re-registration
 
   // This useEffect is responsible for ATTACHING and DETACHING the event listeners to the stage.
   useEffect(() => {
     const stage = stageRef.current;
-    if (!stage) return;
+    if (!stage || !stage.getStage || typeof stage.on !== 'function') {
+      logger.warn('🚨 [CanvasEventHandler] Stage not ready for event listeners');
+      return;
+    }
+    
+    // SAFETY: Ensure stage has proper dimensions before attaching events
+    const stageSize = stage.size();
+    if (!stageSize || stageSize.width === 0 || stageSize.height === 0) {
+      logger.warn('🚨 [CanvasEventHandler] Stage has zero dimensions, skipping event attachment');
+      return;
+    }
 
     const handlers = currentToolHandlersRef.current;
 
@@ -2347,7 +2375,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
           e.preventDefault();
           // INSIGHT FROM TESTS: Use the convenience method instead of manual deletion
           deleteSelectedElements();
-          addHistoryEntry('Delete elements', [], []);
+          addHistoryEntry('Delete elements');
         }
       } 
       // Escape: Clear current operations and selections
@@ -2416,7 +2444,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
         }
 
         // FIXED: Get current tool directly from store to avoid stale closure values
-        const actualCurrentTool = canvasStore.getState().selectedTool;
+        const actualCurrentTool = unifiedStoreRef.current.selectedTool;
         
         // INSIGHT FROM TESTS: Validate tool state before processing events
         const validatedTool = validateToolState(actualCurrentTool as CanvasTool);
@@ -2480,7 +2508,7 @@ export const CanvasEventHandler: React.FC<CanvasEventHandlerProps> = ({
 
         // For critical drawing events, attempt recovery
         if (['mousedown', 'mouseup', 'mousemove'].includes(e.type) && 
-            ['section', 'rectangle', 'circle', 'star', 'triangle', 'pen', 'connector'].includes(canvasStore.getState().selectedTool)) {
+            ['section', 'rectangle', 'circle', 'star', 'triangle', 'pen', 'connector'].includes(unifiedStoreRef.current.selectedTool)) {
           logger.warn('Attempting drawing state recovery after error');
           drawingStateManager.cancelCurrentOperation();
         }

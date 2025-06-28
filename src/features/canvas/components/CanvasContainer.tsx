@@ -7,8 +7,9 @@ import { CanvasEventHandler } from './CanvasEventHandler';
 import { useViewportControls } from '../hooks/useViewportControls';
 import { useSelectionManager } from '../hooks/useSelectionManager';
 import { useCanvasHistory } from '../hooks/useCanvasHistory';
-import { useCanvasStore } from '../../../stores';
-import type { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
+import type { CanvasElement, ElementId, SectionId, CanvasTool } from '../types/enhanced.types';
+import type { UnifiedCanvasStore } from '../../../stores';
 import { toElementId } from '../types/compatibility';
 import { designSystem } from '../../../design-system';
 
@@ -41,22 +42,24 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const { selectedElementIds } = useSelectionManager();
   const { addToHistory } = useCanvasHistory();
 
-  // Store hooks - FIXED: Use the new modular store consistently
-  const elementsMap = useCanvasStore((state) => state.elements);
-  const updateElement = useCanvasStore((state) => state.updateElement);
-  const updateSection = useCanvasStore((state) => state.updateSection);
-  const setEditingTextId = useCanvasStore((state) => state.setEditingTextId);
-  const selectedTool = useCanvasStore((state) => state.selectedTool) as any; // Temporary type assertion
+  // Unified store hooks - migrated from adapter pattern
+  const elementsMap = useUnifiedCanvasStore(canvasSelectors.elements);
+  const updateElement = useUnifiedCanvasStore((state: UnifiedCanvasStore) => state.updateElement);
+  const updateSection = useUnifiedCanvasStore((state: UnifiedCanvasStore) => state.updateSection);
+  const setEditingTextId = useUnifiedCanvasStore((state: UnifiedCanvasStore) => state.setTextEditingElement);
+  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
 
-  // Drawing state for CanvasEventHandler - use store state instead of local state
+  // Drawing state - simplified since UnifiedEventHandler handles most of this
   const [isDrawingConnector, setIsDrawingConnector] = useState(false);
   const [connectorStart, setConnectorStart] = useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
   const [connectorEnd, setConnectorEnd] = useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
   
-  // Use store state for section drawing instead of local state
-  const isDrawingSection = useCanvasStore((state) => state.isDrawingSection);
-  const drawingStartPoint = useCanvasStore((state) => state.drawingStartPoint);
-  const drawingCurrentPoint = useCanvasStore((state) => state.drawingCurrentPoint);
+  // Drawing state from unified store
+  const isDrawingSection = useUnifiedCanvasStore((state: UnifiedCanvasStore) => state.isDrawing && state.selectedTool === 'section');
+  const drawingStartPoint = useUnifiedCanvasStore((state: UnifiedCanvasStore) => state.currentPath && state.currentPath.length >= 2 ? 
+    { x: state.currentPath[0], y: state.currentPath[1] } : null);
+  const drawingCurrentPoint = useUnifiedCanvasStore((state: UnifiedCanvasStore) => state.currentPath && state.currentPath.length >= 4 ? 
+    { x: state.currentPath[state.currentPath.length - 2], y: state.currentPath[state.currentPath.length - 1] } : null);
   
   // Calculate preview section from store state
   const previewSection = React.useMemo(() => {
@@ -106,7 +109,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   // Handle text editing start
   const handleStartTextEdit = useCallback((elementId: string) => {
-    setEditingTextId(elementId);
+    setEditingTextId(toElementId(elementId));
     onStartTextEdit?.(elementId);
   }, [setEditingTextId, onStartTextEdit]);
 
@@ -119,7 +122,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   return (
     <div className={`canvas-container ${className}`}>      <CanvasEventHandler
         stageRef={stageRef as React.RefObject<Konva.Stage>}
-        currentTool={selectedTool}
+        currentTool={selectedTool as CanvasTool}
         isDrawingConnector={isDrawingConnector}
         setIsDrawingConnector={setIsDrawingConnector}
         connectorStart={connectorStart}

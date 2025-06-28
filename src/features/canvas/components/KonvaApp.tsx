@@ -6,7 +6,7 @@ import ModernKonvaToolbar from './toolbar/ModernKonvaToolbar';
 import { useViewportControls } from '../hooks/useViewportControls';
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts';
 import { LayersPanel } from './ui/LayersPanel';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 
 interface KonvaAppProps {
   appSidebarOpen?: boolean;
@@ -31,7 +31,8 @@ const KonvaApp: React.FC<KonvaAppProps> = ({ appSidebarOpen = true, canvasSideba
   useKeyboardShortcuts();
 
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
-  const layersPanelOpen = useCanvasStore((state) => state.layersPanelOpen);
+  // TODO: Implement layers panel state in unified store
+  const layersPanelOpen = false; // useUnifiedCanvasStore((state) => state.layersPanelOpen);
 
   const updateCanvasSize = useCallback(() => {
     if (canvasContainerRef.current) {

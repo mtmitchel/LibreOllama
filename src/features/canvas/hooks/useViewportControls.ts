@@ -9,89 +9,37 @@ import { useCanvasStore } from '../../../stores';
  * - Handles coordinate transformations
  */
 export const useViewportControls = () => {
-  // Use the unified canvas store with selectors
-  const zoom = useCanvasStore((state) => state.zoom);
-  const pan = useCanvasStore((state) => state.pan);
-  const viewportSize = useCanvasStore((state) => state.viewportSize);
-  const setZoom = useCanvasStore((state) => state.setZoom);
-  const setPan = useCanvasStore((state) => state.setPan);
-  const zoomIn = useCanvasStore((state) => state.zoomIn);
-  const zoomOut = useCanvasStore((state) => state.zoomOut);
-  const zoomToFit = useCanvasStore((state) => state.zoomToFit);
-  const resetViewport = useCanvasStore((state) => state.resetViewport);
-  const screenToCanvas = useCanvasStore((state) => state.screenToCanvas);
-  const canvasToScreen = useCanvasStore((state) => state.canvasToScreen);
+  // Use the unified canvas store with stable selectors
+  const viewport = useCanvasStore((state) => state.viewport);
+  const setViewport = useCanvasStore((state) => state.setViewport);
+  const panViewport = useCanvasStore((state) => state.panViewport);
+  const zoomViewport = useCanvasStore((state) => state.zoomViewport);
+  
+  // Extract values from viewport object to avoid recreating objects on every render
+  const zoom = viewport.scale;
+  const pan = { x: viewport.x, y: viewport.y };
+  const viewportSize = { width: viewport.width, height: viewport.height };
 
-  // Zoom to a specific point on the canvas
-  const zoomToPoint = useCallback((zoomLevel: number, point: { x: number; y: number }) => {
-    // Use setZoom with center point support
-    setZoom(zoomLevel, point);
-  }, [setZoom]);
+  // Simplified viewport controls using unified store methods
+  const setZoom = useCallback((scale: number) => {
+    zoomViewport(scale);
+  }, [zoomViewport]);
 
-  // Pan by a relative amount
-  const panBy = useCallback((delta: { x: number; y: number }) => {
-    setPan({
-      x: pan.x + delta.x,
-      y: pan.y + delta.y
-    });
-  }, [pan, setPan]);
+  const setPan = useCallback((newPan: { x: number; y: number }) => {
+    setViewport(newPan);
+  }, [setViewport]);
 
-  // Center the viewport on a specific point
-  const centerOn = useCallback((point: { x: number; y: number }) => {
-    setPan({
-      x: viewportSize.width / 2 - point.x * zoom,
-      y: viewportSize.height / 2 - point.y * zoom
-    });
-  }, [setPan, viewportSize, zoom]);
+  const zoomIn = useCallback(() => {
+    zoomViewport(zoom * 1.2);
+  }, [zoomViewport, zoom]);
 
-  // Fit viewport to specific bounds
-  const fitToBounds = useCallback((bounds: { x: number; y: number; width: number; height: number }, padding: number = 50) => {
-    const scaleX = (viewportSize.width - padding * 2) / bounds.width;
-    const scaleY = (viewportSize.height - padding * 2) / bounds.height;
-    const newZoom = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
+  const zoomOut = useCallback(() => {
+    zoomViewport(zoom * 0.8);
+  }, [zoomViewport, zoom]);
 
-    const centerX = bounds.x + bounds.width / 2;
-    const centerY = bounds.y + bounds.height / 2;
-
-    // For now, use basic setZoom - can be enhanced later
-    setZoom(newZoom);
-    centerOn({ x: centerX, y: centerY });
-  }, [viewportSize, setZoom]);
-
-  // Get visible area bounds in canvas coordinates
-  const getVisibleBounds = useCallback(() => {
-    const topLeft = screenToCanvas({ x: 0, y: 0 });
-    const bottomRight = screenToCanvas({ 
-      x: viewportSize.width, 
-      y: viewportSize.height 
-    });
-
-    return {
-      x: topLeft.x,
-      y: topLeft.y,
-      width: bottomRight.x - topLeft.x,
-      height: bottomRight.y - topLeft.y
-    };
-  }, [screenToCanvas, viewportSize]);
-
-  // Check if a point is visible in the current viewport
-  const isPointVisible = useCallback((point: { x: number; y: number }) => {
-    const bounds = getVisibleBounds();
-    return point.x >= bounds.x &&
-           point.x <= bounds.x + bounds.width &&
-           point.y >= bounds.y &&
-           point.y <= bounds.y + bounds.height;
-  }, [getVisibleBounds]);
-
-  // Get viewport state summary
-  const getViewportState = useCallback(() => {
-    return {
-      zoom,
-      pan,
-      viewportSize,
-      visibleBounds: getVisibleBounds()
-    };
-  }, [zoom, pan, viewportSize, getVisibleBounds]);
+  const resetViewport = useCallback(() => {
+    setViewport({ x: 0, y: 0, scale: 1 });
+  }, [setViewport]);
 
   return {
     // Current state
@@ -104,20 +52,6 @@ export const useViewportControls = () => {
     setPan,
     zoomIn,
     zoomOut,
-    zoomToFit,
-    resetViewport,
-    
-    // Viewport transformations
-    screenToCanvas,
-    canvasToScreen,
-    
-    // Derived actions and getters
-    zoomToPoint,
-    panBy,
-    centerOn,
-    fitToBounds,
-    getVisibleBounds,
-    isPointVisible,
-    getViewportState
+    resetViewport
   };
 };

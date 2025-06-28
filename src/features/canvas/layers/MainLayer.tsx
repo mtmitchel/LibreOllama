@@ -25,7 +25,7 @@ import { EnhancedTableElement } from '../components/EnhancedTableElement';
 import { ConnectorRenderer } from '../components/ConnectorRenderer';
 import KonvaErrorBoundary from '../components/KonvaErrorBoundary';
 import { optimizeLayerProps } from '../utils/events';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 
 interface MainLayerProps {
   name?: string;
@@ -64,7 +64,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   onLayerDraw,
   elementsBySection
 }) => {
-  const elementsMap = useCanvasStore((state) => state.elements);
+  console.log('🎯 [MainLayer] Received elements prop:', elements.length, elements);
+  const elementsMap = useUnifiedCanvasStore(canvasSelectors.elements);
 
   const getSection = useCallback((sectionId: SectionId): SectionElement | undefined => {
     const el = elementsMap.get(sectionId);
@@ -107,6 +108,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   const optimizedProps = useMemo(() => optimizeLayerProps({}), []);
 
   const renderElement = useCallback((element: CanvasElement) => {
+    console.log('🎭 [MainLayer] Rendering element:', element.type, element.id, element);
     const isSelected = selectedElementIds.has(element.id);
     const isEditing = false; // This will be handled by text editing overlay
 
@@ -138,6 +140,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       shadowOpacity: isSelected ? 0.7 : 0,
       perfectDrawEnabled: false,
     };
+
+    console.log('🎨 [MainLayer] Konva props for element:', element.id, konvaElementProps);
 
     // For basic shapes (rectangle, circle), use EditableNode wrapper pattern
     if (isRectangleElement(element) || isCircleElement(element)) {
@@ -305,7 +309,9 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 
   // Use robust rendering pattern to eliminate whitespace issues
   const validElements = elements.filter(Boolean); // Filter out any undefined elements first
+  console.log('🔧 [MainLayer] Valid elements for rendering:', validElements.length, validElements);
   const elementNodes = validElements.map(renderElement);
+  console.log('🔧 [MainLayer] Element nodes after rendering:', elementNodes.length, elementNodes);
 
   // Drawing line component for active drawing state - add key to prevent React warning
   const drawingLine = isDrawing && currentPath.length > 0 ? (

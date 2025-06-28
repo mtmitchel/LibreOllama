@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { KonvaEventObject } from 'konva/lib/Node';
 import { Stage } from 'konva/lib/Stage';
 import { Line, Arrow, Circle } from 'react-konva';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores'; // Using unified store directly
 import { debug } from '../utils/debug';
 import type { CanvasElement, ConnectorElement } from '../types/enhanced.types';
 import { ElementId } from '../types/enhanced.types';
@@ -85,10 +85,10 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   isActive,
   connectorType
 }) => {
-  // Split selectors to prevent infinite loop
-  const addElement = useCanvasStore((state) => state.addElement);
-  const elements = useCanvasStore((state) => state.elements);
-  const setSelectedTool = useCanvasStore((state) => state.setSelectedTool);
+  // Unified store selectors
+  const addElement = useUnifiedCanvasStore(state => state.addElement);
+  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
   
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,

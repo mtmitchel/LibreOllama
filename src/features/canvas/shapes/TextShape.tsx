@@ -153,18 +153,25 @@ export const TextShape: React.FC<TextShapeProps> = React.memo(({
   const scaledFontSize = Math.max(8, Math.min(120, elementHeight * 0.6));
   const finalFontSize = element.fontSize ? baseFontSize : scaledFontSize;
 
+  const finalProps = {
+    ...konvaProps,
+    id: element.id,
+    text: safeText,
+    fontSize: finalFontSize,
+    fontFamily: getAvailableFontFamily(),
+    fill: textColor,
+    width: elementWidth,
+    height: elementHeight,
+    fontStyle: hasContent ? (element.fontStyle || 'normal') : 'italic',
+    onDblClick: handleDoubleClick
+  };
+  
+  console.log('📝 [TextShape] Final props for Text:', finalProps);
+  
   return (
     <>
       <Text
-        {...konvaProps}
-        id={element.id}        text={safeText}
-        fontSize={finalFontSize}
-        fontFamily={getAvailableFontFamily()}
-        fill={textColor}
-        width={elementWidth}
-        height={elementHeight}
-        fontStyle={hasContent ? (element.fontStyle || 'normal') : 'italic'}
-        onDblClick={handleDoubleClick}
+        {...finalProps}
         ref={textNodeRef}
       />
     </>

@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Transformer } from 'react-konva';
 import Konva from 'konva';
-import { useCanvasStore as useEnhancedStore } from '../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 import { CanvasElement, ElementId } from '../types/enhanced.types';
 
 interface TransformerManagerProps {
@@ -25,15 +25,24 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
   const transformerRef = useRef<Konva.Transformer>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Use individual primitive selectors for React 19 compatibility
-  const selectedElementIds = useEnhancedStore(state => state.selectedElementIds);
-  const updateMultipleElements = useEnhancedStore(state => state.updateMultipleElements);
-  const elements = useEnhancedStore(state => state.elements);
-  const sections = useEnhancedStore(state => state.sections);
-  const addHistoryEntry = useEnhancedStore(state => state.addHistoryEntry);
+  // Use unified store selectors
+  const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
+  const addToHistory = useUnifiedCanvasStore(state => state.addToHistory);
+  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  const sections = useUnifiedCanvasStore(state => state.sections);
+  
+  // Helper function to update multiple elements (replaces updateMultipleElements)
+  const updateMultipleElements = useCallback((updates: Array<{ id: ElementId; updates: Partial<CanvasElement> }>) => {
+    updates.forEach(({ id, updates: elementUpdates }) => {
+      updateElement(id, elementUpdates);
+    });
+  }, [updateElement]);
 
-  // Get all elements in a combined map
-  const allElements = new Map([...elements.entries(), ...sections.entries()]);
+  // Get all elements in a combined map - ensure elements is a Map
+  const elementsMap = elements instanceof Map ? elements : new Map();
+  const sectionsMap = sections instanceof Map ? sections : new Map();
+  const allElements = new Map([...elementsMap.entries(), ...sectionsMap.entries()]);
 
   // Update transformer when selection changes
   useEffect(() => {
@@ -286,12 +295,13 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
       // Apply updates if any were collected
       if (Object.keys(updates).length > 0) {
         try {
-          updateMultipleElements(updates);
-          addHistoryEntry('Transform Elements', [], [], {
-            elementIds: Object.keys(updates) as ElementId[],
-            operationType: 'update',
-            affectedCount: Object.keys(updates).length,
-          });
+          // Convert updates object to array format
+          const updatesArray = Object.entries(updates).map(([id, updates]) => ({ 
+            id: id as ElementId, 
+            updates 
+          }));
+          updateMultipleElements(updatesArray);
+          addToHistory('Transform Elements');
         } catch (updateError) {
           console.error('TransformerManager: Error updating elements:', updateError);
         }
@@ -299,7 +309,7 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
     } catch (error) {
       console.error('TransformerManager: Critical error in handleTransformEnd:', error);
     }
-  }, [allElements, updateMultipleElements, addHistoryEntry]);
+  }, [allElements, updateMultipleElements, addToHistory]);
 
   return (
     <Transformer

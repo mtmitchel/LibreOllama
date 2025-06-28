@@ -9,9 +9,9 @@
 import React, { useRef, useCallback, useEffect, useMemo } from 'react';
 import { Stage, Layer, Line, Circle, Rect, Text } from 'react-konva';
 import Konva from 'konva';
-import { CanvasEventHandler } from './CanvasEventHandler';
+import UnifiedEventHandler from './UnifiedEventHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
-import { useCanvasStore, canvasStore } from '../stores/canvasStore.enhanced';
+import { useCanvasStore, canvasStore, useUnifiedCanvasStore } from '../../../stores'; // Migrating to unified store
 import { useCurrentTool } from '../hooks/useGranularSelectors';
 // import { useCanvasSetup } from './useCanvasSetup';
 import { CanvasTool, ElementId, SectionId, CanvasElement } from '../types/enhanced.types';
@@ -83,12 +83,23 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
     console.log('📊 [KonvaCanvas] Tool state updated:', currentTool);
   }, [currentTool]);
   
+  // DEBUG: Log store contents
+  useEffect(() => {
+    console.log('🔍 [KonvaCanvas] Store Debug:', {
+      elementsCount: elements.size,
+      sectionsCount: sections.size,
+      elements: Array.from(elements.entries()),
+      sections: Array.from(sections.entries())
+    });
+  }, [elements, sections]);
+
   // Combine elements and sections for rendering
   const allElements = useMemo(() => {
     const combined = new Map([...elements.entries()]);
     sections.forEach((section, id) => {
       combined.set(id, section as any);
     });
+    console.log('🎨 [KonvaCanvas] Combined elements for rendering:', combined.size, Array.from(combined.entries()));
     return combined;
   }, [elements, sections]);
   
@@ -101,17 +112,20 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   const setEditingTextId = useCanvasStore(state => state.setEditingTextId);
   const handleElementDrop = useCanvasStore(state => state.handleElementDrop);
   const updateElementCoordinatesOnSectionMove = useCanvasStore(state => state.updateElementCoordinatesOnSectionMove);
+  const createTestElements = useCanvasStore(state => state.createTestElements);
 
-  // Tool-specific state for preview overlays
-  const [isDrawingConnector, setIsDrawingConnector] = React.useState(false);
-  const [connectorStart, setConnectorStart] = React.useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
-  const [connectorEnd, setConnectorEnd] = React.useState<{ x: number; y: number; elementId?: ElementId | SectionId; anchor?: string } | null>(null);
-  const [isDrawingText, setIsDrawingText] = React.useState(false);
-  const [previewText, setPreviewText] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [isDrawingTable, setIsDrawingTable] = React.useState(false);
-  const [previewTable, setPreviewTable] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [isDrawingStickyNote, setIsDrawingStickyNote] = React.useState(false);
-  const [previewStickyNote, setPreviewStickyNote] = React.useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  // DEBUG: Disabled test element creation - now using proper element creation via toolbar
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     if (elements.size === 0 && sections.size === 0) {
+  //       console.log('🧪 [KonvaCanvas] Store is empty, creating test elements...');
+  //       createTestElements();
+  //     }
+  //   }, 1000);
+  //   return () => clearTimeout(timer);
+  // }, [elements.size, sections.size, createTestElements]);
+
+  // Preview states are now handled by the unified store and UnifiedEventHandler
   
   // Calculate drawing preview states from store
   const isDrawingSection = isDrawing && currentTool === 'section';
@@ -189,31 +203,12 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
         onTouchMove={handleStageTouch}
         onTouchEnd={handleStageTouch}
       >
-        <CanvasEventHandler 
-          stageRef={internalStageRef} 
-          currentTool={currentTool as CanvasTool}
-          isDrawingConnector={isDrawingConnector}
-          setIsDrawingConnector={setIsDrawingConnector}
-          connectorStart={connectorStart}
-          setConnectorStart={setConnectorStart}
-          connectorEnd={connectorEnd}
-          setConnectorEnd={setConnectorEnd}
-          isDrawingSection={isDrawingSection}
-          previewSection={previewSection}
-          isDrawingText={isDrawingText}
-          setIsDrawingText={setIsDrawingText}
-          previewText={previewText}
-          setPreviewText={setPreviewText}
-          isDrawingTable={isDrawingTable}
-          setIsDrawingTable={setIsDrawingTable}
-          previewTable={previewTable}
-          setPreviewTable={setPreviewTable}
-          isDrawingStickyNote={isDrawingStickyNote}
-          setIsDrawingStickyNote={setIsDrawingStickyNote}
-          previewStickyNote={previewStickyNote}
-          setPreviewStickyNote={setPreviewStickyNote}
-        >
-          <CanvasLayerManager 
+        <UnifiedEventHandler 
+          stageRef={internalStageRef}
+          onStageReady={() => console.log('🎯 [KonvaCanvas] Stage ready with unified event handler')}
+        />
+        
+        <CanvasLayerManager 
             stageWidth={width}
             stageHeight={height}
             stageRef={internalStageRef}
@@ -307,134 +302,15 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
               // Handle text editing start properly
               setEditingTextId(elementId as ElementId);
             }}
-            // Add missing props for drawing and connectors
-            isDrawingConnector={isDrawingConnector}
-            connectorStart={connectorStart}
-            connectorEnd={connectorEnd}
-            isDrawingSection={isDrawingSection}
-            previewSection={previewSection}
+            // Simplified with UnifiedEventHandler handling all events
           />
-        </CanvasEventHandler>
       </Stage>
       <DebugOverlay />
     </>
   );
 });
 
-/**
- * Tool Overlay Manager - Handles tool-specific preview and interaction overlays
- */
-const ToolOverlayManager: React.FC<{
-  tool: CanvasTool;
-  stageRef: React.RefObject<Konva.Stage>;
-  viewport: { scale: number; position: { x: number; y: number } };
-  isDrawingConnector: boolean;
-  connectorStart: { x: number; y: number; elementId?: ElementId | SectionId } | null;
-  connectorEnd: { x: number; y: number; elementId?: ElementId | SectionId } | null;
-  isDrawingSection: boolean;
-  previewSection: { x: number; y: number; width: number; height: number } | null;
-}> = ({ tool, isDrawingConnector, connectorStart, connectorEnd, isDrawingSection, previewSection }) => {
-  // Get drawing state from store for pen tool preview
-  const isDrawing = useCanvasStore(state => state.isDrawing);
-  const currentPath = useCanvasStore(state => state.currentPath);
-  
-  // Drawing tool overlays
-  if (tool === 'pen' && isDrawing && currentPath && currentPath.length >= 4) {
-    return (
-      <React.Fragment>
-        {/* Current drawing path */}
-        <Line
-          points={currentPath}
-          stroke="#000000"
-          strokeWidth={2}
-          lineCap="round"
-          lineJoin="round"
-          tension={0.5}
-          globalCompositeOperation={'source-over'}
-          listening={false}
-        />
-      </React.Fragment>
-    );
-  }
-
-  // Connector tool overlays
-  if ((tool === 'connector' || tool === 'line') && isDrawingConnector && connectorStart && connectorEnd) {
-    return (
-      <React.Fragment>
-        {/* Preview connector line */}
-        <Line
-          points={[connectorStart.x, connectorStart.y, connectorEnd.x, connectorEnd.y]}
-          stroke="#3B82F6"
-          strokeWidth={2}
-          opacity={0.7}
-          dash={[5, 5]}
-          listening={false}
-        />
-        
-        {/* Snap indicators */}
-        {connectorStart.elementId && (
-          <Circle
-            x={connectorStart.x}
-            y={connectorStart.y}
-            radius={4}
-            fill="#3B82F6"
-            stroke="#1E40AF"
-            strokeWidth={2}
-            opacity={0.8}
-            listening={false}
-          />
-        )}
-        
-        {connectorEnd.elementId && (
-          <Circle
-            x={connectorEnd.x}
-            y={connectorEnd.y}
-            radius={4}
-            fill="#3B82F6"
-            stroke="#1E40AF"
-            strokeWidth={2}
-            opacity={0.8}
-            listening={false}
-          />
-        )}
-      </React.Fragment>
-    );
-  }
-
-  // Section tool overlays
-  if (tool === 'section' && isDrawingSection && previewSection) {
-    return (
-      <React.Fragment>
-        {/* Preview section rectangle */}
-        <Rect
-          x={previewSection.x}
-          y={previewSection.y}
-          width={previewSection.width}
-          height={previewSection.height}
-          fill="#3B82F6"
-          fillOpacity={0.1}
-          stroke="#3B82F6"
-          strokeWidth={2}
-          dash={[5, 5]}
-          listening={false}
-        />
-        
-        {/* Section size indicator */}
-        <Text
-          x={previewSection.x + previewSection.width / 2}
-          y={previewSection.y - 20}
-          text={`${Math.round(previewSection.width)} × ${Math.round(previewSection.height)}`}
-          fontSize={12}
-          fill="#1E293B"
-          align="center"
-          listening={false}
-        />
-      </React.Fragment>
-    );
-  }
-
-  return null;
-};
+// Tool overlays are now handled by UnifiedEventHandler and the unified store
 
 /**
  * Canvas UI Overlays - Renders UI elements outside of Konva for better performance

@@ -1,25 +1,15 @@
 // Test component to verify Konva canvas integration
 import React from 'react';
-import { useCanvasStore } from '../stores/canvasStore.enhanced';
-import { useShallow } from 'zustand/react/shallow';
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 import { ElementId as ElementIdFactory } from '../types/enhanced.types';
 import type { RectangleElement } from '../types/enhanced.types';
 
 export const KonvaDebugPanel: React.FC = () => {
-  // Fixed: Use specific selectors to prevent infinite re-renders
-  const {
-    elements,
-    selectedTool,
-    selectedElementIds,
-    addElement
-  } = useCanvasStore(
-    useShallow((state) => ({
-      elements: state.elements,
-      selectedTool: state.selectedTool,
-      selectedElementIds: state.selectedElementIds,
-      addElement: state.addElement,
-    }))
-  );
+  // Use unified store with selectors
+  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
+  const addElement = useUnifiedCanvasStore((state) => state.addElement);
   
   const elementCount = elements.size;
   const selectedElementId = Array.from(selectedElementIds)[0] || null;

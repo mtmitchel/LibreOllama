@@ -4,16 +4,10 @@
 import type { CanvasElement } from '../types/enhanced.types';
 import type { ElementId } from '../types/enhanced.types';
 import { 
-  useCanvasStore, 
+  useCanvasStore,
   useSelectedTool as useSelectedToolFromStore,
-  useElements as useElementsFromStore,
-  useIsDrawing as useIsDrawingFromStore,
-  useElement as useElementFromStore
-} from '../stores/canvasStore.enhanced';
-import { 
-  useSelectedElementIds as useSelectedElementIdsFromStore,
-  useSelectionStore 
-} from '../stores/slices/selectionStore';
+  canvasSelectors
+} from '../../../stores';
 
 // Element property selectors
 export const useElementProperty = <T>(elementId: string, property: keyof CanvasElement): T | undefined => {
@@ -73,7 +67,7 @@ export const useElementStyle = (elementId: string) => {
 
 // Selection state selectors
 export const useIsElementSelected = (elementId: string) => {
-  return useSelectionStore((state) => state.selectedElementIds.has(elementId as ElementId));
+  return useCanvasStore((state) => state.selectedElementIds.has(elementId as ElementId));
 };
 
 // Element collection selectors
@@ -103,29 +97,29 @@ export const useElementCount = () => {
 };
 
 export const useSelectedCount = () => {
-  return useSelectionStore((state) => state.selectedElementIds.size);
+  return useCanvasStore((state) => state.selectedElementIds.size);
 };
 
 // Viewport and interaction selectors
 export const useViewportBounds = () => {
-  return useCanvasStore((state) => state.viewportBounds);
+  return useCanvasStore((state) => state.viewport);
 };
 
 export const useZoom = () => {
-  return useCanvasStore((state) => state.zoom);
+  return useCanvasStore((state) => state.viewport.scale);
 };
 
 export const usePan = () => {
-  return useCanvasStore((state) => state.pan);
+  return useCanvasStore((state) => ({ x: state.viewport.x, y: state.viewport.y }));
 };
 
 // Tool and interaction state selectors
 export const useCurrentTool = () => {
-  return useSelectedToolFromStore();
+  return useCanvasStore(canvasSelectors.selectedTool);
 };
 
 export const useIsDrawing = () => {
-  return useIsDrawingFromStore();
+  return useCanvasStore(canvasSelectors.isDrawing);
 };
 
 export const useCurrentPath = () => {
@@ -134,21 +128,21 @@ export const useCurrentPath = () => {
 
 // History selectors
 export const useCanUndo = () => {
-  return useCanvasStore((state) => state.canUndo());
+  return useCanvasStore((state) => state.canUndo);
 };
 
 export const useCanRedo = () => {
-  return useCanvasStore((state) => state.canRedo());
+  return useCanvasStore((state) => state.canRedo);
 };
 
 // Text editing selectors
 export const useEditingTextId = () => {
-  return useCanvasStore((state) => state.editingTextId);
+  return useCanvasStore((state) => state.textEditingElementId);
 };
 
 export const useIsEditingText = (elementId?: string) => {
   return useCanvasStore(
-    (state) => elementId ? state.editingTextId === elementId : state.editingTextId !== null
+    (state) => elementId ? state.textEditingElementId === elementId : state.textEditingElementId !== null
   );
 };
 
@@ -164,10 +158,10 @@ export const useSection = (sectionId: string) => {
 export const useElementsInSection = (sectionId: string) => {
   return useCanvasStore(
     (state) => {
-      const section = state.sections.get(sectionId);
-      if (!section || !section.childElementIds) return [];
+      const sectionElements = state.sectionElementMap.get(sectionId);
+      if (!sectionElements) return [];
       
-      return section.childElementIds
+      return Array.from(sectionElements)
         .map(id => state.elements.get(id))
         .filter((element) => element !== undefined);
     }
@@ -189,6 +183,8 @@ export const useRenderingStats = () => {
 
 // Re-export commonly used store hooks for convenience
 export { useSelectedToolFromStore as useSelectedTool };
-export { useElementsFromStore as useElements };
-export { useSelectedElementIdsFromStore as useSelectedElementIds };
-export { useElementFromStore as useElement };
+
+// Convenience selectors using unified store
+export const useElements = () => useCanvasStore(canvasSelectors.elements);
+export const useSelectedElementIds = () => useCanvasStore(canvasSelectors.selectedElementIds);
+export const useElement = (id: string) => useCanvasStore((state) => state.elements.get(id));

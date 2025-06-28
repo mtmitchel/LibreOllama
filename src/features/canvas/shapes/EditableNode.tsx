@@ -4,13 +4,14 @@ import Konva from 'konva';
 import { CanvasElement } from '../types/enhanced.types';
 import { RectangleShape } from './RectangleShape';
 import { CircleShape } from './CircleShape';
-import UnifiedTextElement from '../components/UnifiedTextElement';
-import StickyNoteElement from '../components/StickyNoteElement';
+// TEMP FIX: Comment out broken imports and implement simple fallbacks
+// import UnifiedTextElement from '../components/UnifiedTextElement';
+// import StickyNoteElement from '../components/StickyNoteElement';
 import { EnhancedTableElement } from '../components/EnhancedTableElement';
-import SectionElement from '../components/SectionElement';
-import ImageElement from '../components/ImageElement';
-import ConnectorRenderer from '../components/ConnectorRenderer';
-import { Line, Star } from 'react-konva';
+// import SectionElement from '../components/SectionElement';
+// import ImageElement from '../components/ImageElement';
+import { ConnectorRenderer } from '../components/ConnectorRenderer';
+import { Line, Star, Text, Rect } from 'react-konva';
 import { designSystem } from '../../../design-system';
 
 interface EditableNodeProps {
@@ -41,7 +42,8 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
   onElementDragMove,
   onElementUpdate,
   onStartTextEdit
-}) => {// Determine if element should be draggable
+}) => {
+  console.log('🎪 [EditableNode] Rendering element:', element.type, element.id, element);// Determine if element should be draggable
   const isDraggable = React.useMemo(() => {
     return (
       (selectedTool === 'select' || selectedTool === element.type) &&
@@ -106,50 +108,64 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       );
 
     case 'text':
+      // TEMP FIX: Use simple Text element directly until UnifiedTextElement is fixed
       return (
-        <UnifiedTextElement
-          element={{
-            ...element,
-            type: 'text',
-            text: element.text || ''
+        <Text
+          {...commonProps}
+          text={(element as any).text || 'Text'}
+          fontSize={(element as any).fontSize || 16}
+          fontFamily={(element as any).fontFamily || 'Arial'}
+          fill={(element as any).fill || '#000000'}
+          width={(element as any).width || 200}
+          height={(element as any).height || 50}
+          onDblClick={(e: any) => {
+            e.cancelBubble = true;
+            onStartTextEdit(element.id);
           }}
-          isSelected={isSelected}
-          isEditing={false} // Will be managed by parent
-          onUpdate={onElementUpdate}
-          onSelect={() => {}} // Handled by parent
-          onStartEdit={onStartTextEdit}
-          konvaProps={commonProps}
         />
       );
 
     case 'sticky-note':
+      // TEMP FIX: Use simple Rect + Text until StickyNoteElement is fixed
       return (
-        <StickyNoteElement
-          element={element}
-          isSelected={isSelected}
-          isEditing={false} // Will be managed by parent
-          isDraggable={isDraggable}
-          onSelect={(_, e) => onElementClick(e, element)}
-          // FIXED: Add no-op onDragEnd to satisfy interface while centralizing event handling
-          onDragEnd={() => {/* Handled by centralized event system */}}
-          onDoubleClick={(e) => {
-            e.cancelBubble = true;
-            onStartTextEdit(element.id);
-          }}
-        />
+        <React.Fragment>
+          <Rect
+            {...commonProps}
+            width={(element as any).width || 150}
+            height={(element as any).height || 150}
+            fill={(element as any).backgroundColor || '#ffeb3b'}
+            stroke={(element as any).borderColor || '#fbc02d'}
+            strokeWidth={1}
+            cornerRadius={4}
+          />
+          <Text
+            {...commonProps}
+            text={(element as any).text || 'Sticky Note'}
+            fontSize={12}
+            fontFamily="Arial"
+            fill="#333"
+            width={(element as any).width || 150}
+            height={(element as any).height || 150}
+            padding={8}
+            verticalAlign="top"
+            listening={false}
+          />
+        </React.Fragment>
       );    case 'rich-text':
+      // TEMP FIX: Use simple Text element until UnifiedTextElement is fixed
       return (
-        <UnifiedTextElement
-          element={element as any}
+        <Text
           {...commonProps}
+          text={(element as any).text || 'Rich Text'}
+          fontSize={(element as any).fontSize || 16}
+          fontFamily={(element as any).fontFamily || 'Arial'}
+          fill={(element as any).fill || '#000000'}
+          width={(element as any).width || 200}
+          height={(element as any).height || 100}
           onDblClick={(e: any) => {
             e.cancelBubble = true;
-            e.evt?.stopPropagation();
             onStartTextEdit(element.id);
           }}
-          isEditing={false} // Will be managed by parent
-          onTextUpdate={() => {}} // Will be handled by parent
-          onEditingCancel={() => {}} // Will be handled by parent
         />
       );
 
@@ -206,24 +222,28 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       );
 
     case 'image':
+      // TEMP FIX: Use simple Rect placeholder until ImageElement is fixed
       return (
-        <ImageElement
-          element={element}
-          konvaProps={commonProps}        />
+        <Rect
+          {...commonProps}
+          width={(element as any).width || 200}
+          height={(element as any).height || 150}
+          fill="#f0f0f0"
+          stroke="#ccc"
+          strokeWidth={1}
+        />
       );    case 'section':
-      return (        <SectionElement
-          section={element as any}
-          isSelected={isSelected}
-          onUpdate={(id: string, updates: any) => onElementUpdate(id, updates as Partial<CanvasElement>)}
-          onSelect={() => {}} // Handled by parent
-          onDragEnd={onElementDragEnd}
-          onSectionChange={() => {}} // No-op for now
-          isDraggable={isDraggable}
-          elements={{}} // Will be passed from parent
-          renderElement={() => null} // Will be handled by layer manager
-        >
-          {null}
-        </SectionElement>
+      // TEMP FIX: Use simple Rect until SectionElement is fixed
+      return (
+        <Rect
+          {...commonProps}
+          width={(element as any).width || 300}
+          height={(element as any).height || 200}
+          fill="rgba(0, 123, 255, 0.1)"
+          stroke="#007bff"
+          strokeWidth={2}
+          dash={[5, 5]}
+        />
       );
 
     case 'table':
@@ -240,12 +260,16 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       );
 
     case 'connector':
+      // TEMP FIX: Use simple Line until ConnectorRenderer is fixed
+      const startPoint = (element as any).startPoint || { x: 0, y: 0 };
+      const endPoint = (element as any).endPoint || { x: 100, y: 100 };
       return (
-        <ConnectorRenderer
-          element={element}
-          isSelected={isSelected}
-          onSelect={() => onElementClick({} as any, element)}          elements={new Map()} // Will be passed from parent
-          sections={new Map()} // Will be passed from parent
+        <Line
+          {...commonProps}
+          points={[startPoint.x, startPoint.y, endPoint.x, endPoint.y]}
+          stroke={(element as any).stroke || '#333'}
+          strokeWidth={(element as any).strokeWidth || 2}
+          lineCap="round"
         />
       );
 

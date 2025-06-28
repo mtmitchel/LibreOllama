@@ -19,8 +19,8 @@ import { LayersPanel } from './ui/LayersPanel';
 import { PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { Button } from '../../../shared/ui';
 
-// Import unified store with consistent pattern
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+// Import unified store with consistent pattern through main stores
+import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
 
 interface KonvaAppProps {
   appSidebarOpen?: boolean;
@@ -60,7 +60,12 @@ const KonvaAppRefactored: React.FC<KonvaAppProps> = ({
   const updateCanvasSize = useCallback(() => {
     if (canvasContainerRef.current) {
       const rect = canvasContainerRef.current.getBoundingClientRect();
-      setCanvasSize({ width: rect.width, height: rect.height });
+      // SAFETY: Ensure minimum canvas size to prevent Konva errors
+      const width = Math.max(rect.width || 800, 100);
+      const height = Math.max(rect.height || 600, 100);
+      
+      setCanvasSize({ width, height });
+      console.log('🎨 [KonvaApp] Canvas size updated:', { width, height });
     }
   }, []);
 
