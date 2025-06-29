@@ -47,11 +47,10 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
   // Early return if no rows or columns
   if (tableRows.length === 0 || tableColumns.length === 0) {
     return null;
-  }  // Store methods - migrated to unified store
-  // TODO: Implement table-specific methods in unified store
-  const updateTableCell = () => {}; // Stub function
-  const removeTableRow = () => {}; // Stub function 
-  const removeTableColumn = () => {}; // Stub function
+  }  // Store methods - using unified store
+  const updateTableCell = useUnifiedCanvasStore(state => state.updateTableCell);
+  const removeTableRow = () => {}; // TODO: Implement in unified store
+  const removeTableColumn = () => {}; // TODO: Implement in unified store
   const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
 
   // Use extracted table functionality hooks
@@ -70,20 +69,8 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
   const totalWidth = tableColumns.reduce((sum, col) => sum + (col?.width || 100), 0);
   const totalHeight = tableRows.reduce((sum, row) => sum + (row?.height || 40), 0);
 
-  // Handle drag end - memoized to prevent render loops
-  // FIXED: Removed onDragEnd dependency as per Phase 3 centralized event handling
-  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
-    try {
-      const node = e.target;
-      onUpdate({
-        x: node.x(),
-        y: node.y()
-      });
-      // onDragEnd removed - handled by centralized event system
-    } catch (error) {
-      console.error("An error occurred in EnhancedTableElement:", error);
-    }
-  }, [onUpdate]);
+  // ARCHITECTURAL FIX: Remove internal drag handling - now handled by UnifiedEventHandler
+  // The centralized event system in UnifiedEventHandler will handle all drag operations
 
   // Render table cells using the interaction handlers
   const renderCells = () => {
@@ -301,7 +288,6 @@ export const EnhancedTableElement = React.forwardRef<Konva.Group, EnhancedTableE
       x={element.x}
       y={element.y}
       draggable={isDraggable}
-      onDragEnd={handleDragEnd}
       onMouseLeave={interactions.clearAllHoverStates}
       opacity={cellEditing.editingCell ? 0.95 : 1.0}
     >

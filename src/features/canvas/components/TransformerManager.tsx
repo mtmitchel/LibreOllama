@@ -108,6 +108,8 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
           try {
             transformer.nodes(selectedNodes);
             transformer.visible(true);
+            // Ensure transformer is above the element every time (fix for reselection issue)
+            transformer.moveToTop();
             // Safe layer batch draw with error handling
             const layer = transformer.getLayer();
             if (layer) {
@@ -132,6 +134,8 @@ export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef
             if (retryNodes.length > 0) {
               transformer.nodes(retryNodes);
               transformer.visible(true);
+              // Ensure transformer is above the element every time (fix for reselection issue)
+              transformer.moveToTop();
               const layer = transformer.getLayer();
               if (layer) {
                 layer.batchDraw();

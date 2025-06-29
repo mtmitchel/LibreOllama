@@ -22,14 +22,14 @@ export const ImageShape: React.FC<ImageShapeProps> = React.memo(({
 }) => {
   const [image, setImage] = React.useState<HTMLImageElement | null>(null);
   React.useEffect(() => {
-    const imageSrc = element.imageUrl;
+    const imageSrc = (element as any).src || (element as any).imageUrl; // Support both field names
     if (imageSrc) {
       const img = new window.Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => setImage(img);
       img.src = imageSrc;
     }
-  }, [element.imageUrl]);
+  }, [(element as any).src, (element as any).imageUrl]);
   return (
     <Image
       {...konvaProps}

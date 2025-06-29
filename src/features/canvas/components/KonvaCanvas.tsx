@@ -67,16 +67,16 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
   });
   */
 
-  // Store selectors with primitive values to prevent render loops
-  const elements = useCanvasStore(state => state.elements);
-  const sections = useCanvasStore(state => state.sections);
-  const selectedElementIds = useCanvasStore(state => state.selectedElementIds);
-  const currentTool = useCurrentTool();
-  const isDrawing = useCanvasStore(state => state.isDrawing);
-  const drawingStartPoint = useCanvasStore(state => state.drawingStartPoint);
-  const drawingCurrentPoint = useCanvasStore(state => state.drawingCurrentPoint);
-  const currentPath = useCanvasStore(state => state.currentPath);
-  const setSelectedTool = useCanvasStore(state => state.setSelectedTool);
+  // Store selectors with primitive values to prevent render loops - UNIFIED STORE
+  const elements = useUnifiedCanvasStore(state => state.elements);
+  const sections = useUnifiedCanvasStore(state => state.sections);
+  const selectedElementIds = useUnifiedCanvasStore(state => state.selectedElementIds);
+  const currentTool = useUnifiedCanvasStore(state => state.selectedTool);
+  const isDrawing = useUnifiedCanvasStore(state => state.isDrawing);
+  const drawingStartPoint = useUnifiedCanvasStore(state => state.drawingStartPoint);
+  const drawingCurrentPoint = useUnifiedCanvasStore(state => state.drawingCurrentPoint);
+  const currentPath = useUnifiedCanvasStore(state => state.currentPath);
+  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
   
   // Debug logging for tool state
   useEffect(() => {
@@ -103,16 +103,16 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
     return combined;
   }, [elements, sections]);
   
-  // Store actions - get the enhanced methods
-  const selectElement = useCanvasStore(state => state.selectElement);
-  const updateElement = useCanvasStore(state => state.updateElement);
-  const updateSection = useCanvasStore(state => state.updateSection);
-  const addElement = useCanvasStore(state => state.addElement);
-  const createSection = useCanvasStore(state => state.createSection);
-  const setEditingTextId = useCanvasStore(state => state.setEditingTextId);
-  const handleElementDrop = useCanvasStore(state => state.handleElementDrop);
-  const updateElementCoordinatesOnSectionMove = useCanvasStore(state => state.updateElementCoordinatesOnSectionMove);
-  const createTestElements = useCanvasStore(state => state.createTestElements);
+  // Store actions - UNIFIED STORE methods
+  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
+  const updateSection = useUnifiedCanvasStore(state => state.updateSection);
+  const addElement = useUnifiedCanvasStore(state => state.addElement);
+  const createSection = useUnifiedCanvasStore(state => state.createSection);
+  const setEditingTextId = useUnifiedCanvasStore(state => state.setTextEditingElement);
+  const handleElementDrop = useUnifiedCanvasStore(state => state.handleElementDrop);
+  const updateElementCoordinatesOnSectionMove = useUnifiedCanvasStore(state => state.updateElementCoordinatesOnSectionMove);
+  const createTestElements = useUnifiedCanvasStore(state => state.createTestElements);
 
   // DEBUG: Disabled test element creation - now using proper element creation via toolbar
   // useEffect(() => {
@@ -280,7 +280,7 @@ const KonvaCanvas: React.FC<KonvaCanvasProps> = React.memo(({
                 });
                 
                 try {
-                  handleElementDrop(elementId as ElementId, newPosition);
+                  handleElementDrop(elementId as ElementId, newPosition.x, newPosition.y);
                   console.log('✅ [ENHANCED CANVAS] Element drop handled with enhanced logic:', {
                     elementId,
                     newPosition

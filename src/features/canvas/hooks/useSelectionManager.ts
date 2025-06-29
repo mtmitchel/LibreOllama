@@ -1,6 +1,6 @@
 // src/hooks/canvas/useSelectionManager.ts
 import { useCallback } from 'react';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore } from '../../../stores';
 import { toElementId, arrayToElementIds } from '../types/compatibility';
 
 /**
@@ -11,21 +11,36 @@ import { toElementId, arrayToElementIds } from '../types/compatibility';
  */
 export const useSelectionManager = () => {
   // Get selection state and actions from unified store
-  const selectedElementIds = useCanvasStore((state) => state.selectedElementIds);
-  const lastSelectedElementId = useCanvasStore((state) => state.lastSelectedElementId);
-  const selectionRectangle = useCanvasStore((state) => state.selectionRectangle);
-  const selectElement = useCanvasStore((state) => state.selectElement);
-  const deselectElement = useCanvasStore((state) => state.deselectElement);
-  const toggleElementSelection = useCanvasStore((state) => state.toggleElementSelection);
-  const selectMultipleElements = useCanvasStore((state) => state.selectMultipleElements);
-  const clearSelection = useCanvasStore((state) => state.clearSelection);
-  const isElementSelected = useCanvasStore((state) => state.isElementSelected);
-  const getSelectedElementIds = useCanvasStore((state) => state.getSelectedElementIds);
-  const hasSelection = useCanvasStore((state) => state.hasSelection);
+  const selectedElementIds = useUnifiedCanvasStore((state) => state.selectedElementIds);
+  const lastSelectedElementId = useUnifiedCanvasStore((state) => state.lastSelectedElementId);
+  const selectElement = useUnifiedCanvasStore((state) => state.selectElement);
+  const deselectElement = useUnifiedCanvasStore((state) => state.deselectElement);
+  const clearSelection = useUnifiedCanvasStore((state) => state.clearSelection);
+  const getSelectedElements = useUnifiedCanvasStore((state) => state.getSelectedElements);
+  
+  // Derived methods for compatibility
+  const hasSelection = selectedElementIds.size > 0;
+  const isElementSelected = useCallback((elementId: string) => {
+    return selectedElementIds.has(toElementId(elementId));
+  }, [selectedElementIds]);
+  
+  const toggleElementSelection = useCallback((elementId: string) => {
+    const id = toElementId(elementId);
+    if (selectedElementIds.has(id)) {
+      deselectElement(id);
+    } else {
+      selectElement(id, true); // multiSelect = true
+    }
+  }, [selectedElementIds, selectElement, deselectElement]);
+  
+  const selectMultipleElements = useCallback((elementIds: string[]) => {
+    clearSelection();
+    elementIds.forEach(id => selectElement(toElementId(id), true));
+  }, [clearSelection, selectElement]);
   // Select a single element, optionally adding to current selection
   const selectSingle = useCallback((elementId: string, addToSelection: boolean = false) => {
     if (addToSelection) {
-      toggleElementSelection(toElementId(elementId));
+      toggleElementSelection(elementId);
     } else {
       selectElement(toElementId(elementId));
     }
@@ -54,8 +69,8 @@ export const useSelectionManager = () => {
 
   // Get all selected element IDs
   const getSelectedIds = useCallback(() => {
-    return getSelectedElementIds();
-  }, [getSelectedElementIds]);
+    return Array.from(selectedElementIds);
+  }, [selectedElementIds]);
 
   // Get selection count
   const getSelectionCount = useCallback(() => {

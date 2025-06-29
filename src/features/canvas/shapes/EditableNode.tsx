@@ -18,10 +18,7 @@ interface EditableNodeProps {
   element: CanvasElement;
   isSelected: boolean;
   selectedTool: string;
-  onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
-  onElementDragStart?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
-  onElementDragMove?: (e: Konva.KonvaEventObject<DragEvent>, elementId: string) => void;
+  // REMOVED: event handlers - handled by UnifiedEventHandler at stage level
   onElementUpdate: (id: string, updates: Partial<CanvasElement>) => void;
   onStartTextEdit: (elementId: string) => void;
 }
@@ -36,10 +33,6 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
   element,
   isSelected,
   selectedTool,
-  onElementClick,
-  onElementDragStart,
-  onElementDragEnd,
-  onElementDragMove,
   onElementUpdate,
   onStartTextEdit
 }) => {
@@ -50,27 +43,19 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       !(element as any).isLocked
       // Allow dragging of selected elements in sections - that's the whole point!
     );
-  }, [selectedTool, element.type]);  // Common props for all shape types
+  }, [selectedTool, element.type]);  // ARCHITECTURAL FIX: Remove event handlers - UnifiedEventHandler handles all interactions
   const commonProps = React.useMemo(() => {
     const baseProps: any = {
       id: element.id,
       x: element.x,
       y: element.y,
       draggable: isDraggable,
-      onClick: (e: Konva.KonvaEventObject<MouseEvent>) => onElementClick(e, element),
-      onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => onElementDragEnd(e, element.id),
-      opacity: 1,      stroke: isSelected ? designSystem.colors.primary[500] : (element as any).stroke,
+      // REMOVED: onClick, onDragEnd, onDragStart, onDragMove - handled by UnifiedEventHandler
+      opacity: 1,
+      stroke: isSelected ? designSystem.colors.primary[500] : (element as any).stroke,
       strokeWidth: isSelected ? ((element as any).strokeWidth || 1) + 1.5 : (element as any).strokeWidth,
       perfectDrawEnabled: false, // Performance optimization
     };
-
-    // Add optional drag handlers only if they exist
-    if (onElementDragStart) {
-      baseProps.onDragStart = (e: Konva.KonvaEventObject<DragEvent>) => onElementDragStart(e, element.id);
-    }
-    if (onElementDragMove) {
-      baseProps.onDragMove = (e: Konva.KonvaEventObject<DragEvent>) => onElementDragMove(e, element.id);
-    }
 
     // Add shadow properties only if selected to avoid undefined issues
     if (isSelected) {

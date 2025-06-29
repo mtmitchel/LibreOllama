@@ -15,6 +15,7 @@ import { useCanvasFeatureFlag } from '../utils/featureFlags';
 
 // Import the main canvas implementation
 import KonvaCanvas from './KonvaCanvas'; // Main implementation (previously refactored)
+import { CanvasErrorBoundary } from './CanvasErrorBoundary';
 
 // Shared props interface that both implementations must support
 interface CanvasWrapperProps {
@@ -27,6 +28,7 @@ interface CanvasWrapperProps {
   };
   stageRef: React.MutableRefObject<Konva.Stage | null>;
   onWheelHandler: (e: Konva.KonvaEventObject<WheelEvent>) => void;
+  children?: React.ReactNode;
   onTouchMoveHandler?: (e: Konva.KonvaEventObject<TouchEvent>) => void;
   onTouchEndHandler?: (e: Konva.KonvaEventObject<TouchEvent>) => void;
 }
@@ -106,51 +108,13 @@ export const CanvasIntegrationWrapper: React.FC<CanvasWrapperProps> = (props) =>
 
   // Always use error boundary for production stability
   return (
-    <CanvasErrorBoundary onError={handleError}>
+    <CanvasErrorBoundary>
       <CanvasComponent {...enhancedProps} />
       {enablePerformanceMonitoring && <PerformanceOverlay metrics={performanceMetrics} />}
       {hasError && <ErrorNotification error={errorInfo} />}
     </CanvasErrorBoundary>
   );
 };
-
-/**
- * Error Boundary Component for Refactored Canvas
- * Catches errors and triggers fallback to legacy canvas
- */
-interface CanvasErrorBoundaryProps {
-  children: React.ReactNode;
-  onError: (error: Error, errorInfo?: string) => void;
-}
-
-class CanvasErrorBoundary extends React.Component<
-  CanvasErrorBoundaryProps,
-  { hasError: boolean }
-> {
-  constructor(props: CanvasErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(_error: Error) {
-    return { hasError: true };
-  }
-  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    this.props.onError(error, errorInfo.componentStack || 'Unknown error location');
-  }
-
-  override render() {
-    if (this.state.hasError) {
-      return (
-        <div className="canvas-error-fallback">
-          <p>Canvas error detected. Falling back to stable version...</p>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
 
 /**
  * Performance Monitoring Overlay (Development Only)

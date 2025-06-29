@@ -199,14 +199,7 @@ const StickyNoteElement = React.forwardRef<Konva.Group, StickyNoteElementProps>(
         })
       )}
       
-      {/* FIXED: Trigger layer redraw after rich text segments are rendered */}
-      {hasContent && hasRichTextSegments && (() => {
-        // Immediate redraw to ensure rich text segments are visible
-        if (stageRef.current) {
-          triggerLayerRedraw({ current: stageRef.current }, { immediate: true, debug: false });
-        }
-        return null;
-      })()}
+      {/* Note: Layer redraw is handled at the canvas level, not in individual components */}
 
       {/* Fallback to basic text if no rich text segments */}
       {hasContent && !hasRichTextSegments && (

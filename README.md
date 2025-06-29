@@ -20,37 +20,35 @@
 
 ---
 
-## 🚧 **CANVAS STATUS: PHASE 2B STORE MIGRATION COMPLETED** ⚠️
+## 🚨 **CANVAS STATUS: CRITICAL ARCHITECTURAL CONFLICTS IDENTIFIED**
 
-**Current Status (December 28, 2024):**
+**Current Status (June 28, 2025):**
 
-LibreOllama Canvas is undergoing systematic architectural refactoring to establish a production-ready foundation. **Phase 2B Store Architecture Migration has been completed**, migrating core components from legacy adapter pattern to unified store architecture.
+The LibreOllama Canvas system is experiencing severe architectural instability requiring immediate expert-level rectification. The codebase contains critical conflicts that prevent reliable functionality.
 
-**✅ Phase 2B Achievements:**
-- **Store Migration Complete**: 13+ critical components migrated to unified store architecture
-- **UI Rendering Fixed**: Resolved critical rendering pipeline issue where elements weren't visible
-- **Infinite Loop Issues Resolved**: Fixed circular dependency and store access patterns
-- **Type-Safe Operations**: Eliminated `as any` casts in core rendering components
-- **Event Handling Unified**: Centralized event delegation through CanvasEventHandler
+**⚠️ SYSTEM INSTABILITY WARNING:**
+- **High-Risk Architecture**: Multiple conflicting implementations creating unpredictable behavior
+- **Critical Defects**: Elements snap back, tools non-functional, position sync failures
+- **Technical Debt**: Legacy code conflicts with active implementations
+- **Expert Surgery Required**: Systematic architectural cleanup needed
 
-**⚠️ Current Limitations:**
-- UI testing and validation still in progress
-- Some components may require additional testing for full functionality
-- Documentation needs updating to reflect current implementation status
-- Production readiness pending completion of all migration phases
+**📋 AUTHORITATIVE RECOVERY PLAN:**
+All canvas development MUST follow the comprehensive recovery plan outlined in:
 
-**🔄 Active Development:**
-- **Current Phase**: Phase 2B completion validation and testing
-- **Next Phase**: Phase 3 UI/UX modernization and component standardization
-- **Architecture**: Moving from fragmented multi-store to unified store pattern
+**[REFACTOR FINAL PLAN](docs/REFACTOR%20FINAL%20PLAN.md)** - The single source of truth for system rectification
 
-**Technical Status:**
-- **Type Safety**: Major improvements, work ongoing
-- **Store Architecture**: Core migration completed, validation in progress  
-- **Component Migration**: 13+ components migrated, testing ongoing
-- **Canvas Rendering**: Basic rendering restored, advanced features being validated
+This plan provides:
+- 4-phase systematic recovery process
+- Complete architectural conflict resolution
+- Code consolidation and cleanup procedures
+- Target architecture specification
 
-See [Project Roadmap](docs/2_PROJECT_ROADMAP_AND_ACTION_PLAN.md) for current development status and next steps.
+**🚨 DEVELOPMENT MORATORIUM:**
+- No new feature development until architectural conflicts are resolved
+- All work must align with the REFACTOR FINAL PLAN
+- System requires expert-level architectural surgery before stability
+
+For archived technical documentation, see [Documentation Index](docs/README.md).
 
 ---
 
@@ -74,7 +72,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | An infinite whiteboard powered by **Konva.js** for visual thinking and diagramming. Currently supports multiple element types including text, shapes, sticky notes, tables, and connectors. **Under active development** with ongoing architectural refactoring to establish a unified store architecture. Core rendering and basic functionality operational, with advanced features being progressively migrated and tested. Built with **React 19 + Zustand** for modern state management patterns. |
+| **Canvas** | A professional infinite whiteboard powered by **Konva.js** for visual thinking and diagramming. Core architecture complete with unified store pattern. Basic tools working (text, rectangles, circles), advanced tools in development (sections, connectors, pen tools, image upload). Modern floating toolbar with tool selection. Built on **React 19 + Zustand** with TypeScript for type safety and performance. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -254,9 +252,8 @@ window.runCanvasRenderingTests();
 - **Next Phase**: UI/UX modernization and component standardization planned
 
 ## Canvas Documentation Quick Links
-- [Project Roadmap & Action Plan](./docs/2_PROJECT_ROADMAP_AND_ACTION_PLAN.md) - Current development status and next steps
-- [Canvas Developer Guide](./docs/1_CANVAS_DEVELOPER_GUIDE.md) - Technical implementation guide and best practices
-- [Documentation Index](./docs/README.md) - Complete documentation directory
+- [REFACTOR FINAL PLAN](./docs/REFACTOR%20FINAL%20PLAN.md) - **AUTHORITATIVE SOURCE** - Complete system rectification plan
+- [Documentation Index](./docs/README.md) - Complete documentation directory and archived materials
 
 ## Recent Canvas Architecture Highlights (December 28, 2024)
 

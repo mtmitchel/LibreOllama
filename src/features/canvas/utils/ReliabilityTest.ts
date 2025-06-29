@@ -6,7 +6,6 @@
 
 import { logger } from '@/lib/logger';
 import { drawingStateManager } from './state/DrawingStateManager';
-import { eventHandlerManager } from './state/EventHandlerManager';
 import { stateSynchronizationMonitor } from './state/StateSynchronizationMonitor';
 import { enhancedFeatureFlagManager } from './state/EnhancedFeatureFlagManager';
 
@@ -30,7 +29,7 @@ export class ReliabilityTestSuite {
     logger.log('🧪 Starting reliability test suite...');
     
     await this.testDrawingStateRecovery();
-    await this.testEventHandlerFallbacks();
+    // NOTE: testEventHandlerFallbacks removed - functionality now in UnifiedEventHandler
     await this.testStateSynchronizationMonitoring();
     await this.testFeatureFlagFallbacks();
     await this.testErrorBoundaryRecovery();
@@ -89,39 +88,8 @@ export class ReliabilityTestSuite {
   }
 
   /**
-   * Test event handler error handling and fallbacks
-   */  private async testEventHandlerFallbacks(): Promise<void> {
-    const startTime = Date.now();
-    
-    try {
-      // Test creating a safe handler
-      const testHandler = eventHandlerManager.createSafeEventHandler(
-        'testHandler',
-        () => {
-          throw new Error('Test error');
-        },
-        () => {
-          // Fallback should execute
-        }
-      );
-      
-      // Simulate event with test handler
-      const mockEvent = {
-        type: 'test',
-        target: null,
-        currentTarget: null,
-        evt: null,
-        cancelBubble: false
-      } as any;
-      
-      // Should not throw due to error handling
-      testHandler(mockEvent);
-      
-      this.addResult('Event Handler Fallbacks', true, 'Event handlers properly handle errors and fallbacks', Date.now() - startTime);
-    } catch (error) {
-      this.addResult('Event Handler Fallbacks', false, `Event handler test failed: ${error instanceof Error ? error.message : 'Unknown error'}`, Date.now() - startTime, error instanceof Error ? error : new Error('Unknown error'));
-    }
-  }
+   * NOTE: Event handler tests removed - functionality now integrated into UnifiedEventHandler
+   */
 
   /**
    * Test state synchronization monitoring

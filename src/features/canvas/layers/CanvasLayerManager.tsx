@@ -15,7 +15,12 @@ import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores'; // Using unified store
 import { Line } from 'react-konva';
-import { Layer as LayerData } from '../stores/slices/layerStore';
+// import { Layer as LayerData } from '../stores/slices/layerStore'; // Legacy import
+interface LayerData {
+  id: string;
+  name: string;
+  visible: boolean;
+}
 import { CanvasElement, ElementId, SectionElement as SectionElementType, SectionId, isSectionElement, ConnectorElement } from '../types/enhanced.types';
 import { useViewportCulling } from '../hooks/useViewportCulling';
 
@@ -300,10 +305,13 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   }, [visibleElements]);
 
   const sortedMainElements = useMemo(() => {
-    const sorted = [...mainElements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-    console.log('🎨 [CanvasLayerManager] Sorted main elements:', sorted.length, sorted);
+    // When useGroupedSections is false, sections should be included in main elements
+    // so they get rendered by MainLayer alongside other elements
+    const elementsToSort = useGroupedSections ? mainElements : [...mainElements, ...sectionElements];
+    const sorted = elementsToSort.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    console.log('🎨 [CanvasLayerManager] Sorted main elements (includesSections:', !useGroupedSections, '):', sorted.length, sorted);
     return sorted;
-  }, [mainElements]);
+  }, [mainElements, sectionElements, useGroupedSections]);
 
   const sortedConnectorElements = useMemo(() => {
     return [...connectorElements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));

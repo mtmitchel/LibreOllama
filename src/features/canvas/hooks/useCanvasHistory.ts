@@ -1,6 +1,6 @@
 // src/hooks/canvas/useCanvasHistory.ts
 import { useCallback } from 'react';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore } from '../../../stores';
 
 /**
  * useCanvasHistory - Undo/redo operations from history store
@@ -10,15 +10,15 @@ import { useCanvasStore } from '../../../stores';
  */
 export const useCanvasHistory = () => {
   // Use unified store selectors for history functionality
-  const history = useCanvasStore((state) => state.history);
-  const currentIndex = useCanvasStore((state) => state.currentIndex);
-  const canUndo = useCanvasStore((state) => state.canUndo);
-  const canRedo = useCanvasStore((state) => state.canRedo);
-  const undo = useCanvasStore((state) => state.undo);
-  const redo = useCanvasStore((state) => state.redo);
-  const addHistoryEntry = useCanvasStore((state) => state.addHistoryEntry);
-  const clearHistory = useCanvasStore((state) => state.clearHistory);
-  const getHistoryLength = useCanvasStore((state) => state.getHistoryLength);
+  const history = useUnifiedCanvasStore((state) => state.history);
+  const currentIndex = useUnifiedCanvasStore((state) => state.currentIndex);
+  const canUndo = useUnifiedCanvasStore((state) => state.canUndo);
+  const canRedo = useUnifiedCanvasStore((state) => state.canRedo);
+  const undo = useUnifiedCanvasStore((state) => state.undo);
+  const redo = useUnifiedCanvasStore((state) => state.redo);
+  const addHistoryEntry = useUnifiedCanvasStore((state) => state.addHistoryEntry);
+  const clearHistory = useUnifiedCanvasStore((state) => state.clearHistory);
+  const getHistoryLength = useUnifiedCanvasStore((state) => state.getHistoryLength);
   // Perform undo operation
   const performUndo = useCallback(() => {
     if (canUndo()) {
@@ -48,7 +48,7 @@ export const useCanvasHistory = () => {
       affectedCount?: number;
     }
   ) => {
-    addHistoryEntry(action, patches, inversePatches, metadata);
+    addHistoryEntry(action, metadata); // Simplified signature for unified store
   }, [addHistoryEntry]);
 
   // Clear all history
@@ -75,9 +75,9 @@ export const useCanvasHistory = () => {
     return {
       ...state,
       recentActions: recentEntries.map(entry => ({
-        action: entry.action,
+        action: entry.operation, // Use 'operation' instead of 'action'
         timestamp: entry.timestamp,
-        metadata: entry.metadata
+        metadata: {} // No metadata in simplified interface
       }))
     };
   }, [getHistoryState, history, currentIndex]);
@@ -107,13 +107,13 @@ export const useCanvasHistory = () => {
     const state = getHistoryState();
     return {
       undo: {
-        enabled: state.canUndo,        tooltip: state.canUndo && currentIndex >= 0 && history.get(currentIndex) 
-          ? `Undo: ${history.get(currentIndex)!.action}` 
+        enabled: state.canUndo,        tooltip: state.canUndo && currentIndex >= 0 && history[currentIndex] 
+          ? `Undo: ${history[currentIndex]!.operation}` 
           : 'Nothing to undo'
       },
       redo: {
-        enabled: state.canRedo,        tooltip: state.canRedo && currentIndex + 1 < history.getSize() && history.get(currentIndex + 1)
-          ? `Redo: ${history.get(currentIndex + 1)?.action || 'Unknown action'}`
+        enabled: state.canRedo,        tooltip: state.canRedo && currentIndex + 1 < history.length && history[currentIndex + 1]
+          ? `Redo: ${history[currentIndex + 1]?.operation || 'Unknown action'}`
           : 'Nothing to redo'
       }
     };
@@ -122,8 +122,8 @@ export const useCanvasHistory = () => {
   const getMemoryUsage = useCallback(() => {
     // Estimate memory usage based on history entries using the available methods
     let estimatedSize = 0;
-    for (let i = 0; i < history.getSize(); i++) {
-      const entry = history.get(i);
+    for (let i = 0; i < history.length; i++) {
+      const entry = history[i];
       if (entry) {
         estimatedSize += JSON.stringify(entry).length;
       }
@@ -132,8 +132,8 @@ export const useCanvasHistory = () => {
     return {
       estimatedBytes: estimatedSize,
       estimatedKB: Math.round(estimatedSize / 1024),
-      entryCount: history.getSize(),
-      averageEntrySize: history.getSize() > 0 ? Math.round(estimatedSize / history.getSize()) : 0
+      entryCount: history.length,
+      averageEntrySize: history.length > 0 ? Math.round(estimatedSize / history.length) : 0
     };
   }, [history]);
   return {

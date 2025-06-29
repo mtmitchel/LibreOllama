@@ -23,7 +23,7 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
   const currentPath = useUnifiedCanvasStore(state => state.currentPath);
   const startDrawing = useUnifiedCanvasStore(state => state.startDrawing);
   const updateDrawing = useUnifiedCanvasStore(state => state.updateDrawing);
-  const finishDrawing = useUnifiedCanvasStore(state => state.endDrawing); // Unified store uses endDrawing
+  const finishDrawing = useUnifiedCanvasStore(state => state.finishDrawing); // Unified store uses finishDrawing
 
   // Handle pointer down - start drawing
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -38,7 +38,7 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
 
     isDrawingRef.current = true;
     console.log('🖊️ [PenTool] Starting drawing at:', pointer);
-    startDrawing('pen', [pointer.x, pointer.y]);
+    startDrawing('pen', { x: pointer.x, y: pointer.y });
   }, [isActive, stageRef, startDrawing]);
 
   // Handle pointer move - update drawing
@@ -50,7 +50,7 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     if (!pointer) return;
 
     console.log('🖊️ [PenTool] Updating drawing at:', pointer);
-    updateDrawing([pointer.x, pointer.y]);
+    updateDrawing({ x: pointer.x, y: pointer.y });
   }, [isActive, stageRef, updateDrawing]);
 
   // Handle pointer up - finish drawing

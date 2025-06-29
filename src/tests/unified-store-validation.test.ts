@@ -210,17 +210,21 @@ describe('Unified Store Architecture Validation', () => {
     });
   });
 
-  describe('EventHandlerManager Integration', () => {
-    it('should have properly initialized event handler', () => {
-      // Act: Get event handler from store
-      const eventHandler = store.getState().eventHandler;
+  describe('Unified Event Handler Integration', () => {
+    it('should have store methods available for event handling', () => {
+      // Act: Get core event-handling methods from store
+      const state = store.getState();
 
-      // Assert: Verify event handler has required methods
-      expect(eventHandler).toBeDefined();
-      expect(typeof eventHandler.handleElementClick).toBe('function');
-      expect(typeof eventHandler.handleElementDragEnd).toBe('function');
-      expect(typeof eventHandler.handleElementTransform).toBe('function');
-      expect(typeof eventHandler.handleCanvasClick).toBe('function');
+      // Assert: Verify store has required event handling methods
+      expect(typeof state.selectElement).toBe('function');
+      expect(typeof state.updateElement).toBe('function');
+      expect(typeof state.createElement).toBe('function');
+      expect(typeof state.clearSelection).toBe('function');
+      
+      // Verify the store can handle element operations
+      expect(state.elements).toBeDefined();
+      expect(state.selectedElementIds).toBeDefined();
+      expect(state.elementOrder).toBeDefined();
     });
   });
 

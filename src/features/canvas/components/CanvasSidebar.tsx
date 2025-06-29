@@ -155,7 +155,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
       }
       if (parsed.sections && createSection) {
         Object.values(parsed.sections).forEach((section: any) => {
-          createSection(section.x, section.y, section.width, section.height, section.title);
+          createSection(section.x, section.y, section.width, section.height);
         });
       }
     } else {

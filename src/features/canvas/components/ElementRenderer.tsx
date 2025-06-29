@@ -87,16 +87,15 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
     onElementDragEnd(e, element.id);
   };
 
-  // CRITICAL FIX: Use element coordinates directly since they're already relative when inside sections
+  // ARCHITECTURAL FIX: Remove drag handlers - UnifiedEventHandler handles all drag operations
   // The SectionHandler's Group component handles the coordinate transformation automatically
   const konvaProps = {
       id: element.id,
       x: element.x, // These are relative coordinates when inside a section
       y: element.y, // These are relative coordinates when inside a section
       rotation: element.rotation || 0,
-      draggable: !element.isLocked,
-      onDragMove: handleDragMove,
-      onDragEnd: handleDragEnd,
+      draggable: !element.isLocked && !isPenElement(element), // Pen elements should never be draggable
+      // REMOVED: onDragMove, onDragEnd - handled by UnifiedEventHandler at stage level
       ...overrideKonvaProps
   };
 
@@ -105,9 +104,9 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
     onUpdate: onElementUpdate,
     onStartTextEdit: onStartTextEdit,
     konvaProps,
-    // Add missing handlers expected by BaseShapeProps
+    // Add missing handlers expected by BaseShapeProps  
     onSelect: (elementId: ElementId) => onElementClick({ target: { id: () => elementId } } as any, element as NonSectionElement),
-    onDragEnd: (elementId: ElementId) => onElementDragEnd({ target: { id: () => elementId } } as any, elementId)
+    // REMOVED: onDragEnd - handled by UnifiedEventHandler
   };
 
   if (isRectangleElement(element)) {

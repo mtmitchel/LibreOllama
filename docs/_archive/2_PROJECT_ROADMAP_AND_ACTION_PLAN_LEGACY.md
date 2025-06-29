@@ -2,40 +2,89 @@
 
 This document provides a high-level strategic overview with concrete technical implementation details for project tracking and stakeholder communication.
 
-## 1. Executive Summary & Current Status
+## 1. Executive Summary & Current Status ⚠️ **ARCHITECTURE UNDER INTENSIVE DEBUGGING**
 
-The project is in a critical refactoring phase to address fundamental architectural violations discovered on June 26, 2025. Production readiness is **retracted**. The immediate focus is on stabilizing the architecture before proceeding with new features.
+**Status Update (June 28, 2025):** Critical architectural issues have been identified that prevent consistent canvas functionality. While the unified store foundation is solid, significant conflicts in event handling and state management require systematic resolution.
 
-### Current Architectural Violations & Their Impact
+### 📋 **Issue Summary**
 
-| Violation Category | Technical Problem | Business Impact |
+| Problem Category | Technical Issue | Impact Level |
 | :--- | :--- | :--- |
-| **State Management** | State duplication; recursive store methods. | Data corruption, infinite loops, crashes. |
-| **Event Handling** | Scattered logic; "thick" UI handlers. | Inconsistent behavior, difficult to debug, poor performance. |
-| **Type Safety** | Over 29 `as any` casts in `MainLayer.tsx`. | Hidden bugs, high risk of runtime errors, slow development. |
-| **Performance** | Duplicate rendering pathways (`VirtualizedSection`).| High CPU/GPU usage, poor user experience on large canvases. |
+| **🚨 Event Conflicts** | Dual event systems causing handler conflicts | **CRITICAL** - Elements snap back, tools non-functional |
+| **🚨 Position Sync** | Store vs Konva node position mismatches | **CRITICAL** - Movement operations fail |
+| **🚨 Transform Issues** | Multiple transform handlers interfering | **CRITICAL** - Resize/transform operations broken |
+| **🚨 ReactKonva Warnings** | Missing drag handlers preventing state sync | **HIGH** - Inconsistent behavior, console warnings |
+| **🚨 Tool Creation** | Shape tools not responding to canvas clicks | **HIGH** - Core functionality broken |
 
-## 2. Phased Refactoring & Implementation Plan
+## 2. 🔧 **Architecture Migration Progress**
 
-This is the actionable plan to bring the codebase up to standard.
+The major architectural refactoring phases are substantially complete with some refinement ongoing:
 
-### Phase 3B: UI/UX Modernization & Toolbar Redesign (Active)
+### 🔧 **Phase 3B: UI/UX Modernization & Toolbar Redesign (MOSTLY COMPLETE)**
 
 * **Objective**: Implement a modern, FigJam-style UI.
-* **Technical Implementation**:
-  1. **Component:** `src/features/canvas/components/FloatingToolbar.tsx`.
-  2. **Positioning:** Use absolute CSS positioning relative to the canvas container. Logic must account for sidebar visibility to remain centered.
-  3. **State:** Manage toolbar state in a new `uiStore` Zustand slice.
-  4. **Popups:** Use `ReactDOM.createPortal()` for all color pickers and menus to avoid z-index conflicts with the Konva stage.
+* **Technical Status**:
+  1. **✅ Component:** `ModernKonvaToolbar.tsx` implemented with floating design
+  2. **✅ Positioning:** CSS positioning with sidebar awareness and centering
+  3. **✅ State:** Integrated with unified store for tool selection
+  4. **🔧 Tool Integration:** Basic tools working, advanced tool workflows in development
 
-### Phase 4: Store Architecture Cleanup (Planned)
+### 🔧 **Phase 4: Store Architecture Cleanup (CORE COMPLETE)**
 
 * **Objective**: Establish a single source of truth and centralize all business logic.
-* **Technical Implementation**:
-  1. **Refactor `canvasStore.ts`**: Create a single store that combines element state, selection logic, and history. Use the slice pattern.
-  2. **Eliminate `allElements` parameter**: Refactor all store methods to read the `elements` map directly from their own state.
-  3. **Centralize Event Logic**: Create an `EventHandlerManager` class instantiated within the store. This manager will contain methods like `handleDragEnd`, `handleElementClick`, etc.
-  4. **Connect Layer to Store**: The Konva `<Layer>` will delegate events to the `EventHandlerManager` in the store. Example: `onDragEnd={useCanvasStore.getState().eventHandler.handleDragEnd}`.
+* **Technical Status**:
+  1. **✅ Unified Store:** `unifiedCanvasStore.ts` operational, combines all state management
+  2. **✅ Store Methods:** Core methods implemented, some edge cases need fixes
+  3. **🔧 Event Handling:** `UnifiedEventHandler` framework complete, tool-specific handlers in progress
+  4. **✅ Rendering Pipeline:** Store → LayerManager → MainLayer chain functional
+
+## 3. 🚨 **Critical Issues Identified & Debugging Patterns**
+
+### **🔴 Immediate Blocking Issues**
+- **Element Position Persistence**: All dragged elements snap back to original positions after mouse release
+- **Section Movement Failure**: Sections cannot be moved or resized despite visual feedback during operation
+- **Shape Tool Non-Response**: Rectangle/Circle/Triangle/Star tools not creating elements on canvas click
+- **Transform Handle Disappearance**: Resize handles vanish after element reselection
+- **Table Resize Failure**: Tables snap back to original size after resize operations
+
+### **🔧 Architectural Patterns Identified**
+- **Dual Event System Conflicts**: Both stage-level (UnifiedEventHandler) and element-level (MainLayer) handlers compete
+- **Transform Handler Duplication**: TransformerManager and UnifiedEventHandler both handle transform events
+- **Position Update Race Conditions**: Store updates and Konva node positions get out of sync
+- **ReactKonva Integration Issues**: Missing onDragEnd handlers prevent proper state synchronization
+- **Event Handler Cleanup Problems**: Handlers not properly removed causing memory leaks and conflicts
+
+### **🔍 Debugging Approaches Attempted**
+- **Enhanced Debug Logging**: Added comprehensive console logging to track event flow and state changes
+- **Handler Consolidation**: Attempted to remove duplicate transform handlers (partial success)
+- **Store Update Validation**: Added validation to prevent invalid position updates
+- **Event Handler Registration**: Improved event handler cleanup and registration patterns
+
+### **🚨 Development Workflow Impact**
+- **Regression Introduction**: Fixes for one issue often introduce new problems in other areas
+- **Testing Complexity**: Manual testing required for each change due to complex interaction patterns
+- **Documentation Gaps**: Current behavior doesn't match documented expectations
+
+## 4. 🛠️ **Required Immediate Actions: Systematic Debugging**
+
+Before advancing to new features, critical architectural issues must be resolved:
+
+### **Priority 1: Event Handler Architecture Resolution**
+- **Investigate Event Conflicts**: Determine optimal architecture for stage vs element-level event handling
+- **Consolidate Transform Management**: Choose between TransformerManager vs UnifiedEventHandler for transforms
+- **Fix ReactKonva Integration**: Implement proper onDragEnd handlers to prevent state sync issues
+- **Resolve Position Update Conflicts**: Establish single source of truth for element positioning
+
+### **Priority 2: Systematic Issue Resolution**
+- **Element Movement Pipeline**: Fix the drag → store update → render pipeline
+- **Shape Tool Debugging**: Investigate why click handlers aren't triggering for shape tools
+- **Transform Handle Management**: Fix resize handle visibility and functionality
+- **Section Operation Fixes**: Resolve section movement and resizing failures
+
+### **Priority 3: Development Process Improvements**
+- **Automated Testing**: Implement integration tests to catch regressions early
+- **Debug Tooling**: Create canvas debugging utilities for faster issue identification
+- **Documentation Updates**: Align documentation with actual implementation status
 
 ### Phase 5: Performance Optimization (Planned)
 

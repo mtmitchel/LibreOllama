@@ -1,17 +1,16 @@
 // Granular Selectors for Canvas State Management
 // Optimized selectors to prevent unnecessary re-renders
 
-import type { CanvasElement } from '../types/enhanced.types';
-import type { ElementId } from '../types/enhanced.types';
+import type { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import { 
-  useCanvasStore,
+  useUnifiedCanvasStore,
   useSelectedTool as useSelectedToolFromStore,
   canvasSelectors
 } from '../../../stores';
 
 // Element property selectors
 export const useElementProperty = <T>(elementId: string, property: keyof CanvasElement): T | undefined => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => {
       const element = state.elements.get(elementId);
       return element ? (element as any)[property] as T : undefined;
@@ -21,7 +20,7 @@ export const useElementProperty = <T>(elementId: string, property: keyof CanvasE
 
 // Element position selector
 export const useElementPosition = (elementId: string) => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => {
       const element = state.elements.get(elementId);
       return element ? { x: element.x, y: element.y } : { x: 0, y: 0 };
@@ -31,7 +30,7 @@ export const useElementPosition = (elementId: string) => {
 
 // Element dimensions selector
 export const useElementDimensions = (elementId: string) => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => {
       const element = state.elements.get(elementId);
       if (!element) return { width: 0, height: 0 };
@@ -48,18 +47,22 @@ export const useElementDimensions = (elementId: string) => {
   );
 };
 
-// Element style selector
+// Element style selector - Fixed memoization issue by including updatedAt
 export const useElementStyle = (elementId: string) => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => {
       const element = state.elements.get(elementId);
-      if (!element) return {};
+      if (!element) return { style: {}, updatedAt: 0 };
       
       return {
-        fill: 'fill' in element ? element.fill : undefined,
-        stroke: 'stroke' in element ? element.stroke : undefined,
-        strokeWidth: 'strokeWidth' in element ? element.strokeWidth : undefined,
-        opacity: 'opacity' in element ? element.opacity : 1,
+        style: {
+          fill: 'fill' in element ? element.fill : undefined,
+          backgroundColor: 'backgroundColor' in element ? element.backgroundColor : undefined,
+          stroke: 'stroke' in element ? element.stroke : undefined,
+          strokeWidth: 'strokeWidth' in element ? element.strokeWidth : undefined,
+          opacity: 'opacity' in element ? element.opacity : 1,
+        },
+        updatedAt: element.updatedAt || 0  // Break memoization when element updates
       };
     }
   );
@@ -67,12 +70,12 @@ export const useElementStyle = (elementId: string) => {
 
 // Selection state selectors
 export const useIsElementSelected = (elementId: string) => {
-  return useCanvasStore((state) => state.selectedElementIds.has(elementId as ElementId));
+  return useUnifiedCanvasStore((state) => state.selectedElementIds.has(elementId as ElementId));
 };
 
 // Element collection selectors
 export const useSelectedElements = () => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => {
       const selectedIds = Array.from(state.selectedElementIds);
       return selectedIds
@@ -84,7 +87,7 @@ export const useSelectedElements = () => {
 
 // Elements by type selector
 export const useElementsByType = (type: string) => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => Array.from(state.elements.values()).filter((element) => {
       return element.type === type;
     })
@@ -93,70 +96,70 @@ export const useElementsByType = (type: string) => {
 
 // Canvas statistics selectors
 export const useElementCount = () => {
-  return useCanvasStore((state) => state.elements.size);
+  return useUnifiedCanvasStore((state) => state.elements.size);
 };
 
 export const useSelectedCount = () => {
-  return useCanvasStore((state) => state.selectedElementIds.size);
+  return useUnifiedCanvasStore((state) => state.selectedElementIds.size);
 };
 
 // Viewport and interaction selectors
 export const useViewportBounds = () => {
-  return useCanvasStore((state) => state.viewport);
+  return useUnifiedCanvasStore((state) => state.viewport);
 };
 
 export const useZoom = () => {
-  return useCanvasStore((state) => state.viewport.scale);
+  return useUnifiedCanvasStore((state) => state.viewport.scale);
 };
 
 export const usePan = () => {
-  return useCanvasStore((state) => ({ x: state.viewport.x, y: state.viewport.y }));
+  return useUnifiedCanvasStore((state) => ({ x: state.viewport.x, y: state.viewport.y }));
 };
 
 // Tool and interaction state selectors
 export const useCurrentTool = () => {
-  return useCanvasStore(canvasSelectors.selectedTool);
+  return useUnifiedCanvasStore(canvasSelectors.selectedTool);
 };
 
 export const useIsDrawing = () => {
-  return useCanvasStore(canvasSelectors.isDrawing);
+  return useUnifiedCanvasStore(canvasSelectors.isDrawing);
 };
 
 export const useCurrentPath = () => {
-  return useCanvasStore((state) => state.currentPath || []);
+  return useUnifiedCanvasStore((state) => state.currentPath || []);
 };
 
 // History selectors
 export const useCanUndo = () => {
-  return useCanvasStore((state) => state.canUndo);
+  return useUnifiedCanvasStore((state) => state.canUndo);
 };
 
 export const useCanRedo = () => {
-  return useCanvasStore((state) => state.canRedo);
+  return useUnifiedCanvasStore((state) => state.canRedo);
 };
 
 // Text editing selectors
 export const useEditingTextId = () => {
-  return useCanvasStore((state) => state.textEditingElementId);
+  return useUnifiedCanvasStore((state) => state.textEditingElementId);
 };
 
 export const useIsEditingText = (elementId?: string) => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => elementId ? state.textEditingElementId === elementId : state.textEditingElementId !== null
   );
 };
 
 // Section selectors
 export const useSections = () => {
-  return useCanvasStore((state) => Array.from(state.sections.values()));
+  return useUnifiedCanvasStore((state) => Array.from(state.sections.values()));
 };
 
-export const useSection = (sectionId: string) => {
-  return useCanvasStore((state) => state.sections.get(sectionId));
+export const useSection = (sectionId: SectionId) => {
+  return useUnifiedCanvasStore((state) => state.sections.get(sectionId));
 };
 
-export const useElementsInSection = (sectionId: string) => {
-  return useCanvasStore(
+export const useElementsInSection = (sectionId: SectionId) => {
+  return useUnifiedCanvasStore(
     (state) => {
       const sectionElements = state.sectionElementMap.get(sectionId);
       if (!sectionElements) return [];
@@ -170,7 +173,7 @@ export const useElementsInSection = (sectionId: string) => {
 
 // Performance monitoring selector
 export const useRenderingStats = () => {
-  return useCanvasStore(
+  return useUnifiedCanvasStore(
     (state) => ({
       totalElements: state.elements.size,
       selectedElements: state.selectedElementIds.size,
@@ -185,6 +188,6 @@ export const useRenderingStats = () => {
 export { useSelectedToolFromStore as useSelectedTool };
 
 // Convenience selectors using unified store
-export const useElements = () => useCanvasStore(canvasSelectors.elements);
-export const useSelectedElementIds = () => useCanvasStore(canvasSelectors.selectedElementIds);
-export const useElement = (id: string) => useCanvasStore((state) => state.elements.get(id));
+export const useElements = () => useUnifiedCanvasStore(canvasSelectors.elements);
+export const useSelectedElementIds = () => useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
+export const useElement = (id: string) => useUnifiedCanvasStore((state) => state.elements.get(id));

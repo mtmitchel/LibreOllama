@@ -1,14 +1,14 @@
 // src/features/canvas/hooks/useCanvasDrawing.ts
 import { useEffect } from 'react';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore } from '../../../stores';
 import Konva from 'konva';
 
 export const useCanvasDrawing = (stage: Konva.Stage | null) => {
-  const selectedTool = useCanvasStore(state => state.selectedTool);
-  const isDrawing = useCanvasStore(state => state.isDrawing);
-  const startDrawing = useCanvasStore(state => state.startDrawing);
-  const updateDrawing = useCanvasStore(state => state.updateDrawing);
-  const finishDrawing = useCanvasStore(state => state.finishDrawing);
+  const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
+  const isDrawing = useUnifiedCanvasStore(state => state.isDrawing);
+  const startDrawing = useUnifiedCanvasStore(state => state.startDrawing);
+  const updateDrawing = useUnifiedCanvasStore(state => state.updateDrawing);
+  const finishDrawing = useUnifiedCanvasStore(state => state.finishDrawing);
 
   useEffect(() => {
     if (!stage) return;
@@ -18,7 +18,7 @@ export const useCanvasDrawing = (stage: Konva.Stage | null) => {
       
       const pos = stage.getPointerPosition();
       if (pos) {
-        startDrawing(pos.x, pos.y, 'pen');
+        startDrawing('pen', { x: pos.x, y: pos.y });
       }
     };
 
@@ -27,7 +27,7 @@ export const useCanvasDrawing = (stage: Konva.Stage | null) => {
 
       const pos = stage.getPointerPosition();
       if (pos) {
-        updateDrawing(pos.x, pos.y);
+        updateDrawing({ x: pos.x, y: pos.y });
       }
     };
 

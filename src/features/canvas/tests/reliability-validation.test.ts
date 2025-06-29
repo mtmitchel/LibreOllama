@@ -11,20 +11,17 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { EventHandlerManager } from '../utils/state/EventHandlerManager';
 import { DrawingStateManager } from '../utils/state/DrawingStateManager';
 import { StateSynchronizationMonitor } from '../utils/state/StateSynchronizationMonitor';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { CanvasTool } from '../types/enhanced.types';
 
 describe('Canvas Reliability Systems Validation', () => {
-  let eventHandlerManager: EventHandlerManager;
   let drawingStateManager: DrawingStateManager;
   let stateSynchronizationMonitor: StateSynchronizationMonitor;
 
   beforeEach(() => {
     // Reset instances before each test to ensure isolation
-    eventHandlerManager = new EventHandlerManager();
     drawingStateManager = new DrawingStateManager();
     stateSynchronizationMonitor = new StateSynchronizationMonitor();
     
@@ -32,76 +29,7 @@ describe('Canvas Reliability Systems Validation', () => {
     vi.clearAllMocks();
   });
 
-  // --- EventHandlerManager Tests ---
-  describe('EventHandlerManager', () => {
-    test('should create safe event handlers that execute the original handler', async () => {
-      const originalHandler = vi.fn();
-      const fallbackHandler = vi.fn();
-      const safeHandler = eventHandlerManager.createSafeEventHandler(
-        'test-handler',
-        originalHandler,
-        fallbackHandler
-      );
-
-      const mockEvent = { target: { id: () => 'test' }, currentTarget: {} } as any;
-      await safeHandler(mockEvent);
-
-      expect(originalHandler).toHaveBeenCalledWith(mockEvent);
-      expect(fallbackHandler).not.toHaveBeenCalled();
-    });
-
-    test('should execute the fallback handler when the original handler throws an error', async () => {
-      const errorHandler = vi.fn().mockImplementation(() => {
-        throw new Error('Test error');
-      });
-      const fallbackHandler = vi.fn();
-      const safeHandler = eventHandlerManager.createSafeEventHandler(
-        'error-handler',
-        errorHandler,
-        fallbackHandler
-      );
-
-      const mockEvent = { target: { id: () => 'test' }, currentTarget: {} } as any;
-      
-      // The safe handler should not throw an error itself, but its promise will be rejected
-      await expect(safeHandler(mockEvent)).rejects.toThrow('Test error');
-
-      expect(errorHandler).toHaveBeenCalled();
-      expect(fallbackHandler).toHaveBeenCalled();
-    });
-
-    test('should track metrics for successful handler executions', async () => {
-      const handler = vi.fn();
-      const safeHandler = eventHandlerManager.createSafeEventHandler('metrics-test', handler);
-      const mockEvent = { target: { id: () => 'test' }, currentTarget: {} } as any;
-      
-      await safeHandler(mockEvent);
-
-      const metrics = eventHandlerManager.getHandlerMetrics();
-      const handlerMetrics = metrics.get('metrics-test');
-
-      expect(metrics.has('metrics-test')).toBe(true);
-      expect(handlerMetrics?.successCount).toBe(1);
-      expect(handlerMetrics?.errorCount).toBe(0);
-    });
-
-    test('should track metrics for failed handler executions', async () => {
-        const errorHandler = vi.fn().mockImplementation(() => {
-            throw new Error('Metric Error');
-        });
-        const safeHandler = eventHandlerManager.createSafeEventHandler('metrics-error-test', errorHandler);
-        const mockEvent = { target: { id: () => 'test' }, currentTarget: {} } as any;
-
-        await expect(safeHandler(mockEvent)).rejects.toThrow('Metric Error');
-
-        const metrics = eventHandlerManager.getHandlerMetrics();
-        const handlerMetrics = metrics.get('metrics-error-test');
-
-        expect(metrics.has('metrics-error-test')).toBe(true);
-        expect(handlerMetrics?.successCount).toBe(0);
-        expect(handlerMetrics?.errorCount).toBe(1);
-    });
-  });
+  // NOTE: EventHandlerManager tests removed - functionality now integrated into UnifiedEventHandler
 
   // --- DrawingStateManager Tests (from Jest file) ---
   describe('DrawingStateManager', () => {
@@ -185,47 +113,22 @@ describe('Canvas Reliability Systems Validation', () => {
   });
 
   // --- Integration Test ---
-  describe('Full System Integration', () => {
-    test('should handle all reliability systems working in concert', async () => {
+  describe('System Integration (without EventHandlerManager)', () => {
+    test('should handle drawing state and monitoring systems working together', async () => {
       // 1. Start monitoring
       stateSynchronizationMonitor.startMonitoring();
       expect(stateSynchronizationMonitor.getSystemStatus().isMonitoring).toBe(true);
 
+      // 2. Test drawing operation lifecycle
       let operationId: string;
-      // 2. Create a safe event handler
-      const integratedHandler = vi.fn(() => {
-        console.log('Integrated handler executed');
-        // 3. Start a drawing operation within the handler
-        operationId = drawingStateManager.startDrawing('connector-arrow', { x: 0, y: 0 });
-        // 4. Complete the operation
-        drawingStateManager.completeDrawing(operationId);
-      });
-
-      const safeIntegratedHandler = eventHandlerManager.createSafeEventHandler(
-        'integrated-handler',
-        integratedHandler
-      );
-
-      // 5. Execute the handler with a more realistic mock event
-      const mockEvent = {
-        target: { id: () => 'test-shape', getStage: () => ({}) }, // Mock getStage
-        currentTarget: {},
-        evt: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
-      } as any;
-
-      console.log('Calling safeIntegratedHandler');
-      await safeIntegratedHandler(mockEvent);
-      console.log('safeIntegratedHandler finished');
-
-      // 6. Verify outcomes
-      expect(integratedHandler).toHaveBeenCalled();
-
-      const eventMetrics = eventHandlerManager.getHandlerMetrics().get('integrated-handler');
-      expect(eventMetrics?.successCount).toBe(1);
-
+      operationId = drawingStateManager.startDrawing('connector-arrow', { x: 0, y: 0 });
+      expect(drawingStateManager.getCurrentState().isDrawing).toBe(true);
+      
+      // 3. Complete the operation
+      drawingStateManager.completeDrawing(operationId);
       expect(drawingStateManager.getCurrentState().isDrawing).toBe(false);
 
-      // Record a final snapshot for verification
+      // 4. Record a final snapshot for verification
       stateSynchronizationMonitor.recordStateSnapshot('select', {isDrawing: false, isDrawingConnector: false, isDrawingSection: false}, {selectedElementIds: new Set(), hoveredElementId: null}, {zoom: 1, pan: {x: 0, y: 0}});
 
       const syncStatus = stateSynchronizationMonitor.getSystemStatus();

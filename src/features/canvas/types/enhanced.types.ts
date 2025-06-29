@@ -33,6 +33,9 @@ export type LayerId = Brand<string, 'LayerId'>;
 export type ConnectorId = Brand<string, 'ConnectorId'>;
 export type GroupId = Brand<string, 'GroupId'>;
 
+// Union type for places that accept both element and section IDs
+export type ElementOrSectionId = ElementId | SectionId;
+
 // Helper functions to create branded types safely
 export const ElementId = (id: string): ElementId => id as ElementId;
 export const SectionId = (id: string): SectionId => id as SectionId;
@@ -300,7 +303,7 @@ export function isStickyNoteElement(el: CanvasElement): el is StickyNoteElement 
 }
 
 export function isPenElement(el: CanvasElement): el is PenElement {
-  return el.type === 'pen';
+  return el.type === 'pen' || el.type === 'pencil';
 }
 
 export function isTriangleElement(el: CanvasElement): el is TriangleElement {
@@ -443,4 +446,10 @@ export interface QuadtreeConfig {
   maxDepth: number;
   maxElementsPerNode: number;
   minNodeSize: number;
+}
+
+// Snapping system types
+export interface SnapLine {
+  points: number[];
+  stroke: string;
 }

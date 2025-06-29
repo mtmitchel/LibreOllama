@@ -16,9 +16,7 @@ Review structure - Does it fit the established documentation hierarchy?
 Documentation Hierarchy (The Single Source of Truth):
 docs/README.md - Documentation index and guidelines (this file)
 
-docs/1_PROJECT_ROADMAP_AND_ACTION_PLAN.md - The high-level strategic overview, phased plan, and current project status.
-
-docs/2_CANVAS_DEVELOPER_GUIDE.md - The definitive technical guide with architecture, code examples, and best practices.
+docs/REFACTOR FINAL PLAN.md - **THE AUTHORITATIVE SOURCE** - Complete system rectification plan and recovery process. All canvas development must follow this plan.
 
 When New Documentation IS Justified:
 Major new feature requiring comprehensive standalone documentation.
@@ -35,13 +33,20 @@ Technical patterns or code examples (add to the Developer Guide).
 Troubleshooting guides (add to the Developer Guide).
 
 🚀 Core Documentation
-🔧 PHASE 3 UPDATE (June 27, 2025): Systematic architectural refactoring is in progress. All work should follow the plans laid out in these two documents.
+🚨 CRITICAL SYSTEM RECOVERY (June 28, 2025): The canvas system requires immediate architectural rectification. All work must follow the authoritative recovery plan.
 
-New to the Canvas project? Start here:
+**MANDATORY READING FOR ALL CANVAS WORK:**
 
-Project Roadmap & Action Plan - Understand the project's current status, the problems we're solving, and the phased plan for the refactor.
+**[REFACTOR FINAL PLAN](REFACTOR%20FINAL%20PLAN.md)** - The complete and authoritative roadmap for codebase recovery. This document serves as the single source of truth for systematic elimination of architectural conflicts and technical debt.
 
-Canvas Developer Guide - Read the primary technical resource for architecture, required code patterns, and testing strategy before writing any code.
+**[CANVAS DEVELOPER HANDOFF](CANVAS_DEVELOPER_HANDOFF.md)** - **START HERE** if you're taking over canvas development. Comprehensive onboarding guide for developers inheriting the Phase 1 architectural recovery (70% complete).
+
+**Key Sections:**
+- Phase 1: Critical System Stabilization (70% Complete - IN PROGRESS)
+- Phase 2: Codebase Consolidation & Deletion (PENDING)
+- Phase 3: Architectural Refinement & Discipline (PENDING)
+- Phase 4: Verification and Optimization (PENDING)
+- Target Architecture Blueprint
 
 🗂️ Archived Documentation
 All other previous canvas-related documentation (including the old roadmap, checklists, and testing plans) has been archived to the docs/_archive directory. These files are for historical reference only and should not be used for current development work.

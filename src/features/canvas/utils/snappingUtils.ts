@@ -1,6 +1,5 @@
 // src/features/canvas/utils/snappingUtils.ts
-import { CanvasElement } from '../types/enhanced.types';
-import { SnapLine } from '../stores/slices/snappingStore';
+import { CanvasElement, SnapLine } from '../types/enhanced.types';
 
 const getElementPoints = (element: CanvasElement) => {
   const { x, y } = element;

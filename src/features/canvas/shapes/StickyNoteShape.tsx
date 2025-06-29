@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { StickyNoteElement, ElementId, CanvasElement } from '../types/enhanced.types';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore } from '../../../stores';
 import { designSystem } from '../../../design-system';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
@@ -29,9 +29,9 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   onUpdate,
   stageRef
 }) => {
-  // Use individual primitive selectors for React 19 compatibility
-  const editingTextId = useCanvasStore(state => state.editingTextId);
-  const setEditingTextId = useCanvasStore(state => state.setEditingTextId);
+  // Use individual primitive selectors for React 19 compatibility - UNIFIED STORE
+  const editingTextId = useUnifiedCanvasStore(state => state.textEditingElementId);
+  const setEditingTextId = useUnifiedCanvasStore(state => state.setTextEditingElement);
   const cleanupRef = useRef<(() => void) | null>(null);
   const width = element.width || 200;
   const height = element.height || 100;

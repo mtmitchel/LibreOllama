@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Html } from 'react-konva-utils';
 import { Text } from 'react-konva';
-import { useCanvasStore } from '../../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '../../../../stores';
 import type { TableElement, TableCell } from '../../types/enhanced.types';
 
 interface TableCellEditorProps {
@@ -37,7 +37,7 @@ export const TableCellEditor: React.FC<TableCellEditorProps> = ({
   onEndEdit
 }) => {
   const [editText, setEditText] = useState(cell.content || '');
-  const updateElement = useCanvasStore(state => state.updateElement);
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Save cell content to the table
   const saveCell = useCallback(() => {

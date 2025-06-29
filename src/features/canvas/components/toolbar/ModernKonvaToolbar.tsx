@@ -70,11 +70,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const deleteElement = useUnifiedCanvasStore(state => state.deleteElement);
   const updateElement = useUnifiedCanvasStore(state => state.updateElement);
   
-  // Simplified functions for missing unified store features
-  const setStickyNoteColor = (color: string) => {
-    console.log('🎨 [ModernToolbar] Setting sticky note color:', color);
-    // TODO: Implement in unified store
-  };
+  // Sticky note color functionality
+  const setStickyNoteColor = useUnifiedCanvasStore(state => state.setSelectedStickyNoteColor);
   const groupElements = (elementIds: string[]) => {
     console.log('🔗 [ModernToolbar] Grouping elements:', elementIds);
     // TODO: Implement in unified store
@@ -133,10 +130,16 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const handleColorChange = (color: string) => {
-    if (!selectedElementId) return;
+    console.log('🎨 [ModernToolbar] Handling color change:', color);
     
-    const colorProperty = selectedElement?.type === 'sticky-note' ? 'backgroundColor' : 'fill';
-    updateElement(selectedElementId, { [colorProperty]: color });
+    // Set default sticky note color for future elements
+    setStickyNoteColor(color);
+    
+    // If an element is selected, update its color
+    if (selectedElementId && selectedElement) {
+      const colorProperty = selectedElement.type === 'sticky-note' ? 'backgroundColor' : 'fill';
+      updateElement(selectedElementId, { [colorProperty]: color });
+    }
   };
   
   const canShowColorPicker = selectedElement && 
@@ -201,9 +204,9 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                         key={index}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Set the default sticky note color using the store
-                          setStickyNoteColor(colorOption.color);
-                          console.log('🎨 [MODERN TOOLBAR] Sticky note color selected:', colorOption.color);
+                          // Use the consolidated color change handler
+                          handleColorChange(colorOption.color);
+                          console.log('🎨 [MODERN TOOLBAR] Color selected:', colorOption.color);
                         }}
                         className={styles.colorButton}
                         style={{ backgroundColor: colorOption.color }}

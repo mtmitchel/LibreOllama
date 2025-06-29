@@ -1,7 +1,13 @@
 // src/features/canvas/components/ui/LayersPanel.tsx
 import React, { useState } from 'react';
 import { useUnifiedCanvasStore } from '../../../../stores';
-import { Layer } from '../../stores/slices/layerStore';
+// import { Layer } from '../../stores/slices/layerStore'; // Legacy import - using simple interface
+interface Layer {
+  id: string;
+  name: string;
+  visible: boolean;
+  locked: boolean;
+}
 
 export const LayersPanel: React.FC = () => {
   // Simplified layers for unified store - TODO: implement full layer system

@@ -11,8 +11,7 @@
 
 // Core Canvas Components
 export { default as KonvaCanvas } from './components/KonvaCanvas';
-export { default as KonvaApp } from './components/KonvaApp';
-export { CanvasContainer } from './components/CanvasContainer';
+export { default as KonvaAppRefactored } from './components/KonvaAppRefactored'; // Current implementation
 export { default as CanvasSidebar } from './components/CanvasSidebar';
 export { default as EnhancedTableElement } from './components/EnhancedTableElement';
 
