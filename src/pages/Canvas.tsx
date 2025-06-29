@@ -1,6 +1,6 @@
-// src/pages/Canvas.tsx - Updated to use Unified Store Architecture
+// src/pages/Canvas.tsx - Phase 1.3: Component Hierarchy Restoration (FINAL)
 import React, { useState, useEffect } from 'react';
-import KonvaAppRefactored from '../features/canvas/components/KonvaAppRefactored';
+import CanvasContainer from '../features/canvas/components/CanvasContainer';
 import CanvasSidebar from '../features/canvas/components/CanvasSidebar';
 import { PanelRightClose } from 'lucide-react';
 import { Button } from '../shared/ui';
@@ -52,7 +52,7 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
       )}
 
       <main className="flex-1 flex flex-col min-w-0">
-        <KonvaAppRefactored
+        <CanvasContainer
           appSidebarOpen={appSidebarOpen}
           canvasSidebarOpen={isCanvasSidebarOpen}
           toggleCanvasSidebar={() => setCanvasSidebarOpen(!isCanvasSidebarOpen)}

@@ -76,8 +76,18 @@ const KonvaApp: React.FC<KonvaAppProps> = ({ appSidebarOpen = true, canvasSideba
       )}
 
       <ModernKonvaToolbar
-        onUndo={() => {}}
-        onRedo={() => {}}
+        onUndo={() => {
+          const store = useUnifiedCanvasStore.getState();
+          if (store.canUndo) {
+            store.undo();
+          }
+        }}
+        onRedo={() => {
+          const store = useUnifiedCanvasStore.getState();
+          if (store.canRedo) {
+            store.redo();
+          }
+        }}
         sidebarOpen={canvasSidebarOpen}
         onToggleSidebar={toggleCanvasSidebar}
         appSidebarOpen={appSidebarOpen}

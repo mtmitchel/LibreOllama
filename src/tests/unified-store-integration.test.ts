@@ -7,13 +7,13 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { canvasStore } from '../stores';
+import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
 import { ElementId } from '../features/canvas/types/enhanced.types';
 
 describe('Unified Store Integration', () => {
   beforeEach(() => {
-    // This will clear any existing state through the adapter
-    const state = canvasStore.getState();
+    // This will clear any existing state through the unified store
+    const state = useUnifiedCanvasStore.getState();
     const currentElements = Array.from(state.elements.keys());
     
     act(() => {
@@ -25,8 +25,8 @@ describe('Unified Store Integration', () => {
   });
 
   describe('Core Store Integration', () => {
-    it('should provide working store interface through adapter', () => {
-      const store = canvasStore.getState();
+    it('should provide working store interface through unified store', () => {
+      const store = useUnifiedCanvasStore.getState();
       
       // Test basic store structure
       expect(store).toBeDefined();
@@ -36,18 +36,18 @@ describe('Unified Store Integration', () => {
       expect(typeof store.setSelectedTool).toBe('function');
     });
 
-    it('should handle tool selection through adapter', () => {
+    it('should handle tool selection through unified store', () => {
       // Act: Change tool
       act(() => {
-        canvasStore.getState().setSelectedTool('text');
+        useUnifiedCanvasStore.getState().setSelectedTool('text');
       });
       
       // Assert: Tool should be updated
-      const store = canvasStore.getState();
+      const store = useUnifiedCanvasStore.getState();
       expect(store.selectedTool).toBe('text');
     });
 
-    it('should handle element operations through adapter', () => {
+    it('should handle element operations through unified store', () => {
       
       const testElement = {
         id: ElementId('adapter-test-1'),
@@ -64,19 +64,19 @@ describe('Unified Store Integration', () => {
         updatedAt: Date.now()
       };
 
-      // Act: Add element through adapter
+      // Act: Add element through unified store
       act(() => {
-        canvasStore.getState().addElement(testElement);
+        useUnifiedCanvasStore.getState().addElement(testElement);
       });
 
       // Assert: Element should be accessible
-      const store = canvasStore.getState();
+      const store = useUnifiedCanvasStore.getState();
       expect(store.elements.size).toBe(1);
       expect(store.elements.get(ElementId('adapter-test-1'))).toBeDefined();
     });
 
     it('should provide legacy toolbar functions', () => {
-      const store = canvasStore.getState();
+      const store = useUnifiedCanvasStore.getState();
       
       // Test legacy functions exist (even if they're no-ops)
       expect(typeof store.setStickyNoteColor).toBe('function');
@@ -96,7 +96,7 @@ describe('Unified Store Integration', () => {
 
   describe('Store State Access', () => {
     it('should provide consistent state access patterns', () => {
-      const store = canvasStore.getState();
+      const store = useUnifiedCanvasStore.getState();
       
       // Test state properties exist
       expect(store.elements).toBeInstanceOf(Map);
@@ -124,12 +124,12 @@ describe('Unified Store Integration', () => {
 
       // Add element and select it
       act(() => {
-        canvasStore.getState().addElement(testElement);
-        canvasStore.getState().selectElement(ElementId('consistency-test-1'));
+        useUnifiedCanvasStore.getState().addElement(testElement);
+        useUnifiedCanvasStore.getState().selectElement(ElementId('consistency-test-1'));
       });
 
       // State should be consistent
-      const store = canvasStore.getState();
+      const store = useUnifiedCanvasStore.getState();
       expect(store.elements.size).toBe(1);
       expect(store.selectedElementIds.size).toBe(1);
       expect(store.selectedElementIds.has(ElementId('consistency-test-1'))).toBe(true);

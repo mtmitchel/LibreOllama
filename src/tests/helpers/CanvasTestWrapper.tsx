@@ -1,12 +1,12 @@
 import React, { ReactNode, useRef } from 'react';
 import Konva from 'konva';
 import { StoreApi } from 'zustand';
-import { CanvasStoreState } from '@/features/canvas/stores/canvasStore.enhanced';
+import { UnifiedCanvasState } from '@/features/canvas/stores/unifiedCanvasStore';
 
 // Create a minimal context for testing purposes, as the original might not be exported
 // or easily accessible.
 export const CanvasContext = React.createContext<{
-  store: StoreApi<CanvasStoreState>;
+  store: StoreApi<UnifiedCanvasState>;
   stageRef: React.RefObject<Konva.Stage | null>;
 } | null>(null);
 

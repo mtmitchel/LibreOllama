@@ -1,13 +1,16 @@
-import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
-import { enableMapSet } from 'immer';
-import { CanvasStoreState, createEnhancedCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
+/**
+ * Legacy Canvas Test Store - DEPRECATED
+ * 
+ * This file is deprecated in favor of the unified architecture.
+ * New tests should use createUnifiedTestStore from './createUnifiedTestStore.ts'
+ * 
+ * Phase 1.2 Migration: This file now delegates to the unified test store factory
+ */
 
-enableMapSet();
+import { createUnifiedTestStore } from './createUnifiedTestStore';
 
 /**
- * Creates a test-specific Zustand store that mirrors the application's real store structure.
- * It uses the same factory function as the production store to ensure all enhanced methods are available.
+ * @deprecated Use createUnifiedTestStore instead
+ * This export maintains backward compatibility during Phase 1.2 migration
  */
-export const createCanvasTestStore = () => createEnhancedCanvasStore();
+export const createCanvasTestStore = createUnifiedTestStore;
