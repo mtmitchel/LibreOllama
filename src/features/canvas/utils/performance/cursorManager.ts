@@ -62,7 +62,7 @@ export class CursorManager {
     'select': 'default',
     'pan': 'grab',
     'pen': 'crosshair',
-    'text': 'text',
+    'text': 'crosshair',
     'draw-rectangle': 'crosshair',
     'draw-circle': 'crosshair',
     'draw-triangle': 'crosshair',
@@ -321,7 +321,8 @@ export function useCursorManager(stage?: Konva.Stage) {
     setLoadingCursor: (message?: string) => cursorManager.setLoadingCursor(message),
     setErrorCursor: () => cursorManager.setErrorCursor(),
     reset: () => cursorManager.reset(),
-    getState: () => cursorManager.getState()
+    getState: () => cursorManager.getState(),
+    setStage: (stage: Konva.Stage) => cursorManager.setStage(stage)
   };
 }
 

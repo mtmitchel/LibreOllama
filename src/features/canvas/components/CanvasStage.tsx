@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useCallback } from 'react';
+import React, { useRef, useMemo, useCallback, useEffect } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
 import UnifiedEventHandler from '../utils/UnifiedEventHandler';
@@ -9,6 +9,7 @@ import { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import DebugOverlay from '../components/DebugOverlay';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
 import CanvasStabilityCheck from '../utils/CanvasStabilityCheck';
+import { useCursorManager } from '../utils/performance/cursorManager';
 
 /**
  * CanvasStage - The primary component for the Konva canvas.
@@ -76,6 +77,24 @@ const CanvasStage: React.FC = () => {
     console.log('🎯 [CanvasStage] Element click:', element.id);
     selectElement(element.id as ElementId, e.evt.ctrlKey || e.evt.metaKey);
   }, [selectElement]);
+
+  // Add centralized cursor management
+  const cursorManager = useCursorManager();
+  
+  // Update cursor when tool changes (centralized cursor management)
+  useEffect(() => {
+    if (stageRef.current) {
+      cursorManager.updateForTool(currentTool as any);
+      console.log('🎯 [CanvasStage] Updated cursor for tool change:', currentTool);
+    }
+  }, [currentTool, cursorManager]);
+
+  // Initialize cursor manager with stage
+  useEffect(() => {
+    if (stageRef.current) {
+      cursorManager.setStage(stageRef.current);
+    }
+  }, [cursorManager]);
 
   return (
     <CanvasErrorBoundary

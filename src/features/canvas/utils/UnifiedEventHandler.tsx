@@ -22,6 +22,7 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
   const clearSelection = useUnifiedCanvasStore(state => state.clearSelection);
   const selectedElementIds = useUnifiedCanvasStore(state => state.selectedElementIds);
   const textEditingElementId = useUnifiedCanvasStore(state => state.textEditingElementId);
+  const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
   // Protection flag to prevent clearing selection immediately after text operations
   const selectionProtected = useRef<boolean>(false);
@@ -159,6 +160,12 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
           return;
         }
         
+        // Don't handle stage clicks when text tool is active - let TextTool handle them
+        if (selectedTool === 'text') {
+          console.log('🎯 [UnifiedEventHandler] Stage clicked with text tool active - letting TextTool handle it');
+          return;
+        }
+        
         console.log('🎯 [UnifiedEventHandler] Stage background clicked - clearing selection');
         clearSelection();
       } else {
@@ -206,7 +213,7 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
       stage.off('click', handleClick);
       stage.off('transformend', handleTransformEnd);
     };
-  }, [stageRef, updateElement, selectElement, clearSelection, selectedElementIds, textEditingElementId]);
+  }, [stageRef, updateElement, selectElement, clearSelection, selectedElementIds, textEditingElementId, selectedTool]);
 
   return null; // This component does not render anything.
 };

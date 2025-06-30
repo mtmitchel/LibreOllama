@@ -276,12 +276,10 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         />
       </Layer>,
       ...otherLayers,
-      // FORCE DISABLE: Centralized transformer completely disabled for cleaner design
-      // ...(useCentralizedTransformer ? [
-      //   <Layer key="centralized-transformer">
-      //     <TransformerManager stageRef={stageRef} />
-      //   </Layer>
-      // ] : [])
+      // Add TransformerManager as a separate layer
+      <Layer key="transformer-layer">
+        <TransformerManager stageRef={stageRef} />
+      </Layer>
     ];
 
     return <>{finalLayers}</>;

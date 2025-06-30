@@ -63,20 +63,18 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
     // Set the store editing state - TextShape will handle the actual editing UI
     setTextEditingElement(elementId);
     
-    // Clear preview
-    setPreviewBox(null);
-    
   }, [setTextEditingElement]);
 
   // Handle click to place text
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    console.log('📝 [TextTool] Click detected:', {
+    console.log('📝 [TextTool] *** CLICK DETECTED ***:', {
       isActive,
       hasStageRef: !!stageRef.current,
       editingTextId,
       targetId: e.target.id(),
       targetType: e.target.getType(),
-      isStage: e.target === stageRef.current
+      isStage: e.target === stageRef.current,
+      targetClass: e.target.className
     });
     
     if (!isActive || !stageRef.current || editingTextId) return;
@@ -95,22 +93,14 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
     const transform = stage.getAbsoluteTransform().copy().invert();
     const pos = transform.point(pointer);
 
-    // Create preview box at click position
-    setPreviewBox({
-      x: pos.x,
-      y: pos.y,
-      width: 200,
-      height: 50
-    });
-
     // Create new text element with empty text for immediate editing
     const textElement: TextElement = {
       id: nanoid() as ElementId,
       type: 'text',
       x: pos.x,
       y: pos.y,
-      width: 200,
-      height: 50,
+      width: 20, // Start minimal - will auto-expand during typing
+      height: 24, // Just enough for one line of text
       text: '', // Start with empty text so placeholder shows
       fontSize: 16,
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -127,7 +117,7 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
     // Add element to canvas first
     addElement(textElement);
     
-    console.log('📝 [TextTool] Created text element:', textElement.id, 'at position:', pos);
+    console.log('📝 [TextTool] *** CREATED TEXT ELEMENT ***:', textElement.id, 'at position:', pos, 'element:', textElement);
     
     // Hide placement guide
     setShowPlacementGuide(false);
@@ -136,8 +126,8 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
     // Start text editing immediately after element is added
     // Use setTimeout to ensure the element is rendered before starting edit
     setTimeout(() => {
-      console.log('📝 [TextTool] Starting editing for new element:', textElement.id);
-      startTextEditing(textElement.id, pos.x, pos.y, 200, 50);
+      console.log('📝 [TextTool] *** STARTING EDITING FOR NEW ELEMENT ***:', textElement.id);
+      startTextEditing(textElement.id, pos.x, pos.y, 120, 32);
     }, 10);
     
   }, [isActive, stageRef, addElement, editingTextId, startTextEditing]);
@@ -163,26 +153,35 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
 
     const stage = stageRef.current;
     
-    // Set crosshairs cursor (only if not editing)
-    if (!editingTextId) {
-      stage.container().style.cursor = 'crosshair';
-    }
+    console.log('📝 [TextTool] *** SETTING UP EVENT LISTENERS ***');
     
-    // Add event listeners
-    stage.on('pointermove', handlePointerMove);
-    stage.on('pointerdown', handlePointerDown);
-    stage.on('pointerleave', handlePointerLeave);
-    stage.on('pointerenter', handlePointerEnter);
+    // Always use crosshair cursor when text tool is active
+    stage.container().style.cursor = 'crosshair';
+    
+    // Remove any existing listeners first to ensure we get priority
+    stage.off('pointermove.textTool');
+    stage.off('pointerdown.textTool');
+    stage.off('pointerleave.textTool');
+    stage.off('pointerenter.textTool');
+    
+    // Add event listeners with namespace for priority
+    stage.on('pointermove.textTool', handlePointerMove);
+    stage.on('pointerdown.textTool', handlePointerDown);
+    stage.on('pointerleave.textTool', handlePointerLeave);
+    stage.on('pointerenter.textTool', handlePointerEnter);
+
+    console.log('📝 [TextTool] Event listeners attached with namespace');
 
     return () => {
+      console.log('📝 [TextTool] *** CLEANING UP EVENT LISTENERS ***');
       // Clean up event listeners
-      stage.off('pointermove', handlePointerMove);
-      stage.off('pointerdown', handlePointerDown);
-      stage.off('pointerleave', handlePointerLeave);
-      stage.off('pointerenter', handlePointerEnter);
+      stage.off('pointermove.textTool', handlePointerMove);
+      stage.off('pointerdown.textTool', handlePointerDown);
+      stage.off('pointerleave.textTool', handlePointerLeave);
+      stage.off('pointerenter.textTool', handlePointerEnter);
       
-      // Reset cursor (only if not editing)
-      if (!editingTextId) {
+      // Reset cursor when tool becomes inactive - force to default for clean transition
+      if (stage.container()) {
         stage.container().style.cursor = 'default';
       }
     };
@@ -201,8 +200,16 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
         cleanupTextEditor.current = null;
         setTextEditingElement(null);
       }
+      
+      // Ensure cursor is reset when tool becomes inactive
+      if (stageRef.current?.container()) {
+        stageRef.current.container().style.cursor = 'default';
+      }
+    } else if (isActive && stageRef.current) {
+      // Ensure crosshair cursor when becoming active
+      stageRef.current.container().style.cursor = 'crosshair';
     }
-  }, [isActive]);
+  }, [isActive, setTextEditingElement, stageRef]);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -220,69 +227,17 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
       {/* Crosshairs cursor visual indicator (only when moving, not when editing) */}
       {showPlacementGuide && cursorPosition && !editingTextId && !previewBox && (
         <Group>
-          {/* Horizontal crosshair line */}
-          <Line
-            points={[
-              cursorPosition.x - 15, cursorPosition.y,
-              cursorPosition.x + 15, cursorPosition.y
-            ]}
-            stroke="#666666"
-            strokeWidth={1}
-            opacity={0.8}
-            listening={false}
-            dash={[2, 2]}
-          />
-          
-          {/* Vertical crosshair line */}
-          <Line
-            points={[
-              cursorPosition.x, cursorPosition.y - 15,
-              cursorPosition.x, cursorPosition.y + 15
-            ]}
-            stroke="#666666"
-            strokeWidth={1}
-            opacity={0.8}
-            listening={false}
-            dash={[2, 2]}
-          />
-          
-          {/* Center dot */}
-          <Circle
-            x={cursorPosition.x}
-            y={cursorPosition.y}
-            radius={2}
-            fill="#666666"
+          {/* Just the floating "Add text" label */}
+          <Text
+            x={cursorPosition.x + 8}
+            y={cursorPosition.y - 8}
+            text="Add text"
+            fontSize={12}
+            fontFamily="Inter, Arial, sans-serif"
+            fill="#94A3B8"
             opacity={0.8}
             listening={false}
           />
-          
-          {/* Preview text box outline (dashed rectangle) */}
-          <Group x={cursorPosition.x} y={cursorPosition.y}>
-            <Rect
-              x={0}
-              y={0}
-              width={100}
-              height={30}
-              stroke="#3B82F6"
-              strokeWidth={2}
-              opacity={0.6}
-              listening={false}
-              dash={[8, 4]}
-              cornerRadius={4}
-            />
-            
-            {/* Placeholder text in the preview box */}
-            <Text
-              x={4}
-              y={8}
-              text="Add text"
-              fontSize={14}
-              fontFamily="Inter, Arial, sans-serif"
-              fill="#94A3B8"
-              opacity={0.7}
-              listening={false}
-            />
-          </Group>
         </Group>
       )}
       

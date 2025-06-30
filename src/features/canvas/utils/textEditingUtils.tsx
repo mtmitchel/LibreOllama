@@ -16,11 +16,12 @@ export interface CanvasTextConfig {
   MAX_HEIGHT: number;
   LINE_HEIGHT: number;
   FONT_WEIGHT: string;
-  LETTER_SPACING: string;
+  LETTER_SPACING: number; // Number, not string for Konva compatibility
   EDIT_BACKGROUND: string;
   EDIT_BORDER: string;
   CURSOR_COLOR: string;
   CURSOR_WIDTH: number;
+  FONT_COLOR: string;
 }
 
 export const CANVAS_TEXT_CONFIG: CanvasTextConfig = {
@@ -31,11 +32,12 @@ export const CANVAS_TEXT_CONFIG: CanvasTextConfig = {
   MAX_HEIGHT: 600,
   LINE_HEIGHT: 1.25,
   FONT_WEIGHT: '400',
-  LETTER_SPACING: '0px',
+  LETTER_SPACING: 0, // Number, not string for Konva compatibility
   EDIT_BACKGROUND: 'rgba(59, 130, 246, 0.1)',
   EDIT_BORDER: '#3b82f6',
   CURSOR_COLOR: '#3b82f6',
   CURSOR_WIDTH: 2,
+  FONT_COLOR: '#000000',
 } as const;
 
 /**
@@ -45,12 +47,13 @@ export const measureTextDimensions = (
   text: string, 
   fontSize: number, 
   fontFamily: string, 
-  maxWidth: number = 600
+  maxWidth: number = 600,
+  enforceMinimums: boolean = true
 ) => {
   if (!text || text.trim().length === 0) {
     return {
-      width: CANVAS_TEXT_CONFIG.MIN_WIDTH,
-      height: CANVAS_TEXT_CONFIG.MIN_HEIGHT,
+      width: enforceMinimums ? CANVAS_TEXT_CONFIG.MIN_WIDTH : 20,
+      height: enforceMinimums ? CANVAS_TEXT_CONFIG.MIN_HEIGHT : Math.ceil(fontSize * CANVAS_TEXT_CONFIG.LINE_HEIGHT),
     };
   }
 
@@ -62,19 +65,27 @@ export const measureTextDimensions = (
     fontWeight: CANVAS_TEXT_CONFIG.FONT_WEIGHT,
     lineHeight: CANVAS_TEXT_CONFIG.LINE_HEIGHT,
     letterSpacing: CANVAS_TEXT_CONFIG.LETTER_SPACING,
-    wrap: 'word',
-    width: maxWidth - CANVAS_TEXT_CONFIG.PADDING,
+    // Don't set width for single-line text to get natural width
+    ...(text.includes('\n') && { wrap: 'word', width: maxWidth - CANVAS_TEXT_CONFIG.PADDING }),
   });
 
   const textWidth = tempText.getTextWidth();
-  const textHeight = tempText.getTextHeight();
+  const textHeight = tempText.height(); // Use height() instead of deprecated getTextHeight()
 
   // Clean up
   tempText.destroy();
 
+  // Calculate final dimensions with padding
+  const finalWidth = textWidth + CANVAS_TEXT_CONFIG.PADDING;
+  const finalHeight = textHeight + CANVAS_TEXT_CONFIG.PADDING / 2; // Less vertical padding
+
   return {
-    width: Math.min(Math.max(textWidth + CANVAS_TEXT_CONFIG.PADDING, CANVAS_TEXT_CONFIG.MIN_WIDTH), maxWidth),
-    height: Math.max(textHeight + CANVAS_TEXT_CONFIG.PADDING, CANVAS_TEXT_CONFIG.MIN_HEIGHT),
+    width: enforceMinimums 
+      ? Math.min(Math.max(finalWidth, CANVAS_TEXT_CONFIG.MIN_WIDTH), maxWidth)
+      : Math.min(finalWidth, maxWidth),
+    height: enforceMinimums 
+      ? Math.max(finalHeight, CANVAS_TEXT_CONFIG.MIN_HEIGHT)
+      : finalHeight,
   };
 };
 

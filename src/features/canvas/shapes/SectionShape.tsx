@@ -1,5 +1,5 @@
-import React, { useRef, useCallback, useEffect, memo } from 'react';
-import { Group, Rect, Text, Transformer } from 'react-konva';
+import React, { useRef, useCallback, memo } from 'react';
+import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import type { SectionElement, SectionId, ElementId } from '../types/enhanced.types';
@@ -20,7 +20,6 @@ const SectionShapeComponent: React.FC<SectionShapeProps> = ({
   onElementDragEnd,
 }) => {
   const groupRef = useRef<Konva.Group>(null);
-  const transformerRef = useRef<Konva.Transformer>(null);
   
   const updateSection = useUnifiedCanvasStore(state => state.updateSection);
   
@@ -33,35 +32,12 @@ const SectionShapeComponent: React.FC<SectionShapeProps> = ({
     });
   }, [section.id, updateSection]);
 
-  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
-    e.cancelBubble = true;
-    const node = e.target as Konva.Group;
-    const scaleX = node.scaleX();
-    const scaleY = node.scaleY();
-      
-    updateSection(section.id, {
-      width: Math.max(50, (section.width || 100) * scaleX),
-      height: Math.max(50, (section.height || 100) * scaleY),
-    });
-    
-    node.scaleX(1);
-    node.scaleY(1);
-    node.getLayer()?.batchDraw();
-  }, [section.id, section.width, section.height, updateSection]);
-
   const handleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     const clickedOnBackground = e.target.name() === 'section-background';
     if (clickedOnBackground) {
       onSelect(section.id, e);
     }
   }, [section.id, onSelect]);
-
-  useEffect(() => {
-    if (isSelected && transformerRef.current && groupRef.current) {
-      transformerRef.current.nodes([groupRef.current]);
-      transformerRef.current.getLayer()?.batchDraw();
-    }
-  }, [isSelected]);
 
   return (
     <>
@@ -72,7 +48,6 @@ const SectionShapeComponent: React.FC<SectionShapeProps> = ({
         y={section.y}
         draggable
         onDragEnd={handleDragEnd}
-        onTransformEnd={handleTransformEnd}
         onClick={handleClick}
         onTap={handleClick}
       >
@@ -107,25 +82,6 @@ const SectionShapeComponent: React.FC<SectionShapeProps> = ({
           {children}
         </Group>
       </Group>
-
-      {isSelected && (
-        <Transformer
-          ref={transformerRef}
-          rotateEnabled={false}
-          anchorCornerRadius={5}
-          anchorStroke="#4A90E2"
-          anchorFill="#4A90E2"
-          anchorSize={8}
-          borderStroke="#4A90E2"
-          borderDash={[5, 5]}
-          boundBoxFunc={(oldBox, newBox) => {
-            if (newBox.width < 50 || newBox.height < 50) {
-              return oldBox;
-            }
-            return newBox;
-          }}
-        />
-      )}
     </>
   );
 };

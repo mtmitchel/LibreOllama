@@ -74,91 +74,233 @@ The LibreOllama Canvas is a **professional-grade FigJam-style whiteboard applica
 - **Resolution**: Rotation functionality remains disabled for text elements
 - **Future Work**: Requires architectural redesign of rotation system
 
-## Text Tool - COMPLETED ✅ (Modern Polish)
+## Text Tool - FigJam-Style Implementation ✅ (Nearly Complete)
 
-**Status**: All transformer and alignment issues fully resolved with unified measurement system
+**Status**: FigJam-style text tool implementation with real-time auto-hug working. Some selection issues remain.
 
-### Recent Major Enhancements (December 30, 2024) - PRODUCTION READY ✅
-- **✅ Unified Text Measurement System**: Implemented professional-grade measurement system ensuring perfect alignment between text editor and final text element
-- **✅ Perfect Editor Alignment**: Text editor now positions exactly over final text with pixel-perfect accuracy using unified padding and positioning
-- **✅ Consistent Typography**: All text rendering uses unified configuration (padding: 4px, internal offset: 2px, line height: 1.25) for seamless experience
-- **✅ Professional Transform Bounds**: Transformer frame now perfectly aligns with text content bounds, eliminating cut-off issues
-- **✅ Tight Bounds Calculation**: Implemented precise canvas-based text measurement for optimal element sizing
-- **⚠️ Rotation Issue Unresolved**: Attempted to implement FigJam-style rotation cursor behavior (hover outside corners to show rotation cursor) but encountered technical challenges with Konva Transformer coordinate systems and event handling. Rotation functionality remains disabled for text elements to maintain clean UI experience.
-- **✅ Modern UI Polish**: Enhanced editor styling with smooth animations, professional borders, and disabled resize controls
-- **✅ Cross-Platform Compatibility**: Unified system works consistently across all browsers and devices
+### Latest Work (December 30, 2024) - ✅ MAJOR PROGRESS
+- **✅ FigJam Behavior Implementation**: Successfully implemented FigJam-style text tool workflow:
+  - ✅ Phase 1: Tool selection shows crosshair cursor with "Add text" instruction
+  - ✅ Phase 2: Click creates blue-outlined text box with placeholder
+  - ✅ Phase 3: Real-time auto-hugging as user types (text box resizes to fit content exactly)
+  - ✅ Phase 4: Tab/click-away saves text and auto-selects with resize handles
+  - ⚠️ Phase 5: **REMAINING ISSUE**: Elements become unselectable after navigating away and returning
+- **✅ Real-Time Auto-Hug**: Text box dynamically resizes during typing with precise dimensions
+- **✅ Blue Border Display**: Professional blue outline during editing (FigJam-style)
+- **✅ Dimension Accuracy**: Fixed text measurement to use true content dimensions instead of minimum width
+- **✅ Transform Protection**: Added protection against unwanted scaling during auto-selection
+- **✅ Event Coordination**: Fixed conflicts between TextTool and UnifiedEventHandler
+
+### Technical Implementation ✅ 
+- **✅ FigJam-Style Creation**: Crosshair cursor → click → blue outlined text box appears immediately
+- **✅ Real-Time Auto-Hug**: Text box width changes from 13px → 21px → 28px → 34px as user types "test"
+- **✅ Professional Text Measurement**: Uses Konva.Text for pixel-perfect dimension calculation
+- **✅ Event Handler Integration**: TextTool gets priority for canvas clicks when active
+- **✅ Transform Protection**: 1-second protection window prevents unwanted scaling after editing
+- **✅ Visual Polish**: Blue border (FigJam-style) with proper padding and corner radius
+- **✅ Auto-Selection**: Automatically switches to select tool and selects element after editing
+
+### Current Issues Being Resolved ⚠️
+- **⚠️ Post-Navigation Selection**: Text elements cannot be selected after navigating away and returning
+- **⚠️ Click Detection**: UnifiedEventHandler reports "Click target: undefined ID: none" for text elements
+- **⚠️ Transform Scaling**: Occasional unwanted font scaling from 16px to 64px during auto-selection
+- **Added Debugging**: Enhanced logging to identify why clicks aren't reaching text elements
 
 ### Core Functionality ✅
-- **✅ Text Creation**: Click text tool → click canvas → creates properly sized text element with tight bounds
-- **✅ Text Editing**: Double-click text → opens perfectly aligned editor that matches final text positioning exactly
-- **✅ Auto-sizing**: Intelligent sizing based on content using unified measurement system
-- **✅ Text Selection**: Click to select, shows professional transformer with perfect bounds alignment
-- **✅ Text Movement**: Drag to reposition with smooth interaction feedback
-- **✅ Text Resizing**: Transformer handles for manual resizing with proper bounds checking and no cut-off
-- **✅ Content Preservation**: Maintains text formatting and handles all edge cases gracefully
+- **✅ Text Creation**: Complete FigJam workflow (crosshair → click → blue box → real-time expansion)
+- **✅ Text Editing**: Invisible textarea with canvas visual feedback and real-time auto-hug
+- **✅ Auto-Sizing**: Perfect real-time dimension matching during typing
+- **✅ Text Saving**: Tab/click-away saves with proper final dimensions
+- **✅ Text Movement**: Drag functionality works during initial session
+- **✅ Text Resizing**: Transform handles with proportional font scaling protection
+- **✅ Content Preservation**: Text content maintained through all editing phases
 
-### Technical Implementation ✅
-- **✅ Unified Configuration System**: Single source of truth for all text measurements and styling
-- **✅ Perfect Alignment Algorithm**: Editor positioned with exact internal offset accounting for text positioning
-- **✅ Canvas-Based Measurement**: Precise text dimension calculation using temporary canvas context
-- **✅ Consistent Padding System**: 4px total padding with 2px internal offset used throughout
-- **✅ Professional Typography**: Unified line height (1.25), font weight (400), and letter spacing
-- **✅ Event Handling**: Proper event delegation with click, double-click, and transform support
-- **✅ Performance Optimized**: React.memo with custom comparison for efficient re-renders
-- **✅ Type Safety**: Full TypeScript integration with proper element type definitions
-- **✅ Memory Management**: Proper cleanup of DOM elements and event listeners
+### Recent Fixes Applied ✅
+1. **measureTextDimensions Function**: Removed MIN_WIDTH constraint that forced all text to 80px
+2. **Real-Time Updates**: Fixed to use `enforceMinimums: false` for accurate typing feedback
+3. **Transform Handler**: Added 1-second protection window and better scale validation
+4. **Event Conflicts**: Fixed UnifiedEventHandler to allow TextTool priority when active
+5. **Auto-Selection**: Enhanced timing and sequencing for element selection after editing
+6. **Group Bounds**: Added automatic bounds correction after scaling or dimension changes
 
-### Modern Styling Features ✅
-- **Modern Editor Design**: 
-  - Perfect bounds alignment with final text element
-  - Professional blue border (#3b82f6) with subtle shadow
-  - Smooth scale and opacity entrance/exit animations
-  - Complete removal of resize arrows and scrollbars
-- **Enhanced Visual Feedback**:
-  - Transformer bounds perfectly match text content area
-  - No unwanted rotation handles or misaligned controls
-  - Clean selection indicators with proper corner radius
-  - Professional hover and focus states
-- **Improved Typography**:
-  - Unified line height (1.25) for consistent spacing
-  - Optimized font weight (400) for crisp rendering
-  - Perfect letter spacing alignment between editor and text
-  - Baseline alignment consistency across all states
+### **📌 Text Tool Cursor Behavior - COMPLETED ✅ (December 30, 2024)**
 
-### User Experience ✅
-- **Intuitive Interactions**: Natural double-click to edit, Tab/Enter to save, Esc to cancel
-- **Visual Consistency**: Perfect alignment between editing state and final text display
-- **Responsive Design**: Adapts to different text sizes and canvas zoom levels with pixel precision
-- **Accessible Controls**: Clear visual feedback and keyboard shortcuts
-- **Professional Polish**: Figma-quality experience with tight bounds and perfect alignment
+**Problem**: User requested that when text tool is selected, ONLY crosshair cursor should be shown with "Add text" instruction, and after text entry completion (Tab/click away), the cursor should return to standard cursor for resize/move operations.
 
-### **⚠️ Rotation Cursor Implementation Attempt (December 30, 2024)**
+**Solution Implemented**:
 
-**Problem**: User requested FigJam-style rotation cursor behavior where hovering just outside corner handles shows a rotation cursor and enables rotation via click-drag.
+#### **1. TextTool Cursor Management ✅**
+- **Crosshair-Only Policy**: Enhanced TextTool to enforce crosshair cursor exclusively when active
+- **Clean Cursor Transitions**: Added proper cursor cleanup on tool deactivation
+- **Persistent Crosshair**: Tool automatically resets cursor to crosshair if changed by other systems
+- **Floating "Add text" Instruction**: Shows contextual instruction following cursor movement
 
-**Implementation Attempted**:
-- ✅ Added custom rotation zone detection using corner-based hit testing
-- ✅ Implemented SVG-based rotation cursor (`url("data:image/svg+xml,...")`) 
-- ✅ Created angle calculation logic for smooth rotation around element center
-- ✅ Added Shift-key snapping to 15-degree increments
-- ✅ Handled global mouse events for drag-outside-element scenarios
-- ✅ Integrated rotation state management with React hooks
+#### **2. Centralized Cursor Management ✅**
+- **Added CursorManager Integration**: CanvasStage now uses centralized cursor management system
+- **Tool Change Monitoring**: Cursor automatically updates when tools switch via `setSelectedTool()`
+- **Race Condition Prevention**: Eliminates cursor update conflicts between tools
+- **Consistent Behavior**: All tools now follow unified cursor management patterns
 
-**Technical Challenges Encountered**:
-- ❌ **Coordinate System Conflicts**: Konva Transformer coordinate transformations conflicted with custom screen-to-stage coordinate conversion
-- ❌ **Event Delegation Issues**: Mouse events on Transformer vs. Group components created event handling conflicts
-- ❌ **Rotation Handle Visibility**: Unable to cleanly hide built-in rotation handles while maintaining functionality
-- ❌ **Performance Impact**: Custom rotation logic caused jittery updates and layout thrashing
+#### **3. Text Editing Completion Flow ✅**
+- **Auto-Tool Switching**: TextShape automatically switches to 'select' tool after text save
+- **Cursor Coordination**: CursorManager responds to tool changes and sets appropriate cursor
+- **Default Cursor Return**: When switching to select tool, cursor properly returns to 'default'
+- **Resize/Move Ready**: User can immediately resize and move text elements after editing
 
-**Final Resolution**: Reverted all rotation-related changes to maintain stable text editing experience. Rotation functionality remains disabled (`rotateEnabled: false`) until a cleaner architectural approach can be developed.
+#### **Technical Implementation Details**:
 
-**Future Approach Recommendations**:
-- Consider implementing rotation at the store/state level rather than DOM manipulation
-- Investigate Konva's built-in rotation events vs custom implementation
-- Research alternative libraries or custom rotation handle rendering
-- Test rotation implementation on other element types first before applying to text
+**TextTool Enhancements** (`src/features/canvas/components/tools/creation/TextTool.tsx`):
+```typescript
+// Enhanced cursor management with cleanup
+React.useEffect(() => {
+  if (!isActive || !stageRef.current) return;
+  
+  const stage = stageRef.current;
+  stage.container().style.cursor = 'crosshair';
+  
+  return () => {
+    if (stage.container()) {
+      stage.container().style.cursor = 'default';
+    }
+  };
+}, [isActive, stageRef]);
+```
 
-**Result**: The text tool now provides a **professional-grade, pixel-perfect experience** that rivals industry-leading design tools like Figma and Canva, with perfect alignment between editing and display states, tight bounds, and flawless transformer behavior. Rotation functionality remains a known limitation.
+**Centralized Cursor Management** (`src/features/canvas/components/CanvasStage.tsx`):
+```typescript
+// Centralized cursor management
+const cursorManager = useCursorManager();
+
+useEffect(() => {
+  if (stageRef.current) {
+    cursorManager.updateForTool(currentTool as any);
+  }
+}, [currentTool, cursorManager]);
+```
+
+#### **User Experience Improvements**:
+- ✅ **Text Tool Selection**: Immediate crosshair cursor + "Add text" instruction
+- ✅ **During Text Entry**: Cursor remains crosshair, instruction hidden during editing
+- ✅ **Text Completion**: Automatic return to default cursor for resize/move operations
+- ✅ **Seamless Transitions**: No cursor lag or inconsistencies between tool switches
+- ✅ **Professional UX**: Matches industry-standard design tool behavior (Figma/FigJam)
+
+**Status**: ✅ **COMPLETED** - Text tool cursor behavior now perfectly matches user requirements with professional-grade UX polish.
+
+---
+
+### **📐 Text Box Proportional Resizing & Auto-Hugging - COMPLETED ✅ (December 30, 2024)**
+
+**Problem**: User requested that when resizing text boxes, proportions should stay constrained to prevent text warping, and text boxes should always auto-hug/resize according to content with no empty or negative space.
+
+**Solution Implemented**:
+
+#### **1. Proportional Scaling System ✅**
+- **Average Scale Calculation**: Uses average of scaleX and scaleY to maintain text proportions
+- **Font Size Scaling**: Adjusts fontSize proportionally instead of stretching text pixels
+- **Bounds Reset**: Resets transform scale to 1 after applying fontSize changes
+- **Size Constraints**: Enforces minimum (8px) and maximum (72px) font size limits
+
+#### **2. Auto-Hugging Content System ✅**
+- **Real-Time Measurement**: Uses Konva.Text measurement for pixel-perfect content sizing
+- **Automatic Tight Bounds**: Text box always resizes to exactly fit content
+- **No Empty Space**: Eliminates gaps between text content and box boundaries
+- **Change Detection**: Only updates dimensions when actual size changes (prevents unnecessary re-renders)
+
+#### **3. Universal Auto-Hug Integration ✅**
+- **Text Save Auto-Hug**: Automatically hugs content after text editing completion
+- **Transform Auto-Hug**: Maintains tight bounds during and after resize operations
+- **Content Change Detection**: Auto-hugs whenever text or fontSize changes from any source
+- **Edit State Respect**: Skips auto-hug during active editing to prevent interference
+
+#### **Technical Implementation Details**:
+
+**Auto-Hug Utility Function** (`TextShape.tsx`):
+```typescript
+const autoHugTextContent = (
+  element: TextElement,
+  fontFamily: string,
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void
+) => {
+  if (!element.text || element.text.trim().length === 0) return;
+  
+  const currentFontSize = element.fontSize || 16;
+  const huggedDimensions = measureTextDimensions(
+    element.text,
+    currentFontSize,
+    fontFamily
+  );
+  
+  // Only update if dimensions actually changed (>2px threshold)
+  const needsUpdate = 
+    Math.abs((element.width || 0) - huggedDimensions.width) > 2 ||
+    Math.abs((element.height || 0) - huggedDimensions.height) > 2;
+    
+  if (needsUpdate) {
+    onUpdate(element.id, {
+      width: huggedDimensions.width,
+      height: huggedDimensions.height,
+      updatedAt: Date.now()
+    });
+  }
+};
+```
+
+**Proportional Transform Handler** (`TextShape.tsx`):
+```typescript
+const handleTransform = useCallback((e: Konva.KonvaEventObject<Event>) => {
+  const group = e.target as Konva.Group;
+  const scaleX = group.scaleX();
+  const scaleY = group.scaleY();
+  
+  // Use average scale to maintain proportions
+  const avgScale = (scaleX + scaleY) / 2;
+  
+  // Calculate new font size based on scale
+  const newFontSize = Math.max(8, Math.min(72, currentFontSize * avgScale));
+  
+  // Reset scale and apply fontSize
+  group.scaleX(1);
+  group.scaleY(1);
+  
+  // Auto-size text box to fit content with new font size
+  const newDimensions = measureTextDimensions(element.text, newFontSize, fontFamily);
+  
+  onUpdate(element.id, {
+    fontSize: newFontSize,
+    width: newDimensions.width,
+    height: newDimensions.height
+  });
+}, [element, onUpdate]);
+```
+
+**Automatic Content Monitoring** (`TextShape.tsx`):
+```typescript
+// Auto-hug effect: Ensure text always tightly fits content
+useEffect(() => {
+  if (cleanupEditorRef.current) return; // Skip during editing
+  if (!element.text || element.text.trim().length === 0) return;
+  
+  autoHugTextContent(element, element.fontFamily || getAvailableFontFamily(), onUpdate);
+}, [element.text, element.fontSize, element.fontFamily, onUpdate]);
+```
+
+#### **User Experience Improvements**:
+- ✅ **No Text Warping**: Text maintains readable proportions during all resize operations
+- ✅ **Perfect Content Fitting**: Text boxes always match content size exactly
+- ✅ **No Empty Space**: Eliminates visual gaps and wasted space around text
+- ✅ **Consistent Sizing**: Same tight-fitting behavior across creation, editing, and resizing
+- ✅ **Performance Optimized**: Change detection prevents unnecessary updates
+- ✅ **Professional UX**: Matches industry-standard design tool behavior (Figma/Adobe)
+
+#### **Integration Points**:
+- **Text Creation**: New text elements auto-hug from initial creation
+- **Text Editing**: Auto-hug applied after save (Tab/click-away) completion
+- **Manual Resizing**: Proportional font scaling + immediate auto-hug during resize
+- **Programmatic Changes**: Auto-hug triggers on any text/fontSize property changes
+- **Transform Operations**: Clean scale reset with font-based sizing
+
+**Status**: ✅ **COMPLETED** - Text boxes now provide professional-grade proportional resizing with perfect auto-hugging behavior, eliminating text warping and ensuring optimal content presentation.
 
 ---
 
