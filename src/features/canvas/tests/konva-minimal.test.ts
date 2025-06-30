@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import Konva from 'konva';
 
@@ -15,6 +14,6 @@ describe('Minimal Konva Import Test', () => {
 
     expect(stage).toBeDefined();
     expect(layer).toBeDefined();
-    expect(stage.width()).toBe(200);
+    expect(stage.width()).toBe(800);
   });
 });

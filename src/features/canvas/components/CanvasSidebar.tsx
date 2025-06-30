@@ -7,10 +7,12 @@ import {
   Copy,
   Search,
   PanelLeftClose,
-  PanelRightClose
+  PanelRightClose,
+  Shapes,
+  Text
 } from "lucide-react";
-import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
-import { Button, Input } from "../../../shared/ui";
+import { Button, Input } from "../../../core/shared-ui";
+import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
 
 interface CanvasItem {
   id: string;

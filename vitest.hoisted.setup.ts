@@ -164,13 +164,27 @@ vi.mock('canvas', () => ({
   }))
 
   vi.mock('react-konva', () => {
-    const MockComponent = (name: string) => ({ children, ...props }: any) => {
-      // Create a test-friendly name, e.g., 'konva-stage'
-      const testId = `konva-${name.toLowerCase()}`;
-      return React.createElement('div', { 
-        'data-testid': testId, 
-        ...props 
-      }, children);
+    // A more sophisticated mock that renders a real canvas for the Stage
+    const MockComponent = (name: string) => {
+      return React.forwardRef(({ children, ...props }: any, ref: any) => {
+        const testId = `konva-${name.toLowerCase()}`;
+        
+        // The Stage is special, it's the root and needs a canvas.
+        if (name === 'Stage') {
+          return React.createElement('canvas', {
+            'data-testid': testId,
+            ref,
+            ...props,
+          }, children);
+        }
+
+        // Other components can be simple divs.
+        return React.createElement('div', {
+          'data-testid': testId,
+          ref,
+          ...props,
+        }, children);
+      });
     };
 
     return {
@@ -185,6 +199,7 @@ vi.mock('canvas', () => ({
       Arrow: MockComponent('Arrow'),
       Transformer: MockComponent('Transformer'),
       Html: MockComponent('Html'),
+      Star: MockComponent('Star'),
     };
   })
   

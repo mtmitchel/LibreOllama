@@ -5,7 +5,8 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { logger } from '../../../../lib/logger';
+import { logger } from '../../../../core/lib/logger';
+import Konva from 'konva';
 
 export interface TrackedResource {
   id: string;

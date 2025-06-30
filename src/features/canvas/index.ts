@@ -1,124 +1,15 @@
-// Enhanced Canvas Feature Index - Centralized Exports
-// This file provides a single entry point for all canvas feature imports
-
-// Core Types
-export type {
-  CanvasElement,
-  TableCell,
-  TableRow,
-  TableColumn,
-  TableSelection,
-  EnhancedTableData,
-  RichTextSegment
-} from './types';
-
-export type {
-  KonvaMouseEvent,
-  KonvaTouchEvent,
-  KonvaPointerEvent,
-  KonvaShapeConfig,
-  KonvaRectConfig,
-  KonvaCircleConfig,
-  KonvaTextConfig,
-  KonvaLineConfig,
-  TransformerConfig
-} from './types/konva.types';
-
-export type {
-  LayerProps,
-  BackgroundLayerProps,
-  MainLayerProps,
-  ConnectorLayerProps,
-  UILayerProps,
-  ShapeComponentProps
-} from './layers/types';
-
-// DO NOT EXPORT useCanvasStore HERE - import it from src/stores
-// REMOVED: export { useCanvasStore as useKonvaCanvasStore } from './stores';
-// REMOVED: export type { CanvasState } from './hooks/useGranularSelectors';
-
-// Granular Selectors (Phase 2 Optimization)
-export {
-  useElementProperty,
-  useElementPosition,
-  useElementDimensions,
-  useElementStyle,
-  useIsElementSelected,
-  useSelectedElements,
-  useElementCount,
-  useElementsByType,
-  useCurrentTool,
-  useIsDrawing,
-  useCanUndo,
-  useCanRedo
-} from './hooks/useGranularSelectors';
-
-// Performance Optimization Hooks (Phase 4)
-export {
-  useThrottledUpdate,
-  useDebounced,
-  createMemoizedSelector,
-  usePerformanceMonitor,
-  withMemoization,
-  useBatchUpdate,
-  useViewportCulling
-} from './hooks/usePerformanceOptimization';
-
-// Memory Monitoring (Phase 5)
-export {
-  CanvasMemoryProfiler,
-  useMemoryMonitor
-} from './utils/memoryProfiler';
-
-// Production Logging
-export {
-  canvasLogger,
-  performanceLogger,
-  memoryLogger,
-  debugLogger,
-  logPerformance,
-  logMemoryUsage,
-  logCanvasOperation,
-  logCanvasError,
-  assert,
-  devLog,
-  Logger
-} from '../../lib/logger';
-
-// Core Components
-export { EditableNode } from './shapes/EditableNode';
-export { ConnectorRenderer } from './components/ConnectorRenderer';
-
-// Layer Components
-export { UILayer } from './layers/UILayer';
-export { BackgroundLayer } from './layers/BackgroundLayer';
-export { MainLayer } from './layers/MainLayer';
-export { ConnectorLayer } from './layers/ConnectorLayer';
-export { CanvasLayerManager } from './layers/CanvasLayerManager';
-
-// Utility Functions
-
-// Canvas Optimization Utilities
-export {
-  RenderOptimizer
-} from './utils/canvas/RenderOptimizer';
-
-export {
-  EventOptimizer  
-} from './utils/canvas/EventOptimizer';
-
-export {
-  CacheManager
-} from './utils/canvas/CacheManager';
-
-// Viewport and Spatial Utilities
-export {
-  ViewportCuller
-} from './utils/viewport/viewportCuller';
-
-export {
-  Quadtree
-} from './utils/spatial/Quadtree';
-
-// Version information for debugging
-export const CANVAS_VERSION = '2.0.0-optimized';
+export { default as CanvasStage } from './components/CanvasStage';
+export { default as CanvasContainer } from './components/CanvasContainer';
+export { default as CanvasSidebar } from './components/CanvasSidebar';
+export { default as CanvasErrorBoundary } from './utils/CanvasErrorBoundary';
+export { default as CanvasSidebarToggle } from './components/CanvasSidebarToggle';
+export { default as UnifiedTextElement } from './elements/UnifiedTextElement';
+export * from './tools/ConnectorTool';
+export * from './toolbar';
+export * from './layers';
+export * from './renderers';
+export * from './shapes';
+export * from './elements';
+export * from './hooks';
+export * from './stores/unifiedCanvasStore';
+export * from './utils';

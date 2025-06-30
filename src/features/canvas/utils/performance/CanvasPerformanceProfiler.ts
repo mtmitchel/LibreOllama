@@ -3,7 +3,9 @@
  * Profiles canvas operations to identify performance bottlenecks
  */
 
-import { logger } from '../../../../lib/logger';
+import { produce } from "immer";
+import { throttle } from "../throttle";
+import { logger } from "../../../../core/lib/logger";
 import { PerformanceMonitor } from './PerformanceMonitor';
 
 interface PerformanceMark {

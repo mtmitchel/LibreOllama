@@ -10,7 +10,7 @@ import { vi } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
-import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '@/stores';
 import { 
   ElementId, 
   SectionId, 
@@ -71,8 +71,8 @@ const createAdvancedMockStore = () => ({
   checkElementContainment: vi.fn(),
 });
 
-vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: vi.fn(),
+vi.mock('@/stores', () => ({
+  useUnifiedCanvasStore: vi.fn(),
 }));
 
 describe('Advanced Canvas Features - Production Readiness', () => {
@@ -80,7 +80,7 @@ describe('Advanced Canvas Features - Production Readiness', () => {
 
   beforeEach(() => {
     mockStore = createAdvancedMockStore();
-    (useCanvasStore as any).mockImplementation((selector: any) => {
+    (useUnifiedCanvasStore as any).mockImplementation((selector: any) => {
       return selector ? selector(mockStore) : mockStore;
     });
   });

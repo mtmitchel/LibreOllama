@@ -3,12 +3,14 @@ import React from 'react';
 import { Circle } from 'react-konva';
 import Konva from 'konva';
 import { CircleElement } from '../types/enhanced.types';
-import { designSystem } from '../../../design-system';
+import { designSystem } from '../../../core/design-system';
 import { useShapeCaching } from '../hooks/useShapeCaching';
 import { BaseShapeProps } from '../types/shape-props.types';
+import { ElementId, CanvasElement } from '../types/enhanced.types';
 
 interface CircleShapeProps extends BaseShapeProps<CircleElement> {
-  // Circle-specific props can be added here if needed
+  onSelect?: (elementId: ElementId) => void;
+  onUpdate?: (id: ElementId, updates: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -21,7 +23,9 @@ interface CircleShapeProps extends BaseShapeProps<CircleElement> {
 export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
   element,
   isSelected,
-  konvaProps
+  konvaProps,
+  onSelect,
+  onUpdate
 }) => {
   // Validate and ensure minimum radius to prevent rendering issues
   const radius = Math.max(1, element.radius || 50);
@@ -38,6 +42,18 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
     },
     dependencies: [element.fill, element.stroke, element.radius, isSelected]
   });
+
+  // Event handlers for selection and dragging
+  const handleClick = React.useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true;
+    onSelect?.(element.id);
+  }, [onSelect, element.id]);
+
+  const handleDragEnd = React.useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    const newX = e.target.x() - radius; // Convert back to top-left coordinates
+    const newY = e.target.y() - radius;
+    onUpdate?.(element.id, { x: newX, y: newY });
+  }, [onUpdate, element.id, radius]);
 
   // Handle coordinate transformation properly with validation
   // Store coordinates represent top-left corner, but Circle needs center coordinates
@@ -61,6 +77,10 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
       perfectDrawEnabled={false} // Disable perfect drawing for fill+stroke circles
       shadowForStrokeEnabled={false} // Disable shadow for stroke to prevent extra rendering pass
       listening={true} // Keep listening enabled for interactive circles
+      draggable={!element.isLocked}
+      onClick={handleClick}
+      onTap={handleClick}
+      onDragEnd={handleDragEnd}
     />
   );
 });

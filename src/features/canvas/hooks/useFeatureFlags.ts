@@ -1,6 +1,6 @@
 // src/features/canvas/hooks/useFeatureFlags.ts
 import { useMemo } from 'react';
-import { logger } from '@/lib/logger';
+import { logger } from '@/core/lib/logger';
 
 interface FeatureFlags {
   'grouped-section-rendering': boolean;
@@ -20,7 +20,7 @@ export const useFeatureFlags = (): FeatureFlags => {
     const flags = {
       // Phase 1 flags - ENABLED to see new coordinate system fixes
       'grouped-section-rendering': true,  // Enable SectionHandler component
-      'centralized-transformer': true,    // Enable centralized transformer
+      'centralized-transformer': false,   // Disable to use individual element transformers
       
       // Phase 2 flags (for future implementation)
       'shape-connector-grouping': false, // Not implemented yet

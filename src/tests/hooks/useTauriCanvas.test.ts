@@ -7,13 +7,16 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
 }));
 
-// Mock the canvas store
-vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: vi.fn(),
+// Mock the unified canvas store
+vi.mock('../../features/canvas/stores/unifiedCanvasStore', () => ({
+  useUnifiedCanvasStore: vi.fn(),
 }));
 
 // Import after mocks are set up
 import { useTauriCanvas } from '../../features/canvas/hooks/useTauriCanvas';
+// import { useUnifiedCanvasStore } from '../../features/canvas/stores/unifiedCanvasStore'; // This is now mocked
+import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 
 describe('useTauriCanvas', () => {
   let mockInvoke: any;
@@ -31,7 +34,9 @@ describe('useTauriCanvas', () => {
     mockImportElements = vi.fn();
     
     // Setup store mock to handle Zustand selector pattern
-    const mockUseCanvasStore = vi.mocked(await import('../../features/canvas/stores/canvasStore.enhanced')).useCanvasStore;
+    const { useUnifiedCanvasStore: mockUseUnifiedCanvasStore } = await import('../../features/canvas/stores/unifiedCanvasStore');
+    const mockUseCanvasStore = vi.mocked(mockUseUnifiedCanvasStore);
+
     mockUseCanvasStore.mockImplementation((selector) => {
       const mockStore = {
         exportElements: mockExportElements,

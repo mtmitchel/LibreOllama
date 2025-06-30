@@ -4,7 +4,7 @@
  * Validates fixes for identified high-risk patterns
  */
 
-import { logger } from '@/lib/logger';
+import { logger } from "@/core/lib/logger";
 import { drawingStateManager } from './state/DrawingStateManager';
 import { stateSynchronizationMonitor } from './state/StateSynchronizationMonitor';
 import { enhancedFeatureFlagManager } from './state/EnhancedFeatureFlagManager';

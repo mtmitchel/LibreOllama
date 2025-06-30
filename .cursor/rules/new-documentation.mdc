@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ALWAYS check for existing documentation in the docs folder BEFORE creating new documentation. EXISTING documentation should be updated. New documentation should ONLY be created as a LAST RESORT. 
+

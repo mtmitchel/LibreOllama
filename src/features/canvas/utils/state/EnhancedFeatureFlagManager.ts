@@ -4,7 +4,7 @@
  * Solves: Feature flag dependencies, single point of failure risks
  */
 
-import { logger } from '@/lib/logger';
+import { logger } from "@/core/lib/logger";
 
 export interface FeatureFlagConfig {
   name: string;
@@ -64,7 +64,7 @@ export class EnhancedFeatureFlagManager {
       },
       {
         name: 'centralized-transformer',
-        enabled: true,
+        enabled: false, // DISABLED: Use individual element transformers for cleaner design
         fallbackEnabled: true,
         fallbackValue: false, // Fall back to distributed transformers
         criticalityLevel: 'critical',

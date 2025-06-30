@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { canvasStore } from '../stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { ElementId, SectionId } from '../types/enhanced.types';
 
 // Mock Konva
@@ -23,12 +23,15 @@ vi.mock('konva', () => ({
   }
 }));
 
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(() => Promise.resolve()),
+}));
+
 describe('COMPREHENSIVE SECTION FUNCTIONALITY TEST', () => {
-  let store: typeof canvasStore;
+  let store: typeof useUnifiedCanvasStore;
 
   beforeEach(() => {
-    // Reset store state
-    store = canvasStore;
+    store = useUnifiedCanvasStore;
     store.getState().clearCanvas();
   });
 

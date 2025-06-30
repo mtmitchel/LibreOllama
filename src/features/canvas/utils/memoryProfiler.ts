@@ -1,6 +1,6 @@
 // Memory and Performance Monitoring - Phase 5
 import { useEffect, useRef, useCallback } from 'react';
-import { logger } from '../../../lib/logger';
+import { logger } from '../../../core/lib/logger';
 
 /**
  * CanvasMemoryProfiler - Comprehensive memory monitoring for canvas operations

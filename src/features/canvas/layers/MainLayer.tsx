@@ -1,11 +1,11 @@
 /**
  * MainLayer - Pure Rendering Component
  * 
- * CRITICAL FIX: No event handlers - all events delegated to UnifiedEventHandler
+ * CRITICAL FIX: Pass actual store functions to TextShape for proper updates
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { Group, Line } from 'react-konva';
+import { Group, Line, Text } from 'react-konva';
 import Konva from 'konva';
 import {
   CanvasElement,
@@ -14,7 +14,7 @@ import {
   ElementOrSectionId,
   SectionElement
 } from '../types/enhanced.types';
-import { designSystem } from '../../../design-system';
+import { designSystem } from '../../../core/design-system';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
@@ -23,20 +23,22 @@ import { TriangleShape } from '../shapes/TriangleShape';
 import { PenShape } from '../shapes/PenShape';
 import { SectionShape } from '../shapes/SectionShape';
 import { EditableNode } from '../shapes/EditableNode';
-import { EnhancedTableElement } from '../components/EnhancedTableElement';
-import { ConnectorRenderer } from '../components/ConnectorRenderer';
-import KonvaErrorBoundary from '../components/KonvaErrorBoundary';
-import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
+import { TableElement } from '../elements/TableElement';
+import { CanvasErrorBoundary } from '../utils/CanvasErrorBoundary';
+import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { StrokeRenderer } from '../components/renderers/StrokeRenderer';
+// import { ElementRenderer } from '../renderers/ElementRenderer';
 
 interface MainLayerProps {
   name?: string;
-  elements: CanvasElement[];
+  elements: Map<ElementId, CanvasElement | SectionElement>;
   selectedElementIds: Set<ElementId>;
   selectedTool: string;
   isDrawing?: boolean;
   currentPath?: number[];
   onLayerDraw?: () => void;
   elementsBySection?: Map<SectionId, CanvasElement[]>;
+  stageRef?: React.RefObject<Konva.Stage | null>;
 }
 
 export const MainLayer: React.FC<MainLayerProps> = ({
@@ -47,21 +49,30 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   isDrawing = false,
   currentPath = [],
   onLayerDraw,
-  elementsBySection
+  elementsBySection,
+  stageRef
 }) => {
-  console.log('🎯 [MainLayer] Rendering with elements:', elements.length);
+  console.log('🎯 [MainLayer] Rendering with elements:', elements.size);
 
-  const elementsMap = useUnifiedCanvasStore(canvasSelectors.elements);
-  const draftSection = useUnifiedCanvasStore(canvasSelectors.draftSection);
+  // Get actual store actions for element updates
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
+  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
+  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
 
   // Memoized element rendering
   const renderElement = useCallback((element: CanvasElement) => {
+    // Safety check for valid elements
+    if (!element || !element.id || !element.type) {
+      console.warn('[MainLayer] Invalid element:', element);
+      return null;
+    }
+
     console.log('🎭 [MainLayer] Rendering:', element.type, element.id);
 
     const isSelected = selectedElementIds.has(element.id);
     const isDraggable = !element.isLocked && element.type !== 'pen' && element.type !== 'pencil';
 
-    // CRITICAL: NO EVENT HANDLERS - All events delegated to UnifiedEventHandler
+    // CRITICAL: Enable event handlers for proper interaction
     const konvaElementProps: any = {
       id: element.id,
       x: element.x,
@@ -88,179 +99,193 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       case 'rectangle':
       case 'circle':
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <EditableNode
               element={element}
               isSelected={isSelected}
               selectedTool={selectedTool}
-              onElementUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onStartTextEdit={() => {}} // NO-OP - handled by UnifiedEventHandler
+              onElementUpdate={updateElement} // Pass actual update function
+              onStartTextEdit={setTextEditingElement} // Pass actual function
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
+        );
+
+      case 'marker':
+      case 'highlighter':
+      case 'washi-tape':
+        return (
+          <CanvasErrorBoundary key={element.id}>
+            <StrokeRenderer
+              element={element as any}
+              isSelected={isSelected}
+              onSelect={(id) => selectElement(id as ElementId)} // Pass actual select function
+              isEditing={false}
+            />
+          </CanvasErrorBoundary>
         );
 
       case 'text':
+        console.log('🎭 [MainLayer] Rendering text element:', element.id, 'with props:', konvaElementProps);
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <TextShape
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onStartTextEdit={() => {}} // NO-OP - handled by UnifiedEventHandler
+              onUpdate={updateElement} // Pass actual update function
+              onStartTextEdit={setTextEditingElement} // Pass actual function
+              stageRef={stageRef}
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
         );
 
       case 'sticky-note':
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <StickyNoteShape
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onStartTextEdit={() => {}} // NO-OP - handled by UnifiedEventHandler
+              onUpdate={updateElement} // Pass actual update function
+              onStartTextEdit={setTextEditingElement} // Pass actual function
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
         );
 
       case 'star':
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <StarShape
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onStartTextEdit={() => {}} // NO-OP - handled by UnifiedEventHandler
+              onUpdate={updateElement} // Pass actual update function
+              onStartTextEdit={setTextEditingElement} // Pass actual function
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
         );
 
       case 'triangle':
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <TriangleShape
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onStartTextEdit={() => {}} // NO-OP - handled by UnifiedEventHandler
+              onUpdate={updateElement} // Pass actual update function
+              onStartTextEdit={setTextEditingElement} // Pass actual function
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
         );
 
       case 'pen':
       case 'pencil':
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <PenShape
               element={element as any}
               konvaProps={konvaElementProps}
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
         );
 
       case 'image':
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <ImageShape
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onStartTextEdit={() => {}} // NO-OP - handled by UnifiedEventHandler
+              onUpdate={updateElement} // Pass actual update function
+              onStartTextEdit={setTextEditingElement} // Pass actual function
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
         );
 
-      case 'connector':
-        return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
-            <ConnectorRenderer
-              element={element as any}
-              isSelected={isSelected}
-              onSelect={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
-              elements={elementsMap}
-              sections={new Map()}
-            />
-          </KonvaErrorBoundary>
-        );
+
 
       case 'section':
         const sectionChildren = elementsBySection?.get(element.id) || [];
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
+          <CanvasErrorBoundary key={element.id}>
             <SectionShape
-              element={element as SectionElement}
+              section={element as SectionElement}
               isSelected={isSelected}
-              konvaProps={konvaElementProps}
+              onSelect={(id, e) => selectElement(id as ElementId)}
+              onElementDragEnd={(e, id) => {
+                const node = e.target;
+                updateElement(id, { x: node.x(), y: node.y() });
+              }}
             >
               {sectionChildren.map(child => renderElement(child))}
             </SectionShape>
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
         );
 
       case 'table':
         return (
-          <KonvaErrorBoundary key={element.id} elementId={element.id}>
-            <EnhancedTableElement
+          <CanvasErrorBoundary key={element.id}>
+            <TableElement
               element={element as any}
               isSelected={isSelected}
-              onSelect={() => {}} // NO-OP - handled by UnifiedEventHandler
-              onUpdate={() => {}} // NO-OP - handled by UnifiedEventHandler
+              onSelect={() => selectElement(element.id as ElementId)} // Pass actual select function
+              onUpdate={updateElement} // Pass actual update function
               stageRef={{ current: null }}
             />
-          </KonvaErrorBoundary>
+          </CanvasErrorBoundary>
+        );
+
+      case 'connector':
+        const connectorElement = element as any;
+        return (
+          <CanvasErrorBoundary key={element.id}>
+            <Line
+              id={element.id}
+              points={connectorElement.points || []}
+              stroke={connectorElement.stroke || '#000000'}
+              strokeWidth={connectorElement.strokeWidth || 2}
+              lineCap="round"
+              lineJoin="round"
+              listening={true}
+              draggable={false}
+              {...konvaElementProps}
+            />
+          </CanvasErrorBoundary>
         );
 
       default:
-        console.warn('[MainLayer] Unhandled element type:', element.type);
-        return null;
+        console.warn('[MainLayer] Unhandled element type:', element.type, 'Element:', element);
+        return (
+          <CanvasErrorBoundary key={element.id}>
+            <Text
+              x={element.x}
+              y={element.y}
+              text={`Unsupported: ${element.type}`}
+              fontSize={12}
+              fill="#ff6b6b"
+              listening={false}
+            />
+          </CanvasErrorBoundary>
+        );
     }
-  }, [selectedElementIds, elementsMap, elementsBySection]);
+  }, [selectedElementIds, selectedTool, elementsBySection, updateElement, setTextEditingElement, selectElement]);
 
   // Memoized elements to prevent unnecessary re-renders
   const memoizedElements = useMemo(() => {
-    const validElements = elements.filter(Boolean);
-    console.log('🔧 [MainLayer] Valid elements:', validElements.length);
+    const validElements = Array.from(elements.values()).filter(el => el && el.type !== 'connector');
+    const textElements = validElements.filter(el => el.type === 'text');
+    console.log('🔧 [MainLayer] Valid elements for direct rendering:', validElements.length);
+    console.log('🔧 [MainLayer] Text elements found:', textElements.length, 
+      textElements.map(el => ({ id: el.id, type: el.type, text: (el as any).text })));
     
-    return validElements.map(renderElement).filter(Boolean);
+    const renderedElements = validElements.map(renderElement).filter(Boolean);
+    console.log('🔧 [MainLayer] Elements after rendering and filtering:', renderedElements.length);
+    
+    return renderedElements;
   }, [elements, renderElement]);
 
-  // Draft section rendering for live preview
-  const draftSectionElement = useMemo(() => {
-    if (!draftSection || draftSection.width < 5 || draftSection.height < 5) {
-      return null;
-    }
-
-    return (
-      <SectionShape
-        key="draft-section"
-        element={{
-          ...draftSection,
-          type: 'section',
-          title: 'New Section',
-          backgroundColor: 'rgba(0, 123, 255, 0.1)',
-          borderColor: '#007bff',
-          childElementIds: [],
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        } as SectionElement}
-        isSelected={false}
-        konvaProps={{
-          id: draftSection.id,
-          x: draftSection.x,
-          y: draftSection.y,
-          draggable: false,
-          opacity: 0.7,
-          listening: false // No events for draft section
-        }}
-      />
-    );
-  }, [draftSection]);
+  // Draft section rendering for live preview - DISABLED to prevent infinite loops
+  const draftSectionElement = null; // useMemo(() => null, []);
 
   // Active drawing line
   const drawingLine = useMemo(() => {
@@ -281,11 +306,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     );
   }, [isDrawing, currentPath]);
 
-  // Layer draw effect
-  React.useEffect(() => {
-    onLayerDraw?.();
-  }, [elements.length, onLayerDraw]);
-
   // Combine all renderable nodes
   const allNodes = useMemo(() => {
     const nodes = [...memoizedElements];
@@ -303,15 +323,15 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   }, [memoizedElements, draftSectionElement, drawingLine]);
 
   return (
-    <KonvaErrorBoundary elementId="main-layer">
+    <CanvasErrorBoundary>
       <Group
         name={name || "main-layer"}
         perfectDrawEnabled={false}
-        listening={false}  // CRITICAL: Group doesn't listen - children do via event delegation
+        listening={true}  // CRITICAL FIX: Must listen to allow child event propagation
       >
         {allNodes}
       </Group>
-    </KonvaErrorBoundary>
+    </CanvasErrorBoundary>
   );
 };
 

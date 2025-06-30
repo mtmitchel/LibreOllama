@@ -1,4 +1,4 @@
-import { CanvasElement } from '../../stores/types';
+import { CanvasElement } from '../../types/enhanced.types';
 import { Quadtree } from '../spatial/Quadtree';
 import { BoundingBox, ViewportBounds } from '../../types/enhanced.types';
 

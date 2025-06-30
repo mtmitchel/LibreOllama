@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+you're operating on a windows 11 system. use powershell syntax and NOT linux or mac specific syntax.

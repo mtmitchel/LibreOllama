@@ -141,9 +141,19 @@ export interface ImageElement extends BaseElement {
   opacity?: number;
 }
 
+export interface TableRow {
+  height?: number;
+  id?: string;
+}
+
+export interface TableColumn {
+  width?: number;
+  id?: string;
+}
+
 export interface EnhancedTableData {
-  rows: Array<{ height?: number; id?: string }>;
-  columns: Array<{ width?: number; id?: string }>;
+  rows: TableRow[];
+  columns: TableColumn[];
   cells: TableCell[][];
 }
 
@@ -248,6 +258,68 @@ export interface GroupElement extends BaseElement {
   opacity?: number;
 }
 
+// Advanced drawing elements (inline to avoid circular imports)
+export interface MarkerElement extends BaseElement {
+  type: 'marker';
+  points: number[];
+  rawPoints?: any[];
+  style: {
+    color: string;
+    width: number;
+    opacity: number;
+    smoothness: number;
+    lineCap: string;
+    lineJoin: string;
+    blendMode?: string;
+    widthVariation: boolean;
+    minWidth: number;
+    maxWidth: number;
+    pressureSensitive: boolean;
+  };
+}
+
+export interface HighlighterElement extends BaseElement {
+  type: 'highlighter';
+  points: number[];
+  rawPoints?: any[];
+  style: {
+    color: string;
+    width: number;
+    opacity: number;
+    smoothness: number;
+    lineCap: string;
+    lineJoin: string;
+    blendMode: string;
+    baseOpacity: number;
+    highlightColor: string;
+  };
+}
+
+export interface WashiTapeElement extends BaseElement {
+  type: 'washi-tape';
+  points: number[];
+  pattern: {
+    type: string;
+    radius?: number;
+    width?: number;
+    angle?: number;
+    amplitude?: number;
+    frequency?: number;
+    size?: number;
+    scale?: number;
+    shape?: string;
+  };
+  style: {
+    primaryColor: string;
+    secondaryColor: string;
+    width: number;
+    opacity: number;
+    patternScale: number;
+  };
+}
+
+// Note: Drawing types will be imported where needed to avoid circular dependencies
+
 // Main discriminated union for all canvas elements
 export type CanvasElement = 
   | TextElement
@@ -262,7 +334,10 @@ export type CanvasElement =
   | TriangleElement
   | StarElement
   | RichTextElement
-  | GroupElement;
+  | GroupElement
+  | MarkerElement
+  | HighlighterElement
+  | WashiTapeElement;
 
 // Type Predicates provide safe type narrowing within the code.
 // No more `(element as RectangleElement).width`.
@@ -303,7 +378,7 @@ export function isStickyNoteElement(el: CanvasElement): el is StickyNoteElement 
 }
 
 export function isPenElement(el: CanvasElement): el is PenElement {
-  return el.type === 'pen' || el.type === 'pencil';
+  return el.type === 'pen';
 }
 
 export function isTriangleElement(el: CanvasElement): el is TriangleElement {
@@ -320,6 +395,18 @@ export function isRichTextElement(el: CanvasElement): el is RichTextElement {
 
 export function isGroupElement(el: CanvasElement): el is GroupElement {
   return el.type === 'group';
+}
+
+export function isMarkerElement(el: CanvasElement): el is MarkerElement {
+  return el.type === 'marker';
+}
+
+export function isHighlighterElement(el: CanvasElement): el is HighlighterElement {
+  return el.type === 'highlighter';
+}
+
+export function isWashiTapeElement(el: CanvasElement): el is WashiTapeElement {
+  return el.type === 'washi-tape';
 }
 
 // Strict event map ensures all event payloads are correctly typed

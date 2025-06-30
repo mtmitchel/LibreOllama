@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { canvasStore } from '../features/canvas/stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
 import { ElementId, SectionId } from '../features/canvas/types/enhanced.types';
 
 describe('FigJam-Style Section Functionality', () => {
-  let store: typeof canvasStore;
+  let store: typeof useUnifiedCanvasStore;
 
   beforeEach(() => {
-    store = canvasStore;
+    store = useUnifiedCanvasStore;
     store.getState().clearCanvas();
   });
 
-  it('should allow an element to be dragged into a section', () => {
+  it('should automatically assign an element to a section when moved into it', () => {
     const element = {
-      id: ElementId('elem1'),
+      id: 'elem1' as ElementId,
       type: 'circle' as const,
       x: 50,
       y: 50,
@@ -26,6 +26,7 @@ describe('FigJam-Style Section Functionality', () => {
     store.getState().addElement(element);
 
     const sectionId = store.getState().createSection(100, 100, 200, 200, 'Test Section');
+    expect(store.getState().sections.get(sectionId)?.childElementIds).not.toContain(element.id);
 
     // Drag the element into the section
     store.getState().updateElement(element.id, { x: 150, y: 150 });
@@ -37,9 +38,9 @@ describe('FigJam-Style Section Functionality', () => {
     expect(section?.childElementIds).toContain(element.id);
   });
 
-  it('should allow an element to be dragged out of a section', () => {
+  it('should automatically unassign an element from a section when moved out of it', () => {
     const element = {
-      id: ElementId('elem1'),
+      id: 'elem1' as ElementId,
       type: 'circle' as const,
       x: 150,
       y: 150,
@@ -52,8 +53,12 @@ describe('FigJam-Style Section Functionality', () => {
     };
     store.getState().addElement(element);
 
+    // Create section that captures the element
     const sectionId = store.getState().createSection(100, 100, 200, 200, 'Test Section');
-    store.getState().updateElement(element.id, { sectionId });
+    
+    // Verify initial capture
+    expect(store.getState().elements.get(element.id)?.sectionId).toBe(sectionId);
+    expect(store.getState().sections.get(sectionId)?.childElementIds).toContain(element.id);
 
     // Drag the element out of the section
     store.getState().updateElement(element.id, { x: 50, y: 50 });
@@ -67,7 +72,7 @@ describe('FigJam-Style Section Functionality', () => {
 
   it('should allow an element to be dragged from one section to another', () => {
     const element = {
-      id: ElementId('elem1'),
+      id: 'elem1' as ElementId,
       type: 'circle' as const,
       x: 150,
       y: 150,
@@ -82,7 +87,9 @@ describe('FigJam-Style Section Functionality', () => {
 
     const section1Id = store.getState().createSection(100, 100, 200, 200, 'Section 1');
     const section2Id = store.getState().createSection(400, 100, 200, 200, 'Section 2');
-    store.getState().updateElement(element.id, { sectionId: section1Id });
+
+    // Verify it's in section 1
+    expect(store.getState().elements.get(element.id)?.sectionId).toBe(section1Id);
 
     // Drag the element from section 1 to section 2
     store.getState().updateElement(element.id, { x: 450, y: 150 });

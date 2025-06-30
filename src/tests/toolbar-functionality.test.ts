@@ -7,14 +7,14 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { useCanvasStore } from '../stores';
+import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
 import { ElementId } from '../features/canvas/types/enhanced.types';
 
 describe('Current Toolbar Functionality Test', () => {
-  let store: ReturnType<typeof useCanvasStore>;
+  let store: ReturnType<typeof useUnifiedCanvasStore>;
 
   beforeEach(() => {
-    store = useCanvasStore;
+    store = useUnifiedCanvasStore;
     
     // Clear state
     act(() => {

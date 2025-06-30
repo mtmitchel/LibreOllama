@@ -270,12 +270,43 @@ export const Layer = ({ children, ...props }: LayerProps) => {
     }
   }, [props.onClick]);
 
+  const handleMouseMove = React.useCallback((e: React.MouseEvent) => {
+    if (props.onMouseMove) {
+      const enhancedEvent = {
+        ...e,
+        target: {
+          ...e.target,
+          getStage: () => ({
+            getPointerPosition: () => ({ x: 100, y: 100 }),
+            width: () => 800,
+            height: () => 600,
+            findOne: () => null,
+          }),
+          getParent: () => null,
+          getPointerPosition: () => ({ x: 100, y: 100 }),
+        },
+        currentTarget: {
+          ...e.currentTarget,
+          getStage: () => ({
+            getPointerPosition: () => ({ x: 100, y: 100 }),
+            width: () => 800,
+            height: () => 600,
+            findOne: () => null,
+          }),
+          getParent: () => null,
+        },
+      };
+      props.onMouseMove(enhancedEvent as any);
+    }
+  }, [props.onMouseMove]);
+
   return (
     <div 
       data-testid="konva-layer" // Always provide the testid
       style={{ position: 'absolute', top: 0, left: 0 }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
+      onMouseMove={handleMouseMove}
       {...domProps}
     >
       {children}
@@ -286,149 +317,28 @@ export const Layer = ({ children, ...props }: LayerProps) => {
 // Shape component mocks
 export const Rect = ({ x, y, width, height, fill, stroke, strokeWidth, cornerRadius, id, ...props }: ShapeProps) => {
   const domProps = filterDOMProps(props);
-  
-  // Enhanced event handling for shape interactions
-  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
-    if (props.onMouseDown) {
-      const enhancedEvent = {
-        ...e,
-        target: {
-          ...e.target,
-          getStage: () => null, // Shape events don't always need stage
-          getParent: () => null,
-        },
-      };
-      props.onMouseDown(enhancedEvent as any);
-    }
-  }, [props.onMouseDown]);
-
-  const handleClick = React.useCallback((e: React.MouseEvent) => {
-    if (props.onClick) {
-      const enhancedEvent = {
-        ...e,
-        target: {
-          ...e.target,
-          getStage: () => null,
-          getParent: () => null,
-        },
-      };
-      props.onClick(enhancedEvent as any);
-    }
-  }, [props.onClick]);
-
-  return (
-    <div
-      data-testid={id ? `element-${id}` : "konva-rect"}
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y,
-        width,
-        height,
-        backgroundColor: fill,
-        border: stroke ? `${strokeWidth || 1}px solid ${stroke}` : 'none',
-        borderRadius: cornerRadius,
-      }}
-      onMouseDown={handleMouseDown}
-      onClick={handleClick}
-      {...domProps}
-    />
-  );
+  return <div data-testid="konva-rect" id={id} style={{ position: 'absolute', left: x, top: y, width, height, backgroundColor: fill, border: `${strokeWidth || 1}px solid ${stroke || 'black'}`, borderRadius: cornerRadius }} {...domProps} />;
 };
 
 export const Circle = ({ x, y, radius, fill, stroke, strokeWidth, id, ...props }: ShapeProps) => {
   const domProps = filterDOMProps(props);
-  return (
-    <div
-      data-testid={id ? `element-${id}` : "konva-circle"}
-      style={{
-        position: 'absolute',
-        left: (x || 0) - (radius || 0),
-        top: (y || 0) - (radius || 0),
-        width: (radius || 0) * 2,
-        height: (radius || 0) * 2,
-        backgroundColor: fill,
-        border: stroke ? `${strokeWidth || 1}px solid ${stroke}` : 'none',
-        borderRadius: '50%',
-      }}
-      {...domProps}
-    />
-  );
+  return <div data-testid="konva-circle" id={id} style={{ position: 'absolute', left: (x || 0) - (radius || 0), top: (y || 0) - (radius || 0), width: (radius || 0) * 2, height: (radius || 0) * 2, backgroundColor: fill, border: `${strokeWidth || 1}px solid ${stroke || 'black'}`, borderRadius: '50%' }} {...domProps} />;
 };
 
 export const Text = ({ x, y, text, fontSize, fill, fontFamily, fontStyle, textAlign, ...props }: ShapeProps) => {
   const domProps = filterDOMProps(props);
-  return (
-    <div
-      data-testid="konva-text"
-      role="presentation"
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y,
-        fontSize,
-        color: fill,
-        fontFamily,
-        fontStyle,
-        textAlign,
-      }}
-      {...domProps}
-    >
-      {text}
-    </div>
-  );
+  return <div data-testid="konva-text" style={{ position: 'absolute', left: x, top: y, fontSize, color: fill, fontFamily, fontStyle, textAlign }} {...domProps}>{text}</div>;
 };
 
 export const Line = ({ points, stroke, strokeWidth, fill, closed, id, opacity }: ShapeProps) => {
-  // Generate testid based on element structure
-  const testId = id ? `triangle-${id}` : "konva-line";
-  
-  return (
-    <div
-      data-testid={testId}
-      id={id}
-      style={{
-        position: 'absolute',
-        display: 'block',
-        // Map Konva properties to CSS properties that tests expect
-        fill: fill,
-        stroke: stroke,
-        strokeWidth: strokeWidth ? `${strokeWidth}px` : undefined,
-        opacity: opacity,
-      }}
-      data-points={Array.isArray(points) ? points.join(',') : ''}
-      data-closed={closed ? 'true' : 'false'}
-      role="graphics-shape"
-      aria-label={`Triangle ${id || 'shape'}`}
-    />
-  );
+  const domProps = filterDOMProps(props);
+  // This is a simplified mock; for real tests, you might need SVG
+  return <div data-testid="konva-line" id={id} style={{ position: 'absolute', borderTop: `${strokeWidth || 1}px solid ${stroke || 'black'}`, width: '100px', top: '50%', left: '0', opacity }} {...domProps} />;
 };
 
 export const Star = ({ numPoints, innerRadius, outerRadius, fill, stroke, strokeWidth, id, opacity }: ShapeProps & { numPoints?: number; innerRadius?: number; outerRadius?: number }) => {
-  // Generate testid based on element structure
-  const testId = id ? `star-${id}` : "konva-star";
-  
-  return (
-    <div
-      data-testid={testId}
-      id={id}
-      style={{
-        position: 'absolute',
-        display: 'block',
-        // Map Konva properties to CSS properties that tests expect
-        fill: fill,
-        stroke: stroke,
-        strokeWidth: strokeWidth ? `${strokeWidth}px` : undefined,
-        opacity: opacity,
-        // Star-specific properties as data attributes
-      }}
-      data-num-points={numPoints}
-      data-inner-radius={innerRadius}
-      data-outer-radius={outerRadius}
-      role="graphics-shape"
-      aria-label={`Star ${id || 'shape'}`}
-    />
-  );
+  const domProps = filterDOMProps(props);
+  return <div data-testid="konva-star" id={id} style={{ position: 'absolute', color: fill, opacity }} {...domProps}>STAR</div>;
 };
 
 export const Group = ({ children, x, y, id, ...props }: ShapeProps) => {
@@ -494,8 +404,7 @@ export const Group = ({ children, x, y, id, ...props }: ShapeProps) => {
 
 // Additional shape mocks
 export const Path = (props: ShapeProps) => {
-  const domProps = filterDOMProps(props);
-  return <div data-testid="konva-path" {...domProps} />;
+  return <div data-testid="konva-path">PATH</div>;
 };
 
 export const Image = ({ width, height, ...props }: ShapeProps) => {

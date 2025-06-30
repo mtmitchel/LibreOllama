@@ -23,30 +23,16 @@ export interface TestRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 }
 
 /**
- * Wrapper for testing Konva components
- */
-const KonvaWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <Stage width={800} height={600}>
-    <Layer>
-      {children}
-    </Layer>
-  </Stage>
-);
-
-/**
  * Setup test environment with user events and providers
  */
 export const setupTestEnvironment = (): TestEnvironment => {
   const user = userEvent.setup();
   
   const testRender = async (ui: ReactElement, options: TestRenderOptions = {}) => {
-    const { withProviders = true, withKonva = false, ...renderOptions } = options;
-    
-    const wrapper = withKonva ? KonvaWrapper : undefined;
-    
+    const { withProviders = true, ...renderOptions } = options;
+        
     return act(async () => {
       return render(ui, {
-        wrapper,
         ...renderOptions,
       });
     });
@@ -59,20 +45,6 @@ export const setupTestEnvironment = (): TestEnvironment => {
       // Custom cleanup logic if needed
     },
   };
-};
-
-/**
- * Render Konva components with Stage and Layer wrapper
- */
-export const renderKonva = (ui: ReactElement, options: Omit<RenderOptions, 'wrapper'> = {}) => {
-  return render(
-    <Stage width={800} height={600}>
-      <Layer>
-        {ui}
-      </Layer>
-    </Stage>,
-    options
-  );
 };
 
 /**

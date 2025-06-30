@@ -1,6 +1,6 @@
 import { Sun, Moon, Monitor } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
-import { Button } from '../shared/ui';
+import { useTheme } from '../core/hooks/useTheme';
+import { Button } from '../core/shared-ui';
 
 interface ThemeToggleProps {
   className?: string;

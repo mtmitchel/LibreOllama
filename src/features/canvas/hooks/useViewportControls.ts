@@ -1,6 +1,6 @@
 // src/hooks/canvas/useViewportControls.ts
 import { useCallback } from 'react';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
 /**
  * useViewportControls - Zoom/pan controls from the main canvas store
@@ -10,10 +10,10 @@ import { useCanvasStore } from '../../../stores';
  */
 export const useViewportControls = () => {
   // Use the unified canvas store with stable selectors
-  const viewport = useCanvasStore((state) => state.viewport);
-  const setViewport = useCanvasStore((state) => state.setViewport);
-  const panViewport = useCanvasStore((state) => state.panViewport);
-  const zoomViewport = useCanvasStore((state) => state.zoomViewport);
+  const viewport = useUnifiedCanvasStore((state) => state.viewport);
+  const setViewport = useUnifiedCanvasStore((state) => state.setViewport);
+  const panViewport = useUnifiedCanvasStore((state) => state.panViewport);
+  const zoomViewport = useUnifiedCanvasStore((state) => state.zoomViewport);
   
   // Extract values from viewport object to avoid recreating objects on every render
   const zoom = viewport.scale;

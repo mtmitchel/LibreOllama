@@ -7,12 +7,14 @@ import { CircleShape } from './CircleShape';
 // TEMP FIX: Comment out broken imports and implement simple fallbacks
 // import UnifiedTextElement from '../components/UnifiedTextElement';
 // import StickyNoteElement from '../components/StickyNoteElement';
-import { EnhancedTableElement } from '../components/EnhancedTableElement';
+import { TableElement } from '../elements/TableElement';
 // import SectionElement from '../components/SectionElement';
 // import ImageElement from '../components/ImageElement';
 import { ConnectorRenderer } from '../components/ConnectorRenderer';
 import { Line, Star, Text, Rect } from 'react-konva';
-import { designSystem } from '../../../design-system';
+import { designSystem } from '../../../core/design-system';
+import { Html } from 'react-konva-utils';
+import { ElementId } from '../types/enhanced.types';
 
 interface EditableNodeProps {
   element: CanvasElement;
@@ -43,7 +45,9 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       !(element as any).isLocked
       // Allow dragging of selected elements in sections - that's the whole point!
     );
-  }, [selectedTool, element.type]);  // ARCHITECTURAL FIX: Remove event handlers - UnifiedEventHandler handles all interactions
+  }, [selectedTool, element.type]);
+
+  // ARCHITECTURAL FIX: Remove event handlers - UnifiedEventHandler handles all interactions
   const commonProps = React.useMemo(() => {
     const baseProps: any = {
       id: element.id,
@@ -68,7 +72,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
     }
 
     return baseProps;
-  }, [element, isSelected, isDraggable, onElementClick, onElementDragStart, onElementDragEnd, onElementDragMove]);
+  }, [element, isSelected, isDraggable]);
 
   // Render appropriate shape component based on element type
   switch (element.type) {
@@ -233,7 +237,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
 
     case 'table':
       return (
-        <EnhancedTableElement
+        <TableElement
           element={element}
           isSelected={isSelected}
           onSelect={(element) => onElementClick({} as any, element)}

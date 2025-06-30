@@ -1,139 +1,250 @@
 // src/features/canvas/utils/textEditingUtils.tsx
-import { designSystem } from '../../../design-system';
+import { designSystem } from '../../../core/design-system';
+import Konva from 'konva';
+import { ElementId } from '../types/enhanced.types';
 
-interface TextEditorOptions {
-  position: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
-  initialText: string;
-  onSave: (text: string) => void;
-  onCancel: () => void;
-  placeholder?: string;
-  fontSize?: number;
-  fontFamily?: string;
-  multiline?: boolean;
+/**
+ * CANVAS-NATIVE TEXT EDITING UTILITIES
+ * Supporting the new FigJam-style text editing system
+ */
+
+export interface CanvasTextConfig {
+  PADDING: number;
+  MIN_WIDTH: number;
+  MIN_HEIGHT: number;
+  MAX_WIDTH: number;
+  MAX_HEIGHT: number;
+  LINE_HEIGHT: number;
+  FONT_WEIGHT: string;
+  LETTER_SPACING: string;
+  EDIT_BACKGROUND: string;
+  EDIT_BORDER: string;
+  CURSOR_COLOR: string;
+  CURSOR_WIDTH: number;
 }
 
-export const createTextEditor = (options: TextEditorOptions): (() => void) => {
-  const {
-    position,
-    initialText,
-    onSave,
-    onCancel,
-    placeholder = 'Enter text...',
-    fontSize = 16,
-    fontFamily = designSystem.typography.fontFamily.sans,
-    multiline = true
-  } = options;
+export const CANVAS_TEXT_CONFIG: CanvasTextConfig = {
+  PADDING: 8,
+  MIN_WIDTH: 80,
+  MIN_HEIGHT: 32,
+  MAX_WIDTH: 800,
+  MAX_HEIGHT: 600,
+  LINE_HEIGHT: 1.25,
+  FONT_WEIGHT: '400',
+  LETTER_SPACING: '0px',
+  EDIT_BACKGROUND: 'rgba(59, 130, 246, 0.1)',
+  EDIT_BORDER: '#3b82f6',
+  CURSOR_COLOR: '#3b82f6',
+  CURSOR_WIDTH: 2,
+} as const;
 
-  // Create the input element
-  const inputElement = document.createElement(multiline ? 'textarea' : 'input');
+/**
+ * Measure text dimensions using Konva's native text measurement
+ */
+export const measureTextDimensions = (
+  text: string, 
+  fontSize: number, 
+  fontFamily: string, 
+  maxWidth: number = 600
+) => {
+  if (!text || text.trim().length === 0) {
+    return {
+      width: CANVAS_TEXT_CONFIG.MIN_WIDTH,
+      height: CANVAS_TEXT_CONFIG.MIN_HEIGHT,
+    };
+  }
+
+  // Create temporary Konva Text node for accurate measurement
+  const tempText = new Konva.Text({
+    text: text,
+    fontSize: fontSize,
+    fontFamily: fontFamily,
+    fontWeight: CANVAS_TEXT_CONFIG.FONT_WEIGHT,
+    lineHeight: CANVAS_TEXT_CONFIG.LINE_HEIGHT,
+    letterSpacing: CANVAS_TEXT_CONFIG.LETTER_SPACING,
+    wrap: 'word',
+    width: maxWidth - CANVAS_TEXT_CONFIG.PADDING,
+  });
+
+  const textWidth = tempText.getTextWidth();
+  const textHeight = tempText.getTextHeight();
+
+  // Clean up
+  tempText.destroy();
+
+  return {
+    width: Math.min(Math.max(textWidth + CANVAS_TEXT_CONFIG.PADDING, CANVAS_TEXT_CONFIG.MIN_WIDTH), maxWidth),
+    height: Math.max(textHeight + CANVAS_TEXT_CONFIG.PADDING, CANVAS_TEXT_CONFIG.MIN_HEIGHT),
+  };
+};
+
+/**
+ * Calculate cursor position within text
+ */
+export const calculateCursorPosition = (
+  text: string,
+  cursorIndex: number,
+  fontSize: number,
+  fontFamily: string
+): { x: number; y: number } => {
+  const textBeforeCursor = text.slice(0, cursorIndex);
   
-  if ('value' in inputElement) {
-    inputElement.value = initialText;
+  // Create temporary text node to measure cursor position
+  const tempText = new Konva.Text({
+    text: textBeforeCursor,
+    fontSize: fontSize,
+    fontFamily: fontFamily,
+    fontWeight: CANVAS_TEXT_CONFIG.FONT_WEIGHT,
+    lineHeight: CANVAS_TEXT_CONFIG.LINE_HEIGHT,
+  });
+  
+  const cursorX = tempText.getTextWidth();
+  const cursorY = 0; // Simplified for single-line cursor
+  
+  tempText.destroy();
+  
+  return {
+    x: cursorX + CANVAS_TEXT_CONFIG.PADDING / 2,
+    y: cursorY + CANVAS_TEXT_CONFIG.PADDING / 2,
+  };
+};
+
+/**
+ * Validate text input for canvas text elements
+ */
+export const validateTextInput = (text: string, maxLength: number = 1000): string => {
+  if (!text) return '';
+  
+  // Remove control characters except newlines and tabs
+  const cleaned = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  
+  // Limit length
+  return cleaned.length > maxLength ? cleaned.slice(0, maxLength) : cleaned;
+};
+
+/**
+ * Format text for display (handle empty states)
+ */
+export const formatDisplayText = (text: string, placeholder: string = 'Text'): string => {
+  if (!text || text.trim().length === 0) {
+    return placeholder;
+  }
+  return text;
+};
+
+/**
+ * Calculate optimal font size based on container dimensions
+ */
+export const calculateOptimalFontSize = (
+  text: string,
+  containerWidth: number,
+  containerHeight: number,
+  fontFamily: string,
+  minFontSize: number = 8,
+  maxFontSize: number = 72
+): number => {
+  if (!text || text.trim().length === 0) {
+    return 16; // Default font size
+  }
+
+  let fontSize = maxFontSize;
+  
+  while (fontSize > minFontSize) {
+    const dimensions = measureTextDimensions(text, fontSize, fontFamily, containerWidth);
+    
+    if (dimensions.width <= containerWidth && dimensions.height <= containerHeight) {
+      return fontSize;
+    }
+    
+    fontSize -= 1;
   }
   
-  inputElement.placeholder = placeholder;
-  
-  if (multiline && 'rows' in inputElement) {
-    (inputElement as HTMLTextAreaElement).rows = Math.max(1, Math.floor(position.height / (fontSize * 1.4)));
-  }  // Apply styles
-  Object.assign(inputElement.style, {    position: 'fixed',
-    left: `${position.left}px`,
-    top: `${position.top}px`,
-    width: `${position.width - 4}px`,
-    height: `${position.height - 4}px`,
-    zIndex: '10000',
-    border: '1px solid #e5e7eb',
-    borderRadius: '4px',
-    padding: '8px',
-    fontSize: `${fontSize}px`,
-    fontFamily,
-    fontWeight: '400',
-    color: '#000000',
-    backgroundColor: 'white',
-    resize: multiline ? 'both' : 'none',
-    outline: 'none',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-    boxSizing: 'border-box',
-    lineHeight: '1.5',
-    wordWrap: 'break-word',
-    fontFeatureSettings: '"rlig" 1, "calt" 1',
-  });
-  // Add event listeners
-  const handleKeyDown = (e: Event) => {
-    const keyEvent = e as KeyboardEvent;
-    if (keyEvent.key === 'Enter' && (keyEvent.ctrlKey || !multiline)) {
-      e.preventDefault();
-      handleSave();
-    } else if (keyEvent.key === 'Escape') {
-      e.preventDefault();
-      handleCancel();
-    }
+  return minFontSize;
+};
+
+/**
+ * Text editing state management interface
+ */
+export interface TextEditingState {
+  text: string;
+  cursorPosition: number;
+  isEditing: boolean;
+}
+
+/**
+ * Create initial text editing state
+ */
+export const createTextEditingState = (initialText: string = ''): TextEditingState => ({
+  text: initialText,
+  cursorPosition: initialText.length,
+  isEditing: false,
+});
+
+/**
+ * Handle keyboard input for text editing
+ */
+export const handleTextKeyboardInput = (
+  currentState: TextEditingState,
+  keyEvent: KeyboardEvent
+): TextEditingState => {
+  const { text, cursorPosition } = currentState;
+  let newText = text;
+  let newCursorPosition = cursorPosition;
+
+  switch (keyEvent.key) {
+    case 'Backspace':
+      if (cursorPosition > 0) {
+        newText = text.slice(0, cursorPosition - 1) + text.slice(cursorPosition);
+        newCursorPosition = cursorPosition - 1;
+      }
+      break;
+      
+    case 'Delete':
+      if (cursorPosition < text.length) {
+        newText = text.slice(0, cursorPosition) + text.slice(cursorPosition + 1);
+      }
+      break;
+      
+    case 'ArrowLeft':
+      newCursorPosition = Math.max(0, cursorPosition - 1);
+      break;
+      
+    case 'ArrowRight':
+      newCursorPosition = Math.min(text.length, cursorPosition + 1);
+      break;
+      
+    case 'Home':
+      newCursorPosition = 0;
+      break;
+      
+    case 'End':
+      newCursorPosition = text.length;
+      break;
+      
+    default:
+      if (keyEvent.key.length === 1) {
+        // Regular character input
+        const validatedChar = validateTextInput(keyEvent.key);
+        if (validatedChar) {
+          newText = text.slice(0, cursorPosition) + validatedChar + text.slice(cursorPosition);
+          newCursorPosition = cursorPosition + 1;
+        }
+      }
+  }
+
+  return {
+    ...currentState,
+    text: validateTextInput(newText),
+    cursorPosition: newCursorPosition,
   };
+};
 
-  const handleBlur = () => {
-    handleSave();
-  };  const handleSave = () => {
-    const value = 'value' in inputElement ? inputElement.value : '';
-    cleanup();
-    
-    // Prevent saving empty or whitespace-only text
-    const newText = value.trim().length === 0 ? 'Text' : value;
-    onSave(newText);
-  };
-
-  const handleCancel = () => {
-    cleanup();
-    onCancel();
-  };
-
-  const cleanup = () => {
-    inputElement.removeEventListener('keydown', handleKeyDown);
-    inputElement.removeEventListener('blur', handleBlur);
-    if (inputElement.parentNode) {
-      document.body.removeChild(inputElement);
-    }
-  };
-
-  inputElement.addEventListener('keydown', handleKeyDown);
-  inputElement.addEventListener('blur', handleBlur);
-
-  // Add to DOM and focus
-  document.body.appendChild(inputElement);
-  inputElement.focus();
-  inputElement.select();
-  // Create helper text
-  const helperDiv = document.createElement('div');
-  helperDiv.textContent = multiline ? 'Ctrl+Enter to save, Esc to cancel' : 'Enter to save, Esc to cancel';
-  Object.assign(helperDiv.style, {
-    position: 'fixed',
-    left: `${position.left}px`,
-    top: `${position.top + position.height + 4}px`,
-    fontSize: '12px',
-    fontFamily,
-    fontWeight: '400',
-    color: '#64748b',
-    backgroundColor: 'white',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    zIndex: '10001',
-    pointerEvents: 'none',
-    fontFeatureSettings: '"rlig" 1, "calt" 1', // Inter font features
-  });
-
-  document.body.appendChild(helperDiv);
-
-  // Return cleanup function
-  return () => {
-    cleanup();
-    if (helperDiv.parentNode) {
-      document.body.removeChild(helperDiv);
-    }
-  };
+/**
+ * Legacy function compatibility - now returns empty cleanup
+ * The old DOM-based editor is no longer used
+ */
+export const createTextEditor = (): (() => void) => {
+  console.warn('[textEditingUtils] createTextEditor is deprecated. Use canvas-native text editing instead.');
+  return () => {}; // No-op cleanup
 };
 

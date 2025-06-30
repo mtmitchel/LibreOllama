@@ -4,8 +4,8 @@
  * Based on the production readiness guidelines
  */
 
-import { CanvasElement } from '../stores/types';
-import { logger } from '@/lib/logger';
+import { CanvasElement } from '../types/enhanced.types';
+import { logger } from "@/core/lib/logger";
 
 export interface CanvasData {
   elements: CanvasElement[];

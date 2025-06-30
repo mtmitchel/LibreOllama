@@ -1,0 +1,188 @@
+name: Canvas Production Hardening Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+      - release/*
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  production-hardening:
+    name: Production Hardening Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript Type Check
+        run: npx tsc --noEmit
+        
+      - name: Check for Debug/Profiler Code in Production Bundle
+        run: |
+          echo "🔍 Checking for debug code exclusion in production build..."
+          
+          # Build for production
+          NODE_ENV=production npm run build
+          
+          # Check that debug components are NOT in the production bundle
+          if grep -r "CanvasDebugger\|DebugOverlay\|KonvaDebugPanel" dist/ 2>/dev/null; then
+            echo "❌ FAIL: Debug components found in production build!"
+            echo "Debug code must be excluded from production builds."
+            exit 1
+          fi
+          
+          # Check for debug-canvas route
+          if grep -r "debug-canvas" dist/ 2>/dev/null; then
+            echo "❌ FAIL: Debug route found in production build!"
+            exit 1
+          fi
+          
+          echo "✅ PASS: Debug code properly excluded from production build"
+
+      - name: Directory and File Casing Validation
+        run: |
+          echo "🔍 Checking directory and file casing consistency..."
+          
+          # Check for mixed case directories that should be kebab-case
+          MIXED_CASE_DIRS=$(find src/features/canvas/components -type d -name "*[A-Z]*" | grep -v node_modules || true)
+          if [[ -n "$MIXED_CASE_DIRS" ]]; then
+            echo "❌ FAIL: Mixed case directories found:"
+            echo "$MIXED_CASE_DIRS"
+            echo "All component directories should use kebab-case"
+            exit 1
+          fi
+          
+          # Check for component files that don't follow PascalCase convention
+          NON_PASCAL_COMPONENTS=$(find src/features/canvas/components -name "*.tsx" -not -name "*[A-Z]*" | grep -v index.ts || true)
+          if [[ -n "$NON_PASCAL_COMPONENTS" ]]; then
+            echo "❌ FAIL: Component files not following PascalCase:"
+            echo "$NON_PASCAL_COMPONENTS"
+            exit 1
+          fi
+          
+          echo "✅ PASS: Directory and file casing is consistent"
+
+      - name: Ban Legacy Import Paths
+        run: |
+          echo "🔍 Checking for banned legacy import paths..."
+          
+          # Check for imports from legacy paths that should not exist
+          LEGACY_IMPORTS=$(grep -r "from.*RichTextSystem" src/ --include="*.ts" --include="*.tsx" || true)
+          if [[ -n "$LEGACY_IMPORTS" ]]; then
+            echo "❌ FAIL: Legacy RichTextSystem imports found (should be rich-text-system):"
+            echo "$LEGACY_IMPORTS"
+            exit 1
+          fi
+          
+          # Check for old store imports
+          OLD_STORE_IMPORTS=$(grep -r "from.*createCanvasTestStore" src/ --include="*.ts" --include="*.tsx" || true)
+          if [[ -n "$OLD_STORE_IMPORTS" ]]; then
+            echo "❌ FAIL: Legacy createCanvasTestStore imports found (should use createUnifiedTestStore):"
+            echo "$OLD_STORE_IMPORTS"
+            exit 1
+          fi
+          
+          # Check for old connector type imports
+          OLD_CONNECTOR_IMPORTS=$(grep -r "from.*types/connector[\"']" src/ --include="*.ts" --include="*.tsx" || true)
+          if [[ -n "$OLD_CONNECTOR_IMPORTS" ]]; then
+            echo "❌ FAIL: Legacy connector type imports found (should be connectorTypes):"
+            echo "$OLD_CONNECTOR_IMPORTS"
+            exit 1
+          fi
+          
+          echo "✅ PASS: No legacy import paths found"
+
+      - name: Circular Dependency Detection
+        run: |
+          echo "🔍 Checking for circular dependencies..."
+          
+          # Install madge for circular dependency detection
+          npx madge --circular src/
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ FAIL: Circular dependencies detected!"
+            exit 1
+          fi
+          
+          echo "✅ PASS: No circular dependencies found"
+
+      - name: Production Bundle Size Check
+        run: |
+          echo "🔍 Checking production bundle size..."
+          
+          # Get bundle size
+          BUNDLE_SIZE=$(du -sh dist/ | cut -f1)
+          echo "Production bundle size: $BUNDLE_SIZE"
+          
+          # Check that konva chunk exists and is properly separated
+          if [ ! -f dist/assets/konva-*.js ]; then
+            echo "❌ FAIL: Konva chunk not found - code splitting may be broken"
+            exit 1
+          fi
+          
+          echo "✅ PASS: Production bundle properly structured"
+
+      - name: Canvas Test Validation
+        run: |
+          echo "🔍 Running canvas-specific tests..."
+          
+          # Run canvas tests specifically
+          npm run test:canvas
+          
+          echo "✅ PASS: All canvas tests passing"
+
+      - name: Final Production Readiness Check
+        run: |
+          echo "🎯 Final production readiness validation..."
+          
+          # Ensure all critical files exist
+          CRITICAL_FILES=(
+            "src/features/canvas/stores/unifiedCanvasStore.ts"
+            "src/tests/helpers/createUnifiedTestStore.ts"
+            "src/features/canvas/components/rich-text-system/UnifiedRichTextManager.ts"
+          )
+          
+          for file in "${CRITICAL_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ FAIL: Critical file missing: $file"
+              exit 1
+            fi
+          done
+          
+          # Verify no TypeScript errors
+          npx tsc --noEmit --skipLibCheck
+          
+          echo "✅ PASS: Production readiness validated"
+          echo ""
+          echo "🚀 Canvas system is production-ready!"
+          echo "   ✓ Debug code excluded from production"
+          echo "   ✓ File/directory naming consistent"
+          echo "   ✓ No legacy import paths"
+          echo "   ✓ No circular dependencies"
+          echo "   ✓ Bundle properly optimized"
+          echo "   ✓ All tests passing"
+          echo "   ✓ TypeScript compilation clean"

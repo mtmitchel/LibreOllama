@@ -4,7 +4,7 @@
  */
 
 import Konva from 'konva';
-import { logger } from '@/lib/logger';
+import { logger } from '@/core/lib/logger';
 
 export interface RenderStats {
   totalNodes: number;

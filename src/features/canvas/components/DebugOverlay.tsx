@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from "../stores/unifiedCanvasStore";
 import { useShallow } from 'zustand/react/shallow';
 
 export const DebugOverlay: React.FC = () => {

@@ -9,7 +9,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
 import { nanoid } from 'nanoid';
-import { logger } from '../../../lib/logger';
+import { logger } from '../../../core/lib/logger';
 import {
   CanvasElement,
   ElementId,
@@ -21,6 +21,12 @@ import {
   CircleElement,
   SectionElement,
 } from '../types/enhanced.types';
+import { 
+  MarkerConfig, 
+  HighlighterConfig, 
+  WashiTapeConfig, 
+  EraserConfig 
+} from '../types/drawing.types';
 
 enableMapSet();
 
@@ -71,6 +77,7 @@ export interface UnifiedCanvasState {
   selectedTool: string;
   textEditingElementId: ElementId | null;
   selectedStickyNoteColor: string;
+  penColor: string;
   showGrid: boolean;
   snapToGrid: boolean;
   
@@ -93,9 +100,30 @@ export interface UnifiedCanvasState {
   // Additional properties for compatibility
   drawingCurrentPoint: { x: number; y: number } | null;
   viewportBounds: { left: number; top: number; right: number; bottom: number } | null;
+  
+  // Drawing tool configurations
+  strokeConfig: {
+    marker: MarkerConfig;
+    highlighter: HighlighterConfig;
+    washiTape: WashiTapeConfig;
+    eraser: EraserConfig;
+  };
 }
 
-export interface UnifiedCanvasActions {
+export interface CanvasEventActions {
+  handleMouseDown: (e: Konva.KonvaEventObject<MouseEvent>, pos: { x: number; y: number } | null) => void;
+  handleMouseMove: (e: Konva.KonvaEventObject<MouseEvent>, pos: { x: number; y: number } | null) => void;
+  handleMouseUp: (e: Konva.KonvaEventObject<MouseEvent>, pos: { x: number; y: number } | null) => void;
+  handleMouseLeave: (e: Konva.KonvaEventObject<MouseEvent>, pos: { x: number; y: number } | null) => void;
+  handleClick: (e: Konva.KonvaEventObject<MouseEvent>, pos: { x: number; y: number } | null) => void;
+  handleDoubleClick: (e: Konva.KonvaEventObject<MouseEvent>, pos: { x: number; y: number } | null) => void;
+  handleContextMenu: (e: Konva.KonvaEventObject<MouseEvent>, pos: { x: number; y: number } | null) => void;
+  handleDragStart: (e: Konva.KonvaEventObject<DragEvent>, pos: { x: number; y: number } | null) => void;
+  handleDragMove: (e: Konva.KonvaEventObject<DragEvent>, pos: { x: number; y: number } | null) => void;
+  handleDragEnd: (e: Konva.KonvaEventObject<DragEvent>, pos: { x: number; y: number } | null) => void;
+}
+
+export interface UnifiedCanvasActions extends CanvasEventActions {
   // Element operations
   createElement: (type: string, position: { x: number; y: number }) => void;
   updateElement: (id: ElementOrSectionId, updates: Partial<CanvasElement>) => void;
@@ -131,6 +159,7 @@ export interface UnifiedCanvasActions {
   setSelectedTool: (tool: string) => void;
   setTextEditingElement: (id: ElementId | null) => void;
   setSelectedStickyNoteColor: (color: string) => void;
+  setPenColor: (color: string) => void;
   
   // API Compatibility Layer  
   setStickyNoteColor: (color: string) => void;
@@ -142,9 +171,10 @@ export interface UnifiedCanvasActions {
   redo: () => void;
   
   // Sections
-  createSection: (x: number, y: number, width: number, height: number) => SectionId;
+  createSection: (x: number, y: number, width: number, height: number, title?: string) => SectionId;
   updateSection: (id: SectionId, updates: Partial<SectionElement>) => void;
-  captureElementsAfterSectionCreation: (sectionId: SectionId) => void;
+  captureElementsInSection: (sectionId: SectionId) => void;
+  deleteSection: (id: SectionId) => void;
   
   // Legacy compatibility
   addElement: (element: CanvasElement) => void;
@@ -175,902 +205,717 @@ export interface UnifiedCanvasActions {
   // Utilities
   findNearestSnapPoint: (pointer: { x: number; y: number }, snapRadius?: number) => any;
   uploadImage: (file: File, position: { x: number; y: number }) => Promise<void>;
+  
+  // Stroke Configuration
+  updateStrokeConfig: (tool: 'marker' | 'highlighter' | 'washiTape' | 'eraser', config: Partial<MarkerConfig | HighlighterConfig | WashiTapeConfig | EraserConfig>) => void;
+  
+      // Test utility methods
+    clearSelection: () => void;
+    clearAllElements: () => void;
+    clearCanvas: () => void;
+    
+    // Stroke tool action
+    updateStrokeConfig: (tool: 'marker' | 'highlighter' | 'washiTape' | 'eraser', config: any) => void;
 }
 
 export type UnifiedCanvasStore = UnifiedCanvasState & UnifiedCanvasActions;
 
-export const useUnifiedCanvasStore = create<UnifiedCanvasStore>()(
-  subscribeWithSelector(
-    immer((set, get) => {
-      
-      const createHistorySnapshot = (): Pick<HistoryEntry, 'elementsSnapshot' | 'selectionSnapshot'> => {
-        const state = get();
-        return {
-          elementsSnapshot: new Map(state.elements),
-          selectionSnapshot: new Set(state.selectedElementIds)
-        };
+const getElementIdFromNode = (node: Konva.Node): ElementId | null => {
+  if (node && node.id()) {
+    return node.id() as ElementId;
+  }
+  return null;
+};
+
+export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore = (set, get) => {
+  return {
+    // #region State
+    elements: new Map(),
+    elementOrder: [],
+    selectedElementIds: new Set(),
+    lastSelectedElementId: null,
+    viewport: { x: 0, y: 0, scale: 1, width: 1920, height: 1080 },
+    isDrawing: false,
+    drawingTool: null,
+    drawingStartPoint: null,
+    draftSection: null,
+    selectedTool: 'select',
+    textEditingElementId: null,
+    selectedStickyNoteColor: '#ffeb3b',
+    penColor: '#000000',
+    showGrid: true,
+    snapToGrid: false,
+    history: [],
+    currentHistoryIndex: -1,
+    maxHistorySize: 50,
+    canUndo: false,
+    canRedo: false,
+    sections: new Map(),
+    sectionElementMap: new Map(),
+    isUploading: false,
+    drawingCurrentPoint: null,
+    viewportBounds: null,
+    currentIndex: -1,
+    strokeConfig: {
+      marker: {
+        color: '#000000',
+        width: 8,
+        minWidth: 2,
+        maxWidth: 20,
+        opacity: 1,
+        smoothness: 0.5,
+        widthVariation: true,
+        pressureSensitive: true,
+        lineCap: 'round',
+        lineJoin: 'round'
+      },
+      highlighter: {
+        color: '#FFFF00',
+        width: 16,
+        opacity: 0.4,
+        blendMode: 'multiply',
+        lockToElements: false
+      },
+      washiTape: {
+        primaryColor: '#FFB3BA',
+        secondaryColor: '#A8DAFF',
+        width: 20,
+        opacity: 0.8,
+        pattern: {
+          type: 'dots',
+          radius: 2
+        }
+      },
+      eraser: {
+        size: 30,
+        mode: 'stroke'
+      }
+    },
+    // #endregion
+
+    // #region Actions
+
+    // Element Operations
+    getElementById: (id) => get().elements.get(id),
+    
+    addElement: (element) => {
+      set(state => {
+        // FIXED: Create a new Map to ensure proper change detection
+        const newElements = new Map(state.elements);
+        newElements.set(element.id, element);
+        state.elements = newElements;
+        state.elementOrder.push(element.id);
+      });
+      get().addToHistory('addElement');
+    },
+
+    createElement: (type, position) => {
+      const newElement = { id: nanoid(), type, ...position } as CanvasElement;
+      get().addElement(newElement);
+    },
+
+    updateElement: (id, updates) => {
+      console.log('🔄 [Store] updateElement called:', { id, updates });
+      set(state => {
+        const element = state.elements.get(id);
+        console.log('🔄 [Store] Current element:', element);
+        if (element) {
+          const oldX = element.x;
+          const oldY = element.y;
+
+          // FIXED: Create a new element object to ensure proper change detection
+          const updatedElement = { ...element, ...updates };
+          console.log('🔄 [Store] Updated element:', updatedElement);
+
+          // If element is in a section, constrain its position
+          if (updatedElement.sectionId) {
+            const section = state.sections.get(updatedElement.sectionId);
+            if (section) {
+              const halfWidth = (updatedElement.width ?? 0) / 2;
+              const halfHeight = (updatedElement.height ?? 0) / 2;
+              
+              updatedElement.x = Math.max(section.x, Math.min(updatedElement.x, section.x + section.width - (updatedElement.width ?? 0)));
+              updatedElement.y = Math.max(section.y, Math.min(updatedElement.y, section.y + section.height - (updatedElement.height ?? 0)));
+            }
+          }
+
+          // FIXED: Properly update the Map to trigger re-renders
+          state.elements.set(id, updatedElement);
+          console.log('🔄 [Store] Element updated in map');
+
+          // If it's a section, update its children
+          if (updatedElement.type === 'section') {
+            const oldSectionId = updatedElement.sectionId;
+            const hasPositionChanged = updates.x !== undefined || updates.y !== undefined;
+    
+            if (hasPositionChanged) {
+              const newCenter = getElementCenter(updatedElement);
+              const newSectionId = get().findSectionAtPoint(newCenter);
+    
+              if (oldSectionId && oldSectionId !== newSectionId) {
+                // Remove from old section
+                const oldSection = state.sections.get(oldSectionId);
+                if (oldSection) {
+                  oldSection.childElementIds = oldSection.childElementIds.filter(childId => childId !== id);
+                }
+              }
+    
+              if (newSectionId && oldSectionId !== newSectionId) {
+                // Add to new section
+                const newSection = state.sections.get(newSectionId);
+                if (newSection) {
+                  newSection.childElementIds.push(id);
+                }
+              }
+              
+              updatedElement.sectionId = newSectionId || undefined;
+              // Update the element again with the new sectionId
+              state.elements.set(id, updatedElement);
+            }
+          }
+        }
+      });
+      get().addToHistory('updateElement');
+    },
+
+    updateMultipleElements: (updates) => {
+      set(state => {
+        updates.forEach(({ id, updates: elementUpdates }) => {
+          const element = state.elements.get(id);
+          if (element) {
+            Object.assign(element, elementUpdates);
+          }
+        });
+      });
+      get().addToHistory('updateMultipleElements');
+    },
+
+    deleteElement: (id) => {
+      set(state => {
+        if (!state.elements.has(id)) return;
+    
+        const elementToDelete = state.elements.get(id);
+        if (elementToDelete?.sectionId) {
+          const section = state.sections.get(elementToDelete.sectionId);
+          if (section) {
+            section.childElementIds = section.childElementIds.filter(childId => childId !== id);
+          }
+        }
+    
+        state.elements.delete(id);
+        state.elementOrder = state.elementOrder.filter(elementId => elementId !== id);
+        state.selectedElementIds.delete(id as ElementId);
+      });
+      get().addToHistory('deleteElement');
+    },
+
+    deleteSelectedElements: () => {
+      const { selectedElementIds } = get();
+      set(state => {
+        for (const id of selectedElementIds) {
+          if (!state.elements.has(id)) continue;
+          const elementToDelete = state.elements.get(id);
+          if (elementToDelete?.sectionId) {
+            const section = state.sections.get(elementToDelete.sectionId);
+            if (section) {
+              section.childElementIds = section.childElementIds.filter(childId => childId !== id);
+            }
+          }
+          state.elements.delete(id);
+          state.elementOrder = state.elementOrder.filter(elementId => elementId !== id);
+        }
+        state.selectedElementIds.clear();
+      });
+      get().addToHistory('deleteSelectedElements');
+    },
+    
+    // Selection
+    selectElement: (id, multiSelect = false) => {
+      set(state => {
+        if (!multiSelect) {
+          state.selectedElementIds.clear();
+        }
+        state.selectedElementIds.add(id);
+        state.lastSelectedElementId = id;
+      });
+    },
+
+    deselectElement: (id) => {
+      set(state => {
+        state.selectedElementIds.delete(id);
+        if (state.lastSelectedElementId === id) {
+          state.lastSelectedElementId = null;
+        }
+      });
+    },
+
+    clearSelection: () => {
+      set(state => {
+        state.selectedElementIds.clear();
+        state.lastSelectedElementId = null;
+      });
+    },
+
+    getSelectedElements: () => {
+      const { elements, selectedElementIds } = get();
+      return Array.from(selectedElementIds).map(id => elements.get(id)).filter(Boolean) as CanvasElement[];
+    },
+
+    // Section Operations
+    createSection: (x, y, width = 400, height = 300, title = 'New Section') => {
+      const newSectionId = nanoid() as SectionId;
+      const newSection: SectionElement = {
+        id: newSectionId,
+        type: 'section',
+        x,
+        y,
+        width,
+        height,
+        title,
+        childElementIds: [],
+        backgroundColor: 'rgba(240, 240, 240, 0.5)',
+        borderColor: '#ccc',
+        borderWidth: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
 
-      return {
-        // Initial state
+      set((state) => {
+        const newSections = new Map(state.sections).set(newSectionId, newSection);
+        const newElements = new Map(state.elements).set(newSectionId, newSection);
+        const newElementOrder = [...state.elementOrder, newSectionId];
+        const newSectionElementMap = new Map(state.sectionElementMap).set(newSectionId, new Set());
+        
+        return { 
+          sections: newSections, 
+          elements: newElements,
+          elementOrder: newElementOrder,
+          sectionElementMap: newSectionElementMap,
+        };
+      });
+
+      get().captureElementsInSection(newSectionId);
+      get().addToHistory('createSection');
+      return newSectionId;
+    },
+
+    updateSection: (id, updates) => {
+      set(state => {
+        const section = state.sections.get(id);
+        if (section) {
+          const oldX = section.x;
+          const oldY = section.y;
+
+          Object.assign(section, updates);
+          
+          const deltaX = section.x - oldX;
+          const deltaY = section.y - oldY;
+
+          if (deltaX !== 0 || deltaY !== 0) {
+            section.childElementIds.forEach(elementId => {
+              const element = state.elements.get(elementId);
+              if (element) {
+                element.x += deltaX;
+                element.y += deltaY;
+              }
+            });
+          }
+
+          // Also update the element representation
+          const element = state.elements.get(id);
+          if (element) {
+            Object.assign(element, updates);
+          }
+        }
+      });
+      get().addToHistory('updateSection');
+    },
+
+    captureElementsInSection: (sectionId) => {
+      const section = get().sections.get(sectionId);
+      if (!section) return;
+
+      const sectionBounds = {
+        x1: section.x,
+        y1: section.y,
+        x2: section.x + section.width,
+        y2: section.y + section.height,
+      };
+
+      set(state => {
+        const childIds = new Set<ElementId>();
+        for (const element of state.elements.values()) {
+          if (element.type === 'section' || element.id === sectionId) continue;
+
+          const elementCenter = getElementCenter(element);
+          if (
+            elementCenter.x >= sectionBounds.x1 &&
+            elementCenter.x <= sectionBounds.x2 &&
+            elementCenter.y >= sectionBounds.y1 &&
+            elementCenter.y <= sectionBounds.y2
+          ) {
+            if (element.sectionId && element.sectionId !== sectionId) {
+              const oldSection = state.sections.get(element.sectionId);
+              if (oldSection) {
+                oldSection.childElementIds = oldSection.childElementIds.filter(id => id !== element.id);
+              }
+            }
+            element.sectionId = sectionId;
+            childIds.add(element.id as ElementId);
+          }
+        }
+        const currentSection = state.sections.get(sectionId);
+        if(currentSection) {
+            currentSection.childElementIds = Array.from(childIds);
+        }
+      });
+    },
+
+    deleteSection: (id) => {
+      set(state => {
+        if (!state.sections.has(id)) return;
+        
+        // Release child elements
+        const section = state.sections.get(id);
+        if (section?.childElementIds) {
+          section.childElementIds.forEach(childId => {
+            const child = state.elements.get(childId);
+            if (child) {
+              child.sectionId = undefined;
+            }
+          });
+        }
+
+        state.sections.delete(id);
+        state.elements.delete(id); // Also remove from elements map
+        state.sectionElementMap.delete(id);
+        state.elementOrder = state.elementOrder.filter(elId => elId !== id);
+        state.selectedElementIds.delete(id as ElementId);
+      });
+      get().addToHistory('deleteSection');
+    },
+
+    findSectionAtPoint: (point) => {
+        const { sections, elementOrder } = get();
+        // Iterate backwards through elementOrder to find the top-most section
+        for (let i = elementOrder.length - 1; i >= 0; i--) {
+            const id = elementOrder[i] as SectionId;
+            const section = sections.get(id);
+            if (section &&
+                point.x >= section.x &&
+                point.x <= section.x + section.width &&
+                point.y >= section.y &&
+                point.y <= section.y + section.height) {
+                return section.id;
+            }
+        }
+        return null;
+    },
+
+    // Test utility methods
+    clearCanvas: () => {
+      set({
         elements: new Map(),
         elementOrder: [],
         selectedElementIds: new Set(),
-        lastSelectedElementId: null,
-        
-        viewport: {
-          x: 0,
-          y: 0,
-          scale: 1,
-          width: 1920,
-          height: 1080
-        },
-        
-        isDrawing: false,
-        currentPath: undefined,
-        drawingTool: null,
-        drawingStartPoint: null,
-        
-        draftSection: null,
-        
-        selectedTool: 'select',
-        textEditingElementId: null,
-        selectedStickyNoteColor: '#ffeb3b',
-        showGrid: true,
-        snapToGrid: false,
-        
-        history: [],
-        currentHistoryIndex: -1,
-        maxHistorySize: 50,
-        
-        // Computed history properties for API compatibility
-        canUndo: false,
-        canRedo: false,
-        
         sections: new Map(),
         sectionElementMap: new Map(),
-        
-        isUploading: false,
-        drawingCurrentPoint: null,
-        viewportBounds: null,
-
-        // CRITICAL FIX: Proper Immer Map handling
-        updateElement: (id: ElementOrSectionId, updates: Partial<CanvasElement>) => {
-          set((draft) => {
-            const element = draft.elements.get(id);
-            if (!element) {
-              logger.warn(`[Store] Element ${id} not found for update`);
-              return;
-            }
-
-            // Validate numeric updates
-            const validUpdates = { ...updates };
-            
-            if ('x' in validUpdates && (typeof validUpdates.x !== 'number' || !Number.isFinite(validUpdates.x))) {
-              delete validUpdates.x;
-            }
-            if ('y' in validUpdates && (typeof validUpdates.y !== 'number' || !Number.isFinite(validUpdates.y))) {
-              delete validUpdates.y;
-            }
-            if ('width' in validUpdates && (typeof validUpdates.width !== 'number' || !Number.isFinite(validUpdates.width) || validUpdates.width <= 0)) {
-              delete validUpdates.width;
-            }
-            if ('height' in validUpdates && (typeof validUpdates.height !== 'number' || !Number.isFinite(validUpdates.height) || validUpdates.height <= 0)) {
-              delete validUpdates.height;
-            }
-
-            // CRITICAL: Create new object and use draft.elements.set() for Immer tracking
-            const updatedElement = { 
-              ...element, 
-              ...validUpdates, 
-              updatedAt: Date.now() 
-            };
-            
-            // Use draft Map.set() method to ensure Immer tracks the change
-            draft.elements.set(id, updatedElement);
-            
-            console.log(`🔄 [Store] Updated ${id}:`, validUpdates);
-            logger.debug(`[Store] Updated element ${id}`, validUpdates);
-          });
-        },
-
-        // NEW: Batch updates for TransformerManager
-        updateMultipleElements: (updates: Array<{ id: ElementId; updates: Partial<CanvasElement> }>) => {
-          set((draft) => {
-            updates.forEach(({ id, updates: elementUpdates }) => {
-              const element = draft.elements.get(id);
-              if (element) {
-                // Validate updates
-                const validUpdates = { ...elementUpdates };
-                
-                Object.keys(validUpdates).forEach(key => {
-                  const value = (validUpdates as any)[key];
-                  if (['x', 'y', 'width', 'height', 'radius'].includes(key)) {
-                    if (typeof value !== 'number' || !Number.isFinite(value)) {
-                      delete (validUpdates as any)[key];
-                    }
-                    if (['width', 'height', 'radius'].includes(key) && value <= 0) {
-                      delete (validUpdates as any)[key];
-                    }
-                  }
-                });
-
-                const updatedElement = { 
-                  ...element, 
-                  ...validUpdates, 
-                  updatedAt: Date.now() 
-                };
-                
-                // Use draft Map.set() for proper Immer tracking
-                draft.elements.set(id, updatedElement);
-              }
-            });
-            
-            logger.debug(`[Store] Batch updated ${updates.length} elements`);
-          });
-        },
-
-        createElement: (type: string, position: { x: number; y: number }) => {
-          set((draft) => {
-            const now = Date.now();
-            const id = `${type}-${now}` as ElementId;
-            let element: CanvasElement;
-
-            switch (type) {
-              case 'text':
-                element = {
-                  id,
-                  type: 'text',
-                  x: position.x,
-                  y: position.y,
-                  text: 'Type here...',
-                  fontSize: 16,
-                  fontFamily: 'Arial',
-                  fill: '#333333',
-                  width: 200,
-                  height: 30,
-                  createdAt: now,
-                  updatedAt: now
-                } as TextElement;
-                break;
-
-              case 'sticky-note':
-                element = {
-                  id,
-                  type: 'sticky-note',
-                  x: position.x,
-                  y: position.y,
-                  text: 'Note...',
-                  backgroundColor: draft.selectedStickyNoteColor,
-                  textColor: '#333333',
-                  borderColor: draft.selectedStickyNoteColor,
-                  width: 150,
-                  height: 150,
-                  fontSize: 14,
-                  fontFamily: 'Arial',
-                  createdAt: now,
-                  updatedAt: now
-                } as any;
-                break;
-
-              case 'rectangle':
-                element = {
-                  id,
-                  type: 'rectangle',
-                  x: position.x,
-                  y: position.y,
-                  width: 100,
-                  height: 80,
-                  fill: '#4CAF50',
-                  stroke: '#333333',
-                  strokeWidth: 2,
-                  cornerRadius: 4,
-                  createdAt: now,
-                  updatedAt: now
-                } as RectangleElement;
-                break;
-
-              case 'circle':
-                element = {
-                  id,
-                  type: 'circle',
-                  x: position.x,
-                  y: position.y,
-                  radius: 50,
-                  fill: '#2196F3',
-                  stroke: '#333333',
-                  strokeWidth: 2,
-                  createdAt: now,
-                  updatedAt: now
-                } as CircleElement;
-                break;
-
-              case 'triangle':
-                element = {
-                  id,
-                  type: 'triangle',
-                  x: position.x,
-                  y: position.y,
-                  width: 100,
-                  height: 80,
-                  fill: '#FF9800',
-                  stroke: '#333333',
-                  strokeWidth: 2,
-                  createdAt: now,
-                  updatedAt: now
-                } as any;
-                break;
-
-              case 'star':
-                element = {
-                  id,
-                  type: 'star',
-                  x: position.x,
-                  y: position.y,
-                  radius: 50,
-                  sides: 5,
-                  innerRadius: 25,
-                  outerRadius: 50,
-                  fill: '#9C27B0',
-                  stroke: '#333333',
-                  strokeWidth: 2,
-                  createdAt: now,
-                  updatedAt: now
-                } as any;
-                break;
-
-              case 'table':
-                element = {
-                  id,
-                  type: 'table',
-                  x: position.x,
-                  y: position.y,
-                  width: 200,
-                  height: 150,
-                  rows: 3,
-                  columns: 3,
-                  cellData: Array(3).fill(null).map(() => Array(3).fill('')),
-                  createdAt: now,
-                  updatedAt: now
-                } as any;
-                break;
-
-              default:
-                console.warn('[Store] Unknown element type:', type);
-                return;
-            }
-
-            // Use draft.elements.set() for proper Immer tracking
-            draft.elements.set(id, element);
-            draft.elementOrder.push(id);
-            
-            // Select new element
-            draft.selectedElementIds.clear();
-            draft.selectedElementIds.add(id as ElementId);
-            draft.lastSelectedElementId = id as ElementId;
-            
-            // Switch to select tool for immediate editing
-            draft.selectedTool = 'select';
-
-            console.log(`✨ [Store] Created ${type}:`, { id, position });
-            logger.debug(`[Store] Created ${type} element`, { id, position });
-          });
-        },
-
-        deleteElement: (id: ElementOrSectionId) => {
-          set((draft) => {
-            draft.elements.delete(id);
-            draft.elementOrder = draft.elementOrder.filter(elemId => elemId !== id);
-            draft.selectedElementIds.delete(id as ElementId);
-            
-            if (draft.lastSelectedElementId === id) {
-              draft.lastSelectedElementId = null;
-            }
-            
-            logger.debug(`[Store] Deleted element: ${id}`);
-          });
-        },
-
-        deleteSelectedElements: () => {
-          set((draft) => {
-            const elementsToDelete = Array.from(draft.selectedElementIds);
-            if (elementsToDelete.length === 0) return;
-
-            elementsToDelete.forEach(elementId => {
-              draft.elements.delete(elementId);
-              draft.elementOrder = draft.elementOrder.filter(id => id !== elementId);
-            });
-
-            draft.selectedElementIds.clear();
-            draft.lastSelectedElementId = null;
-            
-            logger.debug(`[Store] Deleted ${elementsToDelete.length} elements`);
-          });
-        },
-
-        getElementById: (id: ElementOrSectionId) => {
-          return get().elements.get(id);
-        },
-
-        // Selection operations
-        selectElement: (id: ElementId, multiSelect = false) => {
-          set((draft) => {
-            if (multiSelect) {
-              if (draft.selectedElementIds.has(id)) {
-                draft.selectedElementIds.delete(id);
-              } else {
-                draft.selectedElementIds.add(id);
-              }
-            } else {
-              draft.selectedElementIds.clear();
-              draft.selectedElementIds.add(id);
-            }
-            
-            draft.lastSelectedElementId = id;
-            logger.debug(`[Store] Selected element: ${id} (multi: ${multiSelect})`);
-          });
-        },
-
-        clearSelection: () => {
-          set((draft) => {
-            draft.selectedElementIds.clear();
-            draft.lastSelectedElementId = null;
-            logger.debug('[Store] Cleared selection');
-          });
-        },
-
-        getSelectedElements: () => {
-          const state = get();
-          return Array.from(state.selectedElementIds)
-            .map(id => state.elements.get(id))
-            .filter(Boolean) as CanvasElement[];
-        },
-
-        // Viewport operations
-        setViewport: (viewport) => {
-          set((draft) => {
-            Object.assign(draft.viewport, viewport);
-          });
-        },
-
-        panViewport: (deltaX: number, deltaY: number) => {
-          set((draft) => {
-            draft.viewport.x += deltaX;
-            draft.viewport.y += deltaY;
-          });
-        },
-
-        zoomViewport: (scale: number, centerX?: number, centerY?: number) => {
-          set((draft) => {
-            const oldScale = draft.viewport.scale;
-            draft.viewport.scale = Math.max(0.1, Math.min(5, scale));
-
-            if (centerX !== undefined && centerY !== undefined) {
-              const scaleRatio = draft.viewport.scale / oldScale;
-              draft.viewport.x = centerX - (centerX - draft.viewport.x) * scaleRatio;
-              draft.viewport.y = centerY - (centerY - draft.viewport.y) * scaleRatio;
-            }
-          });
-        },
-
-        // Drawing operations
-        startDrawing: (tool: 'pen' | 'pencil', point: { x: number; y: number }) => {
-          set((draft) => {
-            draft.isDrawing = true;
-            draft.drawingTool = tool;
-            draft.drawingStartPoint = point;
-            draft.currentPath = [point.x, point.y];
-            logger.debug(`[Store] Started drawing with ${tool}`, point);
-          });
-        },
-
-        updateDrawing: (point: { x: number; y: number }) => {
-          const state = get();
-          if (!state.isDrawing || !state.currentPath) return;
-
-          // Simple distance filtering
-          if (state.currentPath.length >= 2) {
-            const lastX = state.currentPath[state.currentPath.length - 2];
-            const lastY = state.currentPath[state.currentPath.length - 1];
-            const distance = Math.sqrt(
-              Math.pow(point.x - lastX, 2) + Math.pow(point.y - lastY, 2)
-            );
-            if (distance < 2) return;
-          }
-
-          set((draft) => {
-            if (draft.currentPath) {
-              draft.currentPath.push(point.x, point.y);
-            }
-          });
-        },
-
-        finishDrawing: () => {
-          set((draft) => {
-            const { drawingTool, currentPath, drawingStartPoint } = draft;
-
-            if (drawingTool && currentPath && currentPath.length >= 4 && drawingStartPoint) {
-              const now = Date.now();
-              const id = `${drawingTool}-${now}` as ElementId;
-
-              const relativePoints = currentPath.map((coord, index) => {
-                const isX = index % 2 === 0;
-                return isX ? coord - drawingStartPoint.x : coord - drawingStartPoint.y;
-              });
-
-              const penElement = {
-                id,
-                type: drawingTool,
-                x: drawingStartPoint.x,
-                y: drawingStartPoint.y,
-                points: relativePoints,
-                stroke: '#000000',
-                strokeWidth: drawingTool === 'pen' ? 2 : 1,
-                lineCap: 'round',
-                lineJoin: 'round',
-                createdAt: now,
-                updatedAt: now
-              } as any;
-
-              draft.elements.set(id, penElement);
-              draft.elementOrder.push(id);
-              logger.debug(`[Store] Created ${drawingTool} element`, penElement);
-            }
-
-            // Reset drawing state
-            draft.isDrawing = false;
-            draft.drawingTool = null;
-            draft.currentPath = undefined;
-            draft.drawingStartPoint = null;
-          });
-        },
-
-        cancelDrawing: () => {
-          set((draft) => {
-            draft.isDrawing = false;
-            draft.drawingTool = null;
-            draft.currentPath = undefined;
-            draft.drawingStartPoint = null;
-          });
-        },
-
-        // Draft section operations
-        startDraftSection: (point: { x: number; y: number }) => {
-          set((draft) => {
-            draft.draftSection = {
-              id: `draft-section-${nanoid()}`,
-              x: point.x,
-              y: point.y,
-              width: 0,
-              height: 0
-            };
-            logger.debug('[Store] Started draft section', point);
-          });
-        },
-
-        updateDraftSection: (point: { x: number; y: number }) => {
-          set((draft) => {
-            if (!draft.draftSection) return;
-
-            const startX = draft.draftSection.x;
-            const startY = draft.draftSection.y;
-
-            const minX = Math.min(startX, point.x);
-            const minY = Math.min(startY, point.y);
-            const maxX = Math.max(startX, point.x);
-            const maxY = Math.max(startY, point.y);
-
-            draft.draftSection.x = minX;
-            draft.draftSection.y = minY;
-            draft.draftSection.width = maxX - minX;
-            draft.draftSection.height = maxY - minY;
-          });
-        },
-
-        commitDraftSection: () => {
-          const state = get();
-          if (!state.draftSection) return null;
-
-          const { x, y, width, height } = state.draftSection;
-
-          if (width < 20 || height < 20) {
-            get().cancelDraftSection();
-            return null;
-          }
-
-          set((draft) => {
-            draft.draftSection = null;
-          });
-
-          const sectionId = get().createSection(x, y, width, height);
-          get().captureElementsAfterSectionCreation(sectionId);
-          
-          return sectionId;
-        },
-
-        cancelDraftSection: () => {
-          set((draft) => {
-            draft.draftSection = null;
-          });
-        },
-
-        // UI operations
-        setSelectedTool: (tool: string) => {
-          set((draft) => {
-            draft.selectedTool = tool;
-          });
-        },
-
-        setTextEditingElement: (id: ElementId | null) => {
-          set((draft) => {
-            draft.textEditingElementId = id;
-          });
-        },
-
-        setSelectedStickyNoteColor: (color: string) => {
-          set((draft) => {
-            draft.selectedStickyNoteColor = color;
-          });
-        },
-
-        // API Compatibility Layer - Legacy function names
-        setStickyNoteColor: (color: string) => {
-          // Delegate to the properly named function
-          get().setSelectedStickyNoteColor(color);
-        },
-
-        // Helper to update computed history properties
-        updateHistoryFlags: () => {
-          set((draft) => {
-            draft.canUndo = draft.currentHistoryIndex > 0;
-            draft.canRedo = draft.currentHistoryIndex < draft.history.length - 1;
-          });
-        },
-
-        // History operations
-        addToHistory: (operation: string) => {
-          const snapshot = createHistorySnapshot();
-          set((draft) => {
-            const entry: HistoryEntry = {
-              id: nanoid(),
-              timestamp: Date.now(),
-              operation,
-              ...snapshot
-            };
-
-            draft.history = draft.history.slice(0, draft.currentHistoryIndex + 1);
-            draft.history.push(entry);
-
-            if (draft.history.length > draft.maxHistorySize) {
-              draft.history = draft.history.slice(-draft.maxHistorySize);
-            }
-
-            draft.currentHistoryIndex = draft.history.length - 1;
-          });
-          // Update computed history flags
-          get().updateHistoryFlags();
-        },
-
-        undo: () => {
-          set((draft) => {
-            if (draft.currentHistoryIndex > 0) {
-              draft.currentHistoryIndex--;
-              const entry = draft.history[draft.currentHistoryIndex];
-              if (entry) {
-                draft.elements = new Map(entry.elementsSnapshot);
-                draft.selectedElementIds = new Set(entry.selectionSnapshot);
-              }
-            }
-          });
-          // Update computed history flags
-          get().updateHistoryFlags();
-        },
-
-        redo: () => {
-          set((draft) => {
-            if (draft.currentHistoryIndex < draft.history.length - 1) {
-              draft.currentHistoryIndex++;
-              const entry = draft.history[draft.currentHistoryIndex];
-              if (entry) {
-                draft.elements = new Map(entry.elementsSnapshot);
-                draft.selectedElementIds = new Set(entry.selectionSnapshot);
-              }
-            }
-          });
-          // Update computed history flags
-          get().updateHistoryFlags();
-        },
-
-        // Section operations
-        createSection: (x: number, y: number, width: number, height: number) => {
-          const sectionId = `section-${nanoid()}` as SectionId;
-          
-          const section: SectionElement = {
-            id: sectionId,
-            type: 'section',
-            x,
-            y,
-            width,
-            height,
-            title: 'New Section',
-            backgroundColor: '#f8f9fa',
-            borderColor: '#dee2e6',
-            childElementIds: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          };
-
-          set((draft) => {
-            draft.elements.set(sectionId, section);
-            draft.sections.set(sectionId, section);
-            draft.sectionElementMap.set(sectionId, new Set());
-            draft.elementOrder.push(sectionId);
-          });
-
-          return sectionId;
-        },
-
-        captureElementsAfterSectionCreation: (sectionId: SectionId) => {
-          set((draft) => {
-            const section = draft.sections.get(sectionId);
-            if (!section) return;
-
-            const elementsToCapture: ElementId[] = [];
-
-            for (const [elementId, element] of draft.elements) {
-              if (element.id === sectionId) continue;
-              if ((element as any).sectionId) continue;
-
-              const elementCenter = getElementCenter(element);
-              
-              if (
-                elementCenter.x >= section.x &&
-                elementCenter.x <= section.x + section.width &&
-                elementCenter.y >= section.y &&
-                elementCenter.y <= section.y + section.height
-              ) {
-                elementsToCapture.push(elementId as ElementId);
-              }
-            }
-
-            elementsToCapture.forEach(elementId => {
-              const element = draft.elements.get(elementId);
-              if (element) {
-                const updatedElement = {
-                  ...element,
-                  sectionId: sectionId,
-                  updatedAt: Date.now()
-                };
-                
-                draft.elements.set(elementId, updatedElement);
-
-                const sectionElements = draft.sectionElementMap.get(sectionId);
-                if (sectionElements) {
-                  sectionElements.add(elementId);
-                }
-              }
-            });
-
-            logger.debug(`[Store] Captured ${elementsToCapture.length} elements in section ${sectionId}`);
-          });
-        },
-
-        // Utility functions
-        findNearestSnapPoint: (pointer: { x: number; y: number }, snapRadius: number = 20) => {
-          return null;
-        },
-
-        uploadImage: async (file: File, position: { x: number; y: number }) => {
-          set((draft) => {
-            draft.isUploading = true;
-          });
-
-          try {
-            const reader = new FileReader();
-            return new Promise<void>((resolve, reject) => {
-              reader.onload = (e) => {
-                const result = e.target?.result;
-                if (typeof result === 'string') {
-                  const now = Date.now();
-                  const imageElement = {
-                    id: `image-${now}` as ElementId,
-                    type: 'image',
-                    x: position.x,
-                    y: position.y,
-                    width: 200,
-                    height: 150,
-                    src: result,
-                    createdAt: now,
-                    updatedAt: now
-                  } as any;
-
-                  set((draft) => {
-                    draft.elements.set(imageElement.id, imageElement);
-                    draft.elementOrder.push(imageElement.id);
-                    draft.isUploading = false;
-                  });
-                  
-                  resolve();
-                } else {
-                  reject(new Error('Failed to read image file'));
-                }
-              };
-
-              reader.onerror = () => {
-                set((draft) => {
-                  draft.isUploading = false;
-                });
-                reject(new Error('Error reading image file'));
-              };
-
-              reader.readAsDataURL(file);
-            });
-          } catch (error) {
-            set((draft) => {
-              draft.isUploading = false;
-            });
-            throw error;
-          }
-        },
-
-        // Missing selection method
-        deselectElement: (id: ElementId) => {
-          set((draft) => {
-            draft.selectedElementIds.delete(id);
-            if (draft.lastSelectedElementId === id) {
-              draft.lastSelectedElementId = Array.from(draft.selectedElementIds)[0] || null;
-            }
-          });
-        },
-
-
-        // Missing legacy methods - implement as NO-OPs for now
-        updateTableCell: (tableId: ElementId, row: number, col: number, value: string) => {
-          logger.debug('[Store] updateTableCell called - not implemented yet');
-        },
-
-        clearAllElements: () => {
-          set((draft) => {
-            draft.elements.clear();
-            draft.elementOrder = [];
-            draft.selectedElementIds.clear();
-            draft.lastSelectedElementId = null;
-          });
-        },
-
-        exportElements: () => {
-          logger.debug('[Store] exportElements called - not implemented yet');
-        },
-
-        importElements: (elements: CanvasElement[]) => {
-          logger.debug('[Store] importElements called - not implemented yet');
-        },
-
-        handleElementDrop: (elementId: ElementId, targetId?: ElementId) => {
-          logger.debug('[Store] handleElementDrop called - not implemented yet');
-        },
-
-        updateElementCoordinatesOnSectionMove: (sectionId: SectionId, deltaX: number, deltaY: number) => {
-          logger.debug('[Store] updateElementCoordinatesOnSectionMove called - not implemented yet');
-        },
-
-        createTestElements: () => {
-          logger.debug('[Store] createTestElements called - not implemented yet');
-        },
-
-        // Missing section update method
-        updateSection: (id: SectionId, updates: Partial<SectionElement>) => {
-          set((draft) => {
-            const section = draft.sections.get(id);
-            if (section) {
-              const updatedSection = { ...section, ...updates, updatedAt: Date.now() };
-              draft.sections.set(id, updatedSection);
-              draft.elements.set(id, updatedSection);
-            }
-          });
-        },
-
-        // Missing legacy compatibility method
-        addElement: (element: CanvasElement) => {
-          set((draft) => {
-            draft.elements.set(element.id, element);
-            draft.elementOrder.push(element.id);
-          });
-        },
-
-        // Additional legacy alias methods
-        pan: (deltaX: number, deltaY: number) => {
-          get().panViewport(deltaX, deltaY);
-        },
-
-        zoom: (scale: number, centerX?: number, centerY?: number) => {
-          get().zoomViewport(scale, centerX, centerY);
-        },
-
-        // More missing methods - implement as NO-OPs for now
-        findSectionAtPoint: (point: { x: number; y: number }) => {
-          logger.debug('[Store] findSectionAtPoint called - not implemented yet');
-          return null;
-        },
-
-        addElementToSection: (elementId: ElementId, sectionId: SectionId) => {
-          logger.debug('[Store] addElementToSection called - not implemented yet');
-        },
-
-        groupElements: (elementIds: ElementId[]) => {
-          logger.debug('[Store] groupElements called - not implemented yet');
-          return `group-${nanoid()}` as GroupId;
-        },
-
-        ungroupElements: (groupId: GroupId) => {
-          logger.debug('[Store] ungroupElements called - not implemented yet');
-        },
-
-        isElementInGroup: (elementId: ElementId) => {
-          logger.debug('[Store] isElementInGroup called - not implemented yet');
-          return false;
-        },
-
-        toggleLayersPanel: () => {
-          logger.debug('[Store] toggleLayersPanel called - not implemented yet');
-        },
-
-        get currentIndex() {
-          return get().currentHistoryIndex;
-        },
-
-        addHistoryEntry: (operation: string, metadata?: any) => {
-          get().addToHistory(operation);
-        },
-
-        clearHistory: () => {
-          set((draft) => {
-            draft.history = [];
-            draft.currentHistoryIndex = -1;
-          });
-          // Update computed history flags
-          get().updateHistoryFlags();
-        },
-
-        getHistoryLength: () => {
-          return get().history.length;
+        history: [],
+        currentHistoryIndex: -1,
+      });
+    },
+
+    // Viewport operations
+    setViewport: (viewport) => {
+      set(state => {
+        Object.assign(state.viewport, viewport);
+      });
+    },
+    
+    panViewport: (deltaX, deltaY) => {
+      set(state => {
+        state.viewport.x += deltaX;
+        state.viewport.y += deltaY;
+      });
+    },
+    
+    zoomViewport: (scale, centerX, centerY) => {
+      set(state => {
+        state.viewport.scale = Math.max(0.1, Math.min(10, scale));
+      });
+    },
+
+    // Drawing operations
+    startDrawing: (tool, point) => {
+      set(state => {
+        state.isDrawing = true;
+        state.drawingTool = tool;
+        state.drawingStartPoint = point;
+        state.currentPath = [point.x, point.y];
+        state.drawingCurrentPoint = point;
+      });
+    },
+    
+    updateDrawing: (point) => {
+      set(state => {
+        if (state.isDrawing && state.currentPath) {
+          state.currentPath.push(point.x, point.y);
+          state.drawingCurrentPoint = point;
         }
-      };
-    })
+      });
+    },
+    
+    finishDrawing: () => {
+      const state = get();
+      if (state.isDrawing && state.currentPath && state.currentPath.length >= 4) {
+        // Create pen element
+        const penElement = {
+          id: nanoid(),
+          type: 'pen',
+          x: 0,
+          y: 0,
+          points: [...state.currentPath],
+          stroke: state.penColor,
+          strokeWidth: 2,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          isLocked: false,
+          isHidden: false
+        };
+        
+        // Add to store
+        get().addElement(penElement as any);
+      }
+      
+      // Reset drawing state
+      set(state => {
+        state.isDrawing = false;
+        state.drawingTool = null;
+        state.drawingStartPoint = null;
+        state.currentPath = undefined;
+        state.drawingCurrentPoint = null;
+      });
+    },
+    
+    cancelDrawing: () => {
+      set(state => {
+        state.isDrawing = false;
+        state.drawingTool = null;
+        state.drawingStartPoint = null;
+        state.currentPath = undefined;
+        state.drawingCurrentPoint = null;
+      });
+    },
+    // Section draft operations  
+    startDraftSection: (point) => {
+      set(state => {
+        state.draftSection = {
+          id: nanoid(),
+          x: point.x,
+          y: point.y,
+          width: 0,
+          height: 0
+        };
+      });
+    },
+    
+    updateDraftSection: (point) => {
+      set(state => {
+        if (state.draftSection) {
+          const startX = state.draftSection.x;
+          const startY = state.draftSection.y;
+          
+          // Calculate normalized bounds (handle drag in any direction)
+          const x = Math.min(point.x, startX);
+          const y = Math.min(point.y, startY);
+          const width = Math.abs(point.x - startX);
+          const height = Math.abs(point.y - startY);
+          
+          state.draftSection.x = x;
+          state.draftSection.y = y;
+          state.draftSection.width = width;
+          state.draftSection.height = height;
+        }
+      });
+    },
+    
+    commitDraftSection: () => {
+      const state = get();
+      if (state.draftSection && state.draftSection.width > 10 && state.draftSection.height > 10) {
+        const sectionId = get().createSection(
+          state.draftSection.x,
+          state.draftSection.y,
+          state.draftSection.width,
+          state.draftSection.height
+        );
+        
+        // Clear draft
+        set(state => {
+          state.draftSection = null;
+        });
+        
+        return sectionId;
+      }
+      
+      // Clear draft even if too small
+      set(state => {
+        state.draftSection = null;
+      });
+      
+      return null;
+    },
+    
+    cancelDraftSection: () => {
+      set(state => {
+        state.draftSection = null;
+      });
+    },
+    setSelectedTool: (tool) => set({ selectedTool: tool }),
+    setTextEditingElement: (id) => set({ textEditingElementId: id }),
+    setSelectedStickyNoteColor: (color) => set({ selectedStickyNoteColor: color }),
+    setPenColor: (color) => set({ penColor: color }),
+    setStickyNoteColor: (color) => set({ selectedStickyNoteColor: color }),
+    updateHistoryFlags: () => {},
+    addToHistory: (operation) => {
+      set(state => {
+        // Simple history implementation
+        const historyEntry = {
+          id: nanoid(),
+          timestamp: Date.now(),
+          operation,
+          elementsSnapshot: new Map(state.elements),
+          selectionSnapshot: new Set(state.selectedElementIds)
+        };
+        
+        // Remove future history if we're not at the end
+        if (state.currentHistoryIndex < state.history.length - 1) {
+          state.history = state.history.slice(0, state.currentHistoryIndex + 1);
+        }
+        
+        // Add new entry
+        state.history.push(historyEntry);
+        state.currentHistoryIndex = state.history.length - 1;
+        
+        // Limit history size
+        if (state.history.length > state.maxHistorySize) {
+          state.history = state.history.slice(-state.maxHistorySize);
+          state.currentHistoryIndex = state.history.length - 1;
+        }
+        
+        // Update flags
+        state.canUndo = state.currentHistoryIndex > 0;
+        state.canRedo = state.currentHistoryIndex < state.history.length - 1;
+      });
+    },
+    undo: () => {},
+    redo: () => {},
+    captureElementsAfterSectionCreation: () => {},
+    updateTableCell: () => {},
+    exportElements: () => {},
+    importElements: () => {},
+    handleElementDrop: () => {},
+    updateElementCoordinatesOnSectionMove: () => {},
+    createTestElements: () => {},
+    pan: () => {},
+    zoom: () => {},
+    addElementToSection: () => {},
+    groupElements: () => '' as GroupId,
+    ungroupElements: () => {},
+    isElementInGroup: () => false,
+    toggleLayersPanel: () => {},
+    addHistoryEntry: () => {},
+    clearHistory: () => {},
+    getHistoryLength: () => 0,
+    findNearestSnapPoint: () => ({}),
+    uploadImage: async () => {},
+    handleMouseDown: () => {},
+    handleMouseMove: () => {},
+    handleMouseUp: () => {},
+    handleMouseLeave: () => {},
+    handleClick: () => {},
+    handleDoubleClick: () => {},
+    handleContextMenu: () => {},
+    handleDragStart: () => {},
+    handleDragMove: () => {},
+    handleDragEnd: () => {},
+    
+    // Stroke Configuration
+    updateStrokeConfig: (tool, config) => {
+      set(state => {
+        Object.assign(state.strokeConfig[tool], config);
+      });
+    },
+    
+    // #endregion
+  };
+};
+
+export const useUnifiedCanvasStore = create<UnifiedCanvasStore>()(
+  subscribeWithSelector(
+    immer(createCanvasStoreSlice)
   )
 );
 
-// Optimized selectors
+// Add debugging to detect infinite loops
+if (process.env.NODE_ENV === 'development') {
+  let renderCount = 0;
+  const originalSubscribe = useUnifiedCanvasStore.subscribe;
+  
+  useUnifiedCanvasStore.subscribe = (listener) => {
+    return originalSubscribe((state, prevState) => {
+      renderCount++;
+      if (renderCount > 100) {
+        console.error('⚠️ [STORE] Potential infinite loop detected! Render count:', renderCount);
+        renderCount = 0; // Reset to prevent spam
+      }
+      listener(state, prevState);
+    });
+  };
+}
+
+function getElementCenter(element: CanvasElement): { x: number; y: number } {
+  const width = element.width ?? 0;
+  const height = element.height ?? 0;
+  return {
+    x: element.x + width / 2,
+    y: element.y + height / 2,
+  };
+}
+
+// Cached selectors to prevent infinite loops
+const elementsSelector = (state: UnifiedCanvasState) => state.elements;
+const selectedElementIdsSelector = (state: UnifiedCanvasState) => state.selectedElementIds;
+const selectedToolSelector = (state: UnifiedCanvasState) => state.selectedTool;
+const viewportSelector = (state: UnifiedCanvasState) => state.viewport;
+const isDrawingSelector = (state: UnifiedCanvasState) => state.isDrawing;
+const draftSectionSelector = (state: UnifiedCanvasState) => state.draftSection;
+const sectionsSelector = (state: UnifiedCanvasState) => state.sections;
+const canUndoSelector = (state: UnifiedCanvasState) => state.canUndo;
+const canRedoSelector = (state: UnifiedCanvasState) => state.canRedo;
+const penColorSelector = (state: UnifiedCanvasState) => state.penColor;
+
 export const canvasSelectors = {
-  elements: (state: UnifiedCanvasState) => state.elements,
+  elements: elementsSelector,
   elementById: (id: ElementId) => (state: UnifiedCanvasState) => state.elements.get(id),
-  selectedElementIds: (state: UnifiedCanvasState) => state.selectedElementIds,
+  selectedElementIds: selectedElementIdsSelector,
   selectedElements: (state: UnifiedCanvasState) =>
     Array.from(state.selectedElementIds)
       .map(id => state.elements.get(id))
       .filter(Boolean) as CanvasElement[],
-  selectedTool: (state: UnifiedCanvasState) => state.selectedTool,
-  viewport: (state: UnifiedCanvasState) => state.viewport,
-  isDrawing: (state: UnifiedCanvasState) => state.isDrawing,
-  draftSection: (state: UnifiedCanvasState) => state.draftSection,
-  sections: (state: UnifiedCanvasState) => state.sections,
-  canUndo: (state: UnifiedCanvasState) => state.canUndo,
-  canRedo: (state: UnifiedCanvasState) => state.canRedo,
+  selectedTool: selectedToolSelector,
+  viewport: viewportSelector,
+  isDrawing: isDrawingSelector,
+  draftSection: draftSectionSelector,
+  sections: sectionsSelector,
+  canUndo: canUndoSelector,
+  canRedo: canRedoSelector,
   lastSelectedElement: (state: UnifiedCanvasState) => 
-    state.lastSelectedElementId ? state.elements.get(state.lastSelectedElementId) : null
+    state.lastSelectedElementId ? state.elements.get(state.lastSelectedElementId) : null,
+  penColor: penColorSelector,
 };
 
-function getElementCenter(element: CanvasElement): { x: number; y: number } {
-  switch (element.type) {
-    case 'circle':
-      return { x: element.x, y: element.y };
-    default:
-      const width = (element as any).width || 100;
-      const height = (element as any).height || 100;
-      return { x: element.x + width / 2, y: element.y + height / 2 };
-  }
-}
-
+export const useSelectedElements = () => useUnifiedCanvasStore(canvasSelectors.selectedElements);
 export const useSelectedTool = () => useUnifiedCanvasStore(canvasSelectors.selectedTool);
+export const usePenColor = () => useUnifiedCanvasStore(canvasSelectors.penColor);
 
 logger.debug('[Store] Unified Canvas Store initialized with Immer fixes');

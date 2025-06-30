@@ -6,7 +6,7 @@
  */
 
 import { reliabilityTestSuite } from '../utils/ReliabilityTest';
-import { logger } from '@/lib/logger';
+import { logger } from "@/core/lib/logger";
 
 /**
  * Run comprehensive reliability test suite

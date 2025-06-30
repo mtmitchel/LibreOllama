@@ -27,7 +27,7 @@ import { screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import KonvaCanvas from '@/features/canvas/components/KonvaCanvas';
-import { useCanvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '@/stores';
 import { 
   ElementId, 
   SectionId, 
@@ -222,8 +222,8 @@ const createComprehensiveMockStore = () => ({
 let mockStore = createComprehensiveMockStore();
 
 // Mock the enhanced store
-vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: vi.fn((selector) => {
+vi.mock('@/stores', () => ({
+  useUnifiedCanvasStore: vi.fn((selector) => {
     if (typeof selector === 'function') {
       return selector(mockStore);
     }

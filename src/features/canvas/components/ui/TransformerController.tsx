@@ -31,6 +31,12 @@ export const TransformerController: React.FC<TransformerControllerProps> = ({
     if (selectedElementIds.size > 0) {
       const selectedNodes: Konva.Node[] = [];
       selectedElementIds.forEach(elementId => {
+        // Skip text elements since they have individual transformers
+        const element = elements.get(elementId);
+        if (element && element.type === 'text') {
+          return; // Skip text elements
+        }
+        
         const node = stageRef.current?.findOne(`#${elementId}`);
         if (node) {
           selectedNodes.push(node);

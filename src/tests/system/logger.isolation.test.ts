@@ -1,6 +1,6 @@
 // src/tests/system/logger.isolation.test.ts
 import { describe, test, expect } from 'vitest';
-import { logger } from '@/lib/logger';
+import { logger } from '@/core/lib/logger';
 
 describe('Logger Isolation Test', () => {
   test('logger.log should be silent in test mode', () => {

@@ -3,11 +3,11 @@ import React, { useEffect, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { StickyNoteElement, ElementId, CanvasElement } from '../types/enhanced.types';
-import { useUnifiedCanvasStore } from '../../../stores';
-import { designSystem } from '../../../design-system';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { designSystem } from '../../../core/design-system';
 import { createTextEditor } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
-import { logger } from '@/lib/logger';
+import { logger } from "@/core/lib/logger";
 
 interface StickyNoteShapeProps {
   element: StickyNoteElement;

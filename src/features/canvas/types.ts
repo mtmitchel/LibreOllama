@@ -46,7 +46,7 @@ export type {
   TextEditingState,
   HistoryState,
   Canvas
-} from './stores/types';
+} from './types/enhanced.types';
 
 // Re-export TableDataModel from root types
 export type { TableDataModel } from '../../types';

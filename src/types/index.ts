@@ -1,4 +1,4 @@
-import type { CanvasElement, EnhancedTableData, TableCell, TableRow, TableColumn } from '../features/canvas/stores/types';
+import type { CanvasElement, TableElement } from '../features/canvas/types/enhanced.types';
 import type { ConnectorEndpoint, ConnectorStyle } from '../features/canvas/types/connector';
 import type { RichTextSegment } from '../features/canvas/types/richText';
 
@@ -56,28 +56,13 @@ export interface BoundingBox {
   height: number;
 }
 
-// Re-export all types from stores/types.ts for backwards compatibility
+// Re-export table types from enhanced.types.ts
 export type {
   TableCell,
   TableRow,
   TableColumn,
-  TableSelection,
-  EnhancedTableData,
-  HistoryState,
-  Canvas,
-  RichTextSegment,
-  ViewportState,
-  SelectionState,
-  CanvasHistoryState,
-  HistoryEntry,
-  CanvasUIState,
-  ModalState,
-  TooltipState,
-  CanvasElementsState,
-  TextEditingState,
-  ConnectorEndpoint,
-  ConnectorStyle
-} from '../features/canvas/stores/types';
+  EnhancedTableData
+} from '../features/canvas/types/enhanced.types';
 
 // Canvas element types are now re-exported from enhanced.types.ts
 // Removing duplicate definitions and using enhanced types as single source of truth
@@ -99,6 +84,9 @@ export type {
   SectionElement as CanvasSectionElement,
   CanvasElement
 } from '../features/canvas/types/enhanced.types';
+
+// Import the table types for use in TableDataModel
+import type { TableCell, TableRow, TableColumn } from '../features/canvas/types/enhanced.types';
 
 // Data model types
 export interface TableDataModel {

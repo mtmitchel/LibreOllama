@@ -3,12 +3,14 @@ import React from 'react';
 import { Rect } from 'react-konva';
 import Konva from 'konva';
 import { RectangleElement } from '../types/enhanced.types';
-import { designSystem } from '../../../design-system';
+import { designSystem } from '../../../core/design-system';
 import { useShapeCaching } from '../hooks/useShapeCaching';
 import { BaseShapeProps } from '../types/shape-props.types';
+import { ElementId, CanvasElement } from '../types/enhanced.types';
 
 interface RectangleShapeProps extends BaseShapeProps<RectangleElement> {
-  // Rectangle-specific props can be added here if needed
+  onSelect?: (elementId: ElementId) => void;
+  onUpdate?: (id: ElementId, updates: Partial<CanvasElement>) => void;
 }
 
 /**
@@ -20,7 +22,9 @@ interface RectangleShapeProps extends BaseShapeProps<RectangleElement> {
 export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   element,
   isSelected,
-  konvaProps
+  konvaProps,
+  onSelect,
+  onUpdate
 }) => {
   console.log('🟨 [RectangleShape] Rendering rectangle:', element.id, { element, isSelected, konvaProps });
   
@@ -37,6 +41,18 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     },
     dependencies: [element.fill, element.stroke, element.width, element.height, isSelected]
   });
+  // Event handlers for selection and dragging
+  const handleClick = React.useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    e.cancelBubble = true;
+    onSelect?.(element.id);
+  }, [onSelect, element.id]);
+
+  const handleDragEnd = React.useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    const newX = e.target.x();
+    const newY = e.target.y();
+    onUpdate?.(element.id, { x: newX, y: newY });
+  }, [onUpdate, element.id]);
+
   // TEMPORARY: Bypass caching for debugging
   const finalProps = {
     ...konvaProps,
@@ -52,7 +68,11 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     cornerRadius: designSystem.borderRadius.md,
     perfectDrawEnabled: false,
     shadowForStrokeEnabled: false,
-    listening: true
+    listening: true,
+    draggable: !element.isLocked,
+    onClick: handleClick,
+    onTap: handleClick,
+    onDragEnd: handleDragEnd
   };
   
   console.log('🟨 [RectangleShape] Final props for Rect:', finalProps);

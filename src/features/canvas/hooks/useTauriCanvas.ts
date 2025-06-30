@@ -1,14 +1,14 @@
 // src/hooks/useTauriCanvas.ts
 import { invoke } from '@tauri-apps/api/core';
-import { useCanvasStore } from '../../../stores';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { useCallback, useMemo } from 'react';
 
 export const useTauriCanvas = () => {
   // Use stable selectors with proper memoization
-  const exportElements = useCanvasStore(
+  const exportElements = useUnifiedCanvasStore(
     useCallback((state) => state.exportElements, [])
   );
-  const importElements = useCanvasStore(
+  const importElements = useUnifiedCanvasStore(
     useCallback((state) => state.importElements, [])
   );
   

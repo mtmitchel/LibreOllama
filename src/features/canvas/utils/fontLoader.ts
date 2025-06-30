@@ -1,5 +1,5 @@
 // src/features/canvas/utils/fontLoader.ts
-import { designSystem } from '../../../design-system';
+import { designSystem } from '../../../core/design-system';
 
 /**
  * Ensures fonts are loaded before using them in Konva

@@ -5,7 +5,7 @@
 
 import { ElementId, SectionId } from './enhanced.types';
 import type { CanvasElement as EnhancedCanvasElement } from './enhanced.types';
-import type { CanvasElement as LegacyCanvasElement } from '../stores/types';
+import type { CanvasElement as LegacyCanvasElement } from './enhanced.types';
 
 // Type conversion utilities
 export const toElementId = (id: string): ElementId => id as ElementId;

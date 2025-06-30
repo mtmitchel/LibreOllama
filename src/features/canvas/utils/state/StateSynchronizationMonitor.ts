@@ -4,7 +4,9 @@
  * Solves: State desynchronization, tool state mismatches, async update failures
  */
 
-import { logger } from '@/lib/logger';
+import { produce } from "immer";
+import { throttle } from "../throttle";
+import { logger } from "@/core/lib/logger";
 import { CanvasTool } from '../../types/enhanced.types';
 
 export interface StateSnapshot {
@@ -36,6 +38,7 @@ export interface SynchronizationIssue {
 }
 
 export class StateSynchronizationMonitor {
+  private static instance: StateSynchronizationMonitor;
   private snapshots: StateSnapshot[] = [];
   private readonly maxSnapshots = 100;
   private synchronizationIssues: SynchronizationIssue[] = [];

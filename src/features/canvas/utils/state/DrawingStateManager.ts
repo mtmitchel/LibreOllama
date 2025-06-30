@@ -4,7 +4,7 @@
  * Solves: "Section drawing aborts", state tracking failures, race conditions
  */
 
-import { logger } from '@/lib/logger';
+import { logger } from "@/core/lib/logger";
 import { CanvasTool } from '../../types/enhanced.types';
 
 export interface DrawingState {

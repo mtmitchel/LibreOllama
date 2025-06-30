@@ -1,15 +1,15 @@
 // src/tests/performance/canvas.performance.test.tsx
 import { describe, test, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
-import { canvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
+import { useUnifiedCanvasStore } from '@/features/canvas/stores/unifiedCanvasStore';
 import { createMockCanvasElement } from '@/tests/utils/testUtils';
 
-const initialState = canvasStore.getState();
+const initialState = useUnifiedCanvasStore.getState();
 
 describe('Canvas Performance Tests', () => {
   beforeEach(() => {
     act(() => {
-      canvasStore.setState(initialState, true);
+      useUnifiedCanvasStore.setState(initialState, true);
     });
   });
 
@@ -19,7 +19,7 @@ describe('Canvas Performance Tests', () => {
       createMockCanvasElement({ id: `perf-elem-${i}`, type: 'rectangle' })
     );
 
-    const { addElement } = canvasStore.getState();
+    const { addElement } = useUnifiedCanvasStore.getState();
     const startTime = performance.now();
 
     act(() => {
@@ -32,7 +32,7 @@ describe('Canvas Performance Tests', () => {
     const duration = endTime - startTime;
 
     console.log(`[PERF] Added ${elementCount} elements in ${duration.toFixed(2)}ms`);
-    expect(canvasStore.getState().elements.size).toBe(elementCount);
+    expect(useUnifiedCanvasStore.getState().elements.size).toBe(elementCount);
     expect(duration).toBeLessThan(1000); // Increased threshold for safety
   });
 });

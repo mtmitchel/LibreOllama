@@ -1,7 +1,9 @@
+var _s = $RefreshSig$();
 import { Search, Bell, Sun, Moon, HelpCircle, Command } from 'lucide-react';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../core/hooks/useTheme';
 
 export const TopBar = () => {
+  _s();
   const { theme, setTheme } = useTheme();
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 

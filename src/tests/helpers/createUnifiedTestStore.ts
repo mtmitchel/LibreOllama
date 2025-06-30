@@ -9,40 +9,19 @@ import { createStore } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
-import { UnifiedCanvasState } from '../../features/canvas/stores/unifiedCanvasStore';
+import { createCanvasStoreSlice } from '../../features/canvas/stores/unifiedCanvasStore';
 
 enableMapSet();
 
 /**
- * Creates a test-specific vanilla Zustand store that mirrors the unified canvas store.
- * This factory follows the same patterns as the production store to ensure
- * authentic test conditions without React hook dependencies.
+ * Creates a test-specific vanilla Zustand store that uses the actual unified canvas store implementation.
+ * This ensures tests run against the real store logic.
  */
 export const createUnifiedTestStore = () => {
-  // Import the store factory function dynamically to avoid circular dependencies
-  const { useUnifiedCanvasStore } = require('../../stores');
-  
-  // Create a vanilla store instance for testing
-  return createStore<UnifiedCanvasState>()(
+  // Create a new store instance using the same slice creator
+  return createStore(
     subscribeWithSelector(
-      immer(() => {
-        // Get initial state from the production store
-        const productionState = useUnifiedCanvasStore.getState();
-        
-        // Return clean initial state with same structure
-        return {
-          ...productionState,
-          // Reset to clean test state
-          elements: new Map(),
-          elementOrder: [],
-          selectedElementIds: new Set(),
-          lastSelectedElementId: null,
-          history: [],
-          currentHistoryIndex: -1,
-          sections: new Map(),
-          sectionElementMap: new Map(),
-        };
-      })
+      immer(createCanvasStoreSlice)
     )
   );
 };

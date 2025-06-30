@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { Rect } from 'react-konva';
-import { useUnifiedCanvasStore } from '../../../../stores';
+import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
 
 interface SectionPreviewProps {
   // Legacy props kept for backward compatibility but not used

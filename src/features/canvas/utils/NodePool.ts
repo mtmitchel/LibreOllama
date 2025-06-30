@@ -8,7 +8,8 @@
  */
 
 import Konva from 'konva';
-import { logger } from '../../../lib/logger';
+import { CanvasElement } from '../types/enhanced.types';
+import { logger } from '../../../core/lib/logger';
 
 type NodeType = 'Rect' | 'Circle' | 'Line' | 'Text' | 'Group' | 'Image';
 

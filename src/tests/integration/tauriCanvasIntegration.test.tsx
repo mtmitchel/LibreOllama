@@ -14,8 +14,9 @@ import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import KonvaCanvas from '@/features/canvas/components/KonvaCanvas';
-import { canvasStore } from '@/features/canvas/stores/canvasStore.enhanced';
-import { ElementId } from '@/features/canvas/types/enhanced.types';
+import { useUnifiedCanvasStore } from '@/features/canvas/stores/unifiedCanvasStore';
+import type { CanvasElement } from '@/features/canvas/types/enhanced.types';
+import { listen } from '@tauri-apps/api/event';
 
 // Mock Tauri API
 vi.mock('@tauri-apps/api/core', () => ({
@@ -29,7 +30,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 
 // Import mocked functions after mocking
 import { invoke } from '@tauri-apps/api/core';
-import { listen, emit } from '@tauri-apps/api/event';
+import { emit } from '@tauri-apps/api/event';
 
 const mockInvoke = invoke as any;
 const mockListen = listen as any;
@@ -47,13 +48,10 @@ describe('Tauri Canvas Integration - End to End', () => {
     // Reset mocks
     vi.clearAllMocks();
     
-    // Reset store to clean state - get the full state and call clearCanvas if it exists
-    const state = canvasStore.getState();
-    if (state.clearCanvas) {
-      act(() => {
-        state.clearCanvas();
-      });
-    }
+    // Reset store to clean state
+    act(() => {
+      useUnifiedCanvasStore.getState().clearCanvas();
+    });
     
     // Setup unlisten mock
     mockUnlisten = vi.fn();
@@ -134,11 +132,11 @@ describe('Tauri Canvas Integration - End to End', () => {
           mockInvoke('load_canvas_data', { filename }).then((data: any) => {
             const parsed = JSON.parse(data as string);
             // Load elements into store using direct access
-            const store = canvasStore.getState();
+            const store = useUnifiedCanvasStore.getState();
             parsed.elements.forEach((el: any) => {
               store.addElement({
                 ...el,
-                id: ElementId(el.id)
+                id: el.id as ElementId
               });
             });
           });
@@ -166,7 +164,7 @@ describe('Tauri Canvas Integration - End to End', () => {
     });
 
     // Get store hook to verify state
-    const store = canvasStore.getState();
+    const store = useUnifiedCanvasStore.getState();
 
     // Verify that elements were loaded into the store
     await waitFor(() => {
@@ -178,7 +176,7 @@ describe('Tauri Canvas Integration - End to End', () => {
 
     // Add a new element
     store.addElement({
-      id: ElementId('new-rect-1'),
+      id: 'new-rect-1' as ElementId,
       type: 'rectangle',
       x: 400,
       y: 300,
@@ -194,22 +192,22 @@ describe('Tauri Canvas Integration - End to End', () => {
 
     // Modify an existing element
     store.setSelectedTool('select');
-    store.selectElement(ElementId('loaded-rect-1'));
-    store.updateElement(ElementId('loaded-rect-1'), {
+    store.selectElement('loaded-rect-1' as ElementId);
+    store.updateElement('loaded-rect-1' as ElementId, {
       x: 100,
       y: 100,
       fill: '#0000ff'
     });
 
     // Delete an element
-    store.selectElement(ElementId('loaded-circle-1'));
-    store.deleteElement(ElementId('loaded-circle-1'));
+    store.selectElement('loaded-circle-1' as ElementId);
+    store.deleteElement('loaded-circle-1' as ElementId);
 
     // Verify modifications
     expect(store.elements.size).toBe(3);
-    expect(store.elements.has(ElementId('loaded-circle-1'))).toBe(false);
+    expect(store.elements.has('loaded-circle-1' as ElementId)).toBe(false);
 
-    const modifiedRect = store.elements.get(ElementId('loaded-rect-1'));
+    const modifiedRect = store.elements.get('loaded-rect-1' as ElementId);
     expect(modifiedRect?.x).toBe(100);
     expect(modifiedRect?.y).toBe(100);
     expect((modifiedRect as any)?.fill).toBe('#0000ff');
@@ -235,7 +233,7 @@ describe('Tauri Canvas Integration - End to End', () => {
 
   test('should handle real-time collaboration events', async () => {
     // Get store instance
-    const store = canvasStore.getState();
+    const store = useUnifiedCanvasStore.getState();
 
     // Setup listener mock
     const eventHandler = vi.fn();
@@ -268,7 +266,7 @@ describe('Tauri Canvas Integration - End to End', () => {
 
     // Add element to store as if received from collaboration
     store.addElement({
-      id: ElementId(collaborativeEdit.element.id),
+      id: collaborativeEdit.element.id as ElementId,
       type: 'circle',
       x: collaborativeEdit.element.x,
       y: collaborativeEdit.element.y,
@@ -279,7 +277,7 @@ describe('Tauri Canvas Integration - End to End', () => {
     });
 
     // Verify the collaborative element was added
-    expect(store.elements.has(ElementId('collab-elem-1'))).toBe(true);
+    expect(store.elements.has('collab-elem-1' as ElementId)).toBe(true);
     expect(store.elements.size).toBe(1);
   });
 

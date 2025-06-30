@@ -3,7 +3,7 @@ import React from 'react';
 import { Star } from 'react-konva';
 import Konva from 'konva';
 import { StarElement } from '../types/enhanced.types';
-import { designSystem } from '../../../design-system';
+import { designSystem } from '../../../core/design-system';
 import { useShapeCaching } from '../hooks/useShapeCaching';
 import { BaseShapeProps } from '../types/shape-props.types';
 
