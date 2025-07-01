@@ -1,15 +1,22 @@
-// src/features/canvas/shapes/TriangleShape.tsx
-import React, { useRef, useEffect, useCallback } from 'react';
+// src/components/canvas/shapes/TriangleShape.tsx
+import React, { useRef, useEffect, useCallback, useReducer, useState, useMemo } from 'react';
 import { Group, Line, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { TriangleElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { measureTextDimensions } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
-import { nanoid } from 'nanoid';
+import { useDebounce } from '@/core/hooks/useDebounce';
+import { getRequiredTriangleSize, SHAPE_FITTING_DEFAULTS, findOptimalTriangleWidth } from '../utils/shapeFittingUtils';
+
+// Resize constants for consistency
+const RESIZE_CONSTANTS = {
+  DEBOUNCE_THRESHOLD: SHAPE_FITTING_DEFAULTS.DEBOUNCE_THRESHOLD,
+  IMMEDIATE_THRESHOLD: 0.2, // 20% capacity change for more responsive feedback
+  UPDATE_TIMEOUT: SHAPE_FITTING_DEFAULTS.UPDATE_TIMEOUT,
+};
 
 /**
- * Create text editor for triangles - adapted from StickyNoteShape
+ * Robust text editor for triangles, adapted from RectangleShape
  */
 const createTriangleTextEditor = (
   position: { left: number; top: number; width: number; height: number; fontSize: number },
@@ -17,85 +24,183 @@ const createTriangleTextEditor = (
   fontSize: number,
   fontFamily: string,
   onSave: (text: string) => void,
-  onCancel: () => void
+  onCancel: () => void,
+  onTextChange: (newText: string) => void
 ) => {
-  console.log('🔺 [TriangleTextEditor] Creating text editor:', position);
-
-  const textarea = document.createElement('textarea');
-  
-  // Style the textarea to overlay the triangle
-  Object.assign(textarea.style, {
+  // Container that covers the full triangle area
+  const container = document.createElement('div');
+  Object.assign(container.style, {
     position: 'fixed',
     left: `${Math.round(position.left)}px`,
     top: `${Math.round(position.top)}px`,
     width: `${Math.round(position.width)}px`,
     height: `${Math.round(position.height)}px`,
-    fontSize: `${Math.max(11, Math.min(20, position.fontSize))}px`,
+    overflow: 'hidden',
+    zIndex: '10000',
+    border: 'none',
+    background: 'transparent',
+    pointerEvents: 'none',
+    // Triangle clipping to match the shape
+    clipPath: `polygon(50% 0%, 100% 100%, 0% 100%)`,
+  });
+
+  // Contenteditable div for centred editing
+  const editor = document.createElement('div');
+  editor.contentEditable = 'true';
+  editor.setAttribute('spellcheck', 'false');
+
+  const padding = 8;
+
+  const computeEditorWidth = (w: number, h: number) => {
+    const ratioH = 0.6;
+    const heightFromTop = ratioH * h;
+    const widthRatio = (h - heightFromTop) / h;
+    return w * widthRatio;
+  };
+
+  const setEditorGeometry = (w: number, h: number) => {
+    const textW = computeEditorWidth(w, h);
+    Object.assign(editor.style, {
+      width: `${textW}px`,
+      left: '50%',
+      transform: `translateX(-${textW / 2}px) translateY(-50%)`,
+    });
+  };
+
+  Object.assign(editor.style, {
+    height: '35%',
+    minHeight: '60px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: `${fontSize}px`,
     fontFamily: fontFamily,
     fontWeight: '400',
     lineHeight: '1.4',
     color: '#FFFFFF',
-    background: 'rgba(234, 88, 12, 0.1)',
-    border: '2px solid #EA580C',
-    borderRadius: '4px',
-    padding: '8px',
-    resize: 'none',
+    background: 'transparent',
+    border: 'none',
+    padding: `${padding}px`,
+    margin: '0',
     outline: 'none',
-    zIndex: '10000',
-    overflow: 'hidden',
     whiteSpace: 'pre-wrap',
-    wordWrap: 'break-word',
+    wordBreak: 'break-word',
+    textAlign: 'center',
     boxSizing: 'border-box',
-    textAlign: 'center'
+    pointerEvents: 'auto',
+    position: 'absolute',
+    top: '70%',
   });
 
-  // Set initial value
-  textarea.value = initialText || '';
-  textarea.placeholder = 'Add text';
-  textarea.setAttribute('spellcheck', 'false');
-  
-  document.body.appendChild(textarea);
+  // initial geometry
+  setEditorGeometry(position.width, position.height);
 
-  // Focus the textarea
-  setTimeout(() => {
-    if (document.body.contains(textarea)) {
-      textarea.focus();
-      if (!initialText || initialText.trim().length === 0) {
-        textarea.setSelectionRange(0, 0);
-      } else {
-        textarea.select();
-      }
+  const placeholder = document.createElement('span');
+  placeholder.style.opacity = '0.6';
+  placeholder.style.fontStyle = 'italic';
+  placeholder.textContent = 'Add text';
+
+  if (initialText) {
+    editor.textContent = initialText;
+  } else {
+    editor.textContent = '\u200B';
+    editor.appendChild(placeholder);
+  }
+
+  container.appendChild(editor);
+  document.body.appendChild(container);
+
+  const autoGrow = () => {
+    setEditorGeometry(position.width, position.height);
+  };
+
+  const handleInput = () => {
+    hasUserInteracted = true;
+    if (editor.innerText.trim().length === 0) {
+      if (!editor.contains(placeholder)) editor.appendChild(placeholder);
+    } else {
+      if (editor.contains(placeholder)) editor.removeChild(placeholder);
     }
-  }, 50);
+    onTextChange(editor.innerText.replace(/\u200B/g, ''));
+  };
+
+  editor.addEventListener('input', handleInput);
+
+  let editorReady = false;
+  let hasUserInteracted = false;
+
+  const updatePosition = (newPos: { left: number; top: number; width: number; height: number; fontSize: number }) => {
+    // Update container to cover the entire triangle area
+    Object.assign(container.style, {
+      left: `${Math.round(newPos.left)}px`,
+      top: `${Math.round(newPos.top)}px`,
+      width: `${Math.round(newPos.width)}px`,
+      height: `${Math.round(newPos.height)}px`,
+    });
+    
+    // Update position reference for autoGrow
+    position.width = newPos.width;
+    position.height = newPos.height;
+    
+    editor.style.fontSize = `${newPos.fontSize}px`;
+    setEditorGeometry(newPos.width, newPos.height);
+  };
+
+  // Use requestAnimationFrame for more reliable focus
+  setTimeout(() => {
+    if (document.body.contains(container)) {
+      requestAnimationFrame(() => {
+        editor.focus();
+        editorReady = true;
+      });
+    }
+  }, 50); // Reduced delay
 
   const handleKeyDown = (e: KeyboardEvent) => {
     e.stopPropagation();
-    
     if (e.key === 'Escape') {
       e.preventDefault();
+      cleanup();
       onCancel();
-    } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+    } else if (e.key === 'Tab' && !e.shiftKey) {
       e.preventDefault();
-      onSave(textarea.value);
+      cleanup();
+      onSave(editor.innerText.replace(/\u200B/g, ''));
     }
   };
 
   const handleBlur = () => {
-    onSave(textarea.value);
-  };
-
-  const cleanup = () => {
-    if (document.body.contains(textarea)) {
-      textarea.removeEventListener('keydown', handleKeyDown);
-      textarea.removeEventListener('blur', handleBlur);
-      document.body.removeChild(textarea);
+    if ((editorReady && hasUserInteracted) || editor.innerText.trim().length > 0) {
+      cleanup();
+      onSave(editor.innerText.replace(/\u200B/g, ''));
+    } else {
+      cleanup();
+      onCancel();
     }
   };
 
-  textarea.addEventListener('keydown', handleKeyDown);
-  textarea.addEventListener('blur', handleBlur);
+  const cleanup = () => {
+    editor.removeEventListener('input', handleInput);
+    editor.removeEventListener('keydown', handleKeyDown);
+    editor.removeEventListener('blur', handleBlur);
+    container.removeEventListener('click', handleContainerClick);
+    if (document.body.contains(container)) {
+      document.body.removeChild(container);
+    }
+  };
 
-  return cleanup;
+  const handleContainerClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (editorReady && !editor.contains(e.target as Node)) {
+      editor.focus();
+    }
+  };
+
+  editor.addEventListener('keydown', handleKeyDown);
+  editor.addEventListener('blur', handleBlur);
+  container.addEventListener('click', handleContainerClick);
+
+  return { cleanup, updatePosition };
 };
 
 interface TriangleShapeProps {
@@ -106,9 +211,6 @@ interface TriangleShapeProps {
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
 
-/**
- * TriangleShape - Following exact StickyNoteShape pattern
- */
 export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
   element,
   isSelected,
@@ -116,263 +218,308 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
   onUpdate,
   stageRef
 }) => {
-  // Store selectors - same pattern as StickyNoteShape
   const textEditingElementId = useUnifiedCanvasStore(state => state.textEditingElementId);
   const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
   const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
-  // Refs - same pattern as StickyNoteShape
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
+  
   const groupRef = useRef<Konva.Group>(null);
-  const triangleRef = useRef<Konva.Line>(null); // Main shape for transformer
+  const triangleRef = useRef<Konva.Line>(null);
   const textNodeRef = useRef<Konva.Text>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
-  const cleanupEditorRef = useRef<(() => void) | null>(null);
-  const isDuplicating = useRef<boolean>(false);
+  const editorRef = useRef<any>(null);
+  const isEditingRef = useRef<boolean>(false);
+  const updateInProgressRef = useRef<boolean>(false);
+  const timeoutsRef = useRef<{ focus?: NodeJS.Timeout; resize?: NodeJS.Timeout }>({});
+  const tweenRef = useRef<Konva.Tween | null>(null);
   
-  const width = element.width || 120;
-  const height = element.height || 100;
+  const { width = 120, height = 100, fontSize = 14 } = element;
   
-  // Ensure fonts are loaded
+  const [liveText, setLiveText] = useState('');
+  const debouncedText = useDebounce(liveText, 100); // Faster response for immediate feedback
+
   useEffect(() => {
     ensureFontsLoaded();
   }, []);
 
-  // Attach transformer to triangle when selected - standard Konva pattern
   useEffect(() => {
     if (isSelected && transformerRef.current && triangleRef.current) {
       transformerRef.current.nodes([triangleRef.current]);
       transformerRef.current.getLayer()?.batchDraw();
-      console.log('🔄 [TriangleShape] Transformer attached to triangle:', element.id);
     }
-  }, [isSelected, element.id]);
+  }, [isSelected]);
 
-  // Calculate textarea position for text editing - same as StickyNoteShape
   const calculateTextareaPosition = useCallback(() => {
-    if (!stageRef?.current || !groupRef.current) return null;
-
+    if (!stageRef?.current || !triangleRef.current) return null;
+    
     const stage = stageRef.current;
-    const group = groupRef.current;
+    const triangle = triangleRef.current;
     const container = stage.container();
     if (!container) return null;
-
+    
     const containerRect = container.getBoundingClientRect();
     const scale = stage.scaleX();
-    const groupPos = group.getAbsolutePosition();
-
+    const stagePos = stage.getAbsolutePosition();
+    
+    // Get triangle's absolute position
+    const trianglePos = triangle.getAbsolutePosition();
+    
     return {
-      left: containerRect.left + (groupPos.x + width/4) * scale,
-      top: containerRect.top + (groupPos.y + height*2/3 - 10) * scale, 
-      width: Math.max((width/2) * scale, 80),
-      height: Math.max(20 * scale, 20),
-      fontSize: Math.max(11, Math.min(16, (element.fontSize || 14) * scale))
+      left: containerRect.left + (trianglePos.x - stagePos.x) * scale,
+      top: containerRect.top + (trianglePos.y - stagePos.y) * scale,
+      width: width * scale,
+      height: height * scale,
+      fontSize: fontSize * scale
     };
-  }, [stageRef, width, height, element.fontSize]);
+  }, [stageRef, width, height, fontSize]);
 
-  // Handle double-click to start editing - same pattern as StickyNoteShape
-  const handleDoubleClick = useCallback(() => {
-    console.log('🔺 [TriangleShape] Double-click detected, entering edit mode');
-    
-    if (cleanupEditorRef.current) {
-      console.log('⚠️ [TriangleShape] Already in edit mode, ignoring double-click');
-      return;
-    }
-    
-    if (textEditingElementId && textEditingElementId !== element.id) {
-      console.log('⚠️ [TriangleShape] Another text element is being edited, ignoring double-click');
-      return;
-    }
-    
-    if (!stageRef?.current) {
-      console.warn('⚠️ [TriangleShape] No stage ref available for editing');
-      return;
-    }
+  // Debounced position updates for better performance
+  const debouncedUpdatePosition = useMemo(
+    () => {
+      let timeout: NodeJS.Timeout | null = null;
+      return (positionData: any) => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          if (editorRef.current?.updatePosition) {
+            editorRef.current.updatePosition(positionData);
+          }
+        }, 16); // 60fps
+      };
+    },
+    []
+  );
 
-    // CRITICAL: Set text editing state FIRST to hide Konva Text immediately
+  // Cached triangle geometry calculations for performance
+  const calculateTriangleTextWidth = useCallback((baseWidth: number, triangleHeight: number, textPosition: number) => {
+    const heightFromTop = textPosition * triangleHeight;
+    const widthRatio = (triangleHeight - heightFromTop) / triangleHeight;
+    return baseWidth * widthRatio;
+  }, []);
+
+  // Cache expensive geometry calculations
+  const cachedTriangleGeometry = useMemo(() => {
+    const triangleHeight = (Math.sqrt(3) / 2) * width;
+    const textStartHeight = 0.6; // 60% from top
+    const textEndHeight = 0.9;   // 90% from top
+    const avgWidth = (calculateTriangleTextWidth(width, triangleHeight, textStartHeight) + 
+                      calculateTriangleTextWidth(width, triangleHeight, textEndHeight)) / 2;
+    return { triangleHeight, avgWidth: avgWidth * 0.9 };
+  }, [width, height, calculateTriangleTextWidth]);
+
+  // Reposition editor if shape resizes while editing (debounced)
+  useEffect(() => {
+    if (isEditingRef.current) {
+      const positionData = calculateTextareaPosition();
+      if (positionData) {
+        debouncedUpdatePosition(positionData);
+      }
+    }
+  }, [width, height, calculateTextareaPosition, debouncedUpdatePosition]);
+
+  // Geometry-aware triangle resizing with proportional scaling
+  useEffect(() => {
+    if (!isEditingRef.current || !debouncedText || updateInProgressRef.current) {
+      return;
+    }
+    
+    updateInProgressRef.current = true;
+    try {
+      const { width: targetWidth, height: targetHeight } = findOptimalTriangleWidth(
+        debouncedText,
+        fontSize,
+        element.fontFamily || getAvailableFontFamily(),
+        width,
+        SHAPE_FITTING_DEFAULTS.MAX_WIDTH
+      );
+
+      if ((targetWidth - width) > RESIZE_CONSTANTS.DEBOUNCE_THRESHOLD) {
+        tweenRef.current?.destroy();
+
+        const node = triangleRef.current;
+        if (!node) {
+          onUpdate(element.id, { width: targetWidth, height: targetHeight });
+          return;
+        }
+
+        tweenRef.current = new Konva.Tween({
+          node,
+          width: targetWidth,
+          height: targetHeight,
+          duration: 0.12,
+          easing: Konva.Easings.EaseOut,
+          onFinish: () => {
+            onUpdate(element.id, { width: targetWidth, height: targetHeight });
+          }
+        });
+        tweenRef.current.play();
+      }
+    } catch(e) {
+        console.error('Triangle resize error:', e);
+    } finally {
+        if (timeoutsRef.current.resize) clearTimeout(timeoutsRef.current.resize);
+        timeoutsRef.current.resize = setTimeout(() => {
+            updateInProgressRef.current = false;
+        }, RESIZE_CONSTANTS.UPDATE_TIMEOUT);
+    }
+  }, [debouncedText, isEditingRef.current, fontSize, element.fontFamily, width, height, onUpdate, element.id, calculateTextareaPosition, calculateTriangleTextWidth]);
+
+  // Handle text changes with triangle-aware immediate feedback
+  const handleTextChange = useCallback((newText: string) => {
+    if (!isEditingRef.current) return;
+    setLiveText(newText);
+    
+    // Quick overflow check: grow immediately if capacity exceeded markedly
+    if (newText && newText.length > 1) {
+      try {
+        const { width: targetW, height: targetH } = getRequiredTriangleSize(
+          newText,
+          fontSize,
+          element.fontFamily || getAvailableFontFamily(),
+          width
+        );
+        if (targetW - width > RESIZE_CONSTANTS.DEBOUNCE_THRESHOLD) {
+          onUpdate(element.id, { width: targetW, height: targetH });
+        }
+      } catch {}
+    }
+  }, [fontSize, element.fontFamily, width, height, onUpdate, element.id, calculateTriangleTextWidth]);
+  
+  const startEditing = useCallback(() => {
+    if (isEditingRef.current) {
+      return;
+    }
+    
+    isEditingRef.current = true;
+    updateInProgressRef.current = false;
     setTextEditingElement(element.id);
+    setLiveText(element.text || '');
+    forceUpdate();
 
-    // Deselect element when entering edit mode to hide transformer
     const store = useUnifiedCanvasStore.getState();
     store.clearSelection();
 
-    const positionData = calculateTextareaPosition();
-    if (!positionData) {
-      console.warn('⚠️ [TriangleShape] Could not calculate textarea position');
-      setTextEditingElement(null); // Reset if we can't create editor
-      return;
-    }
-
-    console.log('✏️ [TriangleShape] Starting edit mode with position:', positionData);
-
-    const cleanup = createTriangleTextEditor(
-      positionData,
-      element.text || '',
-      positionData.fontSize,
-      element.fontFamily || getAvailableFontFamily(),
-      (newText: string) => {
-        console.log('💾 [TriangleShape] Saving text:', newText);
-        
-        const finalText = newText.trim();
-        
-        cleanupEditorRef.current = null;
+    requestAnimationFrame(() => {
+      const positionData = calculateTextareaPosition();
+      if (!positionData) {
+        console.error('❌ [TriangleShape] Failed to calculate position');
+        isEditingRef.current = false;
         setTextEditingElement(null);
-        
-        onUpdate(element.id, {
-          text: finalText,
-          updatedAt: Date.now()
-        });
-        
-        // Auto-switch to select tool and select element
-        setTimeout(() => {
-          const store = useUnifiedCanvasStore.getState();
-          store.setSelectedTool('select');
-          
-          setTimeout(() => {
-            store.clearSelection();
-            setTimeout(() => {
-              store.selectElement(element.id, false);
-            }, 50);
-          }, 50);
-        }, 100);
-      },
-      () => {
-        console.log('❌ [TriangleShape] Edit cancelled');
-        cleanupEditorRef.current = null;
-        setTextEditingElement(null);
+        return;
       }
-    );
-
-    cleanupEditorRef.current = cleanup;
-  }, [element, calculateTextareaPosition, setTextEditingElement, onUpdate, stageRef]);
-
-  // Transform handler - standard Konva pattern for Triangle
-  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
-    const triangle = triangleRef.current;
-    if (!triangle) return;
-    
-    const scaleX = triangle.scaleX();
-    const scaleY = triangle.scaleY();
-    
-    // Calculate new dimensions
-    const newWidth = Math.max(60, element.width * scaleX);
-    const newHeight = Math.max(40, element.height * scaleY);
-    
-    // Reset scale to 1 (standard Konva pattern)
-    triangle.scaleX(1);
-    triangle.scaleY(1);
-    
-    // Update element dimensions
-    onUpdate(element.id, {
-      x: triangle.x(),
-      y: triangle.y(),
-      width: newWidth,
-      height: newHeight,
-      updatedAt: Date.now()
+      
+      console.log('📍 [TriangleShape] Editor position:', positionData);
+      
+      editorRef.current = createTriangleTextEditor(
+        positionData,
+        element.text || '',
+        positionData.fontSize,
+        element.fontFamily || getAvailableFontFamily(),
+        (newText: string) => {
+          console.log('💾 [TriangleShape] Saving text:', newText);
+          isEditingRef.current = false;
+          updateInProgressRef.current = false;
+          setTextEditingElement(null);
+          editorRef.current = null;
+          
+          onUpdate(element.id, { text: newText.trim(), updatedAt: Date.now() });
+          
+          // Auto-switch to select tool
+          setTimeout(() => {
+            const store = useUnifiedCanvasStore.getState();
+            store.setSelectedTool('select');
+            store.selectElement(element.id, false);
+          }, 100);
+        },
+        () => {
+          console.log('❌ [TriangleShape] Edit cancelled');
+          isEditingRef.current = false;
+          updateInProgressRef.current = false;
+          setTextEditingElement(null);
+          editorRef.current = null;
+        },
+        handleTextChange
+      );
     });
-    
-    console.log('🔄 [TriangleShape] Transform complete:', { newWidth, newHeight });
-  }, [element.id, element.width, element.height, onUpdate]);
+  }, [element, calculateTextareaPosition, setTextEditingElement, onUpdate, handleTextChange]);
 
-  // Text editing effect - same pattern as StickyNoteShape
   useEffect(() => {
-    if (textEditingElementId !== element.id || !stageRef?.current) {
-      // Clean up any existing editor when this element is no longer being edited
-      if (cleanupEditorRef.current && textEditingElementId !== element.id) {
-        console.log('🔺 [TriangleShape] Cleaning up editor - element no longer being edited');
-        cleanupEditorRef.current();
-        cleanupEditorRef.current = null;
+    // Start editing only if not already editing
+    if (textEditingElementId === element.id && !isEditingRef.current) {
+      startEditing();
+    }
+    
+    // Stop editing only if we're no longer the editing element AND we're currently editing
+    if (textEditingElementId !== element.id && editorRef.current && isEditingRef.current) {
+      console.log('🛑 [TriangleShape] Stopping editing session - different element selected');
+      tweenRef.current?.destroy();
+      editorRef.current.cleanup();
+      editorRef.current = null;
+      isEditingRef.current = false;
+      updateInProgressRef.current = false;
+      if (timeoutsRef.current.focus) clearTimeout(timeoutsRef.current.focus);
+      
+      if (editorRef.current) {
+        console.log('🧹 [TriangleShape] Component cleanup - removing editor');
+        tweenRef.current?.destroy();
+        editorRef.current.cleanup();
+        editorRef.current = null;
+        isEditingRef.current = false;
+        updateInProgressRef.current = false;
       }
-      return;
     }
-
-    // Prevent multiple editors for the same element
-    if (cleanupEditorRef.current) {
-      console.log('🔺 [TriangleShape] Editor already exists, skipping creation');
-      return;
-    }
-
-    const positionData = calculateTextareaPosition();
-    if (!positionData) {
-      console.warn('🔺 [TriangleShape] ⚠️ Could not calculate position data for text editing');
-      return;
-    }
-
-    console.log('🔺 [TriangleShape] *** STARTING PROGRAMMATIC TEXT EDITING ***', element.id);
-
-    const cleanup = createTriangleTextEditor(
-      positionData,
-      element.text || '',
-      positionData.fontSize,
-      element.fontFamily || getAvailableFontFamily(),
-      (newText: string) => {
-        console.log('💾 [TriangleShape] Saving programmatic text:', newText);
-        
-        const finalText = newText.trim();
-        
-        cleanupEditorRef.current = null;
-        setTextEditingElement(null);
-        
-        onUpdate(element.id, {
-          text: finalText,
-          updatedAt: Date.now()
-        });
-        
-        // Auto-switch to select tool and select element
-        setTimeout(() => {
-          const store = useUnifiedCanvasStore.getState();
-          store.setSelectedTool('select');
-          
-          setTimeout(() => {
-            store.clearSelection();
-            setTimeout(() => {
-              store.selectElement(element.id, false);
-            }, 50);
-          }, 50);
-        }, 100);
-      },
-      () => {
-        cleanupEditorRef.current = null;
-        setTextEditingElement(null);
-      }
-    );
-
-    cleanupEditorRef.current = cleanup;
-
+    
     return () => {
-      if (cleanupEditorRef.current) {
-        cleanupEditorRef.current();
-        cleanupEditorRef.current = null;
+      // Clear any pending timeouts
+      if (timeoutsRef.current.resize) clearTimeout(timeoutsRef.current.resize);
+      if (timeoutsRef.current.focus) clearTimeout(timeoutsRef.current.focus);
+      
+      if (editorRef.current) {
+        console.log('🧹 [TriangleShape] Component cleanup - removing editor');
+        tweenRef.current?.destroy();
+        editorRef.current.cleanup();
+        editorRef.current = null;
+        isEditingRef.current = false;
+        updateInProgressRef.current = false;
       }
     };
-  }, [textEditingElementId, element.id, calculateTextareaPosition, element.text, element.fontFamily, onUpdate, setTextEditingElement, stageRef]);
-  
-  const hasContent = element.text && element.text.trim().length > 0;
-  const displayText = hasContent ? element.text! : 'Add text';
-  const textColor = hasContent 
-    ? (element.textColor || '#FFFFFF')
-    : 'rgba(255, 255, 255, 0.6)'; // Semi-transparent for placeholder
-  
-  // Check if this element is currently being edited
-  const isCurrentlyEditing = textEditingElementId === element.id;
-  
-  // Determine if events should pass through for drawing tools
-  const drawingTools = ['pen', 'marker', 'highlighter', 'washi-tape', 'eraser'];
-  const shouldAllowDrawing = drawingTools.includes(selectedTool);
+  }, [textEditingElementId, element.id]); // Remove startEditing dependency
 
-  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
-    if (isDuplicating.current) {
-      isDuplicating.current = false;
-      return;
-    }
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
+    const node = triangleRef.current;
+    if (!node) return;
     
-    // Update position for normal drag
-    const group = e.target as Konva.Group;
+    tweenRef.current?.destroy();
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+    
+    // Reset scale and update dimensions
+    node.scaleX(1);
+    node.scaleY(1);
+    
     onUpdate(element.id, {
-      x: group.x(),
-      y: group.y(),
+      x: node.x(),
+      y: node.y(),
+      width: Math.max(SHAPE_FITTING_DEFAULTS.MIN_WIDTH, (element.width || 120) * scaleX),
+      height: Math.max(SHAPE_FITTING_DEFAULTS.MIN_HEIGHT, (element.height || 100) * scaleY),
       updatedAt: Date.now()
     });
+  }, [element.id, element.width, element.height, onUpdate]);
+  
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<any>) => {
+    onUpdate(element.id, {
+        x: e.target.x(),
+        y: e.target.y(),
+        updatedAt: Date.now()
+    });
   }, [element.id, onUpdate]);
+
+  const hasContent = element.text && element.text.trim().length > 0;
+  const displayText = hasContent ? element.text! : 'Add text';
+  const textColor = hasContent ? (element.textColor || '#FFFFFF') : 'rgba(255, 255, 255, 0.6)';
+  
+  const isCurrentlyEditing = textEditingElementId === element.id;
+  const shouldAllowDrawing = ['pen', 'marker', 'highlighter', 'eraser'].includes(selectedTool);
 
   // Calculate triangle points
   const trianglePoints = [
@@ -382,7 +529,6 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
     width/2, 0         // Close the path
   ];
 
-  // Handle click events for selection
   const handleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     // Don't interfere with double-click
     if (e.evt.detail === 2) return;
@@ -400,67 +546,72 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
         ref={groupRef}
         id={element.id}
         onClick={handleClick}
-        onDblClick={handleDoubleClick}
-        onDragEnd={handleDragEnd}
+        onDblClick={startEditing}
         draggable={!shouldAllowDrawing}
         listening={!shouldAllowDrawing}
+        onDragEnd={handleDragEnd}
       >
-        {/* Triangle background */}
         <Line
+          onDblClick={startEditing}
           ref={triangleRef}
           points={trianglePoints}
-          fill={element.fill || '#EA580C'}
-          stroke={element.stroke || '#C2410C'}
-          strokeWidth={element.strokeWidth || 2}
+          fill={element.fill || '#10B981'}
+          stroke={element.stroke || '#059669'}
+          strokeWidth={2}
           closed={true}
           onTransformEnd={handleTransformEnd}
+          keepRatio={true}
         />
 
-        {/* Text content - ONLY render when NOT being edited */}
+        {/* Only show text when NOT editing - prevents dual display */}
         {!isCurrentlyEditing && (
-          <Text
-            ref={textNodeRef}
-            x={width/4}
-            y={height*2/3 - (element.fontSize || 14)/2}
-            width={width/2}
-            height={element.fontSize || 14}
-            text={displayText}
-            fontSize={element.fontSize || 14}
-            fontFamily={getAvailableFontFamily()}
-            fill={textColor}
-            align="center"
-            verticalAlign="middle"
-            fontStyle={hasContent ? 'normal' : 'italic'}
-            ellipsis={true}
-            wrap="none"
-            onTransformEnd={handleTransformEnd}
-          />
+          <Group
+            clipFunc={(ctx) => {
+              // Clip to triangle shape
+              ctx.moveTo(width/2, 0);
+              ctx.lineTo(width, height);
+              ctx.lineTo(0, height);
+              ctx.closePath();
+            }}
+          >
+                        <Text
+              onDblClick={startEditing}
+              ref={textNodeRef}
+              x={width * 0.25} // Position for 50% width centered
+              y={height * 0.6} // Start at 60% (75% - 15% for half of 30% height)
+              width={width * 0.5} // Match editor width  
+              height={height * 0.3} // Match the 30% from editor
+              text={displayText}
+              fontSize={fontSize}
+              fontFamily={getAvailableFontFamily()}
+              fill={textColor}
+              align="center"
+              verticalAlign="middle" // Center within the text area
+              fontStyle={hasContent ? 'normal' : 'italic'}
+              wrap="word"
+              padding={4} // Minimal padding for triangle geometry
+            />
+          </Group>
         )}
       </Group>
       
-      {/* Transformer with corner-only handles - same pattern as StickyNoteShape */}
-      {isSelected && !cleanupEditorRef.current && (
+      {isSelected && !isCurrentlyEditing && (
         <Transformer
           ref={transformerRef}
           enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
           rotateEnabled={false}
-          borderStroke="#EA580C"
+          borderStroke="#3B82F6"
           borderStrokeWidth={1}
-          anchorStroke="#EA580C"
+          anchorStroke="#3B82F6"
           anchorFill="#ffffff"
           anchorSize={6}
-          anchorStrokeWidth={1}
-          keepRatio={false}
           ignoreStroke={true}
           boundBoxFunc={(oldBox, newBox) => {
-            const MIN_WIDTH = 60;
-            const MIN_HEIGHT = 40;
-            
             return {
               ...newBox,
-              width: Math.max(MIN_WIDTH, newBox.width),
-              height: Math.max(MIN_HEIGHT, newBox.height),
-            };
+              width: Math.max(60, newBox.width || 0),
+              height: Math.max(40, newBox.height || 0),
+            }
           }}
         />
       )}
@@ -469,4 +620,5 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
 });
 
 TriangleShape.displayName = 'TriangleShape';
+
 

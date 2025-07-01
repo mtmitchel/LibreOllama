@@ -1,15 +1,24 @@
 // src/components/canvas/shapes/CircleShape.tsx
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useReducer, useState, useMemo } from 'react';
 import { Group, Circle, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { CircleElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { measureTextDimensions } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
-import { nanoid } from 'nanoid';
+import { useDebounce } from '@/core/hooks/useDebounce';
+import { getRequiredCircleRadius, SHAPE_FITTING_DEFAULTS, findOptimalCircleRadius } from '../utils/shapeFittingUtils';
+
+// Resize constants for consistency
+const RESIZE_CONSTANTS = {
+  DEBOUNCE_THRESHOLD: SHAPE_FITTING_DEFAULTS.DEBOUNCE_THRESHOLD,
+  IMMEDIATE_THRESHOLD: SHAPE_FITTING_DEFAULTS.IMMEDIATE_THRESHOLD,
+  UPDATE_TIMEOUT: SHAPE_FITTING_DEFAULTS.UPDATE_TIMEOUT,
+};
+
+const EDITOR_WIDTH_MULT = 1.72; // 2% safety margin versus Konva measurement
 
 /**
- * Create text editor for circles - adapted from StickyNoteShape
+ * Robust text editor for circles, adapted from RectangleShape
  */
 const createCircleTextEditor = (
   position: { left: number; top: number; width: number; height: number; fontSize: number },
@@ -17,85 +26,180 @@ const createCircleTextEditor = (
   fontSize: number,
   fontFamily: string,
   onSave: (text: string) => void,
-  onCancel: () => void
+  onCancel: () => void,
+  onTextChange: (newText: string) => void // Kept for API consistency
 ) => {
-  console.log('🔵 [CircleTextEditor] Creating text editor:', position);
+  const radius = position.width / 2;
+  const textWidth = radius * EDITOR_WIDTH_MULT;
+  const textHeight = radius * EDITOR_WIDTH_MULT;
+  const konvaPadding = (radius * 2) * 0.04;
 
-  const textarea = document.createElement('textarea');
-  
-  // Style the textarea to overlay the circle
-  Object.assign(textarea.style, {
+  const textLeft = position.left + radius * 0.15;
+  const textTop = position.top + radius * 0.15;
+
+  const container = document.createElement('div');
+  Object.assign(container.style, {
     position: 'fixed',
-    left: `${Math.round(position.left)}px`,
-    top: `${Math.round(position.top)}px`,
-    width: `${Math.round(position.width)}px`,
-    height: `${Math.round(position.height)}px`,
-    fontSize: `${Math.max(11, Math.min(20, position.fontSize))}px`,
-    fontFamily: fontFamily,
-    fontWeight: '400',
-    lineHeight: '1.4',
-    color: '#FFFFFF',
-    background: 'rgba(34, 197, 94, 0.1)',
-    border: '2px solid #22C55E',
-    borderRadius: '50%',
-    padding: '8px',
-    resize: 'none',
-    outline: 'none',
-    zIndex: '10000',
-    overflow: 'hidden',
-    whiteSpace: 'pre-wrap',
-    wordWrap: 'break-word',
-    boxSizing: 'border-box',
-    textAlign: 'center'
+    left: `${Math.round(textLeft)}px`,
+    top: `${Math.round(textTop)}px`,
+    width: `${Math.round(textWidth)}px`,
+    height: `${Math.round(textHeight)}px`,
+    zIndex: '2147483647',
+    border: 'none',
+    background: 'transparent',
+    pointerEvents: 'auto',
   });
 
-  // Set initial value
-  textarea.value = initialText || '';
-  textarea.placeholder = 'Add text';
-  textarea.setAttribute('spellcheck', 'false');
-  
-  document.body.appendChild(textarea);
+  // Contenteditable div for centered caret
+  const editor = document.createElement('div');
+  editor.contentEditable = 'true';
+  editor.setAttribute('spellcheck', 'false');
 
-  // Focus the textarea
-  setTimeout(() => {
-    if (document.body.contains(textarea)) {
-      textarea.focus();
-      if (!initialText || initialText.trim().length === 0) {
-        textarea.setSelectionRange(0, 0);
-      } else {
-        textarea.select();
-      }
+  Object.assign(editor.style, {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: `${fontSize}px`,
+    fontFamily: fontFamily,
+    fontWeight: '400',
+    lineHeight: '1',
+    color: '#FFFFFF',
+    background: 'transparent',
+    border: 'none',
+    padding: `${konvaPadding}px`,
+    margin: '0',
+    outline: 'none',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    textAlign: 'center',
+    boxSizing: 'border-box',
+    pointerEvents: 'auto',
+  });
+
+  // Placeholder handling
+  const placeholder = document.createElement('span');
+  placeholder.style.opacity = '0.6';
+  placeholder.style.fontStyle = 'italic';
+  placeholder.textContent = 'Add text';
+
+  if (initialText) {
+    editor.textContent = initialText;
+  } else {
+    editor.textContent = '\u200B'; // invisible char so caret shows
+    editor.appendChild(placeholder);
+  }
+
+  container.appendChild(editor);
+  document.body.appendChild(container);
+
+  // Keep fixed dimensions to match Konva Text exactly
+  const autoGrow = () => {
+    // No resizing - keep exact Konva Text dimensions
+  };
+
+  // Handle input with immediate visual feedback
+  const handleInput = () => {
+    hasUserInteracted = true;
+    if (editor.innerText.trim().length === 0) {
+      if (!editor.contains(placeholder)) editor.appendChild(placeholder);
+    } else {
+      if (editor.contains(placeholder)) editor.removeChild(placeholder);
     }
-  }, 50);
+    const textVal = editor.innerText.replace(/\u200B/g, '');
+    onTextChange(textVal);
+  };
+
+  autoGrow();
+  editor.addEventListener('input', handleInput);
+
+  let editorReady = false;
+  let hasUserInteracted = false;
+
+  const updatePosition = (newPos: { left: number; top: number; width: number; height: number; fontSize: number }) => {
+    // Recalculate Konva Text positioning for new size
+    const newRadius = newPos.width / 2;
+    const newTextWidth = newRadius * EDITOR_WIDTH_MULT;
+    const newTextHeight = newRadius * EDITOR_WIDTH_MULT;
+    const newTextLeft = newPos.left + newRadius * 0.15;
+    const newTextTop = newPos.top + newRadius * 0.15;
+    
+    Object.assign(container.style, {
+      left: `${Math.round(newTextLeft)}px`,
+      top: `${Math.round(newTextTop)}px`,
+      width: `${Math.round(newTextWidth)}px`,
+      height: `${Math.round(newTextHeight)}px`,
+    });
+    
+    // Update position reference
+    position.width = newPos.width;
+    position.height = newPos.height;
+    
+    editor.style.fontSize = `${newPos.fontSize}px`;
+    editor.style.padding = `${konvaPadding}px`;
+  };
+
+  // Use requestAnimationFrame for more reliable focus
+  setTimeout(() => {
+    if (document.body.contains(container)) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          editor.focus();
+          editorReady = true;
+        });
+      });
+    }
+  }, 50); // Reduced delay
 
   const handleKeyDown = (e: KeyboardEvent) => {
     e.stopPropagation();
-    
     if (e.key === 'Escape') {
       e.preventDefault();
+      cleanup();
       onCancel();
-    } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+    } else if (e.key === 'Tab' && !e.shiftKey) {
       e.preventDefault();
-      onSave(textarea.value);
+      cleanup();
+      onSave(editor.innerText);
     }
   };
 
   const handleBlur = () => {
-    onSave(textarea.value);
-  };
-
-  const cleanup = () => {
-    if (document.body.contains(textarea)) {
-      textarea.removeEventListener('keydown', handleKeyDown);
-      textarea.removeEventListener('blur', handleBlur);
-      document.body.removeChild(textarea);
+    if ((editorReady && hasUserInteracted) || editor.innerText.trim().length > 0) {
+      cleanup();
+      onSave(editor.innerText);
+    } else {
+      cleanup();
+      onCancel();
     }
   };
 
-  textarea.addEventListener('keydown', handleKeyDown);
-  textarea.addEventListener('blur', handleBlur);
+  const cleanup = () => {
+    // Remove all event listeners
+    editor.removeEventListener('input', handleInput);
+    editor.removeEventListener('keydown', handleKeyDown);
+    editor.removeEventListener('blur', handleBlur);
+    container.removeEventListener('click', handleContainerClick);
+    
+    // Remove from DOM
+    if (document.body.contains(container)) {
+      document.body.removeChild(container);
+    }
+  };
 
-  return cleanup;
+  const handleContainerClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (editorReady && !editor.contains(e.target as Node)) {
+      editor.focus();
+    }
+  };
+
+  editor.addEventListener('keydown', handleKeyDown);
+  editor.addEventListener('blur', handleBlur);
+  container.addEventListener('click', handleContainerClick);
+
+  return { cleanup, updatePosition };
 };
 
 interface CircleShapeProps {
@@ -106,9 +210,6 @@ interface CircleShapeProps {
   stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
 
-/**
- * CircleShape - Following exact StickyNoteShape pattern
- */
 export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
   element,
   isSelected,
@@ -116,272 +217,286 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
   onUpdate,
   stageRef
 }) => {
-  // Store selectors - same pattern as StickyNoteShape
   const textEditingElementId = useUnifiedCanvasStore(state => state.textEditingElementId);
   const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
   const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
-  
-  // Refs - same pattern as StickyNoteShape
+
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
+
   const groupRef = useRef<Konva.Group>(null);
-  const circleRef = useRef<Konva.Circle>(null); // Main shape for transformer
+  const circleRef = useRef<Konva.Circle>(null);
   const textNodeRef = useRef<Konva.Text>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
-  const cleanupEditorRef = useRef<(() => void) | null>(null);
-  const isDuplicating = useRef<boolean>(false);
-  
-  const radius = element.radius || 50;
+  const editorRef = useRef<any>(null);
+  const isEditingRef = useRef<boolean>(false);
+  const updateInProgressRef = useRef<boolean>(false); // For consistency
+  const timeoutsRef = useRef<{ focus?: NodeJS.Timeout; resize?: NodeJS.Timeout }>({});
+  const tweenRef = useRef<Konva.Tween | null>(null);
+
+  const { radius = 50, fontSize = 14 } = element;
   const diameter = radius * 2;
-  
-  // Ensure fonts are loaded
+
+  const [liveText, setLiveText] = useState('');
+  const debouncedText = useDebounce(liveText, 100); // Faster response for immediate feedback
+
   useEffect(() => {
     ensureFontsLoaded();
   }, []);
 
-  // Attach transformer to circle when selected - standard Konva pattern
   useEffect(() => {
     if (isSelected && transformerRef.current && circleRef.current) {
       transformerRef.current.nodes([circleRef.current]);
       transformerRef.current.getLayer()?.batchDraw();
-      console.log('🔄 [CircleShape] Transformer attached to circle:', element.id);
     }
-  }, [isSelected, element.id]);
+  }, [isSelected]);
 
-  // Calculate textarea position for text editing - same as StickyNoteShape
   const calculateTextareaPosition = useCallback(() => {
-    if (!stageRef?.current || !groupRef.current) return null;
-
+    if (!stageRef?.current || !circleRef.current) return null;
+    
     const stage = stageRef.current;
-    const group = groupRef.current;
+    const circle = circleRef.current;
     const container = stage.container();
     if (!container) return null;
-
+    
     const containerRect = container.getBoundingClientRect();
     const scale = stage.scaleX();
-    const groupPos = group.getAbsolutePosition();
-
+    const stagePos = stage.getAbsolutePosition();
+    
+    // Get circle's absolute position (accounting for center offset)
+    const circlePos = circle.getAbsolutePosition();
+    
     return {
-      left: containerRect.left + (groupPos.x + radius/2) * scale,
-      top: containerRect.top + (groupPos.y + radius - 10) * scale, 
-      width: Math.max(radius * scale, 80),
-      height: Math.max(20 * scale, 20),
-      fontSize: Math.max(11, Math.min(16, (element.fontSize || 14) * scale))
+      left: containerRect.left + (circlePos.x - radius - stagePos.x) * scale,
+      top: containerRect.top + (circlePos.y - radius - stagePos.y) * scale,
+      width: diameter * scale,
+      height: diameter * scale,
+      fontSize: fontSize * scale
     };
-  }, [stageRef, radius, element.fontSize]);
+  }, [stageRef, radius, diameter, fontSize]);
 
-  // Handle double-click to start editing - same pattern as StickyNoteShape
-  const handleDoubleClick = useCallback(() => {
-    console.log('🔵 [CircleShape] Double-click detected, entering edit mode');
-    
-    if (cleanupEditorRef.current) {
-      console.log('⚠️ [CircleShape] Already in edit mode, ignoring double-click');
-      return;
+  // Debounced position updates for better performance
+  const debouncedUpdatePosition = useMemo(
+    () => {
+      let timeout: NodeJS.Timeout | null = null;
+      return (positionData: any) => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          if (editorRef.current?.updatePosition) {
+            editorRef.current.updatePosition(positionData);
+          }
+        }, 16); // 60fps
+      };
+    },
+    []
+  );
+
+  // Reposition editor if shape resizes while editing (debounced)
+  useEffect(() => {
+    if (isEditingRef.current) {
+      const positionData = calculateTextareaPosition();
+      if (positionData) {
+        debouncedUpdatePosition(positionData);
+      }
     }
-    
-    if (textEditingElementId && textEditingElementId !== element.id) {
-      console.log('⚠️ [CircleShape] Another text element is being edited, ignoring double-click');
-      return;
-    }
-    
-    if (!stageRef?.current) {
-      console.warn('⚠️ [CircleShape] No stage ref available for editing');
+  }, [radius, calculateTextareaPosition, debouncedUpdatePosition]);
+
+  // Stable circle resizing with inscribed square calculation
+  useEffect(() => {
+    if (!isEditingRef.current || !debouncedText || updateInProgressRef.current) {
       return;
     }
 
-    // CRITICAL: Set text editing state FIRST to hide Konva Text immediately
+    updateInProgressRef.current = true;
+    try {
+      const targetRadius = findOptimalCircleRadius(
+        debouncedText,
+        fontSize,
+        element.fontFamily || getAvailableFontFamily(),
+        radius
+      );
+
+      if (Math.abs(targetRadius - radius) > RESIZE_CONSTANTS.DEBOUNCE_THRESHOLD) {
+        // Kill any existing tween
+        tweenRef.current?.destroy();
+
+        const node = circleRef.current;
+        if (!node) {
+          onUpdate(element.id, { radius: Math.round(targetRadius) });
+          return;
+        }
+
+        // Use a tween for smooth visual transition
+        tweenRef.current = new Konva.Tween({
+          node,
+          radius: targetRadius,
+          duration: 0.12, // 120ms for a quick but smooth feel
+          easing: Konva.Easings.EaseOut,
+          onFinish: () => {
+            // Final update to ensure state is perfectly synced
+            onUpdate(element.id, { radius: Math.round(targetRadius) });
+          },
+        });
+        tweenRef.current.play();
+      }
+    } catch (e) {
+      console.error('Circle text measurement error:', e);
+    } finally {
+      if (timeoutsRef.current.resize) clearTimeout(timeoutsRef.current.resize);
+      timeoutsRef.current.resize = setTimeout(() => {
+        updateInProgressRef.current = false;
+      }, RESIZE_CONSTANTS.UPDATE_TIMEOUT);
+    }
+  }, [debouncedText, isEditingRef.current, fontSize, element.fontFamily, radius, onUpdate, element.id, calculateTextareaPosition]);
+
+  // Handle text changes with immediate feedback for longer text
+  const handleTextChange = useCallback((newText: string) => {
+    if (!isEditingRef.current) return;
+    setLiveText(newText);
+
+    // Quick overflow check – if the text clearly exceeds current capacity, expand immediately
+    if (newText && newText.length > 1) {
+      try {
+        const quickRadius = getRequiredCircleRadius(
+          newText,
+          fontSize,
+          element.fontFamily || getAvailableFontFamily(),
+          radius
+        );
+        const growDelta = quickRadius - radius;
+        const shrinkDelta = radius - quickRadius;
+        if (growDelta > 4) {
+          onUpdate(element.id, { radius: Math.round(quickRadius) });
+        } else if (shrinkDelta > 8) {
+          onUpdate(element.id, { radius: Math.round(quickRadius) });
+        }
+      } catch (e) {
+        // silent
+      }
+    }
+  }, [fontSize, element.fontFamily, radius, onUpdate, element.id]);
+
+  const startEditing = useCallback(() => {
+    if (isEditingRef.current) {
+      return;
+    }
+    
+    isEditingRef.current = true;
+    updateInProgressRef.current = false;
     setTextEditingElement(element.id);
+    setLiveText(element.text || '');
+    forceUpdate();
 
-    // Deselect element when entering edit mode to hide transformer
     const store = useUnifiedCanvasStore.getState();
     store.clearSelection();
 
-    const positionData = calculateTextareaPosition();
-    if (!positionData) {
-      console.warn('⚠️ [CircleShape] Could not calculate textarea position');
-      setTextEditingElement(null); // Reset if we can't create editor
-      return;
-    }
-
-    console.log('✏️ [CircleShape] Starting edit mode with position:', positionData);
-
-    const cleanup = createCircleTextEditor(
-      positionData,
-      element.text || '',
-      positionData.fontSize,
-      element.fontFamily || getAvailableFontFamily(),
-      (newText: string) => {
-        console.log('💾 [CircleShape] Saving text:', newText);
-        
-        const finalText = newText.trim();
-        
-        cleanupEditorRef.current = null;
+    requestAnimationFrame(() => {
+      const positionData = calculateTextareaPosition();
+      if (!positionData) {
+        console.error('❌ [CircleShape] Failed to calculate position');
+        isEditingRef.current = false;
         setTextEditingElement(null);
-        
-        onUpdate(element.id, {
-          text: finalText,
-          updatedAt: Date.now()
-        });
-        
-        // Auto-switch to select tool and select element
-        setTimeout(() => {
-          const store = useUnifiedCanvasStore.getState();
-          store.setSelectedTool('select');
-          
-          setTimeout(() => {
-            store.clearSelection();
-            setTimeout(() => {
-              store.selectElement(element.id, false);
-            }, 50);
-          }, 50);
-        }, 100);
-      },
-      () => {
-        console.log('❌ [CircleShape] Edit cancelled');
-        cleanupEditorRef.current = null;
-        setTextEditingElement(null);
+        return;
       }
-    );
-
-    cleanupEditorRef.current = cleanup;
-  }, [element, calculateTextareaPosition, setTextEditingElement, onUpdate, stageRef]);
-
-  // Transform handler - standard Konva pattern for Circle
-  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
-    const circle = circleRef.current;
-    if (!circle) return;
-    
-    const scaleX = circle.scaleX();
-    const scaleY = circle.scaleY();
-    
-    // Calculate new radius (use average of scales to maintain circle shape)
-    const newRadius = Math.max(25, element.radius * ((scaleX + scaleY) / 2));
-    
-    // Reset scale to 1 (standard Konva pattern)
-    circle.scaleX(1);
-    circle.scaleY(1);
-    
-    // Update element dimensions
-    onUpdate(element.id, {
-      x: circle.x(),
-      y: circle.y(),
-      radius: newRadius,
-      updatedAt: Date.now()
+      
+      console.log('📍 [CircleShape] Editor position:', positionData);
+      
+      editorRef.current = createCircleTextEditor(
+        positionData,
+        element.text || '',
+        positionData.fontSize,
+        element.fontFamily || getAvailableFontFamily(),
+        (newText: string) => {
+          console.log('💾 [CircleShape] Saving text:', newText);
+          isEditingRef.current = false;
+          updateInProgressRef.current = false;
+          setTextEditingElement(null);
+          editorRef.current = null;
+          
+          const cleaned = newText.replace(/\u200B/g, '').trim();
+          onUpdate(element.id, { text: cleaned, updatedAt: Date.now() });
+          
+          // Auto-switch to select tool
+          setTimeout(() => {
+            const store = useUnifiedCanvasStore.getState();
+            store.setSelectedTool('select');
+            store.selectElement(element.id, false);
+          }, 100);
+        },
+        () => {
+          console.log('❌ [CircleShape] Edit cancelled');
+          isEditingRef.current = false;
+          updateInProgressRef.current = false;
+          setTextEditingElement(null);
+          editorRef.current = null;
+        },
+        handleTextChange
+      );
     });
-    
-    console.log('🔄 [CircleShape] Transform complete:', { newRadius });
-  }, [element.id, element.radius, onUpdate]);
+  }, [element, calculateTextareaPosition, setTextEditingElement, onUpdate, handleTextChange]);
 
-  // Text editing effect - same pattern as StickyNoteShape
   useEffect(() => {
-    if (textEditingElementId !== element.id || !stageRef?.current) {
-      // Clean up any existing editor when this element is no longer being edited
-      if (cleanupEditorRef.current && textEditingElementId !== element.id) {
-        console.log('🔵 [CircleShape] Cleaning up editor - element no longer being edited');
-        cleanupEditorRef.current();
-        cleanupEditorRef.current = null;
-      }
-      return;
+    if (textEditingElementId === element.id && !isEditingRef.current) {
+      startEditing();
     }
-
-    // Prevent multiple editors for the same element
-    if (cleanupEditorRef.current) {
-      console.log('🔵 [CircleShape] Editor already exists, skipping creation');
-      return;
+    
+    if (textEditingElementId !== element.id && editorRef.current && isEditingRef.current) {
+      console.log('🛑 [CircleShape] Stopping editing session - different element selected');
+      tweenRef.current?.destroy(); // Stop animation if editing is cancelled
+      editorRef.current.cleanup();
+      editorRef.current = null;
+      isEditingRef.current = false;
+      updateInProgressRef.current = false;
     }
-
-    const positionData = calculateTextareaPosition();
-    if (!positionData) {
-      console.warn('🔵 [CircleShape] ⚠️ Could not calculate position data for text editing');
-      return;
-    }
-
-    console.log('🔵 [CircleShape] *** STARTING PROGRAMMATIC TEXT EDITING ***', element.id);
-
-    const cleanup = createCircleTextEditor(
-      positionData,
-      element.text || '',
-      positionData.fontSize,
-      element.fontFamily || getAvailableFontFamily(),
-      (newText: string) => {
-        console.log('💾 [CircleShape] Saving programmatic text:', newText);
-        
-        const finalText = newText.trim();
-        
-        cleanupEditorRef.current = null;
-        setTextEditingElement(null);
-        
-        onUpdate(element.id, {
-          text: finalText,
-          updatedAt: Date.now()
-        });
-        
-        // Auto-switch to select tool and select element
-        setTimeout(() => {
-          const store = useUnifiedCanvasStore.getState();
-          store.setSelectedTool('select');
-          
-          setTimeout(() => {
-            store.clearSelection();
-            setTimeout(() => {
-              store.selectElement(element.id, false);
-            }, 50);
-          }, 50);
-        }, 100);
-      },
-      () => {
-        cleanupEditorRef.current = null;
-        setTextEditingElement(null);
-      }
-    );
-
-    cleanupEditorRef.current = cleanup;
-
+    
     return () => {
-      if (cleanupEditorRef.current) {
-        cleanupEditorRef.current();
-        cleanupEditorRef.current = null;
+      // Clear any pending timeouts
+      if (timeoutsRef.current.resize) clearTimeout(timeoutsRef.current.resize);
+      if (timeoutsRef.current.focus) clearTimeout(timeoutsRef.current.focus);
+      
+      if (editorRef.current) {
+        console.log('🧹 [CircleShape] Component cleanup - removing editor');
+        tweenRef.current?.destroy(); // Stop animation on unmount
+        editorRef.current.cleanup();
+        editorRef.current = null;
+        isEditingRef.current = false;
+        updateInProgressRef.current = false;
       }
     };
-  }, [textEditingElementId, element.id, calculateTextareaPosition, element.text, element.fontFamily, onUpdate, setTextEditingElement, stageRef]);
-  
-  const hasContent = element.text && element.text.trim().length > 0;
-  const displayText = hasContent ? element.text! : 'Add text';
-  const textColor = hasContent 
-    ? (element.textColor || '#FFFFFF')
-    : 'rgba(255, 255, 255, 0.6)'; // Semi-transparent for placeholder
-  
-  // Check if this element is currently being edited
-  const isCurrentlyEditing = textEditingElementId === element.id;
-  
-  // Determine if events should pass through for drawing tools
-  const drawingTools = ['pen', 'marker', 'highlighter', 'washi-tape', 'eraser'];
-  const shouldAllowDrawing = drawingTools.includes(selectedTool);
+  }, [textEditingElementId, element.id]); // Remove startEditing dependency
 
-  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
-    if (isDuplicating.current) {
-      isDuplicating.current = false;
-      return;
-    }
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
+    const node = circleRef.current;
+    if (!node) return;
     
-    // Update position for normal drag
-    const group = e.target as Konva.Group;
+    tweenRef.current?.destroy(); // Stop any resize animations before transform
+    const scaleX = node.scaleX();
+    
+    // Reset scale and update radius
+    node.scaleX(1);
+    node.scaleY(1);
+    
     onUpdate(element.id, {
-      x: group.x(),
-      y: group.y(),
+      x: node.x(),
+      y: node.y(),
+      radius: Math.max(25, (element.radius || 50) * scaleX),
       updatedAt: Date.now()
+    });
+  }, [element.id, element.radius, onUpdate]);
+
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<any>) => {
+    onUpdate(element.id, {
+        x: e.target.x(),
+        y: e.target.y(),
+        updatedAt: Date.now()
     });
   }, [element.id, onUpdate]);
 
-  // Handle click events for selection
-  const handleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Don't interfere with double-click
-    if (e.evt.detail === 2) return;
-    
-    // Call the original click handler from konvaProps
-    if (konvaProps.onClick) {
-      konvaProps.onClick(e);
-    }
-  }, [konvaProps]);
+  const hasContent = element.text && element.text.trim().length > 0;
+  const displayText = hasContent ? element.text! : 'Add text';
+  const textColor = hasContent ? (element.textColor || '#FFFFFF') : 'rgba(255, 255, 255, 0.6)';
+
+  const isCurrentlyEditing = textEditingElementId === element.id;
+  const shouldAllowDrawing = ['pen', 'marker', 'highlighter', 'eraser'].includes(selectedTool);
 
   return (
     <>
@@ -389,69 +504,65 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
         {...konvaProps}
         ref={groupRef}
         id={element.id}
-        onClick={handleClick}
-        onDblClick={handleDoubleClick}
-        onDragEnd={handleDragEnd}
+        onDblClick={startEditing}
         draggable={!shouldAllowDrawing}
         listening={!shouldAllowDrawing}
+        onDragEnd={handleDragEnd}
       >
-        {/* Circle background */}
         <Circle
+          onDblClick={startEditing}
           ref={circleRef}
           x={radius}
           y={radius}
           radius={radius}
-          fill={element.fill || '#22C55E'}
-          stroke={element.stroke || '#16A34A'}
-          strokeWidth={element.strokeWidth || 2}
+          fill={element.fill || '#EF4444'}
+          stroke={element.stroke || '#DC2626'}
+          strokeWidth={2}
           onTransformEnd={handleTransformEnd}
         />
-
-        {/* Text content - ONLY render when NOT being edited */}
+        {/* Only show text when NOT editing - prevents dual display */}
         {!isCurrentlyEditing && (
-          <Text
-            ref={textNodeRef}
-            x={radius/2}
-            y={radius - (element.fontSize || 14)/2}
-            width={radius}
-            height={element.fontSize || 14}
-            text={displayText}
-            fontSize={element.fontSize || 14}
-            fontFamily={getAvailableFontFamily()}
-            fill={textColor}
-            align="center"
-            verticalAlign="middle"
-            fontStyle={hasContent ? 'normal' : 'italic'}
-            ellipsis={true}
-            wrap="none"
-            onTransformEnd={handleTransformEnd}
-          />
+          <Group
+            clipFunc={(ctx) => {
+              ctx.arc(radius, radius, radius, 0, Math.PI * 2, false);
+            }}
+          >
+            <Text
+              onDblClick={startEditing}
+              ref={textNodeRef}
+              x={radius - (radius * 0.85)} // Use much more horizontal space
+              y={radius - (radius * 0.85)} // Use much more vertical space  
+              width={radius * EDITOR_WIDTH_MULT}
+              height={radius * EDITOR_WIDTH_MULT}
+              text={displayText}
+              fontSize={fontSize}
+              fontFamily={getAvailableFontFamily()}
+              fill={textColor}
+              align="center"
+              verticalAlign="middle"
+              fontStyle={hasContent ? 'normal' : 'italic'}
+              wrap="word"
+              padding={diameter * 0.05} // Much less padding for more text space
+              ellipsis={false}
+            />
+          </Group>
         )}
       </Group>
-      
-      {/* Transformer with corner-only handles - same pattern as StickyNoteShape */}
-      {isSelected && !cleanupEditorRef.current && (
+      {isSelected && !isCurrentlyEditing && (
         <Transformer
           ref={transformerRef}
           enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
           rotateEnabled={false}
-          borderStroke="#22C55E"
+          borderStroke="#3B82F6"
           borderStrokeWidth={1}
-          anchorStroke="#22C55E"
+          anchorStroke="#3B82F6"
           anchorFill="#ffffff"
           anchorSize={6}
-          anchorStrokeWidth={1}
-          keepRatio={true} // Keep circular shape
           ignoreStroke={true}
+          keepRatio={true}
           boundBoxFunc={(oldBox, newBox) => {
-            const MIN_SIZE = 50;
-            const size = Math.max(MIN_SIZE, Math.max(newBox.width, newBox.height));
-            
-            return {
-              ...newBox,
-              width: size,
-              height: size,
-            };
+            const size = Math.max(RESIZE_CONSTANTS.DEBOUNCE_THRESHOLD, newBox.width);
+            return { ...newBox, width: size, height: size };
           }}
         />
       )}

@@ -49,12 +49,6 @@ export const RectangleTool: React.FC<RectangleToolProps> = ({ stageRef, isActive
     setShowPlacementGuide(true);
   }, [isActive, stageRef, editingTextId]);
 
-  // Start text editing for newly created rectangle
-  const startTextEditing = useCallback((elementId: ElementId) => {
-    console.log('🟨 [RectangleTool] Starting text editing for rectangle:', elementId);
-    setTextEditingElement(elementId);
-  }, [setTextEditingElement]);
-
   // Handle click to place rectangle
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     console.log('🟨 [RectangleTool] *** CLICK DETECTED ***:', {
@@ -135,13 +129,7 @@ export const RectangleTool: React.FC<RectangleToolProps> = ({ stageRef, isActive
       }, 50);
     }, 50);
 
-    // Start text editing after tool switch and selection
-    setTimeout(() => {
-      console.log('🟨 [RectangleTool] *** STARTING EDITING FOR NEW RECTANGLE ***:', rectangleElement.id);
-      startTextEditing(rectangleElement.id);
-    }, 150); // Delay to ensure tool switch and selection complete first
-    
-  }, [isActive, stageRef, addElement, editingTextId, startTextEditing]);
+  }, [isActive, stageRef, addElement, editingTextId, setSelectedTool]);
 
   // Handle mouse leave to hide placement guide
   const handlePointerLeave = useCallback(() => {

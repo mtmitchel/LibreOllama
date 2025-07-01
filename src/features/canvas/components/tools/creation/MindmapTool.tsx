@@ -13,8 +13,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { nanoid } from 'nanoid';
-import { RectangleElement, ElementId } from '../../../types/enhanced.types';
+import { createMindmapStructure } from '../../../utils/mindmapUtils';
 
 interface MindmapToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -49,12 +48,6 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
     setShowPlacementGuide(true);
   }, [isActive, stageRef, editingTextId]);
 
-  // Start text editing for newly created mindmap node
-  const startTextEditing = useCallback((elementId: ElementId) => {
-    console.log('🧠 [MindmapTool] Starting text editing for mindmap node:', elementId);
-    setTextEditingElement(elementId);
-  }, [setTextEditingElement]);
-
   // Handle click to place mindmap node
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     console.log('🧠 [MindmapTool] *** CLICK DETECTED ***:', {
@@ -88,34 +81,16 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
     const transform = stage.getAbsoluteTransform().copy().invert();
     const pos = transform.point(pointer);
 
-    // Create new mindmap node element with empty text for immediate editing
-    const mindmapElement: RectangleElement = {
-      id: nanoid() as ElementId,
-      type: 'rectangle',
-      x: pos.x - 70, // Center the mindmap bubble
-      y: pos.y - 35,
-      width: 140,
-      height: 70, // More oval-like proportions for mindmap nodes
-      fill: '#F3F4F6', // Soft gray background
-      stroke: '#6366F1', // Indigo border
-      strokeWidth: 2,
-      cornerRadius: 25, // Very rounded for bubble effect
-      text: '', // Start with empty text so immediate editing begins
-      textColor: '#1F2937',
-      fontSize: 14,
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      textAlign: 'center',
-      isLocked: false,
-      sectionId: undefined,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      isHidden: false
-    };
+    // Create the entire mindmap structure
+    const { centralNode, childNodes, connectors } = createMindmapStructure(pos.x, pos.y);
 
-    // Add element to canvas first
-    addElement(mindmapElement);
+    // Add all elements to the canvas
+    const store = useUnifiedCanvasStore.getState();
+    store.addElement(centralNode);
+    childNodes.forEach(node => store.addElement(node));
+    connectors.forEach(connector => store.addElement(connector));
     
-    console.log('🧠 [MindmapTool] *** CREATED MINDMAP NODE ***:', mindmapElement.id, 'at position:', pos);
+    console.log('🧠 [MindmapTool] *** CREATED MINDMAP STRUCTURE ***:', centralNode.id, 'at position:', pos);
     
     // Hide placement guide 
     setShowPlacementGuide(false);
@@ -125,23 +100,22 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
     console.log('🧠 [MindmapTool] *** SWITCHING TO SELECT TOOL IMMEDIATELY ***');
     setSelectedTool('select');
     
-    // Select the newly created mindmap node
+    // Select the newly created mindmap central node
     setTimeout(() => {
-      const store = useUnifiedCanvasStore.getState();
       store.clearSelection();
       setTimeout(() => {
-        store.selectElement(mindmapElement.id, false);
-        console.log('🧠 [MindmapTool] Selected newly created mindmap node:', mindmapElement.id);
+        store.selectElement(centralNode.id, false);
+        console.log('🧠 [MindmapTool] Selected newly created mindmap central node:', centralNode.id);
       }, 50);
     }, 50);
 
     // Start text editing after tool switch and selection
     setTimeout(() => {
-      console.log('🧠 [MindmapTool] *** STARTING EDITING FOR NEW MINDMAP NODE ***:', mindmapElement.id);
-      startTextEditing(mindmapElement.id);
+      console.log('🧠 [MindmapTool] *** STARTING EDITING FOR NEW MINDMAP NODE ***:', centralNode.id);
+      store.setTextEditingElement(centralNode.id);
     }, 150); // Delay to ensure tool switch and selection complete first
     
-  }, [isActive, stageRef, addElement, editingTextId, startTextEditing]);
+  }, [isActive, stageRef, addElement, editingTextId, setSelectedTool]);
 
   // Handle mouse leave to hide placement guide
   const handlePointerLeave = useCallback(() => {
@@ -236,42 +210,7 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
 
   return (
     <Group listening={false}>
-      {/* Mindmap bubble preview following cursor */}
-      {showPlacementGuide && cursorPosition && !editingTextId && (
-        <Group>
-          {/* Faint mindmap bubble shadow preview */}
-          <Group x={cursorPosition.x - 70} y={cursorPosition.y - 35}>
-            <Rect
-              width={140}
-              height={70}
-              fill="#F3F4F6"
-              stroke="#6366F1"
-              strokeWidth={2}
-              cornerRadius={25}
-              opacity={0.6}
-              shadowColor="rgba(0, 0, 0, 0.1)"
-              shadowBlur={8}
-              shadowOffset={{ x: 2, y: 2 }}
-              shadowOpacity={0.5}
-              listening={false}
-            />
-            <Text
-              x={20}
-              y={30}
-              width={100}
-              height={10}
-              text="Add idea"
-              fontSize={14}
-              fontFamily="Inter, Arial, sans-serif"
-              fill="rgba(31, 41, 55, 0.7)"
-              align="center"
-              verticalAlign="middle"
-              fontStyle="italic"
-              listening={false}
-            />
-          </Group>
-        </Group>
-      )}
+      {/* Mindmap preview is disabled for now to avoid showing a single bubble */}
     </Group>
   );
 };

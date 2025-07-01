@@ -3,7 +3,7 @@ import { Transformer, Circle } from 'react-konva';
 import Konva from 'konva';
 
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
-import { ElementId, CanvasElement } from '../../types/enhanced.types';
+import { ElementId, CanvasElement, isTableElement } from '../../types/enhanced.types';
 
 type CustomTransformerProps = {
   selectedNodeIds: ElementId[];
@@ -21,6 +21,12 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
   const updateElement = useUnifiedCanvasStore((state) => state.updateElement);
   const addToHistory = useUnifiedCanvasStore((state) => state.addToHistory);
 
+  // Filter out table elements - they have their own transformer system
+  const filteredSelectedNodeIds = selectedNodeIds.filter(id => {
+    const element = elements.get(id);
+    return element && !isTableElement(element);
+  });
+
   // Get the bounding box with padding
   const getTransformerBox = useCallback(() => {
     if (!transformerRef.current) return null;
@@ -34,12 +40,22 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
 
     const stage = stageRef.current;
     const transformer = transformerRef.current;
-    const nodes = selectedNodeIds
+    
+    // Only attach to non-table elements
+    const nodes = filteredSelectedNodeIds
       .map((id) => stage.findOne<Konva.Node>(`#${id}`))
       .filter((node): node is Konva.Node => !!node);
 
     transformer.nodes(nodes);
     transformer.getLayer()?.batchDraw();
+
+    // If no valid nodes (e.g., only tables selected), hide transformer
+    if (nodes.length === 0) {
+      transformer.hide();
+      return;
+    } else {
+      transformer.show();
+    }
 
     let hoverTimeout: NodeJS.Timeout;
     
@@ -173,7 +189,7 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
         stage.container().style.cursor = 'default';
       }
     };
-  }, [selectedNodeIds, stageRef, isRotating, rotationStart, showRotationHandle, getTransformerBox, updateElement, addToHistory]);
+  }, [filteredSelectedNodeIds, stageRef, isRotating, rotationStart, showRotationHandle, getTransformerBox, updateElement, addToHistory]);
 
   const handleTransformEnd = (e: Konva.KonvaEventObject<any>) => {
     const node = e.target;
@@ -216,6 +232,11 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
     updateElement(elementId, updates);
     addToHistory('Transform Element');
   };
+
+  // If no non-table elements are selected, don't render transformer
+  if (filteredSelectedNodeIds.length === 0) {
+    return null;
+  }
 
   return (
     <Transformer

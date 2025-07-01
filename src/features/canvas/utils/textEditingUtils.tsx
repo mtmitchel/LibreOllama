@@ -48,7 +48,8 @@ export const measureTextDimensions = (
   fontSize: number, 
   fontFamily: string, 
   maxWidth: number = 600,
-  enforceMinimums: boolean = true
+  enforceMinimums: boolean = true,
+  forceWordWrap: boolean = false
 ) => {
   if (!text || text.trim().length === 0) {
     return {
@@ -65,12 +66,23 @@ export const measureTextDimensions = (
     fontWeight: CANVAS_TEXT_CONFIG.FONT_WEIGHT,
     lineHeight: CANVAS_TEXT_CONFIG.LINE_HEIGHT,
     letterSpacing: CANVAS_TEXT_CONFIG.LETTER_SPACING,
-    // Don't set width for single-line text to get natural width
-    ...(text.includes('\n') && { wrap: 'word', width: maxWidth - CANVAS_TEXT_CONFIG.PADDING }),
+    // Apply width constraints for multi-line text OR when force wrapping is enabled
+    ...((text.includes('\n') || forceWordWrap) && { wrap: 'word', width: maxWidth - CANVAS_TEXT_CONFIG.PADDING }),
   });
 
   const textWidth = tempText.getTextWidth();
   const textHeight = tempText.height(); // Use height() instead of deprecated getTextHeight()
+
+  console.log('📏 [measureTextDimensions] Text measurement details:', {
+    text: text.substring(0, 30) + '...',
+    maxWidth,
+    forceWordWrap,
+    hasLineBreaks: text.includes('\n'),
+    appliedWrapping: text.includes('\n') || forceWordWrap,
+    measuredWidth: textWidth,
+    measuredHeight: textHeight,
+    finalPadding: CANVAS_TEXT_CONFIG.PADDING
+  });
 
   // Clean up
   tempText.destroy();

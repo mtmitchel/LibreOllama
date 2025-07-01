@@ -49,12 +49,6 @@ export const TriangleTool: React.FC<TriangleToolProps> = ({ stageRef, isActive }
     setShowPlacementGuide(true);
   }, [isActive, stageRef, editingTextId]);
 
-  // Start text editing for newly created triangle
-  const startTextEditing = useCallback((elementId: ElementId) => {
-    console.log('🔺 [TriangleTool] Starting text editing for triangle:', elementId);
-    setTextEditingElement(elementId);
-  }, [setTextEditingElement]);
-
   // Handle click to place triangle
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     console.log('🔺 [TriangleTool] *** CLICK DETECTED ***:', {
@@ -88,7 +82,7 @@ export const TriangleTool: React.FC<TriangleToolProps> = ({ stageRef, isActive }
     const transform = stage.getAbsoluteTransform().copy().invert();
     const pos = transform.point(pointer);
 
-    const size = 80;
+    const size = 120;
     const height = size * Math.sqrt(3) / 2;
 
     // Create new triangle element with empty text for immediate editing
@@ -142,14 +136,8 @@ export const TriangleTool: React.FC<TriangleToolProps> = ({ stageRef, isActive }
         console.log('🔺 [TriangleTool] Selected newly created triangle:', triangleElement.id);
       }, 50);
     }, 50);
-
-    // Start text editing after tool switch and selection
-    setTimeout(() => {
-      console.log('🔺 [TriangleTool] *** STARTING EDITING FOR NEW TRIANGLE ***:', triangleElement.id);
-      startTextEditing(triangleElement.id);
-    }, 150); // Delay to ensure tool switch and selection complete first
     
-  }, [isActive, stageRef, addElement, editingTextId, startTextEditing]);
+  }, [isActive, stageRef, addElement, editingTextId, setSelectedTool]);
 
   // Handle mouse leave to hide placement guide
   const handlePointerLeave = useCallback(() => {
@@ -242,7 +230,7 @@ export const TriangleTool: React.FC<TriangleToolProps> = ({ stageRef, isActive }
 
   if (!isActive) return null;
 
-  const size = 80;
+  const size = 120;
   const height = size * Math.sqrt(3) / 2;
   const trianglePoints = [
     size / 2, 0,        // Top point
@@ -271,10 +259,10 @@ export const TriangleTool: React.FC<TriangleToolProps> = ({ stageRef, isActive }
               listening={false}
             />
             <Text
-              x={10}
-              y={height / 2 - 5}
-              width={60}
-              height={10}
+              x={0}
+              y={height * 0.62}
+              width={size}
+              height={14}
               text="Add text"
               fontSize={14}
               fontFamily="Inter, Arial, sans-serif"

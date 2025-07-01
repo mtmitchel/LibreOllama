@@ -49,12 +49,6 @@ export const CircleTool: React.FC<CircleToolProps> = ({ stageRef, isActive }) =>
     setShowPlacementGuide(true);
   }, [isActive, stageRef, editingTextId]);
 
-  // Start text editing for newly created circle
-  const startTextEditing = useCallback((elementId: ElementId) => {
-    console.log('⭕ [CircleTool] Starting text editing for circle:', elementId);
-    setTextEditingElement(elementId);
-  }, [setTextEditingElement]);
-
   // Handle click to place circle
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     console.log('⭕ [CircleTool] *** CLICK DETECTED ***:', {
@@ -134,14 +128,8 @@ export const CircleTool: React.FC<CircleToolProps> = ({ stageRef, isActive }) =>
         console.log('⭕ [CircleTool] Selected newly created circle:', circleElement.id);
       }, 50);
     }, 50);
-
-    // Start text editing after tool switch and selection
-    setTimeout(() => {
-      console.log('⭕ [CircleTool] *** STARTING EDITING FOR NEW CIRCLE ***:', circleElement.id);
-      startTextEditing(circleElement.id);
-    }, 150); // Delay to ensure tool switch and selection complete first
     
-  }, [isActive, stageRef, addElement, editingTextId, startTextEditing]);
+  }, [isActive, stageRef, addElement, editingTextId, setSelectedTool]);
 
   // Handle mouse leave to hide placement guide
   const handlePointerLeave = useCallback(() => {

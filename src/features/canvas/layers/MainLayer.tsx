@@ -243,25 +243,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               isSelected={isSelected}
               onSelect={() => selectElement(element.id as ElementId)} // Pass actual select function
               onUpdate={updateElement} // Pass actual update function
-              stageRef={{ current: null }}
-            />
-          </CanvasErrorBoundary>
-        );
-
-      case 'connector':
-        const connectorElement = element as any;
-        return (
-          <CanvasErrorBoundary key={element.id}>
-            <Line
-              id={element.id}
-              points={connectorElement.points || []}
-              stroke={connectorElement.stroke || '#000000'}
-              strokeWidth={connectorElement.strokeWidth || 2}
-              lineCap="round"
-              lineJoin="round"
-              listening={true}
-              draggable={false}
-              {...konvaElementProps}
+              stageRef={stageRef || { current: null }} // Pass the actual stageRef
             />
           </CanvasErrorBoundary>
         );
