@@ -32,6 +32,8 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
   const clearSelection = useUnifiedCanvasStore(state => state.clearSelection);
   const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
   const editingTextId = useUnifiedCanvasStore(state => state.textEditingElementId);
+  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
+  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
 
   // Local state for UI
   const [showPlacementGuide, setShowPlacementGuide] = React.useState(false);
@@ -117,7 +119,15 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
     // Add element to canvas first
     addElement(textElement);
     
-    console.log('📝 [TextTool] *** CREATED TEXT ELEMENT ***:', textElement.id, 'at position:', pos, 'element:', textElement);
+    // Check if the text was created within a sticky note container
+    const stickyNoteId = findStickyNoteAtPoint(pos);
+    
+    if (stickyNoteId) {
+      console.log('📝 [TextTool] Adding text to sticky note container:', stickyNoteId);
+      addElementToStickyNote(textElement.id, stickyNoteId);
+    }
+    
+    console.log('📝 [TextTool] *** CREATED TEXT ELEMENT ***:', textElement.id, 'at position:', pos, 'inStickyNote:', !!stickyNoteId);
     
     // Hide placement guide
     setShowPlacementGuide(false);

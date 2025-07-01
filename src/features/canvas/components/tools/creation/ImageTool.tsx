@@ -21,6 +21,8 @@ export const ImageTool: React.FC<ImageToolProps> = ({ stageRef, isActive }) => {
   
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
+  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
   
   // Handle file selection
   const handleFileSelect = useCallback((file: File) => {
@@ -47,6 +49,15 @@ export const ImageTool: React.FC<ImageToolProps> = ({ stageRef, isActive }) => {
         };
         
         addElement(imageElement);
+        
+        // Check if the image was created within a sticky note container
+        const stickyNoteId = findStickyNoteAtPoint(placeholderPosition);
+        
+        if (stickyNoteId) {
+          console.log('🖼️ [ImageTool] Adding image to sticky note container:', stickyNoteId);
+          addElementToStickyNote(imageElement.id, stickyNoteId);
+        }
+        
         setSelectedTool('select');
         setPlaceholderPosition(null);
       };

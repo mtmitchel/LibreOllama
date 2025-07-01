@@ -83,6 +83,11 @@ export interface RectangleElement extends BaseElement {
   stroke?: string;
   strokeWidth?: number;
   cornerRadius?: number;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 export interface CircleElement extends BaseElement {
@@ -91,6 +96,11 @@ export interface CircleElement extends BaseElement {
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 export interface SectionElement extends Omit<BaseElement, 'id'> {
@@ -202,6 +212,11 @@ export interface StickyNoteElement extends BaseElement {
   textDecoration?: string;
   textAlign?: 'left' | 'center' | 'right';
   richTextSegments?: RichTextSegment[];
+  childElementIds?: ElementId[];
+  isContainer?: boolean;
+  allowedChildTypes?: string[];
+  clipChildren?: boolean;
+  maxChildElements?: number;
 }
 
 export interface PenElement extends BaseElement {
@@ -215,12 +230,17 @@ export interface PenElement extends BaseElement {
 
 export interface TriangleElement extends BaseElement {
   type: 'triangle';
+  width: number;
+  height: number;
   points: number[];
-  width?: number;
-  height?: number;
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 export interface StarElement extends BaseElement {
@@ -407,6 +427,15 @@ export function isHighlighterElement(el: CanvasElement): el is HighlighterElemen
 
 export function isWashiTapeElement(el: CanvasElement): el is WashiTapeElement {
   return el.type === 'washi-tape';
+}
+
+// Container-related utility functions
+export function isContainerElement(el: CanvasElement): el is (SectionElement | StickyNoteElement) & { childElementIds: ElementId[] } {
+  return (el.type === 'section' || el.type === 'sticky-note') && 'childElementIds' in el;
+}
+
+export function isStickyNoteContainer(el: CanvasElement): el is StickyNoteElement & { childElementIds: ElementId[] } {
+  return el.type === 'sticky-note' && 'childElementIds' in el && Array.isArray((el as any).childElementIds);
 }
 
 // Strict event map ensures all event payloads are correctly typed

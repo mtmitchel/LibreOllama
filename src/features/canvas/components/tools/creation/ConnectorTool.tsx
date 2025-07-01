@@ -97,6 +97,8 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const elements = useUnifiedCanvasStore(canvasSelectors.elements);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
+  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
   
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
@@ -239,6 +241,18 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     });
     
     addElement(connectorElement);
+    
+    // Check if the connector was created within a sticky note container
+    const midPoint = {
+      x: (drawingState.startPoint.x + drawingState.currentEndPoint.x) / 2,
+      y: (drawingState.startPoint.y + drawingState.currentEndPoint.y) / 2
+    };
+    const stickyNoteId = findStickyNoteAtPoint(midPoint);
+    
+    if (stickyNoteId) {
+      console.log('🔗 [ConnectorTool] Adding connector to sticky note container:', stickyNoteId);
+      addElementToStickyNote(connectorElement.id, stickyNoteId);
+    }
     
     // Reset drawing state
     setDrawingState({

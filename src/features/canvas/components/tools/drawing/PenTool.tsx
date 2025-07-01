@@ -9,6 +9,8 @@ import React, { useCallback, useRef } from 'react';
 import { Line } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { nanoid } from 'nanoid';
+import { PenElement } from '../../../types/enhanced.types';
 
 interface PenToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -23,7 +25,14 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
   const currentPath = useUnifiedCanvasStore(state => state.currentPath);
   const startDrawing = useUnifiedCanvasStore(state => state.startDrawing);
   const updateDrawing = useUnifiedCanvasStore(state => state.updateDrawing);
-  const finishDrawing = useUnifiedCanvasStore(state => state.finishDrawing); // Unified store uses finishDrawing
+  const finishDrawing = useUnifiedCanvasStore(state => state.finishDrawing);
+  const cancelDrawing = useUnifiedCanvasStore(state => state.cancelDrawing);
+  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+
+  // Container related actions
+  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
+  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
+  const addElement = useUnifiedCanvasStore(state => state.addElement);
 
   // Handle pointer down - start drawing
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -55,14 +64,17 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
 
   // Handle pointer up - finish drawing
   const handlePointerUp = useCallback(() => {
-    if (!isActive || !isDrawingRef.current) return;
+    if (!isActive || !isDrawingRef.current || !stageRef.current) return;
 
     isDrawingRef.current = false;
     console.log('🖊️ [PenTool] Finishing drawing');
-    
-    // The finishDrawing method in the store will create the element
+
+    // Use store's finishDrawing which now handles sticky note integration
     finishDrawing();
-  }, [isActive, finishDrawing]);
+
+    // Auto-switch to select tool
+    setSelectedTool('select');
+  }, [isActive, finishDrawing, setSelectedTool]);
 
   // Attach event listeners to stage when active
   React.useEffect(() => {

@@ -154,22 +154,15 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     
     // Define which tools are interactive (user must click/drag on canvas)
     const interactiveTools = [
-      'select', 'pan', 'text', 'pen', 'marker', 'highlighter', 
+      'select', 'pan', 'text', 'sticky-note', 'pen', 'marker', 'highlighter', 
       'eraser', 'section', 'table', 'image', 
-      'connector-line', 'connector-arrow'
+      'connector-line', 'connector-arrow',
+      // Shape tools now use interactive pattern like sticky notes
+      'rectangle', 'circle', 'triangle', 'mindmap'
     ];
     
-    // Check if this is a shape creation tool that creates immediately
-    const immediateShapeTools = ['rectangle', 'circle', 'triangle', 'mindmap', 'sticky-note'];
-    
-    if (immediateShapeTools.includes(toolId) && toolId in SHAPE_CREATORS) {
-      // Create shape at center of viewport
-      const shape = SHAPE_CREATORS[toolId as ShapeType](400, 300);
-      addElement(shape);
-      console.log('🎨 [MODERN TOOLBAR] Created shape:', toolId, shape.id);
-      // Keep current tool as select
-      setSelectedTool('select');
-    } else if (interactiveTools.includes(toolId)) {
+    // All tools are now interactive - no immediate shape creation
+    if (interactiveTools.includes(toolId)) {
       // Switch to interactive tool
       setSelectedTool(toolId);
     } else {
@@ -247,12 +240,16 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 {tool.id === 'sticky-note' && isActive && (
                   <div className={styles.stickyColorBar}>
                     {[
-                      { color: '#FFE299', label: 'Yellow' },
-                      { color: '#A8DAFF', label: 'Blue' },
-                      { color: '#FFB3BA', label: 'Pink' },
-                      { color: '#BAFFC9', label: 'Green' },
-                      { color: '#FFDFBA', label: 'Peach' },
-                      { color: '#E6BAFF', label: 'Purple' }
+                      { color: '#FFF2CC', label: 'Soft Yellow (Default)' },
+                      { color: '#E8F5E8', label: 'Soft Green' },
+                      { color: '#E0F7F7', label: 'Soft Teal' },
+                      { color: '#E6F3FF', label: 'Soft Blue' },
+                      { color: '#F0E6FF', label: 'Soft Violet' },
+                      { color: '#FFE6F2', label: 'Soft Pink' },
+                      { color: '#FFE8E6', label: 'Soft Coral' },
+                      { color: '#FFF0E6', label: 'Soft Peach' },
+                      { color: '#FFFFFF', label: 'White' },
+                      { color: '#F5F5F5', label: 'Soft Gray' }
                     ].map((colorOption, index) => (
                       <button
                         key={index}
@@ -263,7 +260,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                           console.log('🎨 [MODERN TOOLBAR] Color selected:', colorOption.color);
                         }}
                         className={styles.colorButton}
-                        style={{ backgroundColor: colorOption.color }}
+                        style={{ backgroundColor: colorOption.color, border: colorOption.color === '#FFFFFF' ? '1px solid #E5E7EB' : 'none' }}
                         title={colorOption.label}
                       />
                     ))}

@@ -4,9 +4,9 @@
 
 ## **📋 EXECUTIVE SUMMARY**
 
-### **Current Status: ✅ FULLY PRODUCTION READY - ALL CRITICAL SYSTEMS COMPLETED**
+### **Current Status: ⚠️ NEAR-PRODUCTION READY - CRITICAL TEXT EDITING BUG PERSISTS**
 
-The LibreOllama Canvas is a **complete, professional-grade FigJam-style whiteboard application** with comprehensive drawing tools, professional UX, and production-ready architecture. All core systems are implemented and working at industry standards with 60+ FPS performance handling 1000+ elements.
+The LibreOllama Canvas is a **nearly complete, professional-grade FigJam-style whiteboard application** with comprehensive drawing tools, professional UX, and production-ready architecture. All core systems are implemented and working at industry standards with 60+ FPS performance handling 1000+ elements. **However, a critical shape text editing bug prevents full production deployment.**
 
 ### **🚀 COMPREHENSIVE COMPLETION UPDATE (January 2025)**
 **ALL CRITICAL DEVELOPMENT PHASES COMPLETED** - Professional canvas application ready for production deployment:
@@ -27,15 +27,116 @@ The LibreOllama Canvas is a **complete, professional-grade FigJam-style whiteboa
 - ✅ **Performance Excellence**: 95% viewport culling, 60+ FPS with 1000+ elements
 - ✅ **Production Architecture**: Type-safe, error-resilient, deployment-ready system
 
-### **🚨 CURRENT STATUS: ALL CRITICAL ISSUES RESOLVED ✅**
+### **🚨 CURRENT STATUS: SHAPE TEXT EDITING CRITICAL ISSUE PERSISTS ❌**
 
-#### **✅ MAJOR PROGRESS UPDATE (January 2025)**
-**All Critical Systems Completed**: 
+#### **⚠️ CURRENT SESSION PROGRESS UPDATE (January 2025)**
+**Shape Tools Text Editing Investigation**: Significant debugging work completed but core issue remains unresolved
+- ✅ **Consulted React-Konva Documentation**: Reviewed proper text editing patterns from official guides
+- ✅ **Implemented Conditional Rendering**: Applied `!isCurrentlyEditing` pattern to hide Konva Text during editing
+- ✅ **Fixed State Timing**: Set `textEditingElementId` BEFORE creating textarea editors to prevent dual display
+- ✅ **Applied Cross-Shape**: Updated Rectangle, Circle, Triangle shape components with fixes
+- ❌ **Issue Persists**: Two text fields still visible despite implementing recommended patterns
+
+#### **✅ PREVIOUSLY COMPLETED CRITICAL SYSTEMS**
 - ✅ **Performance Architecture**: Store-first architecture with 95% viewport culling
-- ✅ **Text Tool System**: Professional FigJam-style implementation with canvas-native editing
+- ✅ **Text Tool System**: Professional FigJam-style implementation with canvas-native editing  
 - ✅ **Undo/Redo System**: Complete history management with UI button states
-- ✅ **Toolbar Organization**: Professional icon cleanup and menu refinement  
+- ✅ **Toolbar Organization**: Professional icon cleanup and menu refinement
 - ✅ **User Experience**: Comprehensive keyboard shortcuts and streamlined tools
+
+---
+
+### **📝 SHAPE TEXT EDITING INVESTIGATION - STATUS: ❌ UNRESOLVED (Current Session)**
+
+**Problem**: Shape tools (Rectangle, Circle, Triangle, Mindmap) showing two text input fields simultaneously when editing text - both HTML textarea overlay AND Konva Text component visible at the same time.
+
+#### **Investigation Work Completed This Session**
+
+##### **1. React-Konva Documentation Research ✅**
+- **Consulted Official Guides**: Reviewed React-Konva text editing patterns and FigJam implementation guides
+- **Identified Proper Pattern**: Documentation clearly states to **completely hide Konva Text during editing**
+- **Key Insight**: Should only show HTML textarea overlay OR Konva Text, never both simultaneously
+- **Pattern Found**: `{!isCurrentlyEditing && (<Text ... />)}` for conditional rendering
+
+##### **2. Timing Issue Investigation ✅**
+- **Root Cause Identified**: `textEditingElementId` was being set AFTER textarea creation, causing brief dual display
+- **Fix Applied**: Moved `setTextEditingElement(element.id)` to execute BEFORE editor creation
+- **Error Handling Added**: Reset state if editor creation fails with `setTextEditingElement(null)`
+- **Applied Universally**: Updated all shape components (Rectangle, Circle, Triangle) with timing fix
+
+##### **3. Conditional Rendering Implementation ✅**
+- **Before**: `{textEditingElementId !== element.id && (<Text ... />)}`
+- **After**: `{!isCurrentlyEditing && (<Text ... />)}` with clear boolean logic
+- **Consistency**: Applied identical pattern across all three shape components
+- **State Management**: Added `const isCurrentlyEditing = textEditingElementId === element.id;`
+
+##### **4. Store State Debugging ✅**
+- **Enhanced Logging**: Added debug logs to `setTextEditingElement` in store to track state changes
+- **State Validation**: Added warnings when switching text editing between different elements
+- **Cleanup Verification**: Ensured proper cleanup when text editing state changes
+
+#### **Technical Changes Made**
+
+**Store Enhancement** (`unifiedCanvasStore.ts`):
+```typescript
+setTextEditingElement: (id) => {
+  const currentId = get().textEditingElementId;
+  console.log('🎯 [Store] setTextEditingElement:', { from: currentId, to: id });
+  
+  if (currentId && id && currentId !== id) {
+    console.log('⚠️ [Store] Switching text editing from', currentId, 'to', id);
+  }
+  
+  set({ textEditingElementId: id });
+},
+```
+
+**Shape Component Pattern** (Applied to Rectangle, Circle, Triangle):
+```typescript
+// CRITICAL: Set text editing state FIRST to hide Konva Text immediately
+setTextEditingElement(element.id);
+
+// Then create editor...
+const positionData = calculateTextareaPosition();
+if (!positionData) {
+  setTextEditingElement(null); // Reset if we can't create editor
+  return;
+}
+
+// Conditional rendering - ONLY render when NOT being edited
+{!isCurrentlyEditing && (
+  <Text ... />
+)}
+```
+
+#### **Expected vs Actual Results**
+- **Expected**: Only HTML textarea visible during text editing, Konva Text hidden
+- **Actual**: Both textarea and Konva Text still visible simultaneously  
+- **Pattern Applied**: Correctly implemented React-Konva recommended pattern
+- **Timing Fixed**: State updates before editor creation as intended
+
+#### **🚨 CRITICAL ISSUE STATUS: UNRESOLVED**
+
+Despite implementing all recommended React-Konva patterns and fixing state timing issues, the core problem persists. This suggests deeper architectural issues that require further investigation:
+
+**Potential Root Causes to Investigate**:
+1. **Multiple Component Instances**: Same shape being rendered multiple times in DOM
+2. **State Synchronization Lag**: React state updates not propagating fast enough
+3. **Event Handler Conflicts**: Multiple text editing sessions being initiated simultaneously  
+4. **Memory/Cleanup Issues**: Previous editors not being properly destroyed
+5. **React Rendering Cycles**: Component re-renders causing temporary dual display
+6. **Store Selector Issues**: Multiple components subscribing to same textEditingElementId
+
+**Next Investigation Steps Required**:
+- [ ] **Component Instance Audit**: Verify only one instance of each shape renders
+- [ ] **State Propagation Testing**: Add React DevTools to monitor state changes in real-time  
+- [ ] **Editor Lifecycle Debugging**: Track all editor creation/destruction events
+- [ ] **Memory Leak Detection**: Check for orphaned textarea elements in DOM
+- [ ] **Race Condition Analysis**: Investigate timing between state updates and renders
+
+**Status**: ❌ **CRITICAL BUG - REQUIRES CONTINUED INVESTIGATION**
+
+---
 
 #### **Text Tool Transformer Investigation - Status: ✅ RESOLVED (January 2025)**
 **Problem**: Text tool showing unwanted rotation handle and UI issues during editing
@@ -201,6 +302,49 @@ The LibreOllama Canvas is a **complete, professional-grade FigJam-style whiteboa
 4. **Event Conflicts**: Fixed UnifiedEventHandler to allow TextTool priority when active
 5. **Auto-Selection**: Enhanced timing and sequencing for element selection after editing
 6. **Group Bounds**: Added automatic bounds correction after scaling or dimension changes
+
+### **🗒️ Sticky Note Tool Issues - RESOLVED ✅ (January 2025)**
+
+**Problems Identified**:
+1. **Crosshair Cursor Issue**: Tool showing pointer instead of crosshair when selected
+2. **Missing Auto-Switch**: Not switching to select tool after sticky note placement
+3. **Text Input Cycling**: Letters cycling/disappearing during text entry
+
+**Solutions Implemented**:
+
+#### **1. Cursor Management Fix ✅**
+- **Namespaced Event Listeners**: Added `.stickyNoteTool` namespace for event priority (like TextTool)
+- **Proper Cursor Control**: Ensured crosshair cursor takes priority over other cursor settings
+- **Event Handler Priority**: Used namespaced listeners to prevent conflicts with other tools
+
+#### **2. Auto-Switch to Select Tool ✅**
+- **Post-Edit Tool Switching**: Added automatic switch to 'select' tool after text editing completion
+- **Element Selection**: Auto-selects the sticky note after editing for immediate resize/move capability
+- **Consistent UX**: Matches TextTool behavior for professional user experience
+
+#### **3. Text Input Stability Fix ✅**
+- **Debounced Input Handling**: Added 100ms debounce to prevent rapid state updates
+- **Event Isolation**: Added proper event stopPropagation and preventDefault
+- **Focus Management**: Improved textarea focus handling and DOM cleanup
+- **Memory Leak Prevention**: Added proper timeout cleanup and event listener removal
+
+**Technical Implementation**:
+```typescript
+// Namespaced event listeners for priority
+stage.on('pointermove.stickyNoteTool', handlePointerMove);
+stage.on('pointerdown.stickyNoteTool', handlePointerDown);
+
+// Auto-switch after editing
+store.setSelectedTool('select');
+store.selectElement(element.id, false);
+
+// Debounced input handling
+inputTimeout = setTimeout(() => {
+  onUpdate(element.id, { text: currentText, ... });
+}, 100);
+```
+
+**Status**: ✅ **COMPLETED** - Sticky note tool now provides stable, professional-grade experience with proper cursor management, auto-tool switching, and reliable text input.
 
 ### **📌 Text Tool Cursor Behavior - COMPLETED ✅ (December 30, 2024)**
 
@@ -741,7 +885,24 @@ export function getShapeCheckPoints(element: any): Point[];
 - [x] **Menu Layout Improved**: Shapes menu now cleaner and more focused, connector menu compact and efficient ✅
 - [x] **Tool Simplification**: Removed lasso and washi-tape tools to streamline core functionality ✅
 
+### **❌ SHAPE TOOLS TEXT EDITING - STATUS: CRITICAL ISSUE PERSISTS (Current Session)**
+- [x] **Investigation Completed**: Thorough debugging following React-Konva documentation patterns ✅
+- [x] **Conditional Rendering Applied**: Implemented `!isCurrentlyEditing` pattern to hide Konva Text ✅
+- [x] **State Timing Fixed**: Set `textEditingElementId` before creating editors to prevent dual display ✅
+- [x] **Cross-Shape Implementation**: Applied fixes to Rectangle, Circle, Triangle components ✅
+- [x] **Store Debugging Enhanced**: Added comprehensive logging to track text editing state changes ✅
+- [ ] **❌ ISSUE UNRESOLVED**: Two text fields still visible despite implementing all recommended patterns
+- [ ] **Requires Deep Investigation**: Potential component instance, state sync, or rendering cycle issues
+
 ### **🚨 NEXT PRIORITY PHASES**
+
+#### **PHASE 1 CRITICAL: Shape Text Editing Bug Resolution (URGENT - 2-3 days)**
+- [ ] **❌ CRITICAL**: Resolve dual text field display in shape text editing
+- [ ] **Component Instance Investigation**: Verify no duplicate shape rendering
+- [ ] **State Synchronization Analysis**: Monitor React state updates with DevTools
+- [ ] **Editor Lifecycle Audit**: Track textarea creation/destruction cycles
+- [ ] **Memory Leak Detection**: Check for orphaned DOM elements
+- [ ] **Race Condition Testing**: Investigate timing between state updates and renders
 
 #### **PHASE 3A: Core Feature Completion (1 week)**
 - [ ] **Context Menus**: Right-click operations for all elements (copy, paste, delete, properties)
@@ -945,6 +1106,10 @@ export function getShapeCheckPoints(element: any): Point[];
 ## **💻 TECHNICAL DEBT & CRITICAL ISSUES**
 
 ### **🚨 CRITICAL BUGS (IMMEDIATE ATTENTION REQUIRED)**
+- ❌ **Shape Text Editing Dual Display**: Rectangle, Circle, Triangle shapes show both HTML textarea AND Konva Text simultaneously during editing
+  - **Impact**: Confusing UX, users see two overlapping text input fields
+  - **Investigation Status**: React-Konva patterns applied, state timing fixed, but issue persists
+  - **Next Steps**: Deep component instance and rendering cycle investigation required
 - ❌ **Text Tool Broken**: Text elements not visible/interactive despite successful creation
 - ❌ **Selection System**: Inconsistent selection state management
 - ❌ **Event Pipeline**: Text element interactions not properly integrated
@@ -997,6 +1162,64 @@ export function getShapeCheckPoints(element: any): Point[];
 📊 Memory usage: 60-80% reduction with efficient culling
 📊 Zoom/Pan latency: <50ms response time at any scale
 ```
+
+---
+
+## **📦 STICKY NOTE CONTAINER FUNCTIONALITY**
+
+### **Container Features (IMPLEMENTED - January 2025)**
+Sticky notes now support container functionality, allowing elements to be drawn and placed within them.
+
+#### **Supported Child Elements**
+- ✅ **Marker Strokes**: Draw freehand with markers inside sticky notes
+- ✅ **Highlighter Strokes**: Highlight text or areas within sticky notes
+- ✅ **Text Elements**: Add text blocks inside sticky notes
+- ✅ **Images**: Place images within sticky note boundaries
+- ✅ **Tables**: Create tables inside sticky notes
+- ✅ **Connectors**: Draw connections between elements in sticky notes
+- ✅ **Washi Tape**: Decorative elements within sticky notes
+
+#### **Container Properties**
+```typescript
+interface StickyNoteElement {
+  // Container-specific properties
+  isContainer: boolean;
+  childElementIds: ElementId[];
+  allowedChildTypes: ElementType[];
+  clipChildren: boolean;
+  maxChildElements?: number;
+}
+```
+
+#### **Store Functions**
+- `enableStickyNoteContainer(id)` - Enable container functionality
+- `addElementToStickyNote(elementId, stickyNoteId)` - Add element as child
+- `removeElementFromStickyNote(elementId, stickyNoteId)` - Remove child
+- `findStickyNoteAtPoint(point)` - Detect sticky note at coordinates
+- `getStickyNoteChildren(stickyNoteId)` - Get all child elements
+- `constrainElementToStickyNote(elementId, stickyNoteId)` - Keep within bounds
+
+#### **Event Handling Fix (January 2025)**
+Fixed an issue where drawing tools couldn't draw on sticky notes:
+- **Problem**: Sticky notes were capturing mouse events with `listening={true}`
+- **Solution**: Conditionally set `listening={false}` when drawing tools are active
+- **Result**: Drawing tools now properly work on sticky notes
+
+```typescript
+// StickyNoteShape.tsx
+const drawingTools = ['pen', 'marker', 'highlighter', 'washi-tape', 'eraser'];
+const shouldAllowDrawing = drawingTools.includes(selectedTool);
+
+<Group
+  listening={!shouldAllowDrawing}  // Allow events to pass through
+  draggable={!shouldAllowDrawing}  // Disable dragging while drawing
+>
+```
+
+#### **Visual Indicators**
+- Child elements are rendered with proper clipping within boundaries
+- Visual hierarchy maintained with proper z-ordering
+- Clean appearance without distracting visual indicators
 
 ---
 
@@ -1152,9 +1375,12 @@ export class CanvasErrorBoundary extends React.Component {
 
 ## **✨ CONCLUSION**
 
-### **Current State: Complete Professional Canvas Application - All Critical Phases Finished**
+### **Current State: Near-Complete Professional Canvas Application - Critical Bug Investigation Required**
 
-The LibreOllama Canvas represents a **fully completed, production-ready whiteboard application** that matches and exceeds professional tools like FigJam and Figma. With comprehensive drawing tools, professional UX design, and optimized performance architecture, it provides users with a complete creative platform ready for immediate deployment.
+The LibreOllama Canvas represents a **nearly complete, professional-grade whiteboard application** that matches professional tools like FigJam and Figma. With comprehensive drawing tools, professional UX design, and optimized performance architecture, it provides users with an advanced creative platform. **However, a persistent shape text editing bug requires resolution before production deployment.**
+
+#### **Session Work Summary**
+This session involved intensive investigation of shape text editing issues, implementing React-Konva recommended patterns, fixing state timing, and applying comprehensive debugging. Despite following official documentation and best practices, the core issue of dual text field display persists, indicating deeper architectural challenges that require continued investigation.
 
 ### **Comprehensive Achievement Summary**
 1. ✅ **Complete Core Systems**: All essential tools, undo/redo, text editing, and performance optimization
@@ -1179,9 +1405,9 @@ With all critical systems complete, future development can focus on:
 - Layers panel and advanced organization features
 - Templates, collaboration, and enterprise features
 
-**Status**: 🎉 **FULLY PRODUCTION READY - CRITICAL DEVELOPMENT COMPLETE**
+**Status**: ⚠️ **NEAR-PRODUCTION READY - CRITICAL BUG BLOCKS DEPLOYMENT**
 
-The LibreOllama Canvas is now a **complete, professional whiteboard application** ready for production deployment, offering users the same quality experience as industry-leading design tools with optimized performance and comprehensive functionality.
+The LibreOllama Canvas is a **comprehensive, professional whiteboard application** with nearly all systems complete. However, the persistent shape text editing dual display bug prevents production deployment until resolved. All other systems are production-ready with optimized performance and comprehensive functionality.
 
 ---
 
@@ -1279,3 +1505,102 @@ features/canvas/
 - Re-editing preserves layout and provides consistent experience
 
 #### **Previous Major Enhancements (Historical Reference)**
+```
+
+## **📊 PERFORMANCE METRICS**
+
+### **Current Performance (Post-Optimization)**
+```
+🚀 60+ FPS smooth drawing with 1000+ elements
+🚀 Sub-10ms update cycles with quadtree culling
+🚀 80-95% element culling ratio when zoomed in
+🚀 < 50ms tool switching response time
+🚀 < 16ms frame time for real-time preview
+🚀 Memory usage scales sub-linearly with viewport culling
+🚀 Store-first architecture prevents re-render loops
+🚀 Smooth zoom/pan without frame drops
+```
+
+### **Advanced Optimization Features**
+```
+🔥 Quadtree spatial indexing - O(log n) element queries
+🔥 Viewport culling with buffer zones - massive performance gains
+🔥 Level-of-Detail (LOD) rendering with 4 quality levels
+🔥 Memory-aware adaptive culling configuration
+🔥 Point reduction based on distance and time
+🔥 Efficient spatial indexing for selection
+🔥 Smart caching for complex patterns
+🔥 Store-first architecture eliminating conflicts
+```
+
+### **Performance Benchmarks**
+```
+📊 With 100 elements: ~80% performance boost over naive rendering
+📊 With 500 elements: ~90% performance boost with viewport culling
+📊 With 1000+ elements: ~95% performance boost with quadtree optimization
+📊 Memory usage: 60-80% reduction with efficient culling
+📊 Zoom/Pan latency: <50ms response time at any scale
+```
+
+---
+
+## **📦 STICKY NOTE CONTAINER FUNCTIONALITY**
+
+### **Container Features (IMPLEMENTED - January 2025)**
+Sticky notes now support container functionality, allowing elements to be drawn and placed within them.
+
+#### **Supported Child Elements**
+- ✅ **Marker Strokes**: Draw freehand with markers inside sticky notes
+- ✅ **Highlighter Strokes**: Highlight text or areas within sticky notes
+- ✅ **Text Elements**: Add text blocks inside sticky notes
+- ✅ **Images**: Place images within sticky note boundaries
+- ✅ **Tables**: Create tables inside sticky notes
+- ✅ **Connectors**: Draw connections between elements in sticky notes
+- ✅ **Washi Tape**: Decorative elements within sticky notes
+
+#### **Container Properties**
+```typescript
+interface StickyNoteElement {
+  // Container-specific properties
+  isContainer: boolean;
+  childElementIds: ElementId[];
+  allowedChildTypes: ElementType[];
+  clipChildren: boolean;
+  maxChildElements?: number;
+}
+```
+
+#### **Store Functions**
+- `enableStickyNoteContainer(id)` - Enable container functionality
+- `addElementToStickyNote(elementId, stickyNoteId)` - Add element as child
+- `removeElementFromStickyNote(elementId, stickyNoteId)` - Remove child
+- `findStickyNoteAtPoint(point)` - Detect sticky note at coordinates
+- `getStickyNoteChildren(stickyNoteId)` - Get all child elements
+- `constrainElementToStickyNote(elementId, stickyNoteId)` - Keep within bounds
+
+#### **Event Handling Fix (January 2025)**
+Fixed an issue where drawing tools couldn't draw on sticky notes:
+- **Problem**: Sticky notes were capturing mouse events with `listening={true}`
+- **Solution**: Conditionally set `listening={false}` when drawing tools are active
+- **Result**: Drawing tools now properly work on sticky notes
+
+```typescript
+// StickyNoteShape.tsx
+const drawingTools = ['pen', 'marker', 'highlighter', 'washi-tape', 'eraser'];
+const shouldAllowDrawing = drawingTools.includes(selectedTool);
+
+<Group
+  listening={!shouldAllowDrawing}  // Allow events to pass through
+  draggable={!shouldAllowDrawing}  // Disable dragging while drawing
+>
+```
+
+#### **Visual Indicators**
+- Child elements are rendered with proper clipping within boundaries
+- Visual hierarchy maintained with proper z-ordering
+- Clean appearance without distracting visual indicators
+
+---
+
+## **🎯 SUCCESS CRITERIA MET**
+```

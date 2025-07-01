@@ -31,10 +31,16 @@ export const TransformerController: React.FC<TransformerControllerProps> = ({
     if (selectedElementIds.size > 0) {
       const selectedNodes: Konva.Node[] = [];
       selectedElementIds.forEach(elementId => {
-        // Skip text elements since they have individual transformers
+        // Skip elements that have individual transformers
         const element = elements.get(elementId);
-        if (element && element.type === 'text') {
-          return; // Skip text elements
+        if (element && (
+          element.type === 'text' || 
+          element.type === 'sticky-note' ||
+          element.type === 'rectangle' ||
+          element.type === 'circle' ||
+          element.type === 'triangle'
+        )) {
+          return; // Skip elements that have their own transformers
         }
         
         const node = stageRef.current?.findOne(`#${elementId}`);
@@ -61,9 +67,11 @@ export const TransformerController: React.FC<TransformerControllerProps> = ({
     switch (selectedElement.type) {
       case 'text':
       case 'rich-text':
-        return { enabledAnchors: ['middle-left', 'middle-right'] };
       case 'sticky-note':
-        return { enabledAnchors: ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'] };
+      case 'rectangle':  // Now has its own transformer
+      case 'circle':     // Now has its own transformer  
+      case 'triangle':   // Now has its own transformer
+        return { enabledAnchors: [] }; // No anchors for elements with individual transformers
       case 'table':
       case 'pen':
       case 'connector':
@@ -76,7 +84,7 @@ export const TransformerController: React.FC<TransformerControllerProps> = ({
 
   const transformerConfig = getTransformerConfig();
 
-  const handleTransformEnd = React.useCallback(() => {
+  const handleTransformEnd = React.useCallback((e: Konva.KonvaEventObject<Event>) => {
     const transformer = transformerRef.current;
     if (!transformer || !onElementUpdate) return;
 
@@ -169,7 +177,7 @@ export const TransformerController: React.FC<TransformerControllerProps> = ({
   return (
     <Transformer
       ref={transformerRef}
-      rotateEnabled={true}
+      rotateEnabled={false} // DISABLED: Remove rotation handle as requested
       enabledAnchors={transformerConfig.enabledAnchors}
       borderStroke="#3B82F6"
       borderStrokeWidth={2}

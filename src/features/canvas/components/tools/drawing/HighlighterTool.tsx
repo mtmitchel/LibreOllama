@@ -36,6 +36,8 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
   const elements = useUnifiedCanvasStore(state => state.elements);
+  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
+  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
   
   // Find elements under the highlighter path (for element-locking)
   const findElementsUnderPath = useCallback((points: number[]) => {
@@ -160,11 +162,21 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
       
       addElement(highlighterElement);
       
+      // Check if the stroke was created within a sticky note container
+      const startPoint = { x: smoothedPoints[0], y: smoothedPoints[1] };
+      const stickyNoteId = findStickyNoteAtPoint(startPoint);
+      
+      if (stickyNoteId) {
+        console.log('🖍️ [HighlighterTool] Adding highlighter to sticky note container:', stickyNoteId);
+        addElementToStickyNote(highlighterElement.id, stickyNoteId);
+      }
+      
       console.log('🖍️ [HighlighterTool] Created highlighter stroke:', {
         id: highlighterElement.id,
         pointCount: smoothedPoints.length / 2,
         blendMode: highlighterElement.style.blendMode,
-        lockedElements: hoveredElements.size
+        lockedElements: hoveredElements.size,
+        inStickyNote: !!stickyNoteId
       });
     }
     

@@ -28,6 +28,11 @@ export function createRectangle(x: number, y: number, width = 100, height = 100)
     stroke: '#1E40AF',
     strokeWidth: 2,
     cornerRadius: 4,
+    text: '',
+    fontSize: 14,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    textColor: '#FFFFFF',
+    textAlign: 'center' as const,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     isLocked: false,
@@ -45,6 +50,11 @@ export function createCircle(x: number, y: number, radius = 50): CircleElement {
     fill: '#EF4444',
     stroke: '#DC2626',
     strokeWidth: 2,
+    text: '',
+    fontSize: 14,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    textColor: '#FFFFFF',
+    textAlign: 'center' as const,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     isLocked: false,
@@ -111,6 +121,11 @@ export function createTriangle(x: number, y: number, size = 60): TriangleElement
     fill: '#10B981',
     stroke: '#059669',
     strokeWidth: 2,
+    text: '',
+    fontSize: 14,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    textColor: '#FFFFFF',
+    textAlign: 'center' as const,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     isLocked: false,
@@ -118,18 +133,23 @@ export function createTriangle(x: number, y: number, size = 60): TriangleElement
   };
 }
 
-export function createMindmap(x: number, y: number, size = 120): RectangleElement {
+export function createMindmap(x: number, y: number, size = 140): RectangleElement {
   return {
     id: nanoid() as ElementId,
     type: 'rectangle',
     x,
     y,
     width: size,
-    height: size * 0.6,
-    fill: '#E0E7FF',
-    stroke: '#6366F1',
-    strokeWidth: 3,
-    cornerRadius: 16,
+    height: size * 0.5, // More oval-like proportions for mindmap nodes
+    fill: '#F3F4F6', // Soft gray background
+    stroke: '#6366F1', // Indigo border
+    strokeWidth: 2,
+    cornerRadius: 25, // Very rounded for bubble effect
+    text: '', // Add text property for editing
+    fontSize: 14,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    textColor: '#1F2937',
+    textAlign: 'center' as const,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     isLocked: false,

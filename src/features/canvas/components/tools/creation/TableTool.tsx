@@ -31,6 +31,8 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
   
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
+  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
   
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (!isActive || !stageRef.current) return;
@@ -114,6 +116,19 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
     };
     
     addElement(tableElement);
+    
+    // Check if the table was created within a sticky note container
+    const tableCenter = {
+      x: preview.x + (preview.cols * preview.cellWidth) / 2,
+      y: preview.y + (preview.rows * preview.cellHeight) / 2
+    };
+    const stickyNoteId = findStickyNoteAtPoint(tableCenter);
+    
+    if (stickyNoteId) {
+      console.log('📋 [TableTool] Adding table to sticky note container:', stickyNoteId);
+      addElementToStickyNote(tableElement.id, stickyNoteId);
+    }
+    
     setSelectedTool('select');
     
     // Reset

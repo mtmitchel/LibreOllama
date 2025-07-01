@@ -1,12 +1,13 @@
 // src/features/canvas/utils/elementRenderer.tsx
 import React from 'react';
-import { Rect, Circle } from 'react-konva';
 import { CanvasElement, ElementId, SectionId, isPenElement, isRectangleElement, isCircleElement, isTextElement, isImageElement, isStickyNoteElement, isStarElement, isTriangleElement } from '../types/enhanced.types';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
 import { StarShape } from '../shapes/StarShape';
 import { TriangleShape } from '../shapes/TriangleShape';
+import { RectangleShape } from '../shapes/RectangleShape';
+import { CircleShape } from '../shapes/CircleShape';
 import { PenShape } from '../shapes/PenShape';
 import Konva from 'konva';
 import { Vector2d } from 'konva/lib/types';
@@ -24,6 +25,7 @@ interface RenderElementProps {
     sectionId: SectionId;
     isInSection: boolean;
   };
+  stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
 
 /**
@@ -39,7 +41,8 @@ export const renderElement = ({
   onStartTextEdit,
   dragBoundFunc,
   draggable = true,
-  sectionContext
+  sectionContext,
+  stageRef
 }: RenderElementProps): React.ReactElement | null => {
   const { id, ...restOfElement } = element;
 
@@ -59,7 +62,8 @@ export const renderElement = ({
     konvaProps,
     onUpdate: onElementUpdate,
     onStartTextEdit,
-    sectionContext
+    sectionContext,
+    stageRef
   };
 
   switch (element.type) {
@@ -101,33 +105,13 @@ export const renderElement = ({
 
     case 'rectangle':
       if (isRectangleElement(element)) {
-        return (
-          <Rect
-            key={id}
-            {...konvaProps}
-            width={element.width || 100}
-            height={element.height || 100}
-            fill={element.fill || '#3B82F6'}
-            stroke={element.stroke || '#1E40AF'}
-            strokeWidth={element.strokeWidth || 2}
-            cornerRadius={element.cornerRadius || 0}
-          />
-        );
+        return <RectangleShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 
     case 'circle':
       if (isCircleElement(element)) {
-        return (
-          <Circle
-            key={id}
-            {...konvaProps}
-            radius={element.radius || 50}
-            fill={element.fill || '#3B82F6'}
-            stroke={element.stroke || '#1E40AF'}
-            strokeWidth={element.strokeWidth || 2}
-          />
-        );
+        return <CircleShape key={id} {...commonShapeProps} element={element} />;
       }
       return null;
 

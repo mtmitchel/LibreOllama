@@ -20,6 +20,8 @@ import { ImageShape } from '../shapes/ImageShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
 import { StarShape } from '../shapes/StarShape';
 import { TriangleShape } from '../shapes/TriangleShape';
+import { RectangleShape } from '../shapes/RectangleShape';
+import { CircleShape } from '../shapes/CircleShape';
 import { PenShape } from '../shapes/PenShape';
 import { SectionShape } from '../shapes/SectionShape';
 import { EditableNode } from '../shapes/EditableNode';
@@ -97,15 +99,27 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     // Render by element type
     switch (element.type) {
       case 'rectangle':
+        return (
+          <CanvasErrorBoundary key={element.id}>
+            <RectangleShape
+              element={element as any}
+              isSelected={isSelected}
+              konvaProps={konvaElementProps}
+              onUpdate={updateElement} // Pass actual update function
+              stageRef={stageRef} // ADDED: Pass stageRef for text editing
+            />
+          </CanvasErrorBoundary>
+        );
+
       case 'circle':
         return (
           <CanvasErrorBoundary key={element.id}>
-            <EditableNode
-              element={element}
+            <CircleShape
+              element={element as any}
               isSelected={isSelected}
-              selectedTool={selectedTool}
-              onElementUpdate={updateElement} // Pass actual update function
-              onStartTextEdit={setTextEditingElement} // Pass actual function
+              konvaProps={konvaElementProps}
+              onUpdate={updateElement} // Pass actual update function
+              stageRef={stageRef} // ADDED: Pass stageRef for text editing
             />
           </CanvasErrorBoundary>
         );
@@ -148,6 +162,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               konvaProps={konvaElementProps}
               onUpdate={updateElement} // Pass actual update function
               onStartTextEdit={setTextEditingElement} // Pass actual function
+              stageRef={stageRef}
             />
           </CanvasErrorBoundary>
         );
@@ -173,7 +188,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               isSelected={isSelected}
               konvaProps={konvaElementProps}
               onUpdate={updateElement} // Pass actual update function
-              onStartTextEdit={setTextEditingElement} // Pass actual function
+              stageRef={stageRef} // ADDED: Pass stageRef for text editing
             />
           </CanvasErrorBoundary>
         );
@@ -201,8 +216,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             />
           </CanvasErrorBoundary>
         );
-
-
 
       case 'section':
         const sectionChildren = elementsBySection?.get(element.id) || [];
@@ -272,7 +285,15 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 
   // Memoized elements to prevent unnecessary re-renders
   const memoizedElements = useMemo(() => {
-    const validElements = Array.from(elements.values()).filter(el => el && el.type !== 'connector');
+    const validElements = Array.from(elements.values()).filter(el => {
+      // Skip rendering elements that are children of sticky note containers
+      if (el && ((el as any).parentId || (el as any).stickyNoteId)) {
+        console.log('🔧 [MainLayer] Skipping sticky note child element:', el.id, el.type);
+        return false;
+      }
+      return el && el.type !== 'connector';
+    });
+    
     const textElements = validElements.filter(el => el.type === 'text');
     console.log('🔧 [MainLayer] Valid elements for direct rendering:', validElements.length);
     console.log('🔧 [MainLayer] Text elements found:', textElements.length, 

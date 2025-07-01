@@ -13,12 +13,17 @@ import { WashiTapeTool } from '../components/tools/drawing/WashiTapeTool';
 import { EraserTool } from '../components/tools/drawing/EraserTool';
 import { LassoTool } from '../components/tools/selection/LassoTool';
 import { TextTool } from '../components/tools/creation/TextTool';
+import { StickyNoteTool } from '../components/tools/creation/StickyNoteTool';
 import { TableTool } from '../components/tools/creation/TableTool';
 import { ImageTool } from '../components/tools/creation/ImageTool';
 import { SectionTool } from '../components/tools/creation/SectionTool';
 import { PenTool } from '../components/tools/drawing/PenTool';
 import { PanTool } from '../components/tools/core/PanTool';
 import { ConnectorTool } from '../components/tools/creation/ConnectorTool';
+import { RectangleTool } from '../components/tools/creation/RectangleTool';
+import { CircleTool } from '../components/tools/creation/CircleTool';
+import { TriangleTool } from '../components/tools/creation/TriangleTool';
+import { MindmapTool } from '../components/tools/creation/MindmapTool';
 import { SHAPE_CREATORS, ShapeType } from '../utils/shapeCreators';
 
 interface ToolLayerProps {
@@ -32,13 +37,14 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
   
-  // Handle canvas clicks for shape creation
+  // Handle canvas clicks for shape creation (excluding interactive tools)
   const handleCanvasClick = React.useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     // Only handle if clicking on the stage (not on an element)
     if (e.target !== stageRef.current) return;
     
-    // Check if current tool is a shape creation tool (excluding text which has its own tool)
-    if (selectedTool in SHAPE_CREATORS && selectedTool !== 'text') {
+    // Check if current tool is a shape creation tool (excluding interactive tools)
+    const interactiveTools = ['text', 'sticky-note', 'section', 'table', 'image', 'connector'];
+    if (selectedTool in SHAPE_CREATORS && !interactiveTools.includes(selectedTool)) {
       const stage = stageRef.current!;
       const pointer = stage.getPointerPosition()!;
       const transform = stage.getAbsoluteTransform().copy().invert();
@@ -54,9 +60,10 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
     }
   }, [selectedTool, addElement, setSelectedTool, stageRef]);
   
-  // Attach click handler when a shape tool is selected
+  // Attach click handler when a non-interactive shape tool is selected
   React.useEffect(() => {
-    if (!stageRef.current || !(selectedTool in SHAPE_CREATORS) || selectedTool === 'text') return;
+    const interactiveTools = ['text', 'sticky-note', 'section', 'table', 'image', 'connector'];
+    if (!stageRef.current || !(selectedTool in SHAPE_CREATORS) || interactiveTools.includes(selectedTool)) return;
     
     const stage = stageRef.current;
     stage.on('click', handleCanvasClick);
@@ -116,13 +123,65 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
         isActive={selectedTool === 'pan'}
       />
       
-      {/* Basic Drawing Tools */}
+      {/* Content creation tools - all now use interactive pattern */}
+      <TextTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'text'}
+      />
+      
+      <StickyNoteTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'sticky-note'}
+      />
+      
+      {/* Shape tools - now use interactive pattern like sticky notes */}
+      <RectangleTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'rectangle'}
+      />
+      
+      <CircleTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'circle'}
+      />
+      
+      <TriangleTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'triangle'}
+      />
+      
+      <MindmapTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'mindmap'}
+      />
+      
+      <TableTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'table'}
+      />
+      
+      <SectionTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'section'}
+      />
+      
+      <ConnectorTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'connector-line' || selectedTool === 'connector-arrow'}
+      />
+      
+      <ImageTool
+        stageRef={stageRef}
+        isActive={selectedTool === 'image'}
+      />
+
+      {/* Drawing tools */}
       <PenTool
         stageRef={stageRef}
         isActive={selectedTool === 'pen'}
+        strokeStyle={{ color: '#000000', width: 2 }}
       />
       
-      {/* Advanced Drawing Tools */}
       <MarkerTool
         stageRef={stageRef}
         isActive={selectedTool === 'marker'}
@@ -146,39 +205,11 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
         isActive={selectedTool === 'eraser'}
         eraserConfig={eraserConfig}
       />
-      
-      {/* Selection Tools */}
+
+      {/* Selection tools */}
       <LassoTool
         stageRef={stageRef}
         isActive={selectedTool === 'lasso'}
-        mode="intersect"
-        threshold={0.1}
-      />
-      
-      {/* Creation Tools */}
-      <TextTool
-        stageRef={stageRef}
-        isActive={selectedTool === 'text'}
-      />
-      
-      <TableTool
-        stageRef={stageRef}
-        isActive={selectedTool === 'table'}
-      />
-      
-      <ImageTool
-        stageRef={stageRef}
-        isActive={selectedTool === 'image'}
-      />
-      
-      <SectionTool
-        stageRef={stageRef}
-        isActive={selectedTool === 'section'}
-      />
-      
-      <ConnectorTool
-        stageRef={stageRef}
-        isActive={selectedTool === 'connector'}
       />
     </Layer>
   );

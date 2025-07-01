@@ -35,6 +35,8 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
   // Store actions
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
+  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
   
   // Update stroke manager when settings change
   React.useEffect(() => {
@@ -143,11 +145,24 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
       
       addElement(markerElement);
       
+      // Check if the stroke was created within a sticky note container
+      const startPoint = { x: smoothedPoints[0], y: smoothedPoints[1] };
+      console.log('🖊️ [MarkerTool] Checking for sticky note at start point:', startPoint);
+      const stickyNoteId = findStickyNoteAtPoint(startPoint);
+      
+      if (stickyNoteId) {
+        console.log('🖊️ [MarkerTool] Adding marker to sticky note container:', stickyNoteId);
+        addElementToStickyNote(markerElement.id, stickyNoteId);
+      } else {
+        console.log('🖊️ [MarkerTool] No sticky note container found at start point');
+      }
+      
       console.log('🖊️ [MarkerTool] Created marker stroke:', {
         id: markerElement.id,
         pointCount: smoothedPoints.length / 2,
         rawPointCount: rawPoints.length,
-        style: markerElement.style
+        style: markerElement.style,
+        inStickyNote: !!stickyNoteId
       });
     }
     

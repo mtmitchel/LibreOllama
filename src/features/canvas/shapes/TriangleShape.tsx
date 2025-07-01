@@ -1,68 +1,470 @@
 // src/features/canvas/shapes/TriangleShape.tsx
-import React from 'react';
-import { Line } from 'react-konva';
+import React, { useRef, useEffect, useCallback } from 'react';
+import { Group, Line, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
-import { TriangleElement } from '../types/enhanced.types';
-import { designSystem } from '../../../core/design-system';
-import { useShapeCaching } from '../hooks/useShapeCaching';
-import { BaseShapeProps } from '../types/shape-props.types';
+import { TriangleElement, ElementId, CanvasElement } from '../types/enhanced.types';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { measureTextDimensions } from '../utils/textEditingUtils';
+import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
+import { nanoid } from 'nanoid';
 
-interface TriangleShapeProps extends BaseShapeProps<TriangleElement> {
-  // Triangle-specific props can be added here if needed
+/**
+ * Create text editor for triangles - adapted from StickyNoteShape
+ */
+const createTriangleTextEditor = (
+  position: { left: number; top: number; width: number; height: number; fontSize: number },
+  initialText: string,
+  fontSize: number,
+  fontFamily: string,
+  onSave: (text: string) => void,
+  onCancel: () => void
+) => {
+  console.log('🔺 [TriangleTextEditor] Creating text editor:', position);
+
+  const textarea = document.createElement('textarea');
+  
+  // Style the textarea to overlay the triangle
+  Object.assign(textarea.style, {
+    position: 'fixed',
+    left: `${Math.round(position.left)}px`,
+    top: `${Math.round(position.top)}px`,
+    width: `${Math.round(position.width)}px`,
+    height: `${Math.round(position.height)}px`,
+    fontSize: `${Math.max(11, Math.min(20, position.fontSize))}px`,
+    fontFamily: fontFamily,
+    fontWeight: '400',
+    lineHeight: '1.4',
+    color: '#FFFFFF',
+    background: 'rgba(234, 88, 12, 0.1)',
+    border: '2px solid #EA580C',
+    borderRadius: '4px',
+    padding: '8px',
+    resize: 'none',
+    outline: 'none',
+    zIndex: '10000',
+    overflow: 'hidden',
+    whiteSpace: 'pre-wrap',
+    wordWrap: 'break-word',
+    boxSizing: 'border-box',
+    textAlign: 'center'
+  });
+
+  // Set initial value
+  textarea.value = initialText || '';
+  textarea.placeholder = 'Add text';
+  textarea.setAttribute('spellcheck', 'false');
+  
+  document.body.appendChild(textarea);
+
+  // Focus the textarea
+  setTimeout(() => {
+    if (document.body.contains(textarea)) {
+      textarea.focus();
+      if (!initialText || initialText.trim().length === 0) {
+        textarea.setSelectionRange(0, 0);
+      } else {
+        textarea.select();
+      }
+    }
+  }, 50);
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    e.stopPropagation();
+    
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    } else if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+      e.preventDefault();
+      onSave(textarea.value);
+    }
+  };
+
+  const handleBlur = () => {
+    onSave(textarea.value);
+  };
+
+  const cleanup = () => {
+    if (document.body.contains(textarea)) {
+      textarea.removeEventListener('keydown', handleKeyDown);
+      textarea.removeEventListener('blur', handleBlur);
+      document.body.removeChild(textarea);
+    }
+  };
+
+  textarea.addEventListener('keydown', handleKeyDown);
+  textarea.addEventListener('blur', handleBlur);
+
+  return cleanup;
+};
+
+interface TriangleShapeProps {
+  element: TriangleElement;
+  isSelected: boolean;
+  konvaProps: any;
+  onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
 }
 
 /**
- * TriangleShape - Optimized triangle component with caching
- * - Performance-optimized with React.memo and shape caching
- * - Handles triangle-specific geometry and styling
- * - Implements proper error handling and prop validation
+ * TriangleShape - Following exact StickyNoteShape pattern
  */
 export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
   element,
   isSelected,
   konvaProps,
+  onUpdate,
+  stageRef
 }) => {
-  // Validate and ensure valid triangle points array
-  const defaultTrianglePoints = [0, -30, 50, 30, -50, 30];
-  const points = (element.points && 
-                  Array.isArray(element.points) && 
-                  element.points.length >= 6 && 
-                  element.points.every(p => typeof p === 'number')) 
-                  ? element.points 
-                  : defaultTrianglePoints;
-  // Calculate triangle area for caching decision (with null safety)
-  const triangleArea = points && points.length >= 6 ? Math.abs(
-    ((points[0] || 0) * ((points[3] || 0) - (points[5] || 0)) + 
-     (points[2] || 0) * ((points[5] || 0) - (points[1] || 0)) + 
-     (points[4] || 0) * ((points[1] || 0) - (points[3] || 0))) / 2
-  ) : 0;
+  // Store selectors - same pattern as StickyNoteShape
+  const textEditingElementId = useUnifiedCanvasStore(state => state.textEditingElementId);
+  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
+  const addElement = useUnifiedCanvasStore(state => state.addElement);
+  const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
-  // Apply shape caching for large triangles or when they have both fill and stroke
-  const shouldCache = triangleArea > 2500 || !!(element.fill && element.stroke);
+  // Refs - same pattern as StickyNoteShape
+  const groupRef = useRef<Konva.Group>(null);
+  const triangleRef = useRef<Konva.Line>(null); // Main shape for transformer
+  const textNodeRef = useRef<Konva.Text>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const cleanupEditorRef = useRef<(() => void) | null>(null);
+  const isDuplicating = useRef<boolean>(false);
   
-  const { nodeRef } = useShapeCaching({
-    element,
-    cacheConfig: {
-      enabled: shouldCache,
-      sizeThreshold: 2500,
-      forceCache: false
-    },
-    dependencies: [element.fill, element.stroke, points, isSelected]
-  });  return (
-    <Line
-      ref={nodeRef as React.RefObject<Konva.Line>}
-      {...(konvaProps as any)}
-      rotation={element.rotation || 0}
-      points={points}
-      closed
-      fill={element.fill || designSystem.colors.success[500]}
-      stroke={isSelected ? designSystem.colors.primary[500] : (element.stroke || designSystem.colors.success[500])}
-      strokeWidth={isSelected ? 3 : Math.max(0, element.strokeWidth || 2)}
-      // Konva performance optimizations
-      perfectDrawEnabled={false} // Disable perfect drawing for fill+stroke triangles
-      shadowForStrokeEnabled={false} // Disable shadow for stroke to prevent extra rendering pass
-      listening={true} // Keep listening enabled for interactive triangles
-    />
+  const width = element.width || 120;
+  const height = element.height || 100;
+  
+  // Ensure fonts are loaded
+  useEffect(() => {
+    ensureFontsLoaded();
+  }, []);
+
+  // Attach transformer to triangle when selected - standard Konva pattern
+  useEffect(() => {
+    if (isSelected && transformerRef.current && triangleRef.current) {
+      transformerRef.current.nodes([triangleRef.current]);
+      transformerRef.current.getLayer()?.batchDraw();
+      console.log('🔄 [TriangleShape] Transformer attached to triangle:', element.id);
+    }
+  }, [isSelected, element.id]);
+
+  // Calculate textarea position for text editing - same as StickyNoteShape
+  const calculateTextareaPosition = useCallback(() => {
+    if (!stageRef?.current || !groupRef.current) return null;
+
+    const stage = stageRef.current;
+    const group = groupRef.current;
+    const container = stage.container();
+    if (!container) return null;
+
+    const containerRect = container.getBoundingClientRect();
+    const scale = stage.scaleX();
+    const groupPos = group.getAbsolutePosition();
+
+    return {
+      left: containerRect.left + (groupPos.x + width/4) * scale,
+      top: containerRect.top + (groupPos.y + height*2/3 - 10) * scale, 
+      width: Math.max((width/2) * scale, 80),
+      height: Math.max(20 * scale, 20),
+      fontSize: Math.max(11, Math.min(16, (element.fontSize || 14) * scale))
+    };
+  }, [stageRef, width, height, element.fontSize]);
+
+  // Handle double-click to start editing - same pattern as StickyNoteShape
+  const handleDoubleClick = useCallback(() => {
+    console.log('🔺 [TriangleShape] Double-click detected, entering edit mode');
+    
+    if (cleanupEditorRef.current) {
+      console.log('⚠️ [TriangleShape] Already in edit mode, ignoring double-click');
+      return;
+    }
+    
+    if (textEditingElementId && textEditingElementId !== element.id) {
+      console.log('⚠️ [TriangleShape] Another text element is being edited, ignoring double-click');
+      return;
+    }
+    
+    if (!stageRef?.current) {
+      console.warn('⚠️ [TriangleShape] No stage ref available for editing');
+      return;
+    }
+
+    // CRITICAL: Set text editing state FIRST to hide Konva Text immediately
+    setTextEditingElement(element.id);
+
+    // Deselect element when entering edit mode to hide transformer
+    const store = useUnifiedCanvasStore.getState();
+    store.clearSelection();
+
+    const positionData = calculateTextareaPosition();
+    if (!positionData) {
+      console.warn('⚠️ [TriangleShape] Could not calculate textarea position');
+      setTextEditingElement(null); // Reset if we can't create editor
+      return;
+    }
+
+    console.log('✏️ [TriangleShape] Starting edit mode with position:', positionData);
+
+    const cleanup = createTriangleTextEditor(
+      positionData,
+      element.text || '',
+      positionData.fontSize,
+      element.fontFamily || getAvailableFontFamily(),
+      (newText: string) => {
+        console.log('💾 [TriangleShape] Saving text:', newText);
+        
+        const finalText = newText.trim();
+        
+        cleanupEditorRef.current = null;
+        setTextEditingElement(null);
+        
+        onUpdate(element.id, {
+          text: finalText,
+          updatedAt: Date.now()
+        });
+        
+        // Auto-switch to select tool and select element
+        setTimeout(() => {
+          const store = useUnifiedCanvasStore.getState();
+          store.setSelectedTool('select');
+          
+          setTimeout(() => {
+            store.clearSelection();
+            setTimeout(() => {
+              store.selectElement(element.id, false);
+            }, 50);
+          }, 50);
+        }, 100);
+      },
+      () => {
+        console.log('❌ [TriangleShape] Edit cancelled');
+        cleanupEditorRef.current = null;
+        setTextEditingElement(null);
+      }
+    );
+
+    cleanupEditorRef.current = cleanup;
+  }, [element, calculateTextareaPosition, setTextEditingElement, onUpdate, stageRef]);
+
+  // Transform handler - standard Konva pattern for Triangle
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
+    const triangle = triangleRef.current;
+    if (!triangle) return;
+    
+    const scaleX = triangle.scaleX();
+    const scaleY = triangle.scaleY();
+    
+    // Calculate new dimensions
+    const newWidth = Math.max(60, element.width * scaleX);
+    const newHeight = Math.max(40, element.height * scaleY);
+    
+    // Reset scale to 1 (standard Konva pattern)
+    triangle.scaleX(1);
+    triangle.scaleY(1);
+    
+    // Update element dimensions
+    onUpdate(element.id, {
+      x: triangle.x(),
+      y: triangle.y(),
+      width: newWidth,
+      height: newHeight,
+      updatedAt: Date.now()
+    });
+    
+    console.log('🔄 [TriangleShape] Transform complete:', { newWidth, newHeight });
+  }, [element.id, element.width, element.height, onUpdate]);
+
+  // Text editing effect - same pattern as StickyNoteShape
+  useEffect(() => {
+    if (textEditingElementId !== element.id || !stageRef?.current) {
+      // Clean up any existing editor when this element is no longer being edited
+      if (cleanupEditorRef.current && textEditingElementId !== element.id) {
+        console.log('🔺 [TriangleShape] Cleaning up editor - element no longer being edited');
+        cleanupEditorRef.current();
+        cleanupEditorRef.current = null;
+      }
+      return;
+    }
+
+    // Prevent multiple editors for the same element
+    if (cleanupEditorRef.current) {
+      console.log('🔺 [TriangleShape] Editor already exists, skipping creation');
+      return;
+    }
+
+    const positionData = calculateTextareaPosition();
+    if (!positionData) {
+      console.warn('🔺 [TriangleShape] ⚠️ Could not calculate position data for text editing');
+      return;
+    }
+
+    console.log('🔺 [TriangleShape] *** STARTING PROGRAMMATIC TEXT EDITING ***', element.id);
+
+    const cleanup = createTriangleTextEditor(
+      positionData,
+      element.text || '',
+      positionData.fontSize,
+      element.fontFamily || getAvailableFontFamily(),
+      (newText: string) => {
+        console.log('💾 [TriangleShape] Saving programmatic text:', newText);
+        
+        const finalText = newText.trim();
+        
+        cleanupEditorRef.current = null;
+        setTextEditingElement(null);
+        
+        onUpdate(element.id, {
+          text: finalText,
+          updatedAt: Date.now()
+        });
+        
+        // Auto-switch to select tool and select element
+        setTimeout(() => {
+          const store = useUnifiedCanvasStore.getState();
+          store.setSelectedTool('select');
+          
+          setTimeout(() => {
+            store.clearSelection();
+            setTimeout(() => {
+              store.selectElement(element.id, false);
+            }, 50);
+          }, 50);
+        }, 100);
+      },
+      () => {
+        cleanupEditorRef.current = null;
+        setTextEditingElement(null);
+      }
+    );
+
+    cleanupEditorRef.current = cleanup;
+
+    return () => {
+      if (cleanupEditorRef.current) {
+        cleanupEditorRef.current();
+        cleanupEditorRef.current = null;
+      }
+    };
+  }, [textEditingElementId, element.id, calculateTextareaPosition, element.text, element.fontFamily, onUpdate, setTextEditingElement, stageRef]);
+  
+  const hasContent = element.text && element.text.trim().length > 0;
+  const displayText = hasContent ? element.text! : 'Add text';
+  const textColor = hasContent 
+    ? (element.textColor || '#FFFFFF')
+    : 'rgba(255, 255, 255, 0.6)'; // Semi-transparent for placeholder
+  
+  // Check if this element is currently being edited
+  const isCurrentlyEditing = textEditingElementId === element.id;
+  
+  // Determine if events should pass through for drawing tools
+  const drawingTools = ['pen', 'marker', 'highlighter', 'washi-tape', 'eraser'];
+  const shouldAllowDrawing = drawingTools.includes(selectedTool);
+
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+    if (isDuplicating.current) {
+      isDuplicating.current = false;
+      return;
+    }
+    
+    // Update position for normal drag
+    const group = e.target as Konva.Group;
+    onUpdate(element.id, {
+      x: group.x(),
+      y: group.y(),
+      updatedAt: Date.now()
+    });
+  }, [element.id, onUpdate]);
+
+  // Calculate triangle points
+  const trianglePoints = [
+    width/2, 0,        // Top point
+    width, height,     // Bottom right
+    0, height,         // Bottom left
+    width/2, 0         // Close the path
+  ];
+
+  // Handle click events for selection
+  const handleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Don't interfere with double-click
+    if (e.evt.detail === 2) return;
+    
+    // Call the original click handler from konvaProps
+    if (konvaProps.onClick) {
+      konvaProps.onClick(e);
+    }
+  }, [konvaProps]);
+
+  return (
+    <>
+      <Group
+        {...konvaProps}
+        ref={groupRef}
+        id={element.id}
+        onClick={handleClick}
+        onDblClick={handleDoubleClick}
+        onDragEnd={handleDragEnd}
+        draggable={!shouldAllowDrawing}
+        listening={!shouldAllowDrawing}
+      >
+        {/* Triangle background */}
+        <Line
+          ref={triangleRef}
+          points={trianglePoints}
+          fill={element.fill || '#EA580C'}
+          stroke={element.stroke || '#C2410C'}
+          strokeWidth={element.strokeWidth || 2}
+          closed={true}
+          onTransformEnd={handleTransformEnd}
+        />
+
+        {/* Text content - ONLY render when NOT being edited */}
+        {!isCurrentlyEditing && (
+          <Text
+            ref={textNodeRef}
+            x={width/4}
+            y={height*2/3 - (element.fontSize || 14)/2}
+            width={width/2}
+            height={element.fontSize || 14}
+            text={displayText}
+            fontSize={element.fontSize || 14}
+            fontFamily={getAvailableFontFamily()}
+            fill={textColor}
+            align="center"
+            verticalAlign="middle"
+            fontStyle={hasContent ? 'normal' : 'italic'}
+            ellipsis={true}
+            wrap="none"
+            onTransformEnd={handleTransformEnd}
+          />
+        )}
+      </Group>
+      
+      {/* Transformer with corner-only handles - same pattern as StickyNoteShape */}
+      {isSelected && !cleanupEditorRef.current && (
+        <Transformer
+          ref={transformerRef}
+          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+          rotateEnabled={false}
+          borderStroke="#EA580C"
+          borderStrokeWidth={1}
+          anchorStroke="#EA580C"
+          anchorFill="#ffffff"
+          anchorSize={6}
+          anchorStrokeWidth={1}
+          keepRatio={false}
+          ignoreStroke={true}
+          boundBoxFunc={(oldBox, newBox) => {
+            const MIN_WIDTH = 60;
+            const MIN_HEIGHT = 40;
+            
+            return {
+              ...newBox,
+              width: Math.max(MIN_WIDTH, newBox.width),
+              height: Math.max(MIN_HEIGHT, newBox.height),
+            };
+          }}
+        />
+      )}
+    </>
   );
 });
 
