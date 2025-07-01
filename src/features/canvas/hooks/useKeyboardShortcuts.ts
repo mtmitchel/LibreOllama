@@ -14,6 +14,8 @@ export const useKeyboardShortcuts = () => {
   const selectedElementIds = useUnifiedCanvasStore((state) => state.selectedElementIds);
   const clearSelection = useUnifiedCanvasStore((state) => state.clearSelection);
   const setSelectedTool = useUnifiedCanvasStore((state) => state.setSelectedTool);
+  const elements = useUnifiedCanvasStore((state) => state.elements);
+  const selectElement = useUnifiedCanvasStore((state) => state.selectElement);
 
   // Helper function to delete multiple elements
   const deleteElements = (ids: ElementId[]) => {
@@ -33,6 +35,21 @@ export const useKeyboardShortcuts = () => {
       };
       addElement(newElement as CanvasElement);
     }
+  };
+
+  // Helper function to select all elements
+  const selectAll = () => {
+    console.log('🎯 [KeyboardShortcuts] Select All - selecting', elements.size, 'elements');
+    
+    // Clear current selection first
+    clearSelection();
+    
+    // Select all elements
+    elements.forEach((element, elementId) => {
+      selectElement(elementId as ElementId, true); // true = additive selection
+    });
+    
+    console.log('✅ [KeyboardShortcuts] Select All complete - selected', elements.size, 'elements');
   };
 
   useEffect(() => {
@@ -66,14 +83,10 @@ export const useKeyboardShortcuts = () => {
             break;
           case '0':
             e.preventDefault();
-            // Reset zoom - handled by canvas component
-            (window as any).resetZoom?.();
+            // Reset to 100% - handled by canvas component
+            (window as any).resetTo100?.();
             break;
-          case '1':
-            e.preventDefault();
-            // Zoom to fit - handled by canvas component
-            (window as any).zoomToFit?.();
-            break;
+
           case '=':
           case '+':
             e.preventDefault();
@@ -87,7 +100,7 @@ export const useKeyboardShortcuts = () => {
             break;
           case 'a':
             e.preventDefault();
-            // Select all - future feature
+            selectAll();
             break;
           case 'd':
             e.preventDefault();
@@ -154,5 +167,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, canUndo, canRedo, selectedElementIds, deleteElements, duplicateElement, setSelectedTool, clearSelection]);
+  }, [undo, redo, canUndo, canRedo, selectedElementIds, deleteElements, duplicateElement, selectAll, setSelectedTool, clearSelection]);
 };

@@ -1,35 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Square, 
-  Circle, 
-  Triangle, 
+  Minus, 
+  ArrowRight,
   ChevronDown,
-  Workflow
+  GitBranch
 } from 'lucide-react';
 import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
 import styles from './ModernToolbar.module.css';
 import '../../../core/design-system/globals.css';
 
-const basicShapes = [
-  { id: 'rectangle', name: 'Rectangle', icon: Square },
-  { id: 'circle', name: 'Circle', icon: Circle },
-  { id: 'triangle', name: 'Triangle', icon: Triangle },
-  { id: 'mindmap', name: 'Mindmap', icon: Workflow }
+const connectorTools = [
+  { id: 'connector-line', name: 'Line', icon: Minus },
+  { id: 'connector-arrow', name: 'Arrow', icon: ArrowRight }
 ];
 
-const allShapeTools = [...basicShapes];
-
-interface ShapesDropdownProps {
+interface ConnectorDropdownProps {
   onToolSelect: (toolId: string) => void;
 }
 
-const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
+const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
   
-  const currentShapeTool = allShapeTools.find(tool => tool.id === selectedTool) || basicShapes[0]!;
-  const CurrentIcon = currentShapeTool.icon;
+  // Check if any connector tool is active, default to line connector
+  const currentConnectorTool = connectorTools.find(tool => tool.id === selectedTool) || connectorTools[0]!;
+  const CurrentIcon = currentConnectorTool.icon;
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -42,7 +38,7 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   
-  const handleShapeSelect = (toolId: string) => {
+  const handleConnectorSelect = (toolId: string) => {
     onToolSelect(toolId);
     setIsOpen(false);
   };
@@ -56,29 +52,29 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
       <button
         onClick={toggleDropdown}
         className={`${styles.toolButton} ${
-          allShapeTools.some(tool => tool.id === selectedTool) ? styles.active : ''
+          connectorTools.some(tool => tool.id === selectedTool) ? styles.active : ''
         }`}
-        title={`Shapes (${currentShapeTool.name} selected)`}
+        title={`Connectors (${currentConnectorTool.name} selected)`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <CurrentIcon size={16} />
+        <GitBranch size={16} />
         <ChevronDown size={12} style={{ marginLeft: '4px' }} />
       </button>
       
       {isOpen && (
-        <div className={styles.shapesDropdownContent} role="menu">
-          <div className={styles.shapesDropdownSection}>
-            <div className={styles.shapesDropdownHeader}>Shapes</div>
-            <div className={styles.shapesGrid}>
-              {basicShapes.map(tool => {
+        <div className={styles.connectorsDropdownContent} role="menu">
+          <div className={styles.connectorsDropdownSection}>
+            <div className={styles.connectorsDropdownHeader}>Connectors</div>
+            <div className={styles.connectorsGrid}>
+              {connectorTools.map(tool => {
                 const IconComponent = tool.icon;
                 const isActive = selectedTool === tool.id;
                 return (
                   <button
                     key={tool.id}
-                    onClick={() => handleShapeSelect(tool.id)}
-                    className={`${styles.shapesDropdownItem} ${isActive ? styles.active : ''}`}
+                    onClick={() => handleConnectorSelect(tool.id)}
+                    className={`${styles.connectorsDropdownItem} ${isActive ? styles.active : ''}`}
                     title={tool.name}
                     role="menuitem"
                   >
@@ -95,4 +91,4 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   );
 };
 
-export default ShapesDropdown;
+export default ConnectorDropdown; 

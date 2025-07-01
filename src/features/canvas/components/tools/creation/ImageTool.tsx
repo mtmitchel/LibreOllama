@@ -17,14 +17,13 @@ interface ImageToolProps {
 
 export const ImageTool: React.FC<ImageToolProps> = ({ stageRef, isActive }) => {
   const [placeholderPosition, setPlaceholderPosition] = useState<{ x: number; y: number } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
   
   const addElement = useUnifiedCanvasStore(state => state.addElement);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
   
   // Handle file selection
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileSelect = useCallback((file: File) => {
     if (!file || !placeholderPosition) return;
     
     const reader = new FileReader();
@@ -39,12 +38,8 @@ export const ImageTool: React.FC<ImageToolProps> = ({ stageRef, isActive }) => {
           y: placeholderPosition.y - 75,
           width: 200,
           height: 150,
-          src: event.target?.result as string,
-          naturalWidth: img.width,
-          naturalHeight: img.height,
+          imageUrl: event.target?.result as string,
           opacity: 1,
-          cornerRadius: 0,
-          preserveAspectRatio: true,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           isLocked: false,
@@ -58,11 +53,6 @@ export const ImageTool: React.FC<ImageToolProps> = ({ stageRef, isActive }) => {
       img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
-    
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   }, [placeholderPosition, addElement, setSelectedTool]);
   
   // Handle click on canvas
@@ -75,15 +65,13 @@ export const ImageTool: React.FC<ImageToolProps> = ({ stageRef, isActive }) => {
     
     setPlaceholderPosition({ x: pointer.x, y: pointer.y });
     
-    // Trigger file input
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    // Trigger file input via custom event
+    window.dispatchEvent(new CustomEvent('canvas-image-tool-click', { 
+      detail: { position: { x: pointer.x, y: pointer.y } } 
+    }));
   }, [isActive, stageRef]);
   
   // Handle pointer move for hover effect
-  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
-  
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (!isActive || !stageRef.current) return;
     
@@ -123,18 +111,25 @@ export const ImageTool: React.FC<ImageToolProps> = ({ stageRef, isActive }) => {
     }
   }, [isActive]);
   
+  // Expose file selection function for external HTML input
+  React.useEffect(() => {
+    const handleFileSelect = (event: CustomEvent) => {
+      const file = event.detail.file;
+      if (file) {
+        handleFileSelect(file);
+      }
+    };
+
+    window.addEventListener('canvas-image-file-selected', handleFileSelect as EventListener);
+    
+    return () => {
+      window.removeEventListener('canvas-image-file-selected', handleFileSelect as EventListener);
+    };
+  }, [handleFileSelect]);
+  
   return (
     <>
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={handleFileSelect}
-      />
-      
-      {/* Hover indicator */}
+      {/* Hover indicator - ONLY Konva components here */}
       {isActive && hoverPosition && (
         <Group listening={false}>
           <Rect

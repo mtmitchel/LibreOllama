@@ -44,7 +44,7 @@ class MemoryUsageMonitorImpl {
   private isEnabled: boolean = true;
   private monitoringInterval: number | null = null;
   private readonly maxSnapshots = 100;
-  private readonly monitoringIntervalMs = 5000; // 5 seconds
+  private readonly monitoringIntervalMs = 10000; // CHANGED: Increased from 5000ms to 10000ms (10 seconds)
   
   // Enhanced tracking for Phase 4
   private canvasMemoryInfo: CanvasMemoryInfo = {

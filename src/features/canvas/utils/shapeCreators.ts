@@ -10,7 +10,6 @@ import {
   TextElement, 
   StickyNoteElement,
   TriangleElement,
-  StarElement,
   SectionElement,
   TableElement,
   ElementId,
@@ -119,18 +118,18 @@ export function createTriangle(x: number, y: number, size = 60): TriangleElement
   };
 }
 
-export function createStar(x: number, y: number, radius = 40): StarElement {
+export function createMindmap(x: number, y: number, size = 120): RectangleElement {
   return {
     id: nanoid() as ElementId,
-    type: 'star',
+    type: 'rectangle',
     x,
     y,
-    innerRadius: radius * 0.5,
-    outerRadius: radius,
-    numPoints: 5,
-    fill: '#F59E0B',
-    stroke: '#D97706',
-    strokeWidth: 2,
+    width: size,
+    height: size * 0.6,
+    fill: '#E0E7FF',
+    stroke: '#6366F1',
+    strokeWidth: 3,
+    cornerRadius: 16,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     isLocked: false,
@@ -200,7 +199,7 @@ export const SHAPE_CREATORS = {
   rectangle: createRectangle,
   circle: createCircle,
   triangle: createTriangle,
-  star: createStar,
+  mindmap: createMindmap,
   text: createText,
   'sticky-note': createStickyNote,
   section: createSection,

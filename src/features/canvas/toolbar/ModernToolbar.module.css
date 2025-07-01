@@ -54,6 +54,19 @@
   box-shadow: 0 0 0 1px hsl(221, 83%, 53%), 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.toolButton.disabled,
+.toolButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toolButton.disabled:hover,
+.toolButton:disabled:hover {
+  background-color: transparent;
+  color: hsl(210, 10%, 62%);
+}
+
 .separator {
   width: 1px;
   height: 1.5rem; /* 24px */
@@ -107,13 +120,12 @@
   border: 1px solid hsl(224, 14%, 25%);
   border-radius: 0.75rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  padding: 0.5rem;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   z-index: 10;
-  width: 200px;
-  min-width: 180px;
+  min-width: fit-content;
 }
 
 .shapesDropdownSection {
@@ -131,12 +143,85 @@
 }
 
 .shapesGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.25rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
 }
 
 .shapesDropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.5rem;
+  background-color: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  color: hsl(210, 10%, 62%);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.shapesDropdownItem span {
+  display: none;
+}
+
+.shapesDropdownItem:hover {
+  background-color: hsl(224, 27%, 20%);
+  color: hsl(210, 40%, 98%);
+  transform: scale(1.05);
+}
+
+.shapesDropdownItem.active {
+  background-color: hsl(221, 83%, 53%);
+  color: white;
+  box-shadow: 0 0 0 2px hsla(221, 83%, 53%, 0.3);
+}
+
+/* Connector Dropdown Styles */
+.connectorsDropdownContent {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  background-color: hsl(224, 27%, 15%);
+  border: 1px solid hsl(224, 14%, 25%);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 10;
+  width: 140px;
+  min-width: 120px;
+}
+
+.connectorsDropdownSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.connectorsDropdownHeader {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: hsl(210, 10%, 62%);
+  padding: 0.25rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.connectorsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.connectorsDropdownItem {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -152,12 +237,12 @@
   font-size: 0.875rem;
 }
 
-.shapesDropdownItem:hover {
+.connectorsDropdownItem:hover {
   background-color: hsl(224, 27%, 20%);
   color: hsl(210, 40%, 98%);
 }
 
-.shapesDropdownItem.active {
+.connectorsDropdownItem.active {
   background-color: hsl(221, 83%, 53%);
   color: white;
 }

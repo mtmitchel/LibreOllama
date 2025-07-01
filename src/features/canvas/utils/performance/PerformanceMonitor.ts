@@ -27,9 +27,11 @@ class PerformanceMonitorImpl {
   private thresholds: PerformanceThresholds = {
     renderTime: 16, // 60 FPS target
     interactionLatency: 100,
-    memoryUsage: 100,
+    memoryUsage: 200, // Increased from 100ms to 200ms to reduce noise
     frameRate: 55 // Minimum acceptable FPS
   };
+  private lastWarningTime = new Map<string, number>(); // Throttle warnings
+  private readonly WARNING_THROTTLE_MS = 10000; // 10 seconds between similar warnings
 
   constructor() {
     // Only enable in development or when explicitly requested
@@ -73,7 +75,7 @@ class PerformanceMonitorImpl {
       }
     });
 
-    // Check thresholds and warn if exceeded
+    // Check thresholds and warn if exceeded (with throttling)
     this.checkThresholds(metric);
   }
 
@@ -175,6 +177,7 @@ class PerformanceMonitorImpl {
    */
   clear(): void {
     this.metrics = [];
+    this.lastWarningTime.clear();
   }
 
   /**
@@ -202,7 +205,7 @@ class PerformanceMonitorImpl {
   }
 
   /**
-   * Check if metric exceeds thresholds
+   * Check if metric exceeds thresholds (with throttling)
    */
   private checkThresholds(metric: PerformanceMetric): void {
     let threshold: number | undefined;
@@ -220,13 +223,29 @@ class PerformanceMonitorImpl {
       case 'frameRate':
         // Frame rate threshold is inverse (lower is worse)
         if (metric.value < this.thresholds.frameRate) {
-          console.warn(`⚠️ Low frame rate detected: ${metric.value.toFixed(2)} FPS`);
+          this.throttledWarning(metric.name, `⚠️ Low frame rate detected: ${metric.value.toFixed(2)} FPS`);
         }
         return;
     }
 
     if (threshold && metric.value > threshold) {
-      console.warn(`⚠️ Performance threshold exceeded for ${metric.name}: ${metric.value.toFixed(2)}ms (threshold: ${threshold}ms)`);
+      this.throttledWarning(
+        metric.name, 
+        `⚠️ Performance threshold exceeded for ${metric.name}: ${metric.value.toFixed(2)}ms (threshold: ${threshold}ms)`
+      );
+    }
+  }
+
+  /**
+   * Throttled warning to prevent console spam
+   */
+  private throttledWarning(key: string, message: string): void {
+    const now = Date.now();
+    const lastWarning = this.lastWarningTime.get(key);
+    
+    if (!lastWarning || (now - lastWarning) > this.WARNING_THROTTLE_MS) {
+      console.warn(message);
+      this.lastWarningTime.set(key, now);
     }
   }
 

@@ -1,11 +1,9 @@
 // src/app/pages/Canvas.tsx - Phase 1.3: Component Hierarchy Restoration (FINAL)
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import CanvasContainer from '../../features/canvas/components/CanvasContainer';
 import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import { PanelRightClose } from 'lucide-react';
 import { Button } from '../../core/shared-ui';
-import { useUnifiedCanvasStore } from '../../features/canvas/stores/unifiedCanvasStore';
-import CanvasDebugInfo from '../../features/canvas/components/CanvasDebugInfo';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,
@@ -15,18 +13,7 @@ import CanvasDebugInfo from '../../features/canvas/components/CanvasDebugInfo';
 export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
   const [isCanvasSidebarOpen, setCanvasSidebarOpen] = useState(true);
 
-  // Debug: Expose unified store to window for testing (development only)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      // Simple debug exposure without getState calls in render
-      (window as any).__CANVAS_STORE__ = {
-        getState: () => useUnifiedCanvasStore.getState(),
-        subscribe: useUnifiedCanvasStore.subscribe,
-        createTestElements: () => useUnifiedCanvasStore.getState().createTestElements()
-      };
-      console.log('🛠️ [Debug] Unified canvas store exposed to window.__CANVAS_STORE__');
-    }
-  }, []);
+
 
   return (
     <div className="flex h-full bg-bg-primary p-4 md:p-6 gap-4 md:gap-6 relative">
@@ -56,8 +43,7 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
         <CanvasContainer />
       </main>
       
-      {/* Debug info overlay */}
-      {process.env.NODE_ENV === 'development' && <CanvasDebugInfo />}
+
     </div>
   );
 }

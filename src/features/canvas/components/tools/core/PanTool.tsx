@@ -16,90 +16,68 @@ export const PanTool: React.FC<PanToolProps> = ({ stageRef, isActive }) => {
   const [isPanning, setIsPanning] = useState(false);
   const lastPointerPos = useRef<{ x: number; y: number } | null>(null);
 
-  // Store actions
-  const setViewport = useUnifiedCanvasStore(state => state.setViewport);
+  // Store subscriptions (minimal)
   const viewport = useUnifiedCanvasStore(state => state.viewport);
+  const setViewport = useUnifiedCanvasStore(state => state.setViewport);
 
-  const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || !stageRef.current) return;
+  // Remove unused callbacks since we moved handlers inside useEffect
 
-    const stage = stageRef.current;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
-    setIsPanning(true);
-    lastPointerPos.current = pointer;
-    
-    // Change cursor to grabbing
-    stage.container().style.cursor = 'grabbing';
-    
-    // Prevent event bubbling
-    e.evt.preventDefault();
-  }, [isActive, stageRef]);
-
-  const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isPanning || !isActive || !stageRef.current || !lastPointerPos.current) return;
-
-    const stage = stageRef.current;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
-    // Calculate delta
-    const deltaX = pointer.x - lastPointerPos.current.x;
-    const deltaY = pointer.y - lastPointerPos.current.y;
-
-    // Update viewport position
-    const newX = viewport.x + deltaX;
-    const newY = viewport.y + deltaY;
-
-    // Apply new position to stage
-    stage.position({ x: newX, y: newY });
-    stage.batchDraw();
-
-    // Update store
-    setViewport({ x: newX, y: newY });
-
-    // Update last position
-    lastPointerPos.current = pointer;
-    
-    // Prevent event bubbling
-    e.evt.preventDefault();
-  }, [isPanning, isActive, stageRef, viewport.x, viewport.y, setViewport]);
-
-  const handlePointerUp = useCallback(() => {
-    if (!isPanning || !isActive || !stageRef.current) return;
-
-    setIsPanning(false);
-    lastPointerPos.current = null;
-    
-    // Change cursor back to grab
-    stageRef.current.container().style.cursor = 'grab';
-  }, [isPanning, isActive, stageRef]);
-
-  // Event listeners
+  // Event listeners - optimized to prevent excessive re-mounting
   React.useEffect(() => {
     if (!isActive || !stageRef.current) return;
 
     const stage = stageRef.current;
     
-    // Set cursor
-    stage.container().style.cursor = 'grab';
+    // Create stable event handlers that don't depend on closures
+    const onPointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
+      if (!stageRef.current) return;
+      
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+
+      setIsPanning(true);
+      lastPointerPos.current = pointer;
+      e.evt.preventDefault();
+    };
+
+    const onPointerMove = (e: Konva.KonvaEventObject<PointerEvent>) => {
+      if (!isPanning || !lastPointerPos.current) return;
+       
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+
+      const deltaX = pointer.x - lastPointerPos.current.x;
+      const deltaY = pointer.y - lastPointerPos.current.y;
+
+      // Store-first update (no direct stage manipulation)
+      const currentViewport = useUnifiedCanvasStore.getState().viewport;
+      useUnifiedCanvasStore.getState().setViewport({
+        ...currentViewport,
+        x: currentViewport.x + deltaX,
+        y: currentViewport.y + deltaY
+      });
+
+      lastPointerPos.current = pointer;
+      e.evt.preventDefault();
+    };
+
+    const onPointerUp = () => {
+      setIsPanning(false);
+      lastPointerPos.current = null;
+    };
     
     // Attach event listeners
-    stage.on('pointerdown', handlePointerDown);
-    stage.on('pointermove', handlePointerMove);
-    stage.on('pointerup pointercancel', handlePointerUp);
+    stage.on('pointerdown', onPointerDown);
+    stage.on('pointermove', onPointerMove);
+    stage.on('pointerup pointercancel', onPointerUp);
 
     return () => {
       // Clean up event listeners
-      stage.off('pointerdown', handlePointerDown);
-      stage.off('pointermove', handlePointerMove);
-      stage.off('pointerup pointercancel', handlePointerUp);
-      
-      // Reset cursor
-      stage.container().style.cursor = 'default';
+      stage.off('pointerdown', onPointerDown);
+      stage.off('pointermove', onPointerMove);
+      stage.off('pointerup pointercancel', onPointerUp);
     };
-  }, [isActive, handlePointerDown, handlePointerMove, handlePointerUp]);
+  }, [isActive, isPanning]); // Include isPanning dependency
 
   // Reset state when tool becomes inactive
   React.useEffect(() => {

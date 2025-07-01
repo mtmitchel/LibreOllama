@@ -20,12 +20,15 @@ import {
   Ungroup,
   Layers,
   Highlighter,
-  Sparkles,
   Eraser,
-  Lasso
+  Edit3,
+  Brush,
+  GitBranch,
+  Workflow
 } from 'lucide-react';
 import PortalColorPicker from './PortalColorPicker';
 import ShapesDropdown from './ShapesDropdown';
+import ConnectorDropdown from './ConnectorDropdown';
 import styles from './ModernToolbar.module.css';
 
 const basicTools = [
@@ -41,17 +44,18 @@ const contentTools = [
 ];
 
 const drawingTools = [
-  { id: 'pen', name: 'Pen', icon: Pen },
-  { id: 'marker', name: 'Marker', icon: Pen },
+  { id: 'pen', name: 'Pen', icon: Edit3 },
+  { id: 'marker', name: 'Marker', icon: Brush },
   { id: 'highlighter', name: 'Highlighter', icon: Highlighter },
-  { id: 'washi-tape', name: 'Washi Tape', icon: Sparkles },
-  { id: 'eraser', name: 'Eraser', icon: Eraser },
-  { id: 'connector', name: 'Connector', icon: Pen },
+  { id: 'eraser', name: 'Eraser', icon: Eraser }
+];
+
+const mediaTools = [
   { id: 'image', name: 'Image', icon: Image }
 ];
 
 const selectionTools = [
-  { id: 'lasso', name: 'Lasso Select', icon: Lasso }
+  // Lasso tool removed - keeping array for future advanced selection tools
 ];
 
 interface ModernKonvaToolbarProps {
@@ -91,6 +95,10 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const deleteElement = useUnifiedCanvasStore(state => state.deleteElement);
   const updateElement = useUnifiedCanvasStore(state => state.updateElement);
   const addElement = useUnifiedCanvasStore(state => state.addElement);
+  
+  // History state for button enable/disable
+  const canUndo = useUnifiedCanvasStore(canvasSelectors.canUndo);
+  const canRedo = useUnifiedCanvasStore(canvasSelectors.canRedo);
   
   // Sticky note color functionality
   const setStickyNoteColor = useUnifiedCanvasStore(state => state.setSelectedStickyNoteColor);
@@ -147,11 +155,12 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     // Define which tools are interactive (user must click/drag on canvas)
     const interactiveTools = [
       'select', 'pan', 'text', 'pen', 'marker', 'highlighter', 
-      'washi-tape', 'eraser', 'lasso', 'section', 'table', 'image', 'connector'
+      'eraser', 'section', 'table', 'image', 
+      'connector-line', 'connector-arrow'
     ];
     
     // Check if this is a shape creation tool that creates immediately
-    const immediateShapeTools = ['rectangle', 'circle', 'triangle', 'star', 'sticky-note'];
+    const immediateShapeTools = ['rectangle', 'circle', 'triangle', 'mindmap', 'sticky-note'];
     
     if (immediateShapeTools.includes(toolId) && toolId in SHAPE_CREATORS) {
       // Create shape at center of viewport
@@ -188,7 +197,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
   
   const canShowColorPicker = selectedElement && 
-    ['rectangle', 'circle', 'triangle', 'star', 'sticky-note'].includes(selectedElement.type);
+    ['rectangle', 'circle', 'triangle', 'mindmap', 'sticky-note'].includes(selectedElement.type);
   
   // Check if current selection can be grouped/ungrouped
   const canGroup = selectedElementIds.size >= 2;
@@ -200,23 +209,6 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
         {/* Basic Tools */}
         <div className={styles.toolbarGroup}>
           {basicTools.map(tool => {
-            const IconComponent = tool.icon;
-            const isActive = selectedTool === tool.id;
-            return (
-              <button
-                key={tool.id}
-                onClick={() => handleToolClick(tool.id)}
-                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
-                title={tool.name}
-                aria-label={tool.name}
-              >
-                <IconComponent size={16} />
-              </button>
-            );
-          })}
-          
-          {/* Advanced Selection Tools */}
-          {selectionTools.map(tool => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
             return (
@@ -284,13 +276,41 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
         <div className={styles.separator} />
 
-        {/* Shapes & Drawing Tools */}
+        {/* Shapes */}
         <div className={styles.toolbarGroup}>
           <div className={styles.dropdownContainer}>
             <ShapesDropdown onToolSelect={handleToolClick} />
           </div>
-          
+        </div>
+
+        <div className={styles.separator} />
+
+        {/* Drawing Tools */}
+        <div className={styles.toolbarGroup}>
           {drawingTools.map(tool => {
+            const IconComponent = tool.icon;
+            const isActive = selectedTool === tool.id;
+            return (
+              <button
+                key={tool.id}
+                onClick={() => handleToolClick(tool.id)}
+                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                title={tool.name}
+                aria-label={tool.name}
+              >
+                <IconComponent size={16} />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={styles.separator} />
+
+        {/* Connection & Media Tools */}
+        <div className={styles.toolbarGroup}>
+          <ConnectorDropdown onToolSelect={handleToolClick} />
+          
+          {mediaTools.map(tool => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
             return (
@@ -313,8 +333,9 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
         <div className={styles.toolbarGroup}>
           <button
             onClick={onUndo}
-            className={styles.toolButton}
-            title="Undo"
+            disabled={!canUndo}
+            className={`${styles.toolButton} ${!canUndo ? styles.disabled : ''}`}
+            title={canUndo ? "Undo" : "Nothing to undo"}
             aria-label="Undo"
           >
             <Undo2 size={16} />
@@ -322,8 +343,9 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
           
           <button
             onClick={onRedo}
-            className={styles.toolButton}
-            title="Redo"
+            disabled={!canRedo}
+            className={`${styles.toolButton} ${!canRedo ? styles.disabled : ''}`}
+            title={canRedo ? "Redo" : "Nothing to redo"}
             aria-label="Redo"
           >
             <Redo2 size={16} />

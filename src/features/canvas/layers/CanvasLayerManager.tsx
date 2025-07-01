@@ -75,8 +75,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   const useGroupedSections = enhancedFeatureFlagManager.getFlag('grouped-section-rendering');
   const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
   
-  // DEBUG: Log the actual value
-  console.log('🔧 [CanvasLayerManager] useCentralizedTransformer:', useCentralizedTransformer);
+
   
   // Other hooks and state that are still managed internally
   const [selectionBox, setSelectionBox] = useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
@@ -96,44 +95,41 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
     }
   }, [stageRef]);
   
-  // FIXED: Create a proper dependency for element changes
+  // Convert elements map to array for processing
   const elementsArray = useMemo(() => {
-    console.log('🔧 [CanvasLayerManager] Converting elements map to array:', elements.size);
-    const array = Array.from(elements.values());
-    // Log the actual elements for debugging
-    array.forEach(el => {
-      if (el.type === 'text') {
-        console.log('🔧 [CanvasLayerManager] Text element:', { 
-          id: el.id, 
-          text: (el as any).text, 
-          x: el.x, 
-          y: el.y 
-        });
-      }
-    });
-    return array;
-  }, [elements]); // Depend on the Map itself
+    return Array.from(elements.values());
+  }, [elements]);
 
-  // Stub for disabled viewport culling
-  const visibleElements = elementsArray;
-  const cullingStats = { totalElements: 0, visibleElements: 0 };
+  // ENABLED: Advanced viewport culling with quadtree (massive performance boost)
+  const cullingResult = useViewportCulling({
+    elements: elementsArray,
+    zoomLevel: viewport.scale || 1,
+    panOffset: { x: viewport.x || 0, y: viewport.y || 0 },
+    canvasSize: stageSize.width > 0 ? stageSize : null,
+    config: {
+      enableQuadtree: true,
+      enableLOD: true,
+      enableHierarchicalCulling: true
+    }
+  });
+  
+  const visibleElements = cullingResult.visibleElements;
+  const cullingStats = cullingResult.cullingStats;
 
-  // FIXED: Element categorization with proper dependencies
+  // OPTIMIZED: Element categorization using culled visible elements  
   const {
     mainElements,
     connectorElements,
     sectionElements,
     elementsBySection,
   } = useMemo(() => {
-    console.log('🔧 [CanvasLayerManager] Categorizing elements, count:', elementsArray.length);
-    
     const main: CanvasElement[] = [];
     const connectors: ConnectorElement[] = [];
     const sections: SectionElementType[] = [];
     const bySection = new Map<SectionId, CanvasElement[]>();
 
-    // Simple categorization without complex logic
-    for (const element of elementsArray) {
+    // Use viewport-culled elements for massive performance boost
+    for (const element of visibleElements) {
       if (element.type === 'connector') {
         connectors.push(element as ConnectorElement);
       } else if (element.type === 'section') {
@@ -143,14 +139,17 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
       }
     }
     
-    console.log('🔧 [CanvasLayerManager] Categorized:', {
-      main: main.length,
-      connectors: connectors.length,
-      sections: sections.length
-    });
+    // Log performance gain when significant culling occurs
+    if (elementsArray.length > 50 && visibleElements.length < elementsArray.length * 0.8) {
+      console.log('🚀 [Viewport Culling] Performance boost:', {
+        total: elementsArray.length,
+        visible: visibleElements.length,
+        culled: `${Math.round((1 - visibleElements.length/elementsArray.length) * 100)}%`
+      });
+    }
     
     return { mainElements: main, connectorElements: connectors, sectionElements: sections, elementsBySection: bySection };
-  }, [elementsArray]); // Depend on the actual array content
+  }, [visibleElements, elementsArray.length]);
 
   // SIMPLIFIED: Prevent memoization issues that cause infinite loops
   const sortedMainElements = mainElements;
@@ -162,20 +161,10 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   // SIMPLIFIED: Remove complex memoization
   const selectedElementIdsOnly = selectedElementIds;
 
-  // DISABLED: All mouse handlers to prevent infinite loops
-  // These were using store functions that cause re-renders
-  
-  const handleMouseDown = () => {
-    console.log('🎯 [CanvasLayerManager] Mouse down (DISABLED)');
-  };
-
-  const handleMouseMove = () => {
-    // Disabled to prevent infinite loops
-  };
-
-  const handleMouseUp = () => {
-    // Disabled to prevent infinite loops
-  };
+  // Simplified event handlers (temporarily disabled)
+  const handleMouseDown = () => {};
+  const handleMouseMove = () => {};
+  const handleMouseUp = () => {};
 
   // Define missing variables with default values
   const layers = [
