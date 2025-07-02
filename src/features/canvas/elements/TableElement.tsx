@@ -1,14 +1,9 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { Group, Rect, Text, Line, Circle } from 'react-konva';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { Group, Rect, Text, Transformer, Circle, Line, Path } from 'react-konva';
 import Konva from 'konva';
-import { CanvasElement, isTableElement, ElementId } from '../types/enhanced.types';
-import { designSystem } from '../../../core/design-system';
 import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
-
-// Import extracted table functionality
-import { getTableDataKey } from '../utils/tableUtils';
-import { useTableCellEditing } from '../hooks/useTableCellEditing';
-import { useTableInteractions } from '../hooks/useTableInteractions';
+import { CanvasElement, ElementId, TableElement as TableElementType } from '../types/enhanced.types';
+import { isTableElement } from '../types/enhanced.types';
 
 interface TableElementProps {
   element: CanvasElement;
@@ -18,600 +13,732 @@ interface TableElementProps {
   stageRef: React.RefObject<Konva.Stage | null>;
 }
 
-interface ContextMenu {
-  show: boolean;
-  x: number;
-  y: number;
-  type: 'row' | 'column';
-  index: number;
+interface HoveredItem {
+  type: 'row' | 'column' | 'cell';
+  rowIndex?: number;
+  colIndex?: number;
 }
 
 export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
   ({ element, isSelected, onSelect, onUpdate, stageRef }, ref) => {
-  const dragUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const groupRef = useRef<Konva.Group>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
   
-  // Type safety: Ensure we're working with a table element
   if (!isTableElement(element)) {
-    console.error('🔧 [TABLE] Invalid element type passed to TableElement:', element.type);
     return null;
   }
   
-  // Type assertion for branded ID
   const tableId = element.id as ElementId;
 
-  // Local state for enhanced functionality
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
-  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
-  const [contextMenu, setContextMenu] = useState<ContextMenu>({ show: false, x: 0, y: 0, type: 'row', index: 0 });
-  const [resizing, setResizing] = useState<{ type: 'row' | 'column'; index: number; startPos: number } | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<HoveredItem | null>(null);
+  const [hoveredRow, setHoveredRow] = useState(-1);
+  const [hoveredCol, setHoveredCol] = useState(-1);
 
-  // Store methods
   const updateTableCell = useUnifiedCanvasStore(state => state.updateTableCell);
   const addTableRow = useUnifiedCanvasStore(state => state.addTableRow);
   const removeTableRow = useUnifiedCanvasStore(state => state.removeTableRow);
   const addTableColumn = useUnifiedCanvasStore(state => state.addTableColumn);
   const removeTableColumn = useUnifiedCanvasStore(state => state.removeTableColumn);
-  const resizeTableCell = useUnifiedCanvasStore(state => state.resizeTableCell);
-  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
 
-  // Get enhanced table data from element with safety checks
-  const enhancedTableData = element.enhancedTableData;
+  const storeElement = useUnifiedCanvasStore(state => state.elements.get(tableId));
+  const latestTableData = (storeElement && isTableElement(storeElement)) 
+    ? storeElement.enhancedTableData 
+    : element.enhancedTableData;
 
-  // Early return if no table data
-  if (!enhancedTableData || !enhancedTableData.rows || !enhancedTableData.columns) {
-    console.warn('🔧 [TABLE] No valid enhancedTableData found for table:', element.id);
-    return null;
+  const tableRows = latestTableData?.rows || [];
+  const tableColumns = latestTableData?.columns || [];
+  const tableCells = latestTableData?.cells || [];
+  
+  const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
+  useEffect(() => {
+    setForceUpdateCounter(prev => prev + 1);
+  }, [latestTableData]);
+
+  const ensureCell = (rowIndex: number, colIndex: number) => {
+    if (!tableCells[rowIndex]) tableCells[rowIndex] = [];
+    if (!tableCells[rowIndex][colIndex]) {
+      const isHeader = rowIndex === 0;
+      tableCells[rowIndex][colIndex] = {
+        content: '', text: '',
+        backgroundColor: isHeader ? '#F8FAFC' : '#FFFFFF',
+        textColor: isHeader ? '#374151' : '#1F2937',
+        fontSize: 14, fontFamily: 'Inter, sans-serif',
+        textAlign: 'left', verticalAlign: 'middle'
+      };
+    }
+  };
+
+  for (let i = 0; i < tableRows.length; i++) {
+    for (let j = 0; j < tableColumns.length; j++) {
+      ensureCell(i, j);
+    }
   }
 
-  const tableRows = enhancedTableData.rows;
-  const tableColumns = enhancedTableData.columns;
-  const tableCells = enhancedTableData.cells || [];
+  // Table dimensions with proper spacing for single add buttons
+  const ROW_HEIGHT = 44;
+  const COLUMN_WIDTH = 200;
+  const DELETE_COLUMN_WIDTH = 40;
+  const ADD_PADDING = 30;
 
-  // Calculate total dimensions
-  const totalWidth = tableColumns.reduce((sum, col) => sum + (col?.width || 120), 0);
-  const totalHeight = tableRows.reduce((sum, row) => sum + (row?.height || 40), 0);
+  // Calculate dimensions based on element size if it was resized
+  const actualTableWidth = element.width || (tableColumns.length * COLUMN_WIDTH + DELETE_COLUMN_WIDTH + ADD_PADDING);
+  const actualTableHeight = element.height || (tableRows.length * ROW_HEIGHT + ADD_PADDING);
+  
+  // Derive actual cell dimensions from table size
+  const actualContentWidth = actualTableWidth - DELETE_COLUMN_WIDTH - ADD_PADDING;
+  const actualContentHeight = actualTableHeight - ADD_PADDING;
+  const actualColumnWidth = tableColumns.length > 0 ? actualContentWidth / tableColumns.length : COLUMN_WIDTH;
+  const actualRowHeight = tableRows.length > 0 ? actualContentHeight / tableRows.length : ROW_HEIGHT;
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (dragUpdateTimeoutRef.current) {
-        clearTimeout(dragUpdateTimeoutRef.current);
-      }
-    };
+  // Use actual dimensions for layout
+  const totalContentWidth = actualContentWidth;
+  const totalWidth = actualTableWidth;
+  const totalContentHeight = actualContentHeight;
+  const totalHeight = actualTableHeight;
+
+  const handleCellDoubleClick = useCallback((row: number, col: number) => {
+    setEditingCell({ row, col });
   }, []);
 
-  // Close context menu on clicks outside
+  // Standard drag handler pattern from working shapes
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<any>) => {
+    updateElement(element.id as ElementId, {
+      x: e.target.x(),
+      y: e.target.y(),
+    });
+  }, [element.id, updateElement]);
+
+  // Enhanced cell editing with improved UX
   useEffect(() => {
-    const handleClickOutside = () => {
-      setContextMenu({ show: false, x: 0, y: 0, type: 'row', index: 0 });
-    };
-
-    if (contextMenu.show) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [contextMenu.show]);
-
-  // Enhanced cell editing with DOM textarea
-  useEffect(() => {
-    console.log('🔧 [Table] Cell editing useEffect triggered:', { editingCell, stageRef: !!stageRef?.current });
-    
-    if (!editingCell || !stageRef?.current) {
-      console.log('🔧 [Table] Cell editing early return:', { editingCell, stageRef: !!stageRef?.current });
-      return;
-    }
-
-    console.log('🔧 [Table] Creating cell editor for:', editingCell);
+    if (!editingCell || !stageRef?.current) return;
 
     const stage = stageRef.current;
     const container = stage.container();
-    if (!container) {
-      console.log('🔧 [Table] No container found');
-      return;
+    if (!container) return;
+
+    // 1. Compute cell local coordinates inside the group
+    const cellX = DELETE_COLUMN_WIDTH + editingCell.col * actualColumnWidth;
+    const cellY = editingCell.row * actualRowHeight;
+
+    // 2. Get the table group
+    const group = groupRef.current;
+    if (!group) return;
+
+    // 3. Use a more direct approach: convert cell coordinates to stage coordinates
+    // then apply stage transform to get screen coordinates
+    const localToStage = group.getAbsoluteTransform();
+    const stageTopLeft = localToStage.point({ x: cellX, y: cellY });
+    const stageBottomRight = localToStage.point({ 
+      x: cellX + actualColumnWidth, 
+      y: cellY + actualRowHeight 
+    });
+
+    // 4. Apply stage's viewport transform (handles zoom/pan)
+    const stageTransform = stage.getAbsoluteTransform();
+    const screenTopLeft = stageTransform.point(stageTopLeft);
+    const screenBottomRight = stageTransform.point(stageBottomRight);
+
+    // 5. Add container's position in the page
+    const containerRect = container.getBoundingClientRect();
+    const finalX = screenTopLeft.x + containerRect.left;
+    const finalY = screenTopLeft.y + containerRect.top;
+    const finalWidth = screenBottomRight.x - screenTopLeft.x;
+    const finalHeight = screenBottomRight.y - screenTopLeft.y;
+
+    // Debug logging to understand positioning issues
+    console.log('🔍 [TableElement] Direct transform approach:', {
+      cellCoords: { x: cellX, y: cellY, width: actualColumnWidth, height: actualRowHeight },
+      stageCoords: { topLeft: stageTopLeft, bottomRight: stageBottomRight },
+      screenCoords: { topLeft: screenTopLeft, bottomRight: screenBottomRight },
+      containerRect: { left: containerRect.left, top: containerRect.top },
+      finalPosition: { x: finalX, y: finalY, width: finalWidth, height: finalHeight },
+      stageScale: stage.scaleX(),
+      stagePosition: { x: stage.x(), y: stage.y() }
+    });
+
+    const existingContainer = document.getElementById(`table-cell-editor-container-${tableId}`);
+    if (existingContainer) existingContainer.remove();
+
+    // Create container for precise positioning
+    const editorContainer = document.createElement('div');
+    editorContainer.id = `table-cell-editor-container-${tableId}`;
+    Object.assign(editorContainer.style, {
+      position: 'fixed',
+      left: `${finalX}px`,
+      top: `${finalY}px`,
+      width: `${finalWidth}px`,
+      height: `${finalHeight}px`,
+      zIndex: '2147483647',
+      pointerEvents: 'auto',
+    });
+
+    const input = document.createElement('textarea');
+    input.id = `table-cell-editor-${tableId}`;
+    input.rows = 1;
+    
+    const cellData = tableCells[editingCell.row]?.[editingCell.col];
+    const currentText = cellData?.text || cellData?.content || '';
+    const isHeader = editingCell.row === 0;
+    input.value = currentText;
+    
+    // Set placeholder text
+    if (!currentText) {
+      input.placeholder = isHeader ? 'Column header' : 'Enter text';
     }
 
-    // Calculate cell position and size
-    const cellX = tableColumns.slice(0, editingCell.col).reduce((sum, c) => sum + (c?.width || 120), 0);
-    const cellY = tableRows.slice(0, editingCell.row).reduce((sum, r) => sum + (r?.height || 40), 0);
-    const cellWidth = tableColumns[editingCell.col]?.width || 120;
-    const cellHeight = tableRows[editingCell.row]?.height || 40;
-
-    console.log('🔧 [Table] Cell dimensions:', { cellX, cellY, cellWidth, cellHeight });
-
-    // Get stage transform
-    const containerRect = container.getBoundingClientRect();
-    const scale = stage.scaleX();
-    const stageX = stage.x();
-    const stageY = stage.y();
-
-    // Calculate absolute position on screen
-    const absoluteX = (element.x + cellX) * scale + stageX + containerRect.left;
-    const absoluteY = (element.y + cellY) * scale + stageY + containerRect.top;
-    const scaledWidth = cellWidth * scale;
-    const scaledHeight = cellHeight * scale;
-
-    console.log('🔧 [Table] Textarea position:', { absoluteX, absoluteY, scaledWidth, scaledHeight });
-
-    // Create textarea element
-    const textarea = document.createElement('textarea');
-    textarea.value = tableCells[editingCell.row]?.[editingCell.col]?.text || '';
-    textarea.placeholder = 'Enter text...';
-
-    console.log('🔧 [Table] Created textarea with value:', textarea.value);
-
-    // Style textarea
-    Object.assign(textarea.style, {
-      position: 'fixed',
-      left: `${absoluteX + 4}px`,
-      top: `${absoluteY + 4}px`,
-      width: `${scaledWidth - 8}px`,
-      height: `${scaledHeight - 8}px`,
-      padding: '8px',
+    // Apply styles so the textarea fills the container exactly while still
+    // keeping internal padding for nicer UX.
+    Object.assign(input.style, {
+      width: '100%',
+      height: '100%',
+      padding: '16px',
+      margin: '0',
       border: '2px solid #3B82F6',
       borderRadius: '4px',
-      fontSize: '14px',
+      fontSize: isHeader ? '15px' : '14px',
       fontFamily: 'Inter, sans-serif',
-      resize: 'none',
+      fontWeight: isHeader ? '600' : '400',
+      backgroundColor: isHeader ? '#F9FAFB' : '#FFFFFF',
+      color: isHeader ? '#1F2937' : '#374151',
       outline: 'none',
-      backgroundColor: 'white',
-      zIndex: '2147483647',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+      resize: 'none',
+      overflow: 'hidden',
+      lineHeight: '1.4',
+      boxSizing: 'border-box'
     });
 
-    // Event handlers
+    // Auto-resize textarea height
+    const autoResize = () => {
+      input.style.height = 'auto';
+      const scrollHeight = input.scrollHeight;
+      const maxHeight = parseFloat(editorContainer.style.height) - 4; // Account for border
+      input.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('🔧 [Table] Textarea key:', e.key);
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        updateTableCell(tableId, editingCell.row, editingCell.col, textarea.value);
-        setEditingCell(null);
-      } else if (e.key === 'Tab') {
-        e.preventDefault();
-        // Save current cell
-        updateTableCell(tableId, editingCell.row, editingCell.col, textarea.value);
-        
-        // Navigate to next cell
-        const { row, col } = editingCell;
-        let nextRow = row;
-        let nextCol = col;
-        
-        if (e.shiftKey) {
-          nextCol = col > 0 ? col - 1 : (row > 0 ? tableColumns.length - 1 : col);
-          nextRow = col > 0 ? row : (row > 0 ? row - 1 : row);
-        } else {
-          nextCol = col < tableColumns.length - 1 ? col + 1 : 0;
-          nextRow = col < tableColumns.length - 1 ? row : Math.min(row + 1, tableRows.length - 1);
-        }
-        
-        if (nextRow < tableRows.length && nextCol < tableColumns.length) {
-          setEditingCell({ row: nextRow, col: nextCol });
-        } else {
-          setEditingCell(null);
-        }
+        saveAndExit();
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        cancelEdit();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        moveToNextCell(e.shiftKey);
+      }
+    };
+
+    const handleInput = (e: Event) => {
+      autoResize();
+    };
+
+    const saveAndExit = () => {
+      updateTableCell(tableId, editingCell.row, editingCell.col, input.value.trim());
+      setEditingCell(null);
+    };
+
+    const cancelEdit = () => {
+      setEditingCell(null);
+    };
+
+    const moveToNextCell = (backward: boolean = false) => {
+      const currentRow = editingCell.row;
+      const currentCol = editingCell.col;
+      
+      // Save current cell
+      updateTableCell(tableId, currentRow, currentCol, input.value.trim());
+      
+      // Calculate next cell position
+      let nextRow = currentRow;
+      let nextCol = currentCol;
+      
+      if (backward) {
+        if (nextCol > 0) {
+          nextCol--;
+        } else if (nextRow > 0) {
+          nextRow--;
+          nextCol = tableColumns.length - 1;
+        }
+      } else {
+        if (nextCol < tableColumns.length - 1) {
+          nextCol++;
+        } else if (nextRow < tableRows.length - 1) {
+          nextRow++;
+          nextCol = 0;
+        }
+      }
+      
+      // Move to next cell if different
+      if (nextRow !== currentRow || nextCol !== currentCol) {
+        setEditingCell({ row: nextRow, col: nextCol });
+      } else {
         setEditingCell(null);
       }
     };
 
-    const handleBlur = () => {
-      console.log('🔧 [Table] Textarea blur');
+    const handleBlur = (e: FocusEvent) => {
+      // Small delay to allow for tab navigation
       setTimeout(() => {
-        if (document.activeElement !== textarea) {
-          updateTableCell(tableId, editingCell.row, editingCell.col, textarea.value);
-          setEditingCell(null);
+        if (document.activeElement?.id !== `table-cell-editor-${tableId}`) {
+          saveAndExit();
         }
-      }, 100);
+      }, 50);
     };
+
+    // Live position update function for when table moves or zoom changes
+    const updateEditorPosition = () => {
+      if (!groupRef.current || !stageRef.current) return;
+
+      const currentStage = stageRef.current;
+      const currentContainer = currentStage.container();
+      if (!currentContainer) return;
+
+      // Recalculate using the same direct transform approach
+      const currentLocalToStage = groupRef.current.getAbsoluteTransform();
+      const currentStageTopLeft = currentLocalToStage.point({ x: cellX, y: cellY });
+      const currentStageBottomRight = currentLocalToStage.point({ 
+        x: cellX + actualColumnWidth, 
+        y: cellY + actualRowHeight 
+      });
+
+      const currentStageTransform = currentStage.getAbsoluteTransform();
+      const currentScreenTopLeft = currentStageTransform.point(currentStageTopLeft);
+      const currentScreenBottomRight = currentStageTransform.point(currentStageBottomRight);
+
+      const currentContainerRect = currentContainer.getBoundingClientRect();
+      const newFinalX = currentScreenTopLeft.x + currentContainerRect.left;
+      const newFinalY = currentScreenTopLeft.y + currentContainerRect.top;
+      const newFinalWidth = currentScreenBottomRight.x - currentScreenTopLeft.x;
+      const newFinalHeight = currentScreenBottomRight.y - currentScreenTopLeft.y;
+
+      // Apply changes only if values differ to avoid style thrash
+      if (Math.abs(newFinalX - parseFloat(editorContainer.style.left)) > 0.5) {
+        editorContainer.style.left = `${newFinalX}px`;
+      }
+      if (Math.abs(newFinalY - parseFloat(editorContainer.style.top)) > 0.5) {
+        editorContainer.style.top = `${newFinalY}px`;
+      }
+      if (Math.abs(newFinalWidth - parseFloat(editorContainer.style.width)) > 0.5) {
+        editorContainer.style.width = `${newFinalWidth}px`;
+      }
+      if (Math.abs(newFinalHeight - parseFloat(editorContainer.style.height)) > 0.5) {
+        editorContainer.style.height = `${newFinalHeight}px`;
+      }
+    };
+
+    // Monitor table position changes more frequently since viewport changes can be fast
+    const positionMonitor = setInterval(updateEditorPosition, 16); // ~60fps monitoring
 
     // Add event listeners
-    textarea.addEventListener('keydown', handleKeyDown);
-    textarea.addEventListener('blur', handleBlur);
+    input.addEventListener('keydown', handleKeyDown);
+    input.addEventListener('input', handleInput);
+    input.addEventListener('blur', handleBlur);
+    
+    // Add input to container and container to body
+    editorContainer.appendChild(input);
+    document.body.appendChild(editorContainer);
+    
+    // Focus and setup
+    setTimeout(() => {
+      input.focus();
+      if (currentText) {
+        input.select();
+      }
+      autoResize();
+    }, 50);
 
-    // Add to DOM
-    document.body.appendChild(textarea);
-    console.log('🔧 [Table] Textarea added to DOM');
-
-    // Focus and select
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.select();
-      console.log('🔧 [Table] Textarea focused and selected');
-    });
-
-    // Cleanup
     return () => {
-      console.log('🔧 [Table] Cleaning up textarea');
-      textarea.removeEventListener('keydown', handleKeyDown);
-      textarea.removeEventListener('blur', handleBlur);
-      if (document.body.contains(textarea)) {
-        document.body.removeChild(textarea);
+      clearInterval(positionMonitor);
+      input.removeEventListener('keydown', handleKeyDown);
+      input.removeEventListener('input', handleInput);
+      input.removeEventListener('blur', handleBlur);
+      if (document.body.contains(editorContainer)) {
+        document.body.removeChild(editorContainer);
       }
     };
-  }, [editingCell, element.x, element.y, tableColumns, tableRows, tableCells, stageRef, updateTableCell, tableId]);
+  }, [editingCell, element.x, element.y, element.width, element.height, stageRef, updateTableCell, tableId, tableColumns.length, tableRows.length, forceUpdateCounter, actualColumnWidth, actualRowHeight]);
 
-  // Context menu management
   useEffect(() => {
-    if (!contextMenu.show) return;
-
-    console.log('🔧 [Table] Creating context menu:', contextMenu);
-
-    const menuDiv = document.createElement('div');
-    Object.assign(menuDiv.style, {
-      position: 'fixed',
-      left: `${contextMenu.x}px`,
-      top: `${contextMenu.y}px`,
-      backgroundColor: 'white',
-      border: '1px solid #E5E7EB',
-      borderRadius: '8px',
-      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-      padding: '4px',
-      minWidth: '160px',
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '14px',
-      zIndex: '2147483646'
-    });
-
-    const createMenuItem = (text: string, action: () => void, dangerous = false) => {
-      const item = document.createElement('button');
-      item.textContent = text;
-      Object.assign(item.style, {
-        width: '100%',
-        padding: '8px 12px',
-        textAlign: 'left',
-        border: 'none',
-        background: 'none',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        color: dangerous ? '#DC2626' : '#374151'
-      });
-
-      item.addEventListener('mouseenter', () => {
-        item.style.backgroundColor = dangerous ? '#FEF2F2' : '#F3F4F6';
-      });
-      item.addEventListener('mouseleave', () => {
-        item.style.backgroundColor = 'transparent';
-      });
-      item.addEventListener('click', () => {
-        action();
-        setContextMenu({ show: false, x: 0, y: 0, type: 'row', index: 0 });
-      });
-
-      return item;
-    };
-
-    // Add menu items based on type
-    if (contextMenu.type === 'row') {
-      menuDiv.appendChild(createMenuItem('Add row above', () => addTableRow(tableId, contextMenu.index)));
-      menuDiv.appendChild(createMenuItem('Add row below', () => addTableRow(tableId, contextMenu.index + 1)));
-      if (tableRows.length > 2) {
-        menuDiv.appendChild(createMenuItem('Delete row', () => removeTableRow(tableId, contextMenu.index), true));
-      }
-    } else {
-      menuDiv.appendChild(createMenuItem('Add column left', () => addTableColumn(tableId, contextMenu.index)));
-      menuDiv.appendChild(createMenuItem('Add column right', () => addTableColumn(tableId, contextMenu.index + 1)));
-      if (tableColumns.length > 2) {
-        menuDiv.appendChild(createMenuItem('Delete column', () => removeTableColumn(tableId, contextMenu.index), true));
-      }
+    if (isSelected && transformerRef.current && groupRef.current) {
+      // we need to attach transformer manually
+      transformerRef.current.nodes([groupRef.current]);
+      transformerRef.current.getLayer()?.batchDraw();
     }
+  }, [isSelected]);
 
-    document.body.appendChild(menuDiv);
+  // Modern icon components with improved styling
+  const PlusIcon = ({ x, y, size = 16, color = '#4B5563' }: { x: number; y: number; size?: number; color?: string }) => (
+    <Group x={x} y={y}>
+      <Line points={[0, -size/2, 0, size/2]} stroke={color} strokeWidth={2.5} lineCap="round" />
+      <Line points={[-size/2, 0, size/2, 0]} stroke={color} strokeWidth={2.5} lineCap="round" />
+    </Group>
+  );
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!menuDiv.contains(e.target as Node)) {
-        setContextMenu({ show: false, x: 0, y: 0, type: 'row', index: 0 });
-      }
-    };
+  const XIcon = ({ x, y, size = 12, color = '#FFFFFF' }: { x: number; y: number; size?: number; color?: string }) => (
+    <Group x={x} y={y}>
+      <Line points={[-size/2, -size/2, size/2, size/2]} stroke={color} strokeWidth={2.5} lineCap="round" />
+      <Line points={[-size/2, size/2, size/2, -size/2]} stroke={color} strokeWidth={2.5} lineCap="round" />
+    </Group>
+  );
 
-    document.addEventListener('click', handleClickOutside);
+  const DeleteButton = ({ x, y, onClick, visible, onMouseEnter, tooltip }: { 
+    x: number; 
+    y: number; 
+    onClick: () => void; 
+    visible: boolean;
+    onMouseEnter?: () => void;
+    tooltip?: string;
+  }) => (
+    <Group 
+      x={x} 
+      y={y} 
+      onClick={onClick} 
+      onTap={onClick}
+      onMouseEnter={onMouseEnter}
+      opacity={visible ? 1 : 0}
+      listening={true}
+    >
+      <Circle
+        radius={7}
+        fill="#EF4444"
+        stroke="#FFFFFF"
+        strokeWidth={1.5}
+        shadowColor="rgba(239, 68, 68, 0.2)"
+        shadowBlur={2}
+        shadowOffset={{ x: 0, y: 1 }}
+      />
+      <XIcon x={0} y={0} size={6} color="#FFFFFF" />
+    </Group>
+  );
 
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-      if (document.body.contains(menuDiv)) {
-        document.body.removeChild(menuDiv);
-      }
-    };
-  }, [contextMenu, addTableRow, removeTableRow, addTableColumn, removeTableColumn, tableId, tableRows.length, tableColumns.length]);
+  const renderTable = () => {
+    const elements = [];
 
-  // Cell editing handlers
-  const handleCellDoubleClick = useCallback((row: number, col: number) => {
-    console.log('🔧 [Table] Cell double-clicked:', { row, col });
-    console.log('🔧 [Table] Setting editingCell state to:', { row, col });
-    setEditingCell({ row, col });
-    console.log('🔧 [Table] editingCell state updated');
-  }, []);
+    // Main table container with cleaner styling
+    elements.push(
+      <Rect
+        key="table-container"
+        width={totalWidth}
+        height={totalHeight}
+        fill="#FFFFFF"
+        stroke="#D1D5DB"
+        strokeWidth={1}
+        cornerRadius={6}
+        shadowColor="rgba(0, 0, 0, 0.04)"
+        shadowBlur={3}
+        shadowOffset={{ x: 0, y: 1 }}
+        onTransformEnd={(e) => {
+          // Standard Konva transform pattern - handle scaling
+          const node = groupRef.current;
+          if (!node) return;
+          
+          const scaleX = node.scaleX();
+          const scaleY = node.scaleY();
+          
+          // Reset scale to 1 and adjust dimensions
+          node.scaleX(1);
+          node.scaleY(1);
+          
+          updateElement(element.id as ElementId, {
+            x: node.x(),
+            y: node.y(),
+            width: Math.max(240, totalWidth * scaleX),
+            height: Math.max(120, totalHeight * scaleY),
+          });
+        }}
+      />
+    );
 
-  // Context menu handlers
-  const handleRowRightClick = useCallback((rowIndex: number, e: Konva.KonvaEventObject<MouseEvent>) => {
-    console.log('🔧 [Table] Row right-clicked:', rowIndex);
-    e.cancelBubble = true;
-    e.evt.preventDefault();
-    
-    setContextMenu({
-      show: true,
-      x: e.evt.clientX,
-      y: e.evt.clientY,
-      type: 'row',
-      index: rowIndex
-    });
-  }, []);
+    // Enhanced header section background
+    elements.push(
+      <Rect
+        key="header-section"
+        x={DELETE_COLUMN_WIDTH}
+        y={0}
+        width={totalContentWidth}
+        height={actualRowHeight}
+        fill="#F9FAFB"
+        stroke="transparent"
+        strokeWidth={0}
+      />
+    );
 
-  const handleColumnRightClick = useCallback((colIndex: number, e: Konva.KonvaEventObject<MouseEvent>) => {
-    console.log('🔧 [Table] Column right-clicked:', colIndex);
-    e.cancelBubble = true;
-    e.evt.preventDefault();
-    
-    setContextMenu({
-      show: true,
-      x: e.evt.clientX,
-      y: e.evt.clientY,
-      type: 'column',
-      index: colIndex
-    });
-  }, []);
-
-  // Render table cells
-  const renderCells = () => {
-    const allCells = [];
-    
+    // Render cells with improved styling and consistent borders
     for (let rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
-      const row = tableRows[rowIndex];
-      
       for (let colIndex = 0; colIndex < tableColumns.length; colIndex++) {
-        const col = tableColumns[colIndex];
-        const cellData = tableCells[rowIndex]?.[colIndex] || { content: '', text: '' };
+        ensureCell(rowIndex, colIndex);
+        const cellData = tableCells[rowIndex][colIndex];
         const cellText = cellData?.text || cellData?.content || '';
+        
+        const cellX = DELETE_COLUMN_WIDTH + colIndex * actualColumnWidth;
+        const cellY = rowIndex * actualRowHeight;
+        const isHeader = rowIndex === 0;
+        const isHovered = hoveredItem?.type === 'cell' && 
+                         hoveredItem?.rowIndex === rowIndex && 
+                         hoveredItem?.colIndex === colIndex;
 
-        // Calculate cell position
-        const cellX = tableColumns.slice(0, colIndex).reduce((sum, c) => sum + (c?.width || 120), 0);
-        const cellY = tableRows.slice(0, rowIndex).reduce((sum, r) => sum + (r?.height || 40), 0);
-
-        const isHeader = rowIndex === 0 || colIndex === 0;
-        const isEditing = editingCell?.row === rowIndex && editingCell?.col === colIndex;
-        const isHovered = hoveredCell?.row === rowIndex && hoveredCell?.col === colIndex;
-
-        allCells.push(
-          <Group
-            key={`cell-group-${rowIndex}-${colIndex}`}
+        // Cell background with improved hover detection
+        elements.push(
+          <Rect
+            key={`cell-bg-${rowIndex}-${colIndex}`}
             x={cellX}
             y={cellY}
-          >
-            <Rect
-              x={0}
-              y={0}
-              width={col?.width || 120}
-              height={row?.height || 40}
-              fill={isEditing ? '#EFF6FF' : isHovered ? '#F8FAFC' : (isHeader ? '#F1F5F9' : 'white')}
-              stroke={isSelected ? designSystem.colors.primary[400] : '#E2E8F0'}
-              strokeWidth={isSelected ? 1.5 : 0.5}
-              onMouseEnter={() => {
-                console.log('🔧 [Table] Cell hover enter:', { row: rowIndex, col: colIndex });
-                setHoveredCell({ row: rowIndex, col: colIndex });
-              }}
-              onMouseLeave={() => {
-                console.log('🔧 [Table] Cell hover leave:', { row: rowIndex, col: colIndex });
-                setHoveredCell(null);
-              }}
-              onClick={(e) => {
-                console.log('🔧 [Table] Cell clicked:', { row: rowIndex, col: colIndex });
-                e.cancelBubble = true;
-                onSelect(element);
-              }}
-              onDblClick={(e) => {
-                console.log('🔧 [Table] Cell double-clicked:', { row: rowIndex, col: colIndex });
-                e.cancelBubble = true;
-                handleCellDoubleClick(rowIndex, colIndex);
-              }}
-              onContextMenu={(e) => {
-                console.log('🔧 [Table] Cell right-clicked:', { row: rowIndex, col: colIndex, isHeader });
-                e.cancelBubble = true;
-                e.evt.preventDefault();
-                
-                // Only show context menu for header cells
-                if (rowIndex === 0 && colIndex > 0) {
-                  // Column header
-                  handleColumnRightClick(colIndex, e);
-                } else if (colIndex === 0 && rowIndex > 0) {
-                  // Row header
-                  handleRowRightClick(rowIndex, e);
-                }
-              }}
-            />
-            
-            <Text
-              x={8}
-              y={8}
-              text={cellText}
-              fontSize={cellData?.fontSize || 14}
-              fontFamily={cellData?.fontFamily || 'Inter, sans-serif'}
-              fontWeight={isHeader ? 'bold' : 'normal'}
-              fill={cellData?.textColor || '#1F2937'}
-              width={(col?.width || 120) - 16}
-              height={(row?.height || 40) - 16}
-              verticalAlign="middle"
-              ellipsis={true}
-              listening={false}
-            />
-          </Group>
+            width={actualColumnWidth}
+            height={actualRowHeight}
+            fill={isHovered ? '#F8F9FA' : (isHeader ? '#F8FAFC' : '#FFFFFF')}
+            stroke="transparent"
+            strokeWidth={0}
+            onMouseEnter={() => {
+              setHoveredItem({ type: 'cell', rowIndex, colIndex });
+              setHoveredRow(rowIndex);
+              setHoveredCol(colIndex);
+            }}
+            onClick={() => onSelect(element)}
+            onDblClick={() => handleCellDoubleClick(rowIndex, colIndex)}
+          />
+        );
+
+        // Enhanced cell text with better typography
+        elements.push(
+          <Text
+            key={`cell-text-${rowIndex}-${colIndex}`}
+            text={cellText || (isHeader ? `Column ${colIndex + 1}` : '')}
+            x={cellX + 12}
+            y={cellY + 12}
+            width={actualColumnWidth - 24}
+            height={actualRowHeight - 24}
+            fontSize={isHeader ? 14 : 13}
+            fontFamily="Inter, sans-serif"
+            fontWeight={isHeader ? '500' : '400'}
+            fill={isHeader ? '#374151' : '#4B5563'}
+            verticalAlign="middle"
+            align="left"
+            listening={false}
+          />
         );
       }
     }
-    
-    return allCells;
-  };
 
-  // Render resize handles for selected table
-  const renderResizeHandles = () => {
-    if (!isSelected) return [];
-    
-    const handles = [];
-    
-    // Column resize handles - positioned at column boundaries
-    let accumulatedWidth = 0;
-    for (let i = 0; i < tableColumns.length - 1; i++) {
-      accumulatedWidth += tableColumns[i]?.width || 120;
-      handles.push(
+    // Add delete buttons for columns (in header area) on hover
+    for (let colIndex = 0; colIndex < tableColumns.length; colIndex++) {
+      const isColHovered = hoveredCol === colIndex;
+      if (tableColumns.length > 2) {
+        elements.push(
+          <DeleteButton
+            key={`delete-col-${colIndex}`}
+            x={DELETE_COLUMN_WIDTH + colIndex * actualColumnWidth + actualColumnWidth - 25}
+            y={actualRowHeight / 2}
+            onClick={() => removeTableColumn(tableId, colIndex)}
+            visible={isColHovered}
+            onMouseEnter={() => setHoveredCol(colIndex)}
+          />
+        );
+      }
+    }
+
+    // Add delete buttons for rows with better separation and hover reveals
+    for (let rowIndex = 1; rowIndex < tableRows.length; rowIndex++) {
+      const isRowHovered = hoveredRow === rowIndex;
+      if (tableRows.length > 2) {
+        elements.push(
+          <DeleteButton
+            key={`delete-row-${rowIndex}`}
+            x={12}
+            y={rowIndex * actualRowHeight + actualRowHeight / 2}
+            onClick={() => removeTableRow(tableId, rowIndex)}
+            visible={isRowHovered}
+            onMouseEnter={() => setHoveredRow(rowIndex)}
+            tooltip="Delete row"
+          />
+        );
+      }
+    }
+
+    // Single add column button at the end of header row
+    elements.push(
+      <Group
+        key="add-column"
+        x={DELETE_COLUMN_WIDTH + totalContentWidth + 15}
+        y={actualRowHeight / 2}
+        onClick={() => addTableColumn(tableId, tableColumns.length)}
+        onTap={() => addTableColumn(tableId, tableColumns.length)}
+        onMouseEnter={() => setHoveredCol(-2)} // Special hover state for add column
+        onMouseLeave={() => setHoveredCol(-1)}
+      >
         <Circle
-          key={`col-handle-${i}`}
-          x={accumulatedWidth}
-          y={totalHeight / 2}
-          radius={6}
-          fill="#3B82F6"
-          stroke="white"
+          radius={10}
+          fill="#F9FAFB"
+          stroke="#E5E7EB"
+          strokeWidth={1}
+          opacity={0.9}
+        />
+        <PlusIcon x={0} y={0} color="#6B7280" size={12} />
+      </Group>
+    );
+
+    // Single add row button at the bottom
+    elements.push(
+      <Group
+        key="add-row"
+        x={DELETE_COLUMN_WIDTH / 2}
+        y={totalContentHeight + 15}
+        onClick={() => addTableRow(tableId, tableRows.length)}
+        onTap={() => addTableRow(tableId, tableRows.length)}
+        onMouseEnter={() => setHoveredRow(-2)} // Special hover state for add row
+        onMouseLeave={() => setHoveredRow(-1)}
+      >
+        <Circle
+          radius={10}
+          fill="#F9FAFB"
+          stroke="#E5E7EB"
+          strokeWidth={1}
+          opacity={0.9}
+        />
+        <PlusIcon x={0} y={0} color="#6B7280" size={12} />
+      </Group>
+    );
+
+    // Add insertion preview for column (when hovering add column button)
+    if (hoveredCol === -2) {
+      elements.push(
+        <Line
+          key="column-insertion-preview"
+          points={[
+            DELETE_COLUMN_WIDTH + totalContentWidth + 5,
+            0,
+            DELETE_COLUMN_WIDTH + totalContentWidth + 5,
+            totalContentHeight
+          ]}
+          stroke="#3B82F6"
           strokeWidth={2}
-          draggable
-          dragBoundFunc={(pos) => {
-            // Constrain to horizontal movement only
-            return {
-              x: Math.max(60, Math.min(pos.x, totalWidth - 60)), // Min/max column widths
-              y: totalHeight / 2
-            };
-          }}
-          onDragStart={() => {
-            console.log('🔧 [Table] Started dragging column handle:', i);
-          }}
-          onDragMove={(e) => {
-            const node = e.target;
-            const newX = node.x();
-            
-            // Calculate new width based on handle position
-            const columnStartX = tableColumns.slice(0, i).reduce((sum, c) => sum + (c?.width || 120), 0);
-            const newWidth = Math.max(60, newX - columnStartX);
-            
-            console.log('🔧 [Table] Resizing column:', { column: i, newWidth, handleX: newX });
-            
-            // Update the column width in real-time
-            resizeTableCell(tableId, 0, i, newWidth, undefined);
-          }}
-          onDragEnd={() => {
-            console.log('🔧 [Table] Finished dragging column handle:', i);
-          }}
+          opacity={0.6}
+          listening={false}
         />
       );
     }
-    
-    // Row resize handles - positioned at row boundaries
-    let accumulatedHeight = 0;
-    for (let i = 0; i < tableRows.length - 1; i++) {
-      accumulatedHeight += tableRows[i]?.height || 40;
-      handles.push(
-        <Circle
-          key={`row-handle-${i}`}
-          x={totalWidth / 2}
-          y={accumulatedHeight}
-          radius={6}
-          fill="#3B82F6"
-          stroke="white"
+
+    // Add insertion preview for row (when hovering add row button)
+    if (hoveredRow === -2) {
+      elements.push(
+        <Line
+          key="row-insertion-preview"
+          points={[
+            DELETE_COLUMN_WIDTH,
+            totalContentHeight + 5,
+            DELETE_COLUMN_WIDTH + totalContentWidth,
+            totalContentHeight + 5
+          ]}
+          stroke="#3B82F6"
           strokeWidth={2}
-          draggable
-          dragBoundFunc={(pos) => {
-            // Constrain to vertical movement only
-            return {
-              x: totalWidth / 2,
-              y: Math.max(30, Math.min(pos.y, totalHeight - 30)) // Min/max row heights
-            };
-          }}
-          onDragStart={() => {
-            console.log('🔧 [Table] Started dragging row handle:', i);
-          }}
-          onDragMove={(e) => {
-            const node = e.target;
-            const newY = node.y();
-            
-            // Calculate new height based on handle position
-            const rowStartY = tableRows.slice(0, i).reduce((sum, r) => sum + (r?.height || 40), 0);
-            const newHeight = Math.max(30, newY - rowStartY);
-            
-            console.log('🔧 [Table] Resizing row:', { row: i, newHeight, handleY: newY });
-            
-            // Update the row height in real-time
-            resizeTableCell(tableId, i, 0, undefined, newHeight);
-          }}
-          onDragEnd={() => {
-            console.log('🔧 [Table] Finished dragging row handle:', i);
-          }}
+          opacity={0.6}
+          listening={false}
         />
       );
     }
-    
-    return handles;
+
+    // Clean, subtle grid lines
+    // Vertical grid lines
+    for (let i = 1; i < tableColumns.length; i++) {
+      const lineX = DELETE_COLUMN_WIDTH + i * actualColumnWidth;
+      elements.push(
+        <Line
+          key={`v-grid-${i}`}
+          points={[lineX, 0, lineX, totalContentHeight]}
+          stroke="#E5E7EB"
+          strokeWidth={1}
+          listening={false}
+        />
+      );
+    }
+
+    // Horizontal grid lines
+    for (let i = 1; i < tableRows.length; i++) {
+      const lineY = i * actualRowHeight;
+      elements.push(
+        <Line
+          key={`h-grid-${i}`}
+          points={[DELETE_COLUMN_WIDTH, lineY, DELETE_COLUMN_WIDTH + totalContentWidth, lineY]}
+          stroke="#E5E7EB"
+          strokeWidth={1}
+          listening={false}
+        />
+      );
+    }
+
+    // Add header separator line (only within table content area)
+    elements.push(
+      <Line
+        key="header-separator"
+        points={[DELETE_COLUMN_WIDTH, actualRowHeight, DELETE_COLUMN_WIDTH + totalContentWidth, actualRowHeight]}
+        stroke="#D1D5DB"
+        strokeWidth={1.5}
+        listening={false}
+      />
+    );
+
+    // Add bottom border for table content area
+    elements.push(
+      <Line
+        key="bottom-separator"
+        points={[DELETE_COLUMN_WIDTH, totalContentHeight, DELETE_COLUMN_WIDTH + totalContentWidth, totalContentHeight]}
+        stroke="#D1D5DB"
+        strokeWidth={1}
+        listening={false}
+      />
+    );
+
+    return elements;
   };
 
   return (
-    <Group
-      ref={ref}
-      id={element.id}
-      x={element.x}
-      y={element.y}
-      draggable
-      onDragStart={(e) => {
-        console.log('🔧 [Table] Drag start:', { x: element.x, y: element.y });
-        // Prevent event bubbling
-        e.cancelBubble = true;
-      }}
-      onDragMove={(e) => {
-        // Update position in real-time
-        const node = e.target;
-        const newX = node.x();
-        const newY = node.y();
-        
-        console.log('🔧 [Table] Dragging to:', { x: newX, y: newY });
-        
-        // Throttle updates for performance
-        if (dragUpdateTimeoutRef.current) {
-          clearTimeout(dragUpdateTimeoutRef.current);
-        }
-        
-        dragUpdateTimeoutRef.current = setTimeout(() => {
-          onUpdate({ x: newX, y: newY });
-        }, 16); // ~60fps
-      }}
-      onDragEnd={(e) => {
-        const node = e.target;
-        const newX = node.x();
-        const newY = node.y();
-        
-        console.log('🔧 [Table] Drag end:', { x: newX, y: newY });
-        
-        // Clear any pending updates
-        if (dragUpdateTimeoutRef.current) {
-          clearTimeout(dragUpdateTimeoutRef.current);
-          dragUpdateTimeoutRef.current = null;
-        }
-        
-        // Final position update
-        onUpdate({ x: newX, y: newY });
-        e.cancelBubble = true;
-      }}
-      onClick={(e) => {
-        console.log('🔧 [Table] Table clicked for selection');
-        e.cancelBubble = true;
-        onSelect(element);
-      }}
-      onMouseLeave={() => setHoveredCell(null)}
-      opacity={editingCell ? 0.95 : 1.0}
-    >
-      {/* Table Background */}
-      <Rect
-        x={0}
-        y={0}
+    <>
+      <Group
+        ref={groupRef}
+        id={element.id}
+        x={element.x}
+        y={element.y}
         width={totalWidth}
         height={totalHeight}
-        fill="white"
-        stroke={isSelected ? designSystem.colors.primary[400] : '#D1D5DB'}
-        strokeWidth={isSelected ? 2 : 1}
-        shadowColor="rgba(0, 0, 0, 0.1)"
-        shadowBlur={8}
-        shadowOffset={{ x: 0, y: 2 }}
-        listening={false}
-      />
-
-      {/* Render all cells */}
-      {renderCells()}
-
-      {/* Render resize handles if selected */}
-      {renderResizeHandles()}
-    </Group>
+        draggable
+        onDragEnd={handleDragEnd}
+        onClick={() => onSelect(element)}
+        onTap={() => onSelect(element)}
+        onMouseLeave={() => {
+          setHoveredItem(null);
+          setHoveredRow(-1);
+          setHoveredCol(-1);
+        }}
+      >
+        {renderTable()}
+      </Group>
+      
+      {/* Standard transformer matching other elements */}
+      {isSelected && (
+        <Transformer
+          ref={transformerRef}
+          flipEnabled={false}
+          boundBoxFunc={(oldBox, newBox) => {
+            if (newBox.width < 240 || newBox.height < 120) {
+              return oldBox;
+            }
+            return newBox;
+          }}
+          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+          rotateEnabled={false}
+          borderStroke="#3B82F6"
+          borderStrokeWidth={2}
+          borderDash={[5, 5]}
+          anchorStroke="#3B82F6"
+          anchorFill="#ffffff"
+          anchorSize={8}
+          anchorStrokeWidth={2}
+          ignoreStroke={true}
+        />
+      )}
+    </>
   );
 });
 

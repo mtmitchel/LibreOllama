@@ -21,7 +21,7 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
   const updateElement = useUnifiedCanvasStore((state) => state.updateElement);
   const addToHistory = useUnifiedCanvasStore((state) => state.addToHistory);
 
-  // Filter out table elements - they have their own transformer system
+  // Exclude table elements - they handle their own selection/transformation
   const filteredSelectedNodeIds = selectedNodeIds.filter(id => {
     const element = elements.get(id);
     return element && !isTableElement(element);
@@ -41,7 +41,7 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
     const stage = stageRef.current;
     const transformer = transformerRef.current;
     
-    // Only attach to non-table elements
+    // Attach to filtered nodes (tables already excluded)
     const nodes = filteredSelectedNodeIds
       .map((id) => stage.findOne<Konva.Node>(`#${id}`))
       .filter((node): node is Konva.Node => !!node);
@@ -49,7 +49,7 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
     transformer.nodes(nodes);
     transformer.getLayer()?.batchDraw();
 
-    // If no valid nodes (e.g., only tables selected), hide transformer
+    // If no nodes to transform (tables filtered out), hide transformer
     if (nodes.length === 0) {
       transformer.hide();
       return;
@@ -229,11 +229,47 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
       updates.fontSize = Math.max(8, Math.min(72, element.fontSize * avgScale));
     }
 
+    // Handle table scaling - resize table and redistribute columns/rows
+    if (element.type === 'table' && isTableElement(element)) {
+      const newWidth = Math.max(120, element.width * scaleX); // Minimum 120px (for at least 1 column)
+      const newHeight = Math.max(80, element.height * scaleY); // Minimum 80px (for at least 2 rows)
+      
+      updates.width = newWidth;
+      updates.height = newHeight;
+      
+      // Update table data if it exists
+      if (element.enhancedTableData) {
+        const { rows, columns } = element.enhancedTableData;
+        
+        // Redistribute column widths proportionally
+        const totalCols = columns.length;
+        const newColWidth = newWidth / totalCols;
+        const updatedColumns = columns.map(col => ({
+          ...col,
+          width: newColWidth
+        }));
+        
+        // Redistribute row heights proportionally  
+        const totalRows = rows.length;
+        const newRowHeight = newHeight / totalRows;
+        const updatedRows = rows.map(row => ({
+          ...row,
+          height: newRowHeight
+        }));
+        
+        updates.enhancedTableData = {
+          ...element.enhancedTableData,
+          columns: updatedColumns,
+          rows: updatedRows
+        };
+      }
+    }
+
     updateElement(elementId, updates);
     addToHistory('Transform Element');
   };
 
-  // If no non-table elements are selected, don't render transformer
+  // If no transformable elements are selected, don't render transformer
   if (filteredSelectedNodeIds.length === 0) {
     return null;
   }

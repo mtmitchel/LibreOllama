@@ -9,6 +9,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
 import { nanoid } from 'nanoid';
+import type { TableCell } from '../types/enhanced.types';
 import { logger } from '../../../core/lib/logger';
 import {
   CanvasElement,
@@ -20,6 +21,7 @@ import {
   RectangleElement,
   CircleElement,
   SectionElement,
+  isTableElement,
 } from '../types/enhanced.types';
 import { 
   MarkerConfig, 
@@ -964,11 +966,16 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
     },
     
     updateTableCell: (tableId, row, col, value) => {
+      console.log('🔥 [updateTableCell] CALLED with:', { tableId, row, col, value });
+      
       set(state => {
         const table = state.elements.get(tableId);
+        console.log('🔥 [updateTableCell] Found table:', !!table, table?.type);
+        
         if (table && isTableElement(table)) {
           // Ensure enhancedTableData exists
           if (!table.enhancedTableData) {
+            console.log('🔥 [updateTableCell] Creating enhancedTableData');
             table.enhancedTableData = {
               rows: Array(table.rows).fill(null).map((_, i) => ({ height: 40, id: `row-${i}` })),
               columns: Array(table.cols).fill(null).map((_, i) => ({ width: 120, id: `col-${i}` })),
@@ -982,6 +989,7 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
           if (!table.enhancedTableData.cells || 
               table.enhancedTableData.cells.length !== table.rows ||
               table.enhancedTableData.cells[0]?.length !== table.cols) {
+            console.log('🔥 [updateTableCell] Fixing cells array dimensions');
             table.enhancedTableData.cells = Array(table.rows).fill(null).map((_, r) => 
               Array(table.cols).fill(null).map((_, c) => 
                 table.enhancedTableData?.cells?.[r]?.[c] || { content: '', text: '' }
@@ -991,7 +999,10 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
 
           // Update the specific cell
           if (table.enhancedTableData.cells[row] && table.enhancedTableData.cells[row][col]) {
-            table.enhancedTableData.cells[row][col] = {
+            console.log('🔥 [updateTableCell] OLD cell value:', table.enhancedTableData.cells[row][col]);
+            
+            // Clone the cell object to avoid mutating in-place
+            const newCell = {
               content: value,
               text: value,
               backgroundColor: row === 0 || col === 0 ? '#F8FAFC' : 'white',
@@ -1000,13 +1011,48 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
               fontFamily: 'Inter, sans-serif',
               textAlign: col === 0 ? 'left' : 'left',
               verticalAlign: 'middle'
+            } as TableCell;
+
+            console.log('🔥 [updateTableCell] NEW cell value:', newCell);
+
+            // Replace the cell to ensure new reference
+            const newRow = [...table.enhancedTableData.cells[row]];
+            newRow[col] = newCell;
+
+            const newCells = [...table.enhancedTableData.cells];
+            newCells[row] = newRow;
+
+            // Replace enhancedTableData with new reference
+            const newEnhancedData = {
+              ...table.enhancedTableData,
+              cells: newCells
             };
-          }
+
+            // Replace table element with new reference
+            const newTable = {
+              ...table,
+              enhancedTableData: newEnhancedData,
+              updatedAt: Date.now()
+            } as typeof table;
+
+            // Replace in elements map with new map reference
+            const newElements = new Map(state.elements);
+            newElements.set(tableId, newTable);
+
+            state.elements = newElements;
+
+            console.log('🔥 [updateTableCell] Updated cell (immutable):', { tableId, row, col, value });
+            console.log('🔥 [updateTableCell] New table data:', newTable.enhancedTableData.cells[row][col]);
+
+            return;
+            }
 
           // Update timestamp
           table.updatedAt = Date.now();
-          
-          console.log('📝 [updateTableCell] Updated cell:', { tableId, row, col, value });
+
+          console.log('🔥 [updateTableCell] Updated cell (mutable path):', { tableId, row, col, value });
+        } else {
+          console.error('🔥 [updateTableCell] Table not found or not a table element');
         }
       });
       get().addToHistory('updateTableCell');

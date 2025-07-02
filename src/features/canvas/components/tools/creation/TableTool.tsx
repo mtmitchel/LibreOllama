@@ -48,8 +48,8 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
       y: pointer.y,
       rows: 2,
       cols: 2,
-      cellWidth: 120,
-      cellHeight: 40
+      cellWidth: 200,
+      cellHeight: 44
     });
   }, [isActive, stageRef]);
   
@@ -65,8 +65,8 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
     const height = Math.abs(pointer.y - startPos.y);
     
     // Calculate number of rows and columns based on drag distance
-    const cellWidth = 120;
-    const cellHeight = 40;
+    const cellWidth = 200;
+    const cellHeight = 44;
     const cols = Math.max(2, Math.min(8, Math.floor(width / cellWidth) + 1));
     const rows = Math.max(2, Math.min(8, Math.floor(height / cellHeight) + 1));
     

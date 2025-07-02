@@ -470,10 +470,14 @@ However, the solution is **not ideal** and could benefit from future refinements
   - **Triangle Development**: Experimenting with text positioning improvements
   - **Current State**: Ongoing development of shape resizing capabilities
 
+### **✅ RECENTLY RESOLVED ISSUES (January 2025)**
+- ✅ **Table Selection System**: Fixed double transformer issue and dashed border conflicts
+- ✅ **Selection Consistency**: Tables now use uniform selection styling with other shapes
+- ✅ **Transformer Architecture**: Proper exclusion system prevents conflicting transformers
+
 ### **Known Issues Under Development**
 - 🚧 **Shape Text Editing**: Developing HTML and Konva text synchronization
 - 🚧 **Text Tool**: Working on text element visibility and interaction improvements
-- 🚧 **Selection System**: Building consistent selection state management
 - 🚧 **System Stability**: Developing testing, error handling, and monitoring capabilities
 
 ### **Remaining Optimizations**
@@ -509,67 +513,43 @@ The LibreOllama Canvas is a **work-in-progress whiteboard application** currentl
 
 ---
 
-### **✅ ENHANCED TABLE SYSTEM - PROFESSIONAL IMPLEMENTATION (January 2025)**
+### **✅ ENHANCED TABLE SYSTEM - PROFESSIONAL UX (FEBRUARY 2025)**
 
-#### **Current Status: FULLY FUNCTIONAL MODERN TABLE SYSTEM**
-- ✅ **Table Persistence**: Tables properly stay on canvas after creation with enhanced data structure
-- ✅ **Cell Text Editing**: Double-click any cell to edit text with modern textarea overlay
-- ✅ **Navigation**: Tab/Shift+Tab to move between cells, Enter to save and exit
-- ✅ **Row/Column Management**: Right-click headers to add/delete rows and columns
-- ✅ **Resize Functionality**: Drag resize handles to adjust column widths and row heights
-- ✅ **Modern Design**: Professional styling with shadows, hover states, and clean borders
-- ✅ **Context Menus**: Right-click context menus for table management operations
+##### **Current Status: FULLY FUNCTIONAL MODERN TABLE SYSTEM**
+- ✅ **Intuitive Actions**: Manage rows and columns with a clean, modern interface.
+- ✅ **Contextual Controls**: Add and delete controls appear on hover for a clutter-free workspace.
+- ✅ **Add Buttons**: A `+` button appears at the right and bottom edges to quickly add new columns or rows.
+- ✅ **Delete Buttons**: A `-` button appears on row/column headers when hovered, allowing for precise deletion.
+- ✅ **Unified Selection**: Tables use the standard transformer for a consistent experience with other canvas elements.
+- ✅ **Modern Design**: Professional styling with clean iconography and subtle hover effects.
 
-#### **✅ IMPLEMENTED FEATURES (January 2025)**
-**Professional Table Creation**:
-- ✅ **Enhanced TableTool**: Drag to create tables with 2x2 minimum, 8x8 maximum dimensions
-- ✅ **Modern Preview**: Blue preview with size indicator and professional styling
-- ✅ **Default Headers**: Automatically populates header row and column with sample content
-
-**Advanced Table Functionality**:
-- ✅ **Real-time Cell Editing**: Double-click cells for immediate text editing with modern overlay
-- ✅ **Keyboard Navigation**: Tab navigation between cells with automatic focus management
-- ✅ **Dynamic Structure**: Add/remove rows and columns via context menus
-- ✅ **Visual Resize Handles**: Drag blue circular handles to resize columns and rows
-- ✅ **Header Styling**: Bold text and distinct background for header row and column
+##### **✅ IMPLEMENTED FEATURES (FEBRUARY 2025)**
+**Modern Table Management**:
+- ✅ **Hover-to-Delete**: A `ominus` icon appears on hover over any row or column (except the main headers) for quick deletion.
+- ✅ **Edge-to-Add**: `⊕` icons are persistently shown on the bottom and right edges of the table when selected, allowing for easy addition of rows and columns.
+- ✅ **Simplified Interface**: Removed the old, clunky right-click context menu in favor of a more direct and visual manipulation system.
+- ✅ **Standard Transformer**: Uses the same blue-bordered transformer as other shapes for resizing.
 
 **Professional UX Design**:
-- ✅ **Modern Shadows**: Clean drop shadows and professional visual hierarchy
-- ✅ **Hover States**: Cell highlighting and interactive feedback
-- ✅ **Selection Feedback**: Blue borders and enhanced styling when table is selected
-- ✅ **Context Menus**: Native-style context menus with proper positioning
+- ✅ **Clean Iconography**: Uses simple, universally understood icons for add/delete operations.
+- ✅ **Interactive Feedback**: Controls have hover states for clear, interactive feedback.
+- ✅ **Seamless Integration**: The entire system is built directly into the Konva canvas for a smooth, performant experience.
 
-#### **🔧 TECHNICAL IMPLEMENTATION**
-**Enhanced Data Structure**:
-```typescript
-enhancedTableData: {
-  rows: [{ height: 40, id: 'row-0' }, ...],
-  columns: [{ width: 120, id: 'col-0' }, ...],
-  cells: [[{ content: 'text', text: 'text', backgroundColor: '#F8FAFC', ... }]]
-}
-```
+##### **🔧 TECHNICAL IMPLEMENTATION**
+**State-Driven UI**:
+- The visibility of action buttons is controlled by a simple `hoveredItem` state (`{ type: 'row' | 'column', index: number }`).
+- `onMouseEnter` and `onMouseLeave` events on the table group and cells manage the state.
 
-**Store Methods Implemented**:
-- ✅ `updateTableCell(tableId, row, col, value)` - Update cell content
-- ✅ `addTableRow(tableId, position)` - Add row at specific position
-- ✅ `removeTableRow(tableId, rowIndex)` - Remove row with safety checks
-- ✅ `addTableColumn(tableId, position)` - Add column at specific position
-- ✅ `removeTableColumn(tableId, colIndex)` - Remove column with safety checks
-- ✅ `resizeTableCell(tableId, row, col, width, height)` - Resize cells dynamically
+**Component-Based Actions**:
+- A reusable `ActionButton` component was created to ensure visual consistency for all buttons.
+- The rendering logic is centralized in `renderActionButtons`, which dynamically places controls based on the table's dimensions and the current hover state.
 
-**Modern Component Architecture**:
-- ✅ **React Konva Integration**: Proper use of React-Konva best practices
-- ✅ **DOM Portal Editing**: Cell editing uses DOM overlays for better UX
-- ✅ **Context Menu System**: Native-style context menus with proper cleanup
-- ✅ **Performance Optimized**: Efficient rendering and state management
-
-#### **🎯 USER WORKFLOW**
-1. **Create Table**: Select table tool, drag to create desired size (2x2 to 8x8)
-2. **Edit Cells**: Double-click any cell to edit text content
-3. **Navigate**: Use Tab/Shift+Tab to move between cells efficiently
-4. **Manage Structure**: Right-click row/column headers for add/delete options
-5. **Resize**: Drag blue resize handles to adjust column widths and row heights
-6. **Move Table**: Select and drag entire table to reposition on canvas
+##### **🎯 USER WORKFLOW**
+1.  **Select Table**: Click on a table to select it and reveal the transformer and "Add" buttons.
+2.  **Add Row/Column**: Click the `⊕` button at the bottom or right edge of the table.
+3.  **Delete Row/Column**: Hover over the header of the row or column you wish to delete, and click the `ominus` icon that appears.
+4.  **Resize**: Drag the corner handles of the blue selection border to resize the entire table.
+5.  **Move Table**: Click and drag the table to reposition it on the canvas.
 
 #### **✨ PROFESSIONAL FEATURES**
 - **Smart Headers**: First row and column automatically styled as headers
@@ -592,5 +572,29 @@ enhancedTableData: {
 The table system now provides a complete, professional-grade table editing experience with modern design, full persistence, and comprehensive functionality that matches industry-standard table editors.
 
 ---
+
+### **🚧 TABLE CELL EDITING - ARCHITECTURAL DECISION (January 2025)**
+
+#### **Current Status: COORDINATE TRANSFORMATION CRISIS IDENTIFIED**
+**Strategic Analysis Completed**: The table cell editor positioning system exhibits fundamental architectural mismatch between DOM overlays and Konva coordinate systems. Current implementation performs 4-layer coordinate transformation (cell local → table group → stage canvas → DOM screen) with cumulative precision errors, particularly at non-integer zoom levels.
+
+#### **⚠️ IDENTIFIED CRITICAL ISSUES**
+- **Root Cause**: Multiple coordinate system conflicts in TableElement.tsx lines 127-330
+- **Precision Degradation**: Transform matrix calculations suffer from floating-point precision loss
+- **Performance Impact**: 60fps position monitoring required to fight coordinate drift
+- **Architectural Mismatch**: DOM overlays fundamentally incompatible with complex canvas transformations
+
+#### **🎯 STRATEGIC DECISION: CANVAS-NATIVE IMPLEMENTATION**
+**Architecture Pivot**: Transition from DOM textarea overlays to canvas-native text editing using Konva.Text components with cursor simulation. This eliminates coordinate transformation entirely and aligns with Konva's design patterns.
+
+#### **📋 IMPLEMENTATION ROADMAP**
+- **Phase 1**: Build Konva-native text input system for table cells (Week 1)
+- **Phase 2**: Remove DOM overlay system and coordinate transformation code (Week 2)  
+- **Success Criteria**: 99%+ positioning accuracy across all zoom levels (32%-300%)
+
+#### **✅ EVIDENCE-BASED DECISION**
+- **Existing Patterns**: CircleShape.tsx and RectangleShape.tsx show successful canvas-native text editing
+- **Performance**: Canvas-native approach eliminates precision errors and monitoring overhead
+- **Maintainability**: Aligns with established codebase architecture patterns
 
 *This is the end of the user-facing message, the rest of the file is truncated for brevity.*

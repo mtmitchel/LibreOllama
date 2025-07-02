@@ -83,16 +83,18 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       opacity: 1,
       perfectDrawEnabled: false,
       listening: true, // Enable listening for event delegation
-      
-      // Selection styling
-      stroke: isSelected ? designSystem.colors.primary[500] : ('stroke' in element ? element.stroke : undefined),
-      strokeWidth: isSelected 
-        ? ((('strokeWidth' in element ? element.strokeWidth : undefined) || 1) + 1.5) 
-        : (('strokeWidth' in element ? element.strokeWidth : undefined) || 1),
-      shadowColor: isSelected ? designSystem.colors.primary[300] : undefined,
-      shadowBlur: isSelected ? 10 : 0,
-      shadowOpacity: isSelected ? 0.7 : 0,
     };
+
+    // Apply selection styling to non-table elements (tables handle their own transformer)
+    if (element.type !== 'table') {
+      konvaElementProps.stroke = isSelected ? designSystem.colors.primary[500] : ('stroke' in element ? element.stroke : undefined);
+      konvaElementProps.strokeWidth = isSelected 
+        ? ((('strokeWidth' in element ? element.strokeWidth : undefined) || 1) + 1.5) 
+        : (('strokeWidth' in element ? element.strokeWidth : undefined) || 1);
+      konvaElementProps.shadowColor = isSelected ? designSystem.colors.primary[300] : undefined;
+      konvaElementProps.shadowBlur = isSelected ? 10 : 0;
+      konvaElementProps.shadowOpacity = isSelected ? 0.7 : 0;
+    }
 
     console.log('🎨 [MainLayer] Props for:', element.id, konvaElementProps);
 

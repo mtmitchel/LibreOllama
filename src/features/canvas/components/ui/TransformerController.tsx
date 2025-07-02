@@ -38,7 +38,8 @@ export const TransformerController: React.FC<TransformerControllerProps> = ({
           element.type === 'sticky-note' ||
           element.type === 'rectangle' ||
           element.type === 'circle' ||
-          element.type === 'triangle'
+          element.type === 'triangle' ||
+          element.type === 'table'
         )) {
           return; // Skip elements that have their own transformers
         }
@@ -71,8 +72,8 @@ export const TransformerController: React.FC<TransformerControllerProps> = ({
       case 'rectangle':  // Now has its own transformer
       case 'circle':     // Now has its own transformer  
       case 'triangle':   // Now has its own transformer
+      case 'table':      // Now has its own transformer
         return { enabledAnchors: [] }; // No anchors for elements with individual transformers
-      case 'table':
       case 'pen':
       case 'connector':
       case 'section':
