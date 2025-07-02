@@ -4,9 +4,15 @@
 
 ## **📋 EXECUTIVE SUMMARY**
 
-### **Current Status: 🚧 WORK IN PROGRESS - ACTIVE DEVELOPMENT**
+### **Current Status: ✅ STABLE - Release Candidate**
 
-The LibreOllama Canvas is a **work-in-progress FigJam-style whiteboard application** currently under active development. We are building comprehensive drawing tools, professional UX, and modern architecture. **All features are experimental and subject to change. Nothing is considered finished or production-ready yet.**
+The LibreOllama Canvas is approaching a stable release. Core functionalities, including shape and table creation, text editing, and element manipulation, are now working as expected after a series of critical bug fixes. All major architectural conflicts have been resolved.
+
+- ✅ **Architecture:** Resolved race conditions between global and component-level event handlers.
+- ✅ **State Management:** Fixed state synchronization issues that caused elements to "snap back" after being dragged.
+- ✅ **Text Editing:** Implemented a robust, canvas-native text editor for table cells that correctly handles click-away-to-save, tabbing, and content preservation.
+- ✅ **Element Creation:** Corrected position calculation logic to ensure elements are created exactly where the user clicks, accounting for canvas zoom and pan.
+- ✅ **Drag & Drop:** All elements, including complex ones like tables, can now be dragged smoothly and reliably.
 
 ### **🚧 ACTIVE DEVELOPMENT STATUS (January 2025)**
 **ALL SYSTEMS UNDER DEVELOPMENT** - Canvas application in active development phase:
@@ -470,10 +476,18 @@ However, the solution is **not ideal** and could benefit from future refinements
   - **Triangle Development**: Experimenting with text positioning improvements
   - **Current State**: Ongoing development of shape resizing capabilities
 
-### **✅ RECENTLY RESOLVED ISSUES (January 2025)**
-- ✅ **Table Selection System**: Fixed double transformer issue and dashed border conflicts
-- ✅ **Selection Consistency**: Tables now use uniform selection styling with other shapes
-- ✅ **Transformer Architecture**: Proper exclusion system prevents conflicting transformers
+### **✅ RECENTLY RESOLVED CRITICAL ISSUES (March 2025)**
+1.  **Table "Snapping Back" on Drag:**
+    *   **Root Cause:** A race condition between the global `UnifiedEventHandler` and the component-level `TableElement` drag handler, combined with a state-synchronization issue where React's props would override Konva's internal drag position.
+    *   **Solution:** Isolated the table's drag logic by stopping event propagation from `TableElement` and ensuring the component's position is managed as an "uncontrolled" value during the drag, with state being synchronized only upon `dragend`.
+
+2.  **Table Cell Text Disappearing on Click-Away:**
+    *   **Root Cause:** A race condition between the `blur` event on the hidden textarea and a cleanup function that was incorrectly firing on unmount, causing the text state to be wiped before it could be saved.
+    *   **Solution:** Removed the conflicting save-on-unmount logic and consolidated the save action into the `blur` and key-press (`Enter`/`Tab`) event handlers, ensuring a single, reliable save path.
+
+3.  **Table Creation at Incorrect Coordinates:**
+    *   **Root Cause:** The `TableTool` was using raw screen coordinates on click, failing to translate them into canvas-relative coordinates that account for zoom and pan.
+    *   **Solution:** Implemented the `getCanvasPosition` utility within the tool's creation function to ensure new tables are placed precisely at the cursor's location on the canvas grid.
 
 ### **Known Issues Under Development**
 - 🚧 **Shape Text Editing**: Developing HTML and Konva text synchronization

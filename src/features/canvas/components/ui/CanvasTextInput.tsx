@@ -39,12 +39,22 @@ export const CanvasTextInput: React.FC<CanvasTextInputProps> = ({
   const [text, setText] = useState(initialText);
   const [cursorVisible, setCursorVisible] = useState(true);
   const textInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const skipSaveRef = useRef(false); // Track if save already handled or cancelled
+  const skipSaveRef = useRef(false);
+
+  // Use refs to hold the latest callbacks to avoid stale closures in the main effect
+  const onSaveRef = useRef(onSave);
+  const onCancelRef = useRef(onCancel);
+  const onTabRef = useRef(onTab);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+    onCancelRef.current = onCancel;
+    onTabRef.current = onTab;
+  }, [onSave, onCancel, onTab]);
 
   // Create hidden DOM textarea for actual text input
   useEffect(() => {
     const textarea = document.createElement('textarea');
-    textarea.value = initialText;
+    textarea.value = text; // Use component state, not initialText prop
     textarea.style.position = 'fixed';
     textarea.style.left = '-9999px';
     textarea.style.top = '-9999px';
@@ -67,40 +77,40 @@ export const CanvasTextInput: React.FC<CanvasTextInputProps> = ({
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         skipSaveRef.current = true;
-        onSave(textarea.value);
+        onSaveRef.current(textarea.value);
       } else if (e.key === 'Escape') {
         e.preventDefault();
         skipSaveRef.current = true;
-        onCancel();
+        onCancelRef.current();
       } else if (e.key === 'Tab') {
         e.preventDefault();
         skipSaveRef.current = true;
-        onSave(textarea.value);
-        onTab(e.shiftKey);
+        // Pass the most current text value directly to the save handler before tabbing
+        onSaveRef.current(textarea.value);
+        onTabRef.current(e.shiftKey);
+      }
+    };
+
+    const handleBlur = () => {
+      if (!skipSaveRef.current) {
+        skipSaveRef.current = true;
+        onSaveRef.current(textarea.value);
       }
     };
 
     textarea.addEventListener('input', handleInput);
     textarea.addEventListener('keydown', handleKeyDown);
+    textarea.addEventListener('blur', handleBlur);
 
     return () => {
       textarea.removeEventListener('input', handleInput);
       textarea.removeEventListener('keydown', handleKeyDown);
+      textarea.removeEventListener('blur', handleBlur);
       if (document.body.contains(textarea)) {
         document.body.removeChild(textarea);
       }
     };
-  }, [initialText, onSave, onCancel, onTab]);
-
-  // Cleanup: auto-save current text unless skipped (run only on unmount)
-  useEffect(() => {
-    return () => {
-      if (!skipSaveRef.current) {
-        const currentValue = textInputRef.current ? textInputRef.current.value : text;
-        onSave(currentValue);
-      }
-    };
-  }, []);
+  }, []); // This effect should only run once to create the textarea
 
   // Cursor blinking effect
   useEffect(() => {

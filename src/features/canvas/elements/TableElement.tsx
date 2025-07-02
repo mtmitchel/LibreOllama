@@ -36,6 +36,9 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     const [hoveredItem, setHoveredItem] = useState<HoveredItem | null>(null);
     const [hoveredRow, setHoveredRow] = useState(-1);
     const [hoveredCol, setHoveredCol] = useState(-1);
+    const [isDragging, setIsDragging] = useState(false);
+    const isDraggingRef = useRef(isDragging);
+    isDraggingRef.current = isDragging;
 
     const updateTableCell = useUnifiedCanvasStore(state => state.updateTableCell);
     const addTableRow = useUnifiedCanvasStore(state => state.addTableRow);
@@ -43,6 +46,7 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     const addTableColumn = useUnifiedCanvasStore(state => state.addTableColumn);
     const removeTableColumn = useUnifiedCanvasStore(state => state.removeTableColumn);
     const updateElement = useUnifiedCanvasStore(state => state.updateElement);
+    const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
 
     const storeElement = useUnifiedCanvasStore(state => state.elements.get(tableId));
     const viewport = useUnifiedCanvasStore(canvasSelectors.viewport);
@@ -57,12 +61,27 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
     
     // Throttled force update function to prevent excessive re-renders during zoom/pan
-    const throttledForceUpdate = useRafThrottle(() => setForceUpdateCounter(c => c + 1));
+    const throttledForceUpdate = useRafThrottle(() => {
+      // Use ref to get the latest isDragging state and avoid stale closures.
+      if (!editingCell && !isDraggingRef.current) {
+        console.log('🔄 [TableElement] Throttled force update');
+        setForceUpdateCounter(c => c + 1);
+      } else {
+        console.log('🚫 [TableElement] Skipping throttled update - cell being edited or table is being dragged');
+      }
+    });
     
-    // Force update when table data changes
+    // Force update when table data changes, but NEVER while editing
     useEffect(() => {
+      // COMPLETELY SKIP ALL FORCE UPDATES WHILE EDITING
+      if (editingCell) {
+        console.log('🚫 [TableElement] Skipping force update - cell is being edited');
+        return;
+      }
+      
+      console.log('🔄 [TableElement] Force update triggered');
       setForceUpdateCounter(prev => prev + 1);
-    }, [latestTableData]);
+    }, [latestTableData, editingCell]);
 
     // Handle edge case: when rows/columns are added while editing, ensure editor stays with correct cell
     useEffect(() => {
@@ -78,9 +97,13 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
         }
       }
     }, [editingCell, latestTableData?.rows.length, latestTableData?.columns.length]);
-    // While a cell is being edited, listen for any transform on the stage or table-group
+    
+    // While a cell is being edited or table is being dragged, disable transform listeners to prevent render loops.
     useEffect(() => {
-      if (editingCell === null || !stageRef.current || !groupRef.current) return;
+      // Don't attach transform listeners while editing to prevent constant re-renders
+      if (editingCell !== null || isDragging) return;
+      
+      if (!stageRef.current || !groupRef.current) return;
       const stage = stageRef.current;
       const group = groupRef.current;
 
@@ -91,27 +114,31 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
         stage.off('scale change dragmove transform', throttledForceUpdate);
         group.off('transform', throttledForceUpdate);
       };
-    }, [editingCell, stageRef, throttledForceUpdate]);
+    }, [editingCell, isDragging, stageRef, throttledForceUpdate]);
 
-    const ensureCell = (rowIndex: number, colIndex: number) => {
-      if (!tableCells[rowIndex]) tableCells[rowIndex] = [];
-      if (!tableCells[rowIndex][colIndex]) {
-        const isHeader = rowIndex === 0;
-        tableCells[rowIndex][colIndex] = {
-          content: '', text: '',
-          backgroundColor: isHeader ? '#F8FAFC' : '#FFFFFF',
-          textColor: isHeader ? '#374151' : '#1F2937',
-          fontSize: 14, fontFamily: 'Inter, sans-serif',
-          textAlign: 'left', verticalAlign: 'middle'
-        };
+    // Safe cell access function - READ ONLY, no mutations
+    const getCellData = (rowIndex: number, colIndex: number) => {
+      const cells = tableCells || [];
+      const row = cells[rowIndex] || [];
+      const cell = row[colIndex];
+      
+      if (cell) {
+        return cell;
       }
+      
+      // Return default cell data without mutating anything
+      const isHeader = rowIndex === 0;
+      return {
+        content: '', 
+        text: '',
+        backgroundColor: isHeader ? '#F8FAFC' : '#FFFFFF',
+        textColor: isHeader ? '#374151' : '#1F2937',
+        fontSize: 14, 
+        fontFamily: 'Inter, sans-serif',
+        textAlign: 'left', 
+        verticalAlign: 'middle'
+      };
     };
-
-    for (let i = 0; i < tableRows.length; i++) {
-      for (let j = 0; j < tableColumns.length; j++) {
-        ensureCell(i, j);
-      }
-    }
 
     // Table dimensions with proper spacing for single add buttons
     const ROW_HEIGHT = 44;
@@ -139,8 +166,14 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
       setEditingCell({ row, col });
     }, []);
 
-    // Standard drag handler pattern from working shapes
-    const handleDragEnd = useCallback((e: Konva.KonvaEventObject<any>) => {
+    const handleDragStart = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+      e.evt.stopPropagation();
+      setIsDragging(true);
+    }, []);
+
+    const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+      e.evt.stopPropagation();
+      setIsDragging(false);
       updateElement(element.id as ElementId, {
         x: e.target.x(),
         y: e.target.y(),
@@ -148,14 +181,29 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     }, [element.id, updateElement]);
 
     // Canvas-native cell editing with proper tab navigation
-    const handleCellSave = useCallback((newText: string) => {
+    const handleCellSave = useCallback((newText: string, clearEditing: boolean = true) => {
       if (!editingCell) return;
+      console.log(`🎯 [TableElement] handleCellSave called for cell (${editingCell.row}, ${editingCell.col}) with text: "${newText}", clearEditing: ${clearEditing}`);
       updateTableCell(tableId, editingCell.row, editingCell.col, newText);
-      setEditingCell(null);
-    }, [editingCell, tableId, updateTableCell]);
+      if (clearEditing) {
+        setEditingCell(null);
+        setSelectedTool('select');
+        console.log('🎯 [TableElement] Cell saved, editingCell cleared, tool set to select');
+      } else {
+        console.log('🎯 [TableElement] Cell saved, keeping editingCell for navigation');
+      }
+    }, [editingCell, tableId, updateTableCell, setSelectedTool]);
 
-    const handleTabNavigation = useCallback((backward: boolean = false) => {
+    const handleTabNavigation = useCallback((backward: boolean = false, currentText?: string) => {
       if (!editingCell) return;
+      
+      console.log(`🎯 [TableElement] Tab navigation called: current=(${editingCell.row}, ${editingCell.col}), backward=${backward}, text="${currentText}"`);
+      
+      // Save the current cell's text first if provided
+      if (currentText !== undefined) {
+        updateTableCell(tableId, editingCell.row, editingCell.col, currentText);
+        console.log(`🎯 [TableElement] Saved current cell text: "${currentText}"`);
+      }
       
       const currentRow = editingCell.row;
       const currentCol = editingCell.col;
@@ -180,11 +228,14 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
       
       // Move to next cell if different
       if (nextRow !== currentRow || nextCol !== currentCol) {
+        console.log(`🎯 [TableElement] Moving to next cell: (${nextRow}, ${nextCol})`);
         setEditingCell({ row: nextRow, col: nextCol });
       } else {
+        console.log('🎯 [TableElement] No more cells, stopping editing');
         setEditingCell(null);
+        setSelectedTool('select');
       }
-    }, [editingCell, tableColumns.length, tableRows.length]);
+    }, [editingCell, tableColumns.length, tableRows.length, updateTableCell, tableId, setSelectedTool]);
 
     useEffect(() => {
       if (isSelected && transformerRef.current && groupRef.current) {
@@ -193,6 +244,14 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
         transformerRef.current.getLayer()?.batchDraw();
       }
     }, [isSelected]);
+
+    // Set initial position only once when component mounts
+    useEffect(() => {
+      const node = groupRef.current;
+      if (node) {
+        node.position({ x: element.x, y: element.y });
+      }
+    }, []); // Only run once on mount
 
     // Modern icon components with improved styling
     const PlusIcon = ({ x, y, size = 16, color = '#4B5563' }: { x: number; y: number; size?: number; color?: string }) => (
@@ -294,8 +353,7 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
       // Render cells with improved styling and consistent borders
       for (let rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
         for (let colIndex = 0; colIndex < tableColumns.length; colIndex++) {
-          ensureCell(rowIndex, colIndex);
-          const cellData = tableCells[rowIndex][colIndex];
+          const cellData = getCellData(rowIndex, colIndex);
           const cellText = cellData?.text || cellData?.content || '';
           
           const cellX = DELETE_COLUMN_WIDTH + colIndex * actualColumnWidth;
@@ -321,7 +379,6 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
                 setHoveredRow(rowIndex);
                 setHoveredCol(colIndex);
               }}
-              onClick={() => onSelect(element)}
               onDblClick={() => handleCellDoubleClick(rowIndex, colIndex)}
             />
           );
@@ -522,8 +579,7 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
       if (editingCell && groupRef.current && stageRef.current) {
         const { row, col } = editingCell;
         if (row < tableRows.length && col < tableColumns.length) {
-          ensureCell(row, col);
-          const cellData = tableCells[row][col];
+          const cellData = getCellData(row, col);
           const cellText = cellData?.text || cellData?.content || '';
           
           // Calculate cell position
@@ -531,31 +587,17 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
           const cellY = row * actualRowHeight;
           const isHeader = row === 0;
 
-          // SOLUTION 2: Canvas-Native Editor (stays in Konva coordinate system)
-          // Position: Compensate for CanvasTextInput's internal 6px text offset
-          // Cell text is at (cellX + 12, cellY + 12)
-          // CanvasTextInput places text at Group position + (6, 6)
-          // So Group should be at (cellX + 12 - 6, cellY + 12 - 6) = (cellX + 6, cellY + 6)
-          // After analysis: CanvasTextInput's Text is offset by (x:6, y:6) plus 4px padding.
-          // That means actual text origin is Group position + 10px.
-          // To align with cell text origin at (cellX + 12, cellY + 12) we set Group at (cellX + 1, cellY - 1).
+          // Debug: Log when editor is being created
+          
           const editorX = cellX + 1;
           const editorY = cellY;
           const editorWidth = actualColumnWidth + 8;
           const editorHeight = actualRowHeight - 4;
           const editorFontSize = isHeader ? 14 : 13;
 
-          console.log('📍 [TableElement] Cell editor positioning:', {
-            cellPosition: { x: cellX, y: cellY },
-            editorPosition: { x: editorX, y: editorY },
-            dimensions: { width: editorWidth, height: editorHeight },
-            fontSize: editorFontSize,
-            isHeader
-          });
-
           elements.push(
             <CanvasTextInput
-              key={`cell-editor-${row}-${col}`}
+              key={`cell-editor-${row}-${col}-${tableId}`}
               x={editorX}
               y={editorY}
               width={editorWidth}
@@ -584,11 +626,10 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
         <Group
           ref={groupRef}
           id={element.id}
-          x={element.x}
-          y={element.y}
           width={totalWidth}
           height={totalHeight}
-          draggable
+          draggable={true}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onClick={() => onSelect(element)}
           onTap={() => onSelect(element)}

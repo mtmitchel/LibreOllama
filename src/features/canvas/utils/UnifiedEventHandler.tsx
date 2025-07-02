@@ -64,13 +64,19 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
     // Handle global drag end for element updates
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
       const target = e.target;
-      const elementId = target.id();
-      
+      const elementId = target.id() as ElementId;
+
       if (elementId && target.isDragging()) {
+        const element = useUnifiedCanvasStore.getState().elements.get(elementId);
+        // Skip table elements - they handle their own drag events
+        if (element?.type === 'table') {
+          return;
+        }
+        
         console.log('🎯 [UnifiedEventHandler] Element drag end:', elementId, { x: target.x(), y: target.y() });
-        updateElement(elementId, { 
-          x: target.x(), 
-          y: target.y() 
+        updateElement(elementId, {
+          x: target.x(),
+          y: target.y(),
         });
       }
     };
