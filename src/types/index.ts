@@ -78,7 +78,7 @@ export type {
   StickyNoteElement,
   PenElement,
   TriangleElement,
-  StarElement,
+
   RichTextElement,
   GroupElement,
   SectionElement as CanvasSectionElement,

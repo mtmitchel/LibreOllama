@@ -57,7 +57,7 @@ export class FeatureFlagManager {
 
     this.registerFlag({
       name: 'performance-monitoring',
-      enabled: process.env.NODE_ENV === 'development',
+      enabled: false, // Disabled by default; can be enabled via console at runtime
       fallbackEnabled: false,
       fallbackValue: false,
       criticalityLevel: 'low'

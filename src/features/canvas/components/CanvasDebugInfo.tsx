@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { ElementId } from '../types/enhanced.types';
 
 export const CanvasDebugInfo: React.FC = () => {
   const elements = useUnifiedCanvasStore(state => state.elements);
@@ -15,7 +16,7 @@ export const CanvasDebugInfo: React.FC = () => {
   // Test function to manually select text elements
   const testSelectTextElement = (elementId: string) => {
     console.log('🧪 [DebugInfo] Manually selecting text element:', elementId);
-    selectElement(elementId, false);
+    selectElement(elementId as ElementId, false);
   };
   
   return (
@@ -51,11 +52,11 @@ export const CanvasDebugInfo: React.FC = () => {
             marginLeft: '8px',
             marginBottom: '4px',
             padding: '4px',
-            background: selectedElementIds.has(el.id) ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+            background: selectedElementIds.has(el.id as ElementId) ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)',
             borderRadius: '4px',
             fontSize: '10px'
           }}>
-            <div style={{ color: selectedElementIds.has(el.id) ? '#3B82F6' : 'white' }}>
+            <div style={{ color: selectedElementIds.has(el.id as ElementId) ? '#3B82F6' : 'white' }}>
               ID: {el.id.substring(0, 12)}...
             </div>
             <div>Text: "{(el as any).text}"</div>

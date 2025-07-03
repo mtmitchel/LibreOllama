@@ -5,7 +5,7 @@ import UnifiedEventHandler from '../utils/UnifiedEventHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { ToolLayer } from '../layers/ToolLayer';
 import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
-import { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
+import { CanvasElement, ElementId, SectionId, ElementOrSectionId } from '../types/enhanced.types';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
 import { useCursorManager } from '../utils/performance/cursorManager';
 
@@ -47,9 +47,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   const { width, height } = viewport;
   const panZoomState = { scale: viewport.scale, position: { x: viewport.x, y: viewport.y } };
 
-  // Elements from store
+  // Elements from store - cast for type compatibility 
   const allElements = useMemo(() => {
-    return elements;
+    return elements as Map<ElementId | SectionId, CanvasElement>;
   }, [elements]);
 
   // Static stage configuration (viewport handled separately)
@@ -65,7 +65,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   }, [viewport?.width, viewport?.height]);
 
   // Element event handlers
-  const onElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId) => {
+  const onElementDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => {
     const node = e.target;
     updateElement(elementId, { x: node.x(), y: node.y() });
   }, [updateElement]);

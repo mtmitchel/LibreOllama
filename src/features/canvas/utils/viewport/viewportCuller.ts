@@ -1,5 +1,5 @@
 import { CanvasElement } from '../../types/enhanced.types';
-import { Quadtree } from '../spatial/Quadtree';
+import { QuadTree } from '../spatial/Quadtree';
 import { BoundingBox, ViewportBounds } from '../../types/enhanced.types';
 
 interface Rectangle {

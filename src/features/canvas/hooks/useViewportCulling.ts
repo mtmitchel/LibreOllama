@@ -3,7 +3,8 @@ import { PanZoom, Size, ViewportBounds } from '../types';
 import type { CanvasElement } from '../types/enhanced.types';
 import { isRectangularElement } from '../types/enhanced.types';
 import { PerformanceMonitor, recordMetric } from '../utils/performance';
-import { Quadtree, createCanvasQuadtree, batchInsertElements } from '../utils/spatial/Quadtree';
+import { QuadTree, spatialUtils } from '../utils/spatial/Quadtree';
+import { shouldRebuildQuadtree, useMemoryOptimizedCulling } from '../utils/memory/MemoryOptimizedCulling';
 
 export interface UseViewportCullingProps {
   elements: CanvasElement[];
@@ -49,6 +50,12 @@ export interface LODLevel {
 
 // Helper to get element bounds with proper typing
 const getElementBounds = (element: CanvasElement): { left: number; top: number; right: number; bottom: number } => {
+  // Fast path: use cached bounding box if available
+  if ((element as any).boundingBox) {
+    const b = (element as any).boundingBox as {x:number;y:number;width:number;height:number};
+    return { left:b.x, top:b.y, right:b.x + b.width, bottom:b.y + b.height };
+  }
+
   switch (element.type) {
     case 'connector':
       if (element.pathPoints && element.pathPoints.length >= 4) {
@@ -145,28 +152,38 @@ export const useViewportCulling = ({
     ...config
   };
 
-  const quadtreeRef = useRef<Quadtree | null>(null);
+  const quadtreeRef = useRef<QuadTree | null>(null);
   const lastElementCountRef = useRef(0);
+  const lastRebuildTimeRef = useRef<number>(Date.now());
+
+  // Memory-aware culling helper
+  const { memoryPressure } = useMemoryOptimizedCulling();
 
   // Simplified quadtree rebuild logic
   useEffect(() => {
     if (!cullingConfig.enableQuadtree || !canvasSize) return;
 
-    const elementCountChanged = Math.abs(elements.length - lastElementCountRef.current) > 20;
-    
-    if (!quadtreeRef.current || elementCountChanged) {
+    const elementCountChange = elements.length - lastElementCountRef.current;
+    const timeSinceLastRebuild = Date.now() - lastRebuildTimeRef.current;
+
+    const needsRebuild =
+      !quadtreeRef.current ||
+      shouldRebuildQuadtree(elementCountChange, memoryPressure, timeSinceLastRebuild);
+
+    if (needsRebuild) {
       const canvasBounds = {
         x: -5000,
         y: -5000,
         width: 10000,
         height: 10000
       };
-      
-      quadtreeRef.current = createCanvasQuadtree(canvasBounds, cullingConfig.quadtreeConfig);
-      batchInsertElements(quadtreeRef.current, elements);
+
+      quadtreeRef.current = spatialUtils.createCanvasQuadtree(canvasBounds, cullingConfig.quadtreeConfig);
+      spatialUtils.batchInsertElements(quadtreeRef.current, elements);
       lastElementCountRef.current = elements.length;
+      lastRebuildTimeRef.current = Date.now();
     }
-  }, [elements.length, cullingConfig.enableQuadtree, canvasSize]);
+  }, [elements.length, cullingConfig.enableQuadtree, canvasSize, memoryPressure]);
 
   // Calculate LOD level based on zoom
   const getLODLevel = useCallback((zoom: number): LODLevel => {

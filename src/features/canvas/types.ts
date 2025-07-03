@@ -14,7 +14,6 @@ export type {
   StickyNoteElement,
   PenElement,
   TriangleElement,
-  StarElement,
   RichTextElement,
   GroupElement,
   ElementId,

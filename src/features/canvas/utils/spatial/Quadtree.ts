@@ -1,392 +1,328 @@
 /**
- * Quadtree Spatial Indexing for Efficient Viewport Culling
- * Part of LibreOllama Canvas Performance Optimization - Phase 5B
- * 
- * This implementation provides O(log n) spatial queries for elements,
- * dramatically improving performance when dealing with large canvases.
+ * Optimized QuadTree implementation for fast spatial element lookup
+ * Used for hit testing and spatial queries in the canvas
  */
 
-import type { CanvasElement, ElementId, SectionId, BoundingBox, ViewportBounds, QuadtreeConfig } from '../../types/enhanced.types';
-import { isCircleElement, isRectangularElement } from '../../types/enhanced.types';
+interface Bounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
-/**
- * Get bounding box for any canvas element
- */
-function getElementBounds(element: CanvasElement): BoundingBox {
-  if (isCircleElement(element)) {
-    return {
-      x: element.x - element.radius,
-      y: element.y - element.radius,
-      width: element.radius * 2,
-      height: element.radius * 2
-    };
-  } else if (isRectangularElement(element)) {
-    return {
-      x: element.x,
-      y: element.y,
-      width: element.width,
-      height: element.height
-    };
-  } else if (element.type === 'star') {
-    // For star elements, use outerRadius
-    const radius = element.outerRadius || 50;
-    return {
-      x: element.x - radius,
-      y: element.y - radius,
+interface QuadTreeElement {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+class QuadNode {
+  private bounds: Bounds;
+  public elements: QuadTreeElement[] = [];
+  public children: QuadNode[] | null = null;
+  private maxElements: number;
+  private maxDepth: number;
+  private depth: number;
+
+  constructor(bounds: Bounds, maxElements = 10, maxDepth = 5, depth = 0) {
+    this.bounds = bounds;
+    this.maxElements = maxElements;
+    this.maxDepth = maxDepth;
+    this.depth = depth;
+  }
+
+  insert(element: QuadTreeElement): boolean {
+    if (!this.intersects(element, this.bounds)) {
+      return false;
+    }
+
+    if (this.children === null) {
+      this.elements.push(element);
+
+      // Split if we exceed capacity and haven't reached max depth
+      if (this.elements.length > this.maxElements && this.depth < this.maxDepth) {
+        this.split();
+        
+        // Redistribute elements to children
+        const elementsToRedistribute = [...this.elements];
+        this.elements = [];
+        
+        for (const elem of elementsToRedistribute) {
+          let inserted = false;
+          for (const child of this.children!) {
+            if (child.insert(elem)) {
+              inserted = true;
+              break;
+            }
+          }
+          // If element doesn't fit in any child, keep it in parent
+          if (!inserted) {
+            this.elements.push(elem);
+          }
+        }
+      }
+      return true;
+    } else {
+      // Try to insert in children
+      for (const child of this.children) {
+        if (child.insert(element)) {
+          return true;
+        }
+      }
+      // If doesn't fit in any child, store in this node
+      this.elements.push(element);
+      return true;
+    }
+  }
+
+  query(range: Bounds): string[] {
+    const result: string[] = [];
+    this.queryInternal(range, result);
+    return result;
+  }
+
+  private queryInternal(range: Bounds, result: string[]): void {
+    if (!this.intersectsBounds(range, this.bounds)) {
+      return;
+    }
+
+    // Check elements in this node
+    for (const element of this.elements) {
+      if (this.intersects(element, range)) {
+        result.push(element.id);
+      }
+    }
+
+    // Check children
+    if (this.children !== null) {
+      for (const child of this.children) {
+        child.queryInternal(range, result);
+      }
+    }
+  }
+
+  private split(): void {
+    const halfWidth = this.bounds.width / 2;
+    const halfHeight = this.bounds.height / 2;
+    const x = this.bounds.x;
+    const y = this.bounds.y;
+
+    this.children = [
+      // Top-left
+      new QuadNode(
+        { x, y, width: halfWidth, height: halfHeight },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+      // Top-right
+      new QuadNode(
+        { x: x + halfWidth, y, width: halfWidth, height: halfHeight },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+      // Bottom-left
+      new QuadNode(
+        { x, y: y + halfHeight, width: halfWidth, height: halfHeight },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+      // Bottom-right
+      new QuadNode(
+        { x: x + halfWidth, y: y + halfHeight, width: halfWidth, height: halfHeight },
+        this.maxElements,
+        this.maxDepth,
+        this.depth + 1
+      ),
+    ];
+  }
+
+  private intersects(element: QuadTreeElement, bounds: Bounds): boolean {
+    return !(
+      element.x > bounds.x + bounds.width ||
+      element.x + element.width < bounds.x ||
+      element.y > bounds.y + bounds.height ||
+      element.y + element.height < bounds.y
+    );
+  }
+
+  private intersectsBounds(bounds1: Bounds, bounds2: Bounds): boolean {
+    return !(
+      bounds1.x > bounds2.x + bounds2.width ||
+      bounds1.x + bounds1.width < bounds2.x ||
+      bounds1.y > bounds2.y + bounds2.height ||
+      bounds1.y + bounds1.height < bounds2.y
+    );
+  }
+
+  clear(): void {
+    this.elements = [];
+    this.children = null;
+  }
+
+  getElementCount(): number {
+    let count = this.elements.length;
+    if (this.children !== null) {
+      for (const child of this.children) {
+        count += child.getElementCount();
+      }
+    }
+    return count;
+  }
+}
+
+export class QuadTree {
+  private root: QuadNode;
+  private bounds: Bounds;
+
+  constructor(bounds: Bounds, maxElements = 10, maxDepth = 5) {
+    this.bounds = bounds;
+    this.root = new QuadNode(bounds, maxElements, maxDepth);
+  }
+
+  insert(element: QuadTreeElement): void {
+    this.root.insert(element);
+  }
+
+  query(range: Bounds): string[] {
+    return this.root.query(range);
+  }
+
+  queryPoint(x: number, y: number, radius = 1): string[] {
+    return this.query({
+      x: x - radius,
+      y: y - radius,
       width: radius * 2,
       height: radius * 2
-    };
-  } else if (element.type === 'pen' || element.type === 'connector') {
-    // For pen/connector elements, calculate bounds from points
-    if (element.points && element.points.length >= 2) {
-      let minX = Infinity, minY = Infinity;
-      let maxX = -Infinity, maxY = -Infinity;
-      
-      for (let i = 0; i < element.points.length; i += 2) {
-        const x = element.x + (element.points[i] || 0);
-        const y = element.y + (element.points[i + 1] || 0);
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
+    });
+  }
+
+  clear(): void {
+    this.root.clear();
+  }
+
+  rebuild(elements: QuadTreeElement[]): void {
+    this.clear();
+    for (const element of elements) {
+      this.insert(element);
+    }
+  }
+
+  getElementCount(): number {
+    return this.root.getElementCount();
+  }
+
+  getBounds(): Bounds {
+    return { ...this.bounds };
+  }
+
+  resize(newBounds: Bounds): void {
+    const elements: QuadTreeElement[] = [];
+    this.collectAllElements(this.root, elements);
+    
+    this.bounds = newBounds;
+    this.root = new QuadNode(newBounds);
+    
+    for (const element of elements) {
+      this.insert(element);
+    }
+  }
+
+  private collectAllElements(node: QuadNode, elements: QuadTreeElement[]): void {
+    elements.push(...node.elements);
+    
+    if (node.children !== null) {
+      for (const child of node.children) {
+        this.collectAllElements(child, elements);
       }
-      
-      return {
-        x: minX,
-        y: minY,
-        width: maxX - minX,
-        height: maxY - minY
-      };
     }
-  } else if (element.type === 'triangle' && element.points) {
-    // For triangle elements, calculate bounds from points
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
-    
-    for (let i = 0; i < element.points.length; i += 2) {
-      const x = element.x + (element.points[i] || 0);
-      const y = element.y + (element.points[i + 1] || 0);
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
+  }
+}
+
+// Utility functions for common spatial operations
+export const spatialUtils = {
+  /**
+   * Check if a point is within a bounds
+   */
+  pointInBounds(x: number, y: number, bounds: Bounds): boolean {
+    return x >= bounds.x && 
+           x <= bounds.x + bounds.width && 
+           y >= bounds.y && 
+           y <= bounds.y + bounds.height;
+  },
+
+  /**
+   * Calculate distance between two points
+   */
+  distance(x1: number, y1: number, x2: number, y2: number): number {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
+  },
+
+  /**
+   * Get bounds that encompass multiple elements
+   */
+  getBoundingBounds(elements: QuadTreeElement[]): Bounds | null {
+    if (elements.length === 0) return null;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const element of elements) {
+      minX = Math.min(minX, element.x);
+      minY = Math.min(minY, element.y);
+      maxX = Math.max(maxX, element.x + element.width);
+      maxY = Math.max(maxY, element.y + element.height);
     }
-    
+
     return {
       x: minX,
       y: minY,
       width: maxX - minX,
       height: maxY - minY
     };
-  }
-  
-  // Default bounds for unknown element types
-  return {
-    x: element.x,
-    y: element.y,
-    width: 100,
-    height: 100
-  };
-}
+  },
 
-/**
- * Check if two bounding boxes intersect
- */
-function boundsIntersect(a: BoundingBox, b: BoundingBox | ViewportBounds): boolean {
-  // Convert ViewportBounds to BoundingBox format if needed
-  const bBox: BoundingBox = 'left' in b ? {
-    x: b.left,
-    y: b.top,
-    width: b.right - b.left,
-    height: b.bottom - b.top
-  } : b;
-  
-  return !(
-    a.x > bBox.x + bBox.width ||
-    a.x + a.width < bBox.x ||
-    a.y > bBox.y + bBox.height ||
-    a.y + a.height < bBox.y
-  );
-}
-
-/**
- * Check if bounds completely contains another bounds
- */
-function boundsContains(container: BoundingBox, contained: BoundingBox): boolean {
-  return (
-    contained.x >= container.x &&
-    contained.y >= container.y &&
-    contained.x + contained.width <= container.x + container.width &&
-    contained.y + contained.height <= container.y + container.height
-  );
-}
-
-/**
- * Quadtree node class
- */
-class QuadtreeNode {
-  bounds: BoundingBox;
-  elementIds: (ElementId | SectionId)[] = [];
-  children?: QuadtreeNode[];
-  
-  constructor(bounds: BoundingBox) {
-    this.bounds = bounds;
-  }
-  
   /**
-   * Check if this node is a leaf (has no children)
+   * Expand bounds by a margin
    */
-  isLeaf(): boolean {
-    return !this.children;
-  }
-  
-  /**
-   * Subdivide this node into 4 quadrants
-   */
-  subdivide(): void {
-    const { x, y, width, height } = this.bounds;
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    
-    this.children = [
-      // Top-left
-      new QuadtreeNode({ x, y, width: halfWidth, height: halfHeight }),
-      // Top-right
-      new QuadtreeNode({ x: x + halfWidth, y, width: halfWidth, height: halfHeight }),
-      // Bottom-left
-      new QuadtreeNode({ x, y: y + halfHeight, width: halfWidth, height: halfHeight }),
-      // Bottom-right
-      new QuadtreeNode({ x: x + halfWidth, y: y + halfHeight, width: halfWidth, height: halfHeight })
-    ];
-  }
-}
-
-/**
- * Quadtree spatial index for efficient element queries
- */
-export class Quadtree {
-  private root: QuadtreeNode;
-  private config: QuadtreeConfig;
-  private elementBounds: Map<ElementId | SectionId, BoundingBox> = new Map();
-  
-  constructor(bounds: BoundingBox, config?: Partial<QuadtreeConfig>) {
-    this.root = new QuadtreeNode(bounds);
-    this.config = {
-      maxDepth: config?.maxDepth ?? 8,
-      maxElementsPerNode: config?.maxElementsPerNode ?? 10,
-      minNodeSize: config?.minNodeSize ?? 50
-    };
-  }
-  
-  /**
-   * Clear all elements from the quadtree
-   */
-  clear(): void {
-    this.root = new QuadtreeNode(this.root.bounds);
-    this.elementBounds.clear();
-  }
-  
-  /**
-   * Insert an element into the quadtree
-   */
-  insert(element: CanvasElement): void {
-    const bounds = getElementBounds(element);
-    this.elementBounds.set(element.id, bounds);
-    this.insertIntoNode(this.root, element.id, bounds, 0);
-  }
-  
-  /**
-   * Remove an element from the quadtree
-   */
-  remove(elementId: ElementId): void {
-    const bounds = this.elementBounds.get(elementId);
-    if (!bounds) return;
-    
-    this.removeFromNode(this.root, elementId, bounds);
-    this.elementBounds.delete(elementId);
-  }
-  
-  /**
-   * Update an element's position in the quadtree
-   */
-  update(element: CanvasElement): void {
-    this.remove(element.id as ElementId);
-    this.insert(element);
-  }
-  
-  /**
-   * Query elements within a viewport bounds
-   */
-  query(viewport: ViewportBounds): (ElementId | SectionId)[] {
-    const viewportBox: BoundingBox = {
-      x: viewport.left,
-      y: viewport.top,
-      width: viewport.right - viewport.left,
-      height: viewport.bottom - viewport.top
-    };
-    
-    const results: ElementId[] = [];
-    this.queryNode(this.root, viewportBox, results);
-    
-    // Remove duplicates (element might be in multiple nodes)
-    return Array.from(new Set(results));
-  }
-  
-  /**
-   * Get statistics about the quadtree
-   */
-  getStats(): { nodes: number; depth: number; elements: number } {
-    let nodes = 0;
-    let maxDepth = 0;
-    
-    const traverse = (node: QuadtreeNode, depth: number) => {
-      nodes++;
-      maxDepth = Math.max(maxDepth, depth);
-      
-      if (node.children) {
-        node.children.forEach(child => traverse(child, depth + 1));
-      }
-    };
-    
-    traverse(this.root, 0);
-    
+  expandBounds(bounds: Bounds, margin: number): Bounds {
     return {
-      nodes,
-      depth: maxDepth,
-      elements: this.elementBounds.size
+      x: bounds.x - margin,
+      y: bounds.y - margin,
+      width: bounds.width + margin * 2,
+      height: bounds.height + margin * 2
     };
-  }
-  
+  },
+
   /**
-   * Insert element into a specific node
+   * Create a quadtree for the entire canvas (compatibility function)
    */
-  private insertIntoNode(node: QuadtreeNode, elementId: ElementId | SectionId, bounds: BoundingBox, depth: number): void {
-    // If node doesn't intersect with element bounds, skip
-    if (!boundsIntersect(node.bounds, bounds)) {
-      return;
-    }
-    
-    // If this is a leaf node
-    if (node.isLeaf()) {
-      node.elementIds.push(elementId);
-      
-      // Check if we should subdivide
-      if (
-        node.elementIds.length > this.config.maxElementsPerNode &&
-        depth < this.config.maxDepth &&
-        node.bounds.width > this.config.minNodeSize &&
-        node.bounds.height > this.config.minNodeSize
-      ) {
-        node.subdivide();
-        
-        // Redistribute existing elements
-        const existingIds = [...node.elementIds];
-        node.elementIds = [];
-        
-        existingIds.forEach(id => {
-          const elemBounds = this.elementBounds.get(id);
-          if (elemBounds) {
-            this.insertIntoNode(node, id, elemBounds, depth);
-          }
-        });
-      }
-    } else {
-      // If element spans multiple children or is too large, store in parent
-      let fitsInChild = false;
-      
-      node.children!.forEach(child => {
-        if (boundsContains(child.bounds, bounds)) {
-          this.insertIntoNode(child, elementId, bounds, depth + 1);
-          fitsInChild = true;
-        }
-      });
-      
-      // If element doesn't fit entirely in any child, store in parent
-      if (!fitsInChild) {
-        node.elementIds.push(elementId);
-      }
-    }
-  }
-  
+  createCanvasQuadtree(canvasBounds: Bounds, config?: any): QuadTree {
+    return new QuadTree(canvasBounds, config?.maxElementsPerNode || 10, config?.maxDepth || 5);
+  },
+
   /**
-   * Remove element from a specific node
+   * Batch insert elements into quadtree (compatibility function)
    */
-  private removeFromNode(node: QuadtreeNode, elementId: ElementId, bounds: BoundingBox): void {
-    // Remove from current node
-    const index = node.elementIds.indexOf(elementId);
-    if (index !== -1) {
-      node.elementIds.splice(index, 1);
-    }
-    
-    // Remove from children if they exist
-    if (node.children) {
-      node.children.forEach(child => {
-        if (boundsIntersect(child.bounds, bounds)) {
-          this.removeFromNode(child, elementId, bounds);
-        }
-      });
-    }
-  }
-  
-  /**
-   * Query elements from a specific node
-   */
-  private queryNode(node: QuadtreeNode, viewport: BoundingBox, results: (ElementId | SectionId)[]): void {
-    // If node doesn't intersect viewport, skip
-    if (!boundsIntersect(node.bounds, viewport)) {
-      return;
-    }
-    
-    // Add all elements in this node that intersect the viewport
-    node.elementIds.forEach(id => {
-      const bounds = this.elementBounds.get(id);
-      if (bounds && boundsIntersect(bounds, viewport)) {
-        results.push(id);
-      }
+  batchInsertElements(quadtree: QuadTree, elements: any[]): void {
+    elements.forEach(element => {
+      // Convert canvas element to QuadTreeElement format
+      const quadElement: QuadTreeElement = {
+        id: element.id,
+        x: element.x || 0,
+        y: element.y || 0,
+        width: element.width || 100,
+        height: element.height || 100
+      };
+      quadtree.insert(quadElement);
     });
-    
-    // Query children
-    if (node.children) {
-      node.children.forEach(child => {
-        this.queryNode(child, viewport, results);
-      });
-    }
   }
-}
-
-/**
- * Create a quadtree for the entire canvas
- */
-export function createCanvasQuadtree(canvasBounds: BoundingBox, config?: Partial<QuadtreeConfig>): Quadtree {
-  return new Quadtree(canvasBounds, config);
-}
-
-/**
- * Batch insert elements into quadtree
- */
-export function batchInsertElements(quadtree: Quadtree, elements: CanvasElement[]): void {
-  elements.forEach(element => {
-    quadtree.insert(element);
-  });
-}
-
-/**
- * Get visible elements using quadtree
- */
-export function getVisibleElements(
-  quadtree: Quadtree,
-  viewport: ViewportBounds,
-  allElements: Map<ElementId, CanvasElement>
-): CanvasElement[] {
-  const visibleIds = quadtree.query(viewport);
-  const visibleElements: CanvasElement[] = [];
-  
-  visibleIds.forEach(id => {
-    const element = allElements.get(id as ElementId);
-    if (element && !element.isHidden) {
-      visibleElements.push(element);
-    }
-  });
-  
-  return visibleElements;
-}
+};

@@ -526,3 +526,70 @@ export interface SnapLine {
   points: number[];
   stroke: string;
 }
+
+// Missing type definitions that are imported elsewhere
+export interface TableSelection {
+  tableId: ElementId;
+  cellRow: number;
+  cellCol: number;
+}
+
+export interface ViewportState {
+  x: number;
+  y: number;
+  scale: number;
+  width: number;
+  height: number;
+}
+
+export interface CanvasHistoryState {
+  history: HistoryEntry[];
+  currentIndex: number;
+  maxSize: number;
+}
+
+export interface CanvasUIState {
+  selectedTool: string;
+  showGrid: boolean;
+  snapToGrid: boolean;
+  isDrawing: boolean;
+}
+
+export interface ModalState {
+  isOpen: boolean;
+  type: string;
+  data?: any;
+}
+
+export interface TooltipState {
+  isVisible: boolean;
+  content: string;
+  position: { x: number; y: number };
+}
+
+export interface CanvasElementsState {
+  elements: Map<string, CanvasElement>;
+  elementOrder: string[];
+}
+
+export interface TextEditingState {
+  elementId: ElementId | null;
+  isEditing: boolean;
+  cursorPosition: number;
+}
+
+export interface HistoryState {
+  entries: HistoryEntry[];
+  currentIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+export interface Canvas {
+  id: string;
+  name: string;
+  elements: CanvasElement[];
+  sections: SectionElement[];
+  viewport: ViewportState;
+  metadata?: any;
+}

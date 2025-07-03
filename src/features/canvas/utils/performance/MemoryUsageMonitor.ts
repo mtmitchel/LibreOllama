@@ -175,9 +175,23 @@ class MemoryUsageMonitorImpl {
   // Added to satisfy MetricsCollector expectations
   generateReport() {
     const current = this.getCurrentMemoryUsage();
+    const leakDetection = this.detectMemoryLeaks();
+
+    const peakUsageMB = Math.max(
+      ...this.snapshots.map(s => s.usedJSHeapSize / 1024 / 1024),
+      current ? current.usedJSHeapSize / 1024 / 1024 : 0
+    );
+
+    const growthRateMBPerMin = this.getMemoryGrowthRate();
+
     return {
-      snapshot: current,
-      leak: this.detectMemoryLeaks(),
+      summary: {
+        currentUsageMB: current ? current.usedJSHeapSize / 1024 / 1024 : 0,
+        peakUsageMB,
+        growthRateMBPerMin
+      },
+      leakDetection,
+      recommendations: leakDetection.isLeak ? leakDetection.recommendations : []
     };
   }
 }

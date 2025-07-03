@@ -38,10 +38,10 @@ export const StrokeRenderer: React.FC<StrokeRendererProps> = React.memo(({
     if (lodLevel) return lodLevel;
     
     // Auto-determine LOD based on zoom level
-    if (zoomLevel >= 1.5) return { level: 'high', pointReduction: 1, styleSimplification: false, useCache: false };
-    if (zoomLevel >= 0.5) return { level: 'medium', pointReduction: 2, styleSimplification: false, useCache: true };
-    if (zoomLevel >= 0.1) return { level: 'low', pointReduction: 4, styleSimplification: true, useCache: true };
-    return { level: 'hidden', pointReduction: 8, styleSimplification: true, useCache: true };
+    if (zoomLevel >= 1.5) return { level: 'high' as const, pointReduction: 1, styleSimplification: false, useCache: false };
+    if (zoomLevel >= 0.5) return { level: 'medium' as const, pointReduction: 2, styleSimplification: false, useCache: true };
+    if (zoomLevel >= 0.1) return { level: 'low' as const, pointReduction: 4, styleSimplification: true, useCache: true };
+    return { level: 'hidden' as const, pointReduction: 8, styleSimplification: true, useCache: true };
   }, [lodLevel, zoomLevel]);
   
   // Skip rendering if hidden LOD and not selected
@@ -69,40 +69,31 @@ function renderMarker(
   isEditing: boolean,
   lod: StrokeLOD
 ) {
-  // Apply LOD point reduction
-  const points = applyPointReduction(marker.points, lod.pointReduction);
-  
-  // Variable width rendering
-  if (marker.style.widthVariation && marker.rawPoints && lod.level === 'high') {
-    return (
-      <Group>
-        <VariableWidthStroke
-          points={marker.rawPoints}
-          style={marker.style}
-          isSelected={isSelected}
-          onSelect={onSelect}
-          simplification={lod.styleSimplification}
-        />
-        {isSelected && <SelectionIndicator element={marker} />}
-      </Group>
-    );
-  }
-  
-  // Standard uniform width stroke
+  // Standard uniform width stroke with performance optimizations
   const strokeWidth = lod.styleSimplification ? 
     Math.max(1, marker.style.width * 0.7) : 
     marker.style.width;
   
+  // Optimize points for current LOD level
+  const optimizedPoints = React.useMemo(() => {
+    return applyPointReduction(marker.points, lod.pointReduction);
+  }, [marker.points, lod.pointReduction]);
+  
+  // Pre-calculate tension for performance
+  const tension = React.useMemo(() => {
+    return lod.styleSimplification ? 0.2 : marker.style.smoothness * 0.5;
+  }, [lod.styleSimplification, marker.style.smoothness]);
+  
   return (
     <Group>
       <Line
-        points={points}
+        points={optimizedPoints}
         stroke={marker.style.color}
         strokeWidth={strokeWidth}
         opacity={marker.style.opacity}
-        lineCap={marker.style.lineCap}
-        lineJoin={marker.style.lineJoin}
-        tension={lod.styleSimplification ? 0.2 : marker.style.smoothness * 0.5}
+        lineCap={marker.style.lineCap as CanvasLineCap}
+        lineJoin={marker.style.lineJoin as CanvasLineJoin}
+        tension={tension}
         onClick={onSelect}
         onTap={onSelect}
         hitStrokeWidth={Math.max(strokeWidth + 10, 15)}
@@ -111,13 +102,17 @@ function renderMarker(
         shadowOpacity={isSelected ? 0.6 : 0}
         perfectDrawEnabled={lod.level === 'high'}
         shadowEnabled={isSelected && lod.level !== 'low'}
+        // Performance optimizations
+        listening={true}
+        transformsEnabled={'position'} // Limit transform calculations
+        hitGraphEnabled={false} // Disable hit graph for better performance
       />
       {isSelected && <SelectionIndicator element={marker} />}
     </Group>
   );
 }
 
-// Highlighter rendering
+// Highlighter rendering with performance optimizations
 function renderHighlighter(
   highlighter: HighlighterElement, 
   isSelected: boolean, 
@@ -125,23 +120,36 @@ function renderHighlighter(
   isEditing: boolean,
   lod: StrokeLOD
 ) {
-  const points = applyPointReduction(highlighter.points, lod.pointReduction);
-  
   const strokeWidth = lod.styleSimplification ? 
     Math.max(3, highlighter.style.width * 0.8) : 
     highlighter.style.width;
   
+  // Optimize points for current LOD level
+  const optimizedPoints = React.useMemo(() => {
+    return applyPointReduction(highlighter.points, lod.pointReduction);
+  }, [highlighter.points, lod.pointReduction]);
+  
+  // Pre-calculate tension for performance
+  const tension = React.useMemo(() => {
+    return lod.styleSimplification ? 0.1 : 0.3;
+  }, [lod.styleSimplification]);
+  
+  // Pre-calculate composite operation for performance
+  const compositeOperation = React.useMemo(() => {
+    return lod.styleSimplification ? 'source-over' : (highlighter.style.blendMode as GlobalCompositeOperation);
+  }, [lod.styleSimplification, highlighter.style.blendMode]);
+  
   return (
     <Group>
       <Line
-        points={points}
+        points={optimizedPoints}
         stroke={highlighter.style.color}
         strokeWidth={strokeWidth}
         opacity={highlighter.style.baseOpacity}
-        lineCap="round"
-        lineJoin="round"
-        tension={lod.styleSimplification ? 0.1 : 0.3}
-        globalCompositeOperation={lod.styleSimplification ? 'source-over' : highlighter.style.blendMode}
+        lineCap={'round' as CanvasLineCap}
+        lineJoin={'round' as CanvasLineJoin}
+        tension={tension}
+        globalCompositeOperation={compositeOperation}
         onClick={onSelect}
         onTap={onSelect}
         hitStrokeWidth={Math.max(strokeWidth + 10, 20)}
@@ -150,6 +158,10 @@ function renderHighlighter(
         shadowOpacity={isSelected ? 0.4 : 0}
         perfectDrawEnabled={lod.level === 'high'}
         shadowEnabled={isSelected && lod.level !== 'low'}
+        // Performance optimizations
+        listening={true}
+        transformsEnabled={'position'} // Limit transform calculations
+        hitGraphEnabled={false} // Disable hit graph for better performance
       />
       {isSelected && <SelectionIndicator element={highlighter} />}
     </Group>
@@ -196,8 +208,8 @@ const VariableWidthStroke: React.FC<{
         stroke={style.color}
         strokeWidth={(style.minWidth + style.maxWidth) / 2}
         opacity={style.opacity}
-        lineCap={style.lineCap}
-        lineJoin={style.lineJoin}
+        lineCap={style.lineCap as CanvasLineCap}
+        lineJoin={style.lineJoin as CanvasLineJoin}
         onClick={onSelect}
         onTap={onSelect}
         shadowBlur={isSelected ? 10 : 0}
@@ -212,8 +224,8 @@ const VariableWidthStroke: React.FC<{
       stroke={style.color}
       strokeWidth={2}
       opacity={style.opacity}
-      lineCap={style.lineCap}
-      lineJoin={style.lineJoin}
+      lineCap={style.lineCap as CanvasLineCap}
+      lineJoin={style.lineJoin as CanvasLineJoin}
       onClick={onSelect}
       onTap={onSelect}
       shadowBlur={isSelected ? 10 : 0}

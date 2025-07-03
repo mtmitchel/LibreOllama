@@ -287,7 +287,7 @@ class MetricsCollectorImpl {
   /**
    * Start periodic reporting
    */
-  private startPeriodicReporting(intervalMs: number = 30000): void {
+  private startPeriodicReporting(intervalMs: number = 120000): void {
     if (this.reportingInterval) return;
 
     this.reportingInterval = window.setInterval(() => {

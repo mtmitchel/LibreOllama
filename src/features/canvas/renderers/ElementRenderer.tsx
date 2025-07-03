@@ -41,7 +41,7 @@ interface ElementRendererProps {
   overrideKonvaProps?: Partial<Konva.NodeConfig>;
 }
 
-export const ElementRenderer: React.FC<ElementRendererProps> = ({ 
+const ElementRendererComponent: React.FC<ElementRendererProps> = ({ 
   element, 
   isSelected, 
   onElementClick,
@@ -157,3 +157,11 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
 
   return null;
 };
+
+export const ElementRenderer = React.memo(ElementRendererComponent, (prev, next) => {
+  return (
+    prev.element.id === next.element.id &&
+    (prev.element as any).updatedAt === (next.element as any).updatedAt &&
+    prev.isSelected === next.isSelected
+  );
+});

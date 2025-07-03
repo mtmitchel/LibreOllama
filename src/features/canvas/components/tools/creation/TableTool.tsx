@@ -45,7 +45,6 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
         height: 150, // Default height
         rows: 3, // Required for store updateTableCell function
         cols: 2, // Required for store updateTableCell function
-        isSelected: false,
         isLocked: false,
         metadata: {},
         createdAt: Date.now(),
@@ -71,7 +70,7 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
       
       const parentStickyNoteId = findStickyNoteAtPoint(pos);
       if (parentStickyNoteId) {
-        addElementToStickyNote(newTable, parentStickyNoteId);
+        addElementToStickyNote(newTable.id, parentStickyNoteId);
       } else {
         addElement(newTable);
       }

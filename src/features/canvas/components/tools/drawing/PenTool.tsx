@@ -11,6 +11,7 @@ import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { nanoid } from 'nanoid';
 import { PenElement } from '../../../types/enhanced.types';
+import { canvasLog } from '../../../utils/canvasLogger';
 
 interface PenToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -46,7 +47,7 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     if (!pointer) return;
 
     isDrawingRef.current = true;
-    console.log('🖊️ [PenTool] Starting drawing at:', pointer);
+    canvasLog.debug('🖊️ [PenTool] Starting drawing at:', pointer);
     startDrawing('pen', { x: pointer.x, y: pointer.y });
   }, [isActive, stageRef, startDrawing]);
 
@@ -58,7 +59,7 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
-    console.log('🖊️ [PenTool] Updating drawing at:', pointer);
+    canvasLog.debug('🖊️ [PenTool] Updating drawing at:', pointer);
     updateDrawing({ x: pointer.x, y: pointer.y });
   }, [isActive, stageRef, updateDrawing]);
 
@@ -67,13 +68,13 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     if (!isActive || !isDrawingRef.current || !stageRef.current) return;
 
     isDrawingRef.current = false;
-    console.log('🖊️ [PenTool] Finishing drawing');
+    canvasLog.debug('🖊️ [PenTool] Finishing drawing');
 
     // Use store's finishDrawing which now handles sticky note integration
     finishDrawing();
 
     // Keep pen tool active for multiple strokes
-    console.log('🖊️ [PenTool] Pen stroke completed, keeping tool active');
+    canvasLog.debug('🖊️ [PenTool] Pen stroke completed, keeping tool active');
   }, [isActive, finishDrawing]);
 
   // Attach event listeners to stage when active

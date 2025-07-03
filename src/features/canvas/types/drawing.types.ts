@@ -184,7 +184,7 @@ export const DRAWING_CONSTANTS = {
   MIN_SMOOTHING: 0.1,
   DEFAULT_SMOOTHING: 0.5,
   PRESSURE_CURVE: 2.0, // Exponential curve for pressure mapping
-  MAX_STROKE_POINTS: 10000, // Maximum points per stroke
+  MAX_STROKE_POINTS: 8000, // Maximum points per stroke (reduced for MVP performance)
   SIMPLIFICATION_TOLERANCE: 1.5,
   CACHE_TIMEOUT: 30000, // 30 seconds
   PERFORMANCE_POINT_THRESHOLD: 1000, // When to start performance optimizations

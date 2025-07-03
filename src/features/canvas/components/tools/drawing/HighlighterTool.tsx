@@ -1,276 +1,190 @@
 /**
- * HighlighterTool - Semi-transparent overlay drawing tool
- * Provides FigJam-style highlighter functionality with blend modes
+ * HighlighterTool - Interactive highlighter drawing component
+ * 
+ * Simplified version based on working PenTool pattern
  */
 
-import React, { useRef, useCallback, useState } from 'react';
-import { Line, Group } from 'react-konva';
+import React, { useCallback, useRef, useState } from 'react';
+import { Line } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
-import { StrokeManager } from '../../../systems/StrokeManager';
-import { HighlighterElement } from '../../../types/enhanced.types';
-import { StrokePoint, HighlighterConfig } from '../../../types/drawing.types';
 import { nanoid } from 'nanoid';
+import { HighlighterElement } from '../../../types/enhanced.types';
+import { ElementId } from '../../../types';
+import { getStrokeBoundingBox } from '../../../utils/spatial/getStrokeBoundingBox';
 
 interface HighlighterToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
   isActive: boolean;
-  strokeStyle: HighlighterConfig;
+  strokeStyle: {
+    color: string;
+    width: number;
+    opacity: number;
+    blendMode: string;
+  };
 }
 
-export const HighlighterTool: React.FC<HighlighterToolProps> = ({
-  stageRef,
-  isActive,
-  strokeStyle
+// Simple stroke smoothing function
+const smoothStroke = (points: number[]): number[] => {
+  if (points.length < 6) return points;
+  
+  const smoothed = [points[0], points[1]]; // Keep first point
+  
+  for (let i = 2; i < points.length - 2; i += 2) {
+    const prevX = points[i - 2];
+    const prevY = points[i - 1];
+    const currX = points[i];
+    const currY = points[i + 1];
+    const nextX = points[i + 2];
+    const nextY = points[i + 3];
+    
+    // Simple smoothing: average with neighbors
+    const smoothX = (prevX + currX + nextX) / 3;
+    const smoothY = (prevY + currY + nextY) / 3;
+    
+    smoothed.push(smoothX, smoothY);
+  }
+  
+  // Keep last point
+  smoothed.push(points[points.length - 2], points[points.length - 1]);
+  return smoothed;
+};
+
+export const HighlighterTool: React.FC<HighlighterToolProps> = ({ 
+  stageRef, 
+  isActive, 
+  strokeStyle 
 }) => {
-  const strokeManager = useRef(new StrokeManager({
-    smoothingLevel: 0.3, // Less smoothing for highlighter
-    simplificationTolerance: 2.0 // More aggressive simplification
-  }));
-  
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [currentPoints, setCurrentPoints] = useState<number[]>([]);
-  const [hoveredElements, setHoveredElements] = useState<Set<string>>(new Set());
-  
+  const isDrawingRef = useRef(false);
+  const [currentStroke, setCurrentStroke] = useState<number[]>([]);
+
   // Store actions
   const addElement = useUnifiedCanvasStore(state => state.addElement);
-  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
-  const elements = useUnifiedCanvasStore(state => state.elements);
   const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
   const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
-  
-  // Find elements under the highlighter path (for element-locking)
-  const findElementsUnderPath = useCallback((points: number[]) => {
-    if (!strokeStyle.lockToElements || points.length < 4) return new Set<string>();
-    
-    const foundElements = new Set<string>();
-    
-    // Sample points along the path to find intersected elements
-    for (let i = 0; i < points.length; i += 4) { // Every other point
-      if (i + 1 < points.length) {
-        const x = points[i];
-        const y = points[i + 1];
-        
-        // Find elements at this point
-        elements.forEach((element, id) => {
-          if (element.type === 'highlighter') return; // Don't highlight other highlighters
-          
-          // Simple bounding box check
-          const inBounds = x >= element.x && 
-                          x <= element.x + (element.width || 0) &&
-                          y >= element.y && 
-                          y <= element.y + (element.height || 0);
-          
-          if (inBounds) {
-            foundElements.add(id);
-          }
-        });
-      }
-    }
-    
-    return foundElements;
-  }, [strokeStyle.lockToElements, elements]);
-  
+
+  // Handle pointer down - start drawing
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isActive || e.target !== stageRef.current) return;
-    
-    const stage = stageRef.current!;
-    const pointer = stage.getPointerPosition()!;
-    const transform = stage.getAbsoluteTransform().copy().invert();
-    const pos = transform.point(pointer);
-    
-    const point: StrokePoint = {
-      x: pos.x,
-      y: pos.y,
-      pressure: e.evt.pressure || 0.7, // Default to higher pressure for highlighter
-      timestamp: Date.now()
-    };
-    
-    strokeManager.current.startRecording(point);
-    setIsDrawing(true);
-    setCurrentPoints([pos.x, pos.y]);
-    
-    // Cursor is managed by CursorManager
-    
-    console.log('🖍️ [HighlighterTool] Started highlighting at:', pos);
-  }, [isActive, stageRef]);
-  
-  const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    if (!isDrawing || !isActive) return;
-    
-    const stage = stageRef.current!;
-    const pointer = stage.getPointerPosition()!;
-    const transform = stage.getAbsoluteTransform().copy().invert();
-    const pos = transform.point(pointer);
-    
-    const point: StrokePoint = {
-      x: pos.x,
-      y: pos.y,
-      pressure: e.evt.pressure || 0.7,
-      timestamp: Date.now()
-    };
-    
-    strokeManager.current.addPoint(point);
-    
-    // Get current preview points
-    const previewPoints = strokeManager.current.getCurrentPoints();
-    setCurrentPoints(previewPoints);
-    
-    // Update hovered elements if element-locking is enabled
-    if (strokeStyle.lockToElements) {
-      const newHoveredElements = findElementsUnderPath(previewPoints);
-      setHoveredElements(newHoveredElements);
-    }
-  }, [isDrawing, isActive, stageRef, strokeStyle.lockToElements, findElementsUnderPath]);
-  
-  const handlePointerUp = useCallback(() => {
-    if (!isDrawing) return;
-    
-    const smoothedPoints = strokeManager.current.finishRecording();
-    const rawPoints = strokeManager.current.getRawPoints();
-    
-    if (smoothedPoints.length >= 4) { // At least 2 points
-      const highlighterElement: HighlighterElement = {
-        id: nanoid(),
-        type: 'highlighter',
-        points: smoothedPoints,
-        rawPoints: rawPoints,
-        x: 0, // Highlighters use absolute coordinates in points
-        y: 0,
-        style: {
-          color: strokeStyle.color,
-          width: strokeStyle.width,
-          opacity: strokeStyle.opacity,
-          smoothness: 0.3, // Fixed smoothness for highlighter
-          lineCap: 'round',
-          lineJoin: 'round',
-          blendMode: strokeStyle.blendMode,
-          baseOpacity: strokeStyle.opacity,
-          highlightColor: strokeStyle.color
-        },
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        isLocked: false,
-        isHidden: false
-      };
-      
-      // If element-locking is enabled, store which elements this highlighter affects
-      if (strokeStyle.lockToElements && hoveredElements.size > 0) {
-        (highlighterElement as any).lockedToElements = Array.from(hoveredElements);
-      }
-      
-      addElement(highlighterElement);
-      
-      // Check if the stroke was created within a sticky note container
-      const startPoint = { x: smoothedPoints[0], y: smoothedPoints[1] };
-      const stickyNoteId = findStickyNoteAtPoint(startPoint);
-      
-      if (stickyNoteId) {
-        console.log('🖍️ [HighlighterTool] Adding highlighter to sticky note container:', stickyNoteId);
-        addElementToStickyNote(highlighterElement.id, stickyNoteId);
-      }
-      
-      console.log('🖍️ [HighlighterTool] Created highlighter stroke:', {
-        id: highlighterElement.id,
-        pointCount: smoothedPoints.length / 2,
-        blendMode: highlighterElement.style.blendMode,
-        lockedElements: hoveredElements.size,
-        inStickyNote: !!stickyNoteId
-      });
-    }
-    
-    setIsDrawing(false);
-    setCurrentPoints([]);
-    setHoveredElements(new Set());
-    
-    // Keep highlighter tool active for multiple strokes
-    console.log('🖍️ [HighlighterTool] Highlighter stroke completed, keeping tool active');
-    
-    // Note: Cursor management is handled by CursorManager, no need to reset here
-  }, [isDrawing, strokeStyle, hoveredElements, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
-  
-  // Handle pointer cancel
-  const handlePointerCancel = useCallback(() => {
-    if (isDrawing) {
-      strokeManager.current.cancelRecording();
-      setIsDrawing(false);
-      setCurrentPoints([]);
-      setHoveredElements(new Set());
-      
-      if (stageRef.current) {
-        stageRef.current.container().style.cursor = 'default';
-      }
-    }
-  }, [isDrawing, stageRef]);
-  
-  // Event listeners
-  React.useEffect(() => {
     if (!isActive || !stageRef.current) return;
     
+    // Only start drawing if clicking on the stage (not on an element)
+    if (e.target !== stageRef.current) return;
+
     const stage = stageRef.current;
-    
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    isDrawingRef.current = true;
+    setCurrentStroke([pointer.x, pointer.y]);
+  }, [isActive, stageRef]);
+
+  // Handle pointer move - update drawing with throttling
+  const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
+    if (!isActive || !isDrawingRef.current || !stageRef.current) return;
+
+    const stage = stageRef.current;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    // Simple distance check to avoid adding too many points
+    if (currentStroke.length >= 2) {
+      const lastX = currentStroke[currentStroke.length - 2];
+      const lastY = currentStroke[currentStroke.length - 1];
+      const distance = Math.sqrt((pointer.x - lastX) ** 2 + (pointer.y - lastY) ** 2);
+      
+      // Only add point if moved at least 2 pixels (reduces point density)
+      if (distance < 2) return;
+    }
+
+    setCurrentStroke(prev => [...prev, pointer.x, pointer.y]);
+  }, [isActive, stageRef, currentStroke]);
+
+  // Handle pointer up - finish drawing
+  const handlePointerUp = useCallback(() => {
+    if (!isActive || !isDrawingRef.current || !stageRef.current) return;
+
+    isDrawingRef.current = false;
+
+    if (currentStroke.length < 4) {
+      setCurrentStroke([]);
+      return;
+    }
+
+    // Smooth the stroke
+    const smoothedStroke = smoothStroke(currentStroke);
+
+    // Create highlighter element
+    const bounds = getStrokeBoundingBox(smoothedStroke);
+    const highlighterElement: HighlighterElement = {
+      id: nanoid() as ElementId,
+      type: 'highlighter',
+      points: smoothedStroke,
+      style: { 
+        ...strokeStyle,
+        smoothness: (strokeStyle as any).smoothness || 0.5,
+        lineCap: (strokeStyle as any).lineCap || 'round',
+        lineJoin: (strokeStyle as any).lineJoin || 'round',
+        blendMode: 'multiply',
+        baseOpacity: strokeStyle.opacity,
+        highlightColor: strokeStyle.color
+      },
+      ...bounds,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      isLocked: false,
+      isHidden: false
+    };
+
+    // Add to store
+    addElement(highlighterElement);
+
+    // Check for sticky note container
+    const startPoint = { x: smoothedStroke[0], y: smoothedStroke[1] };
+    const stickyNoteId = findStickyNoteAtPoint(startPoint);
+    if (stickyNoteId) {
+      addElementToStickyNote(highlighterElement.id, stickyNoteId);
+    }
+
+    // Clear current stroke
+    setCurrentStroke([]);
+  }, [isActive, currentStroke, strokeStyle, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
+
+  // Attach event listeners to stage when active
+  React.useEffect(() => {
+    if (!isActive || !stageRef.current) return;
+
+    const stage = stageRef.current;
     stage.on('pointerdown', handlePointerDown);
     stage.on('pointermove', handlePointerMove);
     stage.on('pointerup', handlePointerUp);
-    stage.on('pointercancel', handlePointerCancel);
-    
+
     return () => {
       stage.off('pointerdown', handlePointerDown);
       stage.off('pointermove', handlePointerMove);
       stage.off('pointerup', handlePointerUp);
-      stage.off('pointercancel', handlePointerCancel);
     };
-  }, [isActive, handlePointerDown, handlePointerMove, handlePointerUp, handlePointerCancel]);
-  
-  if (!isActive) return null;
-  
+  }, [isActive, handlePointerDown, handlePointerMove, handlePointerUp, stageRef]);
+
+  // Render current drawing stroke as preview
+  if (!isActive || !isDrawingRef.current || currentStroke.length < 4) {
+    return null;
+  }
+
   return (
-    <Group listening={false}>
-      {/* Live preview while drawing */}
-      {isDrawing && currentPoints.length >= 4 && (
-        <Line
-          points={currentPoints}
-          stroke={strokeStyle.color}
-          strokeWidth={strokeStyle.width}
-          opacity={strokeStyle.opacity * 0.8} // Slightly more transparent for preview
-          lineCap="round"
-          lineJoin="round"
-          tension={0.2} // Light smoothing for preview
-          globalCompositeOperation={strokeStyle.blendMode}
-          listening={false}
-          perfectDrawEnabled={false}
-          shadowEnabled={false}
-        />
-      )}
-      
-      {/* Element highlight indicators (when element-locking is enabled) */}
-      {strokeStyle.lockToElements && isDrawing && hoveredElements.size > 0 && (
-        <React.Fragment>
-          {Array.from(hoveredElements).map(elementId => {
-            const element = elements.get(elementId);
-            if (!element || !element.width || !element.height) return null;
-            
-            return (
-              <Line
-                key={`highlight-${elementId}`}
-                points={[
-                  element.x, element.y,
-                  element.x + element.width, element.y,
-                  element.x + element.width, element.y + element.height,
-                  element.x, element.y + element.height,
-                  element.x, element.y
-                ]}
-                stroke={strokeStyle.color}
-                strokeWidth={2}
-                opacity={0.6}
-                dash={[4, 4]}
-                listening={false}
-              />
-            );
-          })}
-        </React.Fragment>
-      )}
-    </Group>
+    <Line
+      points={currentStroke}
+      stroke={strokeStyle.color}
+      strokeWidth={strokeStyle.width}
+      opacity={strokeStyle.opacity}
+      globalCompositeOperation={strokeStyle.blendMode as any}
+      tension={0.3}
+      lineCap="round"
+      lineJoin="round"
+      listening={false}
+      perfectDrawEnabled={false}
+      shadowForStrokeEnabled={false}
+      hitStrokeWidth={0}
+    />
   );
 };
 

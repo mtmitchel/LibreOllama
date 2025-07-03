@@ -10,7 +10,7 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { Line, Path, Arrow, Circle, Group } from 'react-konva';
 import Konva from 'konva';
-import type { ConnectorElement } from '../../types/enhanced.types';
+import type { ConnectorElement } from '../types/enhanced.types';
 
 interface ConnectorShapeProps {
   connector: ConnectorElement;
@@ -44,7 +44,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
     
     // Intermediate points
     if (connector.intermediatePoints) {
-      connector.intermediatePoints.forEach(point => {
+      connector.intermediatePoints.forEach((point: { x: number; y: number }) => {
         points.push(point.x, point.y);
       });
     }
@@ -145,7 +145,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
     
     // Update intermediate points if they exist
     if (connector.intermediatePoints && connector.intermediatePoints.length > 0) {
-      updates.intermediatePoints = connector.intermediatePoints.map(point => ({
+      updates.intermediatePoints = connector.intermediatePoints.map((point: { x: number; y: number }) => ({
         x: point.x + dx,
         y: point.y + dy
       }));

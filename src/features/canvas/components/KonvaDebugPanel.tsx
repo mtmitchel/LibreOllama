@@ -1,6 +1,6 @@
 // Test component to verify Konva canvas integration
 import React from 'react';
-import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores';
+import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
 import { ElementId as ElementIdFactory } from '../types/enhanced.types';
 import type { RectangleElement } from '../types/enhanced.types';
 
@@ -9,7 +9,7 @@ export const KonvaDebugPanel: React.FC = () => {
   const elements = useUnifiedCanvasStore(canvasSelectors.elements);
   const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
   const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
-  const addElement = useUnifiedCanvasStore((state) => state.addElement);
+  const addElement = useUnifiedCanvasStore((state: any) => state.addElement);
   
   const elementCount = elements.size;
   const selectedElementId = Array.from(selectedElementIds)[0] || null;
@@ -39,7 +39,7 @@ export const KonvaDebugPanel: React.FC = () => {
       <div className="space-y-1 text-sm">
         <div>Elements: {elementCount}</div>
         <div>Selected Tool: {selectedTool}</div>
-        <div>Selected Element: {selectedElementId || 'None'}</div>
+        <div>Selected Element: {selectedElementId ? String(selectedElementId) : 'None'}</div>
         <button 
           onClick={testCreateElement}
           className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"

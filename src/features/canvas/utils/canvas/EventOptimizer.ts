@@ -80,10 +80,10 @@ class EventOptimizerImpl {
     this.gestureConfig = {
       enablePan: true,
       enableZoom: true,
-      enableRotate: true,
+      enableRotate: false,
       enableTap: true,
       enableDoubleTap: true,
-      enableLongPress: true,
+      enableLongPress: false,
       panThreshold: 10,
       zoomThreshold: 0.1,
       rotateThreshold: 5,
@@ -203,6 +203,7 @@ class EventOptimizerImpl {
    * Handle delegated events with optimization
    */
   private handleDelegatedEvent(eventType: string, event: Event): void {
+    const startTime = performance.now();
     const endTiming = PerformanceMonitor.startTiming('handleDelegatedEvent');
     
     try {
@@ -224,7 +225,8 @@ class EventOptimizerImpl {
       this.metrics.eventsProcessed++;
     } finally {
       endTiming();
-      this.metrics.eventProcessingTime += performance.now() - this.metrics.eventProcessingTime;
+      // Accumulate actual processing duration for this event batch
+      this.metrics.eventProcessingTime += performance.now() - startTime;
     }
   }
 

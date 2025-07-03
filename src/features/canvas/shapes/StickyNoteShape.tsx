@@ -117,9 +117,12 @@ const createStickyNoteTextEditor = (
     textarea.removeEventListener('input', handleInput);
     textarea.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('mousedown', handleDocumentMousedown);
-    if (document.body.contains(textarea)) {
-      document.body.removeChild(textarea);
-    }
+    // Delay removal to next tick to allow click event to propagate to canvas
+    setTimeout(() => {
+      if (document.body.contains(textarea)) {
+        document.body.removeChild(textarea);
+      }
+    }, 0);
   };
 
   textarea.addEventListener('input', handleInput);

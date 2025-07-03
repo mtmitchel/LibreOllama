@@ -80,7 +80,7 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
   // Note: Cursor management is now handled centrally by CursorManager in CanvasStage
   
   // Default tool configurations
-  const markerConfig = strokeConfig?.marker || {
+  const markerConfig = React.useMemo(() => (strokeConfig?.marker || {
     color: '#000000',
     width: 8,
     minWidth: 2,
@@ -91,22 +91,20 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
     pressureSensitive: true,
     lineCap: 'round' as const,
     lineJoin: 'round' as const
-  };
+  }), [strokeConfig?.marker]);
   
-  const highlighterConfig = strokeConfig?.highlighter || {
+  const highlighterConfig = React.useMemo(() => (strokeConfig?.highlighter || {
     color: '#FFFF00',
     width: 16,
     opacity: 0.4,
     blendMode: 'multiply' as const,
     lockToElements: false
-  };
+  }), [strokeConfig?.highlighter]);
   
-
-  
-  const eraserConfig = strokeConfig?.eraser || {
+  const eraserConfig = React.useMemo(() => (strokeConfig?.eraser || {
     size: 30,
     mode: 'stroke' as const
-  };
+  }), [strokeConfig?.eraser]);
   
   return (
     <Layer listening={true}>
