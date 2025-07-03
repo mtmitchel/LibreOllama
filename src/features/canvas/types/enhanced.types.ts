@@ -243,16 +243,6 @@ export interface TriangleElement extends BaseElement {
   textAlign?: 'left' | 'center' | 'right';
 }
 
-export interface StarElement extends BaseElement {
-  type: 'star';
-  innerRadius: number;
-  outerRadius: number;
-  numPoints: number;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-}
-
 export interface RichTextElement extends BaseElement {
   type: 'rich-text';
   text: string;
@@ -315,8 +305,6 @@ export interface HighlighterElement extends BaseElement {
   };
 }
 
-
-
 // Note: Drawing types will be imported where needed to avoid circular dependencies
 
 // Main discriminated union for all canvas elements
@@ -331,7 +319,6 @@ export type CanvasElement =
   | StickyNoteElement
   | PenElement
   | TriangleElement
-  | StarElement
   | RichTextElement
   | GroupElement
   | MarkerElement
@@ -384,10 +371,6 @@ export function isTriangleElement(el: CanvasElement): el is TriangleElement {
   return el.type === 'triangle';
 }
 
-export function isStarElement(el: CanvasElement): el is StarElement {
-  return el.type === 'star';
-}
-
 export function isRichTextElement(el: CanvasElement): el is RichTextElement {
   return el.type === 'rich-text';
 }
@@ -403,8 +386,6 @@ export function isMarkerElement(el: CanvasElement): el is MarkerElement {
 export function isHighlighterElement(el: CanvasElement): el is HighlighterElement {
   return el.type === 'highlighter';
 }
-
-
 
 // Container-related utility functions
 export function isContainerElement(el: CanvasElement): el is (SectionElement | StickyNoteElement) & { childElementIds: ElementId[] } {
@@ -503,7 +484,6 @@ export type CanvasTool =
   | 'connector-line'
   | 'connector-arrow'
   | 'pen'
-  | 'star'
   | 'triangle'
   | 'sticky-note'
   | 'image'

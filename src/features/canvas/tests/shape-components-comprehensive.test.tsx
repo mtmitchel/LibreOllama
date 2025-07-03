@@ -12,7 +12,6 @@ import { renderWithKonva } from '@/tests/utils/konva-test-utils';
 import { RectangleShape } from '@/features/canvas/shapes/RectangleShape';
 import { CircleShape } from '@/features/canvas/shapes/CircleShape';
 import { TriangleShape } from '@/features/canvas/shapes/TriangleShape';
-import { StarShape } from '@/features/canvas/shapes/StarShape';
 import { TextShape } from '@/features/canvas/shapes/TextShape';
 import { StickyNoteShape } from '@/features/canvas/shapes/StickyNoteShape';
 import { PenShape } from '@/features/canvas/shapes/PenShape';
@@ -24,7 +23,6 @@ import {
   isRectangleElement,
   isCircleElement,
   isTriangleElement,
-  isStarElement,
   isTextElement,
   isStickyNoteElement,
   isPenElement,
@@ -98,17 +96,6 @@ const createElement = (type: string, overrides = {}): any => {
         ...baseElement,
         width: 100,
         height: 100,
-        fill: '#3B82F6',
-        stroke: '#1E40AF',
-        strokeWidth: 1,
-        ...overrides
-      };
-    case 'star':
-      return {
-        ...baseElement,
-        innerRadius: 25,
-        outerRadius: 50,
-        numPoints: 5,
         fill: '#3B82F6',
         stroke: '#1E40AF',
         strokeWidth: 1,
@@ -302,41 +289,6 @@ describe('Comprehensive Shape Components Test Suite', () => {
     });
   });
 
-  describe('Star Elements', () => {
-    test('should render star with correct properties', () => {
-      const element = createElement('star', {
-        numPoints: 5,
-        innerRadius: 20,
-        outerRadius: 40,
-        fill: '#F3E8FF',
-        stroke: '#A855F7',
-        strokeWidth: 2
-      });
-
-      const props = getBaseShapeProps(element);
-      const { container } = renderWithKonva(<StarShape {...props} />);
-
-      expect(container).toBeTruthy();
-      expect(isStarElement(element)).toBe(true);
-    });
-
-    test('should handle different star configurations', () => {
-      const starConfigs = [
-        { numPoints: 3, innerRadius: 15, outerRadius: 30 },
-        { numPoints: 6, innerRadius: 25, outerRadius: 50 },
-        { numPoints: 8, innerRadius: 30, outerRadius: 60 }
-      ];
-
-      starConfigs.forEach(config => {
-        const element = createElement('star', config);
-        const props = getBaseShapeProps(element);
-        
-        const { container } = renderWithKonva(<StarShape {...props} />);
-        expect(container).toBeTruthy();
-      });
-    });
-  });
-
   describe('Text Elements', () => {
     test('should render text with correct properties', () => {
       const element = createElement('text', {
@@ -527,7 +479,6 @@ describe('Comprehensive Shape Components Test Suite', () => {
         createElement('rectangle', { width: 100, height: 100 }),
         createElement('circle', { radius: 50 }),
         createElement('triangle', { points: [0, -30, -26, 15, 26, 15] }),
-        createElement('star', { numPoints: 5, innerRadius: 20, outerRadius: 40 }),
         createElement('text', { text: 'Test', fontSize: 16 }),
         createElement('sticky-note', { text: 'Note', backgroundColor: '#FEF08A' }),
         createElement('pen', { points: [0, 0, 50, 50] }),
@@ -537,11 +488,10 @@ describe('Comprehensive Shape Components Test Suite', () => {
       expect(isRectangleElement(elements[0])).toBe(true);
       expect(isCircleElement(elements[1])).toBe(true);
       expect(isTriangleElement(elements[2])).toBe(true);
-      expect(isStarElement(elements[3])).toBe(true);
-      expect(isTextElement(elements[4])).toBe(true);
-      expect(isStickyNoteElement(elements[5])).toBe(true);
-      expect(isPenElement(elements[6])).toBe(true);
-      expect(isImageElement(elements[7])).toBe(true);
+      expect(isTextElement(elements[3])).toBe(true);
+      expect(isStickyNoteElement(elements[4])).toBe(true);
+      expect(isPenElement(elements[5])).toBe(true);
+      expect(isImageElement(elements[6])).toBe(true);
 
       // Cross-type validation
       expect(isRectangleElement(elements[1])).toBe(false);
@@ -555,7 +505,6 @@ describe('Comprehensive Shape Components Test Suite', () => {
         { type: 'rectangle', props: { width: 100, height: 100 } },
         { type: 'circle', props: { radius: 50 } },
         { type: 'triangle', props: { points: [0, -30, -26, 15, 26, 15] } },
-        { type: 'star', props: { numPoints: 5, innerRadius: 20, outerRadius: 40 } },
         { type: 'text', props: { text: 'Test', fontSize: 16 } },
         { type: 'sticky-note', props: { text: 'Note', backgroundColor: '#FEF08A' } },
         { type: 'pen', props: { points: [0, 0, 50, 50] } },
@@ -581,10 +530,6 @@ describe('Comprehensive Shape Components Test Suite', () => {
             break;
           case 'triangle': 
             ShapeComponent = TriangleShape;
-            shapeProps = { ...getBaseShapeProps(element), onSelect };
-            break;
-          case 'star': 
-            ShapeComponent = StarShape;
             shapeProps = { ...getBaseShapeProps(element), onSelect };
             break;
           case 'text': 
@@ -621,13 +566,13 @@ describe('Comprehensive Shape Components Test Suite', () => {
       
       // Create 20 elements of different types
       const elements = Array.from({ length: 20 }, (_, i) => {
-        const types = ['rectangle', 'circle', 'triangle', 'star'];
+        const types = ['rectangle', 'circle', 'triangle', 'text'];
         const type = types[i % types.length];
         return createElement(type, {
           ...(type === 'rectangle' && { width: 50, height: 50 }),
           ...(type === 'circle' && { radius: 25 }),
           ...(type === 'triangle' && { points: [0, -20, -17, 10, 17, 10] }),
-          ...(type === 'star' && { numPoints: 5, innerRadius: 15, outerRadius: 30 })
+          ...(type === 'text' && { text: 'Test', fontSize: 16 })
         });
       });
 
@@ -640,7 +585,7 @@ describe('Comprehensive Shape Components Test Suite', () => {
           case 'rectangle': ShapeComponent = RectangleShape; break;
           case 'circle': ShapeComponent = CircleShape; break;
           case 'triangle': ShapeComponent = TriangleShape; break;
-          case 'star': ShapeComponent = StarShape; break;
+          case 'text': ShapeComponent = TextShape; break;
           default: return;
         }
 

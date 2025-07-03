@@ -6,7 +6,6 @@ export { TextShape } from './TextShape';
 export { ImageShape } from './ImageShape';
 export { MemoryOptimizedShape } from './MemoryOptimizedShape';
 export { StickyNoteShape } from './StickyNoteShape';
-export { StarShape } from './StarShape';
 export { TriangleShape } from './TriangleShape';
 export { PenShape } from './PenShape';
 export { SectionShape } from './SectionShape';

@@ -1,6 +1,7 @@
-// src/features/canvas/components/ui/LayersPanel.tsx
+// src/features/canvas/layers/LayersPanel.tsx
 import React, { useState } from 'react';
 import { useUnifiedCanvasStore } from '../../../../stores';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 // import { Layer } from '../../stores/slices/layerStore'; // Legacy import - using simple interface
 interface Layer {
   id: string;

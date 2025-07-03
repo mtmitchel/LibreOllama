@@ -18,7 +18,6 @@ import { designSystem } from '../../../core/design-system';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
-import { StarShape } from '../shapes/StarShape';
 import { TriangleShape } from '../shapes/TriangleShape';
 import { RectangleShape } from '../shapes/RectangleShape';
 import { CircleShape } from '../shapes/CircleShape';
@@ -26,7 +25,7 @@ import { PenShape } from '../shapes/PenShape';
 import { SectionShape } from '../shapes/SectionShape';
 import { EditableNode } from '../shapes/EditableNode';
 import { TableElement } from '../elements/TableElement';
-import { CanvasErrorBoundary } from '../utils/CanvasErrorBoundary';
+import { KonvaElementBoundary } from '../utils/KonvaElementBoundary';
 import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
 import { StrokeRenderer } from '../components/renderers/StrokeRenderer';
 
@@ -94,7 +93,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     switch (element.type) {
       case 'rectangle':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <RectangleShape
               element={element as any}
               isSelected={isSelected}
@@ -102,12 +101,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onUpdate={updateElement}
               stageRef={stageRef}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'circle':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <CircleShape
               element={element as any}
               isSelected={isSelected}
@@ -115,25 +114,25 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onUpdate={updateElement}
               stageRef={stageRef}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'marker':
       case 'highlighter':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <StrokeRenderer
               element={element as any}
               isSelected={isSelected}
               onSelect={(id) => selectElement(id as ElementId)}
               isEditing={false}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'text':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <TextShape
               element={element as any}
               isSelected={isSelected}
@@ -142,12 +141,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onStartTextEdit={setTextEditingElement}
               stageRef={stageRef}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'sticky-note':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <StickyNoteShape
               element={element as any}
               isSelected={isSelected}
@@ -156,25 +155,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onStartTextEdit={setTextEditingElement}
               stageRef={stageRef}
             />
-          </CanvasErrorBoundary>
-        );
-
-      case 'star':
-        return (
-          <CanvasErrorBoundary key={element.id}>
-            <StarShape
-              element={element as any}
-              isSelected={isSelected}
-              konvaProps={konvaElementProps}
-              onUpdate={updateElement}
-              onStartTextEdit={setTextEditingElement}
-            />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'triangle':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <TriangleShape
               element={element as any}
               isSelected={isSelected}
@@ -182,23 +168,23 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onUpdate={updateElement}
               stageRef={stageRef}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'pen':
       case 'pencil':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <PenShape
               element={element as any}
               konvaProps={konvaElementProps}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'image':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <ImageShape
               element={element as any}
               isSelected={isSelected}
@@ -206,13 +192,13 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onUpdate={updateElement}
               onStartTextEdit={setTextEditingElement}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'section':
         const sectionChildren = elementsBySection?.get(element.id) || [];
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <SectionShape
               section={element as SectionElement}
               isSelected={isSelected}
@@ -224,12 +210,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             >
               {sectionChildren.map(child => renderElement(child))}
             </SectionShape>
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       case 'table':
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <TableElement
               element={element as any}
               isSelected={isSelected}
@@ -237,12 +223,12 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               onUpdate={updateElement}
               stageRef={stageRef || { current: null }}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
 
       default:
         return (
-          <CanvasErrorBoundary key={element.id}>
+          <KonvaElementBoundary key={element.id}>
             <Text
               x={element.x}
               y={element.y}
@@ -251,7 +237,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               fill="#ff6b6b"
               listening={false}
             />
-          </CanvasErrorBoundary>
+          </KonvaElementBoundary>
         );
     }
   }, [selectedElementIds, selectedTool, elementsBySection, updateElement, setTextEditingElement, selectElement]);
@@ -309,7 +295,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   }, [memoizedElements, draftSectionElement, drawingLine]);
 
   return (
-    <CanvasErrorBoundary>
+    <KonvaElementBoundary>
       <Group
         name={name || "main-layer"}
         perfectDrawEnabled={false}
@@ -317,7 +303,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       >
         {allNodes}
       </Group>
-    </CanvasErrorBoundary>
+    </KonvaElementBoundary>
   );
 };
 

@@ -20,64 +20,26 @@
 
 ---
 
-## 🎯 **CANVAS STATUS: PRODUCTION READY - ALL CRITICAL SYSTEMS FUNCTIONAL**
+## 🎯 **CANVAS STATUS: STABLE CORE & ACTIVE DEVELOPMENT**
 
-**🚀 Latest Update (March 2025): TABLE SYSTEM RESTORED - ALL CRITICAL BUGS RESOLVED**
+**🚀 Latest Update (July 2025): Codebase Health & Refactoring**
 
-The LibreOllama Canvas system is a **complete, production-ready FigJam-style whiteboard application** with comprehensive functionality matching industry standards. **All core systems including tables are now fully functional.**
+The LibreOllama Canvas has a stable core with major functionalities like tables, text editing, and shape creation working reliably. Development is active, with a recent focus on improving codebase health and maintainability.
 
-**✅ COMPREHENSIVE COMPLETION ACHIEVEMENTS:**
-- **✅ Complete Drawing Suite**: Pen, Marker, Highlighter, Eraser tools with professional styling
-- **✅ Professional Shape System**: Rectangle, Circle, Triangle, Mindmap with FigJam-style UX
-- **✅ Production-Ready Tables**: Full table functionality with positioning, dragging, and cell editing
-- **✅ Sticky Note Containers**: Full container functionality for drawing and adding elements
-- **✅ Advanced Text Editing**: FigJam-style canvas-native text with real-time auto-sizing
-- **✅ Complete Undo/Redo System**: Full history management with UI button states
-- **✅ Professional Toolbar**: Organized tool groups with distinct icons and clean dropdowns
-- **✅ Performance Excellence**: 60+ FPS with 1000+ elements + **95% viewport culling**
-- **✅ Production Architecture**: Type-safe, error-resilient, deployment-ready system
+**✅ Codebase Health & Refactoring (July 2025):**
+- **Dead Code Removed**: The unused `StarShape` tool was fully deprecated and removed, including its component, types, and tests.
+- **Duplicate Files Resolved**: Consolidated duplicate `elementRenderer` files and resolved a naming collision by renaming the specialized `CanvasErrorBoundary` to `KonvaElementBoundary` to clarify its purpose.
+- **Improved Structure**: Relocated hooks (`useRafThrottle`) and UI components (`LayersPanel`) to more logical directories, improving code organization and maintainability.
 
-**🔥 MAJOR BUG FIXES COMPLETED (March 2025):**
-- **✅ Table Positioning**: Tables now appear exactly where clicked (not top-left corner)
-- **✅ Table Dragging**: Smooth table movement without snapping back to previous position  
-- **✅ Cell Text Persistence**: Cell content saves reliably when clicking away or using Tab navigation
-- **✅ Coordinate System**: Proper screen-to-canvas conversion with zoom/pan support
-- **✅ State Management**: Eliminated crashes from immutable state violations
-
-**🚨 CURRENT STATUS:**
-- **⚠️ MINOR ISSUE**: Shape text editing shows dual text fields (non-blocking, under investigation)
-- **✅ ALL CRITICAL SYSTEMS**: Production-ready with professional-grade functionality
-- **✅ Table System**: Fully functional with precise positioning, smooth dragging, and reliable cell editing
-- **✅ Text Tool**: Fully working with canvas-native implementation
-- **✅ Sticky Notes**: Complete container system with drawing tool support
-- **✅ Drawing Tools**: Professional variable-width tools with smooth curves
-- **✅ Performance**: Quadtree optimization with 95% viewport culling efficiency
-
-**🔥 TECHNICAL ACHIEVEMENTS:**
-- **Quadtree Spatial Indexing**: Advanced O(log n) element queries for massive canvases
-- **Store-First Architecture**: React Konva best practices implementation eliminating conflicts
-- **Canvas-Native Text**: Complete elimination of DOM overlay issues
-- **Container System**: Full sticky note container functionality with multi-element support
-- **Professional UX**: FigJam-style crosshair cursors, click-to-place, immediate text editing
+**🔥 Previously Resolved Major Issues (March 2025):**
+- **Table Positioning**: Tables now appear exactly where clicked.
+- **Table Dragging**: Smooth table movement without snapping back.
+- **Cell Text Persistence**: Cell content saves reliably.
+- **Coordinate System**: Proper screen-to-canvas conversion implemented.
+- **State Management**: Eliminated crashes from immutable state violations.
 
 **📋 COMPREHENSIVE DOCUMENTATION:**
-All canvas development information is available in:
-
-**[CANVAS_MASTER_DOCUMENTATION.md](docs/CANVAS_MASTER_DOCUMENTATION.md)** - Complete implementation guide and production roadmap
-
-This documentation provides:
-- Architecture overview and technical specifications
-- Implementation status and feature completions
-- Development roadmap and future enhancements
-- Performance metrics and deployment guidelines
-
-**🚀 ACTIVE DEVELOPMENT:**
-- All core functionality implemented and stable
-- Advanced features in active development
-- Comprehensive testing coverage established
-- Ready for production deployment
-
-For complete documentation index, see [Documentation Directory](docs/README.md).
+All canvas development information is available in the **[CANVAS_MASTER_DOCUMENTATION.md](docs/CANVAS_MASTER_DOCUMENTATION.md)**, which serves as the authoritative source for architecture, implementation status, and development roadmaps.
 
 ---
 
@@ -101,7 +63,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A **complete, production-ready whiteboard** powered by **Konva.js** for visual thinking and diagramming. **✅ COMPLETE SYSTEMS**: Drawing suite (Pen, Marker, Highlighter, Eraser), professional shape system (Rectangle, Circle, Triangle, Mindmap), FigJam-style text editing, sticky note containers, and **fully functional tables**. **✅ TABLE SYSTEM**: Production-ready tables with precise positioning, smooth dragging, and reliable cell editing. **✅ CONTAINER FUNCTIONALITY**: Full support for drawing and adding elements directly on sticky notes with professional clipping and movement. **✅ PROFESSIONAL UX**: Organized toolbar with distinct icons, undo/redo system, keyboard shortcuts, and FigJam-style interactions. **⚠️ MINOR ISSUE**: Shape text editing dual display (non-blocking). **🚀 PERFORMANCE**: 60+ FPS with **95% viewport culling**, **quadtree spatial indexing**, and **store-first architecture**. Built on **React 19 + Zustand** with full TypeScript coverage. |
+| **Canvas** | A high-performance whiteboard for visual thinking. Features include a full drawing suite, standard shapes, sticky notes, and fully functional tables. Built with Konva.js for a smooth experience with viewport culling and spatial indexing for performance. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
@@ -110,16 +72,15 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 
 ## Tech Stack
 
-LibreOllama is built on a modern, robust, and privacy-focused technology stack with a **consolidated, enterprise-grade architecture**.
+LibreOllama is built on a modern, robust, and privacy-focused technology stack with a consolidated, enterprise-grade architecture.
 
 * **Framework**: [**Tauri**](https://tauri.app/) - A framework for building lightweight, secure, and cross-platform desktop applications using web technologies.
 * **Frontend**: [**React 19**](https://reactjs.org/) & [**TypeScript**](https://www.typescriptlang.org/) - For a type-safe, component-based user interface with full React 19 compatibility and concurrent features.
 * **Canvas**: [**Konva.js**](https://konvajs.org/) & [**React-Konva**](https://github.com/konvajs/react-konva) - High-performance 2D canvas library for professional whiteboard functionality, optimized for React 19's strict rendering requirements.
 * **Backend & Core Logic**: [**Rust**](https://www.rust-lang.org/) - Powers the secure, high-performance backend, managing everything from database connections to system-level commands.
-* **Styling**: [**Tailwind CSS**](https://tailwindcss.com/) - A utility-first CSS framework with **consolidated design system** in single `globals.css` file, eliminating style fragmentation and import conflicts.
-* **State Management**: [**Zustand**](https://zustand.surge.sh/) & React Context API - For simple, predictable state management with React 19 compatible selector patterns, immutable updates, **store-first architecture**, and **memory-optimized viewport culling** with **quadtree spatial indexing** for massive performance gains.
+* **Styling**: [**Tailwind CSS**](https://tailwindcss.com/) - A utility-first CSS framework for rapid UI development.
+* **State Management**: [**Zustand**](https://zustand.surge.sh/) - For simple, predictable global state management.
 * **Database**: [**SQLCipher**](https://www.zetetic.net/sqlcipher/) (via `rusqlite`) - An encrypted SQLite database to keep all your data secure at rest.
-* **Architecture**: **Feature-based organization** with co-located components, tests, and utilities for optimal maintainability and developer experience.
 
 ## Getting Started: Development Setup
 
@@ -139,7 +100,7 @@ Ready to contribute? Follow these steps to get your development environment up a
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/mtmitchel/libreollama.git](https://github.com/mtmitchel/libreollama.git)
+    git clone https://github.com/mtmitchel/libreollama.git
     cd libreollama
     ```
 
@@ -153,178 +114,76 @@ Ready to contribute? Follow these steps to get your development environment up a
     ```bash
     npm run tauri:dev
     ```
-
-    > **Note for Windows users**: The `tauri:dev` script in `package.json` is pre-configured to find your Cargo installation. If you encounter issues, ensure `~/.cargo/bin` is in your system's `PATH`.
-
 Your LibreOllama desktop application will launch, and any changes you make to the Rust or React code will trigger a rebuild and refresh.
 
 ## Project Structure
 
-The repository is organized with a clean, feature-based architecture following modern best practices after comprehensive refactoring (June 2025).
+The repository is organized with a clean, feature-based architecture.
 
 ```
 libreollama/
 ├── docs/                      # Comprehensive project documentation
-│   ├── development/           #   Developer setup and backend guides
-│   ├── design-system/         #   UI/UX design documentation
-│   └── archive/              #   Historical documentation and completed phases
-├── src/                       # React Frontend
-│   ├── components/            #   Shared UI components & page-specific components
-│   ├── features/              #   Feature-based organization
-│   │   └── canvas/            #     Professional whiteboard system
-│   │       ├── components/    #       Canvas UI components (18+ organized components)
+├── src/                       # React Frontend Source
+│   ├── app/                   #   Core application setup, routing, and main pages
+│   │   ├── contexts/          #     React context providers
+│   │   ├── pages/             #     Top-level page components (Dashboard, Chat, etc.)
+│   │   ├── shared/            #     Shared UI components within the app
+│   │   ├── App.tsx            #     Root React component with router setup
+│   │   └── main.tsx           #     Application entry point
+│   ├── components/            #   Global, shared UI components (layout, navigation)
+│   ├── core/                  #   Core framework logic (non-UI)
+│   │   ├── design-system/     #     Global styles, theme
+│   │   ├── hooks/             #     Shared, reusable React hooks
+│   │   ├── lib/               #     Shared libraries, helpers, and utilities
+│   │   └── shared-ui/         #     Low-level shared UI primitives
+│   ├── features/              #   Feature-based modules
+│   │   └── canvas/            #     The Canvas feature module
+│   │       ├── components/    #       UI components specific to the canvas
+│   │       ├── elements/      #       Definitions for canvas element types
 │   │       ├── hooks/         #       Canvas-specific React hooks
+│   │       ├── layers/        #       Konva Layer components
+│   │       ├── renderers/     #       Logic for rendering canvas elements
+│   │       ├── shapes/        #       Konva Shape components
 │   │       ├── stores/        #       Canvas state management (Zustand)
-│   │       ├── tests/         #       Co-located canvas tests (consolidated)
-│   │       ├── types/         #       Canvas type definitions
-│   │       └── utils/         #       Canvas utility functions
-│   ├── contexts/              #   React Context providers for global state
-│   ├── design-system/         #   Consolidated design system
-│   │   └── globals.css        #     SINGLE consolidated stylesheet (all CSS merged)
-│   ├── hooks/                 #   Shared React hooks
-│   ├── lib/                   #   Shared utilities and services
-│   │   └── logger.ts          #     UNIFIED logger (consolidated from 2 files)
-│   ├── pages/                 #   Top-level page components for each module
-│   ├── stores/                #   Global Zustand state management stores
-│   ├── tests/                 #   Global test utilities and shared tests
-│   │   ├── __mocks__/         #     Global mocks and test utilities
-│   │   └── setup/             #     Test configuration and setup
-│   └── main.tsx               #   Application entry point
+│   │       ├── systems/       #       Core canvas systems (e.g., StrokeManager)
+│   │       ├── tests/         #       Co-located canvas tests
+│   │       ├── toolbar/       #       Components for the canvas toolbar
+│   │       ├── types/         #       Canvas-specific type definitions
+│   │       └── utils/         #       Canvas-specific utility functions
+│   ├── test-utils/            #   Shared utilities for testing
+│   └── tests/                 #   Global tests and configuration
 ├── src-tauri/                 # Rust Backend (Tauri Core)
-│   ├── capabilities/          #   Tauri permission manifests
 │   ├── src/                   #   Rust source code
 │   │   ├── commands/          #     Tauri commands exposed to the frontend
-│   │   ├── database/          #     All database logic (schema, models, operations)
-│   │   └── lib.rs             #     Main Rust library, command registration
-│   ├── build.rs               #   Tauri build script
+│   │   ├── database/          #     Database logic (schema, models, operations)
+│   │   └── lib.rs             #     Main Rust library
 │   └── tauri.conf.json        #   Core Tauri application configuration
-├── archives/                  # Archived legacy code and documentation
 ├── tailwind.config.ts         # Tailwind CSS configuration file
 └── README.md                  # This file
 ```
 
-### 🏗️ **Architecture Highlights**
-
-- **Feature-Colocated Organization**: Canvas system properly organized under `src/features/canvas/`
-- **Consolidated Styles**: Single `globals.css` eliminates CSS fragmentation and import conflicts
-- **Unified Utilities**: Single logger with comprehensive capabilities serves entire application
-- **Clean Test Structure**: Tests organized by feature with shared utilities properly separated
-- **Zero Redundancy**: No duplicate files or conflicting dependencies
-
 ## Documentation & Guides
 
-LibreOllama includes comprehensive documentation to help you get started quickly and contribute effectively.
-
-### **Primary Documentation**
-- **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)** - **AUTHORITATIVE SOURCE** - Complete implementation guide, architecture validation, and production roadmap
-- **[Documentation Index](./docs/README.md)** - Guide to all available project documentation
-
-### **Development & Testing**
-- **[Testing Guide](./docs/TESTING_GUIDE.md)** - Development testing methodology and best practices
-- **[Testing Demo](./docs/TESTING_DEMO.md)** - Step-by-step feature testing instructions
-- **[Konva React Guides](./docs/KONVA_REACT_GUIDES/)** - Technical reference for canvas development
+- **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)** - **AUTHORITATIVE SOURCE** for canvas implementation, architecture, and roadmap.
+- **[Documentation Index](./docs/README.md)** - Guide to all project documentation.
+- **[Testing Guide](./docs/TESTING_GUIDE.md)** - Testing methodology and best practices.
 
 ## 📚 Canvas Testing & Development
 
-### Testing the Canvas
-
-The LibreOllama Canvas includes comprehensive testing coverage:
+The LibreOllama Canvas includes comprehensive testing coverage.
 
 ```bash
 # Run all tests
 npm test
 
-# Run specific canvas tests  
+# Run specific canvas tests
 npm test -- --testPathPattern=canvas
-
-# Run canvas feature validation
-npm test -- canvas-rendering-validation.test.ts
 ```
 
-### Canvas Test Suite
+## Contributing
 
-- **Store Testing**: Real store testing with `createUnifiedTestStore` pattern
-- **Component Testing**: React component testing with proper store integration
-- **Performance Testing**: Rendering validation and memory leak detection
-- **Feature Testing**: Comprehensive tool and interaction validation
+Contributions are welcome! Please feel free to open an issue or submit a pull request.
 
-### Development Guidelines
+## License
 
-- **Testing Philosophy**: Store-first testing with minimal mocking of external dependencies
-- **Architecture**: Unified store pattern with TypeScript strict mode + quadtree optimization
-- **Performance**: 60+ FPS target with viewport culling, intelligent throttling, and LOD rendering
-- **Optimization**: Advanced spatial indexing with up to 95% element culling for massive performance gains
-- **Documentation**: All changes documented in [Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)
-
-
----
-
-## Recent Updates
-
-### 🔥 **CRITICAL TABLE FUNCTIONALITY RESTORED** (March 2025)
-
-**✅ ALL TABLE SYSTEM BUGS RESOLVED**
-
-The table system has achieved **full production-ready status** with comprehensive bug fixes:
-
-**🚨 RESOLVED CRITICAL ISSUES:**
-- **✅ Table Positioning Fixed**: Tables now appear exactly where clicked instead of top-left corner
-- **✅ Table Dragging Restored**: Tables move smoothly without snapping back to previous position
-- **✅ Cell Text Persistence**: Cell content saves reliably when clicking away or using Tab navigation
-- **✅ Coordinate System**: Proper screen-to-canvas conversion implemented with zoom/pan support
-- **✅ State Management**: Eliminated immutable state violations causing crashes
-
-**🔧 TECHNICAL SOLUTIONS:**
-- **Coordinate Conversion**: Fixed TableTool to use proper Konva coordinate transformation
-- **Position Management**: Replaced reactive position sync with mount-only initial positioning
-- **Cell Data Access**: Implemented safe read-only cell access replacing mutating functions
-- **Store Integration**: Added required table metadata for proper state management
-- **Component Architecture**: Added missing position props to Konva Group component
-
-**🎯 PRODUCTION IMPACT:**
-The table system now provides a **complete, professional-grade editing experience** with precise positioning, smooth interaction, and reliable text persistence that matches industry-standard table editors.
-
-### 🚀 **COMPREHENSIVE CANVAS COMPLETION** (January 2025)
-
-**✅ ALL CRITICAL DEVELOPMENT PHASES COMPLETED**
-
-The Canvas system has achieved **production-ready status** with all major systems implemented:
-
-**🎯 SHAPE TOOLS IMPLEMENTATION (FigJam-Style UX)**:
-- **✅ Complete Shape System**: Rectangle, Circle, Triangle, Mindmap with professional UX
-- **✅ Crosshair Cursor Feedback**: Professional tool selection with visual feedback
-- **✅ Click-to-Place Workflow**: Instant shape placement at cursor position
-- **✅ Immediate Text Editing**: Text editing capability right after shape creation
-- **✅ Blue Resize Frame**: Professional resize handles with minimal visual clutter
-- **✅ Drawing Tool Support**: Can draw on shapes with pen, marker, highlighter tools
-
-**🎨 TEXT SYSTEM OVERHAUL (Canvas-Native Implementation)**:
-- **✅ FigJam-Style Workflow**: Crosshair cursor → click → blue outlined text box → real-time auto-sizing
-- **✅ Canvas-Native Editing**: Eliminated DOM overlay issues completely
-- **✅ Real-Time Auto-Hugging**: Text box resizes dynamically during typing
-- **✅ Professional Visual States**: Blue background during editing, clean finalization
-- **✅ Proportional Resizing**: Maintains text proportions without warping
-
-**🗒️ STICKY NOTE CONTAINER SYSTEM (Complete)**:
-- **✅ Full Container Functionality**: Draw and add elements directly on sticky notes
-- **✅ Multi-Element Support**: Text, images, tables, connectors within sticky notes
-- **✅ Smooth Movement**: Move sticky notes with all content staying contained
-- **✅ Drawing Tool Integration**: Fixed event handling for pen, marker, highlighter tools
-
-**⚙️ PRODUCTION SYSTEMS**:
-- **✅ Complete Undo/Redo**: Full history management with UI button states
-- **✅ Toolbar Organization**: Distinct icons, logical grouping, professional appearance
-- **✅ Performance Excellence**: 60+ FPS with 1000+ elements using quadtree optimization
-- **✅ Keyboard Shortcuts**: Complete shortcut system (Ctrl+A, Delete, Ctrl+Z/Y)
-
-**🚨 REMAINING CRITICAL ISSUE**:
-- **❌ Shape Text Editing Bug**: Dual text field display in Rectangle, Circle, Triangle shapes
-- **Status**: Investigation ongoing - React-Konva patterns applied but issue persists
-
-### 🏗️ **MAJOR CODEBASE REFACTORING COMPLETED** (June 26, 2025)
-
-**✅ Enterprise-Grade Cleanup & Consolidation Complete**
-
-LibreOllama has undergone a comprehensive **4-phase refactoring** to eliminate all code fragmentation, redundancy, and organizational issues identified in the codebase audit:
-
-...existing code...
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.

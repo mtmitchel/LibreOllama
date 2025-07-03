@@ -12,6 +12,7 @@ export * from './useViewportCulling';
 export * from './useCanvasHistory';
 export * from './useCanvasPerformance';
 export * from './useCanvasSizing';
+export * from './useRafThrottle';
 // Export specific hooks from useMemoryTracking to avoid conflicts
 export { useCacheMemoryTracking } from './useMemoryTracking';
 export * from './useSelectionManager';

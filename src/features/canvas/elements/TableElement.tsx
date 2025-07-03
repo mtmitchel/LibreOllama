@@ -5,7 +5,7 @@ import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasS
 import { CanvasElement, ElementId, TableElement as TableElementType } from '../types/enhanced.types';
 import { isTableElement } from '../types/enhanced.types';
 import { CanvasTextInput } from '../components/ui/CanvasTextInput';
-import { useRafThrottle } from '../utils/useRafThrottle';
+import { useRafThrottle } from '../hooks';
 import { canvasLog } from '../utils/canvasLogger';
 
 interface TableElementProps {

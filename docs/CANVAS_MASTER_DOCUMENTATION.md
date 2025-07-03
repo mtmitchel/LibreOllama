@@ -1204,6 +1204,36 @@ The canvas-native approach is architecturally sound and eliminates coordinate tr
 
 ---
 
+### ✅ JULY 2025 – CODEBASE HEALTH & REFACTORING UPDATE
+
+**Status: Completed – Architectural Cleanup & Code Simplification**  
+A targeted refactoring initiative was completed to improve codebase health, reduce complexity, and align the directory structure with best practices. This effort focused on removing dead code and resolving structural inconsistencies identified in a codebase audit.
+
+**Key Improvements**
+1. **Dead Code Removal (`StarShape` Tool)**  
+   • **Action**: Fully deprecated and removed the unused `StarShape` tool.
+   • **Impact**: Reduced codebase size and eliminated a legacy feature that was no longer accessible from the UI.
+   • **Details**: Deleted the `StarShape.tsx` component, removed its associated type definitions (`StarElement`, `isStarElement`) from `enhanced.types.ts`, and stripped all related tests and rendering logic from the `ElementRenderer` and `MainLayer` components.
+
+2. **Duplicate File Resolution**
+   • **`elementRenderer.tsx`**: Removed the duplicate, legacy element renderer found in `src/features/canvas/utils`, leaving `src/features/canvas/renderers/ElementRenderer.tsx` as the single source of truth for rendering elements.
+   • **`CanvasErrorBoundary.tsx`**: Resolved naming collision between two error boundary components. The component in `utils` was renamed to `KonvaElementBoundary.tsx` to clarify its specific role in wrapping individual canvas elements, differentiating it from the main component that wraps the entire stage.
+
+3. **Structural & Organizational Enhancements**
+   • **`useRafThrottle` Hook**: Relocated the `useRafThrottle.ts` hook from the generic `utils` directory to the more appropriate `hooks` directory, improving code organization.
+   • **`LayersPanel` Component**: Moved the `LayersPanel.tsx` component from the `components/ui` directory to the `layers` directory, co-locating it with other layer-management components.
+
+**User Experience Benefits**
+• While primarily an internal cleanup, these changes contribute to long-term stability and maintainability.
+• A cleaner, more logical codebase makes it easier for developers to navigate, reducing the risk of introducing new bugs.
+
+**Technical Notes**
+• All changes were made carefully to avoid disrupting the fragile canvas ecosystem.
+• High-risk refactoring suggestions from the audit (e.g., flattening the entire `tools` directory) were deferred to prioritize stability.
+• Updated all relevant imports and exports to reflect the new file locations and component names.
+
+---
+
 ### **✅ TRANSFORMER ARCHITECTURE REFACTOR (March 2025)**
 
 **Fixed Dashed Borders and Double Transformers**: Refactored the transformer architecture to use a single, centralized `CustomTransformer` for all resizable elements, resolving issues with inconsistent resize borders and duplicate transformers on images.
@@ -1339,3 +1369,34 @@ This is a classic and difficult problem in web development. Here are some potent
 2.  **Architectural Change: A Single Event Handler**: The most robust solution is to stop overlaying DOM elements and trying to sync two different event models. The application should commit to a single event handler. This means either:
     *   **Fully Canvas-Native Text Editor**: Re-implement the text editor to be drawn and managed entirely by Konva on the canvas. This is a significant effort but eliminates all DOM/canvas event conflicts.
     *   **DOM-Based UI**: Render the entire canvas UI, including shapes, as DOM elements (e.g., `divs` with CSS transforms). This would be a massive architectural change and likely have performance implications.
+
+### ✅ UI POLISH UPDATE (April 2025)
+
+**Status: Completed – Visual & Interaction Refinements**  
+A small but impactful round of front-end tweaks delivers a cleaner creation workflow and higher-contrast visuals.
+
+**Key Improvements**
+1. **Shape Preview Cleanup**  
+   • Removed the *"Add text"* placeholder label from rectangle, circle and triangle cursor previews.  
+   • Users now see only a subtle silhouette of the pending shape, reducing visual noise while positioning.
+2. **Higher-Contrast Outlines**  
+   • Default stroke colour for basic shapes changed from `#D1D5DB` → `#9CA3AF`.  
+   • Preview opacity increased from *0.6* → *0.75* for better visibility against the light-grey dot grid.
+3. **Immediate Table Selection**  
+   • Newly created tables are now automatically selected after placement, showing the blue resize frame by default – consistent with sticky notes and other shapes.
+4. **Sticky Note Single-Click Deselect Fix**  
+   • Addressed the two-click deselection bug: clicking away now both saves text and hides the transformer in one action.
+
+**User Experience Benefits**
+• Cleaner cursor previews help users focus on placement.  
+• Darker borders improve contrast without overpowering the minimalist aesthetic.  
+• Consistent post-placement selection behaviour across all element types.  
+• Sticky-note editing feels natural and responsive.
+
+**Technical Notes**
+• Updated stroke colour constants in `shapeCreators.ts` and individual creation tools.  
+• Preview `Text` nodes removed from `RectangleTool`, `CircleTool`, and `TriangleTool`.  
+• `TableTool` now triggers `selectElement()` after adding a new table.  
+• `StickyNoteShape` receives a blur-to-canvas flag to differentiate save paths.
+
+---

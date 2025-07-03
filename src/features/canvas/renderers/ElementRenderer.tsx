@@ -7,7 +7,6 @@ import {
   isImageElement,
   isPenElement,
   isRectangleElement,
-  isStarElement,
   isStickyNoteElement,
   isTableElement,
   isTextElement,
@@ -16,7 +15,6 @@ import {
 } from '../types/enhanced.types';
 import { RectangleShape } from '../shapes/RectangleShape';
 import { CircleShape } from '../shapes/CircleShape';
-import { StarShape } from '../shapes/StarShape';
 import { TriangleShape } from '../shapes/TriangleShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
 import { TextShape } from '../shapes/TextShape';
@@ -116,9 +114,6 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   }
   if (isCircleElement(element)) {
     return <CircleShape {...(commonShapeProps as any)} element={element} />;
-  }
-  if (isStarElement(element)) {
-    return <StarShape {...(commonShapeProps as any)} element={element} />;
   }
   if (isTriangleElement(element)) {
     return <TriangleShape {...(commonShapeProps as any)} element={element} />;

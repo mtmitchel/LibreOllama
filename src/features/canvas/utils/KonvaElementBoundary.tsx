@@ -20,7 +20,7 @@ interface ErrorBoundaryState {
   recoveryAttempts: number;
 }
 
-export class CanvasErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class KonvaElementBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private readonly maxErrorsPerMinute = 5;
   private readonly maxRecoveryAttempts = 3;
   private recoveryTimeout: NodeJS.Timeout | null = null;
@@ -46,7 +46,7 @@ export class CanvasErrorBoundary extends React.Component<ErrorBoundaryProps, Err
     const currentTime = Date.now();
     const timeSinceLastError = currentTime - this.state.lastErrorTime;
 
-    logger.error('CanvasErrorBoundary caught an error:', {
+    logger.error('KonvaElementBoundary caught an error:', {
       error: error.message,
       stack: error.stack,
       componentStack: errorInfo.componentStack,

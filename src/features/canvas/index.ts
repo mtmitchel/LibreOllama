@@ -1,7 +1,7 @@
 export { default as CanvasStage } from './components/CanvasStage';
 export { default as CanvasContainer } from './components/CanvasContainer';
 export { default as CanvasSidebar } from './components/CanvasSidebar';
-export { default as CanvasErrorBoundary } from './utils/CanvasErrorBoundary';
+export { KonvaElementBoundary } from './utils/KonvaElementBoundary';
 export { default as CanvasSidebarToggle } from './components/CanvasSidebarToggle';
 export { default as UnifiedTextElement } from './elements/UnifiedTextElement';
 export * from './tools/ConnectorTool';
