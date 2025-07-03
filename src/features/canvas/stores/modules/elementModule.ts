@@ -40,6 +40,10 @@ export interface ElementActions {
   
   // Utility operations
   clearAllElements: () => void;
+  
+  // Import/Export operations
+  exportElements: () => void;
+  importElements: (elements: CanvasElement[]) => void;
 }
 
 /**
@@ -305,6 +309,36 @@ export const createElementModule = (
           state.sectionElementMap = new Map();
         });
         get().addToHistory('clearAllElements');
+      },
+
+      exportElements: () => {
+        const { elements } = get();
+        const elementsArray = Array.from(elements.values());
+        const dataStr = JSON.stringify(elementsArray, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = 'canvas-elements.json';
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+      },
+
+      importElements: (elements: CanvasElement[]) => {
+        set(state => {
+          // Clear existing elements
+          state.elements.clear();
+          state.elementOrder = [];
+          state.selectedElementIds.clear();
+          state.lastSelectedElementId = null;
+          
+          // Add imported elements
+          elements.forEach(element => {
+            state.elements.set(element.id, element);
+            state.elementOrder.push(element.id);
+          });
+        });
+        get().addToHistory('importElements');
       },
     },
   };

@@ -1,5 +1,6 @@
-import { CanvasElement, ElementId } from '../../types/enhanced.types';
+import { CanvasElement, ElementId, GroupId } from '../../types/enhanced.types';
 import { StoreModule, StoreSet, StoreGet } from './types';
+import { nanoid } from 'nanoid';
 
 /**
  * Selection module state
@@ -7,6 +8,8 @@ import { StoreModule, StoreSet, StoreGet } from './types';
 export interface SelectionState {
   selectedElementIds: Set<ElementId>;
   lastSelectedElementId: ElementId | null;
+  groups: Map<GroupId, Set<ElementId>>;
+  elementToGroupMap: Map<ElementId, GroupId>;
 }
 
 /**
@@ -17,6 +20,9 @@ export interface SelectionActions {
   deselectElement: (id: ElementId) => void;
   clearSelection: () => void;
   getSelectedElements: () => CanvasElement[];
+  groupElements: (elementIds: ElementId[]) => GroupId;
+  ungroupElements: (groupId: GroupId) => void;
+  isElementInGroup: (elementId: ElementId) => boolean;
 }
 
 /**
@@ -30,6 +36,8 @@ export const createSelectionModule = (
     state: {
       selectedElementIds: new Set(),
       lastSelectedElementId: null,
+      groups: new Map(),
+      elementToGroupMap: new Map(),
     },
     
     actions: {
@@ -62,6 +70,39 @@ export const createSelectionModule = (
       getSelectedElements: () => {
         const { elements, selectedElementIds } = get();
         return Array.from(selectedElementIds).map(id => elements.get(id)).filter(Boolean) as CanvasElement[];
+      },
+
+      groupElements: (elementIds: ElementId[]) => {
+        const groupId = nanoid() as GroupId;
+        set(state => {
+          const elementSet = new Set(elementIds);
+          state.groups.set(groupId, elementSet);
+          
+          // Update element to group mapping
+          elementIds.forEach(elementId => {
+            state.elementToGroupMap.set(elementId, groupId);
+          });
+        });
+        return groupId;
+      },
+
+      ungroupElements: (groupId: GroupId) => {
+        set(state => {
+          const elementIds = state.groups.get(groupId);
+          if (elementIds) {
+            // Remove elements from group mapping
+            elementIds.forEach(elementId => {
+              state.elementToGroupMap.delete(elementId);
+            });
+            // Remove the group
+            state.groups.delete(groupId);
+          }
+        });
+      },
+
+      isElementInGroup: (elementId: ElementId) => {
+        const { elementToGroupMap } = get();
+        return elementToGroupMap.has(elementId);
       },
     },
   };

@@ -30,6 +30,7 @@ import { createTableModule, TableState, TableActions } from './modules/tableModu
 import { createStickyNoteModule, StickyNoteState, StickyNoteActions } from './modules/stickyNoteModule';
 import { createUIModule, UIState, UIActions } from './modules/uiModule';
 import { createEraserModule, EraserState, EraserActions } from './modules/eraserModule';
+import { createEventModule, EventState, EventActions } from './modules/eventModule';
 
 // Import selectors
 import { combinedSelectors } from './selectors';
@@ -73,7 +74,8 @@ export interface UnifiedCanvasState extends
   TableState,
   StickyNoteState,
   UIState,
-  EraserState {
+  EraserState,
+  EventState {
   // No additional state needed - all state comes from modules
 }
 
@@ -89,6 +91,7 @@ export interface UnifiedCanvasActions extends
   StickyNoteActions,
   UIActions,
   EraserActions,
+  EventActions,
   CanvasEventActions,
   LegacyActions {
   // No additional actions needed - all actions come from modules
@@ -117,6 +120,7 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
     stickyNote: createStickyNoteModule(set, get),
     ui: createUIModule(set, get),
     eraser: createEraserModule(set, get),
+    event: createEventModule(set, get),
   };
 
   return {
@@ -131,6 +135,7 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
     ...modules.stickyNote.state,
     ...modules.ui.state,
     ...modules.eraser.state,
+    ...modules.event.state,
 
     // Spread all actions
     ...modules.element.actions,
@@ -143,42 +148,14 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
     ...modules.stickyNote.actions,
     ...modules.ui.actions,
     ...modules.eraser.actions,
-
-    // Canvas event handlers (placeholder implementations)
-    handleMouseDown: () => {},
-    handleMouseMove: () => {},
-    handleMouseUp: () => {},
-    handleMouseLeave: () => {},
-    handleClick: () => {},
-    handleDoubleClick: () => {},
-    handleContextMenu: () => {},
-    handleDragStart: () => {},
-    handleDragMove: () => {},
-    handleDragEnd: () => {},
+    ...modules.event.actions,
 
     // Legacy compatibility actions (placeholder implementations)
-    exportElements: () => {
-      console.log('exportElements not implemented in modular version');
-    },
-    importElements: (elements: CanvasElement[]) => {
-      console.log('importElements not implemented in modular version');
-    },
     handleElementDrop: (elementId: ElementId, targetId?: ElementId) => {
       console.log('handleElementDrop not implemented in modular version');
     },
     createTestElements: () => {
       console.log('createTestElements not implemented in modular version');
-    },
-    groupElements: (elementIds: ElementId[]) => {
-      console.log('groupElements not implemented in modular version');
-      return '' as GroupId;
-    },
-    ungroupElements: (groupId: GroupId) => {
-      console.log('ungroupElements not implemented in modular version');
-    },
-    isElementInGroup: (elementId: ElementId) => {
-      console.log('isElementInGroup not implemented in modular version');
-      return false;
     },
     clearCanvas: () => {
       get().clearAllElements();

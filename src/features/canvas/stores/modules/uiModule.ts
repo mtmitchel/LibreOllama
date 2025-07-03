@@ -25,6 +25,7 @@ export interface UIActions {
   
   // Legacy compatibility
   setStickyNoteColor: (color: string) => void;
+  setActiveTool: (tool: string) => void;
   
   // Utility methods
   uploadImage: (file: File, position: { x: number; y: number }) => Promise<void>;
@@ -51,7 +52,7 @@ export const createUIModule = (
     },
     
     actions: {
-      setSelectedTool: (tool) => set({ selectedTool: tool }),
+      setSelectedTool: (tool) => set(state => { state.selectedTool = tool; }),
 
       setTextEditingElement: (id) => {
         // Log the state change for debugging
@@ -64,25 +65,26 @@ export const createUIModule = (
           console.log('⚠️ [Store] Switching text editing from', currentId, 'to', id);
         }
         
-        set({ textEditingElementId: id });
+        set(state => { state.textEditingElementId = id; });
       },
 
-      setSelectedStickyNoteColor: (color) => set({ selectedStickyNoteColor: color }),
+      setSelectedStickyNoteColor: (color) => set(state => { state.selectedStickyNoteColor = color; }),
 
-      setPenColor: (color) => set({ penColor: color }),
+      setPenColor: (color) => set(state => { state.penColor = color; }),
 
       // Legacy compatibility
-      setStickyNoteColor: (color) => set({ selectedStickyNoteColor: color }),
+      setStickyNoteColor: (color) => set(state => { state.selectedStickyNoteColor = color; }),
+      setActiveTool: (tool) => set(state => { state.selectedTool = tool; }),
 
       // Utility methods
       uploadImage: async (file, position) => {
         // Implementation placeholder for image upload
-        set({ isUploading: true });
+        set(state => { state.isUploading = true; });
         try {
           // Image upload logic would go here
           console.log('Image upload not implemented in module');
         } finally {
-          set({ isUploading: false });
+          set(state => { state.isUploading = false; });
         }
       },
 

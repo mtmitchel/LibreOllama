@@ -30,6 +30,10 @@ export interface ViewportActions {
   // Legacy compatibility
   pan: (deltaX: number, deltaY: number) => void;
   zoom: (scale: number, centerX?: number, centerY?: number) => void;
+  setZoom: (scale: number) => void;
+  setPan: (x: number, y: number) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
 }
 
 /**
@@ -78,6 +82,27 @@ export const createViewportModule = (
 
       zoom: (scale, centerX, centerY) => {
         get().zoomViewport(scale, centerX, centerY);
+      },
+
+      setZoom: (scale) => {
+        get().zoomViewport(scale);
+      },
+
+      setPan: (x, y) => {
+        set(state => {
+          state.viewport.x = x;
+          state.viewport.y = y;
+        });
+      },
+
+      zoomIn: () => {
+        const currentScale = get().viewport.scale;
+        get().zoomViewport(currentScale * 1.2);
+      },
+
+      zoomOut: () => {
+        const currentScale = get().viewport.scale;
+        get().zoomViewport(currentScale / 1.2);
       },
     },
   };
