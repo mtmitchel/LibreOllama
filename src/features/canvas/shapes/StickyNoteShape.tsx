@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { Group, Rect, Text, Transformer, Line, Circle, Image } from 'react-konva';
 import Konva from 'konva';
-import { StickyNoteElement, ElementId, CanvasElement, isMarkerElement, isHighlighterElement, isWashiTapeElement, isTextElement, isConnectorElement, isImageElement, isTableElement, isPenElement } from '../types/enhanced.types';
+import { StickyNoteElement, ElementId, CanvasElement, isMarkerElement, isHighlighterElement, isTextElement, isConnectorElement, isImageElement, isTableElement, isPenElement } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { measureTextDimensions } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
@@ -19,7 +19,7 @@ const createStickyNoteTextEditor = (
   fontFamily: string,
   backgroundColor: string | undefined,
   textColor: string,
-  onSave: (text: string) => void,
+  onSave: (text: string, isBlurringToCanvas?: boolean) => void,
   onCancel: () => void,
   onRealtimeUpdate?: (text: string, dimensions: { width: number; height: number }) => void
 ) => {
@@ -103,18 +103,20 @@ const createStickyNoteTextEditor = (
     // Allow Enter for line breaks in sticky notes
   };
 
-  const handleBlur = () => {
-    console.log('🗒️ [StickyNoteTextEditor] Blur - saving');
-    const text = textarea.value;
-    cleanup();
-    onSave(text);
+  const handleDocumentMousedown = (e: MouseEvent) => {
+    if (!textarea.contains(e.target as Node)) {
+      console.log('🗒️ [StickyNoteTextEditor] Click outside - saving');
+      const text = textarea.value;
+      cleanup();
+      onSave(text, true);
+    }
   };
 
   const cleanup = () => {
     console.log('🗒️ [StickyNoteTextEditor] Cleaning up');
     textarea.removeEventListener('input', handleInput);
     textarea.removeEventListener('keydown', handleKeyDown);
-    textarea.removeEventListener('blur', handleBlur);
+    window.removeEventListener('mousedown', handleDocumentMousedown);
     if (document.body.contains(textarea)) {
       document.body.removeChild(textarea);
     }
@@ -122,7 +124,10 @@ const createStickyNoteTextEditor = (
 
   textarea.addEventListener('input', handleInput);
   textarea.addEventListener('keydown', handleKeyDown);
-  textarea.addEventListener('blur', handleBlur);
+  // Use a global mousedown listener to detect clicks outside
+  setTimeout(() => {
+    window.addEventListener('mousedown', handleDocumentMousedown);
+  }, 0);
 
   return cleanup;
 };
@@ -245,36 +250,37 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
       element.fontFamily || getAvailableFontFamily(),
       element.backgroundColor,
       element.textColor || '#1F2937',
-      (newText: string) => {
-        console.log('💾 [StickyNoteShape] Saving text:', newText);
+      (newText: string, isBlurringToCanvas?: boolean) => {
+        console.log('💾 [StickyNoteShape] Saving text:', newText, { isBlurringToCanvas });
         
         const finalText = newText.trim();
         
-        // Clear editing state first
         cleanupEditorRef.current = null;
         setTextEditingElement(null);
         
-        // Update element with new text
         onUpdate(element.id, {
           text: finalText,
           updatedAt: Date.now()
         });
         
-        // Auto-switch to select tool and select element
-        setTimeout(() => {
-          const store = useUnifiedCanvasStore.getState();
-          console.log('🎯 [StickyNoteShape] *** AUTO-SWITCHING TO SELECT TOOL ***:', element.id);
-          
-          store.setSelectedTool('select');
-          
+        if (isBlurringToCanvas) {
+          useUnifiedCanvasStore.getState().clearSelection();
+        } else {
           setTimeout(() => {
-            store.clearSelection();
+            const store = useUnifiedCanvasStore.getState();
+            console.log('🎯 [StickyNoteShape] *** AUTO-SWITCHING TO SELECT TOOL ***:', element.id);
+            
+            store.setSelectedTool('select');
+            
             setTimeout(() => {
-              store.selectElement(element.id, false);
-              console.log('✅ [StickyNoteShape] Auto-selection complete');
+              store.clearSelection();
+              setTimeout(() => {
+                store.selectElement(element.id, false);
+                console.log('✅ [StickyNoteShape] Auto-selection complete');
+              }, 50);
             }, 50);
-          }, 50);
-        }, 100);
+          }, 100);
+        }
       },
       () => {
         console.log('❌ [StickyNoteShape] Edit cancelled');
@@ -397,31 +403,36 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
       element.fontFamily || getAvailableFontFamily(),
       element.backgroundColor,
       element.textColor || '#1F2937',
-      (newText: string) => {
-        console.log('💾 [StickyNoteShape] Saving programmatic text:', newText);
-        
+      (newText: string, isBlurringToCanvas?: boolean) => {
+        console.log('💾 [StickyNoteShape] Saving programmatic text:', newText, { isBlurringToCanvas });
+
         const finalText = newText.trim();
-        
+
         cleanupEditorRef.current = null;
         setTextEditingElement(null);
-        
+
         onUpdate(element.id, {
           text: finalText,
           updatedAt: Date.now()
         });
-        
-        // Auto-switch to select tool and select element
-        setTimeout(() => {
-          const store = useUnifiedCanvasStore.getState();
-          store.setSelectedTool('select');
-          
+
+        if (isBlurringToCanvas) {
+          // User clicked away on canvas; simply clear selection.
+          useUnifiedCanvasStore.getState().clearSelection();
+        } else {
+          // For standard programmatic edit completion, keep selection workflow.
           setTimeout(() => {
-            store.clearSelection();
+            const store = useUnifiedCanvasStore.getState();
+            store.setSelectedTool('select');
+            
             setTimeout(() => {
-              store.selectElement(element.id, false);
+              store.clearSelection();
+              setTimeout(() => {
+                store.selectElement(element.id, false);
+              }, 50);
             }, 50);
-          }, 50);
-        }, 100);
+          }, 100);
+        }
       },
       () => {
         cleanupEditorRef.current = null;
@@ -652,7 +663,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
   };
 
   // Determine if events should pass through for drawing tools
-  const drawingTools = ['pen', 'marker', 'highlighter', 'washi-tape', 'eraser'];
+      const drawingTools = ['pen', 'marker', 'highlighter', 'eraser'];
   const shouldAllowDrawing = drawingTools.includes(selectedTool);
 
   return (

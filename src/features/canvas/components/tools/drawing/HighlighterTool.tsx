@@ -90,8 +90,7 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
     setIsDrawing(true);
     setCurrentPoints([pos.x, pos.y]);
     
-    // Change cursor to show highlighter mode
-    stage.container().style.cursor = 'crosshair';
+    // Cursor is managed by CursorManager
     
     console.log('🖍️ [HighlighterTool] Started highlighting at:', pos);
   }, [isActive, stageRef]);
@@ -184,14 +183,11 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
     setCurrentPoints([]);
     setHoveredElements(new Set());
     
-    // Auto-switch to select after drawing
-    setSelectedTool('select');
+    // Keep highlighter tool active for multiple strokes
+    console.log('🖍️ [HighlighterTool] Highlighter stroke completed, keeping tool active');
     
-    // Reset cursor
-    if (stageRef.current) {
-      stageRef.current.container().style.cursor = 'default';
-    }
-  }, [isDrawing, strokeStyle, hoveredElements, addElement, setSelectedTool, stageRef]);
+    // Note: Cursor management is handled by CursorManager, no need to reset here
+  }, [isDrawing, strokeStyle, hoveredElements, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
   
   // Handle pointer cancel
   const handlePointerCancel = useCallback(() => {

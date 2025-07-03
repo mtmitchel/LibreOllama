@@ -1,7 +1,7 @@
 /**
  * MainLayer - Pure Rendering Component
  * 
- * CRITICAL FIX: Pass actual store functions to TextShape for proper updates
+ * PERFORMANCE OPTIMIZATION: Reduced logging and optimized rendering
  */
 
 import React, { useMemo, useCallback } from 'react';
@@ -29,7 +29,6 @@ import { TableElement } from '../elements/TableElement';
 import { CanvasErrorBoundary } from '../utils/CanvasErrorBoundary';
 import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
 import { StrokeRenderer } from '../components/renderers/StrokeRenderer';
-// import { ElementRenderer } from '../renderers/ElementRenderer';
 
 interface MainLayerProps {
   name?: string;
@@ -54,8 +53,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   elementsBySection,
   stageRef
 }) => {
-  console.log('🎯 [MainLayer] Rendering with elements:', elements.size);
-
   // Get actual store actions for element updates
   const updateElement = useUnifiedCanvasStore(state => state.updateElement);
   const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
@@ -65,16 +62,13 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   const renderElement = useCallback((element: CanvasElement) => {
     // Safety check for valid elements
     if (!element || !element.id || !element.type) {
-      console.warn('[MainLayer] Invalid element:', element);
       return null;
     }
-
-    console.log('🎭 [MainLayer] Rendering:', element.type, element.id);
 
     const isSelected = selectedElementIds.has(element.id);
     const isDraggable = !element.isLocked && element.type !== 'pen' && element.type !== 'pencil';
 
-    // CRITICAL: Enable event handlers for proper interaction
+    // Enable event handlers for proper interaction
     const konvaElementProps: any = {
       id: element.id,
       x: element.x,
@@ -82,7 +76,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       draggable: isDraggable,
       opacity: 1,
       perfectDrawEnabled: false,
-      listening: true, // Enable listening for event delegation
+      listening: true,
     };
 
     // Apply selection styling to non-table elements (tables handle their own transformer)
@@ -96,8 +90,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       konvaElementProps.shadowOpacity = isSelected ? 0.7 : 0;
     }
 
-    console.log('🎨 [MainLayer] Props for:', element.id, konvaElementProps);
-
     // Render by element type
     switch (element.type) {
       case 'rectangle':
@@ -107,8 +99,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={updateElement} // Pass actual update function
-              stageRef={stageRef} // ADDED: Pass stageRef for text editing
+              onUpdate={updateElement}
+              stageRef={stageRef}
             />
           </CanvasErrorBoundary>
         );
@@ -120,36 +112,34 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={updateElement} // Pass actual update function
-              stageRef={stageRef} // ADDED: Pass stageRef for text editing
+              onUpdate={updateElement}
+              stageRef={stageRef}
             />
           </CanvasErrorBoundary>
         );
 
       case 'marker':
       case 'highlighter':
-      case 'washi-tape':
         return (
           <CanvasErrorBoundary key={element.id}>
             <StrokeRenderer
               element={element as any}
               isSelected={isSelected}
-              onSelect={(id) => selectElement(id as ElementId)} // Pass actual select function
+              onSelect={(id) => selectElement(id as ElementId)}
               isEditing={false}
             />
           </CanvasErrorBoundary>
         );
 
       case 'text':
-        console.log('🎭 [MainLayer] Rendering text element:', element.id, 'with props:', konvaElementProps);
         return (
           <CanvasErrorBoundary key={element.id}>
             <TextShape
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={updateElement} // Pass actual update function
-              onStartTextEdit={setTextEditingElement} // Pass actual function
+              onUpdate={updateElement}
+              onStartTextEdit={setTextEditingElement}
               stageRef={stageRef}
             />
           </CanvasErrorBoundary>
@@ -162,8 +152,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={updateElement} // Pass actual update function
-              onStartTextEdit={setTextEditingElement} // Pass actual function
+              onUpdate={updateElement}
+              onStartTextEdit={setTextEditingElement}
               stageRef={stageRef}
             />
           </CanvasErrorBoundary>
@@ -176,8 +166,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={updateElement} // Pass actual update function
-              onStartTextEdit={setTextEditingElement} // Pass actual function
+              onUpdate={updateElement}
+              onStartTextEdit={setTextEditingElement}
             />
           </CanvasErrorBoundary>
         );
@@ -189,8 +179,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={updateElement} // Pass actual update function
-              stageRef={stageRef} // ADDED: Pass stageRef for text editing
+              onUpdate={updateElement}
+              stageRef={stageRef}
             />
           </CanvasErrorBoundary>
         );
@@ -213,8 +203,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               konvaProps={konvaElementProps}
-              onUpdate={updateElement} // Pass actual update function
-              onStartTextEdit={setTextEditingElement} // Pass actual function
+              onUpdate={updateElement}
+              onStartTextEdit={setTextEditingElement}
             />
           </CanvasErrorBoundary>
         );
@@ -243,15 +233,14 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             <TableElement
               element={element as any}
               isSelected={isSelected}
-              onSelect={() => selectElement(element.id as ElementId)} // Pass actual select function
-              onUpdate={updateElement} // Pass actual update function
-              stageRef={stageRef || { current: null }} // Pass the actual stageRef
+              onSelect={() => selectElement(element.id as ElementId)}
+              onUpdate={updateElement}
+              stageRef={stageRef || { current: null }}
             />
           </CanvasErrorBoundary>
         );
 
       default:
-        console.warn('[MainLayer] Unhandled element type:', element.type, 'Element:', element);
         return (
           <CanvasErrorBoundary key={element.id}>
             <Text
@@ -272,25 +261,18 @@ export const MainLayer: React.FC<MainLayerProps> = ({
     const validElements = Array.from(elements.values()).filter(el => {
       // Skip rendering elements that are children of sticky note containers
       if (el && ((el as any).parentId || (el as any).stickyNoteId)) {
-        console.log('🔧 [MainLayer] Skipping sticky note child element:', el.id, el.type);
         return false;
       }
       return el && el.type !== 'connector';
     });
     
-    const textElements = validElements.filter(el => el.type === 'text');
-    console.log('🔧 [MainLayer] Valid elements for direct rendering:', validElements.length);
-    console.log('🔧 [MainLayer] Text elements found:', textElements.length, 
-      textElements.map(el => ({ id: el.id, type: el.type, text: (el as any).text })));
-    
     const renderedElements = validElements.map(renderElement).filter(Boolean);
-    console.log('🔧 [MainLayer] Elements after rendering and filtering:', renderedElements.length);
     
     return renderedElements;
   }, [elements, renderElement]);
 
   // Draft section rendering for live preview - DISABLED to prevent infinite loops
-  const draftSectionElement = null; // useMemo(() => null, []);
+  const draftSectionElement = null;
 
   // Active drawing line
   const drawingLine = useMemo(() => {
@@ -306,7 +288,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
         lineJoin="round"
         opacity={0.8}
         perfectDrawEnabled={false}
-        listening={false} // No events for drawing line
+        listening={false}
       />
     );
   }, [isDrawing, currentPath]);
@@ -323,7 +305,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       nodes.push(drawingLine);
     }
     
-    console.log('🔧 [MainLayer] Total nodes to render:', nodes.length);
     return nodes;
   }, [memoizedElements, draftSectionElement, drawingLine]);
 
@@ -332,7 +313,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       <Group
         name={name || "main-layer"}
         perfectDrawEnabled={false}
-        listening={true}  // CRITICAL FIX: Must listen to allow child event propagation
+        listening={true}
       >
         {allNodes}
       </Group>

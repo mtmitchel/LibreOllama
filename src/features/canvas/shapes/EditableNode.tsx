@@ -4,6 +4,7 @@ import Konva from 'konva';
 import { CanvasElement } from '../types/enhanced.types';
 import { RectangleShape } from './RectangleShape';
 import { CircleShape } from './CircleShape';
+import { ImageShape } from './ImageShape';
 // TEMP FIX: Comment out broken imports and implement simple fallbacks
 // import UnifiedTextElement from '../components/UnifiedTextElement';
 // import StickyNoteElement from '../components/StickyNoteElement';
@@ -38,6 +39,20 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
   onElementUpdate,
   onStartTextEdit
 }) => {
+  const handleTransformEnd = (e: Konva.KonvaEventObject<any>) => {
+    const node = e.target;
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+    node.scaleX(1);
+    node.scaleY(1);
+    onElementUpdate(node.id(), {
+      x: node.x(),
+      y: node.y(),
+      width: node.width() * scaleX,
+      height: node.height() * scaleY,
+    });
+  };
+
   console.log('🎪 [EditableNode] Rendering element:', element.type, element.id, element);// Determine if element should be draggable
   const isDraggable = React.useMemo(() => {
     return (
@@ -122,7 +137,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
             {...commonProps}
             width={(element as any).width || 150}
             height={(element as any).height || 150}
-            fill={(element as any).backgroundColor || '#ffeb3b'}
+            fill={(element as any).backgroundColor || '#FFF2CC'}
             stroke={(element as any).borderColor || '#fbc02d'}
             strokeWidth={1}
             cornerRadius={4}
@@ -204,24 +219,25 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           {...commonProps}
           points={trianglePoints}
           closed
-          fill={element.fill || designSystem.colors.success[500]}
-          stroke={element.stroke || designSystem.colors.success[500]}
+          fill={element.fill || '#FFFFFF'}
+          stroke={element.stroke || '#D1D5DB'}
           strokeWidth={element.strokeWidth || 2}
         />
       );
 
     case 'image':
-      // TEMP FIX: Use simple Rect placeholder until ImageElement is fixed
       return (
-        <Rect
-          {...commonProps}
-          width={(element as any).width || 200}
-          height={(element as any).height || 150}
-          fill="#f0f0f0"
-          stroke="#ccc"
-          strokeWidth={1}
+        <ImageShape
+          element={element}
+          isSelected={isSelected}
+          konvaProps={commonProps}
+          onUpdate={onElementUpdate}
+          onStartTextEdit={onStartTextEdit}
+          onTransformEnd={handleTransformEnd}
         />
-      );    case 'section':
+      );
+
+    case 'section':
       // TEMP FIX: Use simple Rect until SectionElement is fixed
       return (
         <Rect

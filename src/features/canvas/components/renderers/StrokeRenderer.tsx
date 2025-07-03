@@ -1,6 +1,6 @@
 /**
  * StrokeRenderer - Advanced renderer for all drawing types
- * Handles marker, highlighter, and washi tape elements with LOD support
+ * Handles marker and highlighter elements with LOD support
  */
 
 import React from 'react';
@@ -9,15 +9,15 @@ import Konva from 'konva';
 import { 
   MarkerElement, 
   HighlighterElement, 
-  WashiTapeElement,
+
   isMarkerElement,
   isHighlighterElement,
-  isWashiTapeElement
+
 } from '../../types/enhanced.types';
 import { StrokeLOD } from '../../types/drawing.types';
 
 interface StrokeRendererProps {
-  element: MarkerElement | HighlighterElement | WashiTapeElement;
+  element: MarkerElement | HighlighterElement;
   isSelected: boolean;
   onSelect: () => void;
   isEditing: boolean;
@@ -54,8 +54,6 @@ export const StrokeRenderer: React.FC<StrokeRendererProps> = React.memo(({
     return renderMarker(element, isSelected, onSelect, isEditing, actualLOD);
   } else if (isHighlighterElement(element)) {
     return renderHighlighter(element, isSelected, onSelect, isEditing, actualLOD);
-  } else if (isWashiTapeElement(element)) {
-    return renderWashiTape(element, isSelected, onSelect, isEditing, actualLOD);
   }
   
   return null;
@@ -158,65 +156,7 @@ function renderHighlighter(
   );
 }
 
-// Washi tape rendering
-function renderWashiTape(
-  washi: WashiTapeElement, 
-  isSelected: boolean, 
-  onSelect: () => void, 
-  isEditing: boolean,
-  lod: StrokeLOD
-) {
-  const points = applyPointReduction(washi.points, lod.pointReduction);
-  
-  if (lod.level === 'low' || lod.styleSimplification) {
-    // Simplified rendering - just the base line
-    return (
-      <Group>
-        <Line
-          points={points}
-          stroke={washi.style.primaryColor}
-          strokeWidth={washi.style.width}
-          opacity={washi.style.opacity}
-          dash={[10, 5]}
-          onClick={onSelect}
-          onTap={onSelect}
-          hitStrokeWidth={washi.style.width + 15}
-          shadowBlur={isSelected ? 6 : 0}
-          shadowColor={isSelected ? washi.style.primaryColor : undefined}
-          perfectDrawEnabled={false}
-        />
-        {isSelected && <SelectionIndicator element={washi} />}
-      </Group>
-    );
-  }
-  
-  // Full pattern rendering for high LOD
-  return (
-    <Group onClick={onSelect} onTap={onSelect}>
-      {/* Base tape */}
-      <Line
-        points={points}
-        stroke={washi.style.primaryColor}
-        strokeWidth={washi.style.width}
-        opacity={washi.style.opacity}
-        lineCap="round"
-        lineJoin="round"
-        tension={0.3}
-        listening={false}
-      />
-      
-      {/* Pattern overlay */}
-      <WashiPatternOverlay
-        points={points}
-        pattern={washi.pattern}
-        style={washi.style}
-        listening={false}
-      />
-      
-      {isSelected && <SelectionIndicator element={washi} />}
-    </Group>
-  );
-}
+
 
 // Variable width stroke component
 const VariableWidthStroke: React.FC<{
@@ -282,43 +222,11 @@ const VariableWidthStroke: React.FC<{
   );
 };
 
-// Washi tape pattern overlay
-const WashiPatternOverlay: React.FC<{
-  points: number[];
-  pattern: WashiTapeElement['pattern'];
-  style: WashiTapeElement['style'];
-  listening: boolean;
-}> = ({ points, pattern, style, listening }) => {
-  const patternElements = React.useMemo(() => {
-    const elements: JSX.Element[] = [];
-    const pathLength = calculatePathLength(points);
-    const spacing = 20; // Pattern spacing
-    const numPatterns = Math.floor(pathLength / spacing);
-    
-    for (let i = 0; i < numPatterns; i++) {
-      const t = i / Math.max(1, numPatterns - 1);
-      const position = interpolateAlongPath(points, t);
-      if (!position) continue;
-      
-      const element = createPatternElement(pattern, position, style, `pattern-${i}`);
-      if (element) {
-        elements.push(element);
-      }
-    }
-    
-    return elements;
-  }, [points, pattern, style]);
-  
-  return (
-    <Group listening={listening}>
-      {patternElements}
-    </Group>
-  );
-};
+
 
 // Selection indicator
 const SelectionIndicator: React.FC<{
-  element: MarkerElement | HighlighterElement | WashiTapeElement;
+  element: MarkerElement | HighlighterElement;
 }> = ({ element }) => {
   const bounds = React.useMemo(() => {
     if (!element.points || element.points.length < 2) {
@@ -422,43 +330,6 @@ function interpolateAlongPath(points: number[], t: number): { x: number; y: numb
   };
 }
 
-function createPatternElement(
-  pattern: WashiTapeElement['pattern'],
-  position: { x: number; y: number },
-  style: WashiTapeElement['style'],
-  key: string
-): JSX.Element | null {
-  const { x, y } = position;
-  
-  switch (pattern.type) {
-    case 'dots':
-      return (
-        <Circle
-          key={key}
-          x={x}
-          y={y}
-          radius={pattern.radius}
-          fill={style.secondaryColor}
-          opacity={style.opacity * 0.8}
-          listening={false}
-        />
-      );
-      
-    case 'stripes':
-      return (
-        <Line
-          key={key}
-          points={[x - 5, y, x + 5, y]}
-          stroke={style.secondaryColor}
-          strokeWidth={pattern.width}
-          opacity={style.opacity * 0.6}
-          listening={false}
-        />
-      );
-      
-    default:
-      return null;
-  }
-}
+
 
 export default StrokeRenderer; 

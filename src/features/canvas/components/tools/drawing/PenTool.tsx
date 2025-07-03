@@ -72,9 +72,9 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
     // Use store's finishDrawing which now handles sticky note integration
     finishDrawing();
 
-    // Auto-switch to select tool
-    setSelectedTool('select');
-  }, [isActive, finishDrawing, setSelectedTool]);
+    // Keep pen tool active for multiple strokes
+    console.log('🖊️ [PenTool] Pen stroke completed, keeping tool active');
+  }, [isActive, finishDrawing]);
 
   // Attach event listeners to stage when active
   React.useEffect(() => {

@@ -14,7 +14,7 @@ import { Stage } from 'konva/lib/Stage';
 import { Line, Arrow, Circle } from 'react-konva';
 import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores/unifiedCanvasStore';
 import { debug } from '../../../utils/debug';
-import type { CanvasElement, ConnectorElement } from '../../../types/enhanced.types';
+import type { CanvasElement, ConnectorElement, ConnectorStyle } from '../../../types/enhanced.types';
 import { ElementId } from '../../../types/enhanced.types';
 
 // Connector-specific types (migrated from old types)
@@ -23,14 +23,6 @@ interface ConnectorEndpoint {
   y: number;
   connectedElementId?: string;
   anchorPoint?: 'center' | 'top' | 'bottom' | 'left' | 'right' | undefined;
-}
-
-interface ConnectorStyle {
-  strokeColor: string;
-  strokeWidth: number;
-  hasStartArrow: boolean;
-  hasEndArrow: boolean;
-  arrowSize: number;
 }
 
 interface ConnectorToolProps {
@@ -134,11 +126,17 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   }, [elements]);
   
   // Handle mouse down - start drawing
-  const handleMouseDown = useCallback((_e: KonvaEventObject<MouseEvent>) => {
+  const handleMouseDown = useCallback((e: KonvaEventObject<MouseEvent>) => {
     if (!isActive) return;
+    
+    // Prevent other handlers from interfering
+    e.cancelBubble = true;
     
     const stage = stageRef.current;
     if (!stage) return;
+    
+    // Only handle if clicking on the stage background (not on an existing element)
+    if (e.target !== stage) return;
     
     // Get pointer position relative to the stage (accounting for stage transform)
     const pos = stage.getPointerPosition();
@@ -162,6 +160,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
       : { x: stagePos.x, y: stagePos.y, anchorPoint: undefined };
     
     debug.canvas.elementOperation('connector-start', 'new', startPoint);
+    console.log('🔗 [ConnectorTool] Starting connector draw at:', startPoint);
     
     setDrawingState({
       isDrawing: true,
@@ -172,8 +171,11 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   }, [isActive, stageRef, findNearestElement]);
   
   // Handle mouse move - update preview
-  const handleMouseMove = useCallback((_e: KonvaEventObject<MouseEvent>) => {
+  const handleMouseMove = useCallback((e: KonvaEventObject<MouseEvent>) => {
     if (!isActive || !drawingState.isDrawing || !drawingState.startPoint) return;
+    
+    // Prevent other handlers from interfering during drawing
+    e.cancelBubble = true;
     
     const stage = stageRef.current;
     if (!stage) return;
@@ -209,12 +211,35 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   const handleMouseUp = useCallback(() => {
     if (!isActive || !drawingState.isDrawing || !drawingState.startPoint || !drawingState.currentEndPoint) return;
     
+    // Calculate the distance between start and end points
+    const distance = Math.sqrt(
+      Math.pow(drawingState.currentEndPoint.x - drawingState.startPoint.x, 2) + 
+      Math.pow(drawingState.currentEndPoint.y - drawingState.startPoint.y, 2)
+    );
+    
+    // Minimum distance threshold to prevent accidental tiny connectors
+    const MIN_CONNECTOR_DISTANCE = 10;
+    
+    if (distance < MIN_CONNECTOR_DISTANCE) {
+      // If the user just clicked without dragging, don't create a connector
+      console.log('🔗 [ConnectorTool] Connector too short, canceling creation. Distance:', distance);
+      
+      // Reset drawing state without creating connector
+      setDrawingState({
+        isDrawing: false,
+        startPoint: null,
+        currentEndPoint: null,
+        previewElement: null
+      });
+      return;
+    }
+    
     // Create the connector element
     const connectorStyle: ConnectorStyle = {
       strokeColor: '#1E293B',
       strokeWidth: 2,
-      hasStartArrow: false,
-      hasEndArrow: connectorType === 'arrow',
+      startArrow: 'none',
+      endArrow: connectorType === 'arrow' ? 'solid' : 'none',
       arrowSize: 10
     };
     
@@ -237,9 +262,10 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
     
     debug.canvas.elementOperation('connector-create', connectorElement.id, {
       type: connectorType,
-      hasConnections: !!(drawingState.startPoint.connectedElementId || drawingState.currentEndPoint.connectedElementId)
+      hasConnections: !!(drawingState.startPoint.connectedElementId || drawingState.currentEndPoint.connectedElementId),
+      distance: distance
     });
-    
+
     addElement(connectorElement);
     
     // Check if the connector was created within a sticky note container
@@ -262,9 +288,10 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
       previewElement: null
     });
     
-    // Switch back to select tool
-    setSelectedTool('select');
-  }, [isActive, drawingState, connectorType, addElement, setSelectedTool]);
+    // Don't auto-switch back to select tool - keep the connector tool active
+    // This matches the behavior the user expects
+    console.log('🔗 [ConnectorTool] Connector created successfully, keeping tool active');
+  }, [isActive, drawingState, connectorType, addElement, addElementToStickyNote, findStickyNoteAtPoint]);
 
   // Attach event listeners when active
   useEffect(() => {

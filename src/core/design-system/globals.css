@@ -82,8 +82,8 @@
   --input-focus-ring: var(--accent-primary);
   
   /* Canvas specific variables */
-  --canvas-bg: #f0f2f5; /* White canvas background for dark theme */
-  --canvas-grid-dot: var(--border-subtle);
+  --canvas-bg: #fafafa; /* Very light gray canvas background for dark theme */
+  --canvas-grid-dot: rgba(0, 0, 0, 0.12); /* Slightly darker gray dots to match FigJam style */
   --canvas-selection: var(--accent-primary);
   --canvas-selection-bg: rgba(59, 130, 246, 0.1);
   --canvas-element-stroke: var(--text-primary);
@@ -115,8 +115,8 @@ html.light {
   --border-default: rgba(0, 0, 0, 0.1);
   
   /* Canvas light theme overrides */
-  --canvas-bg: #f0f2f5; /* Light grey canvas background for light theme */
-  --canvas-grid-dot: rgba(0, 0, 0, 0.08);
+  --canvas-bg: #fafafa; /* Very light gray canvas background for light theme */
+  --canvas-grid-dot: rgba(0, 0, 0, 0.12); /* Darker dots to match FigJam style */
   --canvas-sticky-bg: #FFFEF8;
 }
 

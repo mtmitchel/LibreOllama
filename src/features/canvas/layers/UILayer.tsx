@@ -56,34 +56,20 @@ export const UILayer: React.FC<UILayerProps> = ({
   onElementUpdate,
   addHistoryEntry,
 }) => {
-  const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
   const layerRef = React.useRef<Konva.Group>(null);
 
   // Only listen when we actually need to intercept events
   const shouldListenToEvents = isDrawingSection || (selectionBox && selectionBox.visible);
   
-  console.log('🎯 [UILayer] Rendering with listening:', shouldListenToEvents);
-  
   return (
     <Layer
-      listening={shouldListenToEvents} // CRITICAL FIX: Only listen when needed
+      listening={shouldListenToEvents}
       name="ui-layer"
       onMouseDown={shouldListenToEvents ? onMouseDown : undefined}
       onMouseMove={shouldListenToEvents ? onMouseMove : undefined}
       onMouseUp={shouldListenToEvents ? onMouseUp : undefined}
     >
       <Group ref={layerRef}>
-        {!useCentralizedTransformer && (
-          <TransformerController
-            selectedElementIds={selectedElementIds}
-            elements={elements}
-            sections={sections}
-            stageRef={stageRef}
-            onElementUpdate={onElementUpdate}
-            addHistoryEntry={addHistoryEntry}
-          />
-        )}
-
         <SectionPreview isDrawingSection={isDrawingSection} previewSection={previewSection} />
         <SelectionBox selectionBox={selectionBox} />
         <SnapPointIndicator hoveredSnapPoint={hoveredSnapPoint} />

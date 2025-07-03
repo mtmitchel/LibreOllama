@@ -16,7 +16,7 @@ export interface CullingConfig {
   enableHierarchicalCulling: boolean;
   enableLOD: boolean;
   enableIntersectionObserver: boolean;
-  enableQuadtree: boolean; // New option for quadtree culling
+  enableQuadtree: boolean;
   bufferMultiplier: number;
   lodThresholds: {
     high: number;
@@ -51,7 +51,6 @@ export interface LODLevel {
 const getElementBounds = (element: CanvasElement): { left: number; top: number; right: number; bottom: number } => {
   switch (element.type) {
     case 'connector':
-      // For connectors and lines, use pathPoints if available
       if (element.pathPoints && element.pathPoints.length >= 4) {
         let minX = element.pathPoints[0] ?? element.x;
         let maxX = element.pathPoints[0] ?? element.x;
@@ -70,7 +69,6 @@ const getElementBounds = (element: CanvasElement): { left: number; top: number; 
         }
         return { left: minX, top: minY, right: maxX, bottom: maxY };
       }
-      // Fallback to start/end points
       const start = element.startPoint;
       const end = element.endPoint;
       return {
@@ -115,12 +113,9 @@ const getElementBounds = (element: CanvasElement): { left: number; top: number; 
             bottom: element.y + element.height,
           };
       }
-      // Default for elements without width/height (like text before dimensions are calculated)
       return { left: element.x, top: element.y, right: element.x + 1, bottom: element.y + 1 };
   }
 };
-
-// Removed unused defaultCullingConfig - using inline config instead
 
 // Enhanced viewport culling with hierarchical and LOD support
 export const useViewportCulling = ({
@@ -131,57 +126,47 @@ export const useViewportCulling = ({
   config = {}
 }: UseViewportCullingProps & { config?: Partial<CullingConfig> }) => {
   const cullingConfig: CullingConfig = {
-    enableHierarchicalCulling: true,
+    enableHierarchicalCulling: false, // DISABLED: Simplified for performance
     enableLOD: true,
-    enableIntersectionObserver: false, // Disabled by default for canvas elements
+    enableIntersectionObserver: false,
     enableQuadtree: true,
-    bufferMultiplier: 0.5, // MEMORY OPTIMIZATION: Reduced from 1.2 to 0.5
+    bufferMultiplier: 0.2, // REDUCED: From 0.5 to 0.2
     lodThresholds: {
-      high: 1.5,   // MEMORY OPTIMIZATION: Reduced from 2.0 to 1.5
-      medium: 0.3, // MEMORY OPTIMIZATION: Reduced from 0.5 to 0.3
-      low: 0.05    // MEMORY OPTIMIZATION: Reduced from 0.1 to 0.05
+      high: 1.0,   // REDUCED: From 1.5 to 1.0
+      medium: 0.2, // REDUCED: From 0.3 to 0.2
+      low: 0.03    // REDUCED: From 0.05 to 0.03
     },
-    maxElementsPerGroup: 30, // MEMORY OPTIMIZATION: Reduced from 50 to 30
+    maxElementsPerGroup: 20, // REDUCED: From 30 to 20
     quadtreeConfig: {
-      maxDepth: 8,
-      maxElementsPerNode: 5, // MEMORY OPTIMIZATION: Reduced from 10 to 5
-      minNodeSize: 50
+      maxDepth: 6, // REDUCED: From 8 to 6
+      maxElementsPerNode: 3, // REDUCED: From 5 to 3
+      minNodeSize: 100 // INCREASED: From 50 to 100
     },
     ...config
   };
 
-  // Only keep used refs
   const quadtreeRef = useRef<Quadtree | null>(null);
   const lastElementCountRef = useRef(0);
 
-  // Initialize or update quadtree when elements change significantly
+  // Simplified quadtree rebuild logic
   useEffect(() => {
     if (!cullingConfig.enableQuadtree || !canvasSize) return;
 
-    // Only rebuild quadtree if element count changed significantly
-    const elementCountChanged = Math.abs(elements.length - lastElementCountRef.current) > 10;
+    const elementCountChanged = Math.abs(elements.length - lastElementCountRef.current) > 20;
     
     if (!quadtreeRef.current || elementCountChanged) {
-      console.log('[Quadtree] Rebuilding spatial index for', elements.length, 'elements');
-      
-      // Create quadtree with canvas bounds
       const canvasBounds = {
-        x: -10000,
-        y: -10000,
-        width: 20000,
-        height: 20000
+        x: -5000,
+        y: -5000,
+        width: 10000,
+        height: 10000
       };
       
       quadtreeRef.current = createCanvasQuadtree(canvasBounds, cullingConfig.quadtreeConfig);
-      
-      // Batch insert all elements
       batchInsertElements(quadtreeRef.current, elements);
       lastElementCountRef.current = elements.length;
-      
-      const stats = quadtreeRef.current.getStats();
-      console.log('[Quadtree] Stats:', stats);
     }
-  }, [elements.length, cullingConfig.enableQuadtree, cullingConfig.quadtreeConfig, canvasSize]);
+  }, [elements.length, cullingConfig.enableQuadtree, canvasSize]);
 
   // Calculate LOD level based on zoom
   const getLODLevel = useCallback((zoom: number): LODLevel => {
@@ -220,51 +205,7 @@ export const useViewportCulling = ({
     }
   }, [cullingConfig.lodThresholds]);
 
-  // Memoize hierarchical groups creation for better performance
-  const elementGroups = useMemo(() => {
-    if (!cullingConfig.enableHierarchicalCulling) {
-      return [{
-        id: 'default',
-        elements,
-        bounds: { left: 0, top: 0, right: 0, bottom: 0 },
-        level: 0,
-        isVisible: true
-      }];
-    }
-
-    const groups: ElementGroup[] = [];
-    const sortedElements = [...elements].sort((a, b) => a.x - b.x);
-    
-    for (let i = 0; i < sortedElements.length; i += cullingConfig.maxElementsPerGroup) {
-      const groupElements = sortedElements.slice(i, i + cullingConfig.maxElementsPerGroup);
-      
-      // Calculate group bounds
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      
-      groupElements.forEach(element => {
-        const bounds = getElementBounds(element);
-        minX = Math.min(minX, bounds.left);
-        minY = Math.min(minY, bounds.top);
-        maxX = Math.max(maxX, bounds.right);
-        maxY = Math.max(maxY, bounds.bottom);
-      });
-
-      groups.push({
-        id: `group_${i / cullingConfig.maxElementsPerGroup}`,
-        elements: groupElements,
-        bounds: { left: minX, top: minY, right: maxX, bottom: maxY },
-        level: 0,
-        isVisible: false
-      });
-    }
-
-    return groups;
-  }, [elements, cullingConfig.enableHierarchicalCulling, cullingConfig.maxElementsPerGroup]);
-
-  // Removed unused utility functions (isInteractive, isStatic, isDraggable, isResizable, isEditable, getElementLOD)
-  // These were not being used in the culling logic
-
-  // Memoize expensive viewport bounds calculation
+  // Simplified viewport bounds calculation
   const viewportBounds = useMemo(() => {
     if (!canvasSize || canvasSize.width === 0 || canvasSize.height === 0) {
       return null;
@@ -280,7 +221,6 @@ export const useViewportCulling = ({
     };
   }, [panOffset.x, panOffset.y, canvasSize, zoomLevel, cullingConfig.bufferMultiplier]);
 
-  // Memoize LOD level calculation
   const lodLevel = useMemo(() => getLODLevel(zoomLevel), [zoomLevel, getLODLevel]);
 
   return useMemo(() => {
@@ -288,13 +228,7 @@ export const useViewportCulling = ({
     
     try {
       // Early return for invalid parameters
-      const isInitializing = !canvasSize || canvasSize.width === 0 || canvasSize.height === 0 || zoomLevel === 0;
-      const isVerySmallCanvas = canvasSize && (canvasSize.width < 200 || canvasSize.height < 200);
-      
-      if (isInitializing || isVerySmallCanvas || !viewportBounds) {
-        if (import.meta.env.DEV) {
-          console.log(`[Enhanced ViewportCulling] ${isInitializing ? 'Initializing' : 'Very small canvas'} - showing all elements`);
-        }
+      if (!canvasSize || canvasSize.width === 0 || canvasSize.height === 0 || zoomLevel === 0 || !viewportBounds) {
         return {
           visibleElements: elements,
           culledElements: [],
@@ -310,13 +244,9 @@ export const useViewportCulling = ({
         };
       }
       
-      // If LOD level is hidden, cull everything except critical elements
+      // Simplified LOD culling
       if (lodLevel.level === 'hidden') {
-        const criticalElements = elements.filter(el =>
-          el.type === 'text' || el.isLocked
-        );
-        
-        recordMetric('viewportCullingLODHidden', elements.length - criticalElements.length, 'render');
+        const criticalElements = elements.filter(el => el.type === 'text' || el.isLocked);
         
         return {
           visibleElements: criticalElements,
@@ -329,70 +259,22 @@ export const useViewportCulling = ({
             culledElements: elements.length - criticalElements.length,
             groupsCulled: 0,
             lodLevel: lodLevel.level,
-        quadtreeEnabled: cullingConfig.enableQuadtree && quadtreeRef.current !== null
+            quadtreeEnabled: cullingConfig.enableQuadtree && quadtreeRef.current !== null
           }
         };
       }
 
-      // Use the memoized viewport bounds (already calculated above)
-
-      // Use the memoized element groups
       let visibleElements: CanvasElement[] = [];
       let culledElements: CanvasElement[] = [];
-      let groupsCulled = 0;
 
-      // Use quadtree for efficient spatial queries if enabled
-      if (cullingConfig.enableQuadtree && quadtreeRef.current && elements.length > 100) {
-        const startQuery = performance.now();
-        
-        // Query quadtree for visible element IDs
+      // Simplified culling logic - prefer quadtree when available
+      if (cullingConfig.enableQuadtree && quadtreeRef.current && elements.length > 50) {
         const visibleIds = quadtreeRef.current.query(viewportBounds);
-        
-        // Map IDs back to elements (handle both ElementId and SectionId)
         const idSet = new Set<string>(visibleIds.map(id => id as string));
         visibleElements = elements.filter(el => idSet.has(el.id as string));
         culledElements = elements.filter(el => !idSet.has(el.id as string));
-        
-        const queryTime = performance.now() - startQuery;
-        if (import.meta.env.DEV) {
-          console.log(`[Quadtree] Query completed in ${queryTime.toFixed(2)}ms, found ${visibleElements.length} visible elements`);
-        }
-        
-        recordMetric('quadtreeQueryTime', queryTime, 'render');
-      } else if (cullingConfig.enableHierarchicalCulling) {
-        // Process groups first
-        elementGroups.forEach(group => {
-          const groupIntersects =
-            group.bounds.left < viewportBounds.right &&
-            group.bounds.right > viewportBounds.left &&
-            group.bounds.top < viewportBounds.bottom &&
-            group.bounds.bottom > viewportBounds.top;
-
-          if (groupIntersects) {
-            group.isVisible = true;
-            // Process individual elements in visible groups
-            group.elements.forEach(element => {
-              const elementBounds = getElementBounds(element);
-              const isElementVisible =
-                elementBounds.left < viewportBounds.right &&
-                elementBounds.right > viewportBounds.left &&
-                elementBounds.top < viewportBounds.bottom &&
-                elementBounds.bottom > viewportBounds.top;
-
-              if (isElementVisible) {
-                visibleElements.push(element);
-              } else {
-                culledElements.push(element);
-              }
-            });
-          } else {
-            group.isVisible = false;
-            groupsCulled++;
-            culledElements.push(...group.elements);
-          }
-        });
       } else {
-        // Standard element-by-element culling
+        // Simple element-by-element culling
         elements.forEach(element => {
           const elementBounds = getElementBounds(element);
           const isIntersecting =
@@ -409,26 +291,12 @@ export const useViewportCulling = ({
         });
       }
 
-      // Apply LOD filtering to visible elements
-      if (cullingConfig.enableLOD && lodLevel.level !== 'high') {
-        const filteredVisible = visibleElements.filter(element => {
-          // Filter based on element complexity and LOD level
-          if (lodLevel.level === 'low') {
-            // Only show simple shapes at low LOD
-            return ['rectangle', 'circle', 'line', 'arrow'].includes(element.type);
-          } else if (lodLevel.level === 'medium') {
-            // Show most elements but filter very complex ones
-            if (element.type === 'pen' && element.points && element.points.length > 1000) {
-              return false;
-            }
-            if (element.type === 'table' && element.rows && element.cols &&
-                element.rows * element.cols > 100) {
-              return false;
-            }
-          }
-          return true;
-        });
-
+      // Simplified LOD filtering
+      if (cullingConfig.enableLOD && lodLevel.level === 'low') {
+        const filteredVisible = visibleElements.filter(element => 
+          ['rectangle', 'circle', 'line', 'arrow', 'text'].includes(element.type)
+        );
+        
         const lodCulled = visibleElements.filter(el => !filteredVisible.includes(el));
         culledElements.push(...lodCulled);
         visibleElements = filteredVisible;
@@ -438,32 +306,24 @@ export const useViewportCulling = ({
         totalElements: elements.length,
         visibleElements: visibleElements.length,
         culledElements: culledElements.length,
-        groupsCulled,
+        groupsCulled: 0,
         lodLevel: lodLevel.level
       };
 
-      // Record performance metrics
-      recordMetric('viewportCullingVisible', visibleElements.length, 'render', {
-        total: elements.length,
-        culled: culledElements.length,
-        cullRatio: culledElements.length / elements.length,
-        lodLevel: lodLevel.level,
-        zoom: zoomLevel
-      });
-
-      if (import.meta.env.DEV && elements.length > 0) {
-        console.log(`[Enhanced ViewportCulling] LOD: ${lodLevel.level}, Visible: ${visibleElements.length}/${elements.length} (${Math.round(visibleElements.length/elements.length*100)}%), Groups: ${groupsCulled} culled`);
+      // Reduced metrics recording
+      if (elements.length > 100) {
+        recordMetric('viewportCullingVisible', visibleElements.length, 'render');
       }
 
       return {
         visibleElements,
         culledElements,
         lodLevel,
-        elementGroups,
+        elementGroups: [],
         cullingStats
       };
     } finally {
       endTiming();
     }
-  }, [elements, zoomLevel, panOffset.x, panOffset.y, canvasSize?.width, canvasSize?.height, cullingConfig, getLODLevel, elementGroups, viewportBounds, lodLevel]);
+  }, [elements, zoomLevel, panOffset.x, panOffset.y, canvasSize?.width, canvasSize?.height, cullingConfig, viewportBounds, lodLevel]);
 };

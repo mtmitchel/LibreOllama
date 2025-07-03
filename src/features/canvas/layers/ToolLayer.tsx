@@ -9,13 +9,13 @@ import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { MarkerTool } from '../components/tools/drawing/MarkerTool';
 import { HighlighterTool } from '../components/tools/drawing/HighlighterTool';
-import { WashiTapeTool } from '../components/tools/drawing/WashiTapeTool';
+
 import { EraserTool } from '../components/tools/drawing/EraserTool';
 import { LassoTool } from '../components/tools/selection/LassoTool';
 import { TextTool } from '../components/tools/creation/TextTool';
 import { StickyNoteTool } from '../components/tools/creation/StickyNoteTool';
 import { TableTool } from '../components/tools/creation/TableTool';
-import { ImageTool } from '../components/tools/creation/ImageTool';
+
 import { SectionTool } from '../components/tools/creation/SectionTool';
 import { PenTool } from '../components/tools/drawing/PenTool';
 import { PanTool } from '../components/tools/core/PanTool';
@@ -62,7 +62,7 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
   
   // Attach click handler when a non-interactive shape tool is selected
   React.useEffect(() => {
-    const interactiveTools = ['text', 'sticky-note', 'section', 'table', 'image', 'connector'];
+    const interactiveTools = ['text', 'sticky-note', 'section', 'table', 'image'];
     if (!stageRef.current || !(selectedTool in SHAPE_CREATORS) || interactiveTools.includes(selectedTool)) return;
     
     const stage = stageRef.current;
@@ -76,6 +76,8 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
       stage.container().style.cursor = 'default';
     };
   }, [selectedTool, handleCanvasClick]);
+
+  // Note: Cursor management is now handled centrally by CursorManager in CanvasStage
   
   // Default tool configurations
   const markerConfig = strokeConfig?.marker || {
@@ -99,16 +101,7 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
     lockToElements: false
   };
   
-  const washiTapeConfig = strokeConfig?.washiTape || {
-    primaryColor: '#FFB3BA',
-    secondaryColor: '#A8DAFF',
-    width: 20,
-    opacity: 0.8,
-    pattern: {
-      type: 'dots' as const,
-      radius: 2
-    }
-  };
+
   
   const eraserConfig = strokeConfig?.eraser || {
     size: 30,
@@ -168,12 +161,10 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
       <ConnectorTool
         stageRef={stageRef}
         isActive={selectedTool === 'connector-line' || selectedTool === 'connector-arrow'}
+        connectorType={selectedTool === 'connector-arrow' ? 'arrow' : 'line'}
       />
       
-      <ImageTool
-        stageRef={stageRef}
-        isActive={selectedTool === 'image'}
-      />
+
 
       {/* Drawing tools */}
       <PenTool
@@ -194,11 +185,7 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
         strokeStyle={highlighterConfig}
       />
       
-      <WashiTapeTool
-        stageRef={stageRef}
-        isActive={selectedTool === 'washi-tape'}
-        strokeStyle={washiTapeConfig}
-      />
+
       
       <EraserTool
         stageRef={stageRef}

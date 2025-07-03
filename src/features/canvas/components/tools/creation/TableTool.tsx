@@ -76,7 +76,17 @@ export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
         addElement(newTable);
       }
       
+      // Switch back to select tool and immediately highlight the new table
       setSelectedTool('select');
+
+      // Give Konva a tick to register the new element, then select it
+      setTimeout(() => {
+        const store = useUnifiedCanvasStore.getState();
+        store.clearSelection();
+        setTimeout(() => {
+          store.selectElement(newTable.id, false);
+        }, 50);
+      }, 50);
     };
 
     stage.on('mousedown.tabletool', handleMouseDown);

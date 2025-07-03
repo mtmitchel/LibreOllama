@@ -125,7 +125,7 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       // Container functionality - automatically enabled for new sticky notes
       isContainer: true,
       childElementIds: [],
-      allowedChildTypes: ['pen', 'marker', 'highlighter', 'washi-tape', 'text', 'connector', 'image', 'table'],
+              allowedChildTypes: ['pen', 'marker', 'highlighter', 'text', 'connector', 'image', 'table'],
       clipChildren: true,
       maxChildElements: 20
     };
@@ -136,7 +136,7 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
     // Enable container functionality (this will update the element with container properties)
     setTimeout(() => {
       enableStickyNoteContainer(stickyNoteElement.id, {
-        allowedTypes: ['pen', 'marker', 'highlighter', 'washi-tape', 'text', 'connector', 'image', 'table'],
+        allowedTypes: ['pen', 'marker', 'highlighter', 'text', 'connector', 'image', 'table'],
         clipChildren: true,
         maxChildren: 20
       });
@@ -323,21 +323,6 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
               shadowBlur={8}
               shadowOffset={{ x: 2, y: 2 }}
               shadowOpacity={0.5}
-              listening={false}
-            />
-            <Text
-              x={15}
-              y={15}
-              width={150}
-              height={150}
-              text="Add text"
-              fontSize={14}
-              fontFamily="Inter, Arial, sans-serif"
-              fill="rgba(31, 41, 55, 0.6)"
-              wrap="word"
-              align="left"
-              verticalAlign="top"
-              fontStyle="italic"
               listening={false}
             />
           </Group>

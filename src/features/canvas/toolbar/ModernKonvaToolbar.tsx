@@ -12,7 +12,6 @@ import {
   Trash2,
   Undo2,
   Redo2,
-  Image,
   Hand,
   Layout,
   Table,
@@ -24,7 +23,8 @@ import {
   Edit3,
   Brush,
   GitBranch,
-  Workflow
+  Workflow,
+  Image as ImageIcon
 } from 'lucide-react';
 import PortalColorPicker from './PortalColorPicker';
 import ShapesDropdown from './ShapesDropdown';
@@ -40,18 +40,15 @@ const contentTools = [
   { id: 'text', name: 'Text', icon: Type },
   { id: 'sticky-note', name: 'Sticky Note', icon: StickyNote },
   { id: 'section', name: 'Section', icon: Layout },
-  { id: 'table', name: 'Table', icon: Table }
+  { id: 'table', name: 'Table', icon: Table },
+  { id: 'image', name: 'Image', icon: ImageIcon }
 ];
 
 const drawingTools = [
   { id: 'pen', name: 'Pen', icon: Edit3 },
   { id: 'marker', name: 'Marker', icon: Brush },
   { id: 'highlighter', name: 'Highlighter', icon: Highlighter },
-  { id: 'eraser', name: 'Eraser', icon: Eraser }
-];
-
-const mediaTools = [
-  { id: 'image', name: 'Image', icon: Image }
+  { id: 'eraser', name: 'Eraser Tool', icon: Eraser }
 ];
 
 const selectionTools = [
@@ -75,6 +72,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorButtonRef = React.useRef<HTMLButtonElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   // OPTIMIZED: Store hooks to prevent infinite loops
   const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
@@ -125,8 +123,23 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const handleDeleteSelected = () => {
     if (selectedElementId) {
       deleteElement(selectedElementId);
+      console.log('🗑️ [Toolbar] Deleted selected element:', selectedElementId);
     }
   };
+
+  // Add keyboard shortcut support for delete
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete key for selected elements
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElementId) {
+        e.preventDefault();
+        handleDeleteSelected();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElementId]);
 
   const handleGroupElements = () => {
     const selectedIds = Array.from(selectedElementIds);
@@ -152,10 +165,16 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const handleToolClick = (toolId: string) => {
     console.log('🔧 [MODERN TOOLBAR] Tool selected:', toolId);
     
+    // Special handling for image tool
+    if (toolId === 'image') {
+      fileInputRef.current?.click();
+      return;
+    }
+    
     // Define which tools are interactive (user must click/drag on canvas)
     const interactiveTools = [
       'select', 'pan', 'text', 'sticky-note', 'pen', 'marker', 'highlighter', 
-      'eraser', 'section', 'table', 'image', 
+      'eraser', 'section', 'table', 
       'connector-line', 'connector-arrow',
       // Shape tools now use interactive pattern like sticky notes
       'rectangle', 'circle', 'triangle', 'mindmap'
@@ -195,6 +214,67 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   // Check if current selection can be grouped/ungrouped
   const canGroup = selectedElementIds.size >= 2;
   const canUngroup = selectedElementId ? !!isElementInGroup(selectedElementId) : false;
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    files.forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Calculate dimensions maintaining aspect ratio
+          const maxWidth = 300;
+          const maxHeight = 300;
+          let { width, height } = img;
+          
+          if (width > maxWidth || height > maxHeight) {
+            const aspectRatio = width / height;
+            if (width > height) {
+              width = maxWidth;
+              height = maxWidth / aspectRatio;
+            } else {
+              height = maxHeight;
+              width = maxHeight * aspectRatio;
+            }
+          }
+
+          // Create image element in center of viewport
+          const imageElement = {
+            id: Date.now().toString() + index,
+            type: 'image' as const,
+            x: 400 + (index * 20), // Center-ish position with offset for multiple images
+            y: 300 + (index * 20),
+            width,
+            height,
+            imageUrl: event.target?.result as string,
+            opacity: 1,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            isLocked: false,
+            isHidden: false
+          };
+          
+          addElement(imageElement);
+          setSelectedTool('select');
+          
+          // Select the new image after a brief delay
+          setTimeout(() => {
+            const selectElement = useUnifiedCanvasStore.getState().selectElement;
+            selectElement(imageElement.id as any, false);
+          }, 10);
+          
+          console.log('📷 [Toolbar] Image added:', imageElement.id);
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Clear the input
+    e.target.value = '';
+  };
 
   return (
     <div className={styles.toolbarContainer}>
@@ -303,25 +383,9 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
         <div className={styles.separator} />
 
-        {/* Connection & Media Tools */}
+        {/* Connection Tools */}
         <div className={styles.toolbarGroup}>
           <ConnectorDropdown onToolSelect={handleToolClick} />
-          
-          {mediaTools.map(tool => {
-            const IconComponent = tool.icon;
-            const isActive = selectedTool === tool.id;
-            return (
-              <button
-                key={tool.id}
-                onClick={() => handleToolClick(tool.id)}
-                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
-                title={tool.name}
-                aria-label={tool.name}
-              >
-                <IconComponent size={16} />
-              </button>
-            );
-          })}
         </div>
 
         <div className={styles.separator} />
@@ -352,8 +416,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             <button
               onClick={handleDeleteSelected}
               className={styles.toolButton}
-              title="Delete Selected"
-              aria-label="Delete Selected"
+              title="Delete Selected Element (Delete/Backspace)"
+              aria-label="Delete Selected Element"
             >
               <Trash2 size={16} />
             </button>
@@ -386,6 +450,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             </button>
           )}
           
+          {/* Layer Panel Toggle - Temporarily Disabled
           <button
             onClick={() => setShowLayersPanel()}
             className={`${styles.toolButton} ${showLayersPanel ? styles.active : ''}`}
@@ -394,10 +459,21 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
           >
             <Layers size={16} />
           </button>
+          */}
         </div>
 
         {/* Removed duplicate color picker - sticky notes now use inline color picker */}
       </div>
+      
+      {/* Hidden file input for image tool */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileInput}
+        style={{ display: 'none' }}
+      />
     </div>
   );
 };

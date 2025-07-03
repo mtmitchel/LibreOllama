@@ -28,7 +28,7 @@ import { useUnifiedCanvasStore, canvasSelectors } from '../../../stores'; // Usi
 import { calculateSnapLines } from '../utils/snappingUtils';
 import { Line } from 'react-konva';
 import { StrokeRenderer } from './StrokeRenderer';
-import { isMarkerElement, isHighlighterElement, isWashiTapeElement } from '../types/drawing.types';
+import { isMarkerElement, isHighlighterElement } from '../types/drawing.types';
 
 // Type for elements that are not sections (ElementRenderer should only handle these)
 type NonSectionElement = Exclude<CanvasElement, SectionElement>;
@@ -137,7 +137,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   }
   
   // Handle new drawing types with StrokeRenderer
-  if (isMarkerElement(element) || isHighlighterElement(element) || isWashiTapeElement(element)) {
+      if (isMarkerElement(element) || isHighlighterElement(element)) {
     return (
       <StrokeRenderer
         element={element}

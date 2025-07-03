@@ -170,9 +170,9 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
     setCurrentPoints([]);
     setCurrentWidth(strokeStyle.minWidth);
     
-    // Auto-switch to select after drawing (FigJam behavior)
-    setSelectedTool('select');
-  }, [isDrawing, strokeStyle, addElement, setSelectedTool]);
+    // Keep marker tool active for multiple strokes
+    console.log('🖊️ [MarkerTool] Marker stroke completed, keeping tool active');
+  }, [isDrawing, strokeStyle, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
   
   // Handle pointer cancel (when dragging outside)
   const handlePointerCancel = useCallback(() => {
@@ -195,8 +195,7 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
     stage.on('pointerup', handlePointerUp);
     stage.on('pointercancel', handlePointerCancel);
     
-    // Change cursor
-    stage.container().style.cursor = 'crosshair';
+    // Cursor is managed by CursorManager
     
     return () => {
       stage.off('pointerdown', handlePointerDown);
@@ -204,8 +203,7 @@ export const MarkerTool: React.FC<MarkerToolProps> = ({
       stage.off('pointerup', handlePointerUp);
       stage.off('pointercancel', handlePointerCancel);
       
-      // Reset cursor
-      stage.container().style.cursor = 'default';
+      // Cursor cleanup handled by CursorManager
     };
   }, [isActive, handlePointerDown, handlePointerMove, handlePointerUp, handlePointerCancel]);
   

@@ -65,7 +65,7 @@ const createCircleTextEditor = (
     fontFamily: fontFamily,
     fontWeight: '400',
     lineHeight: '1',
-    color: '#FFFFFF',
+    color: '#1F2937',
     background: 'transparent',
     border: 'none',
     padding: `${konvaPadding}px`,
@@ -493,7 +493,7 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
 
   const hasContent = element.text && element.text.trim().length > 0;
   const displayText = hasContent ? element.text! : 'Add text';
-  const textColor = hasContent ? (element.textColor || '#FFFFFF') : 'rgba(255, 255, 255, 0.6)';
+  const textColor = hasContent ? (element.textColor || '#1F2937') : 'rgba(31, 41, 55, 0.6)';
 
   const isCurrentlyEditing = textEditingElementId === element.id;
   const shouldAllowDrawing = ['pen', 'marker', 'highlighter', 'eraser'].includes(selectedTool);
@@ -515,8 +515,8 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
           x={radius}
           y={radius}
           radius={radius}
-          fill={element.fill || '#EF4444'}
-          stroke={element.stroke || '#DC2626'}
+          fill={element.fill || '#FFFFFF'}
+          stroke={element.stroke || '#D1D5DB'}
           strokeWidth={2}
           onTransformEnd={handleTransformEnd}
         />

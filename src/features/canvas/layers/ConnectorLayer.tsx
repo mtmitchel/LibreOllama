@@ -29,12 +29,14 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
 }) => {
   const connectorElements = React.useMemo(() => {
     const connectors: ConnectorElement[] = [];
-    elements.forEach((element) => {
-      if (isConnectorElement(element)) connectors.push(element);
+    elements.forEach((element, id) => {
+      if (isConnectorElement(element)) {
+        connectors.push(element);
+      }
     });
     return connectors;
   }, [elements]);
-
+  
   return (
     <Group listening={true} name="connector-group">
       {connectorElements.map(element => (
@@ -42,7 +44,8 @@ export const ConnectorLayer: React.FC<ConnectorLayerProps> = ({
           key={element.id}
           connector={element}
           isSelected={selectedElementIds.has(element.id)}
-          onSelect={() => onElementClick({} as any, element)}
+          onSelect={(e) => onElementClick(e, element)}
+          onUpdate={onElementUpdate ? (updates) => onElementUpdate(element.id, updates) : undefined}
         />
       ))}
       

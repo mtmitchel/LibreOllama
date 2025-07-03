@@ -25,18 +25,11 @@ export interface StrokeStyle {
 }
 
 // Re-export the enhanced types from enhanced.types.ts
-export type { MarkerElement, HighlighterElement, WashiTapeElement } from './enhanced.types';
+export type { MarkerElement, HighlighterElement } from './enhanced.types';
 // Re-export type guards too
-export { isMarkerElement, isHighlighterElement, isWashiTapeElement } from './enhanced.types';
+export { isMarkerElement, isHighlighterElement } from './enhanced.types';
 
-// Washi tape patterns
-export type WashiPattern = 
-  | { type: 'dots'; spacing: number; radius: number }
-  | { type: 'stripes'; angle: number; width: number; spacing: number }
-  | { type: 'zigzag'; amplitude: number; frequency: number }
-  | { type: 'floral'; scale: number; density: number; variant: 'cherry' | 'sakura' | 'leaves' }
-  | { type: 'geometric'; shape: 'triangles' | 'hexagons' | 'diamonds'; size: number }
-  | { type: 'texture'; name: 'paper' | 'fabric' | 'glitter'; intensity: number };
+
 
 // Stroke grouping
 export interface StrokeGroup {
@@ -66,7 +59,7 @@ export interface StrokeGroup {
 // Drawing state management
 export interface DrawingState {
   isRecording: boolean;
-  currentTool: 'marker' | 'highlighter' | 'washi-tape' | 'eraser' | null;
+  currentTool: 'marker' | 'highlighter' | 'eraser' | null;
   currentStroke: StrokePoint[];
   previewPoints: number[];
   startTime: number;
@@ -92,14 +85,7 @@ export interface HighlighterConfig {
   lockToElements: boolean; // Whether to constrain to element bounds
 }
 
-export interface WashiTapeConfig {
-  primaryColor: string;
-  secondaryColor: string;
-  width: number;
-  opacity: number;
-  pattern: WashiPattern;
-  followCursor: boolean; // Whether to orient along drawing direction
-}
+
 
 export interface EraserConfig {
   size: number;
@@ -173,7 +159,7 @@ export interface StrokeCache {
 // Export/import types
 export interface StrokeExportData {
   version: string;
-  strokes: (MarkerElement | HighlighterElement | WashiTapeElement)[];
+  strokes: (MarkerElement | HighlighterElement)[];
   groups: StrokeGroup[];
   metadata: {
     canvasSize: { width: number; height: number };
@@ -183,12 +169,12 @@ export interface StrokeExportData {
 }
 
 // Import the specific types and type guards we need
-import type { MarkerElement, HighlighterElement, WashiTapeElement } from './enhanced.types';
-import { isMarkerElement, isHighlighterElement, isWashiTapeElement } from './enhanced.types';
+import type { MarkerElement, HighlighterElement } from './enhanced.types';
+import { isMarkerElement, isHighlighterElement } from './enhanced.types';
 
 // Utility type guard that combines the imported ones
-export function isStrokeElement(element: any): element is MarkerElement | HighlighterElement | WashiTapeElement {
-  return isMarkerElement(element) || isHighlighterElement(element) || isWashiTapeElement(element);
+export function isStrokeElement(element: any): element is MarkerElement | HighlighterElement {
+  return isMarkerElement(element) || isHighlighterElement(element);
 }
 
 // Constants
@@ -204,12 +190,4 @@ export const DRAWING_CONSTANTS = {
   PERFORMANCE_POINT_THRESHOLD: 1000, // When to start performance optimizations
 } as const;
 
-export const WASHI_PATTERNS = {
-  DOTS: { type: 'dots' as const, spacing: 8, radius: 2 },
-  THIN_STRIPES: { type: 'stripes' as const, angle: 0, width: 2, spacing: 4 },
-  THICK_STRIPES: { type: 'stripes' as const, angle: 45, width: 4, spacing: 8 },
-  ZIGZAG: { type: 'zigzag' as const, amplitude: 5, frequency: 0.2 },
-  CHERRY_BLOSSOMS: { type: 'floral' as const, scale: 1, density: 0.3, variant: 'cherry' as const },
-  TRIANGLES: { type: 'geometric' as const, shape: 'triangles' as const, size: 6 },
-  PAPER_TEXTURE: { type: 'texture' as const, name: 'paper' as const, intensity: 0.5 },
-} as const; 
+ 

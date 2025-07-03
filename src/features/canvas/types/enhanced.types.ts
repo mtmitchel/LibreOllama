@@ -315,28 +315,7 @@ export interface HighlighterElement extends BaseElement {
   };
 }
 
-export interface WashiTapeElement extends BaseElement {
-  type: 'washi-tape';
-  points: number[];
-  pattern: {
-    type: string;
-    radius?: number;
-    width?: number;
-    angle?: number;
-    amplitude?: number;
-    frequency?: number;
-    size?: number;
-    scale?: number;
-    shape?: string;
-  };
-  style: {
-    primaryColor: string;
-    secondaryColor: string;
-    width: number;
-    opacity: number;
-    patternScale: number;
-  };
-}
+
 
 // Note: Drawing types will be imported where needed to avoid circular dependencies
 
@@ -357,7 +336,7 @@ export type CanvasElement =
   | GroupElement
   | MarkerElement
   | HighlighterElement
-  | WashiTapeElement;
+;
 
 // Type Predicates provide safe type narrowing within the code.
 // No more `(element as RectangleElement).width`.
@@ -425,9 +404,7 @@ export function isHighlighterElement(el: CanvasElement): el is HighlighterElemen
   return el.type === 'highlighter';
 }
 
-export function isWashiTapeElement(el: CanvasElement): el is WashiTapeElement {
-  return el.type === 'washi-tape';
-}
+
 
 // Container-related utility functions
 export function isContainerElement(el: CanvasElement): el is (SectionElement | StickyNoteElement) & { childElementIds: ElementId[] } {

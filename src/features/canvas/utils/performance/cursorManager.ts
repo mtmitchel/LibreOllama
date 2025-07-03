@@ -9,12 +9,18 @@ export type CanvasTool =
   | 'select'
   | 'pan' 
   | 'pen'
+  | 'marker'
+  | 'highlighter'
+  | 'eraser'
+  | 'lasso'
   | 'text'
   | 'draw-rectangle'
   | 'draw-circle'
   | 'draw-triangle'
   | 'draw-star'
   | 'connector'
+  | 'connector-line'
+  | 'connector-arrow'
   | 'sticky-note'
   | 'image'
   | 'table'
@@ -62,12 +68,18 @@ export class CursorManager {
     'select': 'default',
     'pan': 'grab',
     'pen': 'crosshair',
+    'marker': 'crosshair',
+    'highlighter': 'crosshair',
+    'eraser': 'crosshair',
+    'lasso': 'crosshair',
     'text': 'crosshair',
     'draw-rectangle': 'crosshair',
     'draw-circle': 'crosshair',
     'draw-triangle': 'crosshair',
     'draw-star': 'crosshair',
     'connector': 'crosshair',
+    'connector-line': 'crosshair',
+    'connector-arrow': 'crosshair',
     'sticky-note': 'crosshair',
     'image': 'crosshair',
     'table': 'crosshair',

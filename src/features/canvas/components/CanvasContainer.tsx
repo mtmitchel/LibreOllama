@@ -16,7 +16,7 @@ import Konva from 'konva';
 import CanvasStage from './CanvasStage';
 import ModernKonvaToolbar from '../toolbar/ModernKonvaToolbar';
 import { ZoomControls } from './ui/ZoomControls';
-import { ImageUploadInput } from './ui/ImageUploadInput';
+import { CanvasDragDropHandler } from './ui/CanvasDragDropHandler';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
 /**
@@ -31,7 +31,13 @@ const CanvasContainer: React.FC = () => {
   const redo = useUnifiedCanvasStore(state => state.redo);
 
   return (
-    <div className="relative w-full h-full bg-bg-primary">
+    <div 
+      className="relative w-full h-full bg-bg-primary canvas-container"
+      style={{ 
+        minHeight: '100%',
+        position: 'relative'
+      }}
+    >
       <CanvasStage stageRef={stageRef} />
       <ModernKonvaToolbar
         onUndo={undo}
@@ -42,8 +48,8 @@ const CanvasContainer: React.FC = () => {
       {/* Zoom Controls - positioned in bottom-right corner with stage ref */}
       <ZoomControls className="absolute bottom-6 right-6 z-20" stageRef={stageRef} />
       
-      {/* HTML elements that need to be outside Konva context */}
-      <ImageUploadInput />
+      {/* CanvasDragDropHandler handles all drag and drop + paste functionality */}
+      <CanvasDragDropHandler stageRef={stageRef} />
     </div>
   );
 };

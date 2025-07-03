@@ -35,7 +35,7 @@ export interface StrokeSliceState {
   
   // Drawing state
   isRecordingStroke: boolean;
-  currentStrokeTool: 'marker' | 'highlighter' | 'washi-tape' | null;
+  currentStrokeTool: 'marker' | 'highlighter' | null;
   strokePreviewEnabled: boolean;
   
   // Performance settings
@@ -79,7 +79,7 @@ export interface StrokeSliceActions {
   reverseSelectedStrokes: () => void;
   
   // Drawing state
-  setStrokeRecording: (isRecording: boolean, tool?: 'marker' | 'highlighter' | 'washi-tape') => void;
+  setStrokeRecording: (isRecording: boolean, tool?: 'marker' | 'highlighter') => void;
   toggleStrokePreview: () => void;
   
   // Settings

@@ -91,11 +91,11 @@ export const CircleTool: React.FC<CircleToolProps> = ({ stageRef, isActive }) =>
       x: pos.x - radius, // Top-left position for consistency
       y: pos.y - radius,
       radius,
-      fill: '#EF4444',
-      stroke: '#DC2626',
+      fill: '#FFFFFF',
+      stroke: '#9CA3AF',
       strokeWidth: 2,
       text: '', // Start with empty text so immediate editing begins
-      textColor: '#FFFFFF',
+      textColor: '#1F2937',
       fontSize: 14,
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       textAlign: 'center',
@@ -233,30 +233,17 @@ export const CircleTool: React.FC<CircleToolProps> = ({ stageRef, isActive }) =>
           <Group x={cursorPosition.x} y={cursorPosition.y}>
             <Circle
               radius={radius}
-              fill="#EF4444"
-              stroke="#DC2626"
+              fill="#FFFFFF"
+              stroke="#9CA3AF"
               strokeWidth={2}
-              opacity={0.6}
+              opacity={0.75}
               shadowColor="rgba(0, 0, 0, 0.1)"
               shadowBlur={8}
               shadowOffset={{ x: 2, y: 2 }}
               shadowOpacity={0.5}
               listening={false}
             />
-            <Text
-              x={-30}
-              y={-5}
-              width={60}
-              height={10}
-              text="Add text"
-              fontSize={14}
-              fontFamily="Inter, Arial, sans-serif"
-              fill="rgba(255, 255, 255, 0.8)"
-              align="center"
-              verticalAlign="middle"
-              fontStyle="italic"
-              listening={false}
-            />
+            {/* Placeholder text removed for cleaner preview */}
           </Group>
         </Group>
       )}

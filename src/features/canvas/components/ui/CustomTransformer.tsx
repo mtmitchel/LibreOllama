@@ -3,7 +3,7 @@ import { Transformer, Circle } from 'react-konva';
 import Konva from 'konva';
 
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
-import { ElementId, CanvasElement, isTableElement } from '../../types/enhanced.types';
+import { ElementId, CanvasElement, isTableElement, isConnectorElement } from '../../types/enhanced.types';
 
 type CustomTransformerProps = {
   selectedNodeIds: ElementId[];
@@ -21,10 +21,10 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
   const updateElement = useUnifiedCanvasStore((state) => state.updateElement);
   const addToHistory = useUnifiedCanvasStore((state) => state.addToHistory);
 
-  // Exclude table elements - they handle their own selection/transformation
+  // Exclude table and connector elements - they handle their own selection/transformation
   const filteredSelectedNodeIds = selectedNodeIds.filter(id => {
     const element = elements.get(id);
-    return element && !isTableElement(element);
+    return element && !isTableElement(element) && !isConnectorElement(element);
   });
 
   // Get the bounding box with padding

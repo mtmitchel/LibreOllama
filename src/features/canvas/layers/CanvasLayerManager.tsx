@@ -219,6 +219,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
           elements={connectorElementsMap}
           selectedElementIds={selectedElementIdsOnly}
           onElementClick={onElementClick}
+          onElementUpdate={onElementUpdate}
           isDrawingConnector={isDrawingConnector ?? false}
           connectorStart={connectorStart ?? null}
           connectorEnd={connectorEnd ?? null}

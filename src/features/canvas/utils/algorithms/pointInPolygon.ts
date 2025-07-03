@@ -128,56 +128,228 @@ export function pointInEllipse(
 /**
  * Get multiple check points for complex shapes
  * Used to test if a shape intersects with a polygon
+ * ENHANCED: Complete element type coverage for eraser tool
  */
 export function getShapeCheckPoints(element: any): Point[] {
   const points: Point[] = [];
   
-  // Always include center point
+  // Always include center point for all elements
   const centerX = element.x + (element.width || 0) / 2;
   const centerY = element.y + (element.height || 0) / 2;
   points.push([centerX, centerY]);
   
-  // For stroke elements, sample points along the path
-  if (element.points && Array.isArray(element.points)) {
-    // Sample every 10th point or so to avoid too many checks
-    for (let i = 0; i < element.points.length; i += 20) {
-      if (i + 1 < element.points.length) {
-        points.push([element.points[i], element.points[i + 1]]);
+  // Handle different element types with specific geometry
+  switch (element.type) {
+    case 'rectangle':
+    case 'sticky-note':
+    case 'text':
+    case 'image':
+    case 'table':
+    case 'section':
+      // Rectangular elements: corners and edge midpoints
+      if (element.width && element.height) {
+        const { x, y, width, height } = element;
+        
+        // All corners
+        points.push([x, y]);
+        points.push([x + width, y]);
+        points.push([x, y + height]);
+        points.push([x + width, y + height]);
+        
+        // Edge midpoints for better detection
+        points.push([x + width / 2, y]);
+        points.push([x + width, y + height / 2]);
+        points.push([x + width / 2, y + height]);
+        points.push([x, y + height / 2]);
+        
+        // Quarter points for higher accuracy
+        points.push([x + width / 4, y + height / 4]);
+        points.push([x + 3 * width / 4, y + height / 4]);
+        points.push([x + width / 4, y + 3 * height / 4]);
+        points.push([x + 3 * width / 4, y + 3 * height / 4]);
       }
-    }
+      break;
+      
+    case 'circle':
+      // Circular elements: sample points around circumference
+      if (element.radius) {
+        const { x, y, radius } = element;
+        
+        // Sample points around the circle (every 30 degrees)
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 6) {
+          points.push([
+            x + Math.cos(angle) * radius,
+            y + Math.sin(angle) * radius
+          ]);
+        }
+        
+        // Add points at different radii for better coverage
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+          points.push([
+            x + Math.cos(angle) * radius * 0.7,
+            y + Math.sin(angle) * radius * 0.7
+          ]);
+        }
+      }
+      break;
+      
+    case 'triangle':
+      // Triangle elements: use actual triangle points
+      if (element.points && Array.isArray(element.points) && element.points.length >= 6) {
+        // Extract triangle vertices
+        const vertices = [];
+        for (let i = 0; i < element.points.length; i += 2) {
+          if (i + 1 < element.points.length) {
+            vertices.push([element.points[i], element.points[i + 1]]);
+          }
+        }
+        
+        // Add all vertices
+        points.push(...vertices);
+        
+        // Add edge midpoints
+        for (let i = 0; i < vertices.length; i++) {
+          const next = (i + 1) % vertices.length;
+          const midX = (vertices[i][0] + vertices[next][0]) / 2;
+          const midY = (vertices[i][1] + vertices[next][1]) / 2;
+          points.push([midX, midY]);
+        }
+      } else if (element.width && element.height) {
+        // Fallback for triangle without explicit points
+        const { x, y, width, height } = element;
+        // Standard triangle: top center, bottom left, bottom right
+        points.push([x + width / 2, y]); // Top
+        points.push([x, y + height]); // Bottom left
+        points.push([x + width, y + height]); // Bottom right
+        
+        // Add edge midpoints
+        points.push([x + width / 4, y + height / 2]); // Left edge
+        points.push([x + 3 * width / 4, y + height / 2]); // Right edge
+        points.push([x + width / 2, y + height]); // Bottom edge
+      }
+      break;
+      
+    case 'star':
+      // Star elements: sample points around star shape
+      if (element.innerRadius && element.outerRadius && element.numPoints) {
+        const { x, y, innerRadius, outerRadius, numPoints } = element;
+        const angleStep = (Math.PI * 2) / numPoints;
+        
+        // Add outer points
+        for (let i = 0; i < numPoints; i++) {
+          const angle = i * angleStep;
+          points.push([
+            x + Math.cos(angle) * outerRadius,
+            y + Math.sin(angle) * outerRadius
+          ]);
+        }
+        
+        // Add inner points
+        for (let i = 0; i < numPoints; i++) {
+          const angle = i * angleStep + angleStep / 2;
+          points.push([
+            x + Math.cos(angle) * innerRadius,
+            y + Math.sin(angle) * innerRadius
+          ]);
+        }
+      }
+      break;
+      
+    case 'connector':
+      // Connector elements: sample points along the path
+      if (element.startPoint && element.endPoint) {
+        points.push([element.startPoint.x, element.startPoint.y]);
+        points.push([element.endPoint.x, element.endPoint.y]);
+        
+        // Add intermediate points if they exist
+        if (element.intermediatePoints) {
+          element.intermediatePoints.forEach((point: any) => {
+            points.push([point.x, point.y]);
+          });
+        }
+        
+        // Sample points along the line for better detection
+        const dx = element.endPoint.x - element.startPoint.x;
+        const dy = element.endPoint.y - element.startPoint.y;
+        const steps = Math.max(5, Math.floor(Math.sqrt(dx * dx + dy * dy) / 20));
+        
+        for (let i = 1; i < steps; i++) {
+          const t = i / steps;
+          points.push([
+            element.startPoint.x + dx * t,
+            element.startPoint.y + dy * t
+          ]);
+        }
+      }
+      
+      // Also handle path points if available
+      if (element.pathPoints && Array.isArray(element.pathPoints)) {
+        for (let i = 0; i < element.pathPoints.length; i += 2) {
+          if (i + 1 < element.pathPoints.length) {
+            points.push([element.pathPoints[i], element.pathPoints[i + 1]]);
+          }
+        }
+      }
+      break;
+      
+    case 'pen':
+    case 'marker':
+    case 'highlighter':
+      // Stroke elements: sample points along the path
+      if (element.points && Array.isArray(element.points)) {
+        // Sample every few points to avoid performance issues but ensure coverage
+        const sampleRate = Math.max(2, Math.floor(element.points.length / 40));
+        for (let i = 0; i < element.points.length; i += sampleRate * 2) {
+          if (i + 1 < element.points.length) {
+            points.push([element.points[i], element.points[i + 1]]);
+          }
+        }
+        
+        // Always include start and end points
+        if (element.points.length >= 4) {
+          points.push([element.points[0], element.points[1]]);
+          points.push([element.points[element.points.length - 2], element.points[element.points.length - 1]]);
+        }
+      }
+      break;
+      
+    default:
+      // Generic fallback for unknown element types
+      if (element.points && Array.isArray(element.points)) {
+        // Handle as stroke element
+        for (let i = 0; i < element.points.length; i += 20) {
+          if (i + 1 < element.points.length) {
+            points.push([element.points[i], element.points[i + 1]]);
+          }
+        }
+      } else if (element.width && element.height) {
+        // Handle as rectangular element
+        const { x, y, width, height } = element;
+        points.push([x, y]);
+        points.push([x + width, y]);
+        points.push([x, y + height]);
+        points.push([x + width, y + height]);
+      } else if (element.radius) {
+        // Handle as circular element
+        const { x, y, radius } = element;
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+          points.push([
+            x + Math.cos(angle) * radius,
+            y + Math.sin(angle) * radius
+          ]);
+        }
+      }
+      break;
   }
   
-  // For rectangular elements, include corners and edge midpoints
-  if (element.width && element.height) {
-    const { x, y, width, height } = element;
-    
-    // Corners
-    points.push([x, y]);
-    points.push([x + width, y]);
-    points.push([x, y + height]);
-    points.push([x + width, y + height]);
-    
-    // Edge midpoints
-    points.push([x + width / 2, y]);
-    points.push([x + width, y + height / 2]);
-    points.push([x + width / 2, y + height]);
-    points.push([x, y + height / 2]);
-  }
+  // Remove duplicate points for performance
+  const uniquePoints = points.filter((point, index, arr) => {
+    return !arr.slice(0, index).some(p => 
+      Math.abs(p[0] - point[0]) < 0.1 && Math.abs(p[1] - point[1]) < 0.1
+    );
+  });
   
-  // For circular elements
-  if (element.radius) {
-    const { x, y, radius } = element;
-    
-    // Sample points around the circle
-    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
-      points.push([
-        x + Math.cos(angle) * radius,
-        y + Math.sin(angle) * radius
-      ]);
-    }
-  }
-  
-  return points;
+  return uniquePoints;
 }
 
 /**

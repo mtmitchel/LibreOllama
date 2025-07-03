@@ -264,7 +264,7 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
     draftSection: null,
     selectedTool: 'select',
     textEditingElementId: null,
-    selectedStickyNoteColor: '#ffeb3b',
+    selectedStickyNoteColor: '#FFF2CC',
     penColor: '#000000',
     showGrid: true,
     snapToGrid: false,
@@ -1286,7 +1286,7 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
              ...stickyNote,
              isContainer: true,
              childElementIds: stickyNote.childElementIds || [],
-             allowedChildTypes: options.allowedTypes || ['pen', 'marker', 'highlighter', 'washi-tape', 'text', 'connector', 'image', 'table'],
+             allowedChildTypes: options.allowedTypes || ['pen', 'marker', 'highlighter', 'text', 'connector', 'image', 'table'],
              clipChildren: options.clipChildren ?? true,
              maxChildElements: options.maxChildren || 20
            };
@@ -1474,7 +1474,7 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
           fontFamily: 'Inter, sans-serif',
           isContainer: true,
           childElementIds: [],
-          allowedChildTypes: ['pen', 'marker', 'highlighter', 'washi-tape', 'text', 'connector', 'image', 'table'],
+          allowedChildTypes: ['pen', 'marker', 'highlighter', 'text', 'connector', 'image', 'table'],
           clipChildren: true,
           maxChildElements: 10,
           createdAt: Date.now(),

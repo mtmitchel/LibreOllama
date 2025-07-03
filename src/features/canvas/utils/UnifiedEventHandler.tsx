@@ -9,11 +9,7 @@ interface UnifiedEventHandlerProps {
 
 /**
  * UnifiedEventHandler - Centralized event delegation for the canvas.
- *
- * This component attaches all necessary event listeners to the Konva Stage
- * and delegates the handling of these events to the unified Zustand store.
- * It is designed to be the single source of truth for all canvas interactions,
- * ensuring a consistent and predictable event handling pipeline.
+ * PERFORMANCE OPTIMIZATION: Reduced logging and optimized event handling
  */
 const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) => {
   // Store access
@@ -32,7 +28,6 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
   React.useEffect(() => {
     (window as any).__protectSelection = () => {
       selectionProtected.current = true;
-      console.log('🛡️ [UnifiedEventHandler] Selection protected for text operation');
       
       // Clear any existing timeout
       if (protectionTimeout.current) {
@@ -42,7 +37,6 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
       // Clear protection after 500ms (longer for text operations)
       protectionTimeout.current = setTimeout(() => {
         selectionProtected.current = false;
-        console.log('🛡️ [UnifiedEventHandler] Selection protection cleared');
         protectionTimeout.current = null;
       }, 500);
     };
@@ -59,8 +53,6 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
     const stage = stageRef.current;
     if (!stage) return;
 
-    console.log('🎯 [UnifiedEventHandler] Attaching minimal event listeners');
-
     // Handle global drag end for element updates
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
       const target = e.target;
@@ -73,7 +65,6 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
           return;
         }
         
-        console.log('🎯 [UnifiedEventHandler] Element drag end:', elementId, { x: target.x(), y: target.y() });
         updateElement(elementId, {
           x: target.x(),
           y: target.y(),
@@ -86,20 +77,9 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
       const target = e.target;
       let elementId = target.id();
       
-      console.log('🎯 [UnifiedEventHandler] Click event details:', {
-        targetClass: target.className,
-        targetId: elementId,
-        targetName: target.name(),
-        hasParent: !!target.parent,
-        parentClass: target.parent?.className,
-        parentId: target.parent?.id(),
-        isStage: target === stage
-      });
-      
       // Check if this is a text element (has -text or -bg suffix)
       if (elementId && (elementId.endsWith('-text') || elementId.endsWith('-bg'))) {
         elementId = elementId.replace('-text', '').replace('-bg', '');
-        console.log('🎯 [UnifiedEventHandler] Detected text element part, using parent ID:', elementId);
       }
       
       // If the target doesn't have an ID, check its parent (for grouped elements like text)
@@ -107,7 +87,6 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
         const parent = target.parent;
         if (parent && parent.id) {
           elementId = parent.id();
-          console.log('🎯 [UnifiedEventHandler] Found parent element ID:', elementId);
         }
       }
       
@@ -115,37 +94,23 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
       let currentNode = target;
       let depth = 0;
       while (!elementId && currentNode && currentNode !== stage && depth < 5) {
-        console.log(`🔍 [UnifiedEventHandler] Checking node at depth ${depth}:`, {
-          className: currentNode.className,
-          id: currentNode.id(),
-          hasParent: !!currentNode.parent
-        });
-        
         if (currentNode.id && currentNode.id()) {
           elementId = currentNode.id();
-          console.log('🎯 [UnifiedEventHandler] Found element ID at depth', depth, ':', elementId);
           break;
         }
         currentNode = currentNode.parent;
         depth++;
       }
       
-      console.log('🎯 [UnifiedEventHandler] Final result - Click target:', target.className, 'ID:', elementId || 'none');
-      
       // Check if we're clicking on a text element that's being edited
       if (textEditingElementId && elementId === textEditingElementId) {
-        console.log('🎯 [UnifiedEventHandler] Click on editing text element - ignoring');
         return;
       }
       
       // If we found an element ID, handle element click
       if (elementId) {
-        // Clicking on an element
-        console.log('🎯 [UnifiedEventHandler] Element clicked:', elementId);
-        
         // If clicking on a different element while text is being edited, ignore
         if (textEditingElementId && elementId !== textEditingElementId) {
-          console.log('🎯 [UnifiedEventHandler] Click on different element while editing - ignoring');
           return;
         }
         
@@ -156,31 +121,20 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
         // Only clear selection if we truly clicked on the stage background or a layer
         // Check if selection is protected (e.g., after text operations)
         if (selectionProtected.current) {
-          console.log('🛡️ [UnifiedEventHandler] Stage click ignored - selection protected');
           return;
         }
         
         // Check if we have a text element being edited
         if (textEditingElementId) {
-          console.log('🎯 [UnifiedEventHandler] Stage clicked while editing text - ignoring');
           return;
         }
         
         // Don't handle stage clicks when text tool is active - let TextTool handle them
         if (selectedTool === 'text') {
-          console.log('🎯 [UnifiedEventHandler] Stage clicked with text tool active - letting TextTool handle it');
           return;
         }
         
-        console.log('🎯 [UnifiedEventHandler] Stage background clicked - clearing selection');
         clearSelection();
-      } else {
-        // Clicked on something else - don't clear selection unless it's clearly a background click
-        console.log('🎯 [UnifiedEventHandler] Click on unrecognized target:', {
-          className: target.className,
-          name: target.name(),
-          id: elementId || 'none'
-        });
       }
     };
 
@@ -190,7 +144,6 @@ const UnifiedEventHandler: React.FC<UnifiedEventHandlerProps> = ({ stageRef }) =
       const elementId = target.id();
       
       if (elementId) {
-        console.log('🎯 [UnifiedEventHandler] Element transform end:', elementId);
         const scaleX = target.scaleX();
         const scaleY = target.scaleY();
         

@@ -73,10 +73,10 @@ export class FeatureFlagManager {
 
     // CRITICAL FIX: Register missing centralized-transformer flag
     this.registerFlag({
-      name: 'centralized-transformer',
+      name: 'text-rendering-engine',
       enabled: true,
       fallbackEnabled: true,
-      fallbackValue: true, // FIXED: Ensure fallback also enables transformer
+      fallbackValue: true, 
       criticalityLevel: 'high'
     });
   }

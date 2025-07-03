@@ -90,12 +90,12 @@ export const RectangleTool: React.FC<RectangleToolProps> = ({ stageRef, isActive
       y: pos.y - 40,
       width: 120,
       height: 80,
-      fill: '#3B82F6',
-      stroke: '#1E40AF',
+      fill: '#FFFFFF',
+      stroke: '#9CA3AF',
       strokeWidth: 2,
       cornerRadius: 4,
       text: '', // Start with empty text so immediate editing begins
-      textColor: '#FFFFFF',
+      textColor: '#1F2937',
       fontSize: 14,
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       textAlign: 'center',
@@ -232,31 +232,18 @@ export const RectangleTool: React.FC<RectangleToolProps> = ({ stageRef, isActive
             <Rect
               width={120}
               height={80}
-              fill="#3B82F6"
-              stroke="#1E40AF"
+              fill="#FFFFFF"
+              stroke="#9CA3AF"
               strokeWidth={2}
               cornerRadius={4}
-              opacity={0.6}
+              opacity={0.75}
               shadowColor="rgba(0, 0, 0, 0.1)"
               shadowBlur={8}
               shadowOffset={{ x: 2, y: 2 }}
               shadowOpacity={0.5}
               listening={false}
             />
-            <Text
-              x={10}
-              y={30}
-              width={100}
-              height={20}
-              text="Add text"
-              fontSize={14}
-              fontFamily="Inter, Arial, sans-serif"
-              fill="rgba(255, 255, 255, 0.8)"
-              align="center"
-              verticalAlign="middle"
-              fontStyle="italic"
-              listening={false}
-            />
+            {/* Placeholder text removed for cleaner preview */}
           </Group>
         </Group>
       )}

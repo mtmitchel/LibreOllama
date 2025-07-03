@@ -1,7 +1,7 @@
 // src/utils/performance/PerformanceMonitor.ts
 /**
  * Central performance tracking system for LibreOllama Canvas
- * Provides comprehensive performance monitoring with minimal overhead
+ * PERFORMANCE OPTIMIZATION: Reduced monitoring frequency and increased thresholds
  */
 
 export interface PerformanceMetric {
@@ -22,22 +22,22 @@ export interface PerformanceThresholds {
 class PerformanceMonitorImpl {
   private metrics: PerformanceMetric[] = [];
   private observers: Map<string, (metric: PerformanceMetric) => void> = new Map();
-  private isEnabled: boolean = true;
-  private maxMetrics: number = 1000;
+  private isEnabled: boolean = false; // CHANGED: Default to disabled
+  private maxMetrics: number = 500; // REDUCED: From 1000 to 500
   private thresholds: PerformanceThresholds = {
-    renderTime: 16, // 60 FPS target
-    interactionLatency: 100,
-    memoryUsage: 200, // Increased from 100ms to 200ms to reduce noise
-    frameRate: 55 // Minimum acceptable FPS
+    renderTime: 50, // INCREASED: From 16ms to 50ms
+    interactionLatency: 200, // INCREASED: From 100ms to 200ms
+    memoryUsage: 500, // INCREASED: From 200MB to 500MB
+    frameRate: 30 // REDUCED: From 55 to 30 FPS minimum
   };
-  private lastWarningTime = new Map<string, number>(); // Throttle warnings
-  private readonly WARNING_THROTTLE_MS = 10000; // 10 seconds between similar warnings
+  private lastWarningTime = new Map<string, number>();
+  private readonly WARNING_THROTTLE_MS = 30000; // INCREASED: From 10s to 30s
 
   constructor() {
-    // Only enable in development or when explicitly requested
-    this.isEnabled = process.env.NODE_ENV === 'development' || 
+    // Only enable when explicitly requested in development
+    this.isEnabled = process.env.NODE_ENV === 'development' && 
                      typeof window !== 'undefined' && 
-                     (window as any).__ENABLE_PERFORMANCE_MONITORING;
+                     (window as any).__ENABLE_PERFORMANCE_MONITORING === true;
   }
 
   /**
@@ -61,22 +61,25 @@ class PerformanceMonitorImpl {
 
     this.metrics.push(metric);
     
-    // Maintain metric history size
     if (this.metrics.length > this.maxMetrics) {
       this.metrics = this.metrics.slice(-this.maxMetrics);
     }
 
-    // Notify observers
-    this.observers.forEach(callback => {
-      try {
-        callback(metric);
-      } catch (error) {
-        console.warn('Performance observer error:', error);
-      }
-    });
+    // Only notify observers for critical metrics
+    if (value > this.getThresholdForMetric(name) * 2) {
+      this.observers.forEach(callback => {
+        try {
+          callback(metric);
+        } catch (error) {
+          // Silently ignore observer errors in production
+        }
+      });
+    }
 
-    // Check thresholds and warn if exceeded (with throttling)
-    this.checkThresholds(metric);
+    // Only check thresholds for critical metrics
+    if (this.isCriticalMetric(name)) {
+      this.checkThresholds(metric);
+    }
   }
 
   /**
@@ -111,7 +114,6 @@ class PerformanceMonitorImpl {
       try {
         const result = fn(...args);
         
-        // Handle promises
         if (result && typeof result.then === 'function') {
           return result.finally(() => endTiming());
         }
@@ -132,10 +134,15 @@ class PerformanceMonitorImpl {
     if (!this.isEnabled || !(performance as any).memory) return;
 
     const memory = (performance as any).memory;
-    this.recordMetric('memoryUsage', memory.usedJSHeapSize / 1024 / 1024, 'memory', {
-      totalJSHeapSize: memory.totalJSHeapSize,
-      jsHeapSizeLimit: memory.jsHeapSizeLimit
-    });
+    const usageMB = memory.usedJSHeapSize / 1024 / 1024;
+    
+    // Only record if usage is high to reduce noise
+    if (usageMB > 200) {
+      this.recordMetric('memoryUsage', usageMB, 'memory', {
+        totalJSHeapSize: memory.totalJSHeapSize,
+        jsHeapSizeLimit: memory.jsHeapSizeLimit
+      });
+    }
   }
 
   /**
@@ -160,7 +167,7 @@ class PerformanceMonitorImpl {
   /**
    * Get average metric value over time period
    */
-  getAverageMetric(name: string, timeWindowMs: number = 5000): number {
+  getAverageMetric(name: string, timeWindowMs: number = 10000): number {
     const now = performance.now();
     const relevantMetrics = this.metrics.filter(m => 
       m.name === name && (now - m.timestamp) <= timeWindowMs
@@ -204,6 +211,22 @@ class PerformanceMonitorImpl {
     }
   }
 
+  // Helper method to get threshold for a metric
+  private getThresholdForMetric(name: string): number {
+    switch (name) {
+      case 'renderTime': return this.thresholds.renderTime;
+      case 'interactionLatency': return this.thresholds.interactionLatency;
+      case 'memoryUsage': return this.thresholds.memoryUsage;
+      case 'frameRate': return this.thresholds.frameRate;
+      default: return Infinity; // No threshold
+    }
+  }
+
+  // Helper method to determine if a metric is critical
+  private isCriticalMetric(name: string): boolean {
+    return ['memoryUsage', 'renderTime', 'interactionLatency'].includes(name);
+  }
+
   /**
    * Check if metric exceeds thresholds (with throttling)
    */
@@ -221,9 +244,8 @@ class PerformanceMonitorImpl {
         threshold = this.thresholds.memoryUsage;
         break;
       case 'frameRate':
-        // Frame rate threshold is inverse (lower is worse)
         if (metric.value < this.thresholds.frameRate) {
-          this.throttledWarning(metric.name, `⚠️ Low frame rate detected: ${metric.value.toFixed(2)} FPS`);
+          this.throttledWarning(metric.name, `Low frame rate: ${metric.value.toFixed(2)} FPS`);
         }
         return;
     }
@@ -231,7 +253,7 @@ class PerformanceMonitorImpl {
     if (threshold && metric.value > threshold) {
       this.throttledWarning(
         metric.name, 
-        `⚠️ Performance threshold exceeded for ${metric.name}: ${metric.value.toFixed(2)}ms (threshold: ${threshold}ms)`
+        `Performance threshold exceeded for ${metric.name}: ${metric.value.toFixed(2)}ms`
       );
     }
   }
@@ -244,7 +266,7 @@ class PerformanceMonitorImpl {
     const lastWarning = this.lastWarningTime.get(key);
     
     if (!lastWarning || (now - lastWarning) > this.WARNING_THROTTLE_MS) {
-      console.warn(message);
+      console.warn(`⚠️ ${message} (threshold: ${this.getThresholdForMetric(key)})`);
       this.lastWarningTime.set(key, now);
     }
   }
@@ -263,7 +285,7 @@ class PerformanceMonitorImpl {
     recentMetrics: PerformanceMetric[];
   } {
     const now = performance.now();
-    const recentMetrics = this.metrics.filter(m => now - m.timestamp <= 30000); // Last 30 seconds
+    const recentMetrics = this.metrics.filter(m => now - m.timestamp <= 60000); // Last 60 seconds
 
     const categories = this.metrics.reduce((acc, metric) => {
       acc[metric.category] = (acc[metric.category] || 0) + 1;
@@ -273,7 +295,7 @@ class PerformanceMonitorImpl {
     const renderMetrics = this.metrics.filter(m => m.category === 'render');
     const slowestOperations = renderMetrics
       .sort((a, b) => b.value - a.value)
-      .slice(0, 5)
+      .slice(0, 3) // Reduced from 5 to 3
       .map(m => ({ name: m.name, time: m.value }));
 
     return {

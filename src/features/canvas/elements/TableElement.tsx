@@ -6,6 +6,7 @@ import { CanvasElement, ElementId, TableElement as TableElementType } from '../t
 import { isTableElement } from '../types/enhanced.types';
 import { CanvasTextInput } from '../components/ui/CanvasTextInput';
 import { useRafThrottle } from '../utils/useRafThrottle';
+import { canvasLog } from '../utils/canvasLogger';
 
 interface TableElementProps {
   element: CanvasElement;
@@ -60,26 +61,37 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     
     const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
     
+    // Create a stable throttled function reference to prevent memory leaks
+    const throttledForceUpdateRef = useRef<(() => void) | null>(null);
+    
     // Throttled force update function to prevent excessive re-renders during zoom/pan
     const throttledForceUpdate = useRafThrottle(() => {
       // Use ref to get the latest isDragging state and avoid stale closures.
       if (!editingCell && !isDraggingRef.current) {
-        console.log('🔄 [TableElement] Throttled force update');
+        canvasLog.table('🔄 [TableElement] Throttled force update');
         setForceUpdateCounter(c => c + 1);
       } else {
-        console.log('🚫 [TableElement] Skipping throttled update - cell being edited or table is being dragged');
+        canvasLog.table('🚫 [TableElement] Skipping throttled update - cell being edited or table is being dragged');
       }
     });
-    
-    // Force update when table data changes, but NEVER while editing
+
+    // Keep throttled function ref up to date
     useEffect(() => {
-      // COMPLETELY SKIP ALL FORCE UPDATES WHILE EDITING
+      throttledForceUpdateRef.current = throttledForceUpdate;
+    }, [throttledForceUpdate]);
+    
+    // Force update when table data changes, but NEVER while editing - with smart comparison
+    useEffect(() => {
+            // COMPLETELY SKIP ALL FORCE UPDATES WHILE EDITING
       if (editingCell) {
-        console.log('🚫 [TableElement] Skipping force update - cell is being edited');
+        canvasLog.table('🚫 [TableElement] Skipping force update - cell is being edited');
         return;
       }
       
-      console.log('🔄 [TableElement] Force update triggered');
+      // Smart data comparison will be handled by React's built-in comparison
+      // since latestTableData reference changes only when data actually changes
+      
+      canvasLog.table('🔄 [TableElement] Force update triggered');
       setForceUpdateCounter(prev => prev + 1);
     }, [latestTableData, editingCell]);
 
@@ -92,29 +104,30 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
         
         // If the current editing cell is now out of bounds, adjust or stop editing
         if (row > maxRow || col > maxCol) {
-          console.log('📊 [TableElement] Cell editor out of bounds after structure change, stopping edit');
+          canvasLog.table('📊 [TableElement] Cell editor out of bounds after structure change, stopping edit');
           setEditingCell(null);
         }
       }
     }, [editingCell, latestTableData?.rows.length, latestTableData?.columns.length]);
     
-    // While a cell is being edited or table is being dragged, disable transform listeners to prevent render loops.
+    // FIXED: Use stable event handler reference to prevent memory leaks
     useEffect(() => {
       // Don't attach transform listeners while editing to prevent constant re-renders
       if (editingCell !== null || isDragging) return;
       
-      if (!stageRef.current || !groupRef.current) return;
+      if (!stageRef.current || !groupRef.current || !throttledForceUpdateRef.current) return;
       const stage = stageRef.current;
       const group = groupRef.current;
+      const handler = throttledForceUpdateRef.current;
 
-      stage.on('scale change dragmove transform', throttledForceUpdate);
-      group.on('transform', throttledForceUpdate);
+      stage.on('scale change dragmove transform', handler);
+      group.on('transform', handler);
 
       return () => {
-        stage.off('scale change dragmove transform', throttledForceUpdate);
-        group.off('transform', throttledForceUpdate);
+        stage.off('scale change dragmove transform', handler);
+        group.off('transform', handler);
       };
-    }, [editingCell, isDragging, stageRef, throttledForceUpdate]);
+    }, [editingCell, isDragging, stageRef]); // Removed throttledForceUpdate from deps to prevent re-runs
 
     // Safe cell access function - READ ONLY, no mutations
     const getCellData = (rowIndex: number, colIndex: number) => {
@@ -183,26 +196,26 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     // Canvas-native cell editing with proper tab navigation
     const handleCellSave = useCallback((newText: string, clearEditing: boolean = true) => {
       if (!editingCell) return;
-      console.log(`🎯 [TableElement] handleCellSave called for cell (${editingCell.row}, ${editingCell.col}) with text: "${newText}", clearEditing: ${clearEditing}`);
+      canvasLog.table(`🎯 [TableElement] handleCellSave called for cell (${editingCell.row}, ${editingCell.col}) with text: "${newText}", clearEditing: ${clearEditing}`);
       updateTableCell(tableId, editingCell.row, editingCell.col, newText);
       if (clearEditing) {
         setEditingCell(null);
         setSelectedTool('select');
-        console.log('🎯 [TableElement] Cell saved, editingCell cleared, tool set to select');
+        canvasLog.table('🎯 [TableElement] Cell saved, editingCell cleared, tool set to select');
       } else {
-        console.log('🎯 [TableElement] Cell saved, keeping editingCell for navigation');
+        canvasLog.table('🎯 [TableElement] Cell saved, keeping editingCell for navigation');
       }
     }, [editingCell, tableId, updateTableCell, setSelectedTool]);
 
     const handleTabNavigation = useCallback((backward: boolean = false, currentText?: string) => {
       if (!editingCell) return;
       
-      console.log(`🎯 [TableElement] Tab navigation called: current=(${editingCell.row}, ${editingCell.col}), backward=${backward}, text="${currentText}"`);
+      canvasLog.table(`🎯 [TableElement] Tab navigation called: current=(${editingCell.row}, ${editingCell.col}), backward=${backward}, text="${currentText}"`);
       
       // Save the current cell's text first if provided
       if (currentText !== undefined) {
         updateTableCell(tableId, editingCell.row, editingCell.col, currentText);
-        console.log(`🎯 [TableElement] Saved current cell text: "${currentText}"`);
+        canvasLog.table(`🎯 [TableElement] Saved current cell text: "${currentText}"`);
       }
       
       const currentRow = editingCell.row;
@@ -228,10 +241,10 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
       
       // Move to next cell if different
       if (nextRow !== currentRow || nextCol !== currentCol) {
-        console.log(`🎯 [TableElement] Moving to next cell: (${nextRow}, ${nextCol})`);
+        canvasLog.table(`🎯 [TableElement] Moving to next cell: (${nextRow}, ${nextCol})`);
         setEditingCell({ row: nextRow, col: nextCol });
       } else {
-        console.log('🎯 [TableElement] No more cells, stopping editing');
+        canvasLog.table('🎯 [TableElement] No more cells, stopping editing');
         setEditingCell(null);
         setSelectedTool('select');
       }
@@ -657,12 +670,9 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
             rotateEnabled={false}
             borderStroke="#3B82F6"
             borderStrokeWidth={2}
-            borderDash={[5, 5]}
             anchorStroke="#3B82F6"
             anchorFill="#ffffff"
             anchorSize={8}
-            anchorStrokeWidth={2}
-            ignoreStroke={true}
           />
         )}
       </>
