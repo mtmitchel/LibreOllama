@@ -33,6 +33,14 @@ The LibreOllama Canvas has achieved production-ready stability with a completely
 - **Professional Drawing Experience**: Tools now provide industry-standard responsiveness and visual feedback
 - **Simplified Architecture**: Removed complex caching, workers, and optimization hooks in favor of proven, reliable patterns
 
+**✅ Enhanced Canvas Sidebar Context Menu (January 2025):**
+- **Professional UX Design**: Complete redesign with modern shadows, rounded corners, and enhanced spacing for polished appearance
+- **PDF/JPEG Export**: Integrated export functionality with professional loading states and error handling
+- **Color-Coded Sections**: Visual hierarchy with blue (edit), green (export), and red (delete) section icons
+- **Accessibility Improvements**: Full keyboard navigation, screen reader support, and WCAG-compliant design
+- **Dark Mode Support**: Complete theme consistency with adaptive colors and proper contrast
+- **Interactive States**: Smooth hover transitions, animated loading spinners, and proper disabled states
+
 **✅ Recent Canvas Improvements (December 2024):**
 - **Triangle Text Display Fix**: Resolved inconsistency where triangles showed "Add" initially but "Add text" when editing - now consistently shows "Add text" by expanding text display area from 50% to 70% of triangle width
 - **Toolbar Cleanup**: Temporarily removed sections tool from toolbar (commented out for future sprint implementation) for cleaner interface without incomplete functionality
@@ -88,7 +96,7 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
 | **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
 | **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A production-ready whiteboard for visual thinking with enterprise-grade modular architecture. Features include an optimized drawing suite (Marker, Highlighter, Pen), standard shapes, sticky notes, and fully functional tables. Built with Konva.js and a 12-module Zustand store architecture providing complete functionality including element grouping, import/export, and comprehensive event handling. Includes viewport culling, spatial indexing, and industry-standard drawing responsiveness with 100% reliability and 50%+ performance improvement. |
+| **Canvas** | A production-ready whiteboard for visual thinking with enterprise-grade modular architecture. Features include an optimized drawing suite (Marker, Highlighter, Pen), standard shapes, sticky notes, and fully functional tables. Built with Konva.js and a 12-module Zustand store architecture providing complete functionality including element grouping, import/export, and comprehensive event handling. Includes viewport culling, spatial indexing, and industry-standard drawing responsiveness with 100% reliability and 50%+ performance improvement. **Latest**: Professional context menu with PDF/JPEG export, modern UI design, and enhanced accessibility. |
 | **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
 | **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
 | **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |

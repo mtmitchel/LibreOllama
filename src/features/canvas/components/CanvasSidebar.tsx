@@ -9,10 +9,16 @@ import {
   PanelLeftClose,
   PanelRightClose,
   Shapes,
-  Text
+  Text,
+  FileImage,
+  FileText,
+  Download,
+  Share2
 } from "lucide-react";
 import { Button, Input } from "../../../components/ui";
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { exportCanvasAsJPEG, exportCanvasAsPDF, getSuggestedFilename } from '../utils/exportUtils';
+import Konva from 'konva';
 
 interface CanvasItem {
   id: string;
@@ -26,15 +32,17 @@ interface CanvasItem {
 interface CanvasSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  stageRef?: React.RefObject<Konva.Stage | null>;
 }
 
-const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
+const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRef }) => {
   const [canvases, setCanvases] = useState<CanvasItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCanvasId, setSelectedCanvasId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   const elements = useUnifiedCanvasStore(state => state.elements);
   // TODO: Implement clearCanvas in unified store
@@ -248,6 +256,65 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
     setEditingName("");
   };
 
+  const handleExportAsJPEG = async (canvasId: string) => {
+    if (!stageRef?.current || isExporting) return;
+    
+    const canvas = canvases.find(c => c.id === canvasId);
+    if (!canvas) return;
+
+    setIsExporting(true);
+    setMenuOpenId(null);
+
+    try {
+      const filename = getSuggestedFilename(canvas.name, 'jpg');
+      const result = await exportCanvasAsJPEG(stageRef.current, filename, {
+        quality: 0.95,
+        scale: 2,
+        padding: 20,
+        backgroundColor: '#ffffff'
+      });
+
+      if (result.success) {
+        alert(`Canvas exported successfully as ${result.filename}`);
+      } else {
+        alert(`Export failed: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportAsPDF = async (canvasId: string) => {
+    if (!stageRef?.current || isExporting) return;
+    
+    const canvas = canvases.find(c => c.id === canvasId);
+    if (!canvas) return;
+
+    setIsExporting(true);
+    setMenuOpenId(null);
+
+    try {
+      const filename = getSuggestedFilename(canvas.name, 'pdf');
+      const result = await exportCanvasAsPDF(stageRef.current, filename, {
+        scale: 2,
+        padding: 20,
+        backgroundColor: '#ffffff'
+      });
+
+      if (result.success) {
+        alert(`Canvas exported successfully as ${result.filename}`);
+      } else {
+        alert(`Export failed: ${result.error}`);
+      }
+    } catch (error) {
+      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -350,17 +417,111 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
                     <MoreVertical size={16} />
                   </Button>
                   {menuOpenId === canvas.id && (
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-bg-elevated border border-border-subtle rounded-lg shadow-lg z-10 py-1">
-                      <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => handleRenameCanvas(canvas.id)}>
-                        <Edit2 size={14} className="mr-2" /> Rename
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => handleDuplicateCanvas(canvas.id)}>
-                        <Copy size={14} className="mr-2" /> Duplicate
-                      </Button>
-                      <div className="my-1 h-px bg-border-subtle"></div>
-                      <Button variant="ghost" className="w-full justify-start text-sm text-error hover:text-error hover:bg-error/10" onClick={() => handleDeleteCanvas(canvas.id)}>
-                        <Trash2 size={14} className="mr-2" /> Delete
-                      </Button>
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 py-2 backdrop-blur-sm"
+                         style={{
+                           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                         }}>
+                      
+                      {/* Edit Section */}
+                      <div className="px-4 py-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Edit2 size={12} className="text-blue-500" />
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Edit
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          <button 
+                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150"
+                            onClick={() => handleRenameCanvas(canvas.id)}
+                          >
+                            <Edit2 size={16} className="text-gray-500 dark:text-gray-400" />
+                            <span className="font-medium">Rename</span>
+                          </button>
+                          <button 
+                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150"
+                            onClick={() => handleDuplicateCanvas(canvas.id)}
+                          >
+                            <Copy size={16} className="text-gray-500 dark:text-gray-400" />
+                            <span className="font-medium">Duplicate</span>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-600 to-transparent mx-2"></div>
+                      
+                      {/* Export Section */}
+                      <div className="px-4 py-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Download size={12} className="text-green-500" />
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            Export
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          <button 
+                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
+                              isExporting || !stageRef?.current
+                                ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                                : 'text-gray-700 dark:text-gray-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300'
+                            }`}
+                            onClick={() => handleExportAsJPEG(canvas.id)}
+                            disabled={isExporting || !stageRef?.current}
+                          >
+                            <FileImage size={16} className={`${
+                              isExporting || !stageRef?.current
+                                ? 'text-gray-400 dark:text-gray-500' 
+                                : 'text-green-500'
+                            }`} />
+                            <span className="font-medium">
+                              {isExporting ? 'Exporting...' : 'Export as JPEG'}
+                            </span>
+                            {isExporting && (
+                              <div className="ml-auto">
+                                <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                            )}
+                          </button>
+                          <button 
+                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
+                              isExporting || !stageRef?.current
+                                ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                                : 'text-gray-700 dark:text-gray-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300'
+                            }`}
+                            onClick={() => handleExportAsPDF(canvas.id)}
+                            disabled={isExporting || !stageRef?.current}
+                          >
+                            <FileText size={16} className={`${
+                              isExporting || !stageRef?.current
+                                ? 'text-gray-400 dark:text-gray-500' 
+                                : 'text-red-500'
+                            }`} />
+                            <span className="font-medium">
+                              {isExporting ? 'Exporting...' : 'Export as PDF'}
+                            </span>
+                            {isExporting && (
+                              <div className="ml-auto">
+                                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-600 to-transparent mx-2"></div>
+                      
+                      {/* Delete Section */}
+                      <div className="px-4 py-2">
+                        <button 
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-colors duration-150"
+                          onClick={() => handleDeleteCanvas(canvas.id)}
+                        >
+                          <Trash2 size={16} className="text-red-500" />
+                          <span className="font-medium">Delete Canvas</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
