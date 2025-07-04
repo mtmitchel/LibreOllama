@@ -49,7 +49,7 @@ export const createStickyNoteModule = (
               ...stickyNote,
               isContainer: true,
               childElementIds: stickyNote.childElementIds || [],
-              allowedChildTypes: options.allowedTypes || ['pen', 'marker', 'highlighter', 'text', 'connector', 'image', 'table'],
+              allowedChildTypes: options.allowedTypes || ['pen', 'marker', 'highlighter', 'text', 'rich-text', 'connector', 'image', 'table'],
               clipChildren: options.clipChildren ?? true,
               maxChildElements: options.maxChildren || 20
             };
@@ -237,7 +237,7 @@ export const createStickyNoteModule = (
           fontFamily: 'Inter, sans-serif',
           isContainer: true,
           childElementIds: [],
-          allowedChildTypes: ['pen', 'marker', 'highlighter', 'text', 'connector', 'image', 'table'],
+          allowedChildTypes: ['pen', 'marker', 'highlighter', 'text', 'rich-text', 'connector', 'image', 'table'],
           clipChildren: true,
           maxChildElements: 10,
           createdAt: Date.now(),

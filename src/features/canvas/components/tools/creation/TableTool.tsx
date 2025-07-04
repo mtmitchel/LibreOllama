@@ -17,6 +17,8 @@ interface TableToolProps {
 }
 
 export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
   // Store actions using grouped selectors for optimization
   const toolActions = useUnifiedCanvasStore(
     useShallow((state) => ({

@@ -8,9 +8,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { ConnectorTool } from '../components/tools/creation/ConnectorTool';
-import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
+import { createUnifiedTestStore } from '../../../tests/helpers/createUnifiedTestStore';
 import type { ConnectorElement } from '../types/enhanced.types';
 import { ElementId } from '../types/enhanced.types';
+import { CanvasTestWrapper } from '../../../tests/helpers/CanvasTestWrapper';
+import { UnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+
+// Mock Konva
+vi.mock('konva');
+vi.mock('react-konva', () => ({
+  Line: ({ children, ...props }: any) => <div data-testid="line" {...props}>{children}</div>,
+  Arrow: ({ children, ...props }: any) => <div data-testid="arrow" {...props}>{children}</div>,
+  Group: ({ children, ...props }: any) => <div data-testid="group" {...props}>{children}</div>,
+  Stage: ({ children, ...props }: any) => <div data-testid="stage" {...props}>{children}</div>,
+  Layer: ({ children, ...props }: any) => <div data-testid="layer" {...props}>{children}</div>,
+}));
 
 // Mock Konva Stage for UI tests
 const mockStage = {
@@ -24,7 +36,18 @@ const mockStage = {
       })
     })
   })),
-  getStage: vi.fn().mockReturnValue(undefined)
+  getStage: vi.fn().mockReturnValue(undefined),
+  container: vi.fn().mockReturnValue({ 
+    style: {},
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
+  }),
+  width: vi.fn().mockReturnValue(800),
+  height: vi.fn().mockReturnValue(600),
+  scaleX: vi.fn().mockReturnValue(1),
+  scaleY: vi.fn().mockReturnValue(1),
+  x: vi.fn().mockReturnValue(0),
+  y: vi.fn().mockReturnValue(0),
+  id: vi.fn().mockReturnValue('')
 };
 
 const mockStageRef = {
@@ -40,7 +63,7 @@ describe('ConnectorTool', () => {
   describe('Basic Functionality', () => {
     it('should render when active', () => {
       const { container } = render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={true}
           stageRef={mockStageRef}
           connectorType="line"
@@ -53,7 +76,7 @@ describe('ConnectorTool', () => {
 
     it('should not render when inactive', () => {
       const { container } = render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={false}
           stageRef={mockStageRef}
           connectorType="line"
@@ -66,7 +89,7 @@ describe('ConnectorTool', () => {
 
     it('should register event handlers when active', () => {
       render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={true}
           stageRef={mockStageRef}
           connectorType="line"
@@ -74,14 +97,16 @@ describe('ConnectorTool', () => {
       );
 
       // Check that event handlers are registered (using actual event names)
-      expect(mockStage.on).toHaveBeenCalledWith('mousedown', expect.any(Function));
-      expect(mockStage.on).toHaveBeenCalledWith('mousemove', expect.any(Function));
-      expect(mockStage.on).toHaveBeenCalledWith('mouseup', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointermove', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointerup', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointerleave', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointerenter', expect.any(Function));
     });
 
     it('should clean up event handlers on unmount', () => {
       const { unmount } = render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={true}
           stageRef={mockStageRef}
           connectorType="line"
@@ -90,66 +115,71 @@ describe('ConnectorTool', () => {
 
       unmount();
 
-      expect(mockStage.off).toHaveBeenCalledWith('mousedown', expect.any(Function));
-      expect(mockStage.off).toHaveBeenCalledWith('mousemove', expect.any(Function));
-      expect(mockStage.off).toHaveBeenCalledWith('mouseup', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointermove', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointerup', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointerleave', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointerenter', expect.any(Function));
     });
   });
 
   describe('Connector Creation', () => {
     it('should start connector creation on first click', () => {
       render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={true}
           stageRef={mockStageRef}
           connectorType="line"
         />
       );
 
-      // Get the registered mousedown handler
-      const mouseDownHandler = mockStage.on.mock.calls.find(
-        call => call[0] === 'mousedown'
+      // Get the pointer down handler
+      const pointerDownHandler = mockStage.on.mock.calls.find(
+        (call: any) => call[0] === 'pointerdown'
       )?.[1];
 
-             // First click to start connector
-       mouseDownHandler({
-         target: { ...mockStage, getStage: () => mockStage },
-         evt: { clientX: 100, clientY: 100 }
-       });
+      expect(pointerDownHandler).toBeDefined();
 
-      // Should have started drawing (component state is internal, so we can't directly test it)
-      // But we can verify the handler was called without errors
-      expect(mouseDownHandler).toBeDefined();
+      // First click to start connector
+      pointerDownHandler({
+        target: { ...mockStage, getStage: () => mockStage },
+        evt: { clientX: 100, clientY: 100 },
+        cancelBubble: false
+      });
+
+      // Check that the tool is now in creation mode
+      expect(mockStage.getPointerPosition).toHaveBeenCalled();
     });
 
     it('should create connector with correct properties', () => {
       render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={true}
           stageRef={mockStageRef}
           connectorType="arrow"
         />
       );
 
-      // Get the registered handlers
-      const mouseDownHandler = mockStage.on.mock.calls.find(
-        call => call[0] === 'mousedown'
+      // Get the pointer down handler
+      const pointerDownHandler = mockStage.on.mock.calls.find(
+        (call: any) => call[0] === 'pointerdown'
       )?.[1];
 
-             mouseDownHandler({
-         target: { ...mockStage, getStage: () => mockStage },
-         evt: { clientX: 150, clientY: 150 }
-       });
+      pointerDownHandler({
+        target: { ...mockStage, getStage: () => mockStage },
+        evt: { clientX: 150, clientY: 150 },
+        cancelBubble: false
+      });
 
-      // Should handle the mouse down event without errors
-      expect(mouseDownHandler).toBeDefined();
+      // Should handle the event without errors
+      expect(pointerDownHandler).toBeDefined();
     });
 
     it('should handle missing stage gracefully', () => {
       const nullStageRef = { current: null };
       
       const { container } = render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={true}
           stageRef={nullStageRef}
           connectorType="line"
@@ -162,26 +192,27 @@ describe('ConnectorTool', () => {
 
     it('should handle clicks on empty space', () => {
       render(
-        <ConnectorTool
+        <ConnectorTool 
           isActive={true}
           stageRef={mockStageRef}
           connectorType="line"
         />
       );
 
-      // Get the registered mousedown handler
-      const mouseDownHandler = mockStage.on.mock.calls.find(
-        call => call[0] === 'mousedown'
+      // Get the pointer down handler
+      const pointerDownHandler = mockStage.on.mock.calls.find(
+        (call: any) => call[0] === 'pointerdown'
       )?.[1];
 
-             // Click on empty space
-       mouseDownHandler({
-         target: { ...mockStage, getStage: () => mockStage },
-         evt: { clientX: 100, clientY: 100 }
-       });
+      // Click on empty space
+      pointerDownHandler({
+        target: { ...mockStage, getStage: () => mockStage },
+        evt: { clientX: 100, clientY: 100 },
+        cancelBubble: false
+      });
 
       // Should handle the click without errors
-      expect(mouseDownHandler).toBeDefined();
+      expect(pointerDownHandler).toBeDefined();
     });
   });
 });
@@ -576,6 +607,235 @@ describe('Connector Functionality (Store-First)', () => {
       store.getState().addElement(connector);
       expect(store.getState().elements.size).toBe(1);
       expect(store.getState().selectedTool).toBe('connector-line');
+    });
+  });
+
+  describe('Connector Endpoint Editing (FigJam-style)', () => {
+    it('should update start point without affecting end point', () => {
+      const connector: ConnectorElement = {
+        id: ElementId('endpoint-edit-1'),
+        type: 'connector',
+        subType: 'line',
+        x: 0,
+        y: 0,
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 100, y: 100 },
+        intermediatePoints: [],
+        stroke: '#000000',
+        strokeWidth: 2,
+        connectorStyle: {
+          strokeColor: '#000000',
+          strokeWidth: 2,
+          endArrow: 'none',
+          startArrow: 'none'
+        },
+        pathPoints: [0, 0, 100, 100],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      store.getState().addElement(connector);
+
+      // Update start point (simulating start handle drag)
+      const newStartPoint = { x: 50, y: 25 };
+      const newEndPoint = { x: 100, y: 100 }; // Keep end point unchanged
+      
+      store.getState().updateElement(connector.id, {
+        startPoint: newStartPoint,
+        endPoint: newEndPoint,
+        pathPoints: [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y],
+        x: Math.min(newStartPoint.x, newEndPoint.x),
+        y: Math.min(newStartPoint.y, newEndPoint.y)
+      });
+
+      const updatedConnector = store.getState().elements.get(connector.id) as any;
+      expect(updatedConnector.startPoint).toEqual({ x: 50, y: 25 });
+      expect(updatedConnector.endPoint).toEqual({ x: 100, y: 100 }); // Should remain unchanged
+      expect(updatedConnector.pathPoints).toEqual([50, 25, 100, 100]);
+    });
+
+    it('should update end point without affecting start point', () => {
+      const connector: ConnectorElement = {
+        id: ElementId('endpoint-edit-2'),
+        type: 'connector',
+        subType: 'arrow',
+        x: 0,
+        y: 0,
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 100, y: 100 },
+        intermediatePoints: [],
+        stroke: '#000000',
+        strokeWidth: 2,
+        connectorStyle: {
+          strokeColor: '#000000',
+          strokeWidth: 2,
+          endArrow: 'solid',
+          startArrow: 'none'
+        },
+        pathPoints: [0, 0, 100, 100],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      store.getState().addElement(connector);
+
+      // Update end point (simulating end handle drag)
+      const newStartPoint = { x: 0, y: 0 }; // Keep start point unchanged
+      const newEndPoint = { x: 150, y: 75 };
+      
+      store.getState().updateElement(connector.id, {
+        startPoint: newStartPoint,
+        endPoint: newEndPoint,
+        pathPoints: [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y],
+        x: Math.min(newStartPoint.x, newEndPoint.x),
+        y: Math.min(newStartPoint.y, newEndPoint.y)
+      });
+
+      const updatedConnector = store.getState().elements.get(connector.id) as any;
+      expect(updatedConnector.startPoint).toEqual({ x: 0, y: 0 }); // Should remain unchanged
+      expect(updatedConnector.endPoint).toEqual({ x: 150, y: 75 });
+      expect(updatedConnector.pathPoints).toEqual([0, 0, 150, 75]);
+    });
+
+    it('should recalculate bounding box when endpoints change', () => {
+      const connector: ConnectorElement = {
+        id: ElementId('bounding-box-test'),
+        type: 'connector',
+        subType: 'line',
+        x: 50,
+        y: 50,
+        startPoint: { x: 50, y: 50 },
+        endPoint: { x: 150, y: 150 },
+        intermediatePoints: [],
+        stroke: '#000000',
+        strokeWidth: 2,
+        connectorStyle: {
+          strokeColor: '#000000',
+          strokeWidth: 2,
+          endArrow: 'none',
+          startArrow: 'none'
+        },
+        pathPoints: [50, 50, 150, 150],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      store.getState().addElement(connector);
+
+      // Move endpoints to new positions that change the bounding box
+      const newStartPoint = { x: 25, y: 75 };
+      const newEndPoint = { x: 175, y: 25 };
+      
+      store.getState().updateElement(connector.id, {
+        startPoint: newStartPoint,
+        endPoint: newEndPoint,
+        pathPoints: [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y],
+        // Bounding box should be recalculated as min of all coordinates
+        x: Math.min(newStartPoint.x, newEndPoint.x), // min(25, 175) = 25
+        y: Math.min(newStartPoint.y, newEndPoint.y)  // min(75, 25) = 25
+      });
+
+      const updatedConnector = store.getState().elements.get(connector.id) as any;
+      expect(updatedConnector.x).toBe(25);
+      expect(updatedConnector.y).toBe(25);
+      expect(updatedConnector.startPoint).toEqual({ x: 25, y: 75 });
+      expect(updatedConnector.endPoint).toEqual({ x: 175, y: 25 });
+    });
+
+    it('should handle extreme endpoint positions correctly', () => {
+      const connector: ConnectorElement = {
+        id: ElementId('extreme-positions'),
+        type: 'connector',
+        subType: 'arrow',
+        x: 0,
+        y: 0,
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 100, y: 100 },
+        intermediatePoints: [],
+        stroke: '#000000',
+        strokeWidth: 2,
+        connectorStyle: {
+          strokeColor: '#000000',
+          strokeWidth: 2,
+          endArrow: 'solid',
+          startArrow: 'none'
+        },
+        pathPoints: [0, 0, 100, 100],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      store.getState().addElement(connector);
+
+      // Test with negative coordinates and large distances
+      const newStartPoint = { x: -100, y: -50 };
+      const newEndPoint = { x: 500, y: 300 };
+      
+      store.getState().updateElement(connector.id, {
+        startPoint: newStartPoint,
+        endPoint: newEndPoint,
+        pathPoints: [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y],
+        x: Math.min(newStartPoint.x, newEndPoint.x),
+        y: Math.min(newStartPoint.y, newEndPoint.y)
+      });
+
+      const updatedConnector = store.getState().elements.get(connector.id) as any;
+      expect(updatedConnector.startPoint).toEqual({ x: -100, y: -50 });
+      expect(updatedConnector.endPoint).toEqual({ x: 500, y: 300 });
+      expect(updatedConnector.x).toBe(-100); // Minimum x coordinate
+      expect(updatedConnector.y).toBe(-50);  // Minimum y coordinate
+      expect(updatedConnector.pathPoints).toEqual([-100, -50, 500, 300]);
+    });
+
+    it('should preserve connector type and style during endpoint editing', () => {
+      const connector: ConnectorElement = {
+        id: ElementId('preserve-style'),
+        type: 'connector',
+        subType: 'arrow',
+        x: 0,
+        y: 0,
+        startPoint: { x: 0, y: 0 },
+        endPoint: { x: 100, y: 100 },
+        intermediatePoints: [],
+        stroke: '#ff0000',
+        strokeWidth: 4,
+        connectorStyle: {
+          strokeColor: '#ff0000',
+          strokeWidth: 4,
+          endArrow: 'solid',
+          startArrow: 'none'
+        },
+        pathPoints: [0, 0, 100, 100],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      store.getState().addElement(connector);
+
+      // Update endpoints while preserving style
+      const newStartPoint = { x: 20, y: 30 };
+      const newEndPoint = { x: 80, y: 70 };
+      
+      store.getState().updateElement(connector.id, {
+        startPoint: newStartPoint,
+        endPoint: newEndPoint,
+        pathPoints: [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y],
+        x: Math.min(newStartPoint.x, newEndPoint.x),
+        y: Math.min(newStartPoint.y, newEndPoint.y)
+      });
+
+      const updatedConnector = store.getState().elements.get(connector.id) as any;
+      
+      // Endpoints should be updated
+      expect(updatedConnector.startPoint).toEqual({ x: 20, y: 30 });
+      expect(updatedConnector.endPoint).toEqual({ x: 80, y: 70 });
+      
+      // Style properties should be preserved
+      expect(updatedConnector.subType).toBe('arrow');
+      expect(updatedConnector.stroke).toBe('#ff0000');
+      expect(updatedConnector.strokeWidth).toBe(4);
+      expect(updatedConnector.connectorStyle.endArrow).toBe('solid');
+      expect(updatedConnector.connectorStyle.strokeColor).toBe('#ff0000');
     });
   });
 }); 

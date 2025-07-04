@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
 import { ElementId, CanvasElement, isTableElement, isConnectorElement } from '../../types/enhanced.types';
+import { useCursorManager } from '../../utils/performance/cursorManager';
 
 type CustomTransformerProps = {
   selectedNodeIds: ElementId[];
@@ -19,11 +20,14 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
   const [isRotating, setIsRotating] = useState(false);
   const [showRotationHandle, setShowRotationHandle] = useState(false);
   const [rotationStart, setRotationStart] = useState<{ angle: number; nodeRotation: number } | null>(null);
-  const { elements, updateElement, addToHistory } = useUnifiedCanvasStore(useShallow((state) => ({
+  const { elements, updateElement, addToHistory, selectedTool } = useUnifiedCanvasStore(useShallow((state) => ({
     elements: state.elements,
     updateElement: state.updateElement,
-    addToHistory: state.addToHistory
+    addToHistory: state.addToHistory,
+    selectedTool: state.selectedTool
   })));
+  
+  const cursorManager = useCursorManager();
 
   // Exclude table and connector elements - they handle their own selection/transformation
   const filteredSelectedNodeIds = selectedNodeIds.filter(id => {
@@ -117,8 +121,8 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
           stage.container().style.cursor = rotationCursor;
           setShowRotationHandle(true);
         } else {
-          // Reset cursor
-          stage.container().style.cursor = 'default';
+          // Reset cursor to tool-appropriate cursor
+          cursorManager.updateForTool(selectedTool as any);
           setShowRotationHandle(false);
         }
       }
@@ -174,7 +178,7 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
         }
         setIsRotating(false);
         setRotationStart(null);
-        stage.container().style.cursor = 'default';
+        cursorManager.updateForTool(selectedTool as any);
       }
     };
     
@@ -189,11 +193,10 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
       stage.off('mousemove', handleMouseMove);
       stage.off('mousedown', handleMouseDown);
       stage.off('mouseup', handleMouseUp);
-      if (stage.container()) {
-        stage.container().style.cursor = 'default';
-      }
+      // Restore tool-appropriate cursor
+      cursorManager.updateForTool(selectedTool as any);
     };
-  }, [filteredSelectedNodeIds, stageRef, isRotating, rotationStart, showRotationHandle, getTransformerBox, updateElement, addToHistory]);
+  }, [filteredSelectedNodeIds, stageRef, isRotating, rotationStart, showRotationHandle, getTransformerBox, updateElement, addToHistory, selectedTool, cursorManager]);
 
   const handleTransformEnd = (e: Konva.KonvaEventObject<any>) => {
     const node = e.target;

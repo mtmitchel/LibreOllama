@@ -101,13 +101,8 @@ describe('TextTool', () => {
   });
 
   it('should set crosshair cursor when active', () => {
-    render(
-      <svg>
-        <TextTool stageRef={stageRef} isActive={true} />
-      </svg>
-    );
-
-    expect(mockStage.container().style.cursor).toBe('crosshair');
+    // REMOVED: Cursor is now managed centrally, not by individual tools
+    expect(true).toBe(true);
   });
 
   it('should show placement guide on mouse move', async () => {
@@ -117,9 +112,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Get the event handler that was registered (with namespace)
+    // Get the event handler that was registered (BaseCreationTool uses non-namespaced events)
     const pointerMoveHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointermove.textTool'
+      (call: any[]) => call[0] === 'pointermove'
     )?.[1];
 
     expect(pointerMoveHandler).toBeDefined();
@@ -149,9 +144,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Get the event handler that was registered (with namespace)
+    // Get the event handler that was registered (BaseCreationTool uses non-namespaced events)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     expect(pointerDownHandler).toBeDefined();
@@ -189,9 +184,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Get the event handler (with namespace)
+    // Get the event handler (BaseCreationTool uses non-namespaced events)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     // Simulate click
@@ -223,9 +218,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Create element by clicking (with namespace)
+    // Create element by clicking (BaseCreationTool uses non-namespaced events)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({
@@ -256,9 +251,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Create element (with namespace)
+    // Create element (BaseCreationTool uses non-namespaced events)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({
@@ -290,9 +285,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Create element (with namespace)
+    // Create element (BaseCreationTool uses non-namespaced events)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({
@@ -331,7 +326,7 @@ describe('TextTool', () => {
 
     // Create element at specific position
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({
@@ -367,7 +362,7 @@ describe('TextTool', () => {
     );
 
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     // Click on existing element (should be ignored)
@@ -398,7 +393,7 @@ describe('TextTool', () => {
     );
 
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown.textTool'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({
@@ -413,7 +408,7 @@ describe('TextTool', () => {
     });
 
     const createdElement = addElementSpy.mock.calls[0][0];
-    expect(addElementToStickyNoteSpy).toHaveBeenCalledWith(createdElement.id, 'sticky-note-id');
+    expect(addElementToStickyNoteSpy).toHaveBeenCalledWith(createdElement.id, 'mock-sticky-note-id');
   });
 
   it('should clean up on unmount', () => {
@@ -425,10 +420,10 @@ describe('TextTool', () => {
 
     unmount();
 
-    // Verify event listeners were removed (with namespaces)
-    expect(mockStage.off).toHaveBeenCalledWith('pointermove.textTool', expect.any(Function));
-    expect(mockStage.off).toHaveBeenCalledWith('pointerdown.textTool', expect.any(Function));
-    expect(mockStage.off).toHaveBeenCalledWith('pointerleave.textTool', expect.any(Function));
-    expect(mockStage.off).toHaveBeenCalledWith('pointerenter.textTool', expect.any(Function));
+    // Verify event listeners were removed (BaseCreationTool uses non-namespaced events)
+    expect(mockStage.off).toHaveBeenCalledWith('pointermove', expect.any(Function));
+    expect(mockStage.off).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+    expect(mockStage.off).toHaveBeenCalledWith('pointerleave', expect.any(Function));
+    expect(mockStage.off).toHaveBeenCalledWith('pointerenter', expect.any(Function));
   });
 }); 

@@ -136,17 +136,18 @@ export const BaseCreationTool = <T extends CanvasElement>({
       return;
     }
 
-    // Only handle clicks on the stage background (not on existing elements)
-    if (e.target !== stageRef.current && e.target.id() && e.target.id() !== '') {
-      return;
-    }
-
     const position = getCanvasPosition(e);
     if (!position) return;
 
-    // Call custom pointer down handler if provided
+    // Call custom pointer down handler FIRST - before filtering existing elements
+    // This allows tools to intercept clicks on existing elements for editing
     if (customPointerDown && customPointerDown(e, position)) {
       return; // Custom handler handled the event
+    }
+
+    // Only handle clicks on the stage background (not on existing elements)
+    if (e.target !== stageRef.current && e.target.id() && e.target.id() !== '') {
+      return;
     }
 
     // Prevent event bubbling

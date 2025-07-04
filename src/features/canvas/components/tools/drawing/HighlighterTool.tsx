@@ -60,6 +60,8 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
   const isDrawingRef = useRef(false);
   const [currentStroke, setCurrentStroke] = useState<number[]>([]);
 
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
   // Store actions using grouped selectors for optimization
   const stickyNoteActions = useUnifiedCanvasStore(
     useShallow((state) => ({

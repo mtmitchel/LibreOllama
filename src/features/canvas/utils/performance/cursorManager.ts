@@ -24,7 +24,8 @@ export type CanvasTool =
   | 'sticky-note'
   | 'image'
   | 'table'
-  | 'section';
+  | 'section'
+  | 'mindmap';
 
 export type CursorType =
   | 'default'
@@ -83,7 +84,8 @@ export class CursorManager {
     'sticky-note': 'crosshair',
     'image': 'crosshair',
     'table': 'crosshair',
-    'section': 'crosshair'
+    'section': 'crosshair',
+    'mindmap': 'crosshair'
   };
 
   // Resize handle cursor mappings

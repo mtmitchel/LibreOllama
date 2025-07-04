@@ -67,11 +67,7 @@ export default defineConfig({
             './src/features/canvas/components/tools/creation/StickyNoteTool'
           ],
           
-          // Lazy loading infrastructure
-          'canvas-lazy-infrastructure': [
-            './src/features/canvas/components/LazyToolRenderer',
-            './src/features/canvas/components/LazyUIRenderer'
-          ],
+
           
           // Heavy tools that can be lazy loaded
           'canvas-tools-heavy': [

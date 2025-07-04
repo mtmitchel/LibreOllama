@@ -23,6 +23,8 @@ interface PenToolProps {
 export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
   const isDrawingRef = useRef(false);
 
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
   // Store selectors using grouped patterns with useShallow for optimization
   const drawingState = useUnifiedCanvasStore(
     useShallow((state) => ({

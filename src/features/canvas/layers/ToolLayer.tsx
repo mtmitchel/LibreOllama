@@ -12,7 +12,8 @@ import { MarkerTool } from '../components/tools/drawing/MarkerTool';
 import { HighlighterTool } from '../components/tools/drawing/HighlighterTool';
 import { EraserTool } from '../components/tools/drawing/EraserTool';
 
-import { LazyToolRenderer } from '../components/LazyToolRenderer';
+import { TextTool } from '../components/tools/creation/TextTool';
+import { StickyNoteTool } from '../components/tools/creation/StickyNoteTool';
 import { TableTool } from '../components/tools/creation/TableTool';
 import { SectionTool } from '../components/tools/creation/SectionTool';
 import { PenTool } from '../components/tools/drawing/PenTool';
@@ -72,7 +73,7 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
         return <EraserTool stageRef={stageRef} isActive={true} eraserConfig={strokeConfig.eraser} />;
       
       case 'text':
-        return <LazyToolRenderer stageRef={stageRef} toolType="text" isActive={true} />;
+        return <TextTool stageRef={stageRef} isActive={true} />;
       case 'draw-rectangle':
         return <RectangleTool stageRef={stageRef} isActive={true} />;
       case 'draw-circle':
@@ -80,7 +81,7 @@ export const ToolLayer: React.FC<ToolLayerProps> = ({ stageRef }) => {
       case 'draw-triangle':
         return <TriangleTool stageRef={stageRef} isActive={true} />;
       case 'sticky-note':
-        return <LazyToolRenderer stageRef={stageRef} toolType="sticky-note" isActive={true} />;
+        return <StickyNoteTool stageRef={stageRef} isActive={true} />;
       case 'section':
         return <SectionTool stageRef={stageRef} isActive={true} />;
       case 'table':

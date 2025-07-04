@@ -1,11 +1,12 @@
 /**
- * ConnectorTool - Interactive connector drawing component (Refactored)
+ * ConnectorTool - Interactive connector drawing component (Enhanced)
  * 
  * Features:
  * - Real-time preview during drawing
- * - Smart snapping to element anchor points
+ * - Smart detection of existing connectors for editing vs creation
  * - Support for line and arrow connectors
- * - Visual feedback for snap points
+ * - Edit mode: adjust existing connectors without creating new ones
+ * - Create mode: draw new connectors on empty canvas
  */
 
 import React, { useCallback } from 'react';
@@ -29,11 +30,66 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
   stageRef,
   connectorType
 }) => {
-  const { elements } = useUnifiedCanvasStore(
+  const { elements, setSelectedTool, clearSelection, selectElement } = useUnifiedCanvasStore(
     useShallow((state) => ({
-      elements: state.elements
+      elements: state.elements,
+      setSelectedTool: state.setSelectedTool,
+      clearSelection: state.clearSelection,
+      selectElement: state.selectElement
     }))
   );
+
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
+  // Custom pointer down handler to detect existing connectors
+  const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>, position: Vector2d): boolean => {
+    // Check if we clicked on an existing connector
+    const target = e.target;
+    if (target && target.id && target.id() && target.id() !== '') {
+      // Get the element from store
+      const targetId = target.id() as ElementId;
+      const element = elements.get(targetId);
+      
+      // If it's a connector, select it for editing (but stay in connector tool)
+      if (element && element.type === 'connector') {
+        debug.canvas.konvaEvent('connector-edit-mode', `Selecting connector ${targetId} for editing`);
+        
+        // Prevent event bubbling immediately
+        e.cancelBubble = true;
+        
+        // Select the connector for editing (but don't switch tools)
+        clearSelection();
+        setTimeout(() => {
+          selectElement(targetId, false);
+        }, 10);
+        
+        return true; // Indicate we handled the event
+      }
+    }
+    
+    // For clicks on connector endpoints or other non-connector elements, also check parent
+    if (target && target.parent && target.parent.id && target.parent.id() !== '') {
+      const parentId = target.parent.id() as ElementId;
+      const parentElement = elements.get(parentId);
+      
+      if (parentElement && parentElement.type === 'connector') {
+        debug.canvas.konvaEvent('connector-edit-mode', `Selecting connector ${parentId} for editing (via child)`);
+        
+        // Prevent event bubbling
+        e.cancelBubble = true;
+        
+        // Select the connector for editing (but don't switch tools)
+        clearSelection();
+        setTimeout(() => {
+          selectElement(parentId, false);
+        }, 10);
+        
+        return true; // Indicate we handled the event
+      }
+    }
+    
+    return false; // Let BaseCreationTool handle normal creation
+  }, [elements, clearSelection, selectElement]);
 
   // Create connector element function (for drag creation)
   const createConnectorElement = useCallback((startPos: Vector2d, endPos?: Vector2d): ConnectorElement => {
@@ -169,6 +225,7 @@ export const ConnectorTool: React.FC<ConnectorToolProps> = ({
       minDragDistance={10}
       shouldSwitchToSelect={false} // Stay in connector tool for multiple connector creation
       shouldStartTextEdit={false}
+      onPointerDown={handlePointerDown} // Custom handler for edit mode detection
     />
   );
 }; 

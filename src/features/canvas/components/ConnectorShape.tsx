@@ -12,6 +12,8 @@ import { Line, Path, Arrow, Circle, Group } from 'react-konva';
 import Konva from 'konva';
 import type { ConnectorElement } from '../types/enhanced.types';
 import { canvasLog } from '../utils/canvasLogger';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
+import { useCursorManager } from '../utils/performance/cursorManager';
 
 interface ConnectorShapeProps {
   connector: ConnectorElement;
@@ -32,6 +34,8 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = memo(({
   onSelect,
   onUpdate
 }) => {
+  const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
+  const cursorManager = useCursorManager();
   // Memoized path calculation for performance
   const pathData = useMemo(() => {
     const points: number[] = [];
@@ -267,13 +271,11 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = memo(({
           {...handleProps}
           onDragMove={(e) => handleEndpointDrag(e, true)}
           onDragEnd={(e) => handleEndpointDrag(e, true)}
-          onMouseEnter={(e) => {
-            const stage = e.target.getStage();
-            if (stage) stage.container().style.cursor = 'grab';
+          onMouseEnter={() => {
+            cursorManager.setCursor('grab');
           }}
-          onMouseLeave={(e) => {
-            const stage = e.target.getStage();
-            if (stage) stage.container().style.cursor = 'default';
+          onMouseLeave={() => {
+            cursorManager.updateForTool(selectedTool as any);
           }}
         />
         
@@ -284,13 +286,11 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = memo(({
           {...handleProps}
           onDragMove={(e) => handleEndpointDrag(e, false)}
           onDragEnd={(e) => handleEndpointDrag(e, false)}
-          onMouseEnter={(e) => {
-            const stage = e.target.getStage();
-            if (stage) stage.container().style.cursor = 'grab';
+          onMouseEnter={() => {
+            cursorManager.setCursor('grab');
           }}
-          onMouseLeave={(e) => {
-            const stage = e.target.getStage();
-            if (stage) stage.container().style.cursor = 'default';
+          onMouseLeave={() => {
+            cursorManager.updateForTool(selectedTool as any);
           }}
         />
         
@@ -316,15 +316,13 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = memo(({
       onClick={handleClick}
       onTap={handleClick}
       onDragEnd={handleConnectorDrag}
-      onMouseEnter={(e) => {
+      onMouseEnter={() => {
         if (isSelected && onUpdate) {
-          const stage = e.target.getStage();
-          if (stage) stage.container().style.cursor = 'move';
+          cursorManager.setCursor('move');
         }
       }}
-      onMouseLeave={(e) => {
-        const stage = e.target.getStage();
-        if (stage) stage.container().style.cursor = 'default';
+      onMouseLeave={() => {
+        cursorManager.updateForTool(selectedTool as any);
       }}
     >
       {/* Main connector shape */}

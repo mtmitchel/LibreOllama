@@ -55,6 +55,8 @@ export const BaseShapeTool = <T extends Exclude<CanvasElement, SectionElement>>(
     cursorPosition: null
   });
 
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
   // Handle mouse movement for placement guide
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (!isActive || !stageRef.current || editingTextId) {

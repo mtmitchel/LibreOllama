@@ -152,45 +152,15 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
     }
   });
 
-  // Handle cursor separately
-  React.useEffect(() => {
-    if (!isActive || !stageRef.current) return;
+  // Cursor management is handled by CanvasStage's centralized cursor system
 
-    const stage = stageRef.current;
-    const container = stage.container();
-    if (container) {
-      container.style.cursor = 'crosshair';
-      console.log('🧠 [MindmapTool] *** CURSOR FORCED TO CROSSHAIR ***');
-    }
-
-    return () => {
-      if (container) {
-        container.style.cursor = 'default';
-        console.log('🧠 [MindmapTool] Reset cursor to default');
-      }
-      setShowPlacementGuide(false);
-      setCursorPosition(null);
-    };
-  }, [isActive]);
-
-  // Clear placement guide when tool becomes inactive
+  // Handle visual state cleanup when tool becomes inactive
   React.useEffect(() => {
     if (!isActive) {
       setShowPlacementGuide(false);
       setCursorPosition(null);
-      
-      // Ensure cursor is reset when tool becomes inactive
-      if (stageRef.current?.container()) {
-        stageRef.current.container().style.cursor = 'default';
-      }
-    } else if (isActive && stageRef.current) {
-      // FORCE crosshair cursor when becoming active
-      const container = stageRef.current.container();
-      if (container) {
-        container.style.cursor = 'crosshair';
-      }
     }
-  }, [isActive, stageRef]);
+  }, [isActive]);
 
   if (!isActive) return null;
 

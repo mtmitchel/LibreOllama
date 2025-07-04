@@ -71,11 +71,11 @@ describe('StickyNoteTool', () => {
         />
       );
 
-      // Check that event handlers are registered (using namespaced event names)
-      expect(mockStage.on).toHaveBeenCalledWith('pointermove.stickyNoteTool', expect.any(Function));
-      expect(mockStage.on).toHaveBeenCalledWith('pointerdown.stickyNoteTool', expect.any(Function));
-      expect(mockStage.on).toHaveBeenCalledWith('pointerleave.stickyNoteTool', expect.any(Function));
-      expect(mockStage.on).toHaveBeenCalledWith('pointerenter.stickyNoteTool', expect.any(Function));
+      // Check that event handlers are registered (BaseCreationTool uses non-namespaced events)
+      expect(mockStage.on).toHaveBeenCalledWith('pointermove', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointerleave', expect.any(Function));
+      expect(mockStage.on).toHaveBeenCalledWith('pointerenter', expect.any(Function));
     });
 
     it('should clean up event handlers on unmount', () => {
@@ -88,10 +88,10 @@ describe('StickyNoteTool', () => {
 
       unmount();
 
-      expect(mockStage.off).toHaveBeenCalledWith('pointermove.stickyNoteTool', expect.any(Function));
-      expect(mockStage.off).toHaveBeenCalledWith('pointerdown.stickyNoteTool', expect.any(Function));
-      expect(mockStage.off).toHaveBeenCalledWith('pointerleave.stickyNoteTool', expect.any(Function));
-      expect(mockStage.off).toHaveBeenCalledWith('pointerenter.stickyNoteTool', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointermove', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointerleave', expect.any(Function));
+      expect(mockStage.off).toHaveBeenCalledWith('pointerenter', expect.any(Function));
     });
   });
 
@@ -104,9 +104,9 @@ describe('StickyNoteTool', () => {
         />
       );
 
-      // Get the registered pointerdown handler
+      // Get the registered pointerdown handler (BaseCreationTool uses non-namespaced events)
       const pointerDownHandler = mockStage.on.mock.calls.find(
-        call => call[0] === 'pointerdown.stickyNoteTool'
+        call => call[0] === 'pointerdown'
       )?.[1];
 
       // Click to create sticky note
@@ -132,9 +132,9 @@ describe('StickyNoteTool', () => {
         />
       );
 
-      // Get the registered pointerdown handler
+      // Get the registered pointerdown handler (BaseCreationTool uses non-namespaced events)
       const pointerDownHandler = mockStage.on.mock.calls.find(
-        call => call[0] === 'pointerdown.stickyNoteTool'
+        call => call[0] === 'pointerdown'
       )?.[1];
 
       // Click on existing element should be ignored
@@ -176,9 +176,9 @@ describe('StickyNoteTool', () => {
         />
       );
 
-      // Get the registered pointerdown handler
+      // Get the registered pointerdown handler (BaseCreationTool uses non-namespaced events)
       const pointerDownHandler = stageWithoutPointer.on.mock.calls.find(
-        call => call[0] === 'pointerdown.stickyNoteTool'
+        call => call[0] === 'pointerdown'
       )?.[1];
 
       // Click without pointer position
@@ -199,9 +199,9 @@ describe('StickyNoteTool', () => {
         />
       );
 
-      // Get the registered pointermove handler
+      // Get the registered pointermove handler (BaseCreationTool uses non-namespaced events)
       const pointerMoveHandler = mockStage.on.mock.calls.find(
-        call => call[0] === 'pointermove.stickyNoteTool'
+        call => call[0] === 'pointermove'
       )?.[1];
 
       // Move pointer to show preview
@@ -393,9 +393,8 @@ describe('StickyNote Functionality (Store-First)', () => {
     });
 
     it('should add element to sticky note container', () => {
-      // Enable as container
+      // Enable as container (use default allowed types which now includes 'rich-text')
       store.getState().enableStickyNoteContainer(stickyNoteId, {
-        allowedTypes: ['text', 'pen'],
         maxChildren: 5
       });
 
@@ -427,7 +426,7 @@ describe('StickyNote Functionality (Store-First)', () => {
     it('should prevent adding disallowed element types', () => {
       // Enable as container with limited types
       store.getState().enableStickyNoteContainer(stickyNoteId, {
-        allowedTypes: ['text'],
+        allowedTypes: ['rich-text'],
         maxChildren: 5
       });
 
@@ -454,7 +453,7 @@ describe('StickyNote Functionality (Store-First)', () => {
     it('should prevent adding elements beyond max limit', () => {
       // Enable as container with max 2 children
       store.getState().enableStickyNoteContainer(stickyNoteId, {
-        allowedTypes: ['text'],
+        allowedTypes: ['rich-text'],
         maxChildren: 2
       });
 
@@ -517,7 +516,7 @@ describe('StickyNote Functionality (Store-First)', () => {
     });
 
     it('should remove element from sticky note container', () => {
-      // Enable as container and add element
+      // Enable as container and add element (use default allowed types)
       store.getState().enableStickyNoteContainer(stickyNoteId);
 
       const textElement = {
@@ -553,7 +552,7 @@ describe('StickyNote Functionality (Store-First)', () => {
     });
 
     it('should get sticky note children', () => {
-      // Enable as container
+      // Enable as container (use default allowed types)
       store.getState().enableStickyNoteContainer(stickyNoteId);
 
       // Add multiple elements
@@ -597,7 +596,7 @@ describe('StickyNote Functionality (Store-First)', () => {
     });
 
     it('should clear all sticky note children', () => {
-      // Enable as container and add elements
+      // Enable as container and add elements (use default allowed types)
       store.getState().enableStickyNoteContainer(stickyNoteId);
 
       const textElement1 = {
@@ -837,7 +836,7 @@ describe('StickyNote Functionality (Store-First)', () => {
 
       store.getState().addElement(stickyNote);
 
-      // Enable container functionality
+      // Enable container functionality (use default allowed types)
       store.getState().enableStickyNoteContainer(stickyNote.id);
 
       // Add child element

@@ -30,6 +30,8 @@ const EraserToolComponent: React.FC<EraserToolProps> = ({
   // Performance optimization refs
   const lastErasePosition = useRef<{ x: number; y: number } | null>(null);
   const eraserPathRef = useRef<number[]>([]);
+
+  // Cursor management is handled by CanvasStage's centralized cursor system
   
   // Store selectors and actions - using grouped selectors with useShallow
   const {

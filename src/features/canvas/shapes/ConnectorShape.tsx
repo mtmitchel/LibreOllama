@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { Group, Line, Arrow, Circle, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { ConnectorElement, ElementId, CanvasElement } from '../types/enhanced.types';
@@ -29,28 +29,25 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
   const startHandleRef = useRef<Konva.Circle>(null);
   const endHandleRef = useRef<Konva.Circle>(null);
   
+  // State for tracking drag operations to prevent excessive updates
+  const [isDraggingEndpoint, setIsDraggingEndpoint] = useState(false);
+  const [tempStartPoint, setTempStartPoint] = useState(element.startPoint);
+  const [tempEndPoint, setTempEndPoint] = useState(element.endPoint);
+  
   // Calculate points for rendering - relative to group position
   const points = useMemo(() => {
-    // Make points relative to the element position
-    const relativeStartX = element.startPoint.x - element.x;
-    const relativeStartY = element.startPoint.y - element.y;
-    const relativeEndX = element.endPoint.x - element.x;
-    const relativeEndY = element.endPoint.y - element.y;
+    // Use temporary points during dragging for smooth updates
+    const startPoint = isDraggingEndpoint ? tempStartPoint : element.startPoint;
+    const endPoint = isDraggingEndpoint ? tempEndPoint : element.endPoint;
     
-    if (element.pathPoints && element.pathPoints.length >= 4) {
-      // If we have path points, make them relative too
-      return element.pathPoints.map((point, index) => {
-        if (index % 2 === 0) {
-          // X coordinate
-          return point - element.x;
-        } else {
-          // Y coordinate
-          return point - element.y;
-        }
-      });
-    }
+    // Make points relative to the element position
+    const relativeStartX = startPoint.x - element.x;
+    const relativeStartY = startPoint.y - element.y;
+    const relativeEndX = endPoint.x - element.x;
+    const relativeEndY = endPoint.y - element.y;
+    
     return [relativeStartX, relativeStartY, relativeEndX, relativeEndY];
-  }, [element.pathPoints, element.startPoint, element.endPoint, element.x, element.y]);
+  }, [element.x, element.y, element.startPoint, element.endPoint, isDraggingEndpoint, tempStartPoint, tempEndPoint]);
   
   // Determine if this is an arrow connector
   const isArrow = useMemo(() => {
@@ -65,7 +62,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
     onSelect();
   }, [onSelect]);
   
-  // Handle drag end
+  // Handle drag end for the main connector
   const handleDragEnd = useCallback((e: Konva.KonvaEventObject<any>) => {
     const group = groupRef.current;
     if (!group) return;
@@ -88,9 +85,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
     };
     
     // Update pathPoints
-    const newPathPoints = element.pathPoints 
-      ? element.pathPoints.map((point, index) => point + (index % 2 === 0 ? deltaX : deltaY))
-      : [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y];
+    const newPathPoints = [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y];
     
     // Update both the element position and the connector endpoints
     onUpdate(element.id, {
@@ -103,9 +98,17 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
     });
   }, [element, onUpdate]);
   
-  // Handle endpoint drag with stage-relative positioning
-  const handleEndpointDrag = useCallback((isStart: boolean) => (e: Konva.KonvaEventObject<any>) => {
-    // Stop event propagation to prevent tool interference
+  // Handle endpoint drag start - initialize temp state
+  const handleEndpointDragStart = useCallback((isStart: boolean) => (e: Konva.KonvaEventObject<any>) => {
+    e.cancelBubble = true;
+    setIsDraggingEndpoint(true);
+    setTempStartPoint(element.startPoint);
+    setTempEndPoint(element.endPoint);
+    onSelect(); // Ensure connector stays selected
+  }, [element.startPoint, element.endPoint, onSelect]);
+  
+  // Handle endpoint drag move - update temp state only (no store updates)
+  const handleEndpointDragMove = useCallback((isStart: boolean) => (e: Konva.KonvaEventObject<any>) => {
     e.cancelBubble = true;
     
     const handle = isStart ? startHandleRef.current : endHandleRef.current;
@@ -114,9 +117,27 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
     // Get the absolute position of the handle
     const absPos = handle.getAbsolutePosition();
     
+    // Update temporary points for smooth visual feedback
+    if (isStart) {
+      setTempStartPoint(absPos);
+    } else {
+      setTempEndPoint(absPos);
+    }
+  }, []);
+  
+  // Handle endpoint drag end - commit changes to store
+  const handleEndpointDragEnd = useCallback((isStart: boolean) => (e: Konva.KonvaEventObject<any>) => {
+    e.cancelBubble = true;
+    
+    const handle = isStart ? startHandleRef.current : endHandleRef.current;
+    if (!handle || !groupRef.current) return;
+    
+    // Get the final absolute position of the handle
+    const absPos = handle.getAbsolutePosition();
+    
     // Calculate new start and end points
-    const newStartPoint = isStart ? absPos : element.startPoint;
-    const newEndPoint = isStart ? element.endPoint : absPos;
+    const newStartPoint = isStart ? absPos : tempStartPoint;
+    const newEndPoint = isStart ? tempEndPoint : absPos;
     
     // Recalculate the bounding box position (element.x, element.y)
     const minX = Math.min(newStartPoint.x, newEndPoint.x);
@@ -125,7 +146,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
     // Update pathPoints for straight connectors
     const newPathPoints = [newStartPoint.x, newStartPoint.y, newEndPoint.x, newEndPoint.y];
     
-    // Update element with new positions
+    // Commit final changes to store
     onUpdate(element.id, {
       x: minX,
       y: minY,
@@ -134,7 +155,10 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
       pathPoints: newPathPoints,
       updatedAt: Date.now()
     });
-  }, [element.id, element.startPoint, element.endPoint, onUpdate]);
+    
+    // Reset drag state
+    setIsDraggingEndpoint(false);
+  }, [element.id, tempStartPoint, tempEndPoint, onUpdate]);
   
   // Handle endpoint mousedown to prevent tool from creating new connectors
   const handleEndpointMouseDown = useCallback((e: Konva.KonvaEventObject<any>) => {
@@ -152,8 +176,27 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
     lineJoin: 'round' as const
   }), [element.stroke, element.strokeWidth, element.connectorStyle]);
   
-  // Handle drawing tools
+  // Handle drawing tools - connector tool should NOT disable connector interaction
   const shouldAllowDrawing = ['pen', 'marker', 'highlighter', 'eraser'].includes(selectedTool);
+  const isConnectorToolActive = selectedTool === 'connector-line' || selectedTool === 'connector-arrow';
+  const allowConnectorInteraction = selectedTool === 'select' || isConnectorToolActive;
+  
+  // Calculate handle positions - using temp points during dragging for better alignment
+  const startHandlePosition = useMemo(() => {
+    const startPoint = isDraggingEndpoint ? tempStartPoint : element.startPoint;
+    return {
+      x: startPoint.x - element.x,
+      y: startPoint.y - element.y
+    };
+  }, [element.x, element.y, element.startPoint, isDraggingEndpoint, tempStartPoint]);
+  
+  const endHandlePosition = useMemo(() => {
+    const endPoint = isDraggingEndpoint ? tempEndPoint : element.endPoint;
+    return {
+      x: endPoint.x - element.x,
+      y: endPoint.y - element.y
+    };
+  }, [element.x, element.y, element.endPoint, isDraggingEndpoint, tempEndPoint]);
   
   return (
     <Group
@@ -166,8 +209,8 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
       onClick={handleSelect}
       onTap={handleSelect}
       onDragStart={handleSelect}
-      draggable={!shouldAllowDrawing && isSelected}
-      listening={!shouldAllowDrawing}
+      draggable={allowConnectorInteraction && isSelected}
+      listening={allowConnectorInteraction}
       onDragEnd={handleDragEnd}
     >
       {isArrow ? (
@@ -178,6 +221,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
           {...strokeProps}
           hitStrokeWidth={Math.max(strokeProps.strokeWidth * 4, 15)} // Larger hit area
           perfectDrawEnabled={false}
+          listening={allowConnectorInteraction}
         />
       ) : (
         <Line
@@ -186,24 +230,27 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
           {...strokeProps}
           hitStrokeWidth={Math.max(strokeProps.strokeWidth * 4, 15)} // Larger hit area
           perfectDrawEnabled={false}
+          listening={allowConnectorInteraction}
         />
       )}
       
       {/* Endpoint handles for precise editing - positioned relative to group */}
-      {isSelected && (
+      {isSelected && allowConnectorInteraction && (
         <>
           <Circle
             ref={startHandleRef}
-            x={element.startPoint.x - element.x}
-            y={element.startPoint.y - element.y}
+            x={startHandlePosition.x}
+            y={startHandlePosition.y}
             radius={8}
             fill="#0066ff"
             stroke="#ffffff"
             strokeWidth={2}
             draggable
             onMouseDown={handleEndpointMouseDown}
-            onDragMove={handleEndpointDrag(true)}
-            onDragEnd={handleEndpointDrag(true)}
+            onPointerDown={handleEndpointMouseDown}
+            onDragStart={handleEndpointDragStart(true)}
+            onDragMove={handleEndpointDragMove(true)}
+            onDragEnd={handleEndpointDragEnd(true)}
             shadowColor="rgba(0, 0, 0, 0.2)"
             shadowBlur={4}
             shadowOffsetY={2}
@@ -212,16 +259,18 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = React.memo(({
           />
           <Circle
             ref={endHandleRef}
-            x={element.endPoint.x - element.x}
-            y={element.endPoint.y - element.y}
+            x={endHandlePosition.x}
+            y={endHandlePosition.y}
             radius={8}
             fill="#0066ff"
             stroke="#ffffff"
             strokeWidth={2}
             draggable
             onMouseDown={handleEndpointMouseDown}
-            onDragMove={handleEndpointDrag(false)}
-            onDragEnd={handleEndpointDrag(false)}
+            onPointerDown={handleEndpointMouseDown}
+            onDragStart={handleEndpointDragStart(false)}
+            onDragMove={handleEndpointDragMove(false)}
+            onDragEnd={handleEndpointDragEnd(false)}
             shadowColor="rgba(0, 0, 0, 0.2)"
             shadowBlur={4}
             shadowOffsetY={2}

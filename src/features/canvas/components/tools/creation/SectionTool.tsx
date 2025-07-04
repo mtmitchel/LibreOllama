@@ -29,6 +29,8 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
   const [previewSection, setPreviewSection] = React.useState<PreviewSection | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
 
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
   // Store actions using grouped selectors for optimization
   const sectionActions = useUnifiedCanvasStore(
     useShallow((state) => ({

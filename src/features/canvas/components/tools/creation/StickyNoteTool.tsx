@@ -34,6 +34,8 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
 
   const { selectedStickyNoteColor, enableStickyNoteContainer } = stickyNoteState;
 
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
   // Create sticky note element function
   const createStickyNoteElement = useCallback((position: Vector2d): StickyNoteElement => {
     // Adjust position to center the sticky note on cursor (same as preview)
@@ -85,7 +87,7 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
     }, 50);
   }, [enableStickyNoteContainer]);
 
-  // Render preview with sticky note shadow
+  // Render preview with sticky note shadow (no preview text)
   const renderPreview = useCallback((position: Vector2d, showGuide: boolean, startPos?: Vector2d, endPos?: Vector2d) => {
     if (!showGuide) return null;
 
@@ -116,18 +118,6 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
           shadowOpacity={0.2}
           shadowOffsetX={2}
           shadowOffsetY={2}
-        />
-        
-        {/* Preview text */}
-        <Text
-          x={previewX + 10}
-          y={previewY + 10}
-          text="Click to add note"
-          fontSize={14}
-          fontFamily="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-          fill="#666666"
-          opacity={0.7}
-          listening={false}
         />
       </Group>
     );

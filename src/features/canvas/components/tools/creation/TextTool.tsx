@@ -36,6 +36,8 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
 
   const { findStickyNoteAtPoint, addElementToStickyNote } = stickyNoteActions;
 
+  // Cursor management is handled by CanvasStage's centralized cursor system
+
   // Create text element function
   const createTextElement = useCallback((position: Vector2d): TextElement => {
     return {
