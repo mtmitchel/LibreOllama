@@ -1,127 +1,98 @@
-import { CanvasElement, ElementId } from '../../types/enhanced.types';
+import { useShallow } from 'zustand/react/shallow';
+import { UnifiedCanvasState, UnifiedCanvasActions } from "../unifiedCanvasStore";
+
+type CanvasState = UnifiedCanvasState & UnifiedCanvasActions;
 
 /**
- * Element selectors
+ * Standardized, memoized selectors for the UnifiedCanvasStore.
+ * These selectors are designed to be used with `useShallow` to prevent
+ * unnecessary re-renders by returning stable objects.
  */
-export const elementSelectors = {
-  elements: (state: any) => state.elements,
-  elementById: (id: string) => (state: any) => state.elements.get(id),
-  elementCount: (state: any) => state.elements.size,
-  elementOrder: (state: any) => state.elementOrder,
-};
+export const canvasSelectors = {
+  // Element Module
+  elementState: (state: CanvasState) => ({
+    elements: state.elements,
+    elementOrder: state.elementOrder,
+  }),
+  elementActions: (state: CanvasState) => ({
+    getElementById: state.getElementById,
+    addElement: state.addElement,
+    createElement: state.createElement,
+    updateElement: state.updateElement,
+    batchUpdate: state.batchUpdate,
+    deleteElement: state.deleteElement,
+    deleteSelectedElements: state.deleteSelectedElements,
+  }),
 
-/**
- * Selection selectors
- */
-export const selectionSelectors = {
-  selectedIds: (state: any) => state.selectedElementIds,
-  selectedElements: (state: any) =>
-    Array.from(state.selectedElementIds)
-      .map((id: ElementId) => state.elements.get(id))
-      .filter(Boolean) as CanvasElement[],
-  hasSelection: (state: any) => state.selectedElementIds.size > 0,
-  lastSelectedElementId: (state: any) => state.lastSelectedElementId,
-  lastSelectedElement: (state: any) => 
-    state.lastSelectedElementId ? state.elements.get(state.lastSelectedElementId) : null,
-};
+  // Selection Module
+  selectionState: (state: CanvasState) => ({
+    selectedElementIds: state.selectedElementIds,
+    lastSelectedElementId: state.lastSelectedElementId,
+  }),
+  selectionActions: (state: CanvasState) => ({
+    selectElement: state.selectElement,
+    deselectElement: state.deselectElement,
+    clearSelection: state.clearSelection,
+  }),
+  
+  // Viewport Module
+  viewportState: (state: CanvasState) => ({
+    viewport: state.viewport,
+    viewportBounds: state.viewportBounds,
+  }),
+  viewportActions: (state: CanvasState) => ({
+    setViewport: state.setViewport,
+    zoomViewport: state.zoomViewport,
+    panViewport: state.panViewport,
+  }),
 
-/**
- * Viewport selectors
- */
-export const viewportSelectors = {
-  viewport: (state: any) => state.viewport,
-  viewportBounds: (state: any) => state.viewportBounds,
-  scale: (state: any) => state.viewport.scale,
-  position: (state: any) => ({ x: state.viewport.x, y: state.viewport.y }),
-};
+  // Drawing Module
+  drawingState: (state: CanvasState) => ({
+    isDrawing: state.isDrawing,
+    currentPath: state.currentPath,
+    drawingTool: state.drawingTool,
+    strokeConfig: state.strokeConfig,
+  }),
+  drawingActions: (state: CanvasState) => ({
+    startDrawing: state.startDrawing,
+    updateDrawing: state.updateDrawing,
+    finishDrawing: state.finishDrawing,
+  }),
 
-/**
- * Drawing selectors
- */
-export const drawingSelectors = {
-  isDrawing: (state: any) => state.isDrawing,
-  currentPath: (state: any) => state.currentPath,
-  drawingTool: (state: any) => state.drawingTool,
-  drawingStartPoint: (state: any) => state.drawingStartPoint,
-  drawingCurrentPoint: (state: any) => state.drawingCurrentPoint,
-  draftSection: (state: any) => state.draftSection,
-  strokeConfig: (state: any) => state.strokeConfig,
-};
+  // History Module
+  historyState: (state: CanvasState) => ({
+    history: state.history,
+    currentHistoryIndex: state.currentHistoryIndex,
+    canUndo: state.canUndo,
+    canRedo: state.canRedo,
+  }),
+  historyActions: (state: CanvasState) => ({
+    addToHistory: state.addToHistory,
+    undo: state.undo,
+    redo: state.redo,
+    clearHistory: state.clearHistory,
+  }),
+  
+  // UI Module
+  uiState: (state: CanvasState) => ({
+    selectedTool: state.selectedTool,
+    textEditingElementId: state.textEditingElementId,
+    penColor: state.penColor,
+    showGrid: state.showGrid,
+    snapToGrid: state.snapToGrid,
+  }),
+  uiActions: (state: CanvasState) => ({
+    setSelectedTool: state.setSelectedTool,
+    setTextEditingElement: state.setTextEditingElement,
+    setPenColor: state.setPenColor,
+  }),
 
-/**
- * History selectors
- */
-export const historySelectors = {
-  canUndo: (state: any) => state.canUndo,
-  canRedo: (state: any) => state.canRedo,
-  historyLength: (state: any) => state.history.length,
-  currentHistoryIndex: (state: any) => state.currentHistoryIndex,
-  currentIndex: (state: any) => state.currentIndex,
-};
-
-/**
- * Section selectors
- */
-export const sectionSelectors = {
-  sections: (state: any) => state.sections,
-  sectionElementMap: (state: any) => state.sectionElementMap,
-  sectionById: (id: string) => (state: any) => state.sections.get(id),
-};
-
-/**
- * UI selectors
- */
-export const uiSelectors = {
-  selectedTool: (state: any) => state.selectedTool,
-  textEditingElementId: (state: any) => state.textEditingElementId,
-  selectedStickyNoteColor: (state: any) => state.selectedStickyNoteColor,
-  penColor: (state: any) => state.penColor,
-  showGrid: (state: any) => state.showGrid,
-  snapToGrid: (state: any) => state.snapToGrid,
-  isUploading: (state: any) => state.isUploading,
-};
-
-/**
- * Sticky Note selectors
- */
-export const stickyNoteSelectors = {
-  selectedStickyNoteColor: (state: any) => state.selectedStickyNoteColor,
-  stickyNoteById: (id: ElementId) => (state: any) => {
-    const element = state.elements.get(id);
-    return element?.type === 'sticky-note' ? element : null;
-  },
-  stickyNoteChildren: (id: ElementId) => (state: any) => {
-    const stickyNote = state.elements.get(id);
-    if (stickyNote?.type === 'sticky-note' && stickyNote.childElementIds) {
-      return stickyNote.childElementIds
-        .map((childId: ElementId) => state.elements.get(childId))
-        .filter(Boolean) as CanvasElement[];
-    }
-    return [];
-  },
-};
-
-/**
- * Eraser selectors
- */
-export const eraserSelectors = {
-  spatialIndex: (state: any) => state.spatialIndex,
-  spatialIndexDirty: (state: any) => state.spatialIndexDirty,
-  eraserBatch: (state: any) => state.eraserBatch,
-  isEraserBatchActive: (state: any) => state.eraserBatch.isActive,
-};
-
-/**
- * Combined selectors for convenience
- */
-export const combinedSelectors = {
-  ...elementSelectors,
-  ...selectionSelectors,
-  ...viewportSelectors,
-  ...drawingSelectors,
-  ...historySelectors,
-  ...sectionSelectors,
-  ...uiSelectors,
-  ...stickyNoteSelectors,
-  ...eraserSelectors,
+  // Table Module (as an example of a feature module)
+  tableActions: (state: CanvasState) => ({
+    updateTableCell: state.updateTableCell,
+    addTableRow: state.addTableRow,
+    removeTableRow: state.removeTableRow,
+    addTableColumn: state.addTableColumn,
+    removeTableColumn: state.removeTableColumn,
+  }),
 };

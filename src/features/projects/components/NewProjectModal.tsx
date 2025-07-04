@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Input, Textarea, Checkbox } from "../../../core/shared-ui";
+import { Card, Button, Input, Textarea, Checkbox } from "../../../components/ui";
 import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 interface ProjectForm {
@@ -80,7 +80,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   <label className="block text-sm font-medium text-text-primary mb-2">Project Name</label>
                   <Input 
                     value={projectForm.name}
-                    onChange={(e) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Enter project name"
                     className="w-full"
                   />
@@ -89,7 +89,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   <label className="block text-sm font-medium text-text-primary mb-2">Description</label>
                   <Textarea 
                     value={projectForm.description}
-                    onChange={(e) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
                     placeholder="Describe your project"
                     rows={3}
                     className="w-full"

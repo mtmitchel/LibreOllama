@@ -11,8 +11,8 @@ import {
   Shapes,
   Text
 } from "lucide-react";
-import { Button, Input } from "../../../core/shared-ui";
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { Button, Input } from "../../../components/ui";
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
 interface CanvasItem {
   id: string;
@@ -36,7 +36,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
+  const elements = useUnifiedCanvasStore(state => state.elements);
   // TODO: Implement clearCanvas in unified store
   const clearCanvas = () => {}; // Stub function
   const addElement = useUnifiedCanvasStore((state) => state.addElement);

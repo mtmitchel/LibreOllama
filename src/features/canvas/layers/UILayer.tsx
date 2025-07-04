@@ -6,7 +6,6 @@ import { Layer, Group } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement, ElementId, SectionId } from '../types/enhanced.types';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
-import { TransformerController } from '../components/ui/TransformerController';
 import { SelectionBox } from '../components/ui/SelectionBox';
 import { SnapPointIndicator } from '../components/ui/SnapPointIndicator';
 import { SectionPreview } from '../components/ui/SectionPreview';

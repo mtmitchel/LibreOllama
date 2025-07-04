@@ -79,28 +79,28 @@ export class EnhancedFeatureFlagManager {
           }
         },
       },
-      {
-        name: 'advanced-spatial-indexing',
-        enabled: true,
-        fallbackEnabled: true,
-        fallbackValue: false, // Fall back to simple element tracking
-        criticalityLevel: 'medium',
-        healthCheck: async () => {
-          // Check if spatial indexing is working
-          try {
-            return true;
-          } catch {
-            return false;
-          }
-        },
-      },
-      {
-        name: 'performance-monitoring',
-        enabled: true,
-        fallbackEnabled: true,
-        fallbackValue: false, // Disable monitoring if it's causing issues
-        criticalityLevel: 'low',
-      },
+      // {
+      //   name: 'advanced-spatial-indexing',
+      //   enabled: true,
+      //   fallbackEnabled: true,
+      //   fallbackValue: false, // Fall back to simple element tracking
+      //   criticalityLevel: 'medium',
+      //   healthCheck: async () => {
+      //     // Check if spatial indexing is working
+      //     try {
+      //       return true;
+      //     } catch {
+      //       return false;
+      //     }
+      //   },
+      // },
+      // {
+      //   name: 'performance-monitoring',
+      //   enabled: true,
+      //   fallbackEnabled: true,
+      //   fallbackValue: false, // Disable monitoring if it's causing issues
+      //   criticalityLevel: 'low',
+      // },
     ];
 
     for (const flag of defaultFlags) {

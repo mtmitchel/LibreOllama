@@ -1,6 +1,6 @@
 // Modern Bottom-Center Floating Toolbar (FigJam-style)
 import React, { useState } from 'react';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { useTauriCanvas } from '../hooks/useTauriCanvas';
 import { ElementId } from '../types/enhanced.types';
 import { SHAPE_CREATORS, ShapeType } from '../utils/shapeCreators';
@@ -39,7 +39,7 @@ const basicTools = [
 const contentTools = [
   { id: 'text', name: 'Text', icon: Type },
   { id: 'sticky-note', name: 'Sticky Note', icon: StickyNote },
-  { id: 'section', name: 'Section', icon: Layout },
+  // { id: 'section', name: 'Section', icon: Layout }, // Temporarily commented out - will implement in future sprint
   { id: 'table', name: 'Table', icon: Table },
   { id: 'image', name: 'Image', icon: ImageIcon }
 ];
@@ -52,7 +52,7 @@ const drawingTools = [
 ];
 
 const selectionTools = [
-  // Lasso tool removed - keeping array for future advanced selection tools
+  // Reserved for future advanced selection tools
 ];
 
 interface ModernKonvaToolbarProps {
@@ -74,11 +74,17 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const colorButtonRef = React.useRef<HTMLButtonElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  // OPTIMIZED: Store hooks to prevent infinite loops
-  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  // Direct store access without useShallow to test
+  const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
+  const selectedElementIds = useUnifiedCanvasStore(state => state.selectedElementIds);
   const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
-  const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
-  
+  const deleteElement = useUnifiedCanvasStore(state => state.deleteElement);
+  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
+  const addElement = useUnifiedCanvasStore(state => state.addElement);
+  const setStickyNoteColor = useUnifiedCanvasStore(state => state.setStickyNoteColor);
+  const canUndo = useUnifiedCanvasStore(state => state.canUndo);
+  const canRedo = useUnifiedCanvasStore(state => state.canRedo);
+
   // STABLE: Use useMemo to prevent recalculation on every render
   const selectedElementId = React.useMemo(() => {
     return selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] as ElementId : null;
@@ -88,26 +94,12 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const selectedElement = useUnifiedCanvasStore(state => 
     selectedElementId ? state.elements.get(selectedElementId) || null : null
   );
-  
-  // STABLE: Static function references
-  const deleteElement = useUnifiedCanvasStore(state => state.deleteElement);
-  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
-  
-  // History state for button enable/disable
-  const canUndo = useUnifiedCanvasStore(canvasSelectors.canUndo);
-  const canRedo = useUnifiedCanvasStore(canvasSelectors.canRedo);
-  
-  // Sticky note color functionality
-  const setStickyNoteColor = useUnifiedCanvasStore(state => state.setSelectedStickyNoteColor);
   const groupElements = (elementIds: string[]) => {
-    console.log('🔗 [ModernToolbar] Grouping elements:', elementIds);
-    // TODO: Implement in unified store
+// TODO: Implement in unified store
     return null;
   };
   const ungroupElements = (elementId: string) => {
-    console.log('🔗 [ModernToolbar] Ungrouping element:', elementId);
-    // TODO: Implement in unified store
+// TODO: Implement in unified store
   };
   const isElementInGroup = (elementId: string) => {
     // TODO: Implement in unified store
@@ -123,8 +115,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const handleDeleteSelected = () => {
     if (selectedElementId) {
       deleteElement(selectedElementId);
-      console.log('🗑️ [Toolbar] Deleted selected element:', selectedElementId);
-    }
+}
   };
 
   // Add keyboard shortcut support for delete
@@ -163,31 +154,14 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const handleToolClick = (toolId: string) => {
-    console.log('🔧 [MODERN TOOLBAR] Tool selected:', toolId);
-    
     // Special handling for image tool
     if (toolId === 'image') {
       fileInputRef.current?.click();
       return;
     }
     
-    // Define which tools are interactive (user must click/drag on canvas)
-    const interactiveTools = [
-      'select', 'pan', 'text', 'sticky-note', 'pen', 'marker', 'highlighter', 
-      'eraser', 'section', 'table', 
-      'connector-line', 'connector-arrow',
-      // Shape tools now use interactive pattern like sticky notes
-      'rectangle', 'circle', 'triangle', 'mindmap'
-    ];
-    
-    // All tools are now interactive - no immediate shape creation
-    if (interactiveTools.includes(toolId)) {
-      // Switch to interactive tool
-      setSelectedTool(toolId);
-    } else {
-      // Unknown tool, just switch
-      setSelectedTool(toolId);
-    }
+    // Set the tool directly
+    setSelectedTool(toolId);
     
     // Hide color picker when switching tools
     if (showColorPicker) {
@@ -196,9 +170,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const handleColorChange = (color: string) => {
-    console.log('🎨 [ModernToolbar] Handling color change:', color);
-    
-    // Set default sticky note color for future elements
+// Set default sticky note color for future elements
     setStickyNoteColor(color);
     
     // If an element is selected, update its color
@@ -242,7 +214,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
           // Create image element in center of viewport
           const imageElement = {
-            id: Date.now().toString() + index,
+            id: (Date.now().toString() + index) as ElementId,
             type: 'image' as const,
             x: 400 + (index * 20), // Center-ish position with offset for multiple images
             y: 300 + (index * 20),
@@ -264,9 +236,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             const selectElement = useUnifiedCanvasStore.getState().selectElement;
             selectElement(imageElement.id as any, false);
           }, 10);
-          
-          console.log('📷 [Toolbar] Image added:', imageElement.id);
-        };
+};
         img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
@@ -337,8 +307,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                           e.stopPropagation();
                           // Use the consolidated color change handler
                           handleColorChange(colorOption.color);
-                          console.log('🎨 [MODERN TOOLBAR] Color selected:', colorOption.color);
-                        }}
+}}
                         className={styles.colorButton}
                         style={{ backgroundColor: colorOption.color, border: colorOption.color === '#FFFFFF' ? '1px solid #E5E7EB' : 'none' }}
                         title={colorOption.label}

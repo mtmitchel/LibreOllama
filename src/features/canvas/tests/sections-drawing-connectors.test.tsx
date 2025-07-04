@@ -45,12 +45,25 @@ describe('Unified Canvas Store: Sections and Containment', () => {
 
     it('should update section bounds and recalculate containment', async () => {
       const { getState } = store;
-      const el1Id: ElementId = 'el1';
+      const el1Id: ElementId = 'el1' as ElementId;
       let sectionId: SectionId;
 
       await act(async () => {
         sectionId = getState().createSection(0, 0, 100, 100);
-        getState().addElement({ id: el1Id, x: 10, y: 10, width: 20, height: 20, type: 'shape', shapeType: 'rect' } as CanvasElement);
+        getState().addElement({ 
+          id: el1Id, 
+          x: 10, 
+          y: 10, 
+          width: 20, 
+          height: 20, 
+          type: 'rectangle', 
+          fill: '#000000',
+          stroke: '#000000',
+          strokeWidth: 1,
+          cornerRadius: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        } as CanvasElement);
         // Manually capture elements after creation since addElement doesn't do it automatically
         getState().captureElementsInSection(sectionId);
       });
@@ -76,7 +89,20 @@ describe('Unified Canvas Store: Sections and Containment', () => {
       let sectionId: SectionId;
       await act(async () => {
         sectionId = getState().createSection(0, 0, 200, 200);
-        getState().addElement({ id: 'el1', x: 50, y: 50, width: 50, height: 50, type: 'shape', shapeType: 'rect' } as CanvasElement);
+        getState().addElement({ 
+          id: 'el1' as ElementId, 
+          x: 50, 
+          y: 50, 
+          width: 50, 
+          height: 50, 
+          type: 'rectangle',
+          fill: '#000000',
+          stroke: '#000000', 
+          strokeWidth: 1,
+          cornerRadius: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        } as CanvasElement);
       });
 
       // findSectionAtPoint returns the section ID directly, not a section object

@@ -1,5 +1,5 @@
 // src/components/canvas/shapes/RectangleShape.tsx
-import React, { useRef, useEffect, useCallback, useReducer, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useReducer, useState, useMemo } from 'react';
 import { Group, Rect, Text, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { RectangleElement, ElementId, CanvasElement } from '../types/enhanced.types';
@@ -7,10 +7,11 @@ import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { measureTextDimensions } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 import { useDebounce } from '@/core/hooks/useDebounce';
+import { SHAPE_FITTING_DEFAULTS } from '../utils/shapeFittingUtils';
 
 // Resize constants for consistency
 const RESIZE_CONSTANTS = {
-  DEBOUNCE_THRESHOLD: 5,      // Standardized across all shapes
+  DEBOUNCE_THRESHOLD: SHAPE_FITTING_DEFAULTS.DEBOUNCE_THRESHOLD,
   IMMEDIATE_THRESHOLD: 5,     // Standardized immediate feedback threshold
   TEXT_LENGTH_TRIGGER: 5,     // Standardized text length trigger
   UPDATE_TIMEOUT: 100,        // Timeout for update flag reset
@@ -95,12 +96,7 @@ const createRectangleTextEditor = (
     hasUserInteracted = true; // Track that user has typed something
     autoGrow(); // Immediate visual feedback
     onTextChange(textarea.value); // Trigger debounced shape update
-    console.log('📝 [RectangleTextEditor] User typed:', {
-      text: textarea.value.substring(0, 20) + '...',
-      length: textarea.value.length,
-      hasInteracted: hasUserInteracted
-    });
-  };
+};
 
   autoGrow(); // Initial sizing
   textarea.addEventListener('input', handleInput);
@@ -115,8 +111,7 @@ const createRectangleTextEditor = (
       textarea.focus();
       textarea.select();
       editorReady = true;
-      console.log('📝 [RectangleTextEditor] Editor focused and ready');
-    }
+}
   }, 100); // Longer delay to ensure proper focus
 
   // Event handlers
@@ -134,38 +129,26 @@ const createRectangleTextEditor = (
   };
 
   const handleBlur = () => {
-    console.log('📝 [RectangleTextEditor] Blur event:', {
-      editorReady,
-      hasUserInteracted,
-      textValue: textarea.value,
-      textLength: textarea.value.length
-    });
-    
-    // Only save if editor was ready and user interacted, OR if there's actual text
+// Only save if editor was ready and user interacted, OR if there's actual text
     if ((editorReady && hasUserInteracted) || textarea.value.trim().length > 0) {
-      console.log('📝 [RectangleTextEditor] Saving on blur with text:', textarea.value);
-      cleanup();
+cleanup();
       onSave(textarea.value);
     } else {
-      console.log('📝 [RectangleTextEditor] Ignoring premature blur - no user interaction');
-      // Don't save, just cleanup the DOM elements
+// Don't save, just cleanup the DOM elements
       cleanup();
       onCancel(); // Use cancel instead of save to preserve original text
     }
   };
 
   const cleanup = () => {
-    console.log('🧹 [RectangleTextEditor] Cleaning up editor');
-    textarea.removeEventListener('input', handleInput);
+textarea.removeEventListener('input', handleInput);
     textarea.removeEventListener('keydown', handleKeyDown);
     textarea.removeEventListener('blur', handleBlur);
     container.removeEventListener('click', handleContainerClick);
     if (document.body.contains(container)) {
       document.body.removeChild(container);
-      console.log('🧹 [RectangleTextEditor] Container removed from DOM');
-    } else {
-      console.log('⚠️ [RectangleTextEditor] Container not found in DOM');
-    }
+} else {
+}
   };
 
   // Ensure textarea stays focused if container is clicked
@@ -173,8 +156,7 @@ const createRectangleTextEditor = (
     e.stopPropagation();
     if (editorReady && !textarea.contains(e.target as Node)) {
       textarea.focus();
-      console.log('📝 [RectangleTextEditor] Refocused textarea after container click');
-    }
+}
   };
 
   textarea.addEventListener('keydown', handleKeyDown);
@@ -215,6 +197,29 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   
   const { width = 120, height = 80, fontSize = 14 } = element;
 
+  // Memoized expensive calculations
+  const textDisplayProperties = useMemo(() => {
+    const hasContent = element.text && element.text.trim().length > 0;
+    const displayText = hasContent ? element.text! : 'Add text';
+    const textColor = hasContent ? (element.textColor || '#1F2937') : 'rgba(31, 41, 55, 0.6)';
+    const fontStyle = hasContent ? 'normal' : 'italic';
+    
+    return { hasContent, displayText, textColor, fontStyle };
+  }, [element.text, element.textColor]);
+
+  // Memoized style calculations
+  const rectStyle = useMemo(() => ({
+    fill: element.fill || '#FFFFFF',
+    stroke: element.stroke || '#D1D5DB',
+    strokeWidth: 2,
+    cornerRadius: 4
+  }), [element.fill, element.stroke]);
+
+  // Memoized font family (expensive function call)
+  const fontFamily = useMemo(() => {
+    return element.fontFamily || getAvailableFontFamily();
+  }, [element.fontFamily]);
+
   // Debounced text for final shape optimization
   const [liveText, setLiveText] = useState('');
   const debouncedText = useDebounce(liveText, 100); // Faster response for immediate feedback
@@ -235,10 +240,7 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     if (!isEditingRef.current || !debouncedText || updateInProgressRef.current) {
       return;
     }
-
-    console.log('🔧 [RectangleShape] Debounced final optimization for text:', debouncedText.substring(0, 30) + '...');
-
-    // Prevent recursive updates
+// Prevent recursive updates
     updateInProgressRef.current = true;
 
     try {
@@ -250,27 +252,13 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
         true,
         true // Force word wrapping for rectangles
       );
-
-      console.log('🔧 [RectangleShape] Final measured dimensions:', measuredDimensions);
-
-      const targetHeight = Math.max(RESIZE_CONSTANTS.MIN_HEIGHT, measuredDimensions.height + 40);
+const targetHeight = Math.max(RESIZE_CONSTANTS.MIN_HEIGHT, measuredDimensions.height + 40);
       const finalHeight = Math.max(height, targetHeight);
-
-      console.log('🔧 [RectangleShape] Final height calculation:', { 
-        currentHeight: height, 
-        measuredHeight: measuredDimensions.height,
-        targetHeight,
-        finalHeight,
-        needsOptimization: Math.abs(finalHeight - height) > 2
-      });
-
-      // Consistent threshold for updates
+// Consistent threshold for updates
       if (Math.abs(finalHeight - height) > RESIZE_CONSTANTS.DEBOUNCE_THRESHOLD) {
-        console.log('🔧 [RectangleShape] FINAL optimization update:', { from: height, to: finalHeight });
-        onUpdate(element.id, { height: finalHeight });
+onUpdate(element.id, { height: finalHeight });
       } else {
-        console.log('🔧 [RectangleShape] No final optimization needed:', { diff: Math.abs(finalHeight - height) });
-      }
+}
     } catch (error) {
       console.error('❌ [RectangleShape] Error measuring text:', error);
     } finally {
@@ -326,12 +314,7 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
 
         // Standardized immediate feedback threshold
         if (Math.abs(immediateFinalHeight - height) > RESIZE_CONSTANTS.IMMEDIATE_THRESHOLD) {
-          console.log('⚡ [RectangleShape] IMMEDIATE shape height update:', { 
-            from: height, 
-            to: immediateFinalHeight, 
-            textLength: newText.length 
-          });
-          onUpdate(element.id, { height: immediateFinalHeight });
+onUpdate(element.id, { height: immediateFinalHeight });
         }
       } catch (error) {
         console.error('❌ [RectangleShape] Error in immediate measurement:', error);
@@ -341,12 +324,9 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   
   const startEditing = useCallback(() => {
     if (isEditingRef.current) {
-      console.log('⚠️ [RectangleShape] Already editing - ignoring restart request');
-      return;
+return;
     }
-    
-    console.log('🟦 [RectangleShape] Starting edit mode');
-    isEditingRef.current = true;
+isEditingRef.current = true;
     updateInProgressRef.current = false; // Reset update flag
     setTextEditingElement(element.id);
     setLiveText(element.text || '');
@@ -363,23 +343,13 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
         setTextEditingElement(null);
         return;
       }
-      
-      console.log('📍 [RectangleShape] Editor position:', positionData);
-      
-      editorRef.current = createRectangleTextEditor(
+editorRef.current = createRectangleTextEditor(
         positionData,
         element.text || '',
         positionData.fontSize,
         element.fontFamily || getAvailableFontFamily(),
         (newText: string) => {
-          console.log('💾 [RectangleShape] Saving text:', {
-            originalText: newText,
-            trimmedText: newText.trim(),
-            textLength: newText.length,
-            trimmedLength: newText.trim().length,
-            elementId: element.id
-          });
-          isEditingRef.current = false;
+isEditingRef.current = false;
           updateInProgressRef.current = false;
           setTextEditingElement(null);
           editorRef.current = null;
@@ -398,35 +368,23 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
               
               const finalTargetHeight = Math.max(RESIZE_CONSTANTS.MIN_HEIGHT, finalMeasuredDimensions.height + 40);
               const finalHeight = Math.max(height, finalTargetHeight);
-              
-              console.log('💾 [RectangleShape] Final measurement on save:', {
-                textLength: newText.trim().length,
-                measuredHeight: finalMeasuredDimensions.height,
-                currentHeight: height,
-                finalHeight,
-                needsUpdate: finalHeight > height
-              });
-              
-              // Update both text and height in one operation
+// Update both text and height in one operation
               const updateData = { 
                 text: newText.trim(), 
                 height: finalHeight,
                 updatedAt: Date.now() 
               };
-              console.log('💾 [RectangleShape] Updating element with:', updateData);
-              onUpdate(element.id, updateData);
+onUpdate(element.id, updateData);
             } catch (error) {
               console.error('❌ [RectangleShape] Error in final measurement:', error);
               // Fallback to just updating text
               const fallbackData = { text: newText.trim(), updatedAt: Date.now() };
-              console.log('💾 [RectangleShape] Fallback update with:', fallbackData);
-              onUpdate(element.id, fallbackData);
+onUpdate(element.id, fallbackData);
             }
           } else {
             // Empty text, just update
             const emptyData = { text: newText.trim(), updatedAt: Date.now() };
-            console.log('💾 [RectangleShape] Empty text update with:', emptyData);
-            onUpdate(element.id, emptyData);
+onUpdate(element.id, emptyData);
           }
           
           setTimeout(() => {
@@ -436,8 +394,7 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
           }, 100);
         },
         () => {
-          console.log('❌ [RectangleShape] Edit cancelled');
-          isEditingRef.current = false;
+isEditingRef.current = false;
           updateInProgressRef.current = false;
           setTextEditingElement(null);
           editorRef.current = null;
@@ -449,24 +406,14 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
   }, [element, calculateTextareaPosition, setTextEditingElement, onUpdate, handleTextChange]);
 
   useEffect(() => {
-    console.log('🔄 [RectangleShape] useEffect triggered:', {
-      textEditingElementId,
-      elementId: element.id,
-      isCurrentlyEditing: isEditingRef.current,
-      hasEditor: !!editorRef.current,
-      shouldStartEditing: textEditingElementId === element.id && !isEditingRef.current
-    });
-
-    // Start editing only if not already editing
+// Start editing only if not already editing
     if (textEditingElementId === element.id && !isEditingRef.current) {
-      console.log('🟦 [RectangleShape] Starting new editing session');
-      startEditing();
+startEditing();
     }
     
     // Stop editing only if we're no longer the editing element AND we're currently editing
     if (textEditingElementId !== element.id && editorRef.current && isEditingRef.current) {
-      console.log('🛑 [RectangleShape] Stopping editing session - different element selected');
-      editorRef.current.cleanup();
+editorRef.current.cleanup();
       editorRef.current = null;
       isEditingRef.current = false;
       updateInProgressRef.current = false;
@@ -474,8 +421,7 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     
     return () => {
       if (editorRef.current) {
-        console.log('🧹 [RectangleShape] Component cleanup - removing editor');
-        editorRef.current.cleanup();
+editorRef.current.cleanup();
         editorRef.current = null;
         isEditingRef.current = false;
         updateInProgressRef.current = false;
@@ -510,10 +456,6 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
     });
   }, [element.id, onUpdate]);
 
-  const hasContent = element.text && element.text.trim().length > 0;
-  const displayText = hasContent ? element.text! : 'Add text';
-  const textColor = hasContent ? (element.textColor || '#1F2937') : 'rgba(31, 41, 55, 0.6)';
-  
   const isCurrentlyEditing = textEditingElementId === element.id;
   const shouldAllowDrawing = ['pen', 'marker', 'highlighter', 'eraser'].includes(selectedTool);
 
@@ -532,10 +474,7 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
           ref={rectRef}
           width={width}
           height={height}
-          fill={element.fill || '#FFFFFF'}
-          stroke={element.stroke || '#D1D5DB'}
-          strokeWidth={2}
-          cornerRadius={4}
+          {...rectStyle}
           onTransformEnd={handleTransformEnd}
         />
         {!isCurrentlyEditing && (
@@ -545,13 +484,13 @@ export const RectangleShape: React.FC<RectangleShapeProps> = React.memo(({
             y={0}
             width={width}
             height={height}
-            text={displayText}
+            text={textDisplayProperties.displayText}
             fontSize={fontSize}
-            fontFamily={getAvailableFontFamily()}
-            fill={textColor}
+            fontFamily={fontFamily}
+            fill={textDisplayProperties.textColor}
             align="center"
             verticalAlign="middle"
-            fontStyle={hasContent ? 'normal' : 'italic'}
+            fontStyle={textDisplayProperties.fontStyle}
             wrap="word"
             padding={10}
           />

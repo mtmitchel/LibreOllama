@@ -9,6 +9,8 @@ import React, { useCallback, useRef } from 'react';
 import { Line } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
 import { nanoid } from 'nanoid';
 import { PenElement } from '../../../types/enhanced.types';
 import { canvasLog } from '../../../utils/canvasLogger';
@@ -21,19 +23,43 @@ interface PenToolProps {
 export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
   const isDrawingRef = useRef(false);
 
-  // Store selectors and actions - unified store
-  const isDrawingStore = useUnifiedCanvasStore(state => state.isDrawing);
-  const currentPath = useUnifiedCanvasStore(state => state.currentPath);
-  const startDrawing = useUnifiedCanvasStore(state => state.startDrawing);
-  const updateDrawing = useUnifiedCanvasStore(state => state.updateDrawing);
-  const finishDrawing = useUnifiedCanvasStore(state => state.finishDrawing);
-  const cancelDrawing = useUnifiedCanvasStore(state => state.cancelDrawing);
-  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  // Store selectors using grouped patterns with useShallow for optimization
+  const drawingState = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      isDrawing: state.isDrawing,
+      currentPath: state.currentPath,
+      penColor: state.penColor
+    }))
+  );
+  
+  const drawingActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      startDrawing: state.startDrawing,
+      updateDrawing: state.updateDrawing,
+      finishDrawing: state.finishDrawing,
+      cancelDrawing: state.cancelDrawing
+    }))
+  );
+  
+  const toolActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      setSelectedTool: state.setSelectedTool,
+      addElement: state.addElement
+    }))
+  );
+  
+  const stickyNoteActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      findStickyNoteAtPoint: state.findStickyNoteAtPoint,
+      addElementToStickyNote: state.addElementToStickyNote
+    }))
+  );
 
-  // Container related actions
-  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
-  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
+  // Destructure for easier access
+  const { isDrawing: isDrawingStore, currentPath } = drawingState;
+  const { startDrawing, updateDrawing, finishDrawing, cancelDrawing } = drawingActions;
+  const { setSelectedTool, addElement } = toolActions;
+  const { findStickyNoteAtPoint, addElementToStickyNote } = stickyNoteActions;
 
   // Handle pointer down - start drawing
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -78,20 +104,16 @@ export const PenTool: React.FC<PenToolProps> = ({ stageRef, isActive }) => {
   }, [isActive, finishDrawing]);
 
   // Attach event listeners to stage when active
-  React.useEffect(() => {
-    if (!isActive || !stageRef.current) return;
-
-    const stage = stageRef.current;
-    stage.on('pointerdown', handlePointerDown);
-    stage.on('pointermove', handlePointerMove);
-    stage.on('pointerup', handlePointerUp);
-
-    return () => {
-      stage.off('pointerdown', handlePointerDown);
-      stage.off('pointermove', handlePointerMove);
-      stage.off('pointerup', handlePointerUp);
-    };
-  }, [isActive, handlePointerDown, handlePointerMove, handlePointerUp, stageRef]);
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'PenTool',
+    handlers: {
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: handlePointerUp
+    }
+  });
 
   // Render current drawing stroke as preview
   if (!isActive || !isDrawingStore || !currentPath || currentPath.length < 4) {

@@ -6,15 +6,16 @@
 // Main canvas hooks
 export * from './usePanZoom';
 export * from './useTauriCanvas';
-export * from './useViewportCulling';
+export { useSimpleViewportCulling as useViewportCulling } from './useSimpleViewportCulling';
+export * from './useSimpleViewportCulling';
 
 // Canvas-specific hooks
 export * from './useCanvasHistory';
 export * from './useCanvasPerformance';
 export * from './useCanvasSizing';
 export * from './useRafThrottle';
-// Export specific hooks from useMemoryTracking to avoid conflicts
-export { useCacheMemoryTracking } from './useMemoryTracking';
+// Memory monitoring hooks (consolidated)
+export * from './useMemoryMonitoring';
 export * from './useSelectionManager';
 export * from './useShapeCaching';
 export * from './useViewportControls';

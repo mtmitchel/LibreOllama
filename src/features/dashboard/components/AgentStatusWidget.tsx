@@ -1,9 +1,8 @@
 import React from 'react';
-import { Card } from '../../../core/shared-ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../core/shared-ui/DropdownMenu';
-import { Settings2 } from 'lucide-react';
+import { Card, Badge } from '../../../components/ui';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
+import { CheckCircle2, XCircle, Zap, Settings2, MoreHorizontal, Plus } from 'lucide-react';
 import { AgentStatus } from '../../../core/lib/mockData';
-import { MoreHorizontal, Plus } from 'lucide-react';
 
 interface AgentStatusWidgetProps {
   agents: AgentStatus[];

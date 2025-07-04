@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { Card } from '../../../core/shared-ui';
+import { Card } from '../../../components/ui';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {

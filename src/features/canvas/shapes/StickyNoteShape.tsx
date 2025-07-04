@@ -23,9 +23,7 @@ const createStickyNoteTextEditor = (
   onCancel: () => void,
   onRealtimeUpdate?: (text: string, dimensions: { width: number; height: number }) => void
 ) => {
-  console.log('🗒️ [StickyNoteTextEditor] Creating text editor:', position);
-
-  const textarea = document.createElement('textarea');
+const textarea = document.createElement('textarea');
   
   // Style the textarea to overlay the sticky note
   Object.assign(textarea.style, {
@@ -56,9 +54,7 @@ const createStickyNoteTextEditor = (
   textarea.value = initialText || '';
   textarea.placeholder = 'Add text';
   textarea.setAttribute('spellcheck', 'false');
-  
-  console.log('🗒️ [StickyNoteTextEditor] Appending textarea to body');
-  document.body.appendChild(textarea);
+document.body.appendChild(textarea);
 
   // Focus the textarea
   setTimeout(() => {
@@ -69,15 +65,12 @@ const createStickyNoteTextEditor = (
       } else {
         textarea.select();
       }
-      console.log('🗒️ [StickyNoteTextEditor] Focused and selected text');
-    }
+}
   }, 50);
 
   const handleInput = () => {
     const text = textarea.value;
-    console.log('🗒️ [StickyNoteTextEditor] Input:', text.substring(0, 20) + '...');
-    
-    // Real-time updates disabled to prevent typing interference
+// Real-time updates disabled to prevent typing interference
     // if (onRealtimeUpdate) {
     //   const dimensions = measureTextDimensions(text, fontSize, fontFamily, 600, false);
     //   onRealtimeUpdate(text, dimensions);
@@ -86,17 +79,13 @@ const createStickyNoteTextEditor = (
 
   const handleKeyDown = (e: KeyboardEvent) => {
     e.stopPropagation();
-    console.log('🗒️ [StickyNoteTextEditor] Key:', e.key);
-    
-    if (e.key === 'Escape') {
+if (e.key === 'Escape') {
       e.preventDefault();
-      console.log('🗒️ [StickyNoteTextEditor] Escape - canceling');
-      cleanup();
+cleanup();
       onCancel();
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      console.log('🗒️ [StickyNoteTextEditor] Tab - saving');
-      const text = textarea.value;
+const text = textarea.value;
       cleanup();
       onSave(text);
     }
@@ -105,16 +94,14 @@ const createStickyNoteTextEditor = (
 
   const handleDocumentMousedown = (e: MouseEvent) => {
     if (!textarea.contains(e.target as Node)) {
-      console.log('🗒️ [StickyNoteTextEditor] Click outside - saving');
-      const text = textarea.value;
+const text = textarea.value;
       cleanup();
       onSave(text, true);
     }
   };
 
   const cleanup = () => {
-    console.log('🗒️ [StickyNoteTextEditor] Cleaning up');
-    textarea.removeEventListener('input', handleInput);
+textarea.removeEventListener('input', handleInput);
     textarea.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('mousedown', handleDocumentMousedown);
     // Delay removal to next tick to allow click event to propagate to canvas
@@ -187,8 +174,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
     if (isSelected && transformerRef.current && rectRef.current) {
       transformerRef.current.nodes([rectRef.current]);
       transformerRef.current.getLayer()?.batchDraw();
-      console.log('🔄 [StickyNoteShape] Transformer attached to rect:', element.id);
-    }
+}
   }, [isSelected, element.id]);
 
   // Calculate textarea position for text editing - simplified version of TextShape
@@ -215,23 +201,18 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
 
   // Handle double-click to start editing - same pattern as TextShape
   const handleDoubleClick = useCallback(() => {
-    console.log('🗒️ [StickyNoteShape] Double-click detected, entering edit mode');
-    
-    // If already editing, don't start another editor
+// If already editing, don't start another editor
     if (cleanupEditorRef.current) {
-      console.log('⚠️ [StickyNoteShape] Already in edit mode, ignoring double-click');
-      return;
+return;
     }
     
     // If any text element is being edited globally, don't start new editing
     if (textEditingElementId && textEditingElementId !== element.id) {
-      console.log('⚠️ [StickyNoteShape] Another text element is being edited, ignoring double-click');
-      return;
+return;
     }
     
     if (!stageRef?.current) {
-      console.warn('⚠️ [StickyNoteShape] No stage ref available for editing');
-      return;
+return;
     }
 
     // Deselect element when entering edit mode to hide transformer
@@ -240,13 +221,9 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
 
     const positionData = calculateTextareaPosition();
     if (!positionData) {
-      console.warn('⚠️ [StickyNoteShape] Could not calculate textarea position');
-      return;
+return;
     }
-
-    console.log('✏️ [StickyNoteShape] Starting edit mode with position:', positionData);
-
-    const cleanup = createStickyNoteTextEditor(
+const cleanup = createStickyNoteTextEditor(
       positionData,
       element.text || '',
       positionData.fontSize,
@@ -254,9 +231,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
       element.backgroundColor,
       element.textColor || '#1F2937',
       (newText: string, isBlurringToCanvas?: boolean) => {
-        console.log('💾 [StickyNoteShape] Saving text:', newText, { isBlurringToCanvas });
-        
-        const finalText = newText.trim();
+const finalText = newText.trim();
         
         cleanupEditorRef.current = null;
         setTextEditingElement(null);
@@ -271,23 +246,19 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
         } else {
           setTimeout(() => {
             const store = useUnifiedCanvasStore.getState();
-            console.log('🎯 [StickyNoteShape] *** AUTO-SWITCHING TO SELECT TOOL ***:', element.id);
-            
-            store.setSelectedTool('select');
+store.setSelectedTool('select');
             
             setTimeout(() => {
               store.clearSelection();
               setTimeout(() => {
                 store.selectElement(element.id, false);
-                console.log('✅ [StickyNoteShape] Auto-selection complete');
-              }, 50);
+}, 50);
             }, 50);
           }, 100);
         }
       },
       () => {
-        console.log('❌ [StickyNoteShape] Edit cancelled');
-        cleanupEditorRef.current = null;
+cleanupEditorRef.current = null;
         setTextEditingElement(null);
       }
       // Removed real-time updates to prevent text input interference
@@ -371,35 +342,21 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
       height: newHeight,
       updatedAt: Date.now()
     });
-    
-    console.log('🔄 [StickyNoteShape] Transform complete:', { newWidth, newHeight });
-  }, [element.id, onUpdate]);
+}, [element.id, onUpdate]);
 
   // Text editing effect - same pattern as TextShape but triggered programmatically
   useEffect(() => {
-    console.log('🗒️ [StickyNoteShape] Text editing effect triggered:', {
-      textEditingElementId,
-      elementId: element.id,
-      isMatch: textEditingElementId === element.id,
-      hasStageRef: !!stageRef?.current
-    });
-    
-    if (textEditingElementId !== element.id || !stageRef?.current) {
+if (textEditingElementId !== element.id || !stageRef?.current) {
       if (textEditingElementId === element.id && !stageRef?.current) {
-        console.warn('🗒️ [StickyNoteShape] ⚠️ Text editing triggered but no stageRef available!');
-      }
+}
       return;
     }
 
     const positionData = calculateTextareaPosition();
     if (!positionData) {
-      console.warn('🗒️ [StickyNoteShape] ⚠️ Could not calculate position data for text editing');
-      return;
+return;
     }
-
-    console.log('🗒️ [StickyNoteShape] *** STARTING PROGRAMMATIC TEXT EDITING ***', element.id);
-
-    const cleanup = createStickyNoteTextEditor(
+const cleanup = createStickyNoteTextEditor(
       positionData,
       element.text || '',
       positionData.fontSize,
@@ -407,9 +364,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
       element.backgroundColor,
       element.textColor || '#1F2937',
       (newText: string, isBlurringToCanvas?: boolean) => {
-        console.log('💾 [StickyNoteShape] Saving programmatic text:', newText, { isBlurringToCanvas });
-
-        const finalText = newText.trim();
+const finalText = newText.trim();
 
         cleanupEditorRef.current = null;
         setTextEditingElement(null);
@@ -543,7 +498,7 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
             opacity={child.style.opacity}
             lineCap="round"
             lineJoin="round"
-            globalCompositeOperation={child.style.blendMode || 'multiply'}
+            globalCompositeOperation="source-over"
             listening={false}
             clipX={0}
             clipY={0}
@@ -650,8 +605,8 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
           key={child.id}
           x={relativeX}
           y={relativeY}
-          width={child.width || 20}
-          height={child.height || 20}
+          width={(child as any).width || 20}
+          height={(child as any).height || 20}
           fill="#F3F4F6"
           stroke="#D1D5DB"
           strokeWidth={1}
@@ -669,10 +624,13 @@ export const StickyNoteShape: React.FC<StickyNoteShapeProps> = React.memo(({
       const drawingTools = ['pen', 'marker', 'highlighter', 'eraser'];
   const shouldAllowDrawing = drawingTools.includes(selectedTool);
 
+  // Filter out stroke-related properties from konvaProps to prevent blue borders
+  const { stroke, strokeWidth, shadowColor, shadowBlur, shadowOpacity, ...filteredKonvaProps } = konvaProps;
+
   return (
     <>
       <Group
-        {...konvaProps}
+        {...filteredKonvaProps}
         ref={groupRef}
         id={element.id}
         onDblClick={handleDoubleClick}

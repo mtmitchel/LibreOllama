@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { Palette } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { designSystem } from '../../../core/design-system';
 
 interface ColorPickerProps {

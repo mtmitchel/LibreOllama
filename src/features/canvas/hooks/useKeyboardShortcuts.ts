@@ -1,30 +1,42 @@
 // src/features/canvas/hooks/useKeyboardShortcuts.ts
-import { useEffect } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { ElementId, CanvasElement } from '../types/enhanced.types';
 
 export const useKeyboardShortcuts = () => {
-  const undo = useUnifiedCanvasStore((state) => state.undo);
-  const redo = useUnifiedCanvasStore((state) => state.redo);
-  const canUndo = useUnifiedCanvasStore((state) => state.canUndo);
-  const canRedo = useUnifiedCanvasStore((state) => state.canRedo);
-  const deleteElement = useUnifiedCanvasStore((state) => state.deleteElement);
-  const addElement = useUnifiedCanvasStore((state) => state.addElement);
-  const getElementById = useUnifiedCanvasStore((state) => state.getElementById);
-  const selectedElementIds = useUnifiedCanvasStore((state) => state.selectedElementIds);
-  const clearSelection = useUnifiedCanvasStore((state) => state.clearSelection);
-  const setSelectedTool = useUnifiedCanvasStore((state) => state.setSelectedTool);
-  const elements = useUnifiedCanvasStore((state) => state.elements);
-  const selectElement = useUnifiedCanvasStore((state) => state.selectElement);
+  // PERFORMANCE OPTIMIZATION: Consolidate 12 individual subscriptions into 1 combined selector
+  const canvasState = useUnifiedCanvasStore(useCallback((state) => ({
+    // Read-only state for keyboard shortcuts
+    canUndo: state.canUndo,
+    canRedo: state.canRedo,
+    selectedElementIds: state.selectedElementIds,
+    elementsSize: state.elements.size
+  }), []));
+
+  // Extract actions once (these don't cause re-renders)
+  const actions = useMemo(() => {
+    const store = useUnifiedCanvasStore.getState();
+    return {
+      undo: store.undo,
+      redo: store.redo,
+      deleteElement: store.deleteElement,
+      addElement: store.addElement,
+      getElementById: store.getElementById,
+      clearSelection: store.clearSelection,
+      setSelectedTool: store.setSelectedTool,
+      selectElement: store.selectElement,
+      getElements: () => useUnifiedCanvasStore.getState().elements
+    };
+  }, []);
 
   // Helper function to delete multiple elements
-  const deleteElements = (ids: ElementId[]) => {
-    ids.forEach(id => deleteElement(id));
-  };
+  const deleteElements = useCallback((ids: ElementId[]) => {
+    ids.forEach(id => actions.deleteElement(id));
+  }, [actions]);
 
   // Helper function to duplicate an element (simplified implementation)
-  const duplicateElement = (id: ElementId) => {
-    const element = getElementById(id);
+  const duplicateElement = useCallback((id: ElementId) => {
+    const element = actions.getElementById(id);
     if (element) {
       const newElement = {
         ...element,
@@ -33,24 +45,29 @@ export const useKeyboardShortcuts = () => {
         y: element.y + 20,
         updatedAt: Date.now()
       };
-      addElement(newElement as CanvasElement);
+      actions.addElement(newElement as CanvasElement);
     }
-  };
+  }, [actions]);
 
   // Helper function to select all elements
-  const selectAll = () => {
-    console.log('🎯 [KeyboardShortcuts] Select All - selecting', elements.size, 'elements');
+  const selectAll = useCallback(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎯 [KeyboardShortcuts] Select All - selecting', canvasState.elementsSize, 'elements');
+    }
     
     // Clear current selection first
-    clearSelection();
+    actions.clearSelection();
     
-    // Select all elements
+    // Select all elements (get fresh state)
+    const elements = actions.getElements();
     elements.forEach((element, elementId) => {
-      selectElement(elementId as ElementId, true); // true = additive selection
+      actions.selectElement(elementId as ElementId, true); // true = additive selection
     });
     
-    console.log('✅ [KeyboardShortcuts] Select All complete - selected', elements.size, 'elements');
-  };
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ [KeyboardShortcuts] Select All complete - selected', canvasState.elementsSize, 'elements');
+    }
+  }, [actions, canvasState.elementsSize]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,22 +80,22 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      const firstSelectedId: ElementId | null = selectedElementIds.size > 0 ? (selectedElementIds.values().next().value as ElementId) ?? null : null;
+      const firstSelectedId: ElementId | null = canvasState.selectedElementIds.size > 0 ? (canvasState.selectedElementIds.values().next().value as ElementId) ?? null : null;
 
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
           case 'z':
             e.preventDefault();
-            if (e.shiftKey && canRedo) {
-              redo();
-            } else if (canUndo) {
-              undo();
+            if (e.shiftKey && canvasState.canRedo) {
+              actions.redo();
+            } else if (canvasState.canUndo) {
+              actions.undo();
             }
             break;
           case 'y':
             e.preventDefault();
-            if (canRedo) {
-              redo();
+            if (canvasState.canRedo) {
+              actions.redo();
             }
             break;
           case '0':
@@ -113,53 +130,53 @@ export const useKeyboardShortcuts = () => {
         switch (e.key) {
           case 'Delete':
           case 'Backspace':
-            if (selectedElementIds.size > 0) {
+            if (canvasState.selectedElementIds.size > 0) {
               e.preventDefault();
-              deleteElements(Array.from(selectedElementIds) as ElementId[]);
+              deleteElements(Array.from(canvasState.selectedElementIds) as ElementId[]);
             }
             break;
           case 'Escape':
             e.preventDefault();
-            clearSelection();
+            actions.clearSelection();
             break;
           // Tool shortcuts
           case 'v':
             e.preventDefault();
-            setSelectedTool('select');
+            actions.setSelectedTool('select');
             break;
           case 'h':
             e.preventDefault();
-            setSelectedTool('pan');
+            actions.setSelectedTool('pan');
             break;
           case 't':
             e.preventDefault();
-            setSelectedTool('text');
+            actions.setSelectedTool('text');
             break;
           case 'r':
             e.preventDefault();
-            setSelectedTool('rectangle');
+            actions.setSelectedTool('rectangle');
             break;
           case 'c':
             e.preventDefault();
-            setSelectedTool('circle');
+            actions.setSelectedTool('circle');
             break;
           case 'l':
             e.preventDefault();
-            setSelectedTool('line');
+            actions.setSelectedTool('line');
             break;
           case 'p':
             e.preventDefault();
-            setSelectedTool('pen');
+            actions.setSelectedTool('pen');
             break;
           case 's':
             if (!e.ctrlKey && !e.metaKey) {
               e.preventDefault();
-              setSelectedTool('star');
+              actions.setSelectedTool('star');
             }
             break;
           case 'n':
             e.preventDefault();
-            setSelectedTool('sticky-note');
+            actions.setSelectedTool('sticky-note');
             break;
         }
       }
@@ -167,5 +184,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, canUndo, canRedo, selectedElementIds, deleteElements, duplicateElement, selectAll, setSelectedTool, clearSelection]);
+  }, [canvasState, actions, deleteElements, duplicateElement, selectAll]); // PERFORMANCE: Reduced from 10 deps to 5
 };

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Card } from '../../../core/shared-ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../core/shared-ui/DropdownMenu';
-import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate } from 'lucide-react';
-import { MoreHorizontal } from 'lucide-react';
+import { Card, Button } from '../../../components/ui';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
+import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate, MoreHorizontal } from 'lucide-react';
 
 interface QuickAction {
   id: string;

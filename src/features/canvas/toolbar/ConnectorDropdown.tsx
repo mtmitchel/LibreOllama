@@ -5,7 +5,7 @@ import {
   ChevronDown,
   GitBranch
 } from 'lucide-react';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import styles from './ModernToolbar.module.css';
 import '../../../core/design-system/globals.css';
 
@@ -21,7 +21,7 @@ interface ConnectorDropdownProps {
 const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
   // Check if any connector tool is active, default to line connector
   const currentConnectorTool = connectorTools.find(tool => tool.id === selectedTool) || connectorTools[0]!;

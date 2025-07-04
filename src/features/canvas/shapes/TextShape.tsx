@@ -1,5 +1,5 @@
 // src/components/canvas/shapes/TextShape.tsx
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, memo } from 'react';
 import { Text, Group, Rect, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { TextElement, ElementId, CanvasElement } from '../types/enhanced.types';
@@ -7,6 +7,8 @@ import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { designSystem } from '../../../core/design-system';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 import { measureTextDimensions, CANVAS_TEXT_CONFIG } from '../utils/textEditingUtils';
+import { debounce } from '../utils/debounce';
+import { devLog } from '../../../utils/devLog';
 
 interface TextShapeProps {
   element: TextElement;
@@ -55,7 +57,7 @@ const autoHugTextContent = (
     Math.abs((element.height || 0) - huggedDimensions.height) > 2;
     
   if (needsUpdate) {
-    console.log('🤏 [TextShape] Auto-hugging text content:', {
+    devLog.debug('🤏 [TextShape] Auto-hugging text content:', {
       elementId: element.id,
       oldDimensions: { width: element.width, height: element.height },
       newDimensions: huggedDimensions
@@ -85,7 +87,7 @@ const createTextEditor = (
 ) => {
   const textarea = document.createElement('textarea');
   
-  console.log('🎯 [TextEditor] Creating textarea with exact dimensions:', {
+  devLog.debug('🎯 [TextEditor] Creating textarea with exact dimensions:', {
     position,
     fontSize,
     initialText: initialText.substring(0, 50) + (initialText.length > 50 ? '...' : '')
@@ -140,6 +142,16 @@ const createTextEditor = (
     textarea.select();
   }
 
+  // PERFORMANCE OPTIMIZATION: Debounced store updates
+  const debouncedStoreUpdate = debounce((text: string, dimensions: { width: number; height: number }) => {
+    if (onRealtimeUpdate) {
+      if (process.env.NODE_ENV === 'development') {
+        devLog.debug('📝 [TextEditor] Debounced store update:', { text: text.substring(0, 20), dimensions });
+      }
+      onRealtimeUpdate(text, dimensions);
+    }
+  }, 150); // 150ms debounce - smooth typing without performance loss
+
   const handleInput = () => {
     // Auto-expand text box as user types (FigJam behavior)
     const currentText = textarea.value;
@@ -148,39 +160,38 @@ const createTextEditor = (
     // Use enforceMinimums: false for real-time updates to get true text dimensions
     const newDimensions = measureTextDimensions(textToMeasure, fontSize, fontFamily, 600, false);
     
-    console.log('📝 [TextEditor] Input event - measuring:', { 
-      currentText: currentText.substring(0, 20), 
-      textToMeasure, 
-      newDimensions 
-    });
+    if (process.env.NODE_ENV === 'development') {
+      devLog.debug('📝 [TextEditor] Input event - measuring:', { 
+        currentText: currentText.substring(0, 20), 
+        textToMeasure, 
+        newDimensions 
+      });
+    }
     
-    // Update textarea size in real-time
+    // Update textarea size IMMEDIATELY for responsive UX
     textarea.style.width = `${newDimensions.width}px`;
     textarea.style.height = `${newDimensions.height}px`;
     
-    // Update canvas element in real-time (FigJam-style auto-hug)
-    if (onRealtimeUpdate) {
-      console.log('📝 [TextEditor] Calling real-time update with dimensions:', newDimensions);
-      onRealtimeUpdate(currentText, newDimensions);
-    }
+    // Update canvas element with DEBOUNCING to reduce performance impact
+    debouncedStoreUpdate(currentText, newDimensions);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    console.log('📝 [TextEditor] Key pressed:', e.key);
+    devLog.debug('📝 [TextEditor] Key pressed:', e.key);
     if (e.key === 'Escape') {
       e.preventDefault();
-      console.log('📝 [TextEditor] Escape - cancelling');
+      devLog.debug('📝 [TextEditor] Escape - cancelling');
       cleanup();
       onCancel();
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      console.log('📝 [TextEditor] Enter - saving');
+      devLog.debug('📝 [TextEditor] Enter - saving');
       const text = textarea.value;
       cleanup();
       onSave(text);
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      console.log('📝 [TextEditor] Tab - saving');
+      devLog.debug('📝 [TextEditor] Tab - saving');
       const text = textarea.value;
       cleanup();
       onSave(text);
@@ -189,7 +200,7 @@ const createTextEditor = (
   };
 
   const handleBlur = () => {
-    console.log('📝 [TextEditor] Blur event - saving');
+    devLog.debug('📝 [TextEditor] Blur event - saving');
     const text = textarea.value;
     cleanup();
     onSave(text);
@@ -214,7 +225,7 @@ const createTextEditor = (
 /**
  * TextShape - FigJam-style hybrid text editing
  */
-export const TextShape: React.FC<TextShapeProps> = ({
+export const TextShape: React.FC<TextShapeProps> = memo(({
   element,
   isSelected,
   konvaProps,
@@ -231,7 +242,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
   const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
 
   // Using direct textarea approach with store integration
-  console.log('🎯 [TextShape] *** RENDERING TEXT ELEMENT ***:', {
+  devLog.debug('🎯 [TextShape] *** RENDERING TEXT ELEMENT ***:', {
     id: element.id,
     text: element.text?.substring(0, 30) + (element.text?.length > 30 ? '...' : ''),
     position: { x: element.x, y: element.y },
@@ -250,19 +261,19 @@ export const TextShape: React.FC<TextShapeProps> = ({
       // Attach transformer to text node
       transformerRef.current.nodes([textNodeRef.current]);
       transformerRef.current.getLayer()?.batchDraw();
-      console.log('🔄 [TextShape] Transformer attached for element:', element.id);
+      devLog.debug('🔄 [TextShape] Transformer attached for element:', element.id);
       
       // Reset any unwanted scales that might have been applied
       const textNode = textNodeRef.current;
       if (textNode.scaleX() !== 1 || textNode.scaleY() !== 1) {
-        console.log('🔄 [TextShape] Resetting unwanted scales on selection:', { scaleX: textNode.scaleX(), scaleY: textNode.scaleY() });
+        devLog.debug('🔄 [TextShape] Resetting unwanted scales on selection:', { scaleX: textNode.scaleX(), scaleY: textNode.scaleY() });
         textNode.scaleX(1);
         textNode.scaleY(1);
       }
     } else if (transformerRef.current) {
       // Detach transformer when not selected
       transformerRef.current.nodes([]);
-      console.log('🔄 [TextShape] Transformer detached for element:', element.id);
+      devLog.debug('🔄 [TextShape] Transformer detached for element:', element.id);
     }
   }, [isSelected, element.id]);
 
@@ -311,7 +322,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
   // Calculate dimensions based on actual content or placeholder
   const measuredDimensions = React.useMemo(() => {
     const dimensions = measureTextDimensions(displayText, finalFontSize, fontFamily, 600, true);
-    console.log('📐 [TextShape] Calculated dimensions:', {
+    devLog.debug('📐 [TextShape] Calculated dimensions:', {
       displayText: displayText.substring(0, 20),
       fontSize: finalFontSize,
       calculated: dimensions,
@@ -332,7 +343,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
       group.height(elementHeight);
       group.getLayer()?.batchDraw();
       
-      console.log('🔧 [TextShape] Updated Group bounds:', {
+      devLog.debug('🔧 [TextShape] Updated Group bounds:', {
         elementId: element.id,
         groupBounds: { width: elementWidth, height: elementHeight },
         groupPosition: { x: element.x, y: element.y }
@@ -345,8 +356,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
    */
   const calculateTextareaPosition = useCallback(() => {
     if (!stageRef?.current || !groupRef.current) {
-      console.warn('⚠️ [TextShape] Missing stage or group ref for position calculation');
-      return null;
+return null;
     }
 
     const stage = stageRef.current;
@@ -374,7 +384,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
     const effectiveScale = stageScale;
     const effectiveFontSize = currentFontSize * effectiveScale;
     
-    console.log('📐 [TextShape] Position calculation:', {
+    devLog.debug('📐 [TextShape] Position calculation:', {
       groupBounds,
       stageBox,
       stageScale,
@@ -396,30 +406,28 @@ export const TextShape: React.FC<TextShapeProps> = ({
   // Auto-start editing when this element is set as the editing target in the store
   useEffect(() => {
     if (textEditingElementId === element.id && !cleanupEditorRef.current) {
-      console.log('🔄 [TextShape] *** STORE TRIGGERED EDITING ***:', element.id);
+      devLog.debug('🔄 [TextShape] *** STORE TRIGGERED EDITING ***:', element.id);
       
       // Function to attempt starting editing with retries
       const attemptStartEditing = (retryCount = 0) => {
         if (!stageRef?.current || !textNodeRef.current) {
           if (retryCount < 5) {
-            console.log(`⏳ [TextShape] Refs not ready, retrying... (${retryCount + 1}/5)`);
+            devLog.debug(`⏳ [TextShape] Refs not ready, retrying... (${retryCount + 1}/5)`);
             setTimeout(() => attemptStartEditing(retryCount + 1), 100);
             return;
           } else {
-            console.warn('⚠️ [TextShape] Cannot start programmatic editing - missing refs after retries');
-            setTextEditingElement(null); // Clear the editing state
+setTextEditingElement(null); // Clear the editing state
             return;
           }
         }
         
         const positionData = calculateTextareaPosition();
         if (!positionData) {
-          console.warn('⚠️ [TextShape] Cannot calculate position for programmatic editing');
-          setTextEditingElement(null); // Clear the editing state
+setTextEditingElement(null); // Clear the editing state
           return;
         }
         
-        console.log('✏️ [TextShape] *** STARTING PROGRAMMATIC EDIT MODE ***:', positionData);
+        devLog.debug('✏️ [TextShape] *** STARTING PROGRAMMATIC EDIT MODE ***:', positionData);
         
         // Deselect element when entering edit mode to hide transformer
         const store = useUnifiedCanvasStore.getState();
@@ -433,7 +441,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
           undefined, // TextElement doesn't have backgroundColor
           textColor,
           (newText: string) => {
-            console.log('💾 [TextShape] Saving programmatic text:', newText);
+            devLog.debug('💾 [TextShape] Saving programmatic text:', newText);
             
             const finalText = newText.trim();
             
@@ -443,7 +451,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
               updatedAt: Date.now()
             });
             
-            console.log('💾 [TextShape] *** STARTING SAVE SEQUENCE ***:', { finalText, elementId: element.id });
+            devLog.debug('💾 [TextShape] *** STARTING SAVE SEQUENCE ***:', { finalText, elementId: element.id });
             
             // Clear editing state first
             cleanupEditorRef.current = null;
@@ -457,7 +465,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
             
             // Then auto-hug and select in sequence
             setTimeout(() => {
-              console.log('💾 [TextShape] Auto-hugging content');
+              devLog.debug('💾 [TextShape] Auto-hugging content');
               // Use the same approach as real-time updates - don't enforce minimums for final sizing
               const finalDimensions = measureTextDimensions(
                 finalText,
@@ -467,7 +475,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
                 false // Don't enforce minimums - keep true text dimensions
               );
               
-              console.log('💾 [TextShape] Final auto-hug dimensions:', finalDimensions);
+              devLog.debug('💾 [TextShape] Final auto-hug dimensions:', finalDimensions);
               
               onUpdate(element.id, {
                 width: Math.max(finalDimensions.width, 20), // Only ensure basic minimum
@@ -478,7 +486,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
               // Wait longer for auto-hug to complete, then select
               setTimeout(() => {
                 const store = useUnifiedCanvasStore.getState();
-                console.log('🎯 [TextShape] *** ATTEMPTING AUTO-SELECT ***:', element.id);
+                devLog.debug('🎯 [TextShape] *** ATTEMPTING AUTO-SELECT ***:', element.id);
                 
                 // Ensure we switch to select tool first
                 store.setSelectedTool('select');
@@ -488,12 +496,12 @@ export const TextShape: React.FC<TextShapeProps> = ({
                   store.clearSelection();
                   setTimeout(() => {
                     store.selectElement(element.id, false);
-                    console.log('✅ [TextShape] Auto-selection complete');
+                    devLog.debug('✅ [TextShape] Auto-selection complete');
                     
                     // Verify selection worked
                     setTimeout(() => {
                       const newState = useUnifiedCanvasStore.getState();
-                      console.log('🔍 [TextShape] Selection verification:', {
+                      devLog.debug('🔍 [TextShape] Selection verification:', {
                         selectedIds: Array.from(newState.selectedElementIds),
                         targetId: element.id,
                         isSelected: newState.selectedElementIds.has(element.id),
@@ -506,14 +514,14 @@ export const TextShape: React.FC<TextShapeProps> = ({
             }, 50);
           },
           () => {
-            console.log('❌ [TextShape] Programmatic edit cancelled');
+            devLog.debug('❌ [TextShape] Programmatic edit cancelled');
             // Clear editing state
             cleanupEditorRef.current = null;
             setTextEditingElement(null);
           },
           (text: string, dimensions: { width: number; height: number }) => {
             // Real-time update during typing (FigJam-style auto-hug)
-            console.log('🔄 [TextShape] Real-time update:', { text: text.substring(0, 20), dimensions });
+            devLog.debug('🔄 [TextShape] Real-time update:', { text: text.substring(0, 20), dimensions });
             
             // Always update text content, but be more selective about dimension updates
             const currentWidth = element.width || 20;
@@ -523,7 +531,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
             
             // Update if text changed or dimensions changed significantly
             if (text !== element.text || widthDiff > 3 || heightDiff > 2) {
-              console.log('🔄 [TextShape] Applying real-time update - change detected:', {
+              devLog.debug('🔄 [TextShape] Applying real-time update - change detected:', {
                 textChanged: text !== element.text,
                 widthDiff,
                 heightDiff
@@ -536,7 +544,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
                 updatedAt: Date.now()
               });
             } else {
-              console.log('🔄 [TextShape] Skipping real-time update - change too small');
+              devLog.debug('🔄 [TextShape] Skipping real-time update - change too small');
             }
           }
         );
@@ -552,23 +560,22 @@ export const TextShape: React.FC<TextShapeProps> = ({
 
   // Handle double-click to start editing
   const handleDoubleClick = useCallback(() => {
-    console.log('🖱️ [TextShape] Double-click detected, entering edit mode');
+    devLog.debug('🖱️ [TextShape] Double-click detected, entering edit mode');
     
     // If already editing, don't start another editor
     if (cleanupEditorRef.current) {
-      console.log('⚠️ [TextShape] Already in edit mode, ignoring double-click');
+      devLog.debug('⚠️ [TextShape] Already in edit mode, ignoring double-click');
       return;
     }
     
     // If any text element is being edited globally, don't start new editing
     if (textEditingElementId && textEditingElementId !== element.id) {
-      console.log('⚠️ [TextShape] Another text element is being edited, ignoring double-click');
+      devLog.debug('⚠️ [TextShape] Another text element is being edited, ignoring double-click');
       return;
     }
     
     if (!stageRef?.current) {
-      console.warn('⚠️ [TextShape] No stage ref available for editing');
-      return;
+return;
     }
 
     // Deselect element when entering edit mode to hide transformer
@@ -577,11 +584,10 @@ export const TextShape: React.FC<TextShapeProps> = ({
 
     const positionData = calculateTextareaPosition();
     if (!positionData) {
-      console.warn('⚠️ [TextShape] Could not calculate textarea position');
-      return;
+return;
     }
 
-    console.log('✏️ [TextShape] Starting edit mode with position:', positionData);
+    devLog.debug('✏️ [TextShape] Starting edit mode with position:', positionData);
 
     const cleanup = createTextEditor(
       positionData,
@@ -591,7 +597,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
       undefined, // TextElement doesn't have backgroundColor
       textColor,
       (newText: string) => {
-        console.log('💾 [TextShape] Saving text:', newText);
+        devLog.debug('💾 [TextShape] Saving text:', newText);
         
         const finalText = newText.trim();
         
@@ -601,7 +607,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
           updatedAt: Date.now()
         });
         
-        console.log('💾 [TextShape] *** DOUBLE-CLICK SAVE SEQUENCE ***:', { finalText, elementId: element.id });
+        devLog.debug('💾 [TextShape] *** DOUBLE-CLICK SAVE SEQUENCE ***:', { finalText, elementId: element.id });
         
         // Clear editing state first
         cleanupEditorRef.current = null;
@@ -615,7 +621,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
         
         // Then auto-hug and select in sequence
         setTimeout(() => {
-          console.log('💾 [TextShape] Auto-hugging content (double-click)');
+          devLog.debug('💾 [TextShape] Auto-hugging content (double-click)');
           // Use the same approach as real-time updates - don't enforce minimums for final sizing
           const finalDimensions = measureTextDimensions(
             finalText,
@@ -625,7 +631,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
             false // Don't enforce minimums - keep true text dimensions
           );
           
-          console.log('💾 [TextShape] Final auto-hug dimensions (double-click):', finalDimensions);
+          devLog.debug('💾 [TextShape] Final auto-hug dimensions (double-click):', finalDimensions);
           
           onUpdate(element.id, {
             width: Math.max(finalDimensions.width, 20), // Only ensure basic minimum
@@ -636,7 +642,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
           // Wait longer for auto-hug to complete, then select
           setTimeout(() => {
             const store = useUnifiedCanvasStore.getState();
-            console.log('🎯 [TextShape] *** ATTEMPTING AUTO-SELECT (double-click) ***:', element.id);
+            devLog.debug('🎯 [TextShape] *** ATTEMPTING AUTO-SELECT (double-click) ***:', element.id);
             
             // Ensure we switch to select tool first
             store.setSelectedTool('select');
@@ -646,12 +652,12 @@ export const TextShape: React.FC<TextShapeProps> = ({
               store.clearSelection();
               setTimeout(() => {
                 store.selectElement(element.id, false);
-                console.log('✅ [TextShape] Auto-selection complete (double-click)');
+                devLog.debug('✅ [TextShape] Auto-selection complete (double-click)');
                 
                 // Verify selection worked
                 setTimeout(() => {
                   const newState = useUnifiedCanvasStore.getState();
-                  console.log('🔍 [TextShape] Selection verification (double-click):', {
+                  devLog.debug('🔍 [TextShape] Selection verification (double-click):', {
                     selectedIds: Array.from(newState.selectedElementIds),
                     targetId: element.id,
                     isSelected: newState.selectedElementIds.has(element.id),
@@ -664,14 +670,14 @@ export const TextShape: React.FC<TextShapeProps> = ({
         }, 50);
       },
       () => {
-        console.log('❌ [TextShape] Edit cancelled');
+        devLog.debug('❌ [TextShape] Edit cancelled');
         // Clear editing state
         cleanupEditorRef.current = null;
         setTextEditingElement(null);
       },
               (text: string, dimensions: { width: number; height: number }) => {
           // Real-time update during typing (FigJam-style auto-hug)
-          console.log('🔄 [TextShape] Real-time update:', { text: text.substring(0, 20), dimensions });
+          devLog.debug('🔄 [TextShape] Real-time update:', { text: text.substring(0, 20), dimensions });
           
           // Always update text content, but be more selective about dimension updates
           const currentWidth = element.width || 20;
@@ -681,7 +687,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
           
           // Update if text changed or dimensions changed significantly
           if (text !== element.text || widthDiff > 3 || heightDiff > 2) {
-            console.log('🔄 [TextShape] Applying real-time update - change detected:', {
+            devLog.debug('🔄 [TextShape] Applying real-time update - change detected:', {
               textChanged: text !== element.text,
               widthDiff,
               heightDiff
@@ -694,7 +700,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
               updatedAt: Date.now()
             });
           } else {
-            console.log('🔄 [TextShape] Skipping real-time update - change too small');
+            devLog.debug('🔄 [TextShape] Skipping real-time update - change too small');
           }
         }
     );
@@ -707,14 +713,14 @@ export const TextShape: React.FC<TextShapeProps> = ({
   const handleDragEnd = React.useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     // Don't handle drag events while editing
     if (cleanupEditorRef.current) {
-      console.log('🚫 [TextShape] Drag ignored - text editing in progress');
+      devLog.debug('🚫 [TextShape] Drag ignored - text editing in progress');
       return;
     }
     
     if (!groupRef.current) return;
     
     const group = groupRef.current;
-    console.log('🎯 [TextShape] Drag end - updating position:', { x: group.x(), y: group.y() });
+    devLog.debug('🎯 [TextShape] Drag end - updating position:', { x: group.x(), y: group.y() });
     
     onUpdate(element.id, {
       x: group.x(),
@@ -742,7 +748,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
     
     // Only handle transforms from the transformer, not from the text node directly
     if (target.className !== 'Transformer') {
-      console.log('🔄 [TextShape] Transform ignored - not from Transformer:', target.className);
+      devLog.debug('🔄 [TextShape] Transform ignored - not from Transformer:', target.className);
       return;
     }
     
@@ -755,31 +761,31 @@ export const TextShape: React.FC<TextShapeProps> = ({
     
     // Prevent transform handling during text editing
     if (cleanupEditorRef.current) {
-      console.log('🔄 [TextShape] Transform ignored - text editing in progress');
+      devLog.debug('🔄 [TextShape] Transform ignored - text editing in progress');
       return;
     }
     
     // Prevent transforms immediately after text editing (auto-selection protection)
     const timeSinceEdit = Date.now() - lastEditEndTime.current;
     if (timeSinceEdit < 1000) { // 1 second protection window
-      console.log('🔄 [TextShape] Transform ignored - too soon after text editing:', timeSinceEdit + 'ms');
+      devLog.debug('🔄 [TextShape] Transform ignored - too soon after text editing:', timeSinceEdit + 'ms');
       // Reset any unwanted scales
       textNode.scaleX(1);
       textNode.scaleY(1);
       return;
     }
     
-    console.log('🔄 [TextShape] Transform end - checking scales');
+    devLog.debug('🔄 [TextShape] Transform end - checking scales');
     
     const scaleX = textNode.scaleX();
     const scaleY = textNode.scaleY();
     
-    console.log('🔄 [TextShape] Transform scales:', { scaleX, scaleY });
+    devLog.debug('🔄 [TextShape] Transform scales:', { scaleX, scaleY });
     
     // Only apply scaling if there's a significant change AND user intentionally scaled
     // Ignore automatic scaling from selection/rendering
     if (Math.abs(scaleX - 1) < 0.15 && Math.abs(scaleY - 1) < 0.15) {
-      console.log('🔄 [TextShape] Scale change too small, ignoring');
+      devLog.debug('🔄 [TextShape] Scale change too small, ignoring');
       // Reset any minor scale changes
       textNode.scaleX(1);
       textNode.scaleY(1);
@@ -788,13 +794,13 @@ export const TextShape: React.FC<TextShapeProps> = ({
     
     // Additional check: ignore extreme scaling that might be from bugs
     if (scaleX > 3 || scaleY > 3 || scaleX < 0.3 || scaleY < 0.3) {
-      console.log('🔄 [TextShape] Extreme scaling detected, ignoring and resetting:', { scaleX, scaleY });
+      devLog.debug('🔄 [TextShape] Extreme scaling detected, ignoring and resetting:', { scaleX, scaleY });
       textNode.scaleX(1);
       textNode.scaleY(1);
       return;
     }
     
-    console.log('🔄 [TextShape] Applying proportional scaling');
+    devLog.debug('🔄 [TextShape] Applying proportional scaling');
     
     // Use average scale to maintain proportions
     const avgScale = (scaleX + scaleY) / 2;
@@ -803,7 +809,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
     const currentFontSize = element.fontSize || 16;
     const newFontSize = Math.max(8, Math.min(72, currentFontSize * avgScale));
     
-    console.log('🔄 [TextShape] Scaling font:', { currentFontSize, avgScale, newFontSize });
+    devLog.debug('🔄 [TextShape] Scaling font:', { currentFontSize, avgScale, newFontSize });
     
     // Reset scale after applying to fontSize
     textNode.scaleX(1);
@@ -818,7 +824,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
       false // Don't enforce minimums for text scaling
     );
     
-    console.log('🔄 [TextShape] Final dimensions:', finalDimensions);
+    devLog.debug('🔄 [TextShape] Final dimensions:', finalDimensions);
     
     // Update element with new font size and auto-calculated dimensions
     onUpdate(element.id, {
@@ -830,7 +836,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
       updatedAt: Date.now()
     });
     
-    console.log('✅ [TextShape] Transform complete with auto-hug');
+    devLog.debug('✅ [TextShape] Transform complete with auto-hug');
     
   }, [element, onUpdate]);
 
@@ -850,7 +856,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
         onDragEnd={handleDragEnd}
         onDblClick={handleDoubleClick}
         onClick={(e) => {
-          console.log('🖱️ [TextShape] Group clicked:', { 
+          devLog.debug('🖱️ [TextShape] Group clicked:', { 
             elementId: element.id, 
             targetId: e.target.id(),
             targetClass: e.target.className,
@@ -858,7 +864,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
           });
         }}
         onMouseDown={(e) => {
-          console.log('🖱️ [TextShape] Group mouse down:', { 
+          devLog.debug('🖱️ [TextShape] Group mouse down:', { 
             elementId: element.id, 
             targetId: e.target.id(),
             targetClass: e.target.className 
@@ -903,7 +909,7 @@ export const TextShape: React.FC<TextShapeProps> = ({
           opacity={displayOpacity}
           draggable={false}
           onClick={(e) => {
-            console.log('🖱️ [TextShape] Text clicked:', { 
+            devLog.debug('🖱️ [TextShape] Text clicked:', { 
               elementId: element.id, 
               textNodeId: e.target.id(),
               editing: !!cleanupEditorRef.current 
@@ -942,7 +948,18 @@ export const TextShape: React.FC<TextShapeProps> = ({
       {/* No hidden group needed - main group handles all states */}
     </>
   );
-};
+}, (prevProps, nextProps) => {
+  // Memoization comparison function for performance
+  return (
+    prevProps.element.id === nextProps.element.id &&
+    prevProps.element.x === nextProps.element.x &&
+    prevProps.element.y === nextProps.element.y &&
+    prevProps.element.text === nextProps.element.text &&
+    prevProps.element.fontSize === nextProps.element.fontSize &&
+    prevProps.element.updatedAt === nextProps.element.updatedAt &&
+    prevProps.isSelected === nextProps.isSelected
+  );
+});
 
 TextShape.displayName = 'TextShape';
 

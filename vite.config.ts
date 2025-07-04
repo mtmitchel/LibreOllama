@@ -1,12 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import analyzer from 'rollup-plugin-analyzer';
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react({ fastRefresh: false })],
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -29,11 +30,42 @@ export default defineConfig({
     // Increase chunk size limit for Konva
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
-      // No longer need to externalize canvas
+      plugins: process.env.ANALYZE ? [analyzer()] : [],
       output: {
-        // Ensure Konva is properly chunked for WebView2
+        // Better chunk splitting for performance
         manualChunks: {
-          konva: ['konva', 'react-konva']
+          // Core framework chunks
+          'react-vendor': ['react', 'react-dom'],
+          'canvas-vendor': ['konva', 'react-konva'],
+          
+          // Canvas core functionality 
+          'canvas-core': [
+            './src/features/canvas/stores/unifiedCanvasStore',
+            './src/features/canvas/components/CanvasStage'
+          ],
+          
+          // Canvas tools (split into smaller chunks)
+          'canvas-tools-drawing': [
+            './src/features/canvas/components/tools/drawing/PenTool',
+            './src/features/canvas/components/tools/drawing/MarkerTool',
+            './src/features/canvas/components/tools/drawing/HighlighterTool',
+            './src/features/canvas/components/tools/drawing/EraserTool'
+          ],
+          
+          'canvas-tools-creation': [
+            './src/features/canvas/components/tools/creation/RectangleTool',
+            './src/features/canvas/components/tools/creation/CircleTool',
+            './src/features/canvas/components/tools/creation/TriangleTool',
+            './src/features/canvas/components/tools/creation/TextTool'
+          ],
+          
+          // Heavy tools that can be lazy loaded
+          'canvas-tools-heavy': [
+            './src/features/canvas/components/tools/creation/TableTool',
+            './src/features/canvas/components/tools/creation/MindmapTool',
+            './src/features/canvas/components/tools/creation/ConnectorTool',
+            './src/features/canvas/components/tools/creation/SectionTool'
+          ]
         }
       }
     },

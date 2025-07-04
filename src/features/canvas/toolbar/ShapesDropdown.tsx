@@ -6,14 +6,14 @@ import {
   ChevronDown,
   Workflow
 } from 'lucide-react';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import styles from './ModernToolbar.module.css';
 import '../../../core/design-system/globals.css';
 
 const basicShapes = [
-  { id: 'rectangle', name: 'Rectangle', icon: Square },
-  { id: 'circle', name: 'Circle', icon: Circle },
-  { id: 'triangle', name: 'Triangle', icon: Triangle },
+  { id: 'draw-rectangle', name: 'Rectangle', icon: Square },
+  { id: 'draw-circle', name: 'Circle', icon: Circle },
+  { id: 'draw-triangle', name: 'Triangle', icon: Triangle },
   { id: 'mindmap', name: 'Mindmap', icon: Workflow }
 ];
 
@@ -26,7 +26,7 @@ interface ShapesDropdownProps {
 const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
+  const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
   
   const currentShapeTool = allShapeTools.find(tool => tool.id === selectedTool) || basicShapes[0]!;
   const CurrentIcon = currentShapeTool.icon;

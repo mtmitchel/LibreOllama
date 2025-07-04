@@ -7,7 +7,9 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Circle } from 'react-konva';
 import Konva from 'konva';
+import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
 import { EraserConfig } from '../../../types/drawing.types';
 import { ElementId } from '../../../types/enhanced.types';
 
@@ -29,16 +31,18 @@ const EraserToolComponent: React.FC<EraserToolProps> = ({
   const lastErasePosition = useRef<{ x: number; y: number } | null>(null);
   const eraserPathRef = useRef<number[]>([]);
   
-  // Store selectors and actions - using optimized methods
+  // Store selectors and actions - using grouped selectors with useShallow
   const {
     strokeConfig,
-    startEraserBatch,
-    commitEraserBatch,
-    eraseWithSpatialIndex,
     updateSpatialIndex,
-    addToEraserBatch,
-    eraseStrokeSegments
-  } = useUnifiedCanvasStore();
+    eraseAtPoint,
+    eraseInPath
+  } = useUnifiedCanvasStore(useShallow((state) => ({
+    strokeConfig: state.strokeConfig,
+    updateSpatialIndex: state.updateSpatialIndex,
+    eraseAtPoint: state.eraseAtPoint,
+    eraseInPath: state.eraseInPath
+  })));
   
   const eraserSize = eraserConfig.size;
   
@@ -68,19 +72,13 @@ const EraserToolComponent: React.FC<EraserToolProps> = ({
     setIsErasing(true);
     setEraserPosition(pos);
     
-    // Initialize eraser path for segment-based erasing
+    // Initialize eraser path for path-based erasing
     eraserPathRef.current = [pos.x, pos.y];
     lastErasePosition.current = pos;
     
-    // Start batch operation
-    startEraserBatch();
-    
-    // Erase at initial point using spatial index
-    const deletedIds = eraseWithSpatialIndex(pos.x, pos.y, eraserSize);
-    if (deletedIds.length > 0) {
-      addToEraserBatch(deletedIds);
-    }
-  }, [isActive, eraserSize, startEraserBatch, eraseWithSpatialIndex, addToEraserBatch]);
+    // Erase at initial point
+    eraseAtPoint(pos.x, pos.y, eraserSize);
+  }, [isActive, eraserSize, eraseAtPoint]);
   
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (!stageRef.current) return;
@@ -112,59 +110,55 @@ const EraserToolComponent: React.FC<EraserToolProps> = ({
       lastErasePosition.current = pos;
       eraserPathRef.current.push(pos.x, pos.y);
       
-      // Use spatial index for fast erasing
-      const deletedIds = eraseWithSpatialIndex(pos.x, pos.y, eraserSize);
-      if (deletedIds.length > 0) {
-        addToEraserBatch(deletedIds);
-      }
+      // Erase at current point
+      eraseAtPoint(pos.x, pos.y, eraserSize);
     }
-  }, [isErasing, eraserSize, eraseWithSpatialIndex, addToEraserBatch, getDistanceSquared]);
+  }, [isErasing, eraserSize, eraseAtPoint, getDistanceSquared]);
   
   const handlePointerUp = useCallback(() => {
     if (!isActive || !isErasing) return;
     
     setIsErasing(false);
     
-    // For advanced users: optionally use segment-based erasing instead of whole stroke deletion
-    // Uncomment the line below to enable segment-based erasing:
-    // eraseStrokeSegments(eraserPathRef.current, eraserSize);
-    
-    // Commit batched operations
-    commitEraserBatch();
+    // Use path-based erasing for the entire path
+    if (eraserPathRef.current.length > 2) {
+      eraseInPath(eraserPathRef.current, eraserSize);
+    }
     
     // Reset state
     eraserPathRef.current = [];
     lastErasePosition.current = null;
-  }, [isActive, isErasing, commitEraserBatch, eraseStrokeSegments, eraserSize]);
+  }, [isActive, isErasing, eraseInPath, eraserSize]);
   
   const handlePointerLeave = useCallback(() => {
     setEraserPosition(null);
   }, []);
   
   // Event listeners with cleanup
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'EraserTool',
+    handlers: {
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerLeave: handlePointerLeave
+    }
+  });
+
+  // Additional window events for reliable pointer up detection
   useEffect(() => {
-    if (!isActive || !stageRef.current) return;
+    if (!isActive) return;
     
-    const stage = stageRef.current;
-    
-    // Attach pointer events
-    stage.on('pointerdown', handlePointerDown);
-    stage.on('pointermove', handlePointerMove);
-    stage.on('pointerleave', handlePointerLeave);
-    
-    // Use window events for pointerup to avoid Konva event bugs
     const handleWindowPointerUp = () => handlePointerUp();
     window.addEventListener('pointerup', handleWindowPointerUp);
     window.addEventListener('pointercancel', handleWindowPointerUp);
     
     return () => {
-      stage.off('pointerdown', handlePointerDown);
-      stage.off('pointermove', handlePointerMove);
-      stage.off('pointerleave', handlePointerLeave);
       window.removeEventListener('pointerup', handleWindowPointerUp);
       window.removeEventListener('pointercancel', handleWindowPointerUp);
     };
-  }, [isActive, stageRef, handlePointerDown, handlePointerMove, handlePointerUp, handlePointerLeave]);
+  }, [isActive, handlePointerUp]);
   
   // Clean eraser cursor visual - simple circle with center dot for precision
   if (!isActive || !eraserPosition) {
@@ -206,7 +200,7 @@ export default EraserTool;
 if (!(Konva as any).__safeFirePatched) {
   const originalFire = Konva.Node.prototype._fire;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
+  // @ts-ignore - Necessary for Konva monkey patch to fix currentTarget errors
   Konva.Node.prototype._fire = function (eventType: string, evt: any, bubble?: boolean) {
     try {
       return originalFire.call(this, eventType, evt);

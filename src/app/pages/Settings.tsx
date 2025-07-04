@@ -16,11 +16,7 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react';
-import { Card } from '../../core/shared-ui';
-import {
-  Button,
-  Input
-} from "../../core/shared-ui";
+import { Card, Button, Input, Checkbox } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 
 // Reusable Toggle Switch Component (can be moved to a separate file)

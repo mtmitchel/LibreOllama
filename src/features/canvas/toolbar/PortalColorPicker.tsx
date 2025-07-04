@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom';
 import { designSystem } from '../../../core/design-system';
 import { CanvasElement } from '../types/enhanced.types';
 import { HexColorPicker } from 'react-colorful';
-import styles from './ColorPicker.module.css';
 
 interface PortalColorPickerProps {
   selectedElement: CanvasElement;

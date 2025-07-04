@@ -13,6 +13,8 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+import { useShallow } from 'zustand/react/shallow';
 import { createMindmapStructure } from '../../../utils/mindmapUtils';
 
 interface MindmapToolProps {
@@ -21,10 +23,14 @@ interface MindmapToolProps {
 }
 
 export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) => {
-  // Store selectors
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
-  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
-  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
+  // Store selectors using grouped patterns for optimization
+  const toolActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      addElement: state.addElement,
+      setSelectedTool: state.setSelectedTool,
+      setTextEditingElement: state.setTextEditingElement
+    }))
+  );
   const editingTextId = useUnifiedCanvasStore(state => state.textEditingElementId);
 
   // Local state for UI
@@ -98,7 +104,7 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
     
     // IMMEDIATELY switch to select tool after placement (standard creation tool behavior)
     console.log('🧠 [MindmapTool] *** SWITCHING TO SELECT TOOL IMMEDIATELY ***');
-    setSelectedTool('select');
+    toolActions.setSelectedTool('select');
     
     // Select the newly created mindmap central node
     setTimeout(() => {
@@ -115,7 +121,7 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
       store.setTextEditingElement(centralNode.id);
     }, 150); // Delay to ensure tool switch and selection complete first
     
-  }, [isActive, stageRef, addElement, editingTextId, setSelectedTool]);
+  }, [isActive, stageRef, toolActions, editingTextId]);
 
   // Handle mouse leave to hide placement guide
   const handlePointerLeave = useCallback(() => {
@@ -132,60 +138,40 @@ export const MindmapTool: React.FC<MindmapToolProps> = ({ stageRef, isActive }) 
     }
   }, [isActive, editingTextId]);
 
-  // Set up event listeners and cursor
+  // Use shared event handler with namespaced events
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'mindmapTool',
+    handlers: {
+      onPointerMove: handlePointerMove,
+      onPointerDown: handlePointerDown,
+      onPointerLeave: handlePointerLeave,
+      onPointerEnter: handlePointerEnter,
+      useNamespacedEvents: true
+    }
+  });
+
+  // Handle cursor separately
   React.useEffect(() => {
     if (!isActive || !stageRef.current) return;
 
     const stage = stageRef.current;
-    console.log('🧠 [MindmapTool] *** SETTING UP EVENT LISTENERS AND CURSOR ***');
-
-    // FORCE crosshair cursor immediately when tool is active
     const container = stage.container();
     if (container) {
-      container.style.cursor = 'crosshair !important';
-      // Force cursor update multiple times to override any conflicts
-      setTimeout(() => {
-        if (container && isActive) {
-          container.style.cursor = 'crosshair';
-          console.log('🧠 [MindmapTool] *** CURSOR FORCED TO CROSSHAIR ***');
-        }
-      }, 10);
+      container.style.cursor = 'crosshair';
+      console.log('🧠 [MindmapTool] *** CURSOR FORCED TO CROSSHAIR ***');
     }
 
-    // Remove any existing listeners first to ensure we get priority
-    stage.off('pointermove.mindmapTool');
-    stage.off('pointerdown.mindmapTool');
-    stage.off('pointerleave.mindmapTool');
-    stage.off('pointerenter.mindmapTool');
-
-    // Add event listeners with namespace for priority
-    stage.on('pointermove.mindmapTool', handlePointerMove);
-    stage.on('pointerdown.mindmapTool', handlePointerDown);
-    stage.on('pointerleave.mindmapTool', handlePointerLeave);
-    stage.on('pointerenter.mindmapTool', handlePointerEnter);
-
-    console.log('🧠 [MindmapTool] Event listeners attached with namespace');
-
     return () => {
-      console.log('🧠 [MindmapTool] Cleaning up event listeners');
-      
-      // Reset cursor when tool becomes inactive
       if (container) {
         container.style.cursor = 'default';
         console.log('🧠 [MindmapTool] Reset cursor to default');
       }
-      
-      // Remove event listeners
-      stage.off('pointermove.mindmapTool', handlePointerMove);
-      stage.off('pointerdown.mindmapTool', handlePointerDown);
-      stage.off('pointerleave.mindmapTool', handlePointerLeave);
-      stage.off('pointerenter.mindmapTool', handlePointerEnter);
-      
-      // Hide placement guide
       setShowPlacementGuide(false);
       setCursorPosition(null);
     };
-  }, [isActive, stageRef, handlePointerMove, handlePointerDown, handlePointerLeave, handlePointerEnter]);
+  }, [isActive]);
 
   // Clear placement guide when tool becomes inactive
   React.useEffect(() => {

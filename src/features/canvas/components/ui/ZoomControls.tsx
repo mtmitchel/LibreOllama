@@ -1,5 +1,6 @@
 import React from 'react';
 import Konva from 'konva';
+import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -9,9 +10,11 @@ interface ZoomControlsProps {
 }
 
 export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, stageRef }) => {
-  const viewport = useUnifiedCanvasStore(state => state.viewport);
-  const setViewport = useUnifiedCanvasStore(state => state.setViewport);
-  const elements = useUnifiedCanvasStore(state => state.elements);
+  const { viewport, setViewport, elements } = useUnifiedCanvasStore(useShallow((state) => ({
+    viewport: state.viewport,
+    setViewport: state.setViewport,
+    elements: state.elements
+  })));
 
   const currentZoom = Math.round(viewport.scale * 100);
 

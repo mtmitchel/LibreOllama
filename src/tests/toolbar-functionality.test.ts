@@ -11,18 +11,14 @@ import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasSt
 import { ElementId } from '../features/canvas/types/enhanced.types';
 
 describe('Current Toolbar Functionality Test', () => {
-  let store: ReturnType<typeof useUnifiedCanvasStore>;
-
   beforeEach(() => {
-    store = useUnifiedCanvasStore;
-    
     // Clear state
     act(() => {
-      const currentElements = Array.from(store.getState().elements.keys());
+      const currentElements = Array.from(useUnifiedCanvasStore.getState().elements.keys());
       currentElements.forEach(id => {
-        store.getState().deleteElement(id as ElementId);
+        useUnifiedCanvasStore.getState().deleteElement(id as ElementId);
       });
-      store.getState().clearSelection();
+      useUnifiedCanvasStore.getState().clearSelection();
     });
   });
 
@@ -30,17 +26,17 @@ describe('Current Toolbar Functionality Test', () => {
     it('should correctly update selected tool in store', () => {
       // Act: Select text tool
       act(() => {
-        store.getState().setSelectedTool('text');
+        useUnifiedCanvasStore.getState().setSelectedTool('text');
       });
 
       // Assert: Tool should be selected
-      expect(store.getState().selectedTool).toBe('text');
+      expect(useUnifiedCanvasStore.getState().selectedTool).toBe('text');
     });
 
     it('should handle tool switching', () => {
       // Arrange: Start with select tool
       act(() => {
-        store.getState().setSelectedTool('select');
+        useUnifiedCanvasStore.getState().setSelectedTool('select');
       });
 
       // Act: Switch to different tools
@@ -48,9 +44,9 @@ describe('Current Toolbar Functionality Test', () => {
       
       tools.forEach(tool => {
         act(() => {
-          store.getState().setSelectedTool(tool);
+          useUnifiedCanvasStore.getState().setSelectedTool(tool);
         });
-        expect(store.getState().selectedTool).toBe(tool);
+        expect(useUnifiedCanvasStore.getState().selectedTool).toBe(tool);
       });
     });
   });
@@ -68,17 +64,20 @@ describe('Current Toolbar Functionality Test', () => {
         fontFamily: 'Inter, sans-serif',
         fill: '#1F2937',
         width: 120,
-        height: 24
+        height: 24,
+        segments: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       };
 
       // Act: Add element using store action
       act(() => {
-        store.getState().addElement(textElement);
+        useUnifiedCanvasStore.getState().addElement(textElement);
       });
 
       // Assert: Element should be added
-      expect(store.getState().elements.size).toBe(1);
-      expect(store.getState().elements.get(ElementId('test-text-1'))).toEqual(textElement);
+      expect(useUnifiedCanvasStore.getState().elements.size).toBe(1);
+      expect(useUnifiedCanvasStore.getState().elements.get('test-text-1' as ElementId)).toEqual(textElement);
     });
 
     it('should be able to create sticky note elements', () => {
@@ -93,23 +92,25 @@ describe('Current Toolbar Functionality Test', () => {
         text: 'Test Note',
         backgroundColor: '#fff2cc',
         fontSize: 14,
-        fontFamily: 'Arial'
+        fontFamily: 'Arial',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       };
 
       // Act: Add element
       act(() => {
-        store.getState().addElement(stickyNote);
+        useUnifiedCanvasStore.getState().addElement(stickyNote);
       });
 
       // Assert: Element should be added
-      expect(store.getState().elements.size).toBe(1);
-      expect(store.getState().elements.get(ElementId('test-sticky-1'))).toEqual(stickyNote);
+      expect(useUnifiedCanvasStore.getState().elements.size).toBe(1);
+      expect(useUnifiedCanvasStore.getState().elements.get('test-sticky-1' as ElementId)).toEqual(stickyNote);
     });
   });
 
   describe('Store Actions Availability', () => {
     it('should have all required store actions available', () => {
-      const state = store.getState();
+      const state = useUnifiedCanvasStore.getState();
       
       // Assert: All required actions exist
       expect(typeof state.setSelectedTool).toBe('function');
@@ -130,24 +131,26 @@ describe('Current Toolbar Functionality Test', () => {
         x: 100, y: 100, width: 160, height: 120,
         text: 'Color Test',
         backgroundColor: '#fff2cc',
-        fontSize: 14, fontFamily: 'Arial'
+        fontSize: 14, fontFamily: 'Arial',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       };
 
       act(() => {
-        store.getState().addElement(stickyNote);
-        store.getState().selectElement(ElementId('color-test-1'));
+        useUnifiedCanvasStore.getState().addElement(stickyNote);
+        useUnifiedCanvasStore.getState().selectElement('color-test-1' as ElementId);
       });
 
       // Act: Update color
       act(() => {
-        store.getState().updateElement(ElementId('color-test-1'), {
+        useUnifiedCanvasStore.getState().updateElement('color-test-1' as ElementId, {
           backgroundColor: '#ffcccc'
         });
       });
 
       // Assert: Color should be updated
-      const updatedElement = store.getState().elements.get(ElementId('color-test-1'));
-      expect(updatedElement?.backgroundColor).toBe('#ffcccc');
+      const updatedElement = useUnifiedCanvasStore.getState().elements.get('color-test-1' as ElementId);
+      expect((updatedElement as any)?.backgroundColor).toBe('#ffcccc');
     });
   });
 });

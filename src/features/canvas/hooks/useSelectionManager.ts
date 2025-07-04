@@ -33,8 +33,10 @@ export const useSelectionManager = () => {
     }
   }, [selectedElementIds, selectElement, deselectElement]);
   
-  const selectMultipleElements = useCallback((elementIds: string[]) => {
-    clearSelection();
+  const selectMultipleElements = useCallback((elementIds: string[], replaceSelection: boolean = true) => {
+    if (replaceSelection) {
+      clearSelection();
+    }
     elementIds.forEach(id => selectElement(toElementId(id), true));
   }, [clearSelection, selectElement]);
   // Select a single element, optionally adding to current selection
@@ -158,7 +160,6 @@ export const useSelectionManager = () => {
     // State
     selectedElementIds,
     lastSelectedElementId,
-    selectionRectangle,
     
     // Basic operations
     selectSingle,

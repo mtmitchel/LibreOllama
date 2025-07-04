@@ -52,10 +52,8 @@ const createTriangleTextEditor = (
   const padding = 8;
 
   const computeEditorWidth = (w: number, h: number) => {
-    const ratioH = 0.6;
-    const heightFromTop = ratioH * h;
-    const widthRatio = (h - heightFromTop) / h;
-    return w * widthRatio;
+    // Match the display text width (70% of triangle width)
+    return w * 0.7;
   };
 
   const setEditorGeometry = (w: number, h: number) => {
@@ -407,17 +405,13 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
         setTextEditingElement(null);
         return;
       }
-      
-      console.log('📍 [TriangleShape] Editor position:', positionData);
-      
-      editorRef.current = createTriangleTextEditor(
+editorRef.current = createTriangleTextEditor(
         positionData,
         element.text || '',
         positionData.fontSize,
         element.fontFamily || getAvailableFontFamily(),
         (newText: string) => {
-          console.log('💾 [TriangleShape] Saving text:', newText);
-          isEditingRef.current = false;
+isEditingRef.current = false;
           updateInProgressRef.current = false;
           setTextEditingElement(null);
           editorRef.current = null;
@@ -432,8 +426,7 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
           }, 100);
         },
         () => {
-          console.log('❌ [TriangleShape] Edit cancelled');
-          isEditingRef.current = false;
+isEditingRef.current = false;
           updateInProgressRef.current = false;
           setTextEditingElement(null);
           editorRef.current = null;
@@ -451,8 +444,7 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
     
     // Stop editing only if we're no longer the editing element AND we're currently editing
     if (textEditingElementId !== element.id && editorRef.current && isEditingRef.current) {
-      console.log('🛑 [TriangleShape] Stopping editing session - different element selected');
-      tweenRef.current?.destroy();
+tweenRef.current?.destroy();
       editorRef.current.cleanup();
       editorRef.current = null;
       isEditingRef.current = false;
@@ -460,8 +452,7 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
       if (timeoutsRef.current.focus) clearTimeout(timeoutsRef.current.focus);
       
       if (editorRef.current) {
-        console.log('🧹 [TriangleShape] Component cleanup - removing editor');
-        tweenRef.current?.destroy();
+tweenRef.current?.destroy();
         editorRef.current.cleanup();
         editorRef.current = null;
         isEditingRef.current = false;
@@ -475,8 +466,7 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
       if (timeoutsRef.current.focus) clearTimeout(timeoutsRef.current.focus);
       
       if (editorRef.current) {
-        console.log('🧹 [TriangleShape] Component cleanup - removing editor');
-        tweenRef.current?.destroy();
+tweenRef.current?.destroy();
         editorRef.current.cleanup();
         editorRef.current = null;
         isEditingRef.current = false;
@@ -577,9 +567,9 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
                         <Text
               onDblClick={startEditing}
               ref={textNodeRef}
-              x={width * 0.25} // Position for 50% width centered
+              x={width * 0.15} // Position for 70% width centered
               y={height * 0.6} // Start at 60% (75% - 15% for half of 30% height)
-              width={width * 0.5} // Match editor width  
+              width={width * 0.7} // Increased width to fit "Add text" better
               height={height * 0.3} // Match the 30% from editor
               text={displayText}
               fontSize={fontSize}
@@ -620,5 +610,4 @@ export const TriangleShape: React.FC<TriangleShapeProps> = React.memo(({
 });
 
 TriangleShape.displayName = 'TriangleShape';
-
 

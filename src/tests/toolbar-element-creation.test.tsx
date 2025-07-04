@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createUnifiedTestStore } from './helpers/createUnifiedTestStore';
+import { ElementId } from '../features/canvas/types/enhanced.types';
 
 describe('Toolbar Element Creation Workflow', () => {
   let store: ReturnType<typeof createUnifiedTestStore>;
@@ -30,8 +31,8 @@ describe('Toolbar Element Creation Workflow', () => {
     
     // For now, manually create element as createElement signature is different
     const rectangleElement = {
-      id: 'rect-created-' + Date.now(),
-      type: 'rectangle',
+      id: ('rect-created-' + Date.now()) as ElementId,
+      type: 'rectangle' as const,
       x: testPosition.x,
       y: testPosition.y,
       width: 100,
@@ -39,6 +40,7 @@ describe('Toolbar Element Creation Workflow', () => {
       fill: '#4CAF50',
       stroke: '#333333',
       strokeWidth: 2,
+      cornerRadius: 0,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -152,20 +154,23 @@ describe('Toolbar Element Creation Workflow', () => {
     
     // 2. Create element
     const element = {
-      id: 'test-rect-workflow',
-      type: 'rectangle',
+      id: 'test-rect-workflow' as ElementId,
+      type: 'rectangle' as const,
       x: 100,
       y: 100,
       width: 100,
       height: 80,
       fill: '#4CAF50',
+      stroke: '#000000',
+      strokeWidth: 1,
+      cornerRadius: 0,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
     actions.addElement(element);
 
     // 3. Auto-select the created element (simulating UnifiedEventHandler behavior)
-    actions.selectElement('test-rect-workflow');
+    actions.selectElement('test-rect-workflow' as ElementId);
 
     // 4. Tool should switch back to select
     actions.setSelectedTool('select');
@@ -173,8 +178,8 @@ describe('Toolbar Element Creation Workflow', () => {
     // 5. Verify final state
     const finalState = store.getState();
     expect(finalState.elements.size).toBe(1);
-    expect(finalState.selectedElementIds.has('test-rect-workflow')).toBe(true);
+    expect(finalState.selectedElementIds.has('test-rect-workflow' as ElementId)).toBe(true);
     expect(finalState.selectedTool).toBe('select');
-    expect(finalState.lastSelectedElementId).toBe('test-rect-workflow');
+    expect(finalState.lastSelectedElementId).toBe('test-rect-workflow' as ElementId);
   });
 });

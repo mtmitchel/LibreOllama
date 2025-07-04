@@ -6,6 +6,7 @@
   display: flex;
   justify-content: center;
   pointer-events: none; /* Allow clicks to pass through the container */
+  z-index: 1000; /* Ensure toolbar is above other elements */
 }
 
 .modernToolbar {
@@ -20,12 +21,14 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   backdrop-filter: blur(8px);
   transition: all 0.3s ease-in-out;
+  z-index: 1001; /* Ensure toolbar content is above container */
 }
 
 .toolbarGroup {
   display: flex;
   align-items: center;
   gap: 0.25rem; /* 4px */
+  pointer-events: auto; /* Ensure groups can receive clicks */
 }
 
 .toolButton {
@@ -41,6 +44,8 @@
   cursor: pointer;
   transition: all 0.15s ease;
   position: relative;
+  pointer-events: auto; /* Explicitly enable pointer events */
+  z-index: 1002; /* Ensure buttons are clickable */
 }
 
 .toolButton:hover {

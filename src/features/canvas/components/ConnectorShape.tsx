@@ -1,13 +1,13 @@
 /**
- * Enhanced Connector Shape - Optimized with Performance & Validation
+ * Enhanced Connector Shape - Simplified for Better Selection & Interaction
  * 
- * CRITICAL FIXES:
- * - Fixed position reset issues causing connectors to disappear
- * - Added proper validation and constraints for connector operations
- * - Implemented performance optimizations with memoization
- * - Enhanced error handling and state management
+ * FIXES:
+ * - Simplified drag handling to prevent position reset issues
+ * - Fixed coordinate system for proper positioning
+ * - Enhanced selection feedback and interaction
+ * - Improved endpoint handle interaction
  */
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, memo } from 'react';
 import { Line, Path, Arrow, Circle, Group } from 'react-konva';
 import Konva from 'konva';
 import type { ConnectorElement } from '../types/enhanced.types';
@@ -25,16 +25,12 @@ const MAX_CONNECTOR_LENGTH = 2000;
 const HANDLE_RADIUS = 6;
 const HIT_STROKE_WIDTH = 20;
 
-export const ConnectorShape: React.FC<ConnectorShapeProps> = ({ 
+export const ConnectorShape: React.FC<ConnectorShapeProps> = memo(({ 
   connector, 
   isSelected = false,
   onSelect,
   onUpdate
 }) => {
-  // Refs for performance optimization
-  const lastUpdateRef = useRef<number>(0);
-  const throttleDelayRef = useRef<number>(16); // 60fps throttling
-
   // Memoized path calculation for performance
   const pathData = useMemo(() => {
     const points: number[] = [];
@@ -89,47 +85,17 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
     return { hasEndArrow, hasStartArrow, arrowSize };
   }, [connector.subType, connector.connectorStyle]);
 
-  // Optimized validation function
-  const validateConnectorUpdate = useCallback((updates: Partial<ConnectorElement>): boolean => {
-    if (!updates.startPoint && !updates.endPoint) return true;
-    
-    const start = updates.startPoint || connector.startPoint;
-    const end = updates.endPoint || connector.endPoint;
-    const distance = Math.sqrt(
-      Math.pow(end.x - start.x, 2) + 
-      Math.pow(end.y - start.y, 2)
-    );
-    
-    return distance >= MIN_CONNECTOR_LENGTH && distance <= MAX_CONNECTOR_LENGTH;
-  }, [connector.startPoint, connector.endPoint]);
-
-  // Throttled update function for performance
-  const throttledUpdate = useCallback((updates: Partial<ConnectorElement>) => {
-    const now = Date.now();
-    if (now - lastUpdateRef.current < throttleDelayRef.current) {
-      return;
-    }
-    
-    if (!validateConnectorUpdate(updates)) {
-      console.warn('[ConnectorShape] Invalid connector update rejected:', updates);
-      return;
-    }
-    
-    lastUpdateRef.current = now;
-    onUpdate?.(updates);
-  }, [onUpdate, validateConnectorUpdate]);
-
-  // CRITICAL FIX: Optimized connector drag without position reset
+  // Simplified connector drag handler
   const handleConnectorDrag = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     if (!onUpdate) return;
     
     const dx = e.target.x();
     const dy = e.target.y();
     
-    // Only update if actually moved to prevent unnecessary renders
+    // Only update if actually moved
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
     
-    // Batch update for performance - update all points at once
+    // Update all points at once
     const updates: Partial<ConnectorElement> = {
       startPoint: {
         ...connector.startPoint,
@@ -151,35 +117,20 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
       }));
     }
     
-    // Update path points if they exist
-    if (connector.pathPoints && connector.pathPoints.length > 0) {
-      updates.pathPoints = [];
-      for (let i = 0; i < connector.pathPoints.length; i += 2) {
-        updates.pathPoints.push(connector.pathPoints[i] + dx);
-        updates.pathPoints.push(connector.pathPoints[i + 1] + dy);
-      }
-    }
+    onUpdate(updates);
     
-    throttledUpdate(updates);
-    
-    // CRITICAL FIX: Reset position smoothly without causing visual glitches
-    requestAnimationFrame(() => {
-      e.target.position({ x: 0, y: 0 });
-    });
-  }, [connector, throttledUpdate]);
+    // Reset position to prevent accumulation
+    e.target.position({ x: 0, y: 0 });
+  }, [connector, onUpdate]);
 
-  // Enhanced endpoint drag with constraints
+  // Enhanced endpoint drag with better validation
   const handleEndpointDrag = useCallback((
     e: Konva.KonvaEventObject<DragEvent>,
     isStartPoint: boolean
   ) => {
     if (!onUpdate) return;
     
-    const stage = e.target.getStage();
-    if (!stage) return;
-
-    // Get absolute position with proper stage coordinate conversion
-    const pos = e.target.getAbsolutePosition();
+    const pos = e.target.position();
     
     // Calculate distance to other point for validation
     const otherPoint = isStartPoint ? connector.endPoint : connector.startPoint;
@@ -187,46 +138,33 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
     const dy = pos.y - otherPoint.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // Constrain to minimum length
+    // Enforce minimum distance
     if (distance < MIN_CONNECTOR_LENGTH) {
       const scale = MIN_CONNECTOR_LENGTH / distance;
       pos.x = otherPoint.x + dx * scale;
       pos.y = otherPoint.y + dy * scale;
-      e.target.setAbsolutePosition(pos);
+      e.target.position(pos);
     }
     
-    // Constrain to maximum length
+    // Enforce maximum distance
     if (distance > MAX_CONNECTOR_LENGTH) {
       const scale = MAX_CONNECTOR_LENGTH / distance;
       pos.x = otherPoint.x + dx * scale;
       pos.y = otherPoint.y + dy * scale;
-      e.target.setAbsolutePosition(pos);
+      e.target.position(pos);
     }
     
-    // Prepare optimized update
+    // Update the connector
     const updates: Partial<ConnectorElement> = isStartPoint ? {
       startPoint: { ...connector.startPoint, x: pos.x, y: pos.y }
     } : {
       endPoint: { ...connector.endPoint, x: pos.x, y: pos.y }
     };
     
-    // Recalculate path if needed
-    if (connector.pathPoints && connector.pathPoints.length > 4) {
-      const newPath = [...connector.pathPoints];
-      if (isStartPoint) {
-        newPath[0] = pos.x;
-        newPath[1] = pos.y;
-      } else {
-        newPath[newPath.length - 2] = pos.x;
-        newPath[newPath.length - 1] = pos.y;
-      }
-      updates.pathPoints = newPath;
-    }
-    
-    throttledUpdate(updates);
-  }, [connector, throttledUpdate]);
+    onUpdate(updates);
+  }, [connector, onUpdate]);
 
-  // Optimized click handler
+  // Simplified click handler
   const handleClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
     onSelect?.(e);
@@ -243,16 +181,16 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
     lineJoin: 'round' as const,
     onClick: handleClick,
     onTap: handleClick,
-    // Enhanced visual feedback for selection
+    // Enhanced selection visual feedback
     shadowEnabled: isSelected,
     shadowColor: "#3B82F6",
-    shadowBlur: isSelected ? 8 : 0,
-    shadowOpacity: isSelected ? 0.6 : 0,
+    shadowBlur: isSelected ? 4 : 0,
+    shadowOpacity: isSelected ? 0.8 : 0,
     // Improved hit area for easier selection
-    hitStrokeWidth: Math.max(HIT_STROKE_WIDTH, (connector.strokeWidth || 2) + 8),
+    hitStrokeWidth: Math.max(HIT_STROKE_WIDTH, (connector.strokeWidth || 2) * 3),
   }), [connector, isSelected, handleClick]);
 
-  // Render the main connector shape with optimization
+  // Render the main connector shape
   const renderConnectorShape = useCallback(() => {
     if (!pathData.isValid) {
       console.warn('[ConnectorShape] Invalid path data:', pathData);
@@ -303,7 +241,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
     );
   }, [pathData, connector.subType, svgPath, arrowConfig, commonProps]);
 
-  // Render endpoint handles with enhanced styling
+  // Render endpoint handles with improved interaction
   const renderEndpointHandles = useCallback(() => {
     if (!isSelected || !onUpdate) return null;
 
@@ -315,8 +253,8 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
       draggable: true,
       shadowEnabled: true,
       shadowColor: "#000000",
-      shadowBlur: 4,
-      shadowOpacity: 0.3,
+      shadowBlur: 3,
+      shadowOpacity: 0.4,
     };
 
     return (
@@ -355,13 +293,13 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
           }}
         />
         
-        {/* Selection outline */}
+        {/* Selection outline for better visibility */}
         <Line
           points={pathData.points}
           stroke="#3B82F6"
           strokeWidth={1}
           dash={[4, 4]}
-          opacity={0.8}
+          opacity={0.6}
           listening={false}
         />
       </>
@@ -395,7 +333,14 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = ({
       {renderEndpointHandles()}
     </Group>
   );
-};
+}, (prevProps, nextProps) => {
+  // Memoization comparison function for performance
+  return (
+    prevProps.connector.id === nextProps.connector.id &&
+    prevProps.connector.updatedAt === nextProps.connector.updatedAt &&
+    prevProps.isSelected === nextProps.isSelected
+  );
+});
 
 // Utility function for connector length calculation
 function calculateConnectorLength(points: number[]): number {

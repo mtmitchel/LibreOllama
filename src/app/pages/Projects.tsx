@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useHeader, HeaderProps } from '../contexts/HeaderContext';
-import { Button } from '../../core/shared-ui';
-import { Card } from '../../core/shared-ui';
+import { Button, Card } from '../../components/ui';
 import {
   Plus,
   Settings,
@@ -35,6 +34,9 @@ import {
   Download,
   UserPlus,
 } from 'lucide-react';
+import NewProjectModal from '../../features/projects/components/NewProjectModal';
+import { ProjectDetails } from '../../features/projects/components/ProjectDetails';
+import { NoProjectSelected } from '../../features/projects/components/NoProjectSelected';
 
 interface FileItem {
   id: string;

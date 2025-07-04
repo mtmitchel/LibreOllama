@@ -20,36 +20,35 @@ import { CanvasDragDropHandler } from './ui/CanvasDragDropHandler';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
 /**
- * CanvasContainer - Owns the Konva Stage and manages canvas dimensions
+ * Main container for the canvas feature.
+ * Integrates the stage, toolbar, and sidebar.
  */
-const CanvasContainer: React.FC = () => {
-  // Stage ref for React-Konva best practices
+export const CanvasContainer: React.FC = () => {
   const stageRef = useRef<Konva.Stage | null>(null);
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   
   // Essential store functions for toolbar
   const undo = useUnifiedCanvasStore(state => state.undo);
   const redo = useUnifiedCanvasStore(state => state.redo);
 
+  const handleToggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
-    <div 
-      className="relative w-full h-full bg-bg-primary canvas-container"
-      style={{ 
-        minHeight: '100%',
-        position: 'relative'
-      }}
-    >
-      <CanvasStage stageRef={stageRef} />
-      <ModernKonvaToolbar
-        onUndo={undo}
-        onRedo={redo}
-        sidebarOpen={false}
-        onToggleSidebar={() => {}}
-      />
-      {/* Zoom Controls - positioned in bottom-right corner with stage ref */}
-      <ZoomControls className="absolute bottom-6 right-6 z-20" stageRef={stageRef} />
-      
-      {/* CanvasDragDropHandler handles all drag and drop + paste functionality */}
-      <CanvasDragDropHandler stageRef={stageRef} />
+    <div className="flex h-full w-full bg-gray-100 dark:bg-gray-900">
+      <div className="relative flex-1 h-full w-full overflow-hidden">
+        <ModernKonvaToolbar 
+          onUndo={undo} 
+          onRedo={redo} 
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={handleToggleSidebar}
+        />
+        <CanvasDragDropHandler stageRef={stageRef}>
+          <CanvasStage stageRef={stageRef} />
+        </CanvasDragDropHandler>
+        <ZoomControls stageRef={stageRef} className="absolute bottom-6 right-6 z-10" />
+      </div>
     </div>
   );
 };

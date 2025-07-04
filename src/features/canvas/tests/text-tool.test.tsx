@@ -5,6 +5,13 @@ import { TextTool } from '../components/tools/creation/TextTool';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import Konva from 'konva';
 
+// Add global type declaration for test
+declare global {
+  interface Window {
+    __protectSelection?: any;
+  }
+}
+
 // Mock Konva
 vi.mock('konva', () => ({
   default: {
@@ -52,7 +59,11 @@ describe('TextTool', () => {
     });
 
     // Create mock stage
-    mockStage = new Konva.Stage();
+    mockStage = new Konva.Stage({
+      container: document.createElement('div'),
+      width: 800,
+      height: 600
+    });
     stageRef = { current: mockStage };
 
     // Reset all mocks
@@ -103,7 +114,7 @@ describe('TextTool', () => {
 
     // Get the event handler that was registered
     const pointerMoveHandler = mockStage.on.mock.calls.find(
-      call => call[0] === 'pointermove'
+      (call: any[]) => call[0] === 'pointermove'
     )?.[1];
 
     expect(pointerMoveHandler).toBeDefined();
@@ -135,7 +146,7 @@ describe('TextTool', () => {
 
     // Get the event handler that was registered
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      call => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     expect(pointerDownHandler).toBeDefined();
@@ -176,7 +187,7 @@ describe('TextTool', () => {
 
     // Get the event handler
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      call => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     // Simulate click
@@ -227,7 +238,7 @@ describe('TextTool', () => {
 
     // Create element by clicking
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      call => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({
@@ -270,7 +281,7 @@ describe('TextTool', () => {
 
     // Create element
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      call => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({
@@ -304,7 +315,7 @@ describe('TextTool', () => {
 
     // Create element
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      call => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown'
     )?.[1];
 
     pointerDownHandler({

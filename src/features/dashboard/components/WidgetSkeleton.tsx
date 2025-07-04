@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from "../../../core/shared-ui";
+import { Card } from "../../../components/ui";
 
 interface WidgetSkeletonProps {
   className?: string;

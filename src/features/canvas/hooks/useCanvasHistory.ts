@@ -21,7 +21,7 @@ export const useCanvasHistory = () => {
   const getHistoryLength = useUnifiedCanvasStore((state) => state.getHistoryLength);
   // Perform undo operation
   const performUndo = useCallback(() => {
-    if (canUndo()) {
+    if (canUndo) {
       const patches = undo();
       return patches;
     }
@@ -30,7 +30,7 @@ export const useCanvasHistory = () => {
 
   // Perform redo operation
   const performRedo = useCallback(() => {
-    if (canRedo()) {
+    if (canRedo) {
       const patches = redo();
       return patches;
     }
@@ -61,8 +61,8 @@ export const useCanvasHistory = () => {
     return {
       length: getHistoryLength(),
       currentIndex,
-      canUndo: canUndo(),
-      canRedo: canRedo(),
+      canUndo: canUndo,
+      canRedo: canRedo,
       hasHistory: getHistoryLength() > 0
     };
   }, [getHistoryLength, currentIndex, canUndo, canRedo]);
@@ -148,8 +148,8 @@ export const useCanvasHistory = () => {
     clearAllHistory,
     
     // State checks
-    canUndo: canUndo(),
-    canRedo: canRedo(),
+    canUndo: canUndo,
+    canRedo: canRedo,
     hasHistory: getHistoryLength() > 0,
     historyLength: getHistoryLength(),
     

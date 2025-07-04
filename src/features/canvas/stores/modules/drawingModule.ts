@@ -71,15 +71,12 @@ export const createDrawingModule = (
       strokeConfig: {
         marker: {
           color: '#000000',
-          width: 8,
           minWidth: 2,
           maxWidth: 20,
           opacity: 1,
           smoothness: 0.5,
           widthVariation: true,
-          pressureSensitive: true,
-          lineCap: 'round',
-          lineJoin: 'round'
+          pressureSensitive: true
         },
         highlighter: {
           color: '#FFFF00',
@@ -119,20 +116,25 @@ export const createDrawingModule = (
       finishDrawing: () => {
         const state = get();
         if (state.isDrawing && state.currentPath && state.currentPath.length >= 4) {
-          // Create pen element
+          // Create pen element with fallback color
+          const penColor = state.penColor || '#000000';
+          console.log('🖊️ [Store] Creating pen element with color:', penColor);
+          
           const penElement = {
             id: nanoid(),
             type: 'pen',
             x: 0,
             y: 0,
             points: [...state.currentPath],
-            stroke: state.penColor,
+            stroke: penColor,
             strokeWidth: 2,
             createdAt: Date.now(),
             updatedAt: Date.now(),
             isLocked: false,
             isHidden: false
           };
+          
+          console.log('🖊️ [Store] Adding pen element to store:', penElement);
           
           // Add to store
           get().addElement(penElement as any);

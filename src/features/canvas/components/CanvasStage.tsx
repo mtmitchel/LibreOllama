@@ -1,13 +1,16 @@
 import React, { useRef, useMemo, useCallback, useEffect } from 'react';
 import { Stage } from 'react-konva';
 import Konva from 'konva';
-import UnifiedEventHandler from '../utils/UnifiedEventHandler';
+import { useShallow } from 'zustand/react/shallow';
+import UnifiedEventHandler from './UnifiedEventHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { ToolLayer } from '../layers/ToolLayer';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { CanvasElement, ElementId, SectionId, ElementOrSectionId } from '../types/enhanced.types';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
 import { useCursorManager } from '../utils/performance/cursorManager';
+import { useCanvasSetup } from '../hooks/useCanvasSetup';
+import { canvasLog } from '../utils/canvasLogger';
 
 interface CanvasStageProps {
   stageRef?: React.RefObject<Konva.Stage | null>;
@@ -26,31 +29,54 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   const internalStageRef = useRef<Konva.Stage | null>(null);
   const stageRef = externalStageRef || internalStageRef;
 
-  // SELECTIVE: Only essential subscriptions to prevent infinite loops
-  const viewport = useUnifiedCanvasStore(canvasSelectors.viewport);
-  const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
-  const currentTool = useUnifiedCanvasStore(canvasSelectors.selectedTool); // RESTORED: Essential for toolbar
-  
-  // Fixed: Use selectors to prevent infinite loops  
-  const elements = useUnifiedCanvasStore(canvasSelectors.elements);
-  const sections = useUnifiedCanvasStore(canvasSelectors.sections);
-  
-  // Fixed: Use actual store actions
-  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
-  const updateSection = useUnifiedCanvasStore(state => state.updateSection);
-  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
-  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
-  const handleElementDrop = useUnifiedCanvasStore(state => state.handleElementDrop);
-  const zoomViewport = useUnifiedCanvasStore(state => state.zoomViewport);
-  const setViewport = useUnifiedCanvasStore(state => state.setViewport);
+  // OPTIMIZED: Consolidated store subscriptions using useShallow
+  const {
+    viewport,
+    selectedElementIds,
+    selectedTool,
+    elements,
+    sections,
+    updateElement,
+    updateSection,
+    selectElement,
+    setTextEditingElement,
+    handleElementDrop,
+    zoomViewport,
+    setViewport
+  } = useUnifiedCanvasStore(useShallow((state) => ({
+    viewport: state.viewport,
+    selectedElementIds: state.selectedElementIds,
+    selectedTool: state.selectedTool,
+    elements: state.elements,
+    sections: state.sections,
+    updateElement: state.updateElement,
+    updateSection: state.updateSection,
+    selectElement: state.selectElement,
+    setTextEditingElement: state.setTextEditingElement,
+    handleElementDrop: state.handleElementDrop,
+    zoomViewport: state.zoomViewport,
+    setViewport: state.setViewport
+  })));
 
   const { width, height } = viewport;
   const panZoomState = { scale: viewport.scale, position: { x: viewport.x, y: viewport.y } };
 
-  // Elements from store - cast for type compatibility 
+  // Elements from store - memoized conversion with size-based optimization
   const allElements = useMemo(() => {
     return elements as Map<ElementId | SectionId, CanvasElement>;
   }, [elements]);
+
+  // Memoized elements array for performance-critical operations
+  const elementsArray = useMemo(() => {
+    return Array.from(allElements.values());
+  }, [allElements]);
+
+  // Memoized selected elements for performance
+  const selectedElements = useMemo(() => {
+    return elementsArray.filter(element => 
+      selectedElementIds.has(element.id as ElementId)
+    );
+  }, [elementsArray, selectedElementIds]);
 
   // Static stage configuration (viewport handled separately)
   const stageConfig = useMemo(() => {
@@ -82,9 +108,9 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   // Update cursor when tool changes (centralized cursor management)
   useEffect(() => {
     if (stageRef.current) {
-      cursorManager.updateForTool(currentTool as any);
+      cursorManager.updateForTool(selectedTool as any);
     }
-  }, [currentTool, cursorManager]);
+  }, [selectedTool, cursorManager]);
 
   // Initialize cursor manager with stage
   useEffect(() => {
@@ -138,7 +164,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
   return (
     <CanvasErrorBoundary
       onError={(error, errorInfo) => {
-        console.error('🚨 [CanvasStage] Critical error in canvas rendering:', {
+        canvasLog.error('🚨 [CanvasStage] Critical error in canvas rendering:', {
           error: error.message,
           componentStack: errorInfo.componentStack
         });

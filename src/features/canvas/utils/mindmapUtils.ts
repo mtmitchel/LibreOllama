@@ -48,7 +48,7 @@ export const createMindmapStructure = (x: number, y: number) => {
     const endY = childNode.y + 10; // Center of child text
 
     // Create smooth curves for top and bottom, straight line for middle
-    let intermediatePoints = [];
+    let intermediatePoints: { x: number; y: number }[] = [];
     
     if (index === 0) { // Top curve (A concept)
       const controlX1 = startX + 25;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from "../../../core/shared-ui";
+import { Card, Progress } from "../../../components/ui";
 import { MoreHorizontal } from "lucide-react";
 import { Task } from "../../../core/lib/mockData";
 

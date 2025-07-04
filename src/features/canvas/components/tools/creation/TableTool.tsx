@@ -1,11 +1,13 @@
 /**
  * TableTool - Interactive table creation tool
- * Provides FigJam-style table creation with real-time preview
+ * Provides modern table creation with inline editing and add/delete functionality
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+import { useShallow } from 'zustand/react/shallow';
 import { TableElement, ElementId } from '../../../types/enhanced.types';
 import { nanoid } from 'nanoid';
 
@@ -15,85 +17,111 @@ interface TableToolProps {
 }
 
 export const TableTool: React.FC<TableToolProps> = ({ stageRef, isActive }) => {
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
-  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
-  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
-  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
+  // Store actions using grouped selectors for optimization
+  const toolActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      addElement: state.addElement,
+      setSelectedTool: state.setSelectedTool
+    }))
+  );
+  const stickyNoteActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      addElementToStickyNote: state.addElementToStickyNote,
+      findStickyNoteAtPoint: state.findStickyNoteAtPoint
+    }))
+  );
 
-  useEffect(() => {
-    if (!isActive || !stageRef.current) return;
-
+  const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!stageRef.current) return;
+    
+    // We only care about the primary button
+    if (e.evt.button !== 0) return;
+    
     const stage = stageRef.current;
+    
+    // Get canvas position using Konva's built-in coordinate conversion
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
 
-    const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-      // We only care about the primary button
-      if (e.evt.button !== 0) return;
-      
-      // Get canvas position using Konva's built-in coordinate conversion
-      const pointer = stage.getPointerPosition();
-      if (!pointer) return;
+    const transform = stage.getAbsoluteTransform().copy().invert();
+    const pos = transform.point(pointer);
 
-      const transform = stage.getAbsoluteTransform().copy().invert();
-      const pos = transform.point(pointer);
-
-      const newTable: TableElement = {
-        id: nanoid() as ElementId,
-        type: 'table',
-        x: pos.x,
-        y: pos.y,
-        width: 400, // Default width
-        height: 150, // Default height
-        rows: 3, // Required for store updateTableCell function
-        cols: 2, // Required for store updateTableCell function
-        isLocked: false,
-        metadata: {},
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        // Default initial structure
-        enhancedTableData: {
-          rows: [
-            { id: 'row-1', height: 50 },
-            { id: 'row-2', height: 50 },
-            { id: 'row-3', height: 50 },
+    const newTable: TableElement = {
+      id: nanoid() as ElementId,
+      type: 'table',
+      x: pos.x,
+      y: pos.y,
+      width: 300, // Smaller default for 2x2 table
+      height: 100, // Smaller for 2 rows
+      rows: 2, // Simple 2x2 table
+      cols: 2, // Simple 2x2 table
+      isLocked: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      // Simple table structure without placeholder content
+      enhancedTableData: {
+        rows: [
+          { id: 'row-1', height: 50 },
+          { id: 'row-2', height: 50 },
+        ],
+        columns: [
+          { id: 'col-1', width: 150 },
+          { id: 'col-2', width: 150 },
+        ],
+        cells: [
+          [
+            { content: '' }, 
+            { content: '' }
           ],
-          columns: [
-            { id: 'col-1', width: 200 },
-            { id: 'col-2', width: 200 },
+          [
+            { content: '' }, 
+            { content: '' }
           ],
-          cells: [
-            [{ content: 'Header 1' }, { content: 'Header 2' }],
-            [{ content: '' }, { content: '' }],
-            [{ content: '' }, { content: '' }],
-          ],
-        },
-      };
-      
-      const parentStickyNoteId = findStickyNoteAtPoint(pos);
-      if (parentStickyNoteId) {
-        addElementToStickyNote(newTable.id, parentStickyNoteId);
-      } else {
-        addElement(newTable);
-      }
-      
-      // Switch back to select tool and immediately highlight the new table
-      setSelectedTool('select');
+        ],
+        // Modern table styling
+        styling: {
+          headerBackgroundColor: '#f8fafc',
+          headerTextColor: '#374151',
+          borderColor: '#e5e7eb',
+          alternateRowColor: '#f9fafb',
+          hoverColor: '#f3f4f6',
+          fontSize: 14,
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          padding: 12,
+          borderRadius: 8,
+          shadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+        }
+      },
+    };
+    
+    const parentStickyNoteId = stickyNoteActions.findStickyNoteAtPoint(pos);
+    if (parentStickyNoteId) {
+      stickyNoteActions.addElementToStickyNote(newTable.id, parentStickyNoteId);
+    } else {
+      toolActions.addElement(newTable);
+    }
+    
+    // Switch back to select tool and immediately highlight the new table
+    toolActions.setSelectedTool('select');
 
-      // Give Konva a tick to register the new element, then select it
+    // Give Konva a tick to register the new element, then select it
+    setTimeout(() => {
+      const store = useUnifiedCanvasStore.getState();
+      store.clearSelection();
       setTimeout(() => {
-        const store = useUnifiedCanvasStore.getState();
-        store.clearSelection();
-        setTimeout(() => {
-          store.selectElement(newTable.id, false);
-        }, 50);
+        store.selectElement(newTable.id, false);
       }, 50);
-    };
+    }, 50);
+  };
 
-    stage.on('mousedown.tabletool', handleMouseDown);
-
-    return () => {
-      stage.off('mousedown.tabletool');
-    };
-  }, [isActive, stageRef, addElement, addElementToStickyNote, findStickyNoteAtPoint, setSelectedTool]);
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'TableTool',
+    handlers: {
+      onMouseDown: handleMouseDown
+    }
+  });
 
   return null; // The tool itself doesn't render anything, it just handles events
 }; 

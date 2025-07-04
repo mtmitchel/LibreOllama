@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button } from '../../../core/shared-ui';
+import { Card, Button } from '../../../components/ui';
 import { PanelLeftOpen, PanelLeftClose, MoreVertical, Plus, Search } from 'lucide-react';
 
 interface Project {

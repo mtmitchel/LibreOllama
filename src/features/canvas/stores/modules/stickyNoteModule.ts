@@ -111,7 +111,7 @@ export const createStickyNoteModule = (
             // Update sticky note
             const updatedStickyNote = {
               ...stickyNote,
-              childElementIds: (stickyNote.childElementIds || []).filter(id => id !== elementId)
+              childElementIds: (stickyNote.childElementIds || []).filter((id: ElementId) => id !== elementId)
             };
             state.elements.set(stickyNoteId, updatedStickyNote);
 
@@ -168,7 +168,7 @@ export const createStickyNoteModule = (
         const stickyNote = elements.get(stickyNoteId);
         if (stickyNote?.type === 'sticky-note' && stickyNote.childElementIds) {
           return stickyNote.childElementIds
-            .map(id => elements.get(id))
+            .map((id: ElementId) => elements.get(id))
             .filter(Boolean) as CanvasElement[];
         }
         return [];
@@ -209,7 +209,7 @@ export const createStickyNoteModule = (
         const { getStickyNoteChildren, removeElementFromStickyNote } = get();
         const children = getStickyNoteChildren(stickyNoteId);
         
-        children.forEach(child => {
+        children.forEach((child: CanvasElement) => {
           removeElementFromStickyNote(child.id, stickyNoteId);
         });
         

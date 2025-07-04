@@ -1,7 +1,4 @@
-/**
- * Simple throttle utility to replace lodash dependency
- * Ensures a function is called at most once per specified time period
- */
+// Basic throttle utility
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   delay: number
@@ -13,13 +10,15 @@ export function throttle<T extends (...args: any[]) => any>(
     const currentTime = Date.now();
     
     if (currentTime - lastExecTime > delay) {
-      lastExecTime = currentTime;
       func(...args);
-    } else if (!timeoutId) {
+      lastExecTime = currentTime;
+    } else {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       timeoutId = setTimeout(() => {
-        lastExecTime = Date.now();
-        timeoutId = null;
         func(...args);
+        lastExecTime = Date.now();
       }, delay - (currentTime - lastExecTime));
     }
   };

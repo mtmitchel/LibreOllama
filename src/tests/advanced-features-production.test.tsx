@@ -9,8 +9,8 @@
 import { vi } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { renderWithKonva } from '@/tests/utils/konva-test-utils';
-import { useUnifiedCanvasStore } from '@/stores';
+import { renderWithKonva } from '@/tests/utils/testUtils';
+import { useUnifiedCanvasStore } from '@/features/canvas/stores/unifiedCanvasStore';
 import { 
   ElementId, 
   SectionId, 

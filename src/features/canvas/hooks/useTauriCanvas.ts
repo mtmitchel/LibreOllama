@@ -5,8 +5,8 @@ import { useCallback, useMemo } from 'react';
 
 export const useTauriCanvas = () => {
   // Use stable selectors with proper memoization
-  const exportElements = useUnifiedCanvasStore(
-    useCallback((state) => state.exportElements, [])
+  const elements = useUnifiedCanvasStore(
+    useCallback((state) => state.elements, [])
   );
   const importElements = useUnifiedCanvasStore(
     useCallback((state) => state.importElements, [])
@@ -19,12 +19,12 @@ export const useTauriCanvas = () => {
         throw new Error('Invalid filename provided');
       }
       
-      const elements = exportElements();
-      if (!elements) {
+      const elementsArray = Array.from(elements.values());
+      if (elementsArray.length === 0) {
         throw new Error('No elements to export');
       }
       
-      const data = JSON.stringify(elements);
+      const data = JSON.stringify(elementsArray);
       await invoke('save_canvas_data', { data, filename });
       console.log('Canvas saved successfully');
       return true;
@@ -32,7 +32,7 @@ export const useTauriCanvas = () => {
       console.error('Error saving canvas:', error);
       throw error; // Re-throw for caller to handle
     }
-  }, [exportElements]);
+  }, [elements]);
 
   const loadFromFile = useCallback(async (filename: string) => {
     try {

@@ -186,6 +186,7 @@ export function createTable(x: number, y: number, rows = 3, cols = 3): TableElem
     width: cols * 100,
     height: rows * 40,
     rows,
+    cols,
     enhancedTableData: {
       rows: Array.from({ length: rows }, (_, i) => ({ height: 40, id: `row-${i}` })),
       columns: Array.from({ length: cols }, (_, i) => ({ width: 120, id: `col-${i}` })),
@@ -193,20 +194,12 @@ export function createTable(x: number, y: number, rows = 3, cols = 3): TableElem
         Array.from({ length: cols }, () => ({ content: '', text: '' }))
       )
     },
-    cells: Array(rows).fill(null).map(() => 
+    tableData: Array(rows).fill(null).map(() => 
       Array(cols).fill('')
     ),
-    style: {
-      borderColor: '#E5E7EB',
-      borderWidth: 1,
-      cellPadding: 8,
-      fontSize: 14,
-      fontFamily: 'Inter, sans-serif',
-      textColor: '#1F2937',
-      backgroundColor: '#FFFFFF',
-      headerBackgroundColor: '#F3F4F6',
-      headerTextColor: '#111827'
-    },
+    borderColor: '#E5E7EB',
+    borderWidth: 1,
+    cellPadding: 8,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     isLocked: false,

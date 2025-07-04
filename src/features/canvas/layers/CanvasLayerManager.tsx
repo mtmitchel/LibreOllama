@@ -1,66 +1,76 @@
 // src/features/canvas/layers/CanvasLayerManager.tsx
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Konva from 'konva';
 import { Layer } from 'react-konva';
 import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
+import { SelectionLayer } from './SelectionLayer';
+import { LayersPanel } from './LayersPanel';
 import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
 // import { ElementRenderer } from '../renderers/ElementRenderer';
 import { TransformerManager } from '../utils/TransformerManager';
 import { useFeatureFlag } from '../hooks/useFeatureFlags';
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { Line } from 'react-konva';
 // import { Layer as LayerData } from '../stores/slices/layerStore'; // Legacy import
-interface LayerData {
-  id: string;
-  name: string;
-  visible: boolean;
-}
-import { CanvasElement, ElementId, SectionElement as SectionElementType, SectionId, isSectionElement, ConnectorElement } from '../types/enhanced.types';
-import { useViewportCulling } from '../hooks/useViewportCulling';
+import { useShallow } from 'zustand/react/shallow';
+import {
+  CanvasElement,
+  ElementId,
+  SectionId,
+  ElementOrSectionId,
+  SectionElement,
+  isConnectorElement,
+  isSectionElement
+} from '../types/enhanced.types';
+import { canvasSelectors } from '../stores/selectors';
+import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
+import { canvasLog } from '../utils/canvasLogger';
 
 interface CanvasLayerManagerProps {
   stageRef: React.RefObject<Konva.Stage | null>;
   elements: Map<ElementId | SectionId, CanvasElement>;
-  selectedElementIds: Set<ElementId | SectionId>;
-  onElementUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
+  selectedElementIds: Set<ElementId>;
+  onElementUpdate: (id: ElementOrSectionId, updates: Partial<CanvasElement>) => void;
   onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => void;
   onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
   onStartTextEdit: (elementId: ElementId) => void;
 }
 
-export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
+/**
+ * CanvasLayerManager is responsible for:
+ * - Separating elements into connectors and non-connectors.
+ * - Passing elements to appropriate layers.
+ * - Managing layer order (background -> main elements -> connectors -> selection).
+ * - NOT responsible for event handling (that's handled by UnifiedEventHandler)
+ */
+export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(({
   stageRef,
   elements,
   selectedElementIds,
   onElementUpdate,
   onElementDragEnd,
   onElementClick,
-  onStartTextEdit,
+  onStartTextEdit
 }) => {
   if (!stageRef) {
-    console.error('[CanvasLayerManager] stageRef is null, cannot render.');
+    canvasLog.error('[CanvasLayerManager] stageRef is null, cannot render.');
     return null;
   }
 
-  // SELECTIVE: Essential subscriptions only
-  const selectedTool = useUnifiedCanvasStore(canvasSelectors.selectedTool);
-  const viewport = useUnifiedCanvasStore(canvasSelectors.viewport); // RESTORED: Needed for proper canvas sizing
-  const panZoomState = { scale: viewport.scale, position: { x: viewport.x, y: viewport.y } };
-  
-  // TEMPORARILY DISABLED: These were causing re-render loops
+  // OPTIMIZED: Consolidated store subscriptions using useShallow
+  const { selectedTool, viewport } = useUnifiedCanvasStore(useShallow((state) => ({
+    selectedTool: state.selectedTool,
+    viewport: state.viewport
+  })));
+
+  // Deferred - sections (commented out - not implemented in store yet)
   // const sections = useUnifiedCanvasStore(canvasSelectors.sections);
   // const updateSection = useUnifiedCanvasStore(state => state.updateSection);
   // const selectElement = useUnifiedCanvasStore(state => state.selectElement);
   // const clearSelection = useUnifiedCanvasStore(state => state.clearSelection);
-  
-  // Stub implementations to prevent crashes
-  const sections = new Map();
-  const updateSection = () => {};
-  const selectElement = () => {};
-  const clearSelection = () => {};
 
   // DISABLED: Drawing state that might cause loops
   const storeIsDrawing = false;
@@ -81,36 +91,36 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   const [selectionBox, setSelectionBox] = useState({ x: 0, y: 0, width: 0, height: 0, visible: false });
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
 
-  useEffect(() => {
+  const handleResize = useCallback(() => {
     const stage = stageRef.current;
     if (stage) {
       setStageSize({ width: stage.width(), height: stage.height() });
-      const handleResize = () => {
-        setStageSize({ width: stage.width(), height: stage.height() });
-      };
+    }
+  }, [stageRef]);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (stage) {
+      // Set initial size
+      handleResize();
+      
       stage.on('resize', handleResize);
       return () => {
         stage.off('resize', handleResize);
       };
     }
-  }, [stageRef]);
+  }, [stageRef, handleResize]);
   
-  // Convert elements map to array for processing
-  const elementsArray = useMemo(() => {
-    return Array.from(elements.values());
-  }, [elements]);
+  // Convert Map to array for processing
+  const elementsArray = useMemo(() => Array.from(elements.values()), [elements]);
 
-  // ENABLED: Advanced viewport culling with quadtree (massive performance boost)
-  const cullingResult = useViewportCulling({
+  // Use viewport culling for performance
+  const cullingResult = useSimpleViewportCulling({
     elements: elementsArray,
     zoomLevel: viewport.scale || 1,
     panOffset: { x: viewport.x || 0, y: viewport.y || 0 },
     canvasSize: stageSize.width > 0 ? stageSize : null,
-    config: {
-      enableQuadtree: true,
-      enableLOD: true,
-      enableHierarchicalCulling: true
-    }
+    buffer: 300 // Generous buffer for smooth scrolling
   });
   
   const visibleElements = cullingResult.visibleElements;
@@ -119,52 +129,57 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   // OPTIMIZED: Element categorization using culled visible elements  
   const {
     mainElements,
-    connectorElements,
     sectionElements,
     elementsBySection,
   } = useMemo(() => {
-    const main: CanvasElement[] = [];
-    const connectors: ConnectorElement[] = [];
-    const sections: SectionElementType[] = [];
+    const main: (CanvasElement & { id: ElementId })[] = [];
+    const sections: SectionElement[] = [];
     const bySection = new Map<SectionId, CanvasElement[]>();
 
     // Use viewport-culled elements for massive performance boost
     for (const element of visibleElements) {
-      if (element.type === 'connector') {
-        connectors.push(element as ConnectorElement);
-      } else if (element.type === 'section') {
-        sections.push(element as SectionElementType);
+      if (element.type === 'section') {
+        sections.push(element as SectionElement);
       } else {
-        main.push(element);
+        // All elements including connectors go to main - they're handled by ElementRenderer
+        main.push(element as CanvasElement & { id: ElementId });
       }
     }
     
     // Log performance gain when significant culling occurs
     if (elementsArray.length > 50 && visibleElements.length < elementsArray.length * 0.8) {
-      console.log('🚀 [Viewport Culling] Performance boost:', {
+      canvasLog.debug('🚀 [Viewport Culling] Performance boost:', {
         total: elementsArray.length,
         visible: visibleElements.length,
         culled: `${Math.round((1 - visibleElements.length/elementsArray.length) * 100)}%`
       });
     }
     
-    return { mainElements: main, connectorElements: connectors, sectionElements: sections, elementsBySection: bySection };
+    return { mainElements: main, sectionElements: sections, elementsBySection: bySection };
   }, [visibleElements, elementsArray.length]);
+
+  // Hide layers panel toggle - not implemented yet
+  const showLayersPanel = false;
+  const toggleLayersPanel = () => {
+    canvasLog.debug('Layers panel toggle not implemented yet');
+  };
 
   // SIMPLIFIED: Prevent memoization issues that cause infinite loops
   const sortedMainElements = mainElements;
-  const connectorElementsMap = new Map(connectorElements.map(c => [c.id, c]));
   const sectionElementsMap = new Map(sectionElements.map(s => [s.id, s]));
   const sortedSectionElements = sectionElements;
   const sortedElementsBySection = elementsBySection;
 
   // SIMPLIFIED: Remove complex memoization
-  const selectedElementIdsOnly = selectedElementIds;
+  const selectedElementIdsOnly = new Set(Array.from(selectedElementIds).filter(id => {
+    // Only include ElementIds, not SectionIds
+    return !sectionElements.some(section => section.id === id);
+  }) as ElementId[]);
 
   // Simplified event handlers (temporarily disabled)
-  const handleMouseDown = () => {};
-  const handleMouseMove = () => {};
-  const handleMouseUp = () => {};
+  const handleMouseDown = useCallback(() => {}, []);
+  const handleMouseMove = useCallback(() => {}, []);
+  const handleMouseUp = useCallback(() => {}, []);
 
   // Define missing variables with default values
   const layers = [
@@ -204,7 +219,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
         <React.Fragment key="main">
           <MainLayer
               elements={new Map(sortedMainElements.map(el => [el.id, el]))}
-              selectedElementIds={selectedElementIds}
+              selectedElementIds={new Set(Array.from(selectedElementIds).filter(id => sortedMainElements.some(el => el.id === id)) as ElementId[])}
               selectedTool={selectedTool}
               isDrawing={storeIsDrawing}
               currentPath={currentPath}
@@ -213,19 +228,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
             />
         </React.Fragment>
       ),
-      connector: (
-        <ConnectorLayer
-          key="connector"
-          elements={connectorElementsMap}
-          selectedElementIds={selectedElementIdsOnly}
-          onElementClick={onElementClick}
-          onElementUpdate={onElementUpdate}
-          isDrawingConnector={isDrawingConnector ?? false}
-          connectorStart={connectorStart ?? null}
-          connectorEnd={connectorEnd ?? null}
-          selectedTool={selectedTool}
-        />
-      ),
+      connector: null, // Connectors now rendered through MainLayer/ElementRenderer
       ui: (
         <UILayer
           key="ui"
@@ -276,6 +279,13 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = ({
   };
 
   return renderLayerContent();
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison for performance
+  return (
+    prevProps.elements === nextProps.elements &&
+    prevProps.selectedElementIds === nextProps.selectedElementIds &&
+    prevProps.stageRef === nextProps.stageRef
+  );
+});
 
 CanvasLayerManager.displayName = 'CanvasLayerManager';

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Transformer, Circle } from 'react-konva';
 import Konva from 'konva';
+import { useShallow } from 'zustand/react/shallow';
 
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
 import { ElementId, CanvasElement, isTableElement, isConnectorElement } from '../../types/enhanced.types';
@@ -14,12 +15,15 @@ const rotationCursor = `url('data:image/svg+xml;charset=utf-8,<svg width="20" he
 
 export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNodeIds, stageRef }) => {
   const transformerRef = useRef<Konva.Transformer>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isRotating, setIsRotating] = useState(false);
   const [showRotationHandle, setShowRotationHandle] = useState(false);
   const [rotationStart, setRotationStart] = useState<{ angle: number; nodeRotation: number } | null>(null);
-  const elements = useUnifiedCanvasStore((state) => state.elements);
-  const updateElement = useUnifiedCanvasStore((state) => state.updateElement);
-  const addToHistory = useUnifiedCanvasStore((state) => state.addToHistory);
+  const { elements, updateElement, addToHistory } = useUnifiedCanvasStore(useShallow((state) => ({
+    elements: state.elements,
+    updateElement: state.updateElement,
+    addToHistory: state.addToHistory
+  })));
 
   // Exclude table and connector elements - they handle their own selection/transformation
   const filteredSelectedNodeIds = selectedNodeIds.filter(id => {
@@ -56,8 +60,6 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
     } else {
       transformer.show();
     }
-
-    let hoverTimeout: NodeJS.Timeout;
     
     const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
       const pos = stage.getPointerPosition();
@@ -181,7 +183,9 @@ export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNo
     stage.on('mouseup', handleMouseUp);
 
     return () => {
-      clearTimeout(hoverTimeout);
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
       stage.off('mousemove', handleMouseMove);
       stage.off('mousedown', handleMouseDown);
       stage.off('mouseup', handleMouseUp);

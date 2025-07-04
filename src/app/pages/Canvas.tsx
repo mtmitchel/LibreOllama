@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import CanvasContainer from '../../features/canvas/components/CanvasContainer';
 import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import { PanelRightClose } from 'lucide-react';
-import { Button } from '../../core/shared-ui';
+import { Button } from '../../components/ui';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,

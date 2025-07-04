@@ -25,17 +25,13 @@ export interface ElementActions {
   getElementById: (id: ElementOrSectionId) => CanvasElement | undefined;
   addElement: (element: CanvasElement) => void;
   createElement: (type: string, position: { x: number; y: number }) => void;
-  updateElement: (id: ElementOrSectionId, updates: Partial<CanvasElement>) => void;
-  updateMultipleElements: (updates: Array<{ id: ElementId; updates: Partial<CanvasElement> }>) => void;
+  updateElement: (id: ElementOrSectionId, updates: Partial<CanvasElement>, options?: { skipHistory?: boolean; skipValidation?: boolean }) => void;
+  batchUpdate: (updates: Array<{ id: ElementOrSectionId; updates: Partial<CanvasElement> }>, options?: { skipHistory?: boolean; skipValidation?: boolean }) => void;
   deleteElement: (id: ElementOrSectionId) => void;
   deleteSelectedElements: () => void;
   
   // High-performance operations
   addElementFast: (element: CanvasElement) => void;
-  patchElement: (id: string, updates: Partial<CanvasElement>) => void;
-  patchElementFast: (id: string, updates: Partial<CanvasElement>) => void;
-  batchUpdateElements: (updates: Array<{ id: string; changes: Partial<CanvasElement> }>) => void;
-  updateStrokeFast: (id: string, points: number[], bounds?: { x: number; y: number; width: number; height: number }) => void;
   
   
   // Utility operations
@@ -54,8 +50,8 @@ export const createElementModule = (
   get: StoreGet
 ): StoreModule<ElementState, ElementActions> => {
   const getElementCenter = (element: CanvasElement): { x: number; y: number } => {
-    const width = element.width ?? 0;
-    const height = element.height ?? 0;
+    const width = (element as any).width ?? (element as any).radius * 2 ?? 0;
+    const height = (element as any).height ?? (element as any).radius * 2 ?? 0;
     return {
       x: element.x + width / 2,
       y: element.y + height / 2,
@@ -96,8 +92,12 @@ export const createElementModule = (
         get().addElement(newElement);
       },
 
-      updateElement: (id, updates) => {
-        console.log('🔄 [Store] updateElement called:', { id, updates });
+      updateElement: (id, updates, options = {}) => {
+        const { skipHistory = false, skipValidation = false } = options;
+        
+        if (!skipValidation) {
+          console.log('🔄 [Store] updateElement called:', { id, updates });
+        }
         set(state => {
           const element = state.elements.get(id);
           console.log('🔄 [Store] Current element:', element);
@@ -135,7 +135,7 @@ export const createElementModule = (
                   // Remove from old section
                   const oldSection = state.sections?.get(oldSectionId);
                   if (oldSection) {
-                    oldSection.childElementIds = oldSection.childElementIds.filter(childId => childId !== id);
+                    oldSection.childElementIds = oldSection.childElementIds.filter((childId: ElementId) => childId !== id);
                   }
                 }
       
@@ -164,7 +164,7 @@ export const createElementModule = (
                 childCount: updatedElement.childElementIds.length
               });
               if (deltaX !== 0 || deltaY !== 0) {
-                updatedElement.childElementIds.forEach(childId => {
+                updatedElement.childElementIds.forEach((childId: ElementId) => {
                   const child = state.elements.get(childId);
                   if (child) {
                     console.log('🗒️ [Store] Moving child element:', {
@@ -195,19 +195,46 @@ export const createElementModule = (
             }
           }
         });
-        get().addToHistory('updateElement');
+        
+        if (!skipHistory) {
+          get().addToHistory('updateElement');
+        }
       },
 
-      updateMultipleElements: (updates) => {
+      batchUpdate: (updates, options = {}) => {
+        const { skipHistory = false, skipValidation = false } = options;
+        
         set(state => {
           updates.forEach(({ id, updates: elementUpdates }) => {
             const element = state.elements.get(id);
             if (element) {
-              Object.assign(element, elementUpdates);
+              if (skipValidation) {
+                // Fast path: direct assignment for performance
+                Object.assign(element, elementUpdates);
+              } else {
+                // Full validation path: create new object
+                const updatedElement = { ...element, ...elementUpdates };
+                
+                // Apply section constraints if needed
+                if (updatedElement.sectionId) {
+                  const section = state.sections?.get(updatedElement.sectionId);
+                  if (section) {
+                    const elementWidth = (updatedElement as any).width ?? 0;
+                    const elementHeight = (updatedElement as any).height ?? 0;
+                    updatedElement.x = Math.max(section.x, Math.min(updatedElement.x, section.x + section.width - elementWidth));
+                    updatedElement.y = Math.max(section.y, Math.min(updatedElement.y, section.y + section.height - elementHeight));
+                  }
+                }
+                
+                state.elements.set(id, updatedElement);
+              }
             }
           });
         });
-        get().addToHistory('updateMultipleElements');
+        
+        if (!skipHistory) {
+          get().addToHistory('batchUpdate');
+        }
       },
 
       deleteElement: (id) => {
@@ -218,12 +245,12 @@ export const createElementModule = (
           if (elementToDelete?.sectionId) {
             const section = state.sections?.get(elementToDelete.sectionId);
             if (section) {
-              section.childElementIds = section.childElementIds.filter(childId => childId !== id);
+              section.childElementIds = section.childElementIds.filter((childId: ElementId) => childId !== id);
             }
           }
       
           state.elements.delete(id);
-          state.elementOrder = state.elementOrder.filter(elementId => elementId !== id);
+          state.elementOrder = state.elementOrder.filter((elementId: ElementId) => elementId !== id);
           state.selectedElementIds?.delete(id as ElementId);
         });
         get().addToHistory('deleteElement');
@@ -238,66 +265,16 @@ export const createElementModule = (
             if (elementToDelete?.sectionId) {
               const section = state.sections?.get(elementToDelete.sectionId);
               if (section) {
-                section.childElementIds = section.childElementIds.filter(childId => childId !== id);
+                section.childElementIds = section.childElementIds.filter((childId: ElementId) => childId !== id);
               }
             }
             state.elements.delete(id);
-            state.elementOrder = state.elementOrder.filter(elementId => elementId !== id);
+            state.elementOrder = state.elementOrder.filter((elementId: ElementId) => elementId !== id);
           }
           state.selectedElementIds.clear();
         });
         get().addToHistory('deleteSelectedElements');
       },
-
-      // Fast element patch without history snapshot (used by stroke tools)
-      patchElement: (id: string, updates: Partial<CanvasElement>) => {
-        set(state => {
-          const element = state.elements.get(id);
-          if (!element) return;
-          const updated = { ...element, ...updates } as CanvasElement;
-          state.elements.set(id, updated);
-          // Ensure change detection
-          state.elements = new Map(state.elements);
-        });
-      },
-
-      // Ultra-fast patch for stroke processing (no validation, minimal overhead)
-      patchElementFast: (id: string, updates: Partial<CanvasElement>) => {
-        set(state => {
-          const element = state.elements.get(id);
-          if (element) {
-            // Direct mutation for performance (Immer will handle immutability)
-            Object.assign(element, updates);
-          }
-        });
-        // Skip history and validation for performance
-      },
-
-      // Batch update method for multiple stroke updates
-      batchUpdateElements: (updates: Array<{ id: string; changes: Partial<CanvasElement> }>) => {
-        set(state => {
-          updates.forEach(({ id, changes }) => {
-            const element = state.elements.get(id);
-            if (element) {
-              Object.assign(element, changes);
-            }
-          });
-        });
-        get().addToHistory('batchUpdateElements');
-      },
-
-      // Dedicated stroke update method that skips validation
-      updateStrokeFast: (id: string, points: number[], bounds?: { x: number; y: number; width: number; height: number }) => {
-        set(state => {
-          const element = state.elements.get(id);
-          if (element) {
-            // Direct mutation for performance (Immer will handle immutability)
-            Object.assign(element, { points });
-          }
-        });
-        // Skip history and validation for performance
-      },
-
 
       clearAllElements: () => {
         set(state => {

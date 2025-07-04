@@ -1,6 +1,6 @@
 /**
  * Point-in-Polygon Algorithm
- * Used for lasso selection and complex shape intersection testing
+ * Used for geometric calculations and complex shape intersection testing
  */
 
 export type Point = [number, number];
@@ -197,7 +197,7 @@ export function getShapeCheckPoints(element: any): Point[] {
       // Triangle elements: use actual triangle points
       if (element.points && Array.isArray(element.points) && element.points.length >= 6) {
         // Extract triangle vertices
-        const vertices = [];
+        const vertices: Point[] = [];
         for (let i = 0; i < element.points.length; i += 2) {
           if (i + 1 < element.points.length) {
             vertices.push([element.points[i], element.points[i + 1]]);
@@ -205,7 +205,9 @@ export function getShapeCheckPoints(element: any): Point[] {
         }
         
         // Add all vertices
-        points.push(...vertices);
+        for (const vertex of vertices) {
+          points.push(vertex);
+        }
         
         // Add edge midpoints
         for (let i = 0; i < vertices.length; i++) {
@@ -366,7 +368,7 @@ export function shapeIntersectsPolygon(element: any, polygon: Polygon): boolean 
 }
 
 /**
- * Create a polygon from a lasso path (array of x,y coordinates)
+ * Create a polygon from a coordinate path (array of x,y coordinates)
  */
 export function pathToPolygon(path: number[]): Polygon {
   const polygon: Polygon = [];

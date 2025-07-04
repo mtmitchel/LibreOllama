@@ -9,6 +9,8 @@ import React, { useCallback, useRef } from 'react';
 import { Rect, Text } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+import { useShallow } from 'zustand/react/shallow';
 
 interface SectionToolProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -27,11 +29,15 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
   const [previewSection, setPreviewSection] = React.useState<PreviewSection | null>(null);
   const startPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Store actions - unified store
-  const startDraftSection = useUnifiedCanvasStore(state => state.startDraftSection);
-  const updateDraftSection = useUnifiedCanvasStore(state => state.updateDraftSection);
-  const commitDraftSection = useUnifiedCanvasStore(state => state.commitDraftSection);
-  const cancelDraftSection = useUnifiedCanvasStore(state => state.cancelDraftSection);
+  // Store actions using grouped selectors for optimization
+  const sectionActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      startDraftSection: state.startDraftSection,
+      updateDraftSection: state.updateDraftSection,
+      commitDraftSection: state.commitDraftSection,
+      cancelDraftSection: state.cancelDraftSection
+    }))
+  );
   const draftSection = useUnifiedCanvasStore(state => state.draftSection);
 
   // Handle pointer down - start drawing
@@ -47,9 +53,9 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
 
     setIsDrawing(true);
     startPointRef.current = pos;
-    startDraftSection(pos);
+    sectionActions.startDraftSection(pos);
     setPreviewSection({ x: pos.x, y: pos.y, width: 0, height: 0 });
-  }, [isActive, stageRef, startDraftSection]);
+  }, [isActive, stageRef, sectionActions]);
 
   // Handle pointer move - update preview
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -65,7 +71,7 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
     const startPos = startPointRef.current;
     
     // Update draft section in store
-    updateDraftSection(pos);
+    sectionActions.updateDraftSection(pos);
     
     // Normalize coordinates to handle all drag directions
     const x = Math.min(pos.x, startPos.x);
@@ -84,7 +90,7 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
       width: normalizedWidth,
       height: normalizedHeight
     });
-  }, [isActive, isDrawing, stageRef, updateDraftSection]);
+  }, [isActive, isDrawing, stageRef, sectionActions]);
 
   // Handle pointer up - finish drawing
   const handlePointerUp = useCallback(() => {
@@ -93,7 +99,7 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
     setIsDrawing(false);
     
     // Commit the draft section (this will create it if large enough)
-    const sectionId = commitDraftSection();
+    const sectionId = sectionActions.commitDraftSection();
     
     if (sectionId) {
       console.log('🎯 [SectionTool] Created section:', sectionId);
@@ -102,23 +108,19 @@ export const SectionTool: React.FC<SectionToolProps> = ({ stageRef, isActive }) 
     // Reset state
     setPreviewSection(null);
     startPointRef.current = null;
-  }, [isActive, isDrawing, commitDraftSection]);
+  }, [isActive, isDrawing, sectionActions]);
 
   // Attach event listeners to stage when active
-  React.useEffect(() => {
-    if (!isActive || !stageRef.current) return;
-
-    const stage = stageRef.current;
-    stage.on('pointerdown', handlePointerDown);
-    stage.on('pointermove', handlePointerMove);
-    stage.on('pointerup', handlePointerUp);
-
-    return () => {
-      stage.off('pointerdown', handlePointerDown);
-      stage.off('pointermove', handlePointerMove);
-      stage.off('pointerup', handlePointerUp);
-    };
-  }, [isActive, handlePointerDown, handlePointerMove, handlePointerUp, stageRef]);
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'SectionTool',
+    handlers: {
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: handlePointerUp
+    }
+  });
 
   // Render preview section (use store draft if available, fallback to local preview)
   const renderSection = draftSection || previewSection;

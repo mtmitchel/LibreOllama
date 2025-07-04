@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
+import { ElementId, GroupId, ElementOrSectionId } from '../features/canvas/types/enhanced.types';
 import { nanoid } from 'nanoid';
 
 describe('Modular Store Functionality', () => {
@@ -7,8 +8,8 @@ describe('Modular Store Functionality', () => {
     const store = useUnifiedCanvasStore.getState();
     
     // Create some test element IDs
-    const elementId1 = nanoid();
-    const elementId2 = nanoid();
+    const elementId1 = nanoid() as ElementId;
+    const elementId2 = nanoid() as ElementId;
     const elementIds = [elementId1, elementId2];
     
     // Test groupElements
@@ -37,8 +38,8 @@ describe('Modular Store Functionality', () => {
     
     // Create a test element
     const testElement = {
-      id: nanoid(),
-      type: 'text',
+      id: nanoid() as ElementId,
+      type: 'text' as const,
       x: 100,
       y: 100,
       width: 200,
@@ -46,7 +47,10 @@ describe('Modular Store Functionality', () => {
       text: 'Test Element',
       fontSize: 16,
       fontFamily: 'Arial',
-      fill: '#000000'
+      fill: '#000000',
+      segments: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
     
     // Test importing elements
@@ -55,7 +59,7 @@ describe('Modular Store Functionality', () => {
     // Verify the element was imported
     const importedElement = store.getElementById(testElement.id);
     expect(importedElement).toBeTruthy();
-    expect(importedElement?.text).toBe('Test Element');
+    expect((importedElement as any)?.text).toBe('Test Element');
   });
   
   it('should implement event handling functionality', () => {

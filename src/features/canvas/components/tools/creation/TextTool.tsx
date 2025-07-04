@@ -15,6 +15,8 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Group, Text, Line, Circle, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
 import { nanoid } from 'nanoid';
 import { TextElement, ElementId } from '../../../types/enhanced.types';
 
@@ -25,15 +27,42 @@ interface TextToolProps {
 
 export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
   // Store selectors
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
-  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
-  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
-  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
-  const clearSelection = useUnifiedCanvasStore(state => state.clearSelection);
-  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
-  const editingTextId = useUnifiedCanvasStore(state => state.textEditingElementId);
-  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
-  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
+  // Store selectors using grouped patterns with useShallow for optimization
+  const elementActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      addElement: state.addElement,
+      updateElement: state.updateElement,
+      selectElement: state.selectElement,
+      clearSelection: state.clearSelection
+    }))
+  );
+  
+  const toolState = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      selectedTool: state.selectedTool,
+      textEditingElementId: state.textEditingElementId
+    }))
+  );
+  
+  const toolActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      setSelectedTool: state.setSelectedTool,
+      setTextEditingElement: state.setTextEditingElement
+    }))
+  );
+  
+  const stickyNoteActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      findStickyNoteAtPoint: state.findStickyNoteAtPoint,
+      addElementToStickyNote: state.addElementToStickyNote
+    }))
+  );
+
+  // Destructure for easier access
+  const { addElement, updateElement, selectElement, clearSelection } = elementActions;
+  const { selectedTool, textEditingElementId: editingTextId } = toolState;
+  const { setSelectedTool, setTextEditingElement } = toolActions;
+  const { findStickyNoteAtPoint, addElementToStickyNote } = stickyNoteActions;
 
   // Local state for UI
   const [showPlacementGuide, setShowPlacementGuide] = React.useState(false);
@@ -157,45 +186,36 @@ export const TextTool: React.FC<TextToolProps> = ({ stageRef, isActive }) => {
     }
   }, [isActive, editingTextId]);
 
-  // Set up event listeners and cursor
+  // Use shared event handler hook with namespaced events
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'textTool',
+    handlers: {
+      onPointerMove: handlePointerMove,
+      onPointerDown: handlePointerDown,
+      onPointerLeave: handlePointerLeave,
+      onPointerEnter: handlePointerEnter,
+      useNamespacedEvents: true
+    }
+  });
+  
+  // Handle cursor separately
   React.useEffect(() => {
     if (!isActive || !stageRef.current) return;
-
-    const stage = stageRef.current;
     
-    console.log('📝 [TextTool] *** SETTING UP EVENT LISTENERS ***');
+    const stage = stageRef.current;
     
     // Always use crosshair cursor when text tool is active
     stage.container().style.cursor = 'crosshair';
     
-    // Remove any existing listeners first to ensure we get priority
-    stage.off('pointermove.textTool');
-    stage.off('pointerdown.textTool');
-    stage.off('pointerleave.textTool');
-    stage.off('pointerenter.textTool');
-    
-    // Add event listeners with namespace for priority
-    stage.on('pointermove.textTool', handlePointerMove);
-    stage.on('pointerdown.textTool', handlePointerDown);
-    stage.on('pointerleave.textTool', handlePointerLeave);
-    stage.on('pointerenter.textTool', handlePointerEnter);
-
-    console.log('📝 [TextTool] Event listeners attached with namespace');
-
     return () => {
-      console.log('📝 [TextTool] *** CLEANING UP EVENT LISTENERS ***');
-      // Clean up event listeners
-      stage.off('pointermove.textTool', handlePointerMove);
-      stage.off('pointerdown.textTool', handlePointerDown);
-      stage.off('pointerleave.textTool', handlePointerLeave);
-      stage.off('pointerenter.textTool', handlePointerEnter);
-      
-      // Reset cursor when tool becomes inactive - force to default for clean transition
+      // Reset cursor when tool becomes inactive
       if (stage.container()) {
         stage.container().style.cursor = 'default';
       }
     };
-  }, [isActive, editingTextId, handlePointerMove, handlePointerDown, handlePointerLeave, handlePointerEnter]);
+  }, [isActive, stageRef]);
 
   // Clear placement guide when tool becomes inactive
   React.useEffect(() => {

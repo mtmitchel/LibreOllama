@@ -397,17 +397,13 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
         setTextEditingElement(null);
         return;
       }
-      
-      console.log('📍 [CircleShape] Editor position:', positionData);
-      
-      editorRef.current = createCircleTextEditor(
+editorRef.current = createCircleTextEditor(
         positionData,
         element.text || '',
         positionData.fontSize,
         element.fontFamily || getAvailableFontFamily(),
         (newText: string) => {
-          console.log('💾 [CircleShape] Saving text:', newText);
-          isEditingRef.current = false;
+isEditingRef.current = false;
           updateInProgressRef.current = false;
           setTextEditingElement(null);
           editorRef.current = null;
@@ -423,8 +419,7 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
           }, 100);
         },
         () => {
-          console.log('❌ [CircleShape] Edit cancelled');
-          isEditingRef.current = false;
+isEditingRef.current = false;
           updateInProgressRef.current = false;
           setTextEditingElement(null);
           editorRef.current = null;
@@ -440,8 +435,7 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
     }
     
     if (textEditingElementId !== element.id && editorRef.current && isEditingRef.current) {
-      console.log('🛑 [CircleShape] Stopping editing session - different element selected');
-      tweenRef.current?.destroy(); // Stop animation if editing is cancelled
+tweenRef.current?.destroy(); // Stop animation if editing is cancelled
       editorRef.current.cleanup();
       editorRef.current = null;
       isEditingRef.current = false;
@@ -454,8 +448,7 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
       if (timeoutsRef.current.focus) clearTimeout(timeoutsRef.current.focus);
       
       if (editorRef.current) {
-        console.log('🧹 [CircleShape] Component cleanup - removing editor');
-        tweenRef.current?.destroy(); // Stop animation on unmount
+tweenRef.current?.destroy(); // Stop animation on unmount
         editorRef.current.cleanup();
         editorRef.current = null;
         isEditingRef.current = false;

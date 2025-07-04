@@ -36,8 +36,8 @@ export const createSectionModule = (
   get: StoreGet
 ): StoreModule<SectionState, SectionActions> => {
   const getElementCenter = (element: CanvasElement): { x: number; y: number } => {
-    const width = element.width ?? 0;
-    const height = element.height ?? 0;
+    const width = (element as any).width ?? (element as any).radius * 2 ?? 0;
+    const height = (element as any).height ?? (element as any).radius * 2 ?? 0;
     return {
       x: element.x + width / 2,
       y: element.y + height / 2,
@@ -103,7 +103,7 @@ export const createSectionModule = (
             const deltaY = section.y - oldY;
 
             if (deltaX !== 0 || deltaY !== 0) {
-              section.childElementIds.forEach(elementId => {
+              section.childElementIds.forEach((elementId: ElementId) => {
                 const element = state.elements.get(elementId);
                 if (element) {
                   element.x += deltaX;
@@ -148,7 +148,7 @@ export const createSectionModule = (
               if (element.sectionId && element.sectionId !== sectionId) {
                 const oldSection = state.sections.get(element.sectionId);
                 if (oldSection) {
-                  oldSection.childElementIds = oldSection.childElementIds.filter(id => id !== element.id);
+                  oldSection.childElementIds = oldSection.childElementIds.filter((id: ElementId) => id !== element.id);
                 }
               }
               element.sectionId = sectionId;
@@ -169,7 +169,7 @@ export const createSectionModule = (
           // Release child elements
           const section = state.sections.get(id);
           if (section?.childElementIds) {
-            section.childElementIds.forEach(childId => {
+            section.childElementIds.forEach((childId: ElementId) => {
               const child = state.elements.get(childId);
               if (child) {
                 child.sectionId = undefined;
@@ -180,8 +180,9 @@ export const createSectionModule = (
           state.sections.delete(id);
           state.elements.delete(id); // Also remove from elements map
           state.sectionElementMap.delete(id);
-          state.elementOrder = state.elementOrder.filter(elId => elId !== id);
-          state.selectedElementIds.delete(id as ElementId);
+          state.elementOrder = state.elementOrder.filter((elId: ElementId | SectionId) => elId !== id);
+          // Only delete from selectedElementIds if it's actually an ElementId, not a SectionId
+          // state.selectedElementIds.delete(id as ElementId);
         });
         get().addToHistory('deleteSection');
       },
@@ -204,13 +205,42 @@ export const createSectionModule = (
       },
 
       addElementToSection: (elementId, sectionId) => {
-        // Implementation placeholder
-        console.log('addElementToSection not implemented in module');
+        set(state => {
+          const section = state.sections.get(sectionId);
+          const element = state.elements?.get(elementId);
+          
+          if (section && element) {
+            // Add element to section's child list
+            if (!section.childElementIds.includes(elementId)) {
+              section.childElementIds.push(elementId);
+            }
+            
+            // Update element's section reference
+            if (state.elements) {
+              const updatedElement = { ...element, sectionId };
+              state.elements.set(elementId, updatedElement);
+            }
+          }
+        });
       },
 
       updateElementCoordinatesOnSectionMove: (sectionId, deltaX, deltaY) => {
-        // Implementation placeholder
-        console.log('updateElementCoordinatesOnSectionMove not implemented in module');
+        set(state => {
+          const section = state.sections.get(sectionId);
+          if (section && state.elements) {
+            section.childElementIds.forEach((elementId: ElementId) => {
+              const element = state.elements?.get(elementId);
+              if (element) {
+                const updatedElement = {
+                  ...element,
+                  x: element.x + deltaX,
+                  y: element.y + deltaY
+                };
+                state.elements.set(elementId, updatedElement);
+              }
+            });
+          }
+        });
       },
     },
   };

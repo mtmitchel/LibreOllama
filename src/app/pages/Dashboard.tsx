@@ -79,6 +79,14 @@ export function Dashboard() {
         <WidgetErrorBoundary widgetName="Today's Focus">
           <TodaysFocusWidget 
             items={todaysFocusItems}
+            onToggle={(item) => {
+              // Implement toggle logic
+              console.log('Toggle item:', item);
+            }}
+            onAddTask={(item) => {
+              // Implement add task logic
+              console.log('Add task:', item);
+            }}
           />
         </WidgetErrorBoundary>
         

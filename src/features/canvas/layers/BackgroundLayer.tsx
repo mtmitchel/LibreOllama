@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Group, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
 import { CanvasElement } from '../types/enhanced.types';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
 interface BackgroundLayerProps {
   width: number;
@@ -24,7 +24,7 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   onBackgroundClick
 }) => {
   // Access viewport information for scale-aware rendering
-  const viewport = useUnifiedCanvasStore(canvasSelectors.viewport);
+  const viewport = useUnifiedCanvasStore(state => state.viewport);
   const scale = viewport.scale || 1;
   
   // Grid configuration (FigJam-style)

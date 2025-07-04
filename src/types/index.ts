@@ -1,5 +1,5 @@
 import type { CanvasElement, TableElement } from '../features/canvas/types/enhanced.types';
-import type { ConnectorEndpoint, ConnectorStyle } from '../features/canvas/types/connector';
+import type { ConnectorEndpoint, ConnectorStyle } from '../features/canvas/types/connectorTypes';
 import type { RichTextSegment } from '../features/canvas/types/richText';
 
 export interface PanZoom {

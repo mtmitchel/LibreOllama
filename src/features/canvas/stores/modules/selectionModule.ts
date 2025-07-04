@@ -79,7 +79,7 @@ export const createSelectionModule = (
           state.groups.set(groupId, elementSet);
           
           // Update element to group mapping
-          elementIds.forEach(elementId => {
+          elementIds.forEach((elementId: ElementId) => {
             state.elementToGroupMap.set(elementId, groupId);
           });
         });
@@ -91,7 +91,7 @@ export const createSelectionModule = (
           const elementIds = state.groups.get(groupId);
           if (elementIds) {
             // Remove elements from group mapping
-            elementIds.forEach(elementId => {
+            elementIds.forEach((elementId: ElementId) => {
               state.elementToGroupMap.delete(elementId);
             });
             // Remove the group

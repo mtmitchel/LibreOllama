@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useUnifiedCanvasStore } from '../features/canvas/stores/unifiedCanvasStore';
-import { ElementId } from '../features/canvas/types/enhanced.types';
+import { ElementId, GroupId } from '../features/canvas/types/enhanced.types';
 
 describe('Unified Store Integration', () => {
   beforeEach(() => {
@@ -87,9 +87,9 @@ describe('Unified Store Integration', () => {
       // These should not throw errors when called
       expect(() => {
         store.setStickyNoteColor('#ffcccc');
-        const groupId = store.groupElements(['elem1', 'elem2']);
-        store.ungroupElements('elem1');
-        const inGroup = store.isElementInGroup('elem1');
+        const groupId = store.groupElements(['elem1' as ElementId, 'elem2' as ElementId]);
+        store.ungroupElements('elem1' as GroupId);
+        const inGroup = store.isElementInGroup('elem1' as ElementId);
       }).not.toThrow();
     });
   });

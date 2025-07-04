@@ -114,7 +114,7 @@ export const createTableModule = (
               state.elements = newElements;
 
               console.log('🔥 [updateTableCell] Updated cell (immutable):', { tableId, row, col, value });
-              console.log('🔥 [updateTableCell] New table data:', newTable.enhancedTableData.cells[row][col]);
+              console.log('🔥 [updateTableCell] New table data:', newTable.enhancedTableData?.cells[row][col]);
 
               return;
             }

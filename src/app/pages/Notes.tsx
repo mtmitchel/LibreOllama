@@ -1,6 +1,6 @@
 // src/pages/Notes.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Button, Input } from '../../core/shared-ui';
+import { Card, Button, Input } from '../../components/ui';
 import {
   Plus, Folder, Search, Heading1, Heading2, List, CheckSquare, Code2,
   PencilRuler, ChevronRight, ChevronDown, GripVertical, MoreHorizontal, Type, Image as ImageIcon, Quote, Trash2

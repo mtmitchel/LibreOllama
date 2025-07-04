@@ -12,7 +12,7 @@ export type CanvasTool =
   | 'marker'
   | 'highlighter'
   | 'eraser'
-  | 'lasso'
+
   | 'text'
   | 'draw-rectangle'
   | 'draw-circle'
@@ -71,7 +71,7 @@ export class CursorManager {
     'marker': 'crosshair',
     'highlighter': 'crosshair',
     'eraser': 'crosshair',
-    'lasso': 'crosshair',
+  
     'text': 'crosshair',
     'draw-rectangle': 'crosshair',
     'draw-circle': 'crosshair',

@@ -33,6 +33,11 @@ The LibreOllama Canvas has achieved production-ready stability with a completely
 - **Professional Drawing Experience**: Tools now provide industry-standard responsiveness and visual feedback
 - **Simplified Architecture**: Removed complex caching, workers, and optimization hooks in favor of proven, reliable patterns
 
+**✅ Recent Canvas Improvements (December 2024):**
+- **Triangle Text Display Fix**: Resolved inconsistency where triangles showed "Add" initially but "Add text" when editing - now consistently shows "Add text" by expanding text display area from 50% to 70% of triangle width
+- **Toolbar Cleanup**: Temporarily removed sections tool from toolbar (commented out for future sprint implementation) for cleaner interface without incomplete functionality
+- **Lasso Tool Removal**: Completely eliminated lasso tool and all references as it won't be used in current design direction - streamlined codebase while preserving all other canvas tools and maintaining code quality
+
 **✅ Modular Store Architecture - Fully Implemented (July 2025):**
 - **✅ Production Migration**: Live system runs on modular store architecture with 12 focused modules replacing the original 2,097-line monolithic store
 - **✅ Complete Functionality**: ALL placeholder functions now implemented with full business logic including:
@@ -46,10 +51,10 @@ The LibreOllama Canvas has achieved production-ready stability with a completely
 - **✅ Comprehensive Testing**: New test suite validates all functionality including grouping, import/export, and event handling
 - **✅ Legacy Cleanup**: Removed empty `/slices` directory and completed architectural consolidation
 
-**✅ Codebase Health & Refactoring (July 2025):**
-- **Dead Code Removed**: The unused `StarShape` tool was fully deprecated and removed, including its component, types, and tests.
-- **Duplicate Files Resolved**: Consolidated duplicate `elementRenderer` files and resolved a naming collision by renaming the specialized `CanvasErrorBoundary` to `KonvaElementBoundary` to clarify its purpose.
-- **Improved Structure**: Relocated hooks (`useRafThrottle`) and UI components (`LayersPanel`) to more logical directories, improving code organization and maintainability.
+**✅ Comprehensive Codebase Refactoring (July 2025):**
+- **Dead Code & Duplicates Removed**: Eliminated obsolete files including a legacy feature flag system, disabled tests, and the unused `StarShape` tool. Consolidated duplicated test utilities, type definitions, and rendering logic.
+- **Major Structural Refactoring**: Improved the project's architecture by relocating components to more logical directories. The most significant change was deprecating the `core/shared-ui` directory and moving its contents into `src/components/ui` and `src/components/layout` to establish a clearer architectural pattern.
+- **Build & Dependency Fixes**: Resolved critical build-time errors, including issues with the Tauri CLI and missing package dependencies, and corrected all stale import paths that resulted from the refactoring, ensuring a stable development environment.
 
 **🔥 Previously Resolved Major Issues (March 2025):**
 - **Table Positioning**: Tables now appear exactly where clicked.

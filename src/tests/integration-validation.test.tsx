@@ -1,65 +1,26 @@
 /**
- * INTEGRATION VALIDATION TEST
+ * INTEGRATION VALIDATION TEST - REFACTORED
  * 
- * This test validates that the UI is properly calling enhanced store methods
+ * This test validates that the UI is properly calling enhanced store methods,
+ * now using a real store instance as per the new testing guidelines.
  */
-
-import { vi } from 'vitest';
 import React from 'react';
 import Konva from 'konva';
-import { renderWithKonva } from '@/tests/utils/konva-test-utils';
+import { vi } from 'vitest';
+import { renderWithKonva } from '@/tests/utils/testUtils';
 import { CanvasLayerManager } from '@/features/canvas/layers/CanvasLayerManager';
-import { ElementId, SectionId } from '@/features/canvas/types/enhanced.types';
+import { createUnifiedTestStore } from '@/tests/helpers/createUnifiedTestStore';
+import { act } from '@testing-library/react';
 
-// Mock the enhanced store
-const mockEnhancedStore = {
-  elements: new Map(),
-  sections: new Map(),
-  selectedElementIds: new Set<ElementId | SectionId>(),
-  zoom: 1,
-  pan: { x: 0, y: 0 },
-  
-  // These are the enhanced methods that should be called from UI
-  handleElementDrop: vi.fn(),
-  updateElementCoordinatesOnSectionMove: vi.fn(),
-  captureElementsAfterSectionCreation: vi.fn(),
-  
-  // Basic store methods
-  updateElement: vi.fn(),
-  updateSection: vi.fn(),
-  selectElement: vi.fn(),
-  clearSelection: vi.fn(),
-};
-
-// Mock the store hook
-vi.mock('@/features/canvas/stores/canvasStore.enhanced', () => ({
-  useCanvasStore: vi.fn((selector) => {
-    if (typeof selector === 'function') {
-      return selector(mockEnhancedStore);
-    }
-    return mockEnhancedStore;
-  }),
-}));
-
-vi.mock('@/features/canvas/hooks/useViewportCulling', () => ({
-  useViewportCulling: vi.fn(() => ({
-    visibleElements: [],
-    cullingStats: { totalElements: 0, visibleElements: 0, culledElements: 0 }
-  }))
-}));
+// Per testing guidelines, we no longer mock the store.
+// We create a real store instance for each test.
 
 describe('UI Enhanced Store Integration Validation', () => {
-  test('should validate enhanced methods are available in store', () => {
-    // Check that the enhanced methods exist
-    expect(mockEnhancedStore.handleElementDrop).toBeDefined();
-    expect(mockEnhancedStore.updateElementCoordinatesOnSectionMove).toBeDefined();
-    expect(mockEnhancedStore.captureElementsAfterSectionCreation).toBeDefined();
-    
-    console.log('✅ Enhanced store methods are properly mocked and available');
-  });
+  test('should render CanvasLayerManager without errors using a real store', () => {
+    const store = createUnifiedTestStore();
+    const { getState, setState } = store;
 
-  test('should render CanvasLayerManager without errors', () => {
-    const mockStageRef = ({ 
+    const mockStageRef = ({
       current: {
         getPointerPosition: vi.fn(() => ({ x: 0, y: 0 })),
         width: vi.fn(() => 800),
@@ -70,24 +31,28 @@ describe('UI Enhanced Store Integration Validation', () => {
         draw: vi.fn(),
         container: vi.fn(() => ({
           getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 })
-        }))
+        })),
+        on: vi.fn(),
+        off: vi.fn(),
       }
     } as unknown) as React.MutableRefObject<Konva.Stage | null>;
-    
+
     expect(() => {
-      renderWithKonva(
-        <CanvasLayerManager
-          elements={mockEnhancedStore.elements}
-          selectedElementIds={mockEnhancedStore.selectedElementIds}
-          onElementClick={vi.fn()}
-          onElementDragEnd={vi.fn()}
-          onElementUpdate={mockEnhancedStore.updateElement}
-          onStartTextEdit={vi.fn()}
-          stageRef={mockStageRef}
-        />
-      );
+      act(() => {
+        renderWithKonva(
+          <CanvasLayerManager
+            stageRef={mockStageRef}
+            elements={getState().elements as Map<import('@/features/canvas/types/enhanced.types').ElementId | import('@/features/canvas/types/enhanced.types').SectionId, import('@/features/canvas/types/enhanced.types').CanvasElement>}
+            selectedElementIds={getState().selectedElementIds}
+            onElementUpdate={getState().updateElement}
+            onElementDragEnd={vi.fn()}
+            onElementClick={vi.fn()}
+            onStartTextEdit={vi.fn()}
+          />
+        );
+      });
     }).not.toThrow();
-    
-    console.log('✅ CanvasLayerManager renders successfully with enhanced store');
+
+    console.log('✅ CanvasLayerManager renders successfully with a real store');
   });
 });

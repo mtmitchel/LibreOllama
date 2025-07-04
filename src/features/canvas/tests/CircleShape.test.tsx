@@ -3,8 +3,8 @@ import { render } from '@testing-library/react';
 import { vi } from 'vitest';
 import { CircleShape } from '../shapes/CircleShape';
 import { createMockCanvasElement } from '../../../tests/utils/testUtils';
-import { renderWithKonva } from '../../../tests/utils/konva-test-utils';
-import { CanvasTestWrapper } from './helpers/CanvasTestWrapper';
+import { renderWithKonva } from '../../../tests/utils/testUtils';
+import { CanvasTestWrapper } from '../../../tests/helpers/CanvasTestWrapper';
 import type { CircleElement } from '../types/enhanced.types';
 import type { KonvaEventObject } from "konva/lib/Node";
 

@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Group, Rect, Text, Transformer, Circle, Line, Path } from 'react-konva';
 import Konva from 'konva';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { CanvasElement, ElementId, TableElement as TableElementType } from '../types/enhanced.types';
 import { isTableElement } from '../types/enhanced.types';
 import { CanvasTextInput } from '../components/ui/CanvasTextInput';
@@ -50,7 +50,7 @@ export const TableElement = React.forwardRef<Konva.Group, TableElementProps>(
     const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
 
     const storeElement = useUnifiedCanvasStore(state => state.elements.get(tableId));
-    const viewport = useUnifiedCanvasStore(canvasSelectors.viewport);
+    const viewport = useUnifiedCanvasStore(state => state.viewport);
     const latestTableData = (storeElement && isTableElement(storeElement)) 
       ? storeElement.enhancedTableData 
       : element.enhancedTableData;

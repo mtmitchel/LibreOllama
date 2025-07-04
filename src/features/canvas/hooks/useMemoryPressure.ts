@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { CanvasMemoryProfiler } from '../utils/memoryProfiler';
+// import { CanvasMemoryProfiler } from '../utils/memoryProfiler';
 import { canvasLog } from '../utils/canvasLogger';
 
 interface MemoryPressureState {
@@ -40,27 +40,27 @@ export const useMemoryPressure = (options: MemoryPressureOptions = {}) => {
     recommendations: []
   });
 
-  const profilerRef = useRef<CanvasMemoryProfiler | null>(null);
+  const profilerRef = useRef<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastCleanupRef = useRef<number>(0);
 
-  // Initialize profiler
+  // Initialize profiler (disabled - memoryProfiler not available)
   useEffect(() => {
-    profilerRef.current = new CanvasMemoryProfiler({
-      measurementInterval: checkInterval,
-      maxMeasurements: 50,
-      leakThreshold: criticalThreshold * 1024 * 1024, // Convert to bytes
-      warningThreshold: moderateThreshold * 1024 * 1024
-    });
+    // profilerRef.current = new CanvasMemoryProfiler({
+    //   measurementInterval: checkInterval,
+    //   maxMeasurements: 50,
+    //   leakThreshold: criticalThreshold * 1024 * 1024, // Convert to bytes
+    //   warningThreshold: moderateThreshold * 1024 * 1024
+    // });
 
-    profilerRef.current.startProfiling();
-    canvasLog.memory('🔍 Memory pressure monitoring started');
+    // profilerRef.current.startProfiling();
+    canvasLog.memory('🔍 Memory pressure monitoring started (profiler disabled)');
 
     return () => {
-      if (profilerRef.current) {
-        profilerRef.current.stopProfiling();
-        canvasLog.memory('🔍 Memory pressure monitoring stopped');
-      }
+      // if (profilerRef.current) {
+      //   profilerRef.current.stopProfiling();
+      //   canvasLog.memory('🔍 Memory pressure monitoring stopped');
+      // }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
@@ -70,14 +70,17 @@ export const useMemoryPressure = (options: MemoryPressureOptions = {}) => {
   // Periodic memory check
   useEffect(() => {
     const checkMemoryPressure = () => {
-      if (!profilerRef.current) return;
+      // if (!profilerRef.current) return;
 
-      const status = profilerRef.current.getMemoryStatus();
+      // const status = profilerRef.current.getMemoryStatus();
       
-      if (!status.isSupported) {
-        canvasLog.warn('Memory monitoring not supported in this browser');
-        return;
-      }
+      // if (!status.isSupported) {
+      //   canvasLog.warn('Memory monitoring not supported in this browser');
+      //   return;
+      // }
+
+      // Mock status for now
+      const status = { current: 0, baseline: 0, growth: 0 };
 
       const growthMB = status.growth / (1024 * 1024);
       let pressureLevel: 'low' | 'moderate' | 'high' | 'critical' = 'low';

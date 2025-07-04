@@ -11,9 +11,10 @@ import { nanoid } from 'nanoid';
 
 interface CanvasDragDropHandlerProps {
   stageRef: React.RefObject<Konva.Stage | null>;
+  children?: React.ReactNode;
 }
 
-export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ stageRef }) => {
+export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ stageRef, children }) => {
   // Use refs to avoid dependency issues with store functions
   const storeRef = useRef(useUnifiedCanvasStore.getState());
   
@@ -242,5 +243,5 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
     };
   }, []); // No dependencies - completely stable
 
-  return null;
+  return <>{children}</>;
 }; 

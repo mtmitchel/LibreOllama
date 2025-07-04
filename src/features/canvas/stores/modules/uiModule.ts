@@ -55,14 +55,16 @@ export const createUIModule = (
       setSelectedTool: (tool) => set(state => { state.selectedTool = tool; }),
 
       setTextEditingElement: (id) => {
-        // Log the state change for debugging
-        const currentId = get().textEditingElementId;
-        console.log('🎯 [Store] setTextEditingElement:', { from: currentId, to: id });
-        
-        // If we're setting a new element while another is being edited,
-        // we need to ensure cleanup happens
-        if (currentId && id && currentId !== id) {
-          console.log('⚠️ [Store] Switching text editing from', currentId, 'to', id);
+        // Log the state change for debugging in development
+        if (process.env.NODE_ENV === 'development') {
+          const currentId = get().textEditingElementId;
+          console.log('🎯 [Store] setTextEditingElement:', { from: currentId, to: id });
+          
+          // If we're setting a new element while another is being edited,
+          // we need to ensure cleanup happens
+          if (currentId && id && currentId !== id) {
+            console.log('⚠️ [Store] Switching text editing from', currentId, 'to', id);
+          }
         }
         
         set(state => { state.textEditingElementId = id; });
@@ -78,11 +80,22 @@ export const createUIModule = (
 
       // Utility methods
       uploadImage: async (file, position) => {
-        // Implementation placeholder for image upload
         set(state => { state.isUploading = true; });
         try {
-          // Image upload logic would go here
-          console.log('Image upload not implemented in module');
+          // Create image element from uploaded file
+          const imageUrl = URL.createObjectURL(file);
+          const imageElement = {
+            id: `image-${Date.now()}`,
+            type: 'image',
+            x: position.x,
+            y: position.y,
+            width: 200,
+            height: 150,
+            src: imageUrl,
+            draggable: true,
+            visible: true,
+          };
+          get().addElement(imageElement);
         } finally {
           set(state => { state.isUploading = false; });
         }

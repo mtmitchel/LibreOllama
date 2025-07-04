@@ -67,7 +67,7 @@ export type {
 export type {
   ConnectorEndpoint,
   ConnectorStyle,
-} from './types/connector';
+} from './types/connectorTypes';
 
 export type {
   SectionElement as SectionType,

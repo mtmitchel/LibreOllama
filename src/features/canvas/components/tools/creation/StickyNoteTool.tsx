@@ -13,6 +13,8 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Group, Text, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
 import { nanoid } from 'nanoid';
 import { StickyNoteElement, ElementId } from '../../../types/enhanced.types';
 
@@ -23,12 +25,30 @@ interface StickyNoteToolProps {
 
 export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActive }) => {
   // Store selectors
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
-  const setSelectedTool = useUnifiedCanvasStore(state => state.setSelectedTool);
-  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
-  const editingTextId = useUnifiedCanvasStore(state => state.textEditingElementId);
-  const selectedStickyNoteColor = useUnifiedCanvasStore(state => state.selectedStickyNoteColor);
-  const enableStickyNoteContainer = useUnifiedCanvasStore(state => state.enableStickyNoteContainer);
+  // Store selectors using grouped patterns with useShallow for optimization
+  const toolActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      addElement: state.addElement,
+      setSelectedTool: state.setSelectedTool,
+      setTextEditingElement: state.setTextEditingElement
+    }))
+  );
+  
+  const stickyNoteState = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      textEditingElementId: state.textEditingElementId,
+      selectedStickyNoteColor: state.selectedStickyNoteColor,
+      enableStickyNoteContainer: state.enableStickyNoteContainer
+    }))
+  );
+
+  // Destructure for easier access
+  const { addElement, setSelectedTool, setTextEditingElement } = toolActions;
+  const { 
+    textEditingElementId: editingTextId, 
+    selectedStickyNoteColor, 
+    enableStickyNoteContainer
+  } = stickyNoteState;
 
   // Local state for UI
   const [showPlacementGuide, setShowPlacementGuide] = React.useState(false);
@@ -40,7 +60,6 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
   // Handle mouse movement for placement guide
   const handlePointerMove = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
     if (!isActive || !stageRef.current || editingTextId) {
-      console.log('🗒️ [StickyNoteTool] Pointer move blocked:', { isActive, hasStage: !!stageRef.current, editingTextId });
       return;
     }
 
@@ -48,57 +67,48 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
+    // Use standard Konva coordinate transformation (same as BaseShapeTool/TableTool)
     const transform = stage.getAbsoluteTransform().copy().invert();
-    const pos = transform.point(pointer);
+    const pointerPos = transform.point(pointer);
 
-    setCursorPosition(pos);
+    // Store the actual pointer position for consistent placement
+    setCursorPosition(pointerPos);
     setShowPlacementGuide(true);
-    console.log('🗒️ [StickyNoteTool] Updated cursor position:', pos);
   }, [isActive, stageRef, editingTextId]);
 
   // Start text editing for newly created sticky note
   const startTextEditing = useCallback((elementId: ElementId) => {
-    console.log('🗒️ [StickyNoteTool] Starting text editing for sticky note:', elementId);
-    
     // Set the store editing state - StickyNoteShape will handle the actual editing UI
     setTextEditingElement(elementId);
-    
-    // No tool switching here - already switched to select tool immediately after placement
-    
   }, [setTextEditingElement]);
 
   // Handle click to place sticky note
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
-    console.log('🗒️ [StickyNoteTool] *** CLICK DETECTED ***:', {
-      isActive,
-      hasStageRef: !!stageRef.current,
-      editingTextId,
-      targetId: e.target.id(),
-      targetType: e.target.getType(),
-      isStage: e.target === stageRef.current,
-      targetClass: e.target.className
-    });
-    
     if (!isActive || !stageRef.current || editingTextId) {
-      console.log('🗒️ [StickyNoteTool] Click blocked - conditions not met');
       return;
     }
     
     // Only handle clicks on the stage background (not on existing elements)
     if (e.target !== stageRef.current && e.target.id() && e.target.id() !== '') {
-      console.log('🗒️ [StickyNoteTool] Click on existing element, ignoring:', e.target.id());
       return;
     }
 
     const stage = stageRef.current;
     const pointer = stage.getPointerPosition();
     if (!pointer) {
-      console.log('🗒️ [StickyNoteTool] No pointer position available');
       return;
     }
 
+    // Use standard Konva coordinate transformation (same as BaseShapeTool/TableTool)
     const transform = stage.getAbsoluteTransform().copy().invert();
-    const pos = transform.point(pointer);
+    const pointerPos = transform.point(pointer);
+
+    // Adjust position to match preview centering - sticky note appears centered on cursor
+    const stickyNoteSize = 180; // Same as preview
+    const pos = {
+      x: pointerPos.x - (stickyNoteSize / 2),
+      y: pointerPos.y - (stickyNoteSize / 2)
+    };
 
     // Use selected color or default soft pastel yellow - MUST match preview
     const backgroundColor = selectedStickyNoteColor || '#FFF2CC';
@@ -142,14 +152,11 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       });
     }, 50);
     
-    console.log('🗒️ [StickyNoteTool] *** CREATED STICKY NOTE ***:', stickyNoteElement.id, 'at position:', pos, 'color:', backgroundColor);
-    
     // Hide placement guide 
     setShowPlacementGuide(false);
     setCursorPosition(null);
     
     // IMMEDIATELY switch to select tool after placement (standard creation tool behavior)
-    console.log('🗒️ [StickyNoteTool] *** SWITCHING TO SELECT TOOL IMMEDIATELY ***');
     setSelectedTool('select');
     
     // Select the newly created sticky note
@@ -158,22 +165,19 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       store.clearSelection();
       setTimeout(() => {
         store.selectElement(stickyNoteElement.id, false);
-        console.log('🗒️ [StickyNoteTool] Selected newly created sticky note:', stickyNoteElement.id);
       }, 50);
     }, 50);
 
     // Start text editing after tool switch and selection
     setTimeout(() => {
-      console.log('🗒️ [StickyNoteTool] *** STARTING EDITING FOR NEW STICKY NOTE ***:', stickyNoteElement.id);
       startTextEditing(stickyNoteElement.id);
     }, 150); // Delay to ensure tool switch and selection complete first
     
-  }, [isActive, stageRef, addElement, editingTextId, startTextEditing, selectedStickyNoteColor]);
+  }, [isActive, stageRef, addElement, editingTextId, startTextEditing, selectedStickyNoteColor, enableStickyNoteContainer, setSelectedTool]);
 
   // Handle mouse leave to hide placement guide
   const handlePointerLeave = useCallback(() => {
     if (!editingTextId) {
-      console.log('🗒️ [StickyNoteTool] Pointer leave - hiding placement guide');
       setShowPlacementGuide(false);
       setCursorPosition(null);
     }
@@ -182,74 +186,27 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
   // Handle mouse enter to show placement guide
   const handlePointerEnter = useCallback(() => {
     if (isActive && !editingTextId) {
-      console.log('🗒️ [StickyNoteTool] Pointer enter - showing placement guide');
       setShowPlacementGuide(true);
     }
   }, [isActive, editingTextId]);
 
   // No need to watch for text editing completion since we switch tools immediately
 
-  // Set up event listeners and cursor
-  React.useEffect(() => {
-    if (!isActive || !stageRef.current) return;
-
-    const stage = stageRef.current;
-    console.log('🗒️ [StickyNoteTool] *** SETTING UP EVENT LISTENERS AND CURSOR ***');
-
-    // FORCE crosshair cursor immediately when tool is active
-    const container = stage.container();
-    if (container) {
-      container.style.cursor = 'crosshair !important';
-      // Force cursor update multiple times to override any conflicts
-      setTimeout(() => {
-        if (container && isActive) {
-          container.style.cursor = 'crosshair';
-          console.log('🗒️ [StickyNoteTool] *** CURSOR FORCED TO CROSSHAIR ***');
-        }
-      }, 10);
-      setTimeout(() => {
-        if (container && isActive) {
-          container.style.cursor = 'crosshair';
-        }
-      }, 50);
+  // Use shared event handler with namespaced events
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'stickyNoteTool',
+    handlers: {
+      onPointerMove: handlePointerMove,
+      onPointerDown: handlePointerDown,
+      onPointerLeave: handlePointerLeave,
+      onPointerEnter: handlePointerEnter,
+      useNamespacedEvents: true
     }
+  });
 
-    // Remove any existing listeners first to ensure we get priority
-    stage.off('pointermove.stickyNoteTool');
-    stage.off('pointerdown.stickyNoteTool');
-    stage.off('pointerleave.stickyNoteTool');
-    stage.off('pointerenter.stickyNoteTool');
-
-    // Add event listeners with namespace for priority (like TextTool)
-    stage.on('pointermove.stickyNoteTool', handlePointerMove);
-    stage.on('pointerdown.stickyNoteTool', handlePointerDown);
-    stage.on('pointerleave.stickyNoteTool', handlePointerLeave);
-    stage.on('pointerenter.stickyNoteTool', handlePointerEnter);
-
-    console.log('🗒️ [StickyNoteTool] Event listeners attached with namespace');
-
-    return () => {
-      console.log('🗒️ [StickyNoteTool] Cleaning up event listeners');
-      
-      // Reset cursor when tool becomes inactive
-      if (container) {
-        container.style.cursor = 'default';
-        console.log('🗒️ [StickyNoteTool] Reset cursor to default');
-      }
-      
-      // Remove event listeners
-      stage.off('pointermove.stickyNoteTool', handlePointerMove);
-      stage.off('pointerdown.stickyNoteTool', handlePointerDown);
-      stage.off('pointerleave.stickyNoteTool', handlePointerLeave);
-      stage.off('pointerenter.stickyNoteTool', handlePointerEnter);
-      
-      // Hide placement guide
-      setShowPlacementGuide(false);
-      setCursorPosition(null);
-    };
-  }, [isActive, stageRef, handlePointerMove, handlePointerDown, handlePointerLeave, handlePointerEnter]);
-
-  // Clear placement guide when tool becomes inactive
+  // Clear placement guide when tool becomes inactive - let CanvasStage handle cursor
   React.useEffect(() => {
     if (!isActive) {
       setShowPlacementGuide(false);
@@ -261,34 +218,8 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
         cleanupTextEditor.current = null;
         setTextEditingElement(null);
       }
-      
-      // Ensure cursor is reset when tool becomes inactive
-      if (stageRef.current?.container()) {
-        stageRef.current.container().style.cursor = 'default';
-      }
-    } else if (isActive && stageRef.current) {
-      // FORCE crosshair cursor when becoming active - multiple attempts
-      const container = stageRef.current.container();
-      if (container) {
-        container.style.cursor = 'crosshair';
-        setTimeout(() => {
-          if (container && isActive) {
-            container.style.cursor = 'crosshair';
-          }
-        }, 10);
-        setTimeout(() => {
-          if (container && isActive) {
-            container.style.cursor = 'crosshair';
-          }
-        }, 50);
-        setTimeout(() => {
-          if (container && isActive) {
-            container.style.cursor = 'crosshair';
-          }
-        }, 100);
-      }
     }
-  }, [isActive, setTextEditingElement, stageRef]);
+  }, [isActive, setTextEditingElement]);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -309,7 +240,7 @@ export const StickyNoteTool: React.FC<StickyNoteToolProps> = ({ stageRef, isActi
       {/* Sticky note preview following cursor */}
       {showPlacementGuide && cursorPosition && !editingTextId && (
         <Group>
-          {/* Faint sticky note shadow preview */}
+          {/* Faint sticky note shadow preview - centered on cursor */}
           <Group x={cursorPosition.x - 90} y={cursorPosition.y - 90}>
             <Rect
               width={180}

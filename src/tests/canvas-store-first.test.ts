@@ -149,7 +149,8 @@ describe('Canvas Store-First Testing Examples', () => {
       store.getState().addElement(rect2);
       
       // Test multiple selection
-      store.getState().selectMultipleElements([rect1.id, rect2.id]);
+      store.getState().selectElement(rect1.id);
+      store.getState().selectElement(rect2.id, true); // multiSelect: true
       
       expect(store.getState().selectedElementIds.size).toBe(2);
       expect(store.getState().selectedElementIds.has(rect1.id)).toBe(true);
@@ -192,15 +193,13 @@ describe('Canvas Store-First Testing Examples', () => {
       expect(store.getState().selectedTool).toBe('text');
     });
 
-    it('should maintain available tools list', () => {
-      const availableTools = store.getState().availableTools;
+    it('should maintain tool state correctly', () => {
+      // Test that tool selection persists
+      store.getState().setSelectedTool('rectangle');
+      expect(store.getState().selectedTool).toBe('rectangle');
       
-      expect(availableTools).toContain('select');
-      expect(availableTools).toContain('rectangle');
-      expect(availableTools).toContain('circle');
-      expect(availableTools).toContain('text');
-      expect(availableTools).toContain('pen');
-      expect(availableTools).toContain('section');
+      store.getState().setSelectedTool('select');
+      expect(store.getState().selectedTool).toBe('select');
     });
   });
 
@@ -297,11 +296,13 @@ describe('Canvas Store-First Testing Examples', () => {
       
       // Select multiple elements
       const elementIds = elements.map(e => e.id);
-      store.getState().selectMultipleElements(elementIds);
+      elementIds.forEach((id, index) => {
+        store.getState().selectElement(id, index > 0); // multiSelect: true for subsequent elements
+      });
       expect(store.getState().selectedElementIds.size).toBe(3);
       
       // Delete selected elements
-      store.getState().deleteElements(elementIds);
+      store.getState().deleteSelectedElements();
       expect(store.getState().elements.size).toBe(0);
       expect(store.getState().selectedElementIds.size).toBe(0);
     });

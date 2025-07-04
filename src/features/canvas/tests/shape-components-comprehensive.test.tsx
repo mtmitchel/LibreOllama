@@ -6,7 +6,7 @@
 import { vi } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { renderWithKonva } from '@/tests/utils/konva-test-utils';
+import { renderWithKonva } from '@/tests/utils/testUtils';
 
 // Import all shape components
 import { RectangleShape } from '@/features/canvas/shapes/RectangleShape';
@@ -161,6 +161,7 @@ const getBaseShapeProps = (element: any) => ({
   onElementDoubleClick: vi.fn(),
   onUpdate: vi.fn(),
   onStartTextEdit: vi.fn(),
+  onTransformEnd: vi.fn(),
   stageScale: 1,
   nodeRef: { current: null },
 });

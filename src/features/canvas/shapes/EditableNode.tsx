@@ -11,7 +11,7 @@ import { ImageShape } from './ImageShape';
 import { TableElement } from '../elements/TableElement';
 // import SectionElement from '../components/SectionElement';
 // import ImageElement from '../components/ImageElement';
-import { ConnectorRenderer } from '../components/ConnectorRenderer';
+// import { ConnectorRenderer } from '../components/ConnectorRenderer'; // REMOVED: Missing module
 import { Line, Star, Text, Rect } from 'react-konva';
 import { designSystem } from '../../../core/design-system';
 import { Html } from 'react-konva-utils';
@@ -97,7 +97,6 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           isSelected={isSelected}
           konvaProps={commonProps}
           onUpdate={onElementUpdate}
-          onStartTextEdit={onStartTextEdit}
         />
       );
 
@@ -107,7 +106,6 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           isSelected={isSelected}
           konvaProps={commonProps}
           onUpdate={onElementUpdate}
-          onStartTextEdit={onStartTextEdit}
         />
       );
 
@@ -185,25 +183,6 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
           tension={0.5}        />
       );
 
-    case 'star':
-      const starRadius = (element as any).radius || ((element as any).width || 100) / 2;
-      // Normalize star positioning to top-left corner like rectangles
-      // Store coordinates represent top-left corner, but Star needs center coordinates
-      const starCenterX = (commonProps.x || 0) + starRadius;
-      const starCenterY = (commonProps.y || 0) + starRadius;
-
-      return (
-        <Star
-          {...commonProps}
-          x={starCenterX}
-          y={starCenterY}          numPoints={(element as any).sides || 5}
-          innerRadius={(element as any).innerRadius || ((element as any).width || 100) / 4}
-          outerRadius={starRadius}
-          fill={element.fill || designSystem.colors.warning[500]}
-          stroke={element.stroke || designSystem.colors.warning[600]}
-          strokeWidth={element.strokeWidth || 2}        />
-      );
-
     case 'triangle':
       // Calculate triangle points based on current position and dimensions
       const triangleWidth = element.width || 100;
@@ -256,7 +235,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
         <TableElement
           element={element}
           isSelected={isSelected}
-          onSelect={(element) => onElementClick({} as any, element)}
+          onSelect={() => {}} // Simplified handler
           onUpdate={(updates) => onElementUpdate(element.id, updates)}
           // ARCHITECTURAL FIX: Remove drag handler to centralize in CanvasEventHandler
           // onDragEnd={(e) => onElementDragEnd(e, element.id)} // DISABLED per Friday Review

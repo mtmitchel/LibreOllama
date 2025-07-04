@@ -23,16 +23,30 @@ export interface TestRenderOptions extends Omit<RenderOptions, 'wrapper'> {
 }
 
 /**
+ * Wrapper for testing Konva components
+ */
+const KonvaWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Stage width={800} height={600}>
+    <Layer>
+      {children}
+    </Layer>
+  </Stage>
+);
+
+/**
  * Setup test environment with user events and providers
  */
 export const setupTestEnvironment = (): TestEnvironment => {
   const user = userEvent.setup();
   
   const testRender = async (ui: ReactElement, options: TestRenderOptions = {}) => {
-    const { withProviders = true, ...renderOptions } = options;
+    const { withProviders = true, withKonva = false, ...renderOptions } = options;
+    
+    const wrapper = withKonva ? KonvaWrapper : undefined;
         
     return act(async () => {
       return render(ui, {
+        wrapper,
         ...renderOptions,
       });
     });
@@ -46,6 +60,27 @@ export const setupTestEnvironment = (): TestEnvironment => {
     },
   };
 };
+
+/**
+ * Render Konva components with Stage and Layer wrapper
+ * THIS IS THE PREFERRED RENDERER FOR ALL KONVA COMPONENTS.
+ */
+export const renderKonva = (ui: ReactElement, options: Omit<RenderOptions, 'wrapper'> = {}) => {
+  return render(
+    <Stage width={800} height={600}>
+      <Layer>
+        {ui}
+      </Layer>
+    </Stage>,
+    options
+  );
+};
+
+/**
+ * Alias for renderKonva to maintain compatibility with existing imports
+ * @deprecated Use renderKonva instead
+ */
+export const renderWithKonva = renderKonva;
 
 /**
  * Create mock canvas element with basic structure

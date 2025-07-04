@@ -7,12 +7,15 @@
 import React, { useMemo, useCallback } from 'react';
 import { Group, Line, Text } from 'react-konva';
 import Konva from 'konva';
+import { useShallow } from 'zustand/react/shallow';
 import {
   CanvasElement,
   ElementId,
   SectionId,
   ElementOrSectionId,
-  SectionElement
+  SectionElement,
+  isImageElement,
+  isStickyNoteElement
 } from '../types/enhanced.types';
 import { designSystem } from '../../../core/design-system';
 import { TextShape } from '../shapes/TextShape';
@@ -23,11 +26,11 @@ import { RectangleShape } from '../shapes/RectangleShape';
 import { CircleShape } from '../shapes/CircleShape';
 import { PenShape } from '../shapes/PenShape';
 import { SectionShape } from '../shapes/SectionShape';
-import { EditableNode } from '../shapes/EditableNode';
 import { TableElement } from '../elements/TableElement';
 import { KonvaElementBoundary } from '../utils/KonvaElementBoundary';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { StrokeRenderer } from '../components/renderers/StrokeRenderer';
+import { ConnectorShape } from '../shapes/ConnectorShape';
 
 interface MainLayerProps {
   name?: string;
@@ -39,6 +42,11 @@ interface MainLayerProps {
   onLayerDraw?: () => void;
   elementsBySection?: Map<SectionId, CanvasElement[]>;
   stageRef?: React.RefObject<Konva.Stage | null>;
+  sections?: SectionElement[];
+  onElementUpdate: (id: ElementOrSectionId, updates: Partial<CanvasElement>) => void;
+  onElementDragEnd: (e: Konva.KonvaEventObject<DragEvent>, elementId: ElementId | SectionId) => void;
+  onElementClick: (e: Konva.KonvaEventObject<MouseEvent>, element: CanvasElement) => void;
+  onStartTextEdit: (elementId: ElementId) => void;
 }
 
 export const MainLayer: React.FC<MainLayerProps> = ({
@@ -50,12 +58,23 @@ export const MainLayer: React.FC<MainLayerProps> = ({
   currentPath = [],
   onLayerDraw,
   elementsBySection,
-  stageRef
+  stageRef,
+  sections = [],
+  onElementUpdate,
+  onElementDragEnd,
+  onElementClick,
+  onStartTextEdit
 }) => {
-  // Get actual store actions for element updates
-  const updateElement = useUnifiedCanvasStore(state => state.updateElement);
-  const setTextEditingElement = useUnifiedCanvasStore(state => state.setTextEditingElement);
-  const selectElement = useUnifiedCanvasStore(state => state.selectElement);
+  // OPTIMIZED: Consolidated store subscriptions using useShallow
+  const {
+    updateElement,
+    setTextEditingElement,
+    selectElement
+  } = useUnifiedCanvasStore(useShallow((state) => ({
+    updateElement: state.updateElement,
+    setTextEditingElement: state.setTextEditingElement,
+    selectElement: state.selectElement
+  })));
 
   // Memoized element rendering
   const renderElement = useCallback((element: CanvasElement) => {
@@ -64,8 +83,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       return null;
     }
 
-    const isSelected = selectedElementIds.has(element.id);
-    const isDraggable = !element.isLocked && element.type !== 'pen' && element.type !== 'pencil';
+    const isSelected = selectedElementIds.has(element.id as ElementId);
+    const isDraggable = !element.isLocked && element.type !== 'pen';
 
     // Enable event handlers for proper interaction
     const konvaElementProps: any = {
@@ -78,8 +97,8 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       listening: true,
     };
 
-    // Apply selection styling to non-table elements (tables handle their own transformer)
-    if (element.type !== 'table') {
+    // Apply selection styling to elements that support it (not tables or sticky notes)
+    if (element.type !== 'table' && element.type !== 'sticky-note') {
       konvaElementProps.stroke = isSelected ? designSystem.colors.primary[500] : ('stroke' in element ? element.stroke : undefined);
       konvaElementProps.strokeWidth = isSelected 
         ? ((('strokeWidth' in element ? element.strokeWidth : undefined) || 1) + 1.5) 
@@ -124,8 +143,22 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             <StrokeRenderer
               element={element as any}
               isSelected={isSelected}
-              onSelect={(id) => selectElement(id as ElementId)}
+              onSelect={() => selectElement(element.id as ElementId)}
               isEditing={false}
+            />
+          </KonvaElementBoundary>
+        );
+
+      case 'connector':
+        return (
+          <KonvaElementBoundary key={element.id}>
+            <ConnectorShape
+              element={element as any}
+              isSelected={isSelected}
+              konvaProps={konvaElementProps}
+              onUpdate={updateElement}
+              onSelect={() => selectElement(element.id as ElementId)}
+              stageRef={stageRef}
             />
           </KonvaElementBoundary>
         );
@@ -152,7 +185,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               isSelected={isSelected}
               konvaProps={konvaElementProps}
               onUpdate={updateElement}
-              onStartTextEdit={setTextEditingElement}
               stageRef={stageRef}
             />
           </KonvaElementBoundary>
@@ -172,7 +204,6 @@ export const MainLayer: React.FC<MainLayerProps> = ({
         );
 
       case 'pen':
-      case 'pencil':
         return (
           <KonvaElementBoundary key={element.id}>
             <PenShape
@@ -191,6 +222,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               konvaProps={konvaElementProps}
               onUpdate={updateElement}
               onStartTextEdit={setTextEditingElement}
+              onTransformEnd={() => {}}
             />
           </KonvaElementBoundary>
         );
@@ -202,7 +234,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             <SectionShape
               section={element as SectionElement}
               isSelected={isSelected}
-              onSelect={(id, e) => selectElement(id as ElementId)}
+              onSelect={(id, e) => selectElement(id as unknown as ElementId)}
               onElementDragEnd={(e, id) => {
                 const node = e.target;
                 updateElement(id, { x: node.x(), y: node.y() });
@@ -220,7 +252,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
               element={element as any}
               isSelected={isSelected}
               onSelect={() => selectElement(element.id as ElementId)}
-              onUpdate={updateElement}
+              onUpdate={(updates) => updateElement(element.id, updates)}
               stageRef={stageRef || { current: null }}
             />
           </KonvaElementBoundary>
@@ -249,7 +281,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
       if (el && ((el as any).parentId || (el as any).stickyNoteId)) {
         return false;
       }
-      return el && el.type !== 'connector';
+      return el;
     });
     
     const renderedElements = validElements.map(renderElement).filter(Boolean);
@@ -301,6 +333,27 @@ export const MainLayer: React.FC<MainLayerProps> = ({
         perfectDrawEnabled={false}
         listening={true}
       >
+        {/* Render sections first (behind elements) */}
+        {sections.map(section => {
+          const sectionChildren = elementsBySection?.get(section.id) || [];
+          return (
+            <KonvaElementBoundary key={section.id}>
+              <SectionShape
+                section={section}
+                isSelected={selectedElementIds.has(section.id as ElementId)}
+                onSelect={(id, e) => selectElement(id as unknown as ElementId)}
+                onElementDragEnd={(e, id) => {
+                  const node = e.target;
+                  updateElement(id, { x: node.x(), y: node.y() });
+                }}
+              >
+                {sectionChildren.map(child => renderElement(child))}
+              </SectionShape>
+            </KonvaElementBoundary>
+          );
+        })}
+        
+        {/* Render all elements */}
         {allNodes}
       </Group>
     </KonvaElementBoundary>

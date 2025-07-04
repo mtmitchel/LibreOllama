@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HeaderProvider } from './contexts/HeaderContext';
+import { ThemeProvider } from '../components/ThemeProvider';
 import Sidebar from '../components/navigation/Sidebar';
 import { TopBar } from '../components/layout/TopBar';
 import { CommandPalette } from '../components/CommandPalette';
@@ -48,14 +49,16 @@ export default function App() {
   const { isOpen, close } = useCommandPalette();
 
   return (
-    <Router>
-      <HeaderProvider>
-        <div className="flex h-screen bg-bg-primary text-text-primary font-sans">
-          <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
-          <AppContent isSidebarOpen={isSidebarOpen} />
-          <CommandPalette isOpen={isOpen} onClose={close} />
-        </div>
-      </HeaderProvider>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <HeaderProvider>
+          <div className="flex h-screen bg-bg-primary text-text-primary font-sans">
+            <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
+            <AppContent isSidebarOpen={isSidebarOpen} />
+            <CommandPalette isOpen={isOpen} onClose={close} />
+          </div>
+        </HeaderProvider>
+      </Router>
+    </ThemeProvider>
   );
 }

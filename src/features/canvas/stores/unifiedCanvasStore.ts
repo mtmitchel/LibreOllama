@@ -34,22 +34,10 @@ import { createEventModule, EventState, EventActions } from './modules/eventModu
 
 // Import selectors
 import { combinedSelectors } from './selectors';
+import { StoreApi } from 'zustand';
+import { WritableDraft } from 'immer';
 
 enableMapSet();
-
-// Canvas event actions interface
-export interface CanvasEventActions {
-  handleMouseDown: (e: any, pos: { x: number; y: number } | null) => void;
-  handleMouseMove: (e: any, pos: { x: number; y: number } | null) => void;
-  handleMouseUp: (e: any, pos: { x: number; y: number } | null) => void;
-  handleMouseLeave: (e: any, pos: { x: number; y: number } | null) => void;
-  handleClick: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDoubleClick: (e: any, pos: { x: number; y: number } | null) => void;
-  handleContextMenu: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDragStart: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDragMove: (e: any, pos: { x: number; y: number } | null) => void;
-  handleDragEnd: (e: any, pos: { x: number; y: number } | null) => void;
-}
 
 // Legacy compatibility actions
 export interface LegacyActions {
@@ -57,6 +45,7 @@ export interface LegacyActions {
   importElements: (elements: CanvasElement[]) => void;
   handleElementDrop: (elementId: ElementId, targetId?: ElementId) => void;
   createTestElements: () => void;
+  createStressTestElements: (count: number) => void;
   groupElements: (elementIds: ElementId[]) => GroupId;
   ungroupElements: (groupId: GroupId) => void;
   isElementInGroup: (elementId: ElementId) => boolean;
@@ -92,7 +81,6 @@ export interface UnifiedCanvasActions extends
   UIActions,
   EraserActions,
   EventActions,
-  CanvasEventActions,
   LegacyActions {
   // No additional actions needed - all actions come from modules
 }
@@ -107,7 +95,10 @@ const getElementIdFromNode = (node: Konva.Node): ElementId | null => {
   return null;
 };
 
-export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore = (set, get) => {
+type Get = StoreApi<UnifiedCanvasStore>['getState'];
+type Set = (fn: (draft: WritableDraft<UnifiedCanvasStore>) => void) => void;
+
+export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore = (set, get) => {
   // Create all modules
   const modules = {
     element: createElementModule(set, get),
@@ -150,12 +141,39 @@ export const createCanvasStoreSlice: (set: any, get: any) => UnifiedCanvasStore 
     ...modules.eraser.actions,
     ...modules.event.actions,
 
-    // Legacy compatibility actions (placeholder implementations)
+    // Legacy compatibility actions
     handleElementDrop: (elementId: ElementId, targetId?: ElementId) => {
-      console.log('handleElementDrop not implemented in modular version');
+      // Element drop functionality - move element to target position or container
+      const element = get().elements.get(elementId);
+      if (!element) return;
+      
+      if (targetId) {
+        const targetElement = get().elements.get(targetId);
+        if (targetElement && targetElement.type === 'section') {
+          // Move element into section
+          get().updateElement(elementId, { 
+            sectionId: targetId as unknown as SectionId,
+            x: targetElement.x + 10,
+            y: targetElement.y + 40 
+          });
+        }
+      }
     },
     createTestElements: () => {
-      console.log('createTestElements not implemented in modular version');
+      // Create test elements for development
+      get().createStressTestElements(5);
+    },
+    createStressTestElements: (count: number) => {
+      get().createStressTestElements(count);
+    },
+    groupElements: (elementIds: ElementId[]) => {
+      return get().groupElements(elementIds);
+    },
+    ungroupElements: (groupId: GroupId) => {
+      get().ungroupElements(groupId);
+    },
+    isElementInGroup: (elementId: ElementId) => {
+      return get().isElementInGroup(elementId);
     },
     clearCanvas: () => {
       get().clearAllElements();
@@ -175,7 +193,7 @@ if (process.env.NODE_ENV === 'development') {
   let renderCount = 0;
   const originalSubscribe = useUnifiedCanvasStore.subscribe;
   
-  useUnifiedCanvasStore.subscribe = (listener) => {
+  useUnifiedCanvasStore.subscribe = (listener: (state: UnifiedCanvasStore, prevState: UnifiedCanvasStore) => void) => {
     return originalSubscribe((state, prevState) => {
       renderCount++;
       if (renderCount > 100) {
@@ -187,52 +205,4 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
-// Cached selectors to prevent infinite loops
-const elementsSelector = (state: UnifiedCanvasState) => state.elements;
-const selectedElementIdsSelector = (state: UnifiedCanvasState) => state.selectedElementIds;
-const selectedToolSelector = (state: UnifiedCanvasState) => state.selectedTool;
-const viewportSelector = (state: UnifiedCanvasState) => state.viewport;
-const isDrawingSelector = (state: UnifiedCanvasState) => state.isDrawing;
-const draftSectionSelector = (state: UnifiedCanvasState) => state.draftSection;
-const sectionsSelector = (state: UnifiedCanvasState) => state.sections;
-const canUndoSelector = (state: UnifiedCanvasState) => state.canUndo;
-const canRedoSelector = (state: UnifiedCanvasState) => state.canRedo;
-const penColorSelector = (state: UnifiedCanvasState) => state.penColor;
-
-export const canvasSelectors = {
-  elements: elementsSelector,
-  elementById: (id: ElementId) => (state: UnifiedCanvasState) => state.elements.get(id),
-  selectedElementIds: selectedElementIdsSelector,
-  selectedElements: (state: UnifiedCanvasState) =>
-    Array.from(state.selectedElementIds)
-      .map(id => state.elements.get(id))
-      .filter(Boolean) as CanvasElement[],
-  selectedTool: selectedToolSelector,
-  viewport: viewportSelector,
-  isDrawing: isDrawingSelector,
-  draftSection: draftSectionSelector,
-  sections: sectionsSelector,
-  canUndo: canUndoSelector,
-  canRedo: canRedoSelector,
-  lastSelectedElement: (state: UnifiedCanvasState) => 
-    state.lastSelectedElementId ? state.elements.get(state.lastSelectedElementId) : null,
-  penColor: penColorSelector,
-};
-
-// Convenience hooks
-export const useSelectedElements = () => useUnifiedCanvasStore(canvasSelectors.selectedElements);
-export const useSelectedTool = () => useUnifiedCanvasStore(canvasSelectors.selectedTool);
-export const usePenColor = () => useUnifiedCanvasStore(canvasSelectors.penColor);
-
 logger.debug('[Store] Unified Canvas Store initialized');
-
-// Expose demo function to window for easy testing
-if (typeof window !== 'undefined') {
-  (window as any).createStickyNoteDemo = () => {
-    const store = useUnifiedCanvasStore.getState();
-    return store.createStickyNoteContainerDemo();
-  };
-  (window as any).useUnifiedCanvasStore = useUnifiedCanvasStore;
-  console.log('🧪 [Debug] Added window.createStickyNoteDemo() function');
-  console.log('🧪 [Debug] Added window.useUnifiedCanvasStore for debugging');
-}

@@ -1,7 +1,7 @@
 // src/features/canvas/utils/TransformerManager.tsx
 import React from 'react';
 import Konva from 'konva';
-import { useUnifiedCanvasStore, canvasSelectors } from '../stores/unifiedCanvasStore';
+import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { CustomTransformer } from '../components/ui/CustomTransformer';
 
 interface TransformerManagerProps {
@@ -21,7 +21,7 @@ interface TransformerManagerProps {
  * - ✅ Consistent transformer behavior across all elements
  */
 export const TransformerManager: React.FC<TransformerManagerProps> = ({ stageRef }) => {
-  const selectedElementIds = useUnifiedCanvasStore(canvasSelectors.selectedElementIds);
+  const selectedElementIds = useUnifiedCanvasStore(state => state.selectedElementIds);
 
   const selectedIdsArray = Array.from(selectedElementIds);
 

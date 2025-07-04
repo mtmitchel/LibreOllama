@@ -72,19 +72,7 @@ export const measureTextDimensions = (
 
   const textWidth = tempText.getTextWidth();
   const textHeight = tempText.height(); // Use height() instead of deprecated getTextHeight()
-
-  console.log('📏 [measureTextDimensions] Text measurement details:', {
-    text: text.substring(0, 30) + '...',
-    maxWidth,
-    forceWordWrap,
-    hasLineBreaks: text.includes('\n'),
-    appliedWrapping: text.includes('\n') || forceWordWrap,
-    measuredWidth: textWidth,
-    measuredHeight: textHeight,
-    finalPadding: CANVAS_TEXT_CONFIG.PADDING
-  });
-
-  // Clean up
+// Clean up
   tempText.destroy();
 
   // Calculate final dimensions with padding
@@ -267,7 +255,6 @@ export const handleTextKeyboardInput = (
  * The old DOM-based editor is no longer used
  */
 export const createTextEditor = (): (() => void) => {
-  console.warn('[textEditingUtils] createTextEditor is deprecated. Use canvas-native text editing instead.');
-  return () => {}; // No-op cleanup
+return () => {}; // No-op cleanup
 };
 

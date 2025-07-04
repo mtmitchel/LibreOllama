@@ -1,7 +1,7 @@
 // src/pages/Chat.tsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card } from '../../core/shared-ui';
+import { Card } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { Plus } from 'lucide-react';
 
@@ -14,6 +14,7 @@ import {
   EmptyState 
 } from "../../features/chat/components";
 import {
+  ChatMessage,
   mockConversations,
   mockMessages,
   createNewConversation,

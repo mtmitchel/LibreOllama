@@ -1,0 +1,17 @@
+{
+  "entry": [
+    "src/main.tsx",
+    "src/app/App.tsx"
+  ],
+  "extensions": [".js", ".jsx", ".ts", ".tsx"],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/target/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/test-utils/**",
+    "**/tests/**",
+    "**/_archived_scripts/**"
+  ]
+}

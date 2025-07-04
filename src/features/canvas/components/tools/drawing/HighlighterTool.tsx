@@ -8,6 +8,8 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Line } from 'react-konva';
 import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
+import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
+import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
 import { HighlighterElement } from '../../../types/enhanced.types';
 import { ElementId } from '../../../types';
@@ -58,10 +60,14 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
   const isDrawingRef = useRef(false);
   const [currentStroke, setCurrentStroke] = useState<number[]>([]);
 
-  // Store actions
-  const addElement = useUnifiedCanvasStore(state => state.addElement);
-  const findStickyNoteAtPoint = useUnifiedCanvasStore(state => state.findStickyNoteAtPoint);
-  const addElementToStickyNote = useUnifiedCanvasStore(state => state.addElementToStickyNote);
+  // Store actions using grouped selectors for optimization
+  const stickyNoteActions = useUnifiedCanvasStore(
+    useShallow((state) => ({
+      addElement: state.addElement,
+      findStickyNoteAtPoint: state.findStickyNoteAtPoint,
+      addElementToStickyNote: state.addElementToStickyNote
+    }))
+  );
 
   // Handle pointer down - start drawing
   const handlePointerDown = useCallback((e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -136,34 +142,30 @@ export const HighlighterTool: React.FC<HighlighterToolProps> = ({
     };
 
     // Add to store
-    addElement(highlighterElement);
+    stickyNoteActions.addElement(highlighterElement);
 
     // Check for sticky note container
     const startPoint = { x: smoothedStroke[0], y: smoothedStroke[1] };
-    const stickyNoteId = findStickyNoteAtPoint(startPoint);
+    const stickyNoteId = stickyNoteActions.findStickyNoteAtPoint(startPoint);
     if (stickyNoteId) {
-      addElementToStickyNote(highlighterElement.id, stickyNoteId);
+      stickyNoteActions.addElementToStickyNote(highlighterElement.id, stickyNoteId);
     }
 
     // Clear current stroke
     setCurrentStroke([]);
-  }, [isActive, currentStroke, strokeStyle, addElement, findStickyNoteAtPoint, addElementToStickyNote]);
+  }, [isActive, currentStroke, strokeStyle, stickyNoteActions]);
 
   // Attach event listeners to stage when active
-  React.useEffect(() => {
-    if (!isActive || !stageRef.current) return;
-
-    const stage = stageRef.current;
-    stage.on('pointerdown', handlePointerDown);
-    stage.on('pointermove', handlePointerMove);
-    stage.on('pointerup', handlePointerUp);
-
-    return () => {
-      stage.off('pointerdown', handlePointerDown);
-      stage.off('pointermove', handlePointerMove);
-      stage.off('pointerup', handlePointerUp);
-    };
-  }, [isActive, handlePointerDown, handlePointerMove, handlePointerUp, stageRef]);
+  useToolEventHandler({
+    isActive,
+    stageRef,
+    toolName: 'HighlighterTool',
+    handlers: {
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: handlePointerUp
+    }
+  });
 
   // Render current drawing stroke as preview
   if (!isActive || !isDrawingRef.current || currentStroke.length < 4) {

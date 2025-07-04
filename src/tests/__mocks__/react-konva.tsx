@@ -330,13 +330,15 @@ export const Text = ({ x, y, text, fontSize, fill, fontFamily, fontStyle, textAl
   return <div data-testid="konva-text" style={{ position: 'absolute', left: x, top: y, fontSize, color: fill, fontFamily, fontStyle, textAlign }} {...domProps}>{text}</div>;
 };
 
-export const Line = ({ points, stroke, strokeWidth, fill, closed, id, opacity }: ShapeProps) => {
+export const Line = (props: ShapeProps) => {
+  const { points, stroke, strokeWidth, fill, closed, id, opacity } = props;
   const domProps = filterDOMProps(props);
   // This is a simplified mock; for real tests, you might need SVG
   return <div data-testid="konva-line" id={id} style={{ position: 'absolute', borderTop: `${strokeWidth || 1}px solid ${stroke || 'black'}`, width: '100px', top: '50%', left: '0', opacity }} {...domProps} />;
 };
 
-export const Star = ({ numPoints, innerRadius, outerRadius, fill, stroke, strokeWidth, id, opacity }: ShapeProps & { numPoints?: number; innerRadius?: number; outerRadius?: number }) => {
+export const Star = (props: ShapeProps & { numPoints?: number; innerRadius?: number; outerRadius?: number }) => {
+  const { numPoints, innerRadius, outerRadius, fill, stroke, strokeWidth, id, opacity } = props;
   const domProps = filterDOMProps(props);
   return <div data-testid="konva-star" id={id} style={{ position: 'absolute', color: fill, opacity }} {...domProps}>STAR</div>;
 };

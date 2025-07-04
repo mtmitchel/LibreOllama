@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card } from '../../../core/shared-ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../core/shared-ui/DropdownMenu';
+import { Card } from '../../../components/ui';
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
 import { MoreHorizontal } from 'lucide-react';
 import { FocusItem } from '../../../core/lib/mockData';
 

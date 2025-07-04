@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react';
-import { Card, Button } from '../../core/shared-ui';
-import { PageLayout } from '../../core/shared-ui/PageLayout';
+import { Card, Button } from '../../components/ui';
+import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import { PageLayout } from '../../components/layout/PageLayout';
+import { useHeader } from '../contexts/HeaderContext';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 interface CalendarEvent {
   id: string;

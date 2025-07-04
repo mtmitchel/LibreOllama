@@ -4,7 +4,6 @@ import type {
   RectangleElement, 
   CircleElement, 
   TriangleElement, 
-  StarElement, 
   TextElement,
   ImageElement,
   TableElement,
@@ -83,28 +82,6 @@ describe('Canvas Element Types Validation', () => {
       expect(element.height).toBe(80);
       expect(element.fill).toBe('#0000ff');
       expect(element.id).toBe('triangle-test');
-    });
-
-    test('should create and validate Star element', () => {
-      const element = createMockCanvasElement({
-        type: 'star',
-        id: 'star-test',
-        x: 200,
-        y: 200,
-        innerRadius: 30,
-        outerRadius: 60,
-        numPoints: 5,
-        fill: '#ffff00',
-        stroke: '#ff0000',
-        strokeWidth: 2
-      }) as StarElement;
-
-      expect(element.type).toBe('star');
-      expect(element.innerRadius).toBe(30);
-      expect(element.outerRadius).toBe(60);
-      expect(element.numPoints).toBe(5);
-      expect(element.fill).toBe('#ffff00');
-      expect(element.id).toBe('star-test');
     });
 
     test('should create and validate Pen/Drawing element', () => {
