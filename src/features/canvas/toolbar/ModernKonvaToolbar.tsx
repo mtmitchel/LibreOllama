@@ -26,7 +26,7 @@ import {
   Workflow,
   Image as ImageIcon
 } from 'lucide-react';
-import PortalColorPicker from './PortalColorPicker';
+import { LazyUIRenderer } from '../components/LazyUIRenderer';
 import ShapesDropdown from './ShapesDropdown';
 import ConnectorDropdown from './ConnectorDropdown';
 import styles from './ModernToolbar.module.css';

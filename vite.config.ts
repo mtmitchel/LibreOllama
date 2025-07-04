@@ -55,8 +55,22 @@ export default defineConfig({
           'canvas-tools-creation': [
             './src/features/canvas/components/tools/creation/RectangleTool',
             './src/features/canvas/components/tools/creation/CircleTool',
-            './src/features/canvas/components/tools/creation/TriangleTool',
+            './src/features/canvas/components/tools/creation/TriangleTool'
+          ],
+          
+          // Lazy-loaded tools (loaded on demand)
+          'canvas-tools-text': [
             './src/features/canvas/components/tools/creation/TextTool'
+          ],
+          
+          'canvas-tools-sticky-note': [
+            './src/features/canvas/components/tools/creation/StickyNoteTool'
+          ],
+          
+          // Lazy loading infrastructure
+          'canvas-lazy-infrastructure': [
+            './src/features/canvas/components/LazyToolRenderer',
+            './src/features/canvas/components/LazyUIRenderer'
           ],
           
           // Heavy tools that can be lazy loaded

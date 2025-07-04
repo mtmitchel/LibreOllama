@@ -43,11 +43,21 @@ export const createSelectionModule = (
     actions: {
       selectElement: (id, multiSelect = false) => {
         set(state => {
-          if (!multiSelect) {
+          // Note: We don't validate element existence here to allow temporary selections
+          // during element creation workflows. Validation happens in getSelectedElements()
+          if (multiSelect) {
+            if (state.selectedElementIds.has(id)) {
+              state.selectedElementIds.delete(id);
+            } else {
+              state.selectedElementIds.add(id);
+            }
+          } else {
             state.selectedElementIds.clear();
+            state.selectedElementIds.add(id);
           }
-          state.selectedElementIds.add(id);
-          state.lastSelectedElementId = id;
+      
+          const selectedIds = Array.from(state.selectedElementIds);
+          state.lastSelectedElementId = selectedIds.length > 0 ? selectedIds[selectedIds.length - 1] : null;
         });
       },
 

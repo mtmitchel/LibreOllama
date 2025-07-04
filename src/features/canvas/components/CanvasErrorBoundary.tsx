@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { canvasLog } from '../utils/canvasLogger';
 
 interface Props {
   children: ReactNode;
@@ -78,7 +79,7 @@ export class CanvasErrorBoundary extends Component<Props, State> {
 
     const recoveryDelay = Math.min(5000, this.state.renderCount * 500); // Max 5 seconds
     this.renderTimer = setTimeout(() => {
-      console.log('🔄 [CanvasErrorBoundary] Attempting auto-recovery...');
+              canvasLog.log('🔄 [CanvasErrorBoundary] Attempting auto-recovery...');
       this.setState({
         hasError: false,
         error: null,

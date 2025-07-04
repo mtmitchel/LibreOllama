@@ -283,6 +283,96 @@ Our recent refactoring efforts have highlighted several critical patterns for te
     expect(getState().sections.get(sectionId!)?.childElementIds).toContain(el1Id);
     ```
 
+### Critical Store Usage Patterns (ConnectorTool Test Findings)
+
+**CRITICAL**: The most important lesson from recent test development is the correct store method invocation pattern.
+
+4.  **Correct Store Method Invocation**: Always use `store.getState().methodName()` pattern, never call methods directly on state variables.
+
+    ```typescript
+    // ✅ CORRECT: This pattern works
+    const store = createUnifiedTestStore();
+    store.getState().addElement(element);
+    expect(store.getState().elements.size).toBe(1);
+
+    // ❌ WRONG: This pattern fails silently
+    const state = store.getState();
+    state.addElement(element);  // Method exists but doesn't work
+    expect(state.elements.size).toBe(0);  // Still 0, element not added
+    ```
+
+    **Why this happens**: Zustand with Immer middleware requires method calls to go through the store's state getter to properly trigger the Immer proxy and state updates.
+
+5.  **Event Handler Testing with Konva**: When testing React-Konva components, ensure mock objects match the actual Konva API structure.
+
+    ```typescript
+    // ✅ CORRECT: Mock target with proper Konva structure
+    const mockTarget = {
+      ...mockStage,
+      getStage: () => mockStage  // Essential for ConnectorTool logic
+    };
+
+    mouseDownHandler({
+      target: mockTarget,
+      evt: { clientX: 100, clientY: 100 }
+    });
+    ```
+
+6.  **Match Implementation Event Names**: Always verify the actual event names used in component implementation rather than assuming.
+
+    ```typescript
+    // ✅ CORRECT: Check actual implementation first
+    // ConnectorTool uses: mousedown, mousemove, mouseup
+    expect(mockStage.on).toHaveBeenCalledWith('mousedown', expect.any(Function));
+
+    // ❌ WRONG: Assuming pointer events
+    expect(mockStage.on).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+    ```
+
+7.  **Element Property Names**: Use the correct property names as defined in the type system.
+
+    ```typescript
+    // ✅ CORRECT: Use actual property names
+    expect(addedConnector.pathPoints).toEqual([0, 0, 100, 100]);
+
+    // ❌ WRONG: Using assumed property names
+    expect(addedConnector.points).toEqual([0, 0, 100, 100]);
+    ```
+
+### Test Development Debugging Workflow
+
+When store-first tests fail with "elements.size is 0" or similar issues:
+
+1. **Verify Store Pattern**: Ensure using `store.getState().method()` not `state.method()`
+2. **Check Element Structure**: Verify all required properties are present (id, type, createdAt, updatedAt)
+3. **Validate Store Factory**: Confirm test store uses same middleware as production
+4. **Console Log State**: Add `console.log(store.getState().elements)` to debug
+5. **Compare with Working Tests**: Reference `core-canvas-store.test.ts` for proven patterns
+
+```typescript
+// Debugging template for failed store tests
+test('debug element addition', () => {
+  const store = createUnifiedTestStore();
+  
+  console.log('Initial state:', store.getState().elements.size);
+  
+  const element = {
+    id: ElementId('test-1'),
+    type: 'connector',
+    // ... all required properties
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  
+  store.getState().addElement(element);
+  
+  console.log('After addition:', store.getState().elements.size);
+  console.log('Elements map:', store.getState().elements);
+  
+  expect(store.getState().elements.size).toBe(1);
+});
+```
+
 ## Contributing
 
 When adding new tests:

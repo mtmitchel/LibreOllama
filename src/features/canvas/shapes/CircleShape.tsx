@@ -245,8 +245,10 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
 
   useEffect(() => {
     if (isSelected && transformerRef.current && circleRef.current) {
-      transformerRef.current.nodes([circleRef.current]);
-      transformerRef.current.getLayer()?.batchDraw();
+      if (typeof transformerRef.current.nodes === 'function') {
+        transformerRef.current.nodes([circleRef.current]);
+        transformerRef.current.getLayer()?.batchDraw();
+      }
     }
   }, [isSelected]);
 

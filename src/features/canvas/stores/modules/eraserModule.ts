@@ -89,7 +89,7 @@ export const createEraserModule = (
             }
           });
           
-          console.log('🧹 [Eraser] Rebuilt spatial index with', erasableElements.length, 'erasable elements');
+
           
           state.spatialIndex.rebuild(erasableElements);
           state.spatialIndexDirty = false;
@@ -146,7 +146,7 @@ export const createEraserModule = (
                 const dist = Math.hypot(px - x, py - y);
                 
                 if (dist <= halfSize) {
-                  console.log('🧹 [Eraser] Erasing element:', { id, elementType: element.type });
+
                   deletedIds.push(id as ElementId);
                   state.elements.delete(id);
                   state.elementOrder = state.elementOrder.filter((elId: any) => elId !== id);

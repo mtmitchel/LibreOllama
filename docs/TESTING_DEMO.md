@@ -17,13 +17,17 @@
 3. **Check** blend mode effect on overlapping content
 4. **Test**: Wide stroke (15-30px) for highlighting text areas
 
-#### **3. Washi Tape Tool**
-1. Click **"Washi Tape"** button
-2. **Draw** decorative patterns - dots, stripes, zigzag
-3. **Notice** dual-color pattern rendering
-4. **Test**: Different pattern configurations
+#### **3. Washi Tape Tool (Planned Feature)**
+1. This tool is currently a planned feature and not yet implemented as a distinct drawing tool. The `Pen Tool` serves as the current basic freehand drawing tool.
 
-#### **4. Eraser Tool**
+#### **4. Pen Tool**
+1. Click **"Pen"** button
+2. **Draw** on canvas - notice freehand stroke
+3. **Watch** real-time drawing
+4. **Observe** auto-switch to Select tool after drawing
+5. **Test**: Try different drawing speeds
+
+#### **5. Eraser Tool**
 1. Create some drawings first
 2. Click **"Eraser"** button  
 3. **Click** on strokes to remove them individually
@@ -33,14 +37,14 @@
 
 ### **🔗 Selection Tools Testing**
 
-#### **5. Lasso Selection**
+#### **6. Lasso Selection**
 1. Create multiple shapes and drawings
 2. Click **"Lasso"** button in toolbar
 3. **Draw** free-form shape around elements
 4. **Watch** elements get selected inside lasso area
 5. **Test**: Complex selections with overlapping elements
 
-#### **6. Multi-Selection**
+#### **7. Multi-Selection**
 1. Use Select tool
 2. **Shift+Click** multiple elements
 3. **Drag** to move all selected items
@@ -50,13 +54,13 @@
 
 ### **📦 Shape Creation Testing**
 
-#### **7. Toolbar Shape Creation**
+#### **8. Toolbar Shape Creation**
 1. Click **"Rectangle"** → Shape appears at center
 2. Click **"Circle"** → Instant circle creation  
 3. Try **Triangle**, **Star**, **Text**, **Sticky Note**
 4. **Notice**: Auto-switch to Select after creation
 
-#### **8. Canvas Click Creation**
+#### **9. Canvas Click Creation**
 1. Click **"Rectangle"** button
 2. **Click anywhere on canvas** → Rectangle appears at cursor
 3. **Test**: Different shapes at various positions
@@ -66,13 +70,13 @@
 
 ### **🎮 Interaction Testing**
 
-#### **9. Element Manipulation**
+#### **10. Element Manipulation**
 1. **Select** any element (click on it)
 2. **Drag** to move around canvas
 3. **Resize** using corner handles (if available)
 4. **Test**: Smooth interaction and visual feedback
 
-#### **10. Tool Switching**
+#### **11. Tool Switching**
 1. **Rapid switching** between tools via toolbar
 2. **Check**: Cursor changes appropriately
 3. **Test**: No lag or visual artifacts
@@ -82,13 +86,13 @@
 
 ### **⚡ Performance Testing**
 
-#### **11. High Element Count**
+#### **12. High Element Count**
 1. **Create 50+ elements** (mix of shapes and drawings)
 2. **Test drawing** still smooth at 60fps
 3. **Pan and zoom** canvas - should remain responsive
 4. **Check**: No memory leaks or slowdown
 
-#### **12. Complex Drawings**
+#### **13. Complex Drawings**
 1. **Draw continuous long strokes** with marker
 2. **Test real-time smoothing** performance
 3. **Create overlapping highlighter** strokes

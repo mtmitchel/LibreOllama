@@ -8,6 +8,7 @@ import Konva from 'konva';
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
 import { ImageElement } from '../../types/enhanced.types';
 import { nanoid } from 'nanoid';
+import { canvasLog } from '../../utils/canvasLogger';
 
 interface CanvasDragDropHandlerProps {
   stageRef: React.RefObject<Konva.Stage | null>;
@@ -67,7 +68,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
         // Check for sticky note container
         const stickyNoteId = store.findStickyNoteAtPoint({ x, y });
         if (stickyNoteId) {
-          console.log('🖼️ [CanvasDragDrop] Adding image to sticky note container:', stickyNoteId);
+          canvasLog.debug('🖼️ [CanvasDragDrop] Adding image to sticky note container:', stickyNoteId);
           store.addElementToStickyNote(imageElement.id, stickyNoteId);
         }
         
@@ -77,7 +78,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
           store.selectElement(imageElement.id, false);
         }, 10);
         
-        console.log('🖼️ [CanvasDragDrop] Image added and selected:', imageElement.id);
+        canvasLog.debug('🖼️ [CanvasDragDrop] Image added and selected:', imageElement.id);
       };
       img.src = event.target?.result as string;
     };
@@ -198,7 +199,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
           const transform = stage.getAbsoluteTransform().copy().invert();
           pos = transform.point(stagePos);
           
-          console.log('🖼️ [DragDrop] Position calculation (paste):', {
+          canvasLog.debug('🖼️ [DragDrop] Position calculation (paste):', {
             client: { x: fakeEvent.clientX, y: fakeEvent.clientY },
             stage: stagePos,
             canvas: pos
@@ -232,7 +233,7 @@ export const CanvasDragDropHandler: React.FC<CanvasDragDropHandlerProps> = ({ st
       
       if (hasImage) {
         e.preventDefault();
-        console.log('🖼️ [CanvasDragDrop] Image pasted from clipboard');
+        canvasLog.debug('🖼️ [CanvasDragDrop] Image pasted from clipboard');
       }
     };
 

@@ -115,6 +115,14 @@ const Konva = {
     setPosition() { return this; }
     width() { return 100; }
     height() { return 20; }
+    // Missing methods that are used in textEditingUtils.tsx
+    getTextWidth() { return 100; }
+    getTextHeight() { return 20; }
+    measureSize() { return { width: 100, height: 20 }; }
+    textWidth() { return 100; }
+    textHeight() { return 20; }
+    getLayer() { return null; }
+    remove() { return this; }
   },
   
   Line: class MockLine {
@@ -129,7 +137,7 @@ const Konva = {
     strokeWidth() { return 1; }
     setStrokeWidth() { return this; }
   },
-    Transformer: class MockTransformer {
+  Transformer: class MockTransformer {
     constructor() {}
     nodes(nodeArray?: any[]) { 
       if (nodeArray !== undefined) {
@@ -148,6 +156,16 @@ const Konva = {
     setEnabledAnchors() { return this; }
     boundBoxFunc() { return null; }
     setBoundBoxFunc() { return this; }
+    getLayer() { 
+      return {
+        batchDraw: () => {},
+        draw: () => {}
+      }; 
+    }
+    show() { return this; }
+    hide() { return this; }
+    visible() { return true; }
+    setVisible() { return this; }
   },
   
   // Utility methods

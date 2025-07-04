@@ -1,9 +1,10 @@
 // src/app/pages/Canvas.tsx - Phase 1.3: Component Hierarchy Restoration (FINAL)
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import CanvasContainer from '../../features/canvas/components/CanvasContainer';
 import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import { PanelRightClose } from 'lucide-react';
 import { Button } from '../../components/ui';
+import Konva from 'konva';
 
 /**
  * This component establishes the two-pane layout for the Canvas feature,
@@ -12,6 +13,11 @@ import { Button } from '../../components/ui';
  */
 export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
   const [isCanvasSidebarOpen, setCanvasSidebarOpen] = useState(true);
+  const [canvasStageRef, setCanvasStageRef] = useState<React.RefObject<Konva.Stage | null> | undefined>(undefined);
+
+  const handleStageReady = (stageRef: React.RefObject<Konva.Stage | null>) => {
+    setCanvasStageRef(stageRef);
+  };
 
 
 
@@ -21,6 +27,7 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
         <CanvasSidebar
           isOpen={isCanvasSidebarOpen}
           onToggle={() => setCanvasSidebarOpen(!isCanvasSidebarOpen)}
+          stageRef={canvasStageRef}
         />
       )}
 
@@ -40,7 +47,7 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
       )}
 
       <main className="flex-1 flex flex-col min-w-0">
-        <CanvasContainer />
+        <CanvasContainer onStageReady={handleStageReady} />
       </main>
       
 

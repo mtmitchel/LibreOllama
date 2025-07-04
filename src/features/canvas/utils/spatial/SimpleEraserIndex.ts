@@ -42,9 +42,7 @@ export class SimpleEraserIndex {
       }
     }
     
-    if (intersections.length > 0) {
-      console.log('🧹 [SpatialIndex] Found', intersections.length, 'intersecting elements');
-    }
+
     
     return intersections;
   }

@@ -4,8 +4,8 @@ import Konva from 'konva';
 import { Layer } from 'react-konva';
 import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
-import { SelectionLayer } from './SelectionLayer';
-import { LayersPanel } from './LayersPanel';
+// import { SelectionLayer } from './SelectionLayer'; // TODO: Implement SelectionLayer
+// import { LayersPanel } from './LayersPanel'; // TODO: Implement LayersPanel
 import { ConnectorLayer } from './ConnectorLayer';
 import { UILayer } from './UILayer';
 // import { ElementRenderer } from '../renderers/ElementRenderer';
@@ -25,7 +25,7 @@ import {
   isConnectorElement,
   isSectionElement
 } from '../types/enhanced.types';
-import { canvasSelectors } from '../stores/selectors';
+// import { canvasSelectors } from '../stores/selectors'; // TODO: Replace with combinedSelectors when needed
 import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
 import { canvasLog } from '../utils/canvasLogger';
 
@@ -173,7 +173,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   // SIMPLIFIED: Remove complex memoization
   const selectedElementIdsOnly = new Set(Array.from(selectedElementIds).filter(id => {
     // Only include ElementIds, not SectionIds
-    return !sectionElements.some(section => section.id === id);
+    return !sectionElements.some(section => String(section.id) === String(id));
   }) as ElementId[]);
 
   // Simplified event handlers (temporarily disabled)
@@ -225,6 +225,10 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
               currentPath={currentPath}
               elementsBySection={sortedElementsBySection}
               stageRef={stageRef}
+              onElementUpdate={onElementUpdate}
+              onElementDragEnd={onElementDragEnd}
+              onElementClick={onElementClick}
+              onStartTextEdit={onStartTextEdit}
             />
         </React.Fragment>
       ),

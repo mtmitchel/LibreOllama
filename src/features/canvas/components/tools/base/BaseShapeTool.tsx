@@ -17,10 +17,11 @@ import { useUnifiedCanvasStore } from '../../../stores/unifiedCanvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToolEventHandler } from '../../../hooks/useToolEventHandler';
 import { nanoid } from 'nanoid';
-import { CanvasElement, ElementId } from '../../../types/enhanced.types';
+import { CanvasElement, ElementId, SectionElement } from '../../../types/enhanced.types';
 import { BaseShapeToolProps, Vector2d, ShapeToolState } from './types';
+import { canvasLog } from '../../../utils/canvasLogger';
 
-export const BaseShapeTool = <T extends CanvasElement>({
+export const BaseShapeTool = <T extends Exclude<CanvasElement, SectionElement>>({
   stageRef,
   isActive,
   type,
@@ -131,7 +132,7 @@ export const BaseShapeTool = <T extends CanvasElement>({
       }
 
     } catch (error) {
-      console.error(`Failed to create ${type}:`, error);
+      canvasLog.error(`Failed to create ${type}:`, error);
     }
   }, [isActive, stageRef, editingTextId, createShape, addElement, shouldStartTextEdit, setTextEditingElement, setSelectedTool, type]);
 

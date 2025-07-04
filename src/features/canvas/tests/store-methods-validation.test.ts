@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { createCanvasTestStore } from '../../../tests/helpers/createCanvasTestStore';
+import { createUnifiedTestStore } from '../../../tests/helpers/createUnifiedTestStore';
 
 describe('Canvas Test Store Validation', () => {
   it('should create a store with all slice methods available', () => {
-    const store = createCanvasTestStore();
+    const store = createUnifiedTestStore();
     const state = store.getState();
 
     // Validate CanvasElementsStore methods

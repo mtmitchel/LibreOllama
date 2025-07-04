@@ -4,6 +4,8 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TextTool } from '../components/tools/creation/TextTool';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import Konva from 'konva';
+import { ElementId, StickyNoteElement } from '../types/enhanced.types';
+import { createUnifiedTestStore } from '../../../tests/helpers/createUnifiedTestStore';
 
 // Add global type declaration for test
 declare global {
@@ -40,10 +42,8 @@ vi.mock('konva', () => ({
   }
 }));
 
-// Mock textEditingUtils
-vi.mock('../utils/textEditingUtils', () => ({
-  createTextEditor: vi.fn().mockReturnValue(() => {})
-}));
+// Note: textEditingUtils is not directly used by TextTool anymore
+// TextTool sets store state and TextShape handles the actual editing
 
 describe('TextTool', () => {
   let stageRef: React.RefObject<Konva.Stage>;
@@ -64,6 +64,11 @@ describe('TextTool', () => {
       width: 800,
       height: 600
     });
+    
+    // Add missing methods that TextTool expects
+    mockStage.id = vi.fn().mockReturnValue('');
+    mockStage.getType = vi.fn().mockReturnValue('Stage');
+    
     stageRef = { current: mockStage };
 
     // Reset all mocks
@@ -105,16 +110,16 @@ describe('TextTool', () => {
     expect(mockStage.container().style.cursor).toBe('crosshair');
   });
 
-  it('should show preview box on mouse move', async () => {
+  it('should show placement guide on mouse move', async () => {
     const { container } = render(
       <svg>
         <TextTool stageRef={stageRef} isActive={true} />
       </svg>
     );
 
-    // Get the event handler that was registered
+    // Get the event handler that was registered (with namespace)
     const pointerMoveHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointermove'
+      (call: any[]) => call[0] === 'pointermove.textTool'
     )?.[1];
 
     expect(pointerMoveHandler).toBeDefined();
@@ -127,10 +132,10 @@ describe('TextTool', () => {
     
     pointerMoveHandler(mockEvent);
 
-    // Wait for state update
+    // Wait for state update - check for "Add text" label instead of preview box
     await waitFor(() => {
-      const previewBox = container.querySelector('rect[stroke="#3B82F6"]');
-      expect(previewBox).toBeTruthy();
+      const addTextLabel = container.querySelector('div[data-testid="konva-text"][text="Add text"]');
+      expect(addTextLabel).toBeTruthy();
     });
   });
 
@@ -144,9 +149,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Get the event handler that was registered
+    // Get the event handler that was registered (with namespace)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown.textTool'
     )?.[1];
 
     expect(pointerDownHandler).toBeDefined();
@@ -166,18 +171,17 @@ describe('TextTool', () => {
           type: 'text',
           x: 100,
           y: 100,
-          width: 200,
-          height: 50,
           text: '', // Should start with empty text
-          fontSize: 20,
+          fontSize: 16,
           fill: '#000000'
         })
       );
     });
   });
 
-  it('should start text editor after creating element', async () => {
-    const createTextEditor = await import('../utils/textEditingUtils').then(m => m.createTextEditor);
+  it('should start text editing after creating element', async () => {
+    const { setTextEditingElement } = useUnifiedCanvasStore.getState();
+    const setTextEditingElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'setTextEditingElement');
     
     render(
       <svg>
@@ -185,9 +189,9 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Get the event handler
+    // Get the event handler (with namespace)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown.textTool'
     )?.[1];
 
     // Simulate click
@@ -198,37 +202,20 @@ describe('TextTool', () => {
     
     pointerDownHandler(mockEvent);
 
-    // Wait for text editor creation
+    // Wait for store state to be set for text editing
     await waitFor(() => {
-      expect(createTextEditor).toHaveBeenCalledWith(
-        expect.objectContaining({
-          position: expect.objectContaining({
-            left: expect.any(Number),
-            top: expect.any(Number),
-            width: 200,
-            height: 50
-          }),
-          initialText: '',
-          placeholder: 'Add text',
-          multiline: true,
-          showHelper: false
-        })
-      );
+      expect(setTextEditingElementSpy).toHaveBeenCalled();
     });
+
+    // Verify an element was created and editing state was set
+    const { elements } = useUnifiedCanvasStore.getState();
+    const createdElement = Array.from(elements.values())[0];
+    expect(createdElement).toBeDefined();
+    expect(createdElement.type).toBe('text');
   });
 
-  it('should switch to select tool after saving text', async () => {
-    const { setSelectedTool, selectElement } = useUnifiedCanvasStore.getState();
-    const setSelectedToolSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'setSelectedTool');
-    const selectElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'selectElement');
-
-    // Mock createTextEditor to capture onSave callback
-    let onSaveCallback: ((text: string) => void) | null = null;
-    const createTextEditor = await import('../utils/textEditingUtils').then(m => m.createTextEditor);
-    (createTextEditor as any).mockImplementation((options: any) => {
-      onSaveCallback = options.onSave;
-      return () => {};
-    });
+  it('should set text editing element in store after creating text', async () => {
+    const setTextEditingElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'setTextEditingElement');
 
     render(
       <svg>
@@ -236,102 +223,197 @@ describe('TextTool', () => {
       </svg>
     );
 
-    // Create element by clicking
+    // Create element by clicking (with namespace)
     const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown'
+      (call: any[]) => call[0] === 'pointerdown.textTool'
     )?.[1];
 
     pointerDownHandler({
       target: mockStage,
       evt: { clientX: 200, clientY: 200 }
+    });
+
+    // Wait for editing state to be set
+    await waitFor(() => {
+      expect(setTextEditingElementSpy).toHaveBeenCalled();
     });
 
     // Get the created element ID
     const { elements } = useUnifiedCanvasStore.getState();
     const createdElement = Array.from(elements.values())[0];
+    
+    // Verify the correct element ID was set for editing
+    expect(setTextEditingElementSpy).toHaveBeenCalledWith(createdElement.id);
+  });
 
-    // Simulate saving text
-    expect(onSaveCallback).toBeDefined();
-    onSaveCallback!('Hello World');
+  it('should handle text editing workflow through store state', async () => {
+    const addElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'addElement');
+    const setTextEditingElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'setTextEditingElement');
 
-    // Wait for tool switch
+    render(
+      <svg>
+        <TextTool stageRef={stageRef} isActive={true} />
+      </svg>
+    );
+
+    // Create element (with namespace)
+    const pointerDownHandler = mockStage.on.mock.calls.find(
+      (call: any[]) => call[0] === 'pointerdown.textTool'
+    )?.[1];
+
+    pointerDownHandler({
+      target: mockStage,
+      evt: { clientX: 200, clientY: 200 }
+    });
+
+    // Wait for element creation and editing state
     await waitFor(() => {
-      expect(selectElementSpy).toHaveBeenCalledWith(createdElement.id, false);
-      expect(setSelectedToolSpy).toHaveBeenCalledWith('select');
-    }, { timeout: 500 });
-  });
-
-  it('should protect selection when saving', async () => {
-    // Mock window.__protectSelection
-    window.__protectSelection = vi.fn();
-
-    // Mock createTextEditor
-    let onSaveCallback: ((text: string) => void) | null = null;
-    const createTextEditor = await import('../utils/textEditingUtils').then(m => m.createTextEditor);
-    (createTextEditor as any).mockImplementation((options: any) => {
-      onSaveCallback = options.onSave;
-      return () => {};
+      expect(addElementSpy).toHaveBeenCalled();
+      expect(setTextEditingElementSpy).toHaveBeenCalled();
     });
 
-    render(
-      <svg>
-        <TextTool stageRef={stageRef} isActive={true} />
-      </svg>
-    );
-
-    // Create element
-    const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown'
-    )?.[1];
-
-    pointerDownHandler({
-      target: mockStage,
-      evt: { clientX: 200, clientY: 200 }
-    });
-
-    // Save text
-    onSaveCallback!('Test');
-
-    expect(window.__protectSelection).toHaveBeenCalled();
-  });
-
-  it('should delete element on cancel', async () => {
-    const { deleteElement } = useUnifiedCanvasStore.getState();
-    const deleteElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'deleteElement');
-
-    // Mock createTextEditor
-    let onCancelCallback: (() => void) | null = null;
-    const createTextEditor = await import('../utils/textEditingUtils').then(m => m.createTextEditor);
-    (createTextEditor as any).mockImplementation((options: any) => {
-      onCancelCallback = options.onCancel;
-      return () => {};
-    });
-
-    render(
-      <svg>
-        <TextTool stageRef={stageRef} isActive={true} />
-      </svg>
-    );
-
-    // Create element
-    const pointerDownHandler = mockStage.on.mock.calls.find(
-      (call: any[]) => call[0] === 'pointerdown'
-    )?.[1];
-
-    pointerDownHandler({
-      target: mockStage,
-      evt: { clientX: 200, clientY: 200 }
-    });
-
-    // Get created element ID
-    const { elements } = useUnifiedCanvasStore.getState();
+    // Verify the workflow: element created, then editing started
+    const { elements, textEditingElementId } = useUnifiedCanvasStore.getState();
     const createdElement = Array.from(elements.values())[0];
+    
+    expect(createdElement.type).toBe('text');
+    expect((createdElement as any).text).toBe(''); // Starts with empty text
+    expect(textEditingElementId).toBe(createdElement.id);
+  });
 
-    // Cancel editing
-    expect(onCancelCallback).toBeDefined();
-    onCancelCallback!();
+  it('should create text elements with correct initial properties', async () => {
+    const addElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'addElement');
 
-    expect(deleteElementSpy).toHaveBeenCalledWith(createdElement.id);
+    render(
+      <svg>
+        <TextTool stageRef={stageRef} isActive={true} />
+      </svg>
+    );
+
+    // Create element (with namespace)
+    const pointerDownHandler = mockStage.on.mock.calls.find(
+      (call: any[]) => call[0] === 'pointerdown.textTool'
+    )?.[1];
+
+    pointerDownHandler({
+      target: mockStage,
+      evt: { clientX: 150, clientY: 100 }
+    });
+
+    // Wait for element creation
+    await waitFor(() => {
+      expect(addElementSpy).toHaveBeenCalled();
+    });
+
+    // Verify the element was created with correct properties
+    const createdElement = addElementSpy.mock.calls[0][0];
+    expect(createdElement).toMatchObject({
+      type: 'text',
+      x: 100, // Transformed position
+      y: 100,
+      text: '', // Starts empty for immediate editing
+      fontSize: 16,
+      fill: '#000000',
+      fontFamily: expect.stringContaining('Inter'),
+      width: 20, // Minimal starting width
+      height: 24 // Minimal starting height
+    });
+  });
+
+  it('should handle text element positioning correctly', async () => {
+    const addElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'addElement');
+
+    render(
+      <svg>
+        <TextTool stageRef={stageRef} isActive={true} />
+      </svg>
+    );
+
+    // Create element at specific position
+    const pointerDownHandler = mockStage.on.mock.calls.find(
+      (call: any[]) => call[0] === 'pointerdown.textTool'
+    )?.[1];
+
+    pointerDownHandler({
+      target: mockStage,
+      evt: { clientX: 300, clientY: 250 }
+    });
+
+    // Wait for element creation
+    await waitFor(() => {
+      expect(addElementSpy).toHaveBeenCalled();
+    });
+
+    // Verify position is correctly transformed
+    const createdElement = addElementSpy.mock.calls[0][0];
+    expect(createdElement.x).toBe(100); // Transformed by mock transform
+    expect(createdElement.y).toBe(100);
+  });
+
+  it('should only create text on stage clicks, not element clicks', async () => {
+    const addElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'addElement');
+
+    // Create a mock element target (not the stage)
+    const mockElement = {
+      ...mockStage,
+      id: vi.fn().mockReturnValue('existing-element-id'),
+      getType: vi.fn().mockReturnValue('Rect')
+    };
+
+    render(
+      <svg>
+        <TextTool stageRef={stageRef} isActive={true} />
+      </svg>
+    );
+
+    const pointerDownHandler = mockStage.on.mock.calls.find(
+      (call: any[]) => call[0] === 'pointerdown.textTool'
+    )?.[1];
+
+    // Click on existing element (should be ignored)
+    pointerDownHandler({
+      target: mockElement,
+      evt: { clientX: 200, clientY: 200 }
+    });
+
+    // Wait a bit to ensure no element is created
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Verify no element was created
+    expect(addElementSpy).not.toHaveBeenCalled();
+  });
+
+  it('should handle sticky note integration', async () => {
+    const addElementSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'addElement');
+    const findStickyNoteAtPointSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'findStickyNoteAtPoint');
+    const addElementToStickyNoteSpy = vi.spyOn(useUnifiedCanvasStore.getState(), 'addElementToStickyNote');
+
+    // Mock finding a sticky note at the click position
+    findStickyNoteAtPointSpy.mockReturnValue(ElementId('mock-sticky-note-id'));
+
+    render(
+      <svg>
+        <TextTool stageRef={stageRef} isActive={true} />
+      </svg>
+    );
+
+    const pointerDownHandler = mockStage.on.mock.calls.find(
+      (call: any[]) => call[0] === 'pointerdown.textTool'
+    )?.[1];
+
+    pointerDownHandler({
+      target: mockStage,
+      evt: { clientX: 200, clientY: 200 }
+    });
+
+    // Wait for element creation and sticky note integration
+    await waitFor(() => {
+      expect(addElementSpy).toHaveBeenCalled();
+      expect(addElementToStickyNoteSpy).toHaveBeenCalled();
+    });
+
+    const createdElement = addElementSpy.mock.calls[0][0];
+    expect(addElementToStickyNoteSpy).toHaveBeenCalledWith(createdElement.id, 'sticky-note-id');
   });
 
   it('should clean up on unmount', () => {
@@ -343,10 +425,10 @@ describe('TextTool', () => {
 
     unmount();
 
-    // Verify event listeners were removed
-    expect(mockStage.off).toHaveBeenCalledWith('pointermove', expect.any(Function));
-    expect(mockStage.off).toHaveBeenCalledWith('pointerdown', expect.any(Function));
-    expect(mockStage.off).toHaveBeenCalledWith('pointerleave', expect.any(Function));
-    expect(mockStage.off).toHaveBeenCalledWith('pointerenter', expect.any(Function));
+    // Verify event listeners were removed (with namespaces)
+    expect(mockStage.off).toHaveBeenCalledWith('pointermove.textTool', expect.any(Function));
+    expect(mockStage.off).toHaveBeenCalledWith('pointerdown.textTool', expect.any(Function));
+    expect(mockStage.off).toHaveBeenCalledWith('pointerleave.textTool', expect.any(Function));
+    expect(mockStage.off).toHaveBeenCalledWith('pointerenter.textTool', expect.any(Function));
   });
 }); 

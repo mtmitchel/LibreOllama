@@ -4,6 +4,7 @@
  */
 
 export { BaseShapeTool } from './BaseShapeTool';
+export { BaseCreationTool } from './BaseCreationTool';
 export { CirclePreview, RectanglePreview, TrianglePreview } from './ShapePreviews';
 export { 
   createCircleElement, 
@@ -12,7 +13,9 @@ export {
 } from './shapeCreators';
 export type { 
   BaseShapeToolProps, 
+  BaseCreationToolProps,
   ShapeToolState, 
+  CreationToolState,
   ShapeCreationOptions, 
   Vector2d 
 } from './types';

@@ -20,12 +20,12 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, stageRef 
 
   const zoomIn = () => {
     const newScale = Math.min(10, viewport.scale * 1.2);
-    setViewport({ ...viewport, scale: newScale });
+    setViewport({ scale: newScale }); // ✅ Only update scale, not entire viewport
   };
 
   const zoomOut = () => {
     const newScale = Math.max(0.1, viewport.scale / 1.2);
-    setViewport({ ...viewport, scale: newScale });
+    setViewport({ scale: newScale }); // ✅ Only update scale, not entire viewport
   };
 
   const resetZoom = () => {
@@ -33,8 +33,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, stageRef 
   };
 
   const resetTo100 = () => {
-    console.log('🔍 [ZoomControls] Reset to 100%');
-    setViewport({ ...viewport, scale: 1 });
+    setViewport({ scale: 1 }); // ✅ Only update scale, not entire viewport
   };
 
 

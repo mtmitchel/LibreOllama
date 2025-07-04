@@ -58,6 +58,10 @@ export const createViewportModule = (
     actions: {
       setViewport: (viewport) => {
         set(state => {
+          // Validate scale if provided
+          if (viewport.scale !== undefined) {
+            viewport.scale = Math.max(0.1, Math.min(10, viewport.scale));
+          }
           Object.assign(state.viewport, viewport);
         });
       },

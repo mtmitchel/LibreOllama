@@ -11,6 +11,7 @@ import React, { useCallback, useMemo, useRef, memo } from 'react';
 import { Line, Path, Arrow, Circle, Group } from 'react-konva';
 import Konva from 'konva';
 import type { ConnectorElement } from '../types/enhanced.types';
+import { canvasLog } from '../utils/canvasLogger';
 
 interface ConnectorShapeProps {
   connector: ConnectorElement;
@@ -193,7 +194,7 @@ export const ConnectorShape: React.FC<ConnectorShapeProps> = memo(({
   // Render the main connector shape
   const renderConnectorShape = useCallback(() => {
     if (!pathData.isValid) {
-      console.warn('[ConnectorShape] Invalid path data:', pathData);
+      canvasLog.warn('[ConnectorShape] Invalid path data:', pathData);
       return null;
     }
 

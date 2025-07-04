@@ -19,13 +19,24 @@ import { ZoomControls } from './ui/ZoomControls';
 import { CanvasDragDropHandler } from './ui/CanvasDragDropHandler';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
+interface CanvasContainerProps {
+  onStageReady?: (stageRef: React.RefObject<Konva.Stage | null>) => void;
+}
+
 /**
  * Main container for the canvas feature.
  * Integrates the stage, toolbar, and sidebar.
  */
-export const CanvasContainer: React.FC = () => {
+export const CanvasContainer: React.FC<CanvasContainerProps> = ({ onStageReady }) => {
   const stageRef = useRef<Konva.Stage | null>(null);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  // Notify parent when stage is ready
+  React.useEffect(() => {
+    if (onStageReady) {
+      onStageReady(stageRef);
+    }
+  }, [onStageReady]);
   
   // Essential store functions for toolbar
   const undo = useUnifiedCanvasStore(state => state.undo);

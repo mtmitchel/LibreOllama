@@ -340,7 +340,7 @@ export const MainLayer: React.FC<MainLayerProps> = ({
             <KonvaElementBoundary key={section.id}>
               <SectionShape
                 section={section}
-                isSelected={selectedElementIds.has(section.id as ElementId)}
+                isSelected={Array.from(selectedElementIds).some(id => String(id) === String(section.id))}
                 onSelect={(id, e) => selectElement(id as unknown as ElementId)}
                 onElementDragEnd={(e, id) => {
                   const node = e.target;

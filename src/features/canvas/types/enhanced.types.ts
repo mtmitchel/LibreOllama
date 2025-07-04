@@ -161,10 +161,24 @@ export interface TableColumn {
   id?: string;
 }
 
+export interface TableStyling {
+  headerBackgroundColor?: string;
+  headerTextColor?: string;
+  borderColor?: string;
+  alternateRowColor?: string;
+  hoverColor?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  padding?: number;
+  borderRadius?: number;
+  shadow?: string;
+}
+
 export interface EnhancedTableData {
   rows: TableRow[];
   columns: TableColumn[];
   cells: TableCell[][];
+  styling?: TableStyling;
 }
 
 export interface TableElement extends BaseElement {
