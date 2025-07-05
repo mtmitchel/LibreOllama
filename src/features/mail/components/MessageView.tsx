@@ -49,75 +49,80 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
   };
 
   return (
-    <div className="border-b border-[var(--border-default)]">
-      {/* Main Header */}
+    <div className="border-b border-[var(--border-default)] bg-[var(--bg-tertiary)]">
+      {/* Main Header - Optimized for compact space */}
       <div 
-        className="flex items-start"
-        style={{ padding: 'var(--space-4)' }}
+        className="flex flex-col"
+        style={{ padding: 'var(--space-3)' }}
       >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <Text size="lg" weight="semibold" variant="body" style={{ marginBottom: 'var(--space-1)' }}>
-                {message.subject || '(no subject)'}
-              </Text>
-              <div 
-                className="flex items-center text-sm"
-                style={{ gap: 'var(--space-2)' }}
-              >
-                <Text size="sm" weight="medium" variant="body">
-                  {message.from.name || message.from.email}
-                </Text>
-                <Text size="sm" variant="secondary">
-                  &lt;{message.from.email}&gt;
-                </Text>
-              </div>
-              <Text size="xs" variant="secondary" style={{ marginTop: 'var(--space-1)' }}>
-                to {formatEmailAddresses(message.to)}
-              </Text>
-            </div>
-            
-            <div 
-              className="flex items-center ml-4"
-              style={{ gap: 'var(--space-1)' }}
+        {/* Subject Line */}
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0 pr-2">
+            <Text size="lg" weight="semibold" variant="body" className="leading-tight">
+              {message.subject || '(no subject)'}
+            </Text>
+          </div>
+          
+          {/* Action buttons - more compact */}
+          <div 
+            className="flex items-center flex-shrink-0"
+            style={{ gap: 'var(--space-1)' }}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleStarClick}
+              className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
             >
-              <Text size="xs" variant="secondary" style={{ marginRight: 'var(--space-2)' }}>
-                {formatDate(message.date)}
-              </Text>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleStarClick}
-                className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              >
-                <Star
-                  size={16}
-                  className={`${
-                    message.isStarred 
-                      ? 'text-yellow-500 fill-yellow-500' 
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  }`}
-                />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggleExpanded}
-                className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              >
-                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              >
-                <MoreHorizontal size={16} />
-              </Button>
-            </div>
+              <Star
+                size={12}
+                className={`${
+                  message.isStarred 
+                    ? 'text-yellow-500 fill-yellow-500' 
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleExpanded}
+              className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+            >
+              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+            >
+              <MoreHorizontal size={12} />
+            </Button>
+          </div>
+        </div>
+
+        {/* Sender and Date Info - Stacked for better space usage */}
+        <div className="flex flex-col gap-1">
+          {/* Sender Info */}
+          <div className="flex items-center min-w-0">
+            <Text size="sm" weight="medium" variant="body" className="truncate">
+              {message.from.name || message.from.email}
+            </Text>
+            <Text size="xs" variant="secondary" className="ml-1 truncate">
+              &lt;{message.from.email}&gt;
+            </Text>
+          </div>
+          
+          {/* Recipient and Date */}
+          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+            <Text size="xs" variant="secondary" className="truncate flex-1 min-w-0">
+              to {formatEmailAddresses(message.to)}
+            </Text>
+            <Text size="xs" variant="secondary" className="ml-2 flex-shrink-0">
+              {formatDate(message.date)}
+            </Text>
           </div>
         </div>
       </div>
@@ -125,53 +130,51 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
       {/* Expanded Header Details */}
       {isExpanded && (
         <div 
-          className="text-sm"
+          className="text-sm border-t border-[var(--border-default)] bg-[var(--bg-secondary)] rounded-[var(--radius-sm)] mx-[var(--space-2)] mb-[var(--space-2)]"
           style={{ 
-            paddingLeft: 'var(--space-4)',
-            paddingRight: 'var(--space-4)',
-            paddingBottom: 'var(--space-4)'
+            padding: 'var(--space-3)'
           }}
         >
           <div className="space-y-1">
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-16 text-right mr-2">
+              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
                 from:
               </Text>
-              <Text size="sm" variant="secondary">
+              <Text size="sm" variant="secondary" className="truncate">
                 {message.from.name || message.from.email} &lt;{message.from.email}&gt;
               </Text>
             </div>
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-16 text-right mr-2">
+              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
                 to:
               </Text>
-              <Text size="sm" variant="secondary">
+              <Text size="sm" variant="secondary" className="truncate">
                 {formatEmailAddresses(message.to)}
               </Text>
             </div>
             {message.cc && message.cc.length > 0 && (
               <div className="flex">
-                <Text size="sm" variant="secondary" className="w-16 text-right mr-2">
+                <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
                   cc:
                 </Text>
-                <Text size="sm" variant="secondary">
+                <Text size="sm" variant="secondary" className="truncate">
                   {formatEmailAddresses(message.cc)}
                 </Text>
               </div>
             )}
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-16 text-right mr-2">
+              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
                 date:
               </Text>
-              <Text size="sm" variant="secondary">
+              <Text size="sm" variant="secondary" className="truncate">
                 {formatDate(message.date)}
               </Text>
             </div>
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-16 text-right mr-2">
+              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
                 subject:
               </Text>
-              <Text size="sm" variant="secondary">
+              <Text size="sm" variant="secondary" className="truncate">
                 {message.subject || '(no subject)'}
               </Text>
             </div>
@@ -199,8 +202,8 @@ function AttachmentList({ attachments }: AttachmentListProps) {
 
   return (
     <div 
-      className="border-b border-[var(--border-default)]"
-      style={{ padding: 'var(--space-4)' }}
+      className="border-b border-[var(--border-default)] bg-[var(--bg-secondary)] rounded-[var(--radius-sm)] mx-[var(--space-2)] mb-[var(--space-2)]"
+      style={{ padding: 'var(--space-3)' }}
     >
       <div 
         className="flex items-center"
@@ -222,7 +225,7 @@ function AttachmentList({ attachments }: AttachmentListProps) {
           <Card
             key={index}
             padding="sm"
-            className="flex items-center justify-between bg-[var(--bg-secondary)] border border-[var(--border-default)]"
+            className="flex items-center justify-between bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-[var(--radius-md)] hover:bg-[var(--bg-surface)] transition-colors"
           >
             <div 
               className="flex items-center"
@@ -238,7 +241,11 @@ function AttachmentList({ attachments }: AttachmentListProps) {
                 </Text>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+            >
               Download
             </Button>
           </Card>
@@ -254,7 +261,7 @@ export function MessageView() {
 
   if (!currentMessage) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[var(--bg-tertiary)]">
+      <div className="flex-1 flex items-center justify-center bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] m-[var(--space-2)]">
         <div className="text-center">
           <Text size="lg" variant="secondary">
             Select a message to view
@@ -303,19 +310,21 @@ export function MessageView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)]">
+    <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] m-[var(--space-2)] overflow-hidden shadow-sm border border-[var(--border-default)]">
       {/* Message Header */}
-      <MessageHeader
-        message={currentMessage}
-        isExpanded={isHeaderExpanded}
-        onToggleExpanded={() => setIsHeaderExpanded(!isHeaderExpanded)}
-      />
+      <div className="bg-[var(--bg-tertiary)] rounded-t-[var(--radius-lg)]">
+        <MessageHeader
+          message={currentMessage}
+          isExpanded={isHeaderExpanded}
+          onToggleExpanded={() => setIsHeaderExpanded(!isHeaderExpanded)}
+        />
+      </div>
 
       {/* Attachments */}
       <AttachmentList attachments={currentMessage.attachments} />
 
       {/* Message Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-[var(--bg-tertiary)]">
         <div style={{ padding: 'var(--space-4)' }}>
           <div className="prose prose-sm max-w-none text-[var(--text-primary)]">
             {currentMessage.htmlBody ? (
@@ -331,65 +340,78 @@ export function MessageView() {
 
       {/* Action Buttons */}
       <div 
-        className="border-t border-[var(--border-default)]"
-        style={{ padding: 'var(--space-4)' }}
+        className="border-t border-[var(--border-default)] bg-[var(--bg-secondary)] rounded-b-[var(--radius-lg)]"
+        style={{ padding: 'var(--space-2) var(--space-3)' }}
       >
-        <div 
-          className="flex items-center"
-          style={{ gap: 'var(--space-2)' }}
-        >
-          <Button 
-            onClick={handleReply}
-            variant="primary"
+        <div className="flex items-center justify-between">
+          {/* Primary actions - more compact */}
+          <div 
+            className="flex items-center"
+            style={{ gap: 'var(--space-1)' }}
           >
-            <Reply size={16} />
-            Reply
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={handleReplyAll}
-          >
-            <ReplyAll size={16} />
-            Reply all
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            onClick={handleForward}
-          >
-            <Forward size={16} />
-            Forward
-          </Button>
+            <Button 
+              onClick={handleReply}
+              variant="primary"
+              size="sm"
+              className="h-8 rounded-[var(--radius-md)]"
+            >
+              <Reply size={14} />
+              Reply
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={handleReplyAll}
+              size="sm"
+              className="h-8 rounded-[var(--radius-md)]"
+            >
+              <ReplyAll size={14} />
+              Reply all
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={handleForward}
+              size="sm"
+              className="h-8 rounded-[var(--radius-md)]"
+            >
+              <Forward size={14} />
+              Forward
+            </Button>
+          </div>
 
-          <div className="flex-1" />
-
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            title="Archive"
+          {/* Secondary actions - compact icons */}
+          <div 
+            className="flex items-center"
+            style={{ gap: 'var(--space-1)' }}
           >
-            <Archive size={16} />
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            title="Print"
-          >
-            <Printer size={16} />
-          </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)]"
+              title="Archive"
+            >
+              <Archive size={14} />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)]"
+              title="Delete"
+            >
+              <Trash2 size={14} />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)]"
+              title="Print"
+            >
+              <Printer size={14} />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

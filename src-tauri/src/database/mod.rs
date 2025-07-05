@@ -9,6 +9,7 @@ pub mod operations;
 pub mod operations_v4;
 pub mod schema;
 pub mod schema_v4;
+pub mod schema_v5;
 pub mod schema_onboarding;
 
 // Re-export all the necessary items for easy access from other modules.

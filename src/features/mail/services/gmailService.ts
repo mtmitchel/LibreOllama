@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { 
   GmailMessage, 
   GmailThread, 
@@ -14,144 +15,135 @@ import {
   GMAIL_LABELS 
 } from '../types';
 
-class GmailService {
-  private accessToken: string | null = null;
-  private refreshToken: string | null = null;
-  private baseUrl = 'https://gmail.googleapis.com/gmail/v1';
+// Backend types for Tauri commands
+interface BackendGmailConfig {
+  client_id: string;
+  client_secret: string;
+  redirect_uri: string;
+}
 
-  constructor(private config: GmailAuthConfig) {}
+interface BackendGmailTokens {
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: string;
+  token_type: string;
+}
+
+interface BackendGmailMessage {
+  id: string;
+  thread_id: string;
+  label_ids: string[];
+  snippet: string;
+  payload: BackendGmailPayload;
+  size_estimate?: number;
+  history_id?: string;
+  internal_date?: string;
+}
+
+interface BackendGmailPayload {
+  part_id?: string;
+  mime_type: string;
+  filename?: string;
+  headers: BackendGmailHeader[];
+  body?: BackendGmailBody;
+  parts?: BackendGmailPayload[];
+}
+
+interface BackendGmailHeader {
+  name: string;
+  value: string;
+}
+
+interface BackendGmailBody {
+  attachment_id?: string;
+  size?: number;
+  data?: string;
+}
+
+interface BackendSendEmailRequest {
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  html_body?: string;
+}
+
+class GmailService {
+  private config: BackendGmailConfig;
+  private tokens: BackendGmailTokens | null = null;
+
+  constructor(config: GmailAuthConfig) {
+    this.config = {
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      redirect_uri: config.redirectUri,
+    };
+  }
 
   // Authentication methods
   async authenticate(): Promise<void> {
     try {
-      // Create OAuth URL
-      const authUrl = this.buildAuthUrl();
+      const authUrl = await invoke<string>('gmail_generate_auth_url', { 
+        config: this.config 
+      });
       
-      // In a real application, you would redirect to this URL
-      // For now, we'll simulate the authentication process
-      console.log('Authenticate at:', authUrl);
+      // For now, we'll open the auth URL in the user's browser
+      // In a production app, you'd want to handle this more elegantly
+      console.log('Please visit this URL to authenticate:', authUrl);
       
-      // This would normally be handled by the OAuth flow
-      // For development, we'll need to implement the actual OAuth flow
-      throw new Error('Authentication not implemented - requires OAuth flow');
+      // This would need to be replaced with a proper OAuth flow
+      // For example, opening a window and listening for the callback
+      throw new Error('Authentication flow needs to be completed - please implement OAuth callback handling');
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  private buildAuthUrl(): string {
-    const params = new URLSearchParams({
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
-      response_type: 'code',
-      scope: this.config.scopes.join(' '),
-      access_type: 'offline',
-      prompt: 'consent'
-    });
-
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  }
-
-  async exchangeCodeForTokens(code: string): Promise<GmailAuthResponse> {
+  async exchangeCodeForTokens(code: string, stateToken: string): Promise<GmailAuthResponse> {
     try {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
-          code,
-          grant_type: 'authorization_code',
-          redirect_uri: this.config.redirectUri,
-        }),
+      const tokens = await invoke<BackendGmailTokens>('gmail_exchange_code', {
+        config: this.config,
+        code,
+        stateToken
       });
 
-      if (!response.ok) {
-        throw new Error(`Token exchange failed: ${response.statusText}`);
-      }
-
-      const tokens: GmailAuthResponse = await response.json();
-      this.setTokens(tokens.access_token, tokens.refresh_token);
-      return tokens;
+      this.tokens = tokens;
+      
+      return {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token || '',
+        expires_in: tokens.expires_at ? this.calculateExpiresIn(tokens.expires_at) : 0,
+        token_type: tokens.token_type,
+      };
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  private setTokens(accessToken: string, refreshToken?: string): void {
-    this.accessToken = accessToken;
-    if (refreshToken) {
-      this.refreshToken = refreshToken;
-    }
+  private calculateExpiresIn(expiresAt: string): number {
+    const expiryTime = new Date(expiresAt);
+    const now = new Date();
+    return Math.max(0, Math.floor((expiryTime.getTime() - now.getTime()) / 1000));
+  }
+
+  setTokens(accessToken: string, refreshToken?: string): void {
+    this.tokens = {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token_type: 'Bearer',
+    };
   }
 
   async refreshAccessToken(): Promise<string> {
-    if (!this.refreshToken) {
+    if (!this.tokens?.refresh_token) {
       throw new Error('No refresh token available');
     }
 
     try {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
-          refresh_token: this.refreshToken,
-          grant_type: 'refresh_token',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Token refresh failed: ${response.statusText}`);
-      }
-
-      const tokens: GmailAuthResponse = await response.json();
-      this.setTokens(tokens.access_token);
-      return tokens.access_token;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  // API request methods
-  private async makeRequest<T>(
-    endpoint: string, 
-    options: RequestInit = {}
-  ): Promise<T> {
-    if (!this.accessToken) {
-      throw new Error('No access token available');
-    }
-
-    const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
-      'Authorization': `Bearer ${this.accessToken}`,
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      });
-
-      if (response.status === 401) {
-        // Try to refresh token
-        await this.refreshAccessToken();
-        return this.makeRequest(endpoint, options);
-      }
-
-      if (!response.ok) {
-        const error: GmailApiError = await response.json();
-        throw error;
-      }
-
-      return response.json();
+      // The backend handles token refresh automatically in API calls
+      // This method is kept for compatibility but may not be needed
+      throw new Error('Token refresh is handled automatically by the backend');
     } catch (error) {
       throw this.handleError(error);
     }
@@ -159,8 +151,20 @@ class GmailService {
 
   // Label methods
   async getLabels(): Promise<GmailLabel[]> {
-    const response = await this.makeRequest<GmailListResponse<GmailLabel>>('/users/me/labels');
-    return response.labels || [];
+    if (!this.tokens) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      const labels = await invoke<GmailLabel[]>('gmail_get_labels', {
+        config: this.config,
+        tokens: this.tokens,
+      });
+
+      return labels;
+    } catch (error) {
+      throw this.handleError(error);
+    }
   }
 
   // Message methods
@@ -170,176 +174,190 @@ class GmailService {
     maxResults: number = 50,
     pageToken?: string
   ): Promise<GmailListResponse<{ id: string; threadId: string }>> {
-    const params = new URLSearchParams({
-      labelIds: labelId,
-      maxResults: maxResults.toString(),
-    });
+    if (!this.tokens) {
+      throw new Error('Not authenticated');
+    }
 
-    if (query) params.append('q', query);
-    if (pageToken) params.append('pageToken', pageToken);
+    try {
+      const response = await invoke<GmailListResponse<any>>('gmail_get_messages', {
+        config: this.config,
+        tokens: this.tokens,
+        labelId: labelId,
+        maxResults: maxResults,
+      });
 
-    return this.makeRequest<GmailListResponse<{ id: string; threadId: string }>>(
-      `/users/me/messages?${params.toString()}`
-    );
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
   }
 
   async getMessage(messageId: string): Promise<GmailMessage> {
-    return this.makeRequest<GmailMessage>(`/users/me/messages/${messageId}`);
+    if (!this.tokens) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      const message = await invoke<BackendGmailMessage>('gmail_get_message', {
+        config: this.config,
+        tokens: this.tokens,
+        messageId,
+      });
+
+      // Convert backend format to frontend format
+      return this.convertBackendMessage(message);
+    } catch (error) {
+      throw this.handleError(error);
+    }
   }
 
   async getThread(threadId: string): Promise<GmailThread> {
-    return this.makeRequest<GmailThread>(`/users/me/threads/${threadId}`);
+    // For now, get individual messages - thread support can be added later
+    throw new Error('Thread support not yet implemented - use getMessage instead');
   }
 
   // Message operations
   async markAsRead(messageIds: string[]): Promise<void> {
-    await this.batchModifyMessages(messageIds, [], [GMAIL_LABELS.UNREAD]);
+    // These operations will need to be implemented in the backend
+    throw new Error('Message operations not yet implemented in backend');
   }
 
   async markAsUnread(messageIds: string[]): Promise<void> {
-    await this.batchModifyMessages(messageIds, [GMAIL_LABELS.UNREAD], []);
+    throw new Error('Message operations not yet implemented in backend');
   }
 
   async starMessages(messageIds: string[]): Promise<void> {
-    await this.batchModifyMessages(messageIds, [GMAIL_LABELS.STARRED], []);
+    throw new Error('Message operations not yet implemented in backend');
   }
 
   async unstarMessages(messageIds: string[]): Promise<void> {
-    await this.batchModifyMessages(messageIds, [], [GMAIL_LABELS.STARRED]);
+    throw new Error('Message operations not yet implemented in backend');
   }
 
   async deleteMessages(messageIds: string[]): Promise<void> {
-    await this.batchModifyMessages(messageIds, [GMAIL_LABELS.TRASH], []);
+    throw new Error('Message operations not yet implemented in backend');
   }
 
   async archiveMessages(messageIds: string[]): Promise<void> {
-    await this.batchModifyMessages(messageIds, [], [GMAIL_LABELS.INBOX]);
+    throw new Error('Message operations not yet implemented in backend');
   }
 
-  private async batchModifyMessages(
-    messageIds: string[],
-    addLabelIds: string[],
-    removeLabelIds: string[]
-  ): Promise<void> {
-    await this.makeRequest('/users/me/messages/batchModify', {
-      method: 'POST',
-      body: JSON.stringify({
-        ids: messageIds,
-        addLabelIds,
-        removeLabelIds,
-      }),
-    });
-  }
-
-  // Send email
   async sendEmail(email: ComposeEmail): Promise<GmailMessage> {
-    const rawMessage = this.createRawMessage(email);
-    
-    return this.makeRequest<GmailMessage>('/users/me/messages/send', {
-      method: 'POST',
-      body: JSON.stringify({
-        raw: rawMessage,
-      }),
-    });
-  }
+    if (!this.tokens) {
+      throw new Error('Not authenticated');
+    }
 
-  private createRawMessage(email: ComposeEmail): string {
-    const boundary = `----boundary_${Date.now()}`;
-    
-    let message = '';
-    message += `To: ${email.to.map(addr => this.formatEmailAddress(addr)).join(', ')}\r\n`;
-    
-    if (email.cc && email.cc.length > 0) {
-      message += `Cc: ${email.cc.map(addr => this.formatEmailAddress(addr)).join(', ')}\r\n`;
+    try {
+      const sendRequest: BackendSendEmailRequest = {
+        to: email.to.map(addr => this.formatEmailAddress(addr)),
+        cc: email.cc?.map(addr => this.formatEmailAddress(addr)),
+        bcc: email.bcc?.map(addr => this.formatEmailAddress(addr)),
+        subject: email.subject,
+        body: email.body,
+        html_body: email.htmlBody,
+      };
+
+      const sentMessage = await invoke<BackendGmailMessage>('gmail_send_email', {
+        config: this.config,
+        tokens: this.tokens,
+        email: sendRequest,
+      });
+
+      return this.convertBackendMessage(sentMessage);
+    } catch (error) {
+      throw this.handleError(error);
     }
-    
-    if (email.bcc && email.bcc.length > 0) {
-      message += `Bcc: ${email.bcc.map(addr => this.formatEmailAddress(addr)).join(', ')}\r\n`;
-    }
-    
-    message += `Subject: ${email.subject}\r\n`;
-    message += `MIME-Version: 1.0\r\n`;
-    
-    if (email.attachments && email.attachments.length > 0) {
-      message += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`;
-      message += `--${boundary}\r\n`;
-    }
-    
-    message += `Content-Type: text/plain; charset="UTF-8"\r\n\r\n`;
-    message += `${email.body}\r\n`;
-    
-    // Handle attachments (simplified - would need proper implementation)
-    if (email.attachments && email.attachments.length > 0) {
-      for (const attachment of email.attachments) {
-        message += `--${boundary}\r\n`;
-        message += `Content-Type: application/octet-stream\r\n`;
-        message += `Content-Transfer-Encoding: base64\r\n`;
-        message += `Content-Disposition: attachment; filename="${attachment.name}"\r\n\r\n`;
-        // Would need to convert file to base64
-        message += `[BASE64_ENCODED_FILE]\r\n`;
-      }
-      message += `--${boundary}--\r\n`;
-    }
-    
-    return btoa(message).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
   private formatEmailAddress(address: EmailAddress): string {
-    return address.name ? `${address.name} <${address.email}>` : address.email;
+    if (address.name) {
+      return `${address.name} <${address.email}>`;
+    }
+    return address.email;
   }
 
-  // Parsing methods
-  parseMessage(gmailMessage: GmailMessage): ParsedEmail {
-    const headers = gmailMessage.payload.headers;
-    const getHeader = (name: string) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+  private convertBackendMessage(backendMessage: BackendGmailMessage): GmailMessage {
+    return {
+      id: backendMessage.id,
+      threadId: backendMessage.thread_id,
+      labelIds: backendMessage.label_ids,
+      snippet: backendMessage.snippet,
+      payload: this.convertBackendPayload(backendMessage.payload),
+      sizeEstimate: backendMessage.size_estimate,
+      historyId: backendMessage.history_id,
+      internalDate: backendMessage.internal_date,
+    };
+  }
 
+  private convertBackendPayload(backendPayload: BackendGmailPayload): any {
+    return {
+      partId: backendPayload.part_id,
+      mimeType: backendPayload.mime_type,
+      filename: backendPayload.filename,
+      headers: backendPayload.headers.map(h => ({
+        name: h.name,
+        value: h.value,
+      })),
+      body: backendPayload.body ? {
+        attachmentId: backendPayload.body.attachment_id,
+        size: backendPayload.body.size,
+        data: backendPayload.body.data,
+      } : undefined,
+      parts: backendPayload.parts?.map(p => this.convertBackendPayload(p)),
+    };
+  }
+
+  parseMessage(gmailMessage: GmailMessage): ParsedEmail {
+    const headers = gmailMessage.payload.headers || [];
+    const getHeader = (name: string) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+    
     return {
       id: gmailMessage.id,
       threadId: gmailMessage.threadId,
-      from: this.parseEmailAddress(getHeader('From')),
-      to: this.parseEmailAddresses(getHeader('To')),
-      cc: this.parseEmailAddresses(getHeader('Cc')),
-      bcc: this.parseEmailAddresses(getHeader('Bcc')),
-      subject: getHeader('Subject'),
-      body: this.extractBody(gmailMessage.payload),
+      from: this.parseEmailAddress(getHeader('from')),
+      to: this.parseEmailAddresses(getHeader('to')),
+      cc: this.parseEmailAddresses(getHeader('cc')),
+      bcc: this.parseEmailAddresses(getHeader('bcc')),
+      subject: getHeader('subject'),
+      body: this.extractBody(gmailMessage.payload, 'text/plain'),
       htmlBody: this.extractBody(gmailMessage.payload, 'text/html'),
-      attachments: this.extractAttachments(gmailMessage.payload),
-      date: new Date(parseInt(gmailMessage.internalDate)),
+      snippet: gmailMessage.snippet,
+      date: new Date(gmailMessage.internalDate ? parseInt(gmailMessage.internalDate) : Date.now()),
       isRead: !gmailMessage.labelIds.includes(GMAIL_LABELS.UNREAD),
       isStarred: gmailMessage.labelIds.includes(GMAIL_LABELS.STARRED),
       labels: gmailMessage.labelIds,
-      snippet: gmailMessage.snippet,
+      attachments: this.extractAttachments(gmailMessage.payload),
     };
   }
 
   parseThread(gmailThread: GmailThread): EmailThread {
-    const messages = gmailThread.messages.map(msg => this.parseMessage(msg));
-    const lastMessage = messages[messages.length - 1];
-    const participants = this.extractParticipants(messages);
-
+    const messages = gmailThread.messages?.map(msg => this.parseMessage(msg)) || [];
+    
     return {
       id: gmailThread.id,
-      subject: lastMessage.subject,
-      participants,
       messages,
-      lastMessage,
+      participants: this.extractParticipants(messages),
+      subject: messages[0]?.subject || '',
+      lastMessageDate: messages[messages.length - 1]?.date || new Date(),
       isRead: messages.every(msg => msg.isRead),
       isStarred: messages.some(msg => msg.isStarred),
-      labels: [...new Set(messages.flatMap(msg => msg.labels))],
+      labels: Array.from(new Set(messages.flatMap(msg => msg.labels))),
       messageCount: messages.length,
-      date: lastMessage.date,
     };
   }
 
   private parseEmailAddress(addressString: string): EmailAddress {
-    const match = addressString.match(/^(.+?)\s*<(.+)>$/) || addressString.match(/^(.+)$/);
-    if (!match) return { email: addressString };
+    if (!addressString) return { email: '', name: undefined };
     
-    if (match.length === 3) {
-      return { name: match[1].trim(), email: match[2].trim() };
-    } else {
-      return { email: match[1].trim() };
+    const match = addressString.match(/^(.+?)\s*<(.+?)>$/) || addressString.match(/^(.+)$/);
+    if (match) {
+      if (match[2]) {
+        return { name: match[1].trim().replace(/^"|"$/g, ''), email: match[2].trim() };
+      } else {
+        return { email: match[1].trim(), name: undefined };
+      }
     }
+    return { email: addressString, name: undefined };
   }
 
   private parseEmailAddresses(addressString: string): EmailAddress[] {
@@ -367,10 +385,10 @@ class GmailService {
     
     if (payload.filename && payload.body?.attachmentId) {
       attachments.push({
-        id: payload.body.attachmentId,
         filename: payload.filename,
         mimeType: payload.mimeType,
         size: payload.body.size,
+        attachmentId: payload.body.attachmentId,
       });
     }
     
@@ -384,52 +402,61 @@ class GmailService {
   }
 
   private extractParticipants(messages: ParsedEmail[]): EmailAddress[] {
-    const participants = new Map<string, EmailAddress>();
+    const participantMap = new Map<string, EmailAddress>();
     
-    for (const message of messages) {
-      participants.set(message.from.email, message.from);
-      message.to.forEach(addr => participants.set(addr.email, addr));
-      message.cc?.forEach(addr => participants.set(addr.email, addr));
-    }
+    messages.forEach(message => {
+      const allAddresses = [
+        message.from,
+        ...message.to,
+        ...(message.cc || []),
+        ...(message.bcc || [])
+      ];
+      
+      allAddresses.forEach(addr => {
+        if (addr.email) {
+          participantMap.set(addr.email, addr);
+        }
+      });
+    });
     
-    return Array.from(participants.values());
+    return Array.from(participantMap.values());
   }
 
   private handleError(error: any): Error {
-    if (error.code && error.message) {
-      // Gmail API error
-      return new Error(`Gmail API Error ${error.code}: ${error.message}`);
+    console.error('Gmail service error:', error);
+    
+    if (typeof error === 'string') {
+      return new Error(error);
     }
     
     if (error instanceof Error) {
       return error;
     }
     
-    return new Error('Unknown error occurred');
+    return new Error('An unexpected error occurred');
   }
 
-  // Utility methods
   signOut(): void {
-    this.accessToken = null;
-    this.refreshToken = null;
+    this.tokens = null;
   }
 
   isAuthenticated(): boolean {
-    return !!this.accessToken;
+    return !!this.tokens;
   }
 
   getUserEmail(): string | null {
-    // This would typically be extracted from the token or fetched from the profile
+    // This would need to be stored separately or extracted from token
     return null;
   }
 }
 
-// Export singleton instance
-export const gmailService = new GmailService({
-  clientId: import.meta.env.VITE_GMAIL_CLIENT_ID || '',
-  clientSecret: import.meta.env.VITE_GMAIL_CLIENT_SECRET || '',
-  redirectUri: import.meta.env.VITE_GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback',
-  scopes: GMAIL_SCOPES as unknown as string[],
-});
+// Create a default service instance with placeholder config
+// In a real app, these would come from environment variables or user input
+const defaultConfig: GmailAuthConfig = {
+  clientId: process.env.GMAIL_CLIENT_ID || '',
+  clientSecret: process.env.GMAIL_CLIENT_SECRET || '',
+  redirectUri: process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback',
+  scopes: [...GMAIL_SCOPES],
+};
 
-export default GmailService; 
+export const gmailService = new GmailService(defaultConfig); 

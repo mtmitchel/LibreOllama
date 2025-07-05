@@ -15,8 +15,16 @@ use commands::mcp::*;
 use commands::n8n::*;
 use commands::links::*;
 use commands::canvas::*;
+use commands::gmail::*;
+use commands::token_storage::*;
+use commands::gmail_integration::*;
+use commands::sync_manager::*;
+use commands::cache_manager::*;
+use commands::rate_limiter::*;
 
 // Database imports
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -90,9 +98,28 @@ pub fn run() {
     
     println!("🎨 [BACKEND-DEBUG] WebView2 hardware acceleration enabled for canvas rendering");
 
+    // Initialize OAuth state management for Gmail
+    let oauth_state: commands::gmail::OAuthStateMap = Arc::new(Mutex::new(HashMap::new()));
+
+    // Initialize database manager for state management
+    let db_manager = rt.block_on(async {
+        match database::init_database().await {
+            Ok(manager) => manager,
+            Err(_) => {
+                // Create a dummy manager if initialization failed
+                // This allows the app to start but token storage won't work
+                database::connection::DatabaseManager::new().await.unwrap_or_else(|_| {
+                    panic!("Failed to create database manager");
+                })
+            }
+        }
+    });
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .manage(oauth_state)
+        .manage(db_manager)
         .invoke_handler(tauri::generate_handler![
             greet,
             database_health_check,
@@ -182,10 +209,54 @@ pub fn run() {
             get_link_statistics,
             // Canvas commands for Konva.js integration
             save_canvas_data,
-            load_canvas_data
+            load_canvas_data,
+            // Gmail API commands
+            gmail_generate_auth_url,
+            gmail_exchange_code,
+            gmail_get_labels,
+            gmail_get_messages,
+            gmail_get_message,
+            gmail_send_email,
+            // Token storage commands
+            store_gmail_tokens,
+            get_gmail_tokens,
+            get_gmail_accounts,
+            remove_gmail_tokens,
+            update_gmail_sync_timestamp,
+            check_token_validity,
+            // Gmail integration commands (email parsing and processing)
+            parse_gmail_message,
+            parse_gmail_thread,
+            search_and_parse_gmail_messages,
+            extract_text_from_html,
+            sync_gmail_messages,
+            get_gmail_attachment,
+            // Sync management commands
+            initialize_sync_state,
+            perform_full_sync,
+            perform_incremental_sync,
+            get_sync_state,
+            pause_sync,
+            resume_sync,
+            // Cache management commands
+            initialize_cache_config,
+            get_cached_messages,
+            cache_message,
+            get_cache_stats,
+            cleanup_cache,
+            enable_offline_access,
+            get_offline_messages,
+            preload_for_offline,
+            // Rate limiting and batch operation commands
+            initialize_rate_limiter,
+            get_quota_status,
+            get_queue_stats,
+            execute_rate_limited_request,
+            execute_batch_requests
         ])
         .setup(|_app| {
             println!("✅ [BACKEND-SUCCESS] All Tauri commands registered successfully");
+            println!("🔒 [BACKEND-SUCCESS] Gmail OAuth state management initialized");
             println!("✅ [BACKEND-SUCCESS] LibreOllama backend is ready for frontend connections");
             Ok(())
         })

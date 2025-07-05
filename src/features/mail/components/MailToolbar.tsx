@@ -87,7 +87,7 @@ export function MailToolbar() {
       {/* Left Side - Selection and Actions */}
       <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
         {/* Select All Checkbox */}
-        <div className="relative">
+        <div className="relative w-3 flex items-center justify-center">
           <input
             type="checkbox"
             checked={isAllSelected}
@@ -95,7 +95,8 @@ export function MailToolbar() {
               if (input) input.indeterminate = isPartiallySelected;
             }}
             onChange={handleSelectAll}
-            className="w-4 h-4 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded focus:ring-[var(--accent-primary)] focus:ring-2"
+            className="w-3 h-3 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded-none focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0 cursor-pointer"
+            style={{ transform: 'scale(0.5)' }}
           />
         </div>
 

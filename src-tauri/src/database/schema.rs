@@ -45,6 +45,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         crate::database::schema_v4::run_migration_v4(conn)?;
         record_migration(conn, 4)?;
     }
+    
+    if current_version < 5 {
+        crate::database::schema_v5::run_migration_v5(conn)?;
+        record_migration(conn, 5)?;
+    }
 
     Ok(())
 }

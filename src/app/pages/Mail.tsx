@@ -70,28 +70,32 @@ export default function Mail() {
         onToggle={toggleMailSidebar}
       />
 
-      {/* Main Mail Container */}
-      <div className="flex-1 flex flex-col h-full bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] min-w-0">
+      {/* Main Mail Container - Softer design with rounded corners */}
+      <div className="flex-1 flex flex-col h-full bg-[var(--bg-secondary)] rounded-[var(--radius-xl)] min-w-0 overflow-hidden shadow-sm border border-[var(--border-default)]">
         {/* Search Bar */}
-        <div className="flex-shrink-0 p-[var(--space-4)] border-b border-[var(--border-default)]">
+        <div className="flex-shrink-0 p-[var(--space-4)] bg-[var(--bg-tertiary)] rounded-t-[var(--radius-xl)]">
           <MailSearchBar />
         </div>
 
         {/* Mail Toolbar */}
-        <div className="flex-shrink-0 border-b border-[var(--border-default)]">
+        <div className="flex-shrink-0 bg-[var(--bg-tertiary)] border-b border-[var(--border-default)]">
           <MailToolbar />
         </div>
 
-        {/* Content Area - Flexible Growth */}
-        <div className="flex-1 flex min-h-0">
-          {/* Message List */}
-          <div className={`${currentMessage ? 'w-1/2' : 'flex-1'} flex flex-col border-r border-[var(--border-default)]`}>
+        {/* Content Area - Card-like design with softer borders */}
+        <div className="flex-1 flex min-h-0 overflow-hidden bg-[var(--bg-tertiary)]">
+          {/* Message List - Softer styling */}
+          <div className={`${
+            currentMessage 
+              ? `${isContextOpen ? 'w-72' : 'w-80'} flex-shrink-0` 
+              : 'flex-1'
+          } flex flex-col ${currentMessage ? 'border-r border-[var(--border-default)]' : ''} min-w-0 overflow-hidden bg-[var(--bg-tertiary)]`}>
             <MessageList />
           </div>
 
-          {/* Message View */}
+          {/* Message View - Card-like styling */}
           {currentMessage && (
-            <div className="w-1/2 flex flex-col">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--bg-tertiary)]">
               <MessageView />
             </div>
           )}

@@ -54,19 +54,20 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
       onClick={() => onMessageClick(message)}
     >
       <div 
-        className="flex items-center"
+        className="flex items-center overflow-hidden w-full"
         style={{ 
-          padding: 'var(--space-3) var(--space-4)',
-          gap: 'var(--space-3)'
+          padding: 'var(--space-2) var(--space-3)',
+          gap: 'var(--space-2)'
         }}
       >
         {/* Checkbox */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 w-3 flex items-center justify-center">
           <input
             type="checkbox"
             checked={isSelected}
             onChange={handleCheckboxChange}
-            className="w-4 h-4 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded focus:ring-[var(--accent-primary)] focus:ring-2"
+            className="w-3 h-3 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded-none focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0 cursor-pointer"
+            style={{ transform: 'scale(0.5)' }}
           />
         </div>
 
@@ -88,7 +89,7 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
         </div>
 
         {/* Sender */}
-        <div className="flex-shrink-0 w-48">
+        <div className="flex-shrink-0 w-28 min-w-0">
           <Text 
             size="sm" 
             weight={!message.isRead ? 'semibold' : 'normal'}
@@ -100,22 +101,23 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
         </div>
 
         {/* Subject and Snippet */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline" style={{ gap: 'var(--space-2)' }}>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-baseline min-w-0" style={{ gap: 'var(--space-1)' }}>
             <Text 
               size="sm" 
               weight={!message.isRead ? 'semibold' : 'normal'}
               variant="body"
-              className="truncate"
+              className="truncate flex-shrink-0"
+              style={{ maxWidth: '180px' }}
             >
-              {truncateText(message.subject || '(no subject)', 50)}
+              {truncateText(message.subject || '(no subject)', 35)}
             </Text>
             <Text 
               size="sm" 
               variant="secondary"
-              className="truncate"
+              className="truncate flex-1 min-w-0"
             >
-              — {truncateText(message.snippet, 100)}
+              — {truncateText(message.snippet, 60)}
             </Text>
           </div>
         </div>
@@ -128,11 +130,12 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
         )}
 
         {/* Date */}
-        <div className="flex-shrink-0 w-20 text-right">
+        <div className="flex-shrink-0 w-12 text-right min-w-0">
           <Text 
             size="xs" 
             weight={!message.isRead ? 'semibold' : 'normal'}
             variant={!message.isRead ? 'body' : 'secondary'}
+            className="truncate"
           >
             {formatDate(message.date)}
           </Text>

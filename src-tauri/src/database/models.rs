@@ -313,3 +313,334 @@ impl From<String> for PreferenceType {
         }
     }
 }
+
+// Gmail-related models for Gmail integration
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GmailAccount {
+    pub id: String,
+    pub email_address: String,
+    pub display_name: Option<String>,
+    pub profile_picture_url: Option<String>,
+    pub access_token_encrypted: String,
+    pub refresh_token_encrypted: Option<String>,
+    pub token_expires_at: Option<String>,
+    pub scopes: Vec<String>,
+    pub is_active: bool,
+    pub last_sync_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub user_id: String,
+}
+
+impl GmailAccount {
+    pub fn new(
+        id: String,
+        email_address: String,
+        display_name: Option<String>,
+        access_token_encrypted: String,
+        scopes: Vec<String>,
+        user_id: String,
+    ) -> Self {
+        let now = chrono::Utc::now().to_rfc3339();
+        Self {
+            id,
+            email_address,
+            display_name,
+            profile_picture_url: None,
+            access_token_encrypted,
+            refresh_token_encrypted: None,
+            token_expires_at: None,
+            scopes,
+            is_active: true,
+            last_sync_at: None,
+            created_at: now.clone(),
+            updated_at: now,
+            user_id,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GmailLabel {
+    pub id: String,
+    pub account_id: String,
+    pub name: String,
+    pub message_list_visibility: String,
+    pub label_list_visibility: String,
+    pub label_type: String,
+    pub messages_total: Option<i32>,
+    pub messages_unread: Option<i32>,
+    pub threads_total: Option<i32>,
+    pub threads_unread: Option<i32>,
+    pub color_text: Option<String>,
+    pub color_background: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl GmailLabel {
+    pub fn new(
+        id: String,
+        account_id: String,
+        name: String,
+        message_list_visibility: String,
+        label_list_visibility: String,
+        label_type: String,
+    ) -> Self {
+        let now = Local::now().naive_local();
+        Self {
+            id,
+            account_id,
+            name,
+            message_list_visibility,
+            label_list_visibility,
+            label_type,
+            messages_total: Some(0),
+            messages_unread: Some(0),
+            threads_total: Some(0),
+            threads_unread: Some(0),
+            color_text: None,
+            color_background: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GmailThread {
+    pub id: String,
+    pub account_id: String,
+    pub history_id: Option<String>,
+    pub snippet: Option<String>,
+    pub message_count: i32,
+    pub is_read: bool,
+    pub is_starred: bool,
+    pub has_attachments: bool,
+    pub participants: Vec<String>,
+    pub subject: Option<String>,
+    pub last_message_date: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl GmailThread {
+    pub fn new(id: String, account_id: String) -> Self {
+        let now = Local::now().naive_local();
+        Self {
+            id,
+            account_id,
+            history_id: None,
+            snippet: None,
+            message_count: 0,
+            is_read: false,
+            is_starred: false,
+            has_attachments: false,
+            participants: Vec::new(),
+            subject: None,
+            last_message_date: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GmailMessage {
+    pub id: String,
+    pub thread_id: String,
+    pub account_id: String,
+    pub history_id: Option<String>,
+    pub internal_date: Option<NaiveDateTime>,
+    pub size_estimate: Option<i32>,
+    pub snippet: Option<String>,
+    pub is_read: bool,
+    pub is_starred: bool,
+    pub is_important: bool,
+    pub from_email: String,
+    pub from_name: Option<String>,
+    pub to_emails: Vec<String>,
+    pub cc_emails: Vec<String>,
+    pub bcc_emails: Vec<String>,
+    pub subject: Option<String>,
+    pub date_header: Option<NaiveDateTime>,
+    pub message_id_header: Option<String>,
+    pub reply_to: Option<String>,
+    pub body_text: Option<String>,
+    pub body_html: Option<String>,
+    pub raw_headers: serde_json::Value,
+    pub has_attachments: bool,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl GmailMessage {
+    pub fn new(
+        id: String,
+        thread_id: String,
+        account_id: String,
+        from_email: String,
+    ) -> Self {
+        let now = Local::now().naive_local();
+        Self {
+            id,
+            thread_id,
+            account_id,
+            history_id: None,
+            internal_date: None,
+            size_estimate: None,
+            snippet: None,
+            is_read: false,
+            is_starred: false,
+            is_important: false,
+            from_email,
+            from_name: None,
+            to_emails: Vec::new(),
+            cc_emails: Vec::new(),
+            bcc_emails: Vec::new(),
+            subject: None,
+            date_header: None,
+            message_id_header: None,
+            reply_to: None,
+            body_text: None,
+            body_html: None,
+            raw_headers: serde_json::Value::Object(serde_json::Map::new()),
+            has_attachments: false,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GmailAttachment {
+    pub id: String,
+    pub message_id: String,
+    pub account_id: String,
+    pub attachment_id: String,
+    pub filename: String,
+    pub mime_type: String,
+    pub size_bytes: i64,
+    pub is_downloaded: bool,
+    pub local_path: Option<String>,
+    pub download_date: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
+}
+
+impl GmailAttachment {
+    pub fn new(
+        id: String,
+        message_id: String,
+        account_id: String,
+        attachment_id: String,
+        filename: String,
+        mime_type: String,
+        size_bytes: i64,
+    ) -> Self {
+        let now = Local::now().naive_local();
+        Self {
+            id,
+            message_id,
+            account_id,
+            attachment_id,
+            filename,
+            mime_type,
+            size_bytes,
+            is_downloaded: false,
+            local_path: None,
+            download_date: None,
+            created_at: now,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GmailSyncState {
+    pub id: String,
+    pub account_id: String,
+    pub sync_type: String,
+    pub last_sync_at: NaiveDateTime,
+    pub last_history_id: Option<String>,
+    pub next_page_token: Option<String>,
+    pub sync_status: String,
+    pub error_message: Option<String>,
+    pub messages_synced: Option<i32>,
+    pub total_messages: Option<i32>,
+    pub started_at: Option<NaiveDateTime>,
+    pub completed_at: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl GmailSyncState {
+    pub fn new(
+        id: String,
+        account_id: String,
+        sync_type: String,
+        sync_status: String,
+    ) -> Self {
+        let now = Local::now().naive_local();
+        Self {
+            id,
+            account_id,
+            sync_type,
+            last_sync_at: now,
+            last_history_id: None,
+            next_page_token: None,
+            sync_status,
+            error_message: None,
+            messages_synced: Some(0),
+            total_messages: Some(0),
+            started_at: None,
+            completed_at: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GmailDraft {
+    pub id: String,
+    pub message_id: Option<String>,
+    pub account_id: String,
+    pub to_emails: Vec<String>,
+    pub cc_emails: Vec<String>,
+    pub bcc_emails: Vec<String>,
+    pub subject: Option<String>,
+    pub body_text: Option<String>,
+    pub body_html: Option<String>,
+    pub attachments: serde_json::Value,
+    pub is_reply: bool,
+    pub reply_to_message_id: Option<String>,
+    pub thread_id: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl GmailDraft {
+    pub fn new(
+        id: String,
+        account_id: String,
+        to_emails: Vec<String>,
+    ) -> Self {
+        let now = Local::now().naive_local();
+        Self {
+            id,
+            message_id: None,
+            account_id,
+            to_emails,
+            cc_emails: Vec::new(),
+            bcc_emails: Vec::new(),
+            subject: None,
+            body_text: None,
+            body_html: None,
+            attachments: serde_json::Value::Array(Vec::new()),
+            is_reply: false,
+            reply_to_message_id: None,
+            thread_id: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}

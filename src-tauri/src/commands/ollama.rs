@@ -1,13 +1,15 @@
+use anyhow::Result as AnyResult;
 use serde::{Deserialize, Serialize};
 use reqwest;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use sysinfo::{System, Pid};
 use tauri::{AppHandle, Emitter};
 use tokio::time::{sleep, Duration};
 use futures_util::StreamExt;
+use bytes::Bytes;
 
 // Global sidecar process management
 lazy_static::lazy_static! {

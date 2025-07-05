@@ -4,10 +4,10 @@ export interface GmailMessage {
   threadId: string;
   labelIds: string[];
   snippet: string;
-  historyId: string;
-  internalDate: string;
+  historyId?: string;
+  internalDate?: string;
   payload: GmailPayload;
-  sizeEstimate: number;
+  sizeEstimate?: number;
   raw?: string;
 }
 
@@ -90,12 +90,11 @@ export interface EmailThread {
   subject: string;
   participants: EmailAddress[];
   messages: ParsedEmail[];
-  lastMessage: ParsedEmail;
+  lastMessageDate: Date;
   isRead: boolean;
   isStarred: boolean;
   labels: string[];
   messageCount: number;
-  date: Date;
 }
 
 export interface ComposeEmail {
@@ -104,6 +103,7 @@ export interface ComposeEmail {
   bcc?: EmailAddress[];
   subject: string;
   body: string;
+  htmlBody?: string;
   attachments?: File[];
   threadId?: string;
   replyToMessageId?: string;
