@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Progress } from "../../../components/ui";
+import { Card, Progress, Heading, Text, Caption } from "../../../components/ui";
 import { MoreHorizontal } from "lucide-react";
 import { Task } from "../../../core/lib/mockData";
 
@@ -15,29 +15,24 @@ export const ProjectProgressWidget: React.FC<ProjectProgressWidgetProps> = ({
   tasks 
 }) => {
   return (
-    <Card className="p-6">
+    <Card>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
-        <span className="text-sm font-medium text-primary bg-accent-soft px-3 py-1 rounded-full">
+        <Heading level={3}>{title}</Heading>
+        <Text variant="body" size="sm" weight="medium" className="bg-accent-soft text-accent-primary px-3 py-1 rounded-xl">
           {percentage}% complete
-        </span>
+        </Text>
       </div>
       <div className="mb-4">
-        <div className="w-full bg-bg-secondary rounded-full h-2.5">
-          <div 
-            className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-out" 
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
+        <Progress value={percentage} max={100} />
       </div>
-      <ul className="space-y-3">
+      <ul className="flex flex-col gap-3">
         {tasks.map((item) => (
           <li key={item.id} className="flex items-center gap-3">
             {item.icon}
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary truncate">{item.text}</div>
+              <Text variant="body" size="sm" weight="medium" className="truncate">{item.text}</Text>
             </div>
-            <div className="text-xs text-text-secondary flex-shrink-0">{item.date}</div>
+            <Text as="div" size="sm" variant="secondary" className="flex-shrink-0">{item.date}</Text>
           </li>
         ))}
       </ul>

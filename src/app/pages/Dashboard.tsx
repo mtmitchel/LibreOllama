@@ -9,6 +9,7 @@ import {
 } from "../../features/dashboard/components";
 import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetErrorBoundary";
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
+import { LoadingState, Heading, Text } from "../../components/ui";
 import {
   migrationSprintTasks,
   todaysFocusItems,
@@ -54,7 +55,12 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="w-full">
+      <div className="w-full p-6">
+        <LoadingState 
+          size="lg" 
+          text="Loading your dashboard..." 
+          className="mb-8" 
+        />
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <WidgetSkeleton rows={3} />
           <WidgetSkeleton rows={2} />
@@ -66,7 +72,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="w-full p-4 md:p-6">
+    <div className="w-full p-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <WidgetErrorBoundary widgetName="Project Progress">
           <ProjectProgressWidget 

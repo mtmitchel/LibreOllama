@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Button, Input, Badge } from '../../components/ui';
+import { Card, AddNewCard, Button, Input, Badge, Tag, Heading, Text } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle } from 'lucide-react';
 
@@ -103,80 +103,89 @@ const Agents: React.FC = () => {
 
   return (
     <div className="w-full p-4 md:p-6">
-
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredAgents.map((agent) => (
-          <Card key={agent.id} className="flex flex-col gap-4 p-6">
+          <Card 
+            key={agent.id} 
+            className="flex flex-col gap-4 p-6 transition-all duration-200 hover:scale-[1.02]"
+          >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+                <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-[var(--accent-ghost)] text-[var(--accent-primary)]">
                   {getAgentIcon(agent.icon)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">{agent.name}</h3>
-                  <p className="text-sm text-muted-foreground">{agent.model}</p>
+                  <Heading level={4} className="text-base">
+                    {agent.name}
+                  </Heading>
+                  <Text variant="muted" size="sm">
+                    {agent.model}
+                  </Text>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    agent.status === 'online'
-                      ? 'bg-success'
-                      : 'bg-text-tertiary'
-                  }`}
-                  title={agent.status === 'online' ? 'Online' : 'Offline'}
-                />
-                <span className={`text-xs font-medium ${
-                  agent.status === 'online'
-                    ? 'text-green-600'
-                    : 'text-muted-foreground'
-                }`}>
-                  {agent.status}
-                </span>
-              </div>
+              <Tag 
+                variant="dot" 
+                color={agent.status === 'online' ? 'success' : 'muted'} 
+                size="sm"
+              >
+                {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
+              </Tag>
             </div>
-            <p className="text-muted-foreground text-sm leading-relaxed">{agent.description}</p>
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-foreground">Capabilities</h4>
+            
+            <Text variant="muted" size="sm" lineHeight="relaxed">
+              {agent.description}
+            </Text>
+            
+            <div className="flex flex-col gap-2">
+              <Heading level={4} className="text-sm font-medium">
+                Capabilities
+              </Heading>
               <div className="flex flex-wrap gap-2">
                 {agent.capabilities.map((capability, index) => (
-                  <span
+                  <Tag
                     key={index}
-                    className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md font-medium"
+                    variant="ghost"
+                    color="primary"
+                    size="sm"
                   >
                     {capability}
-                  </span>
+                  </Tag>
                 ))}
               </div>
             </div>
-            <div className="flex items-center gap-2 pt-2 border-t border-border">
-              <button
-                className="flex items-center gap-2 px-3 py-2 bg-muted text-foreground rounded-md text-sm font-medium hover:bg-muted/80 transition-colors"
+            
+            <div className="flex items-center gap-2 pt-4 mt-auto border-t border-[var(--border-default)]">
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => handleConfigureAgent(agent.id)}
+                className="gap-2"
               >
-                <Settings2 className="w-4 h-4" />
+                <Settings2 size={16} />
                 Configure
-              </button>
-              <button
-                className="flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => handleDeleteAgent(agent.id)}
+                className="ml-auto text-[var(--text-muted)] hover:bg-[var(--error-ghost)] hover:text-[var(--error)]"
+                aria-label="Delete agent"
                 title="Delete agent"
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                <Trash2 size={16} />
+              </Button>
             </div>
           </Card>
         ))}
         
         {/* Create New Agent Card */}
-        <div
-          className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors min-h-[280px]"
-          onClick={handleCreateAgent}
-        >
-          <PlusCircle className="w-12 h-12 text-muted-foreground mb-4" />
-          <h3 className="font-semibold text-foreground mb-2">Create a new agent</h3>
-          <p className="text-sm text-muted-foreground">Define capabilities and select a model.</p>
-        </div>
+        <AddNewCard
+          title="Create a new agent"
+          description="Define capabilities and select a model."
+          icon={<PlusCircle size={48} />}
+          onAdd={handleCreateAgent}
+          minHeight="280px"
+        />
       </div>
     </div>
   );

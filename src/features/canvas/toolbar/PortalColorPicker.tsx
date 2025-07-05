@@ -1,7 +1,7 @@
 // Portal-based Color Picker to prevent layout shifts
 import React, { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { designSystem } from '../../../core/design-system';
+
 import { CanvasElement } from '../types/enhanced.types';
 import { HexColorPicker } from 'react-colorful';
 
@@ -60,17 +60,17 @@ const PortalColorPicker: React.FC<PortalColorPickerProps> = ({
     { value: '#FFDFBA', label: 'Peach' },            // Complement
     { value: '#E6BAFF', label: 'Lavender' }          // Complement
   ] : [
-    { value: '#3B82F6', label: 'Blue' },
-    { value: '#10B981', label: 'Green' },
-    { value: '#F59E0B', label: 'Orange' },
-    { value: '#EF4444', label: 'Red' },
-    { value: '#8B5CF6', label: 'Purple' },
+    { value: 'var(--accent-primary)', label: 'Blue' },
+    { value: 'var(--success)', label: 'Green' },
+    { value: 'var(--warning)', label: 'Orange' },
+    { value: 'var(--error)', label: 'Red' },
+    { value: 'var(--accent-violet)', label: 'Purple' },
     { value: '#06B6D4', label: 'Cyan' },
     { value: '#84CC16', label: 'Lime' },
     { value: '#F97316', label: 'Orange' },
-    { value: '#6B7280', label: 'Gray' },
-    { value: '#1F2937', label: 'Dark' },
-    { value: '#FFFFFF', label: 'White' },
+    { value: 'var(--text-muted)', label: 'Gray' },
+    { value: 'var(--text-primary)', label: 'Dark' },
+    { value: 'var(--bg-primary)', label: 'White' },
     { value: 'transparent', label: 'None' }
   ];
 

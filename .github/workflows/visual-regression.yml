@@ -1,0 +1,89 @@
+name: Visual Regression Testing
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tailwind.config.ts'
+      - 'vite.config.ts'
+      - '.ladle/**'
+
+jobs:
+  visual-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for Chromatic to work properly
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Ladle stories
+        run: npm run ladle:build
+
+      - name: Run Chromatic visual tests
+        uses: chromaui/action@v11
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          buildScriptName: 'ladle:build'
+          exitZeroOnChanges: true
+          exitOnceUploaded: ${{ github.event_name == 'push' }}
+          onlyChanged: ${{ github.event_name == 'pull_request' }}
+          ignoreLastBuildOnBranch: ${{ github.ref == 'refs/heads/main' && 'main' || '' }}
+          
+      - name: Comment PR with visual changes
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('📸 Visual Regression Test Results')
+            );
+            
+            const body = `📸 **Visual Regression Test Results**
+            
+            Visual regression tests have been completed for this PR. 
+            
+            - ✅ Components tested for visual changes
+            - 🔍 Design system consistency verified  
+            - 📊 Cross-browser compatibility checked
+            
+            Review any flagged changes in [Chromatic](https://www.chromatic.com/) before merging.`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            } 

@@ -17,7 +17,7 @@ import {
   isImageElement,
   isStickyNoteElement
 } from '../types/enhanced.types';
-import { designSystem } from '../../../core/design-system';
+import { canvasTheme } from '../utils/canvasTheme';
 import { TextShape } from '../shapes/TextShape';
 import { ImageShape } from '../shapes/ImageShape';
 import { StickyNoteShape } from '../shapes/StickyNoteShape';
@@ -99,11 +99,11 @@ export const MainLayer: React.FC<MainLayerProps> = ({
 
     // Apply selection styling to elements that support it (not tables or sticky notes)
     if (element.type !== 'table' && element.type !== 'sticky-note') {
-      konvaElementProps.stroke = isSelected ? designSystem.colors.primary[500] : ('stroke' in element ? element.stroke : undefined);
+      konvaElementProps.stroke = isSelected ? canvasTheme.colors.primary : ('stroke' in element ? element.stroke : undefined);
       konvaElementProps.strokeWidth = isSelected 
         ? ((('strokeWidth' in element ? element.strokeWidth : undefined) || 1) + 1.5) 
         : (('strokeWidth' in element ? element.strokeWidth : undefined) || 1);
-      konvaElementProps.shadowColor = isSelected ? designSystem.colors.primary[300] : undefined;
+      konvaElementProps.shadowColor = isSelected ? canvasTheme.colors.primaryLight : undefined;
       konvaElementProps.shadowBlur = isSelected ? 10 : 0;
       konvaElementProps.shadowOpacity = isSelected ? 0.7 : 0;
     }

@@ -23,14 +23,14 @@ export const mockConversations: ChatConversation[] = [
     lastMessage: "Let's discuss the component architecture...", 
     timestamp: "30m ago", 
     isPinned: true, 
-    participants: 2 
+    participants: 2
   },
   { 
     id: '2', 
     title: 'Code review session', 
     lastMessage: 'The implementation looks good, but...', 
     timestamp: "2h ago", 
-    participants: 1 
+    participants: 1
   },
   { 
     id: '3', 
@@ -51,7 +51,7 @@ export const mockConversations: ChatConversation[] = [
     title: 'UI Components Review', 
     lastMessage: 'The new button variants look great!', 
     timestamp: "3d ago", 
-    participants: 2 
+    participants: 2
   },
 ];
 

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Button, Textarea } from '../../../components/ui';
+import { Button, Input } from '../../../components/ui';
 import { Paperclip, Send } from 'lucide-react';
 
 interface ChatInputProps {
@@ -19,55 +19,55 @@ export function ChatInput({
   onSendMessage,
   disabled = false
 }: ChatInputProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onSendMessage(e as any);
     }
   };
 
   return (
-    <footer className="px-6 py-5 border-t-2 border-border/30 flex-shrink-0 bg-background/80 backdrop-blur-sm">
-      <form onSubmit={onSendMessage} className="flex items-end gap-3">
-        {/* Attachment Button */}
+    <footer className="flex-shrink-0 bg-[var(--bg-surface)]/80 backdrop-blur-sm">
+      {/* Invisible Container - For Alignment Only */}
+      <div className="flex items-center gap-[var(--space-3)] p-[var(--space-4)]">
+        {/* Left: Attachment IconButton */}
         <Button 
           variant="ghost" 
           size="icon" 
           type="button" 
           title="Attach files"
-          className="p-3 hover:text-primary hover:scale-105 transition-all duration-200"
+          className="flex-shrink-0"
         >
-          <Paperclip className="w-4 h-4" />
+          <Paperclip size={16} />
         </Button>
         
-        {/* Text Input */}
-        <div className="flex-1 relative">
-          <Textarea 
-            ref={textareaRef}
+        {/* Center: Standard TextField with Own Styling */}
+        <form onSubmit={onSendMessage} className="flex-1">
+          <Input 
+            ref={inputRef}
             value={newMessage}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onMessageChange(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onMessageChange(e.target.value)}
             placeholder={`Message ${selectedChatTitle || 'AI'}...`}
-            className="w-full min-h-[52px] max-h-32 py-4 px-4 rounded-xl resize-none focus:ring-2 focus:ring-primary disabled:opacity-50 h-auto border-2 transition-all duration-200"
             onKeyDown={handleKeyDown}
             disabled={disabled || !selectedChatId}
-            rows={1}
           />
-        </div>
+        </form>
         
-        {/* Send Button */}
+        {/* Right: Send IconButton */}
         <Button
-          type="submit"
+          type="button"
+          onClick={(e) => onSendMessage(e as any)}
           variant={newMessage.trim() && selectedChatId ? "primary" : "secondary"}
           size="icon"
-          className={`p-3.5 transition-all duration-200 ${newMessage.trim() && selectedChatId ? "hover:scale-105 shadow-primary/25" : ""}`}
           disabled={!newMessage.trim() || !selectedChatId || disabled}
-          title="Send message (⌘↵)"
+          title="Send message (Enter)"
+          className="flex-shrink-0"
         >
-          <Send className="w-4 h-4" />
+          <Send size={16} />
         </Button>
-      </form>
+      </div>
     </footer>
   );
 }

@@ -7,8 +7,7 @@ import {
   Workflow
 } from 'lucide-react';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import styles from './ModernToolbar.module.css';
-import '../../../core/design-system/globals.css';
+import { Button } from '../../../components/ui';
 
 const basicShapes = [
   { id: 'draw-rectangle', name: 'Rectangle', icon: Square },
@@ -30,6 +29,7 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   
   const currentShapeTool = allShapeTools.find(tool => tool.id === selectedTool) || basicShapes[0]!;
   const CurrentIcon = currentShapeTool.icon;
+  const isActive = allShapeTools.some(tool => tool.id === selectedTool);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -52,39 +52,41 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
   };
   
   return (
-    <div className={styles.dropdownContainer} ref={dropdownRef}>
-      <button
+    <div className="relative" ref={dropdownRef}>
+      <Button
+        variant={isActive ? "primary" : "ghost"}
+        size="icon"
         onClick={toggleDropdown}
-        className={`${styles.toolButton} ${
-          allShapeTools.some(tool => tool.id === selectedTool) ? styles.active : ''
-        }`}
+        className="h-9 w-9 relative"
         title={`Shapes (${currentShapeTool.name} selected)`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         <CurrentIcon size={16} />
-        <ChevronDown size={12} style={{ marginLeft: '4px' }} />
-      </button>
+        <ChevronDown size={10} className="absolute bottom-0 right-0" />
+      </Button>
       
       {isOpen && (
-        <div className={styles.shapesDropdownContent} role="menu">
-          <div className={styles.shapesDropdownSection}>
-            <div className={styles.shapesDropdownHeader}>Shapes</div>
-            <div className={styles.shapesGrid}>
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-bg-elevated border border-border-default rounded-xl shadow-xl backdrop-blur-sm p-2 z-[1200] min-w-max">
+          <div className="flex flex-col gap-1">
+            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide text-center px-2 py-1">
+              Shapes
+            </div>
+            <div className="flex gap-1 justify-center items-center">
               {basicShapes.map(tool => {
                 const IconComponent = tool.icon;
-                const isActive = selectedTool === tool.id;
+                const isToolActive = selectedTool === tool.id;
                 return (
-                  <button
+                  <Button
                     key={tool.id}
+                    variant={isToolActive ? "primary" : "ghost"}
+                    size="icon"
                     onClick={() => handleShapeSelect(tool.id)}
-                    className={`${styles.shapesDropdownItem} ${isActive ? styles.active : ''}`}
+                    className="h-9 w-9 flex items-center justify-center"
                     title={tool.name}
-                    role="menuitem"
                   >
-                    <IconComponent size={20} />
-                    <span>{tool.name}</span>
-                  </button>
+                    <IconComponent size={16} />
+                  </Button>
                 );
               })}
             </div>

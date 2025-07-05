@@ -34,7 +34,7 @@ interface PageLayoutProps {
 
 export const PageLayout: React.FC<PageLayoutProps> = ({ headerProps, children }) => {
   return (
-    <div className="flex flex-col h-full w-full bg-background">
+    <div className="flex flex-col h-full w-full bg-[var(--bg-primary)]">
       <UnifiedHeader {...headerProps} />
       {/* This <main> tag now enforces consistent padding for all pages */}
       <main className="flex-1 overflow-y-auto p-6 lg:p-8">

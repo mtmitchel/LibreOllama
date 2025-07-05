@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useHeader, HeaderProps } from '../contexts/HeaderContext';
-import { Button, Card } from '../../components/ui';
+import { Button, Card, Text, Heading, Caption, StatusBadge, Progress, Tag } from '../../components/ui';
 import {
   Plus,
   Settings,
@@ -83,7 +83,7 @@ const mockProjects: Project[] = [
     id: '1',
     name: 'UI Migration Sprint',
     description: 'Modernizing the interface and migrating to new component architecture for better performance and maintainability across the platform.',
-    color: 'var(--accent-primary)',
+            color: 'var(--primary)',
     active: true,
     progress: 75,
     statusTag: 'Active',
@@ -199,70 +199,35 @@ const mockProgressTasks: ProgressTask[] = [
     startDate: '2025-06-18',
     endDate: '2025-07-08',
     progress: 20,
-    status: 'in-progress',
+    status: 'not-started',
     assignee: 'Alex K.',
     dependencies: ['1']
   },
   {
     id: '5',
-    name: 'Integration testing',
+    name: 'Testing & QA',
     startDate: '2025-07-01',
     endDate: '2025-07-15',
     progress: 0,
     status: 'not-started',
-    assignee: 'Lisa T.',
+    assignee: 'Lisa S.',
     dependencies: ['3', '4']
-  },
-  {
-    id: '6',
-    name: 'User acceptance testing',
-    startDate: '2025-07-10',
-    endDate: '2025-07-20',
-    progress: 0,
-    status: 'not-started',
-    assignee: 'Emma W.',
-    dependencies: ['5']
-  },
-  {
-    id: '7',
-    name: 'Deployment & launch',
-    startDate: '2025-07-18',
-    endDate: '2025-07-25',
-    progress: 0,
-    status: 'not-started',
-    assignee: 'David L.',
-    dependencies: ['6']
   }
 ];
 
 export function Projects() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
-  const [selectedProject, setSelectedProject] = useState<Project | null>(mockProjects[0]);
-  const [isNewProjectModalOpen, setNewProjectModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(mockProjects[0] || null);
+  const [newProjectModalOpen, setNewProjectModalOpen] = useState(false);
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([
+    'Create project documentation',
+    'Set up automated testing',
+    'Schedule stakeholder review'
+  ]);
+  const [customSuggestion, setCustomSuggestion] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // New Project Wizard State
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectDescription, setNewProjectDescription] = useState('');
-  const [newProjectColor, setNewProjectColor] = useState('#3b82f6');
-  const [enableAI, setEnableAI] = useState(false);
-  const [aiGoals, setAiGoals] = useState<string[]>([]);
-  
-  // AI Suggestions Management
-  const [customSuggestion, setCustomSuggestion] = useState('');
-  const [availableSuggestions, setAvailableSuggestions] = useState([
-    'Break down project into manageable tasks',
-    'Create detailed project timeline and milestones',
-    'Define resource allocation and team responsibilities',
-    'Establish risk assessment and mitigation plan',
-    'Set up progress tracking and reporting framework',
-    'Create stakeholder communication schedule',
-    'Define project scope and success criteria',
-    'Plan quality assurance and testing phases'
-  ]);
-
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -280,119 +245,89 @@ export function Projects() {
 
   useEffect(() => {
     const headerProps: HeaderProps = {
-      title: selectedProject ? selectedProject.name : 'Projects',
-      breadcrumb: selectedProject 
-        ? [{ label: 'Projects', onClick: () => setSelectedProject(null) }, { label: selectedProject.name }]
-        : [{ label: 'Projects' }],
+      title: 'Projects',
       primaryAction: {
         label: 'New project',
-        onClick: () => setNewProjectModalOpen(true),
+        onClick: handleCreateProject,
         icon: <Plus size={16} />
       },
-      secondaryActions: selectedProject ? [
+      secondaryActions: [
         {
           label: 'Project settings',
           onClick: () => console.log('Project settings'),
-          variant: 'secondary'
+          icon: <Settings size={16} />,
+          variant: 'ghost' as const
         }
-      ] : []
+      ]
     };
-    
+
     setHeaderProps(headerProps);
-    
+
     return () => clearHeaderProps();
-  }, [selectedProject, setHeaderProps, clearHeaderProps]);
+  }, [setHeaderProps, clearHeaderProps]);
 
   const handleCreateProject = () => {
-    const newProject: Project = {
-      id: Date.now().toString(),
-      name: newProjectName,
-      description: newProjectDescription,
-      color: newProjectColor,
-      progress: 0,
-      statusTag: 'Planning',
-      keyGoals: aiGoals.map((goal, idx) => ({
-        id: `goal-${idx}`,
-        text: goal,
-        completed: false
-      })),
-      files: [],
-      assets: []
-    };
-    
-    // Add to projects list (in real app, this would be an API call)
-    mockProjects.push(newProject);
-    setSelectedProject(newProject);
-    
-    // Reset wizard
+    setNewProjectModalOpen(true);
+  };
+
+  const handleProjectCreated = (projectData: any) => {
+    console.log('New project created:', projectData);
     setNewProjectModalOpen(false);
-    setNewProjectName('');
-    setNewProjectDescription('');
-    setNewProjectColor('#3b82f6');
-    setEnableAI(false);
-    setAiGoals([]);
+    // Here you would typically add the new project to your projects list
   };
 
   const handleCreateAsset = (type: string) => {
-    console.log('Creating asset of type:', type);
+    console.log(`Creating new ${type} for project:`, selectedProject?.name);
+    // Implementation for creating different types of assets
     switch (type) {
       case 'notes':
-        console.log('Opening notes creation interface');
+        console.log('Navigate to notes creation');
         break;
       case 'tasks':
-        console.log('Opening tasks creation interface');
+        console.log('Navigate to task creation');
         break;
       case 'canvas':
-        console.log('Opening canvas creation interface');
+        console.log('Navigate to canvas creation');
         break;
       case 'files':
-        console.log('Opening file upload interface');
+        console.log('Open file upload dialog');
         break;
       case 'chat':
-        console.log('Creating new chat for project');
+        console.log('Start new chat session');
         break;
       case 'agent':
-        console.log('Creating new agent for project');
+        console.log('Configure new agent');
         break;
       default:
-        console.log('Unknown asset type:', type);
+        console.log('Unknown asset type');
     }
   };
 
   const handleToggleGoal = (goalId: string) => {
-    if (selectedProject && selectedProject.keyGoals) {
-      const updatedGoals = selectedProject.keyGoals.map(goal =>
-        goal.id === goalId ? { ...goal, completed: !goal.completed } : goal
-      );
-      
-      const updatedProject: Project = {
-        ...selectedProject,
-        keyGoals: updatedGoals
-      };
-      
-      // Update the project in the mock data (in real app, this would be an API call)
-      const projectIndex = mockProjects.findIndex(p => p.id === selectedProject.id);
-      if (projectIndex !== -1) {
-        mockProjects[projectIndex] = updatedProject;
-        setSelectedProject(updatedProject);
-      }
+    if (!selectedProject) return;
+    
+    // This would typically update the project in your state management
+    console.log(`Toggling goal ${goalId} for project ${selectedProject.id}`);
+    
+    // For demo purposes, we'll just log the action
+    const goal = selectedProject.keyGoals?.find(g => g.id === goalId);
+    if (goal) {
+      console.log(`Goal "${goal.text}" ${goal.completed ? 'unchecked' : 'completed'}`);
     }
   };
 
-  // AI Suggestions Management Functions
   const addCustomSuggestion = () => {
-    if (customSuggestion.trim() && !availableSuggestions.includes(customSuggestion.trim())) {
-      setAvailableSuggestions([...availableSuggestions, customSuggestion.trim()]);
+    if (customSuggestion.trim()) {
+      setSuggestions([...suggestions, customSuggestion.trim()]);
       setCustomSuggestion('');
     }
   };
 
   const removeSuggestion = (suggestionToRemove: string) => {
-    setAvailableSuggestions(availableSuggestions.filter(s => s !== suggestionToRemove));
-    setAiGoals(aiGoals.filter(g => g !== suggestionToRemove));
+    setSuggestions(suggestions.filter(s => s !== suggestionToRemove));
   };
 
-  // Helper function to group projects by status
+  // Group projects by status for better organization
   const groupedProjects = mockProjects.reduce((acc, project) => {
     const status = project.statusTag || 'Other';
     if (!acc[status]) {
@@ -402,53 +337,156 @@ export function Projects() {
     return acc;
   }, {} as Record<string, Project[]>);
 
+  const getStatusVariant = (status: string): 'success' | 'warning' | 'error' | 'info' | 'pending' => {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'completed':
+        return 'success';
+      case 'in progress':
+        return 'info'; // Blue indicates active progress, not warning
+      case 'planning':
+        return 'pending'; // Gray indicates planning phase
+      case 'on hold':
+        return 'warning'; // Yellow indicates caution/attention needed
+      case 'cancelled':
+        return 'error';
+      default:
+        return 'info';
+    }
+  };
+
+  const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'primary' | 'muted' => {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'completed':
+        return 'success';
+      case 'in progress':
+        return 'primary'; // Blue indicates active progress
+      case 'planning':
+        return 'muted'; // Gray indicates planning phase
+      case 'on hold':
+        return 'warning'; // Yellow indicates caution/attention needed
+      case 'cancelled':
+        return 'error';
+      default:
+        return 'primary';
+    }
+  };
+
   return (
-    <div className="flex h-full gap-4 md:gap-6 p-4 md:p-6">
+    <div 
+      className="flex h-full"
+      style={{ 
+        gap: 'var(--space-6)',
+        padding: 'var(--space-layout-gutter)'
+      }}
+    >
       {/* === Left Panel: Project List === */}
-      <aside className="w-1/3 max-w-sm flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">All projects</h2>
-          <button onClick={() => setNewProjectModalOpen(true)} className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-md bg-primary text-white hover:bg-primary/90">
-            <Plus size={16} /> New project
-          </button>
+      <aside 
+        className="flex flex-col"
+        style={{ 
+          width: '33.333333%',
+          maxWidth: '24rem'
+        }}
+      >
+        <div 
+          className="flex justify-between items-center"
+          style={{ marginBottom: 'var(--space-4)' }}
+        >
+          <Heading level={2}>All projects</Heading>
+          <Button 
+            onClick={() => setNewProjectModalOpen(true)}
+            variant="primary"
+            size="sm"
+          >
+            <Plus size={16} style={{ marginRight: 'var(--space-2)' }} />
+            <Text as="span" size="sm" weight="medium">New project</Text>
+          </Button>
         </div>
-        <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-          {Object.entries(groupedProjects).map(([status, projects]) => (
-            <div key={status}>
-              <h3 className="px-3 pt-4 pb-2 text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                {status}
-              </h3>
-              {projects.map(project => (
-                <Card
-                  key={project.id}
-                  padding="none"
-                  className={`cursor-pointer group relative ${selectedProject?.id === project.id ? 'bg-accent-soft border-primary' : 'hover:bg-surface'}`}
+        <div 
+          className="flex-1 overflow-y-auto"
+          style={{ 
+            paddingRight: 'var(--space-2)',
+            gap: 'var(--space-2)'
+          }}
+        >
+          <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+            {Object.entries(groupedProjects).map(([status, projects]) => (
+              <div key={status}>
+                <Caption 
+                  className="uppercase tracking-wider text-[var(--text-secondary)]"
+                  style={{ 
+                    padding: `var(--space-4) var(--space-3) var(--space-2)`,
+                    fontWeight: 'var(--font-weight-semibold)'
+                  }}
                 >
-                  <div className="p-3" onClick={() => setSelectedProject(project)}>
-                    <div className="flex items-center gap-3">
-                      <span style={{ backgroundColor: project.color }} className="w-2.5 h-2.5 rounded-full flex-shrink-0" />
-                      <h3 className="font-semibold text-text-primary truncate">{project.name}</h3>
-                    </div>
-                    <p className="text-sm text-text-secondary mt-1 ml-[22px] truncate">{project.description}</p>
-                    {project.progress !== undefined && (
-                      <div className="mt-2 ml-[22px]">
-                        <div className="flex justify-between text-xs text-text-secondary mb-1">
-                          <span>Progress</span>
-                          <span>{project.progress}%</span>
-                        </div>
-                        <div className="w-full bg-bg-secondary rounded-full h-1.5">
+                  {status}
+                </Caption>
+                {projects.map(project => (
+                  <Card
+                    key={project.id}
+                    padding="none"
+                    className={`cursor-pointer group relative ${
+                      selectedProject?.id === project.id 
+                        ? 'bg-accent-soft border-primary' 
+                        : 'hover:bg-[var(--bg-surface)]'
+                    }`}
+                  >
+                    <div 
+                      style={{ padding: 'var(--space-3)' }}
+                      onClick={() => setSelectedProject(project)}
+                    >
+                      <div 
+                        className="flex items-center"
+                        style={{ gap: 'var(--space-3)' }}
+                      >
+                        <span 
+                          className="flex-shrink-0 rounded-full"
+                          style={{ 
+                            backgroundColor: project.color,
+                            width: 'calc(var(--space-2) + var(--space-1))',
+                            height: 'calc(var(--space-2) + var(--space-1))'
+                          }}
+                        />
+                        <Text weight="semibold" variant="body" className="truncate">
+                          {project.name}
+                        </Text>
+                      </div>
+                      <Text 
+                        size="sm" 
+                        variant="secondary" 
+                        className="truncate"
+                        style={{ 
+                          marginTop: 'var(--space-1)',
+                          marginLeft: 'calc(var(--space-5) + var(--space-1))'
+                        }}
+                      >
+                        {project.description}
+                      </Text>
+                      {project.progress !== undefined && (
+                        <div style={{ 
+                          marginTop: 'var(--space-2)',
+                          marginLeft: 'calc(var(--space-5) + var(--space-1))'
+                        }}>
                           <div 
-                            className="bg-primary h-1.5 rounded-full transition-all"
-                            style={{ width: `${project.progress}%` }}
+                            className="flex justify-between"
+                            style={{ marginBottom: 'var(--space-1)' }}
+                          >
+                            <Caption>Progress</Caption>
+                            <Caption>{project.progress}%</Caption>
+                          </div>
+                          <Progress 
+                            value={project.progress} 
+                            className="h-1.5"
                           />
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ))}
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </aside>
 
@@ -457,474 +495,289 @@ export function Projects() {
         {selectedProject && (
           <Card className="h-full flex flex-col" padding="none">
             {/* Project Header */}
-            <div className="p-6 flex-shrink-0 border-b border-border-subtle">
+            <div 
+              className="flex-shrink-0 border-b border-[var(--border-subtle)]"
+              style={{ padding: 'var(--space-6)' }}
+            >
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold">{selectedProject.name}</h1>
-                  <p className="text-text-secondary mt-1">{selectedProject.description}</p>
+                  <Heading level={1}>{selectedProject.name}</Heading>
+                  <Text 
+                    variant="secondary" 
+                    size="lg"
+                    style={{ marginTop: 'var(--space-1)' }}
+                  >
+                    {selectedProject.description}
+                  </Text>
                 </div>
                 <div className="relative" ref={dropdownRef}>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
-                    className="p-2 hover:bg-bg-secondary rounded-lg transition-colors"
                   >
-                    <MoreVertical className="w-5 h-5 text-text-secondary" />
-                  </button>
+                    <MoreVertical className="text-[var(--text-secondary)]" style={{ width: 'var(--space-5)', height: 'var(--space-5)' }} />
+                  </Button>
                   
                   {/* Dropdown Menu */}
                   {isProjectMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-bg-primary border border-border-subtle rounded-lg shadow-lg z-10">
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            console.log('Edit project');
-                            setIsProjectMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-bg-secondary flex items-center gap-2"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          Edit project
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Share project');
-                            setIsProjectMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-bg-secondary flex items-center gap-2"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Share project
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Add collaborators');
-                            setIsProjectMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-bg-secondary flex items-center gap-2"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                          Add collaborators
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Duplicate project');
-                            setIsProjectMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-bg-secondary flex items-center gap-2"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Duplicate project
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Export project');
-                            setIsProjectMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-bg-secondary flex items-center gap-2"
-                        >
-                          <Download className="w-4 h-4" />
-                          Export project
-                        </button>
-                        <div className="border-t border-border-subtle my-1"></div>
-                        <button
-                          onClick={() => {
-                            console.log('Archive project');
-                            setIsProjectMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-bg-secondary flex items-center gap-2"
-                        >
-                          <Archive className="w-4 h-4" />
-                          Archive project
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Delete project');
-                            setIsProjectMenuOpen(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-bg-secondary flex items-center gap-2 text-error"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete project
-                        </button>
-                      </div>
+                    <div 
+                      className="absolute right-0 top-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-10"
+                      style={{
+                        marginTop: 'var(--space-2)',
+                        width: '12rem',
+                        padding: 'var(--space-1)'
+                      }}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Edit project');
+                          setIsProjectMenuOpen(false);
+                        }}
+                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        style={{ gap: 'var(--space-2)' }}
+                      >
+                        <Edit3 style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Text size="sm">Edit project</Text>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Share project');
+                          setIsProjectMenuOpen(false);
+                        }}
+                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        style={{ gap: 'var(--space-2)' }}
+                      >
+                        <Share2 style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Text size="sm">Share project</Text>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Add collaborators');
+                          setIsProjectMenuOpen(false);
+                        }}
+                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        style={{ gap: 'var(--space-2)' }}
+                      >
+                        <UserPlus style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Text size="sm">Add collaborators</Text>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Duplicate project');
+                          setIsProjectMenuOpen(false);
+                        }}
+                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        style={{ gap: 'var(--space-2)' }}
+                      >
+                        <Copy style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Text size="sm">Duplicate project</Text>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Export project');
+                          setIsProjectMenuOpen(false);
+                        }}
+                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        style={{ gap: 'var(--space-2)' }}
+                      >
+                        <Download style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Text size="sm">Export project</Text>
+                      </Button>
+                      <div 
+                        className="border-t border-[var(--border-subtle)]"
+                        style={{ margin: 'var(--space-1) 0' }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Archive project');
+                          setIsProjectMenuOpen(false);
+                        }}
+                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        style={{ gap: 'var(--space-2)' }}
+                      >
+                        <Archive style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Text size="sm">Archive project</Text>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Delete project');
+                          setIsProjectMenuOpen(false);
+                        }}
+                        className="w-full justify-start text-[var(--error)] hover:bg-[var(--bg-secondary)]"
+                        style={{ gap: 'var(--space-2)' }}
+                      >
+                        <Trash2 style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Text size="sm">Delete project</Text>
+                      </Button>
                     </div>
                   )}
                 </div>
               </div>
               
               {/* Key Metrics Bar */}
-              <div className="grid grid-cols-3 gap-6 mt-6 p-4 bg-bg-secondary rounded-lg">
+              <div 
+                className="grid grid-cols-3 bg-[var(--bg-secondary)] rounded-[var(--radius-lg)]"
+                style={{ 
+                  gap: 'var(--space-6)',
+                  marginTop: 'var(--space-6)',
+                  padding: 'var(--space-4)'
+                }}
+              >
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{selectedProject.progress || 0}%</p>
-                  <p className="text-sm text-text-secondary">Complete</p>
+                  <Text size="2xl" weight="bold" variant="body" className="text-primary">
+                    {selectedProject.progress || 0}%
+                  </Text>
+                  <Caption>Complete</Caption>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">
+                  <Text size="2xl" weight="bold" variant="body" className="text-primary">
                     {mockAssets.reduce((total, asset) => total + asset.count, 0)}
-                  </p>
-                  <p className="text-sm text-text-secondary">Total assets</p>
+                  </Text>
+                  <Caption>Total assets</Caption>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">
+                  <Text size="2xl" weight="bold" variant="body" className="text-primary">
                     {selectedProject.keyGoals?.filter(goal => goal.completed).length || 0}
-                  </p>
-                  <p className="text-sm text-text-secondary">Goals completed</p>
+                  </Text>
+                  <Caption>Goals completed</Caption>
                 </div>
               </div>
             </div>
 
             {/* Unified Dashboard Content */}
-            <div className="p-6 flex-1 overflow-y-auto space-y-8">
-              
-              {/* Active Goals Section */}
-              <Card>
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-primary" />
-                  Active goals
-                </h3>
-                <div className="space-y-2">
-                  {selectedProject?.keyGoals?.map(goal => (
-                    <button
-                      key={goal.id}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-bg-secondary transition-colors w-full text-left"
-                      onClick={() => handleToggleGoal(goal.id)}
-                    >
-                      {goal.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-success" />
-                      ) : (
-                        <Circle className="w-4 h-4 text-text-secondary" />
-                      )}
-                      <span className={goal.completed ? 'line-through text-text-secondary' : 'text-text-primary'}>
-                        {goal.text}
-                      </span>
-                    </button>
-                  )) || <p className="text-text-secondary">No goals defined yet.</p>}
-                </div>
-              </Card>
-
-              {/* Progress Timeline Section */}
-              <Card>
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  Current timeline
-                </h3>
-                <div className="space-y-4">
-                  {/* Progress Overview Stats */}
-                  <div className="grid grid-cols-4 gap-4 p-4 bg-bg-secondary rounded-lg">
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-primary">{selectedProject.progress || 0}%</p>
-                      <p className="text-xs text-text-secondary">Overall</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-success">
-                        {mockProgressTasks.filter(task => task.status === 'completed').length}
-                      </p>
-                      <p className="text-xs text-text-secondary">Completed</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-warning">
-                        {mockProgressTasks.filter(task => task.status === 'in-progress').length}
-                      </p>
-                      <p className="text-xs text-text-secondary">In progress</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-text-secondary">
-                        {mockProgressTasks.filter(task => task.status === 'not-started').length}
-                      </p>
-                      <p className="text-xs text-text-secondary">Not started</p>
-                    </div>
+            <div 
+              className="flex-1 overflow-y-auto"
+              style={{ 
+                padding: 'var(--space-6)',
+                gap: 'var(--space-8)'
+              }}
+            >
+              <div className="flex flex-col" style={{ gap: 'var(--space-8)' }}>
+                {/* Active Goals Section */}
+                <Card>
+                  <Heading level={3} className="flex items-center" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                    <CheckCircle2 className="text-primary" style={{ width: 'var(--space-5)', height: 'var(--space-5)' }} />
+                    Active goals
+                  </Heading>
+                  <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+                    {selectedProject?.keyGoals?.map(goal => (
+                      <Button
+                        key={goal.id}
+                        variant="ghost"
+                        onClick={() => handleToggleGoal(goal.id)}
+                        className="justify-start text-left hover:bg-[var(--bg-secondary)] transition-colors"
+                        style={{ 
+                          gap: 'var(--space-3)',
+                          padding: 'var(--space-2)',
+                          borderRadius: 'var(--radius-lg)',
+                          height: 'auto'
+                        }}
+                      >
+                        {goal.completed ? (
+                          <CheckCircle2 className="text-[var(--success)]" style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        ) : (
+                          <Circle className="text-[var(--text-secondary)]" style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        )}
+                        <Text 
+                          variant={goal.completed ? "secondary" : "body"}
+                          className={goal.completed ? 'line-through' : ''}
+                        >
+                          {goal.text}
+                        </Text>
+                      </Button>
+                    ))}
                   </div>
+                </Card>
 
-                  {/* Compact Timeline View */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-text-secondary">Upcoming tasks</h4>
-                    {mockProgressTasks.slice(0, 4).map(task => {
-                      const getStatusColor = (status: string) => {
-                        switch (status) {
-                          case 'completed': return 'bg-success';
-                          case 'in-progress': return 'bg-primary';
-                          case 'not-started': return 'bg-bg-secondary';
-                          case 'on-hold': return 'bg-warning';
-                          default: return 'bg-bg-secondary';
-                        }
-                      };
-
-                      const getStatusIcon = (status: string) => {
-                        switch (status) {
-                          case 'completed': return <CheckCircle2 className="w-4 h-4" />;
-                          case 'in-progress': return <PlayCircle className="w-4 h-4" />;
-                          case 'not-started': return <Clock className="w-4 h-4" />;
-                          case 'on-hold': return <PauseCircle className="w-4 h-4" />;
-                          default: return <Clock className="w-4 h-4" />;
-                        }
-                      };
-
+                {/* Project Assets Section */}
+                <Card>
+                  <Heading level={3} style={{ marginBottom: 'var(--space-4)' }}>
+                    Project assets
+                  </Heading>
+                  <div 
+                    className="grid grid-cols-2 md:grid-cols-3"
+                    style={{ gap: 'var(--space-4)' }}
+                  >
+                    {mockAssets.map(asset => {
+                      const Icon = asset.icon;
                       return (
-                        <div key={task.id} className="p-3 bg-bg-secondary rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              {getStatusIcon(task.status)}
-                              <div>
-                                <p className="font-medium text-sm">{task.name}</p>
-                                <div className="flex items-center gap-4 text-xs text-text-secondary">
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {task.assignee}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {new Date(task.startDate).toLocaleDateString()} - {new Date(task.endDate).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <span className="text-xs text-text-secondary">{task.progress}%</span>
+                        <Button
+                          key={asset.type}
+                          variant="ghost"
+                          onClick={() => handleCreateAsset(asset.type)}
+                          className="flex flex-col items-center justify-center hover:bg-[var(--bg-secondary)] transition-colors h-auto"
+                          style={{
+                            padding: 'var(--space-4)',
+                            borderRadius: 'var(--radius-lg)',
+                            gap: 'var(--space-2)'
+                          }}
+                        >
+                          <div 
+                            className="rounded-[var(--radius-lg)] bg-[var(--accent-soft)] flex items-center justify-center"
+                            style={{
+                              width: 'calc(var(--space-8) + var(--space-4))',
+                              height: 'calc(var(--space-8) + var(--space-4))'
+                            }}
+                          >
+                            <Icon className="text-primary" style={{ width: 'var(--space-6)', height: 'var(--space-6)' }} />
                           </div>
-                          <div className="w-full bg-bg-primary rounded-full h-1.5">
-                            <div 
-                              className={`h-1.5 rounded-full ${getStatusColor(task.status)}`}
-                              style={{ width: `${task.progress}%` }}
-                            />
+                          <div className="text-center">
+                            <Text size="lg" weight="bold" variant="body">
+                              {asset.count}
+                            </Text>
+                            <Caption>{asset.label}</Caption>
                           </div>
-                        </div>
+                        </Button>
                       );
                     })}
                   </div>
-                </div>
-              </Card>
-
-              {/* Quick Actions & Assets Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Quick Actions */}
-                <Card>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-primary" />
-                    Quick actions
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {mockAssets.slice(0, 6).map(asset => (
-                      <Card key={asset.type} className="text-center hover:border-primary relative p-3 group cursor-pointer transition-all hover:shadow-md">
-                         <button 
-                           className="absolute top-1 right-1 p-1 rounded-full hover:bg-bg-secondary opacity-0 group-hover:opacity-100 transition-opacity"
-                           onClick={() => handleCreateAsset(asset.type)}
-                           title={`Create new ${asset.label.toLowerCase()}`}
-                         >
-                           <Plus className="w-3 h-3" />
-                         </button>
-                         <div onClick={() => handleCreateAsset(asset.type)}>
-                           <asset.icon className="w-5 h-5 mx-auto mb-2 text-primary"/>
-                           <p className="text-xs font-medium">{asset.label}</p>
-                         </div>
-                      </Card>
-                    ))}
-                  </div>
                 </Card>
 
-                {/* Recent Activity */}
-                <Card>
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    Recent activity
-                  </h3>
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    <div className="flex items-center justify-between p-2 bg-bg-secondary rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-4 h-4 text-primary" />
-                        <div>
-                          <p className="font-medium text-sm">Project requirements</p>
-                          <p className="text-xs text-text-secondary">Modified 2 hours ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-bg-secondary rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <CheckSquare className="w-4 h-4 text-primary" />
-                        <div>
-                          <p className="font-medium text-sm">Sprint backlog</p>
-                          <p className="text-xs text-text-secondary">Modified 1 day ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2 bg-bg-secondary rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <MessageSquare className="w-4 h-4 text-primary" />
-                        <div>
-                          <p className="font-medium text-sm">Team discussion</p>
-                          <p className="text-xs text-text-secondary">Modified 3 days ago</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+                {/* Project Status */}
+                {selectedProject.statusTag && (
+                  <Card>
+                    <Heading level={3} style={{ marginBottom: 'var(--space-4)' }}>
+                      Project Status
+                    </Heading>
+                    <Tag 
+                      variant="dot" 
+                      color={getStatusColor(selectedProject.statusTag)}
+                      size="md"
+                    >
+                      {selectedProject.statusTag}
+                    </Tag>
+                  </Card>
+                )}
               </div>
-
-              {/* AI Suggestions Section */}
-              <Card>
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Brain className="w-5 h-5 text-primary" />
-                  AI project management insights
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {availableSuggestions.slice(0, 4).map(suggestion => (
-                      <div key={suggestion} className="p-3 bg-bg-secondary rounded-lg">
-                        <div className="flex items-start gap-2">
-                          <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-text-primary">{suggestion}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="text-center">
-                    <button className="text-sm text-primary hover:underline flex items-center gap-1 mx-auto">
-                      <Plus className="w-4 h-4" />
-                      View all AI suggestions
-                    </button>
-                  </div>
-                </div>
-              </Card>
             </div>
           </Card>
         )}
+
+        {!selectedProject && <NoProjectSelected />}
       </main>
 
-      {/* New Project Wizard Modal */}
-      {isNewProjectModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Create new project</h2>
-              <button 
-                onClick={() => setNewProjectModalOpen(false)}
-                className="p-1 hover:bg-bg-secondary rounded"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Project name</label>
-                <input 
-                  type="text" 
-                  placeholder="Enter project name..." 
-                  className="w-full p-3 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  value={newProjectName} 
-                  onChange={e => setNewProjectName(e.target.value)} 
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Description</label>
-                <textarea 
-                  placeholder="Describe your project goals and scope..." 
-                  className="w-full p-3 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  rows={4} 
-                  value={newProjectDescription} 
-                  onChange={e => setNewProjectDescription(e.target.value)} 
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Project color</label>
-                <div className="flex gap-2">
-                  {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'].map(color => (
-                    <button
-                      key={color}
-                      className={`w-8 h-8 rounded-full border-2 ${newProjectColor === color ? 'border-text-primary' : 'border-transparent'}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setNewProjectColor(color)}
-                    />
-                  ))}
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <input 
-                  type="checkbox" 
-                  id="enable-ai"
-                  checked={enableAI}
-                  onChange={e => setEnableAI(e.target.checked)}
-                  className="rounded"
-                />
-                <label htmlFor="enable-ai" className="text-sm">
-                  <Sparkles className="inline w-4 h-4 mr-1" />
-                  Enable AI-powered project management suggestions
-                </label>
-              </div>
-              
-              {enableAI && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">AI-suggested project management goals</label>
-                  
-                  {/* Add Custom Suggestion */}
-                  <div className="flex gap-2 mb-3">
-                    <input 
-                      type="text"
-                      placeholder="Add custom project management goal..."
-                      value={customSuggestion}
-                      onChange={e => setCustomSuggestion(e.target.value)}
-                      onKeyPress={e => e.key === 'Enter' && addCustomSuggestion()}
-                      className="flex-1 px-3 py-2 text-sm border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <button 
-                      onClick={addCustomSuggestion}
-                      disabled={!customSuggestion.trim()}
-                      className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Suggestions List */}
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-border-subtle rounded-lg p-3">
-                    {availableSuggestions.map(suggestion => (
-                      <div key={suggestion} className="flex items-center gap-2 group">
-                        <input 
-                          type="checkbox"
-                          checked={aiGoals.includes(suggestion)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setAiGoals([...aiGoals, suggestion]);
-                            } else {
-                              setAiGoals(aiGoals.filter(g => g !== suggestion));
-                            }
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-sm flex-1">{suggestion}</span>
-                        <button 
-                          onClick={() => removeSuggestion(suggestion)}
-                          className="p-1 opacity-0 group-hover:opacity-100 hover:bg-bg-secondary rounded text-error"
-                          title="Remove this suggestion"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex justify-end gap-3 mt-8">
-              <Button 
-                variant="secondary" 
-                onClick={() => setNewProjectModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={handleCreateProject}
-                disabled={!newProjectName.trim()}
-              >
-                Create project
-              </Button>
-            </div>
-          </Card>
-        </div>
+      {/* New Project Modal */}
+      {newProjectModalOpen && (
+        <NewProjectModal
+          isOpen={newProjectModalOpen}
+          onClose={() => setNewProjectModalOpen(false)}
+          onProjectCreated={handleProjectCreated}
+        />
       )}
     </div>
   );

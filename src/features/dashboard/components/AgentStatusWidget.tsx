@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Badge } from '../../../components/ui';
+import { Card, StatusBadge, Heading, Text, Button } from '../../../components/ui';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
 import { CheckCircle2, XCircle, Zap, Settings2, MoreHorizontal, Plus } from 'lucide-react';
 import { AgentStatus } from '../../../core/lib/mockData';
@@ -26,44 +26,48 @@ export const AgentStatusWidget: React.FC<AgentStatusWidgetProps> = ({ agents }) 
   };
 
   return (
-    <Card className="p-6">
+    <Card>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-text-primary">Agent status</h3>        <DropdownMenu
-          trigger={
-            <div className="flex items-center justify-center w-8 h-8 text-text-secondary hover:text-text-primary hover:bg-bg-secondary rounded-md transition-colors cursor-pointer">
-              <Settings2 className="w-4 h-4" />
-            </div>
-          }
-        >
-          <DropdownMenuItem onClick={handleConfigureAgents}>
-            Configure agents
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleViewAllStatuses}>
-            View all statuses
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleRestartAgent}>
-            Restart agents
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleAgentSettings}>
-            Agent settings
-          </DropdownMenuItem>
-        </DropdownMenu>
+        <Heading level={3}>Agent status</Heading>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={handleConfigureAgents}>
+            Configure
+          </Button>
+          <DropdownMenu
+            trigger={
+              <Button variant="ghost" size="icon" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            }
+          >
+            <DropdownMenuItem onClick={handleViewAllStatuses}>
+              View all statuses
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleRestartAgent}>
+              Restart agents
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleAgentSettings}>
+              Agent settings
+            </DropdownMenuItem>
+          </DropdownMenu>
+        </div>
       </div>
-      <ul className="space-y-3">
+      <ul className="flex flex-col gap-3">
         {agents.map((agent) => (
-          <li key={agent.id} className="flex items-center gap-3">
-            <div className={`w-2.5 h-2.5 ${agent.statusColor} rounded-full flex-shrink-0`}></div>
+          <li key={agent.id} className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary">{agent.name}</div>
-              <div className="text-xs text-text-secondary mt-0.5">{agent.model}</div>
-            </div>
-            <div className={`px-2 py-0.5 text-xs rounded-full font-medium flex-shrink-0 ${
-              agent.status === 'Active' 
-                ? 'bg-accent-soft text-success' 
-                : 'bg-bg-tertiary text-text-secondary'
-            }`}>
-              {agent.status}
+              <div className="flex items-center justify-between">
+                <Text size="sm" weight="medium" variant="body">{agent.name}</Text>
+                <StatusBadge 
+                  status={agent.status === 'Active' ? 'success' : 'pending'}
+                  size="sm"
+                  className="flex-shrink-0"
+                >
+                  {agent.status}
+                </StatusBadge>
+              </div>
+              <Text size="xs" variant="secondary" className="mt-1">{agent.model}</Text>
             </div>
           </li>
         ))}

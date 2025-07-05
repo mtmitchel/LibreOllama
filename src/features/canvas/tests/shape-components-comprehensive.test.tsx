@@ -8,6 +8,8 @@ import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderWithKonva } from '@/tests/utils/testUtils';
 
+import { canvasTheme } from '../utils/canvasTheme';
+
 // Import all shape components
 import { RectangleShape } from '@/features/canvas/shapes/RectangleShape';
 import { CircleShape } from '@/features/canvas/shapes/CircleShape';
@@ -32,30 +34,46 @@ import {
 // Import compatibility utilities
 import { toElementId } from '@/features/canvas/types/compatibility';
 
-// Mock design system
-vi.mock('@/designSystem', () => ({
-  designSystem: {
+// Mock the whole module
+vi.mock('../utils/canvasTheme', () => ({
+  canvasTheme: {
     colors: {
-      primary: {
-        100: '#DBEAFE',
-        500: '#3B82F6',
-        600: '#2563EB'
+      primary: '#3B82F6',
+      primaryLight: '#93C5FD',
+      secondary: {
+        800: '#1E293B',
       },
-      gray: {
-        100: '#F3F4F6',
-        800: '#1F2937'
-      }
+      stickyNote: {
+        yellow: '#FFE299',
+        yellowBorder: '#E6C975',
+        blue: '#A8DAFF',
+        blueBorder: '#85C1FF',
+        pink: '#FFB3BA',
+        pinkBorder: '#FF8A94',
+        green: '#BAFFC9',
+        greenBorder: '#94E6A7',
+        orange: '#FFDFBA',
+        orangeBorder: '#FFCC99',
+        purple: '#E6BAFF',
+        purpleBorder: '#D194FF',
+      },
     },
-    borderRadius: {
-      md: 4,
-      lg: 8
+    typography: {
+      fontFamily: {
+        sans: 'Inter, sans-serif',
+      },
     },
-    spacing: {
-      xs: 4,
-      sm: 8,
-      md: 16
-    }
-  }
+  },
+  getStickyNoteColors: vi.fn((variant) => ({
+    fill: '#FFE299',
+    stroke: '#E6C975',
+  })),
+}));
+
+// Mock the whole module
+vi.mock('../utils/fontLoader', () => ({
+  // ... existing code ...
+  // ... existing code ...
 }));
 
 // Common test element factory
@@ -337,6 +355,8 @@ describe('Comprehensive Shape Components Test Suite', () => {
       
       expect(container).toBeTruthy();
     });
+
+
   });
 
   describe('Sticky Note Elements', () => {
@@ -633,3 +653,4 @@ describe('Comprehensive Shape Components Test Suite', () => {
     });
   });
 });
+

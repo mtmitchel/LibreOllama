@@ -26,10 +26,14 @@ const config: Config = {
         'accent-primary': 'var(--accent-primary)',
         'accent-secondary': 'var(--accent-secondary)',
         'accent-soft': 'var(--accent-soft)',
+        'accent-violet': 'var(--accent-violet)',
         
         'success': 'var(--success)',
         'warning': 'var(--warning)',
         'error': 'var(--error)',
+        'success-fg': 'var(--success-fg)',
+        'warning-fg': 'var(--warning-fg)',
+        'error-fg': 'var(--error-fg)',
         
         'border-subtle': 'var(--border-subtle)',
         'border-default': 'var(--border-default)',

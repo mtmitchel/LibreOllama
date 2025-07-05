@@ -16,10 +16,10 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react';
-import { Card, Button, Input, Checkbox } from '../../components/ui';
+import { Card, Button, Input, Checkbox, Heading, Text } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 
-// Reusable Toggle Switch Component (can be moved to a separate file)
+// Design system aligned Toggle Switch Component
 interface ToggleSwitchProps {
   enabled: boolean;
   onChange: (enabled: boolean) => void;
@@ -33,16 +33,23 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId 
       aria-pressed={enabled}
       aria-labelledby={labelId}
       onClick={() => onChange(!enabled)}
-      className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
-        enabled ? 'bg-primary' : 'bg-bg-tertiary'
-      }`}
+      className="relative inline-flex flex-shrink-0 border-2 border-transparent rounded-full cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2"
+      style={{
+        height: 'var(--space-6)',
+        width: 'calc(var(--space-8) + var(--space-3))',
+        backgroundColor: enabled ? 'var(--accent-primary)' : 'var(--bg-tertiary)'
+      }}
     >
-      <span className="sr-only">Use setting</span>
+      <span className="sr-only">Toggle setting</span>
       <span
         aria-hidden="true"
-        className={`inline-block w-5 h-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-          enabled ? 'translate-x-5' : 'translate-x-0'
-        }`}
+        className="inline-block rounded-full shadow transform ring-0 transition ease-in-out duration-200"
+        style={{
+          width: 'var(--space-5)',
+          height: 'var(--space-5)',
+          backgroundColor: 'white',
+          transform: enabled ? 'translateX(var(--space-5))' : 'translateX(0)'
+        }}
       />
     </button>
   );
@@ -70,47 +77,59 @@ const Settings: React.FC = () => {
     switch (activeSection) {
       case 'general':
         return (
-          <Card padding="lg"> {/* Added padding to the outer Card */}
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary mb-1">General</h1>
-              <p className="text-text-secondary mb-6">Configure general application preferences and behavior.</p>
+          <Card className="p-6">
+            <div className="mb-6">
+              <Heading level={1} className="text-2xl font-bold mb-1">General</Heading>
+              <Text variant="muted">Configure general application preferences and behavior.</Text>
             </div>
             
-            <div className="space-y-8"> {/* Increased spacing between sections */}
-              <Card padding="lg"> {/* Wrapped section in a Card */}
-                <h2 className="text-lg font-semibold text-text-primary mb-4">Application Startup</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+            <div className="flex flex-col gap-8">
+              <Card className="p-6">
+                <Heading level={2} className="text-lg font-semibold mb-4">Application Startup</Heading>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between py-3 border-b border-border-default">
                     <div className="flex-1">
-                      <label htmlFor="startup-view" className="font-medium text-text-primary mb-1 block">Startup view</label>
-                      <p className="text-sm text-text-secondary">Choose which module to open when you start the application.</p>
+                      <Text as="label" htmlFor="startup-view" weight="medium" className="block mb-1">Startup view</Text>
+                      <Text variant="muted" size="sm">Choose which module to open when you start the application.</Text>
                     </div>
                     {/* Select component removed */}
                   </div>
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <label id="check-updates-label" className="font-medium text-text-primary mb-1 block">Check for updates on startup</label>
-                      <p className="text-sm text-text-secondary">Automatically check for new versions when the application launches.</p>
+                      <Text as="label" id="check-updates-label" weight="medium" className="block mb-1">
+                        Check for updates on startup
+                      </Text>
+                      <Text variant="muted" size="sm">
+                        Automatically check for new versions when the application launches.
+                      </Text>
                     </div>
                     <ToggleSwitch enabled={checkForUpdates} onChange={setCheckForUpdates} labelId="check-updates-label" />
                   </div>
                 </div>
               </Card>
               
-              <Card padding="lg"> {/* Wrapped section in a Card */}
-                <h2 className="text-lg font-semibold text-text-primary mb-4">Regional Settings</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+              <Card className="p-6">
+                <Heading level={2} className="text-lg font-semibold mb-4">Regional Settings</Heading>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between py-3 border-b border-border-default">
                     <div className="flex-1">
-                      <label htmlFor="language-select" className="font-medium text-text-primary mb-1 block">Language</label>
-                      <p className="text-sm text-text-secondary">Set the display language for the entire application.</p>
+                      <Text as="label" htmlFor="language-select" weight="medium" className="block mb-1">
+                        Language
+                      </Text>
+                      <Text variant="muted" size="sm">
+                        Set the display language for the entire application.
+                      </Text>
                     </div>
                     {/* Select component removed */}
                   </div>
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <label htmlFor="first-day-select" className="font-medium text-text-primary mb-1 block">First day of the week</label>
-                      <p className="text-sm text-text-secondary">Set the first day for calendars and date pickers.</p>
+                      <Text as="label" htmlFor="first-day-select" weight="medium" className="block mb-1">
+                        First day of the week
+                      </Text>
+                      <Text variant="muted" size="sm">
+                        Set the first day for calendars and date pickers.
+                      </Text>
                     </div>
                     {/* Select component removed */}
                   </div>
@@ -121,71 +140,84 @@ const Settings: React.FC = () => {
         );
       case 'agents-and-models':
         return (
-          <Card padding="lg"> {/* Added padding to the outer Card */}
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary mb-1">Agents and Models</h1>
-              <p className="text-text-secondary mb-6">Manage your local AI models and agent configurations.</p>
+          <Card className="p-6">
+            <div className="mb-6">
+              <Heading level={1} className="text-2xl font-bold mb-1">Agents and Models</Heading>
+              <Text variant="muted">Manage your local AI models and agent configurations.</Text>
             </div>
-            <div className="space-y-8">
-              <Card padding="lg"> {/* Wrapped section in a Card */}
+            <div className="flex flex-col gap-8">
+              <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-text-primary">Ollama Server</h2>
-                  {/* Placeholder for server status indicator, can be dynamic */}
+                  <Heading level={2} className="text-lg font-semibold">Ollama Server</Heading>
                   <div className="flex items-center gap-2 text-sm text-success">
-                    <span className="w-2.5 h-2.5 bg-success rounded-full"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-success" />
                     Connected
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <label htmlFor="ollama-endpoint" className="font-medium text-text-primary mb-1 block">Server endpoint</label>
-                      <p className="text-sm text-text-secondary">The local URL where your Ollama instance is running.</p>
+                      <Text as="label" htmlFor="ollama-endpoint" weight="medium" className="block mb-1">
+                        Server endpoint
+                      </Text>
+                      <Text variant="muted" size="sm">
+                        The local URL where your Ollama instance is running.
+                      </Text>
                     </div>
                     <Input 
                       id="ollama-endpoint"
                       type="text" 
-                      className="ml-4 w-auto max-w-xs"
+                      className="w-auto max-w-xs ml-4 focus:ring-2 focus:ring-primary focus:ring-offset-2"
                       defaultValue="http://localhost:11434" 
                     />
                   </div>
                 </div>
               </Card>
 
-              <Card padding="lg"> {/* Wrapped section in a Card */}
+              <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-text-primary">Local Models</h2>
-                  <Button variant="outline" size="sm">
-                    <Download size={16} className="mr-2" /> Pull a new model
+                  <Heading level={2} className="text-lg font-semibold">Local Models</Heading>
+                  <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <Download size={16} /> Pull a new model
                   </Button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="text-left text-text-secondary">
+                    <thead className="text-left text-muted">
                       <tr>
-                        <th className="p-2 font-medium border-b border-border-subtle">Model Name</th>
-                        <th className="p-2 font-medium border-b border-border-subtle">Size</th>
-                        <th className="p-2 font-medium border-b border-border-subtle">Last Modified</th>
-                        <th className="p-2 font-medium border-b border-border-subtle text-right">Actions</th>
+                        <th className="p-2 font-medium border-b border-border-default">Model Name</th>
+                        <th className="p-2 font-medium border-b border-border-default">Size</th>
+                        <th className="p-2 font-medium border-b border-border-default">Last Modified</th>
+                        <th className="p-2 font-medium border-b border-border-default text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-subtle">
+                    <tbody>
                       {[ /* Mock data for table */
                         { name: 'llama3:8b', size: '4.7 GB', modified: '2 weeks ago' },
                         { name: 'codellama:7b', size: '3.8 GB', modified: '1 month ago' },
                         { name: 'mixtral:latest', size: '26 GB', modified: '3 days ago' },
                       ].map(model => (
-                        <tr key={model.name}>
-                          <td className="p-2 whitespace-nowrap text-text-primary font-medium">{model.name}</td>
-                          <td className="p-2 whitespace-nowrap text-text-secondary">{model.size}</td>
-                          <td className="p-2 whitespace-nowrap text-text-secondary">{model.modified}</td>
+                        <tr key={model.name} className="border-b border-border-subtle">
+                          <td className="p-2 whitespace-nowrap text-primary font-medium">{model.name}</td>
+                          <td className="p-2 whitespace-nowrap text-muted">{model.size}</td>
+                          <td className="p-2 whitespace-nowrap text-muted">{model.modified}</td>
                           <td className="p-2 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-text-secondary hover:text-primary" title="Update model">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-muted focus:ring-2 focus:ring-primary focus:ring-offset-2 w-8 h-8"
+                                title="Update model"
+                              >
                                 <RefreshCw size={16} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-text-secondary hover:text-error" title="Remove model">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-muted hover:bg-error-ghost hover:text-error focus:ring-2 focus:ring-error focus:ring-offset-2 w-8 h-8"
+                                title="Remove model"
+                              >
                                 <Trash2 size={16} />
                               </Button>
                             </div>
@@ -201,73 +233,85 @@ const Settings: React.FC = () => {
         );
       case 'integrations':
         return (
-          <Card padding="lg"> {/* Added padding to the outer Card */}
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary mb-1">Integrations</h1>
-              <p className="text-text-secondary mb-6">Connect to external services and manage API keys.</p>
+          <Card className="p-6">
+            <div className="mb-6">
+              <Heading level={1} className="text-2xl font-bold mb-1">Integrations</Heading>
+              <Text variant="muted">Connect to external services and manage API keys.</Text>
             </div>
-            <div className="space-y-8">
-              <Card padding="lg"> {/* Wrapped section in a Card */}
-                <h2 className="text-lg font-semibold text-text-primary mb-4">Connected Accounts</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+            <div className="flex flex-col gap-8">
+              <Card className="p-6">
+                <Heading level={2} className="text-lg font-semibold mb-4">Connected Accounts</Heading>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between py-3 border-b border-border-default">
                     <div className="flex items-center gap-3">
-                      <Gem size={20} className="text-primary" />
+                      <Gem size={20} className="text-accent-primary" />
                       <div>
-                        <div className="font-medium text-text-primary">Google</div>
-                        <p className="text-sm text-text-secondary">Sync Calendar and Tasks.</p>
+                        <Text weight="medium">Google</Text>
+                        <Text variant="muted" size="sm">Sync Calendar and Tasks.</Text>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      <LinkIcon size={16} className="mr-2" /> Connect
+                    <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                      <LinkIcon size={16} /> Connect
                     </Button>
                   </div>
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
-                      <Github size={20} className="text-text-primary" />
+                      <Github size={20} className="text-primary" />
                       <div>
-                        <div className="font-medium text-text-primary">GitHub</div>
-                        <p className="text-sm text-text-secondary">Sync repositories and issues.</p>
+                        <Text weight="medium">GitHub</Text>
+                        <Text variant="muted" size="sm">Sync repositories and issues.</Text>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      <LinkIcon size={16} className="mr-2" /> Connect
+                    <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                      <LinkIcon size={16} /> Connect
                     </Button>
                   </div>
                 </div>
               </Card>
-              <Card padding="lg"> {/* Wrapped section in a Card */}
-                <h2 className="text-lg font-semibold text-text-primary mb-4">Cloud Model API Keys</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+              <Card className="p-6">
+                <Heading level={2} className="text-lg font-semibold mb-4">Cloud Model API Keys</Heading>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between py-3 border-b border-border-default">
                     <div className="flex-1">
-                      <label htmlFor="gemini-api-key" className="font-medium text-text-primary mb-1 block">Google Gemini</label>
-                      <p className="text-sm text-text-secondary">Required for accessing Google's cloud-based AI models.</p>
+                      <Text as="label" htmlFor="gemini-api-key" weight="medium" className="block mb-1">
+                        Google Gemini
+                      </Text>
+                      <Text variant="muted" size="sm">
+                        Required for accessing Google's cloud-based AI models.
+                      </Text>
                     </div>
                     <div className="flex items-center gap-2">
                       <Input 
                         id="gemini-api-key"
                         type="password" 
-                        className="w-auto max-w-xs"
+                        className="w-auto max-w-xs focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         placeholder="Enter Gemini API key..." 
                         defaultValue="••••••••••••••••"
                       />
-                      <Button variant="outline" size="sm">Save</Button>
+                      <Button variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        Save
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between py-3 border-b border-border-subtle last:border-b-0">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <label htmlFor="anthropic-api-key" className="font-medium text-text-primary mb-1 block">Anthropic Claude</label>
-                      <p className="text-sm text-text-secondary">Required for accessing Claude models via API.</p>
+                      <Text as="label" htmlFor="anthropic-api-key" weight="medium" className="block mb-1">
+                        Anthropic Claude
+                      </Text>
+                      <Text variant="muted" size="sm">
+                        Required for accessing Claude models via API.
+                      </Text>
                     </div>
                     <div className="flex items-center gap-2">
                       <Input 
                         id="anthropic-api-key"
                         type="password" 
-                        className="w-auto max-w-xs"
+                        className="w-auto max-w-xs focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         placeholder="Enter Anthropic API key..." 
                       />
-                      <Button variant="outline" size="sm">Save</Button>
+                      <Button variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                        Save
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -277,11 +321,15 @@ const Settings: React.FC = () => {
         );
       default:
         return (
-          <Card padding="lg">
-            <div className="flex flex-col items-center justify-center h-full text-text-secondary">
-              <Cog size={48} className="mb-4 opacity-50" />
-              <h1 className="text-xl font-semibold text-text-primary mb-2">{navItems.find(item => item.id === activeSection)?.label}</h1>
-              <p>Settings for this section are not yet implemented.</p>
+          <Card className="p-6">
+            <div className="flex flex-col items-center justify-center h-full text-muted">
+              <Cog size={48} className="opacity-50 mb-4" />
+              <Heading level={2} className="text-xl font-semibold mb-2 text-primary">
+                {navItems.find(item => item.id === activeSection)?.label}
+              </Heading>
+              <Text>
+                Settings for this section are not yet implemented.
+              </Text>
             </div>
           </Card>
         );
@@ -297,31 +345,42 @@ const Settings: React.FC = () => {
   }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="w-full flex gap-4 md:gap-6 p-4 md:p-6"> {/* Removed outer padding, will be handled by Cards */}
+    <div className="w-full flex gap-x-6 p-4 md:p-6">
       {/* Left Navigation */}
       <div className="w-64 flex-shrink-0">
-        <Card padding="default"> {/* Changed to default padding */}
-          <h3 className="text-base font-semibold text-text-primary mb-3 px-3 pt-1">Categories</h3> {/* Adjusted heading style */}
-          <nav className="space-y-1">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] p-4">
+          <h3 className="text-base font-semibold text-primary mb-3 px-3 pt-1">
+            Categories
+          </h3>
+          <nav className="flex flex-col gap-1">
             {navItems.map(item => {
               const IconComponent = item.icon;
+              const isActive = activeSection === item.id;
               return (
-                <Button
+                <a
                   key={item.id}
-                  variant={activeSection === item.id ? "secondary" : "ghost"} 
-                  className={`w-full justify-start text-sm font-normal ${activeSection === item.id ? 'font-medium text-primary' : 'text-text-secondary hover:text-text-primary'}`}
-                  onClick={() => setActiveSection(item.id)}
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveSection(item.id);
+                  }}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-bg-tertiary
+                    ${isActive 
+                      ? 'bg-accent-ghost text-accent-primary font-semibold' 
+                      : 'text-muted hover:bg-bg-tertiary hover:text-primary'
+                    }`
+                  }
                 >
-                  <IconComponent className="w-4 h-4 mr-3 flex-shrink-0" />
+                  <IconComponent size={16} className="flex-shrink-0" />
                   <span className="truncate">{item.label}</span>
-                </Button>
+                </a>
               );
             })}
           </nav>
-        </Card>
+        </div>
       </div>
 
-      {/* Main Content Area - No Card wrapper here, each section will be a Card */}
+      {/* Main Content Area */}
       <div className="flex-1 min-w-0">
         {renderSection()} 
       </div>

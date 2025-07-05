@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button } from '../../../components/ui';
+import { Card, Button, Heading } from '../../../components/ui';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
 import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate, MoreHorizontal } from 'lucide-react';
 
@@ -17,25 +17,25 @@ interface QuickActionsWidgetProps {
 const defaultActions: QuickAction[] = [
   { 
     id: 'action1', 
-    icon: <MessageSquare className="w-5 h-5 text-primary" />, 
+    icon: <MessageSquare className="w-6 h-6 text-primary" />, 
     label: "New chat",
     onClick: () => console.log('New chat')
   },
   { 
     id: 'action2', 
-    icon: <FileText className="w-5 h-5 text-primary" />, 
+    icon: <FileText className="w-6 h-6 text-primary" />, 
     label: "Create task",
     onClick: () => console.log('Create task')
   },
   { 
     id: 'action3', 
-    icon: <FolderPlus className="w-5 h-5 text-primary" />, 
+    icon: <FolderPlus className="w-6 h-6 text-primary" />, 
     label: "Create project",
     onClick: () => console.log('Create project')
   },
   { 
     id: 'action4', 
-    icon: <LayoutTemplate className="w-5 h-5 text-primary" />, 
+    icon: <LayoutTemplate className="w-6 h-6 text-primary" />, 
     label: "Open canvas",
     onClick: () => console.log('Open canvas')
   }
@@ -57,13 +57,18 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
   };
 
   return (
-    <Card className="lg:col-span-2 xl:col-span-1 p-6">
+    <Card className="lg:col-span-2 xl:col-span-1">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-text-primary">Quick actions</h3>        <DropdownMenu
+        <Heading level={3}>Quick actions</Heading>
+        <DropdownMenu
           trigger={
-            <div className="flex items-center justify-center w-8 h-8 text-text-secondary hover:text-text-primary hover:bg-bg-secondary rounded-md transition-colors cursor-pointer">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-secondary hover:text-primary"
+            >
               <Settings2 className="w-4 h-4" />
-            </div>
+            </Button>
           }
         >
           <DropdownMenuItem onClick={handleCustomizeActions}>
@@ -78,18 +83,17 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
           </DropdownMenuItem>
         </DropdownMenu>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {actions.map((action) => (
-          <button 
-            key={action.id} 
+          <Button
+            key={action.id}
+            variant="secondary"
             onClick={action.onClick}
-            className="flex flex-col items-center justify-center p-4 rounded-lg bg-bg-secondary hover:bg-bg-tertiary transition-colors group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-bg-primary"
+            className="h-24 p-2 flex flex-col items-center justify-center text-center whitespace-normal gap-2"
           >
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-2 group-hover:bg-accent-soft transition-colors">
-              {action.icon}
-            </div>
-            <span className="text-sm font-medium text-text-primary">{action.label}</span>
-          </button>
+            {action.icon}
+            <span className="font-semibold text-sm text-primary leading-tight">{action.label}</span>
+          </Button>
         ))}
       </div>
     </Card>

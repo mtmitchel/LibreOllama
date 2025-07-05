@@ -4,7 +4,7 @@ import { Text, Group, Rect, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { TextElement, ElementId, CanvasElement } from '../types/enhanced.types';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { designSystem } from '../../../core/design-system';
+
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 import { measureTextDimensions, CANVAS_TEXT_CONFIG } from '../utils/textEditingUtils';
 import { debounce } from '../utils/debounce';

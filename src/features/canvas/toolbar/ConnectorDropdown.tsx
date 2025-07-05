@@ -6,8 +6,7 @@ import {
   GitBranch
 } from 'lucide-react';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import styles from './ModernToolbar.module.css';
-import '../../../core/design-system/globals.css';
+import { Button } from '../../../components/ui';
 
 const connectorTools = [
   { id: 'connector-line', name: 'Line', icon: Minus },
@@ -25,7 +24,7 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
   
   // Check if any connector tool is active, default to line connector
   const currentConnectorTool = connectorTools.find(tool => tool.id === selectedTool) || connectorTools[0]!;
-  const CurrentIcon = currentConnectorTool.icon;
+  const isActive = connectorTools.some(tool => tool.id === selectedTool);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,39 +47,41 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
   };
   
   return (
-    <div className={styles.dropdownContainer} ref={dropdownRef}>
-      <button
+    <div className="relative" ref={dropdownRef}>
+      <Button
+        variant={isActive ? "primary" : "ghost"}
+        size="icon"
         onClick={toggleDropdown}
-        className={`${styles.toolButton} ${
-          connectorTools.some(tool => tool.id === selectedTool) ? styles.active : ''
-        }`}
+        className="h-9 w-9 relative"
         title={`Connectors (${currentConnectorTool.name} selected)`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         <GitBranch size={16} />
-        <ChevronDown size={12} style={{ marginLeft: '4px' }} />
-      </button>
+        <ChevronDown size={10} className="absolute bottom-0 right-0" />
+      </Button>
       
       {isOpen && (
-        <div className={styles.connectorsDropdownContent} role="menu">
-          <div className={styles.connectorsDropdownSection}>
-            <div className={styles.connectorsDropdownHeader}>Connectors</div>
-            <div className={styles.connectorsGrid}>
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-bg-elevated border border-border-default rounded-xl shadow-xl backdrop-blur-sm p-2 z-[1200] w-44">
+          <div className="flex flex-col gap-1">
+            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide text-center px-2 py-1">
+              Connectors
+            </div>
+            <div className="flex flex-col gap-1">
               {connectorTools.map(tool => {
                 const IconComponent = tool.icon;
-                const isActive = selectedTool === tool.id;
+                const isToolActive = selectedTool === tool.id;
                 return (
-                  <button
+                  <Button
                     key={tool.id}
+                    variant={isToolActive ? "primary" : "ghost"}
                     onClick={() => handleConnectorSelect(tool.id)}
-                    className={`${styles.connectorsDropdownItem} ${isActive ? styles.active : ''}`}
+                    className="flex items-center gap-2 justify-start px-2 py-1.5 h-auto text-left w-full"
                     title={tool.name}
-                    role="menuitem"
                   >
-                    <IconComponent size={20} />
-                    <span>{tool.name}</span>
-                  </button>
+                    <IconComponent size={16} />
+                    <span className="text-sm font-medium">{tool.name}</span>
+                  </Button>
                 );
               })}
             </div>

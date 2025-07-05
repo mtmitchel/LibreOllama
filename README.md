@@ -20,100 +20,44 @@
 
 ---
 
-## 🎯 **CANVAS STATUS: STABLE CORE & ACTIVE DEVELOPMENT**
-
-**🚀 Latest Update (July 2025): Modular Store Architecture Fully Operational**
-
-The LibreOllama Canvas has achieved production-ready stability with a completely modernized architecture. **Latest Achievement**: Successfully completed the modular store migration with ALL business logic implemented - from a monolithic 2,097-line store to 12 focused modules with full functionality including grouping, import/export, and comprehensive event handling.
-
-**✅ Drawing Tool Architecture Refactor (December 2024):**
-- **100% Reliability**: Eliminated all "Cannot read properties of undefined" errors that were causing stroke recording failures
-- **Continuous Strokes**: Fixed critical bug where marker/highlighter tools only created single dots instead of smooth lines
-- **50%+ Performance Improvement**: Simplified complex optimization systems that were causing instability and memory leaks
-- **Professional Drawing Experience**: Tools now provide industry-standard responsiveness and visual feedback
-- **Simplified Architecture**: Removed complex caching, workers, and optimization hooks in favor of proven, reliable patterns
-
-**✅ Enhanced Canvas Sidebar Context Menu (January 2025):**
-- **Professional UX Design**: Complete redesign with modern shadows, rounded corners, and enhanced spacing for polished appearance
-- **PDF/JPEG Export**: Integrated export functionality with professional loading states and error handling
-- **Color-Coded Sections**: Visual hierarchy with blue (edit), green (export), and red (delete) section icons
-- **Accessibility Improvements**: Full keyboard navigation, screen reader support, and WCAG-compliant design
-- **Dark Mode Support**: Complete theme consistency with adaptive colors and proper contrast
-- **Interactive States**: Smooth hover transitions, animated loading spinners, and proper disabled states
-
-**✅ Recent Canvas Improvements (December 2024):**
-- **Triangle Text Display Fix**: Resolved inconsistency where triangles showed "Add" initially but "Add text" when editing - now consistently shows "Add text" by expanding text display area from 50% to 70% of triangle width
-- **Toolbar Cleanup**: Temporarily removed sections tool from toolbar (commented out for future sprint implementation) for cleaner interface without incomplete functionality
-- **Lasso Tool Removal**: Completely eliminated lasso tool and all references as it won't be used in current design direction - streamlined codebase while preserving all other canvas tools and maintaining code quality
-
-**✅ Modular Store Architecture - Fully Implemented (July 2025):**
-- **✅ Production Migration**: Live system runs on modular store architecture with 12 focused modules replacing the original 2,097-line monolithic store
-- **✅ Complete Functionality**: ALL placeholder functions now implemented with full business logic including:
-  - **Group Management**: `groupElements()`, `ungroupElements()`, `isElementInGroup()` - Complete element grouping system
-  - **Import/Export**: `exportElements()`, `importElements()` - JSON-based canvas data exchange
-  - **Event Handling**: Comprehensive mouse event system with tool-specific behavior patterns
-  - **Legacy Compatibility**: Full backward compatibility with `setActiveTool()`, `setZoom()`, `setPan()`, etc.
-- **✅ Module Architecture**: Elements (345 lines), selection + groups (109 lines), viewport + compatibility (109 lines), drawing (183 lines), history (121 lines), sections (157 lines), tables (186 lines), sticky notes (192 lines), UI + legacy (99 lines), eraser (304 lines), events (130 lines), types (15 lines)
-- **✅ Zero Breaking Changes**: Seamless migration with full API compatibility - no component updates required
-- **✅ Performance Preserved**: All Immer integration, spatial indexing, viewport culling, and drawing optimizations maintained
-- **✅ Comprehensive Testing**: New test suite validates all functionality including grouping, import/export, and event handling
-- **✅ Legacy Cleanup**: Removed empty `/slices` directory and completed architectural consolidation
-
-**✅ Comprehensive Codebase Refactoring (July 2025):**
-- **Dead Code & Duplicates Removed**: Eliminated obsolete files including a legacy feature flag system, disabled tests, and the unused `StarShape` tool. Consolidated duplicated test utilities, type definitions, and rendering logic.
-- **Major Structural Refactoring**: Improved the project's architecture by relocating components to more logical directories. The most significant change was deprecating the `core/shared-ui` directory and moving its contents into `src/components/ui` and `src/components/layout` to establish a clearer architectural pattern.
-- **Build & Dependency Fixes**: Resolved critical build-time errors, including issues with the Tauri CLI and missing package dependencies, and corrected all stale import paths that resulted from the refactoring, ensuring a stable development environment.
-
-**🔥 Previously Resolved Major Issues (March 2025):**
-- **Table Positioning**: Tables now appear exactly where clicked.
-- **Table Dragging**: Smooth table movement without snapping back.
-- **Cell Text Persistence**: Cell content saves reliably.
-- **Coordinate System**: Proper screen-to-canvas conversion implemented.
-- **State Management**: Eliminated crashes from immutable state violations.
-
-**📋 COMPREHENSIVE DOCUMENTATION:**
-All canvas development information is available in the **[CANVAS_MASTER_DOCUMENTATION.md](docs/CANVAS_MASTER_DOCUMENTATION.md)**, which serves as the authoritative source for architecture, implementation status, and development roadmaps.
-
----
-
 **LibreOllama** is more than just a collection of tools; it's an integrated, desktop application designed to be your single workspace for thinking, creating, and organizing. By harnessing the power of local AI through Ollama and a user experience crafted for neurodivergent minds, LibreOllama provides a calm, focused, and powerful environment to get work done without compromising your data.
 
 Built with **Tauri**, **React**, and **Rust**, it's a cross-platform application that runs securely on your machine.
 
 ## Core Philosophy
 
-* **AI-Powered Productivity**: Leveraging AI to enhance your workflow and creativity.
-* **Extensible Integrations**: Future integration with Google Calendar & Tasks APIs and upcoming support for various LLM APIs (e.g., OpenAI, Anthropic).
-* **All-in-One Workspace**: Chat, Projects, Tasks, Notes, and a professional-grade Canvas in a single, cohesive interface.
+*   **AI-Powered Productivity**: Leveraging AI to enhance your workflow and creativity.
+*   **Extensible Integrations**: Future integration with Google Calendar & Tasks APIs and upcoming support for various LLM APIs (e.g., OpenAI, Anthropic).
+*   **All-in-One Workspace**: Chat, Projects, Tasks, Notes, and a professional-grade Canvas in a single, cohesive interface.
 
 ## Features
 
 LibreOllama provides a suite of deeply integrated tools designed to work together seamlessly.
 
-| Feature          | Description                                                                                                                                                       |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard** | Your "command center." Get a clear overview of your day with widgets for active projects, today's focus, and agent statuses.                                            |
-| **AI Chat** | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                               |
-| **Projects** | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                              |
-| **Notes** | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                       |
-| **Canvas** | A production-ready whiteboard for visual thinking with enterprise-grade modular architecture. Features include an optimized drawing suite (Marker, Highlighter, Pen), standard shapes, sticky notes, and fully functional tables. Built with Konva.js and a 12-module Zustand store architecture providing complete functionality including element grouping, import/export, and comprehensive event handling. Includes viewport culling, spatial indexing, and industry-standard drawing responsiveness with 100% reliability and 50%+ performance improvement. **Latest**: Professional context menu with PDF/JPEG export, modern UI design, and enhanced accessibility. |
-| **Tasks** | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                        |
-| **Calendar** | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                |
-| **Agents** | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                 |
-| **Settings** | Granular control over the application, including theme, integrations, and model management.                                                                             |
-| **Command Palette** | The power-user's best friend. Press `Ctrl+K` (`Cmd+K` on Mac) to instantly navigate anywhere, create new items, or perform actions.                                     |
+| Feature     | Description                                                                                                                                                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard** | Your "command center." Get a clear overview of your day with widgets for active projects, today's focus, and agent statuses.                                                                                                                                                                        |
+| **AI Chat**   | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                                                                                                                                                         |
+| **Projects**  | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                                                                                                                                                           |
+| **Notes**     | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                                                                                                                                                 |
+| **Canvas**    | A production-ready, infinite whiteboard for visual thinking. Features a robust, modular architecture and a full suite of tools for drawing, diagramming, and brainstorming. For a deep dive into its architecture and functionality, see the **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)**. |
+| **Tasks**     | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                                                                                                                                                |
+| **Calendar**  | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                                                                                                                                            |
+| **Agents**    | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                                                                                                                                             |
+| **Settings**  | Granular control over the application, including theme, integrations, and model management.                                                                                                                                                                                                         |
+| **Command Palette** | The power-user's best friend. Press `Ctrl+K` (`Cmd+K` on Mac) to instantly navigate anywhere, create new items, or perform actions.                                                                                                                                                             |
 
 ## Tech Stack
 
 LibreOllama is built on a modern, robust, and privacy-focused technology stack with a consolidated, enterprise-grade architecture.
 
-* **Framework**: [**Tauri**](https://tauri.app/) - A framework for building lightweight, secure, and cross-platform desktop applications using web technologies.
-* **Frontend**: [**React 19**](https://reactjs.org/) & [**TypeScript**](https://www.typescriptlang.org/) - For a type-safe, component-based user interface with full React 19 compatibility and concurrent features.
-* **Canvas**: [**Konva.js**](https://konvajs.org/) & [**React-Konva**](https://github.com/konvajs/react-konva) - High-performance 2D canvas library for professional whiteboard functionality, optimized for React 19's strict rendering requirements.
-* **Backend & Core Logic**: [**Rust**](https://www.rust-lang.org/) - Powers the secure, high-performance backend, managing everything from database connections to system-level commands.
-* **Styling**: [**Tailwind CSS**](https://tailwindcss.com/) - A utility-first CSS framework for rapid UI development.
-* **State Management**: [**Zustand**](https://zustand.surge.sh/) - For simple, predictable global state management.
-* **Database**: [**SQLCipher**](https://www.zetetic.net/sqlcipher/) (via `rusqlite`) - An encrypted SQLite database to keep all your data secure at rest.
+*   **Framework**: [**Tauri**](https://tauri.app/) - A framework for building lightweight, secure, and cross-platform desktop applications using web technologies.
+*   **Frontend**: [**React 19**](https://reactjs.org/) & [**TypeScript**](https://www.typescriptlang.org/) - For a type-safe, component-based user interface with full React 19 compatibility and concurrent features.
+*   **Canvas**: [**Konva.js**](https://konvajs.org/) & [**React-Konva**](https://github.com/konvajs/react-konva) - High-performance 2D canvas library for professional whiteboard functionality, optimized for React 19's strict rendering requirements.
+*   **Backend & Core Logic**: [**Rust**](https://www.rust-lang.org/) - Powers the secure, high-performance backend, managing everything from database connections to system-level commands.
+*   **Styling**: [**Tailwind CSS**](https://tailwindcss.com/) - A utility-first CSS framework for rapid UI development.
+*   **State Management**: [**Zustand**](https://zustand.surge.sh/) - For simple, predictable global state management.
+*   **Database**: [**SQLCipher**](https://www.zetetic.net/sqlcipher/) (via `rusqlite`) - An encrypted SQLite database to keep all your data secure at rest.
 
 ## Getting Started: Development Setup
 
@@ -147,65 +91,36 @@ Ready to contribute? Follow these steps to get your development environment up a
     ```bash
     npm run tauri:dev
     ```
-Your LibreOllama desktop application will launch, and any changes you make to the Rust or React code will trigger a rebuild and refresh.
+    Your LibreOllama desktop application will launch, and any changes you make to the Rust or React code will trigger a rebuild and refresh.
 
 ## Project Structure
 
-The repository is organized with a clean, feature-based architecture.
+The repository is organized with a clean, feature-based architecture. A detailed breakdown can be found in the comments within the file tree below.
 
 ```
 libreollama/
 ├── docs/                      # Comprehensive project documentation
 ├── src/                       # React Frontend Source
-│   ├── app/                   #   Core application setup, routing, and main pages
-│   │   ├── contexts/          #     React context providers
-│   │   ├── pages/             #     Top-level page components (Dashboard, Chat, etc.)
-│   │   ├── shared/            #     Shared UI components within the app
-│   │   ├── App.tsx            #     Root React component with router setup
-│   │   └── main.tsx           #     Application entry point
-│   ├── components/            #   Global, shared UI components (layout, navigation)
-│   ├── core/                  #   Core framework logic (non-UI)
-│   │   ├── design-system/     #     Global styles, theme
-│   │   ├── hooks/             #     Shared, reusable React hooks
-│   │   ├── lib/               #     Shared libraries, helpers, and utilities
-│   │   └── shared-ui/         #     Low-level shared UI primitives
-│   ├── features/              #   Feature-based modules
-│   │   └── canvas/            #     The Canvas feature module
-│   │       ├── components/    #       UI components specific to the canvas
-│   │       ├── elements/      #       Definitions for canvas element types
-│   │       ├── hooks/         #       Canvas-specific React hooks
-│   │       ├── layers/        #       Konva Layer components
-│   │       ├── renderers/     #       Logic for rendering canvas elements
-│   │       ├── shapes/        #       Konva Shape components
-│   │       ├── stores/        #       Canvas state management (Zustand)
-│   │       │   ├── modules/   #         Modular store architecture (11 focused modules)
-│   │       │   └── selectors/ #         Module-specific state selectors
-│   │       ├── systems/       #       Core canvas systems (e.g., StrokeManager)
-│   │       ├── tests/         #       Co-located canvas tests
-│   │       ├── toolbar/       #       Components for the canvas toolbar
-│   │       ├── types/         #       Canvas-specific type definitions
-│   │       └── utils/         #       Canvas-specific utility functions
-│   ├── test-utils/            #   Shared utilities for testing
-│   └── tests/                 #   Global tests and configuration
+│   ├── app/                   # Core application setup, routing, and main pages
+│   ├── components/            # Global, shared UI components (layout, navigation)
+│   ├── core/                  # Core framework logic (non-UI)
+│   ├── features/              # Feature-based modules (e.g., Canvas, Chat)
+│   └── tests/                 # Global tests and configuration
 ├── src-tauri/                 # Rust Backend (Tauri Core)
-│   ├── src/                   #   Rust source code
-│   │   ├── commands/          #     Tauri commands exposed to the frontend
-│   │   ├── database/          #     Database logic (schema, models, operations)
-│   │   └── lib.rs             #     Main Rust library
-│   └── tauri.conf.json        #   Core Tauri application configuration
-├── tailwind.config.ts         # Tailwind CSS configuration file
+│   ├── src/                   # Rust source code
+│   └── tauri.conf.json        # Core Tauri application configuration
 └── README.md                  # This file
 ```
 
-## Documentation & Guides
+## Documentation
 
-- **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)** - **AUTHORITATIVE SOURCE** for canvas implementation, architecture, and roadmap.
-- **[Documentation Index](./docs/README.md)** - Guide to all project documentation.
-- **[Testing Guide](./docs/TESTING_GUIDE.md)** - Testing methodology and best practices.
+The single source of truth for all canvas-related architecture, development practices, and testing philosophy is the **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)**.
+
+For a guide to all other project documentation, see the **[Documentation Index](./docs/README.md)**.
 
 ## 📚 Canvas Testing & Development
 
-The LibreOllama Canvas includes comprehensive testing coverage.
+The LibreOllama Canvas includes comprehensive testing coverage. See the master documentation for our testing philosophy.
 
 ```bash
 # Run all tests

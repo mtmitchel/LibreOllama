@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Badge, Progress, Checkbox } from "../../../components/ui";
+import { Card, Button, Badge, Progress, Checkbox, StatusBadge, Heading, Text, Caption, Avatar } from "../../../components/ui";
 import { MoreVertical, Upload, ImageIcon, File, Link, Plus, Users, Calendar, Target } from 'lucide-react';
 
 interface Project {
@@ -36,12 +36,12 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     { id: 'team', label: 'Team', icon: Users }
   ];
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityStatus = (priority: string): 'error' | 'warning' | 'success' | 'info' => {
     switch (priority) {
-      case 'high': return 'border-error text-error';
-      case 'medium': return 'border-warning text-warning';
-      case 'low': return 'border-success text-success';
-      default: return 'border-border-default text-text-tertiary';
+      case 'high': return 'error';
+      case 'medium': return 'warning';
+      case 'low': return 'success';
+      default: return 'info';
     }
   };
 
@@ -49,99 +49,109 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     <div className="flex-1 min-w-0 flex flex-col">
       <Card className="flex-1 flex flex-col" padding="none">
         {/* Tabs */}
-        <div className="border-b border-border-subtle sticky top-0 bg-bg-primary z-10">
-          <div className="flex gap-1 px-4 pt-4">
+        <div className="border-b border-[var(--border-subtle)] sticky top-0 bg-[var(--bg-primary)] z-10">
+          <div className="flex gap-[var(--space-1)] px-[var(--space-4)] pt-[var(--space-4)]">
             {projectTabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-t-lg ${
+                className={`flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-2)] text-[var(--font-size-sm)] font-[var(--font-weight-medium)] transition-colors rounded-t-[var(--radius-lg)] ${
                   activeTab === tab.id
-                    ? 'bg-bg-secondary text-text-primary border-b-2 border-accent-primary'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary'
+                    ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border-b-2 border-[var(--accent-primary)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
                 }`}
               >
                 <tab.icon size={16} />
-                {tab.label}
+                <Text size="sm" weight="medium" font="sans">{tab.label}</Text>
               </button>
             ))}
           </div>
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto" style={{ padding: 'var(--space-6)' }}>
           {activeTab === 'overview' && (
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
               {/* Project Header */}
               <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
+                <div className="flex items-start" style={{ gap: 'var(--space-4)' }}>
                   <div
-                    className="w-12 h-12 rounded-lg flex-shrink-0"
-                    style={{ backgroundColor: project.color }}
+                    className="rounded-[var(--radius-lg)] flex-shrink-0"
+                    style={{ 
+                      backgroundColor: project.color,
+                      width: 'calc(var(--space-12))',
+                      height: 'calc(var(--space-12))'
+                    }}
                   />
                   <div>
-                    <h1 className="text-2xl font-bold text-text-primary">{project.name}</h1>
-                    <p className="text-text-secondary mt-1">{project.description}</p>
-                    <div className="flex items-center gap-4 mt-3">
+                    <Heading level={1}>{project.name}</Heading>
+                    <Text variant="secondary" style={{ marginTop: 'var(--space-1)' }}>{project.description}</Text>
+                    <div className="flex items-center" style={{ gap: 'var(--space-4)', marginTop: 'var(--space-3)' }}>
                       <Badge 
                         variant={project.status === 'in-progress' ? 'default' : project.status === 'completed' ? 'success' : 'secondary'}
                       >
                         {project.status}
                       </Badge>
-                      <span className="text-sm text-text-secondary">Due: {new Date(project.dueDate).toLocaleDateString()}</span>
+                      <Text variant="tertiary" size="sm">Due: {new Date(project.dueDate).toLocaleDateString()}</Text>
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  <MoreVertical size={16} className="mr-2" />
+                <Button variant="outline" size="sm" className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                  <MoreVertical size={16} />
                   Actions
                 </Button>
               </div>
 
               {/* Progress Overview */}
               <Card>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-text-primary">Progress Overview</h3>
-                  <span className="text-2xl font-bold text-accent-primary">{project.progress}%</span>
+                <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-4)' }}>
+                  <Heading level={3}>Progress Overview</Heading>
+                  <Text size="lg" weight="semibold" className="text-[var(--accent-primary)]">{project.progress}%</Text>
                 </div>
-                <Progress value={project.progress} className="mb-4" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <Progress value={project.progress} style={{ marginBottom: 'var(--space-4)' }} />
+                <div className="grid grid-cols-1 md:grid-cols-3 text-center" style={{ gap: 'var(--space-4)' }}>
                   <div>
-                    <div className="text-2xl font-bold text-text-primary">{project.goals.filter(g => g.completed).length}</div>
-                    <div className="text-sm text-text-secondary">Completed Goals</div>
+                    <Text size="lg" weight="semibold">{project.goals.filter(g => g.completed).length}</Text>
+                    <Text variant="secondary" size="sm">Completed Goals</Text>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-text-primary">{project.goals.length - project.goals.filter(g => g.completed).length}</div>
-                    <div className="text-sm text-text-secondary">Remaining Goals</div>
+                    <Text size="lg" weight="semibold">{project.goals.length - project.goals.filter(g => g.completed).length}</Text>
+                    <Text variant="secondary" size="sm">Remaining Goals</Text>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-text-primary">{project.assets?.length || 0}</div>
-                    <div className="text-sm text-text-secondary">Assets</div>
+                    <Text size="lg" weight="semibold">{project.assets?.length || 0}</Text>
+                    <Text variant="secondary" size="sm">Assets</Text>
                   </div>
                 </div>
               </Card>
 
               {/* Key Goals */}
               <Card>
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Key Goals</h3>
-                <div className="space-y-3">
+                <Heading level={3} style={{ marginBottom: 'var(--space-4)' }}>Key Goals</Heading>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                   {project.goals.map(goal => (
-                    <div key={goal.id} className="flex items-center gap-3 p-3 rounded-lg bg-bg-secondary">
+                    <div key={goal.id} className="flex items-center bg-[var(--bg-secondary)] rounded-[var(--radius-lg)]" style={{ 
+                      gap: 'var(--space-3)', 
+                      padding: 'var(--space-3)' 
+                    }}>
                       <Checkbox 
                         checked={goal.completed}
                         onCheckedChange={() => onGoalToggle(goal.id)}
                       />
                       <div className="flex-1">
-                        <span className={`font-medium ${goal.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                        <Text 
+                          weight="medium" 
+                          className={goal.completed ? 'line-through text-[var(--text-secondary)]' : 'text-[var(--text-primary)]'}
+                        >
                           {goal.title}
-                        </span>
+                        </Text>
                       </div>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${getPriorityColor(goal.priority)}`}
+                      <StatusBadge 
+                        status={getPriorityStatus(goal.priority)}
+                        size="sm"
                       >
                         {goal.priority}
-                      </Badge>
+                      </StatusBadge>
                     </div>
                   ))}
                 </div>
@@ -150,28 +160,30 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
           )}
 
           {activeTab === 'assets' && (
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-text-primary">Project Assets</h3>
-                <Button variant="default">
-                  <Upload size={16} className="mr-2" />
+                <Heading level={3}>Project Assets</Heading>
+                <Button variant="default" className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                  <Upload size={16} />
                   Upload Asset
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 'var(--space-4)' }}>
                 {project.assets?.map(asset => (
-                  <Card key={asset.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-bg-tertiary">
-                        {asset.type === 'image' && <ImageIcon size={20} className="text-text-secondary" />}
-                        {asset.type === 'document' && <File size={20} className="text-text-secondary" />}
-                        {asset.type === 'link' && <Link size={20} className="text-text-secondary" />}
+                  <Card key={asset.id} padding="sm" className="hover:shadow-[var(--shadow-md)] transition-shadow cursor-pointer">
+                    <div className="flex items-start" style={{ gap: 'var(--space-3)' }}>
+                      <div className="bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]" style={{ padding: 'var(--space-2)' }}>
+                        {asset.type === 'image' && <ImageIcon size={20} className="text-[var(--text-secondary)]" />}
+                        {asset.type === 'document' && <File size={20} className="text-[var(--text-secondary)]" />}
+                        {asset.type === 'link' && <Link size={20} className="text-[var(--text-secondary)]" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-text-primary text-sm truncate">{asset.name}</h4>
-                        <p className="text-xs text-text-secondary mt-1">Uploaded {new Date(asset.uploadDate).toLocaleDateString()}</p>
-                        <Badge variant="outline" className="text-xs mt-2">
+                        <Text size="sm" weight="medium" className="truncate">{asset.name}</Text>
+                        <Text size="xs" variant="secondary" style={{ marginTop: 'var(--space-1)' }}>
+                          Uploaded {new Date(asset.uploadDate).toLocaleDateString()}
+                        </Text>
+                        <Badge variant="outline" style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-2)' }}>
                           {asset.type}
                         </Badge>
                       </div>
@@ -181,68 +193,82 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 
                 {/* Add Asset Card */}
                 <div 
-                  className="border-2 border-dashed border-border-default rounded-lg p-6 flex flex-col items-center justify-center text-center hover:border-accent-primary hover:bg-accent-primary/5 transition-colors cursor-pointer group"
+                  className="border-2 border-dashed border-[var(--border-default)] rounded-[var(--radius-lg)] flex flex-col items-center justify-center text-center hover:border-[var(--accent-primary)] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer group"
+                  style={{ padding: 'var(--space-6)' }}
                   onClick={() => console.log('Add asset clicked')}
                 >
-                  <Plus size={24} className="text-text-secondary group-hover:text-accent-primary mb-2" />
-                  <span className="text-sm font-medium text-text-secondary group-hover:text-accent-primary">Add Asset</span>
+                  <Plus size={24} className="text-[var(--text-secondary)] group-hover:text-[var(--accent-primary)]" style={{ marginBottom: 'var(--space-2)' }} />
+                  <Text size="sm" weight="medium" className="text-[var(--text-secondary)] group-hover:text-[var(--accent-primary)]">Add Asset</Text>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'roadmap' && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold text-text-primary">Project Roadmap</h3>
-              <div className="space-y-4">
-                <Card className="p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-success" />
-                    <h4 className="font-medium text-text-primary">Phase 1: Planning</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+              <Heading level={3}>Project Roadmap</Heading>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                <Card padding="sm">
+                  <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+                    <div className="bg-[var(--success)] rounded-full" style={{ 
+                      width: 'var(--space-3)', 
+                      height: 'var(--space-3)' 
+                    }} />
+                    <Text weight="medium">Phase 1: Planning</Text>
                     <Badge variant="success">Completed</Badge>
                   </div>
-                  <p className="text-sm text-text-secondary ml-6">Initial project setup and requirements gathering</p>
+                  <Text size="sm" variant="secondary" style={{ marginLeft: 'var(--space-6)' }}>
+                    Initial project setup and requirements gathering
+                  </Text>
                 </Card>
-                <Card className="p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-primary" />
-                    <h4 className="font-medium text-text-primary">Phase 2: Development</h4>
+                <Card padding="sm">
+                  <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+                    <div className="bg-[var(--accent-primary)] rounded-full" style={{ 
+                      width: 'var(--space-3)', 
+                      height: 'var(--space-3)' 
+                    }} />
+                    <Text weight="medium">Phase 2: Development</Text>
                     <Badge variant="default">In Progress</Badge>
                   </div>
-                  <p className="text-sm text-text-secondary ml-6">Core feature development and implementation</p>
+                  <Text size="sm" variant="secondary" style={{ marginLeft: 'var(--space-6)' }}>
+                    Core feature development and implementation
+                  </Text>
                 </Card>
-                <Card className="p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-text-tertiary" />
-                    <h4 className="font-medium text-text-primary">Phase 3: Testing</h4>
+                <Card padding="sm">
+                  <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+                    <div className="bg-[var(--text-tertiary)] rounded-full" style={{ 
+                      width: 'var(--space-3)', 
+                      height: 'var(--space-3)' 
+                    }} />
+                    <Text weight="medium">Phase 3: Testing</Text>
                     <Badge variant="secondary">Upcoming</Badge>
                   </div>
-                  <p className="text-sm text-text-secondary ml-6">Quality assurance and user testing</p>
+                  <Text size="sm" variant="secondary" style={{ marginLeft: 'var(--space-6)' }}>
+                    Quality assurance and user testing
+                  </Text>
                 </Card>
               </div>
             </div>
           )}
 
           {activeTab === 'team' && (
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-text-primary">Team Members</h3>
-                <Button variant="default">
-                  <Plus size={16} className="mr-2" />
+                <Heading level={3}>Team Members</Heading>
+                <Button variant="default" className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                  <Plus size={16} />
                   Invite Team Member
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 'var(--space-4)' }}>
                 {project.team.map(member => (
-                  <Card key={member.id} className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-accent-primary flex items-center justify-center text-white font-medium">
-                        {member.name.charAt(0)}
-                      </div>
+                  <Card key={member.id} padding="sm">
+                    <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
+                      <Avatar name={member.name} size="sm" />
                       <div>
-                        <h4 className="font-medium text-text-primary">{member.name}</h4>
-                        <p className="text-sm text-text-secondary">Team Member</p>
+                        <Text weight="medium">{member.name}</Text>
+                        <Text size="sm" variant="secondary">Team Member</Text>
                       </div>
                     </div>
                   </Card>

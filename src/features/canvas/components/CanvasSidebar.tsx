@@ -9,13 +9,12 @@ import {
   PanelLeftClose,
   PanelRightClose,
   Shapes,
-  Text,
   FileImage,
   FileText,
   Download,
   Share2
 } from "lucide-react";
-import { Button, Input } from "../../../components/ui";
+import { Button, Input, Spinner, Text, Heading, Caption } from "../../../components/ui";
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { exportCanvasAsJPEG, exportCanvasAsPDF, getSuggestedFilename } from '../utils/exportUtils';
 import Konva from 'konva';
@@ -201,33 +200,35 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
     setCanvases(updatedCanvases);
     saveCanvasesToStorage(updatedCanvases);
 
-    if (canvasId === selectedCanvasId && updatedCanvases.length > 0) {
-      const firstCanvas = updatedCanvases[0];
-      if (firstCanvas) {
-        loadCanvas(firstCanvas.id);
+    if (selectedCanvasId === canvasId) {
+      const nextCanvas = updatedCanvases[0];
+      if (nextCanvas) {
+        loadCanvas(nextCanvas.id);
       }
     }
-
-    setMenuOpenId(null);
   };
 
   const handleDuplicateCanvas = (canvasId: string) => {
-    const canvasToDuplicate = canvases.find((c) => c.id === canvasId);
-    if (!canvasToDuplicate) return;
+    const originalCanvas = canvases.find((c) => c.id === canvasId);
+    if (!originalCanvas) return;
 
-    const newCanvas: CanvasItem = {
-      ...createNewCanvas(),
-      name: `${canvasToDuplicate.name} (Copy)`,
+    const canvasData = localStorage.getItem(`libreollama_canvas_${canvasId}`);
+    const newCanvas = {
+      ...originalCanvas,
+      id: `canvas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: `${originalCanvas.name} (Copy)`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
-
-    const originalData = localStorage.getItem(`libreollama_canvas_${canvasId}`);
-    if (originalData) {
-      localStorage.setItem(`libreollama_canvas_${newCanvas.id}`, originalData);
-    }
 
     const updatedCanvases = [...canvases, newCanvas];
     setCanvases(updatedCanvases);
     saveCanvasesToStorage(updatedCanvases);
+
+    if (canvasData) {
+      localStorage.setItem(`libreollama_canvas_${newCanvas.id}`, canvasData);
+    }
+
     setMenuOpenId(null);
   };
 
@@ -241,11 +242,14 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
   };
 
   const handleSaveRename = () => {
-    if (!editingId || !editingName.trim()) return;
+    if (!editingId || !editingName.trim()) {
+      setEditingId(null);
+      return;
+    }
 
     const updatedCanvases = canvases.map((canvas) => {
       if (canvas.id === editingId) {
-        return { ...canvas, name: editingName.trim() };
+        return { ...canvas, name: editingName.trim(), updatedAt: Date.now() };
       }
       return canvas;
     });
@@ -258,29 +262,17 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
   const handleExportAsJPEG = async (canvasId: string) => {
     if (!stageRef?.current || isExporting) return;
-    
-    const canvas = canvases.find(c => c.id === canvasId);
-    if (!canvas) return;
 
     setIsExporting(true);
     setMenuOpenId(null);
 
     try {
-      const filename = getSuggestedFilename(canvas.name, 'jpg');
-      const result = await exportCanvasAsJPEG(stageRef.current, filename, {
-        quality: 0.95,
-        scale: 2,
-        padding: 20,
-        backgroundColor: '#ffffff'
-      });
-
-      if (result.success) {
-        alert(`Canvas exported successfully as ${result.filename}`);
-      } else {
-        alert(`Export failed: ${result.error}`);
-      }
+      const canvas = canvases.find((c) => c.id === canvasId);
+      const filename = getSuggestedFilename(canvas?.name || "canvas", "jpeg");
+      await exportCanvasAsJPEG(stageRef.current, filename);
     } catch (error) {
-      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Export failed:", error);
+      alert("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -288,28 +280,17 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
   const handleExportAsPDF = async (canvasId: string) => {
     if (!stageRef?.current || isExporting) return;
-    
-    const canvas = canvases.find(c => c.id === canvasId);
-    if (!canvas) return;
 
     setIsExporting(true);
     setMenuOpenId(null);
 
     try {
-      const filename = getSuggestedFilename(canvas.name, 'pdf');
-      const result = await exportCanvasAsPDF(stageRef.current, filename, {
-        scale: 2,
-        padding: 20,
-        backgroundColor: '#ffffff'
-      });
-
-      if (result.success) {
-        alert(`Canvas exported successfully as ${result.filename}`);
-      } else {
-        alert(`Export failed: ${result.error}`);
-      }
+      const canvas = canvases.find((c) => c.id === canvasId);
+      const filename = getSuggestedFilename(canvas?.name || "canvas", "pdf");
+      await exportCanvasAsPDF(stageRef.current, filename);
     } catch (error) {
-      alert(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Export failed:", error);
+      alert("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -337,199 +318,286 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
   return (
     <aside
-      className={`transition-all duration-300 ease-in-out flex flex-col ${isOpen ? 'w-80' : 'w-0'} overflow-hidden bg-surface/80 border border-border-subtle rounded-lg`}
+      className={`transition-all duration-300 ease-in-out flex flex-col overflow-hidden bg-[var(--bg-secondary)] border border-border-subtle rounded-lg shadow-lg`}
       style={{
+        width: isOpen ? '20rem' : '0',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
       }}
+      role="complementary"
+      aria-label="Canvas sidebar"
     >
-        <div className={`flex items-center justify-between p-3 border-b border-border-subtle flex-shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-          <h2 className="text-lg font-semibold text-text-primary">Canvases</h2>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={handleCreateCanvas}>
-              <Plus size={16} className="mr-1.5" />
-              New
-            </Button>
-            <Button variant="ghost" size="icon" onClick={onToggle} className="text-text-secondary">
-              <PanelLeftClose size={20} />
-            </Button>
-          </div>
+      {/* Header */}
+      <div 
+        className={`flex items-center justify-between border-b border-border-subtle flex-shrink-0 transition-opacity duration-200 bg-[var(--bg-primary)] ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
+      >
+        <Heading 
+          level={3} 
+          className="text-primary select-none text-lg font-semibold"
+        >
+          Canvases
+        </Heading>
+        <div className="flex items-center shrink-0 gap-2">
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={handleCreateCanvas}
+            className="focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            aria-label="Create new canvas"
+          >
+            <Plus size={16} className="mr-2" />
+            <Text as="span" size="sm" weight="medium">New</Text>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onToggle} 
+            className="text-secondary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            aria-label="Close canvas sidebar"
+          >
+            <PanelLeftClose size={18} />
+          </Button>
         </div>
+      </div>
 
-        <div className={`p-3 flex-shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            <Input
-              type="text"
-              placeholder="Search canvases..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full"
-            />
-          </div>
+      {/* Search */}
+      <div 
+        className={`flex-shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
+      >
+        <div className="relative">
+          <Search 
+            size={18} 
+            className="absolute top-1/2 -translate-y-1/2 text-muted pointer-events-none left-3"
+          />
+          <Input
+            type="text"
+            placeholder="Search canvases..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full focus:ring-2 focus:ring-primary focus:ring-offset-0 focus:border-primary pl-10 text-sm"
+            aria-label="Search canvases"
+          />
         </div>
+      </div>
 
-        <div className={`flex-1 overflow-y-auto px-3 pb-3 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="space-y-1">
-            {filteredCanvases.map((canvas) => (
-              <div
-                key={canvas.id}
-                className={`group flex items-center p-2 rounded-md cursor-pointer transition-colors ${
-                  selectedCanvasId === canvas.id ? "bg-accent-soft" : "hover:bg-bg-secondary"
+      {/* Canvas List */}
+      <div 
+        className={`flex-1 overflow-y-auto transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} px-3 pb-3`}
+        role="list"
+        aria-label="Canvas list"
+      >
+        <div className="flex flex-col gap-1">
+          {filteredCanvases.map((canvas) => (
+            <div
+              key={canvas.id}
+              className={`group flex items-center cursor-pointer transition-all duration-200 rounded-md border border-transparent
+                focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-bg-surface p-3
+                ${selectedCanvasId === canvas.id 
+                  ? "bg-accent-ghost text-accent-primary border-accent-primary shadow-sm" 
+                  : "hover:bg-[var(--bg-tertiary)] hover:border-border-default hover:shadow-sm active:bg-tertiary"
                 }`}
-                onClick={() => loadCanvas(canvas.id)}
+              onClick={() => loadCanvas(canvas.id)}
+              role="listitem"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  loadCanvas(canvas.id);
+                }
+              }}
+              aria-label={`Canvas: ${canvas.name}`}
+              aria-current={selectedCanvasId === canvas.id ? 'page' : undefined}
+            >
+              {/* Thumbnail */}
+              <div 
+                className={`flex-shrink-0 rounded-md flex items-center justify-center transition-all duration-200 border w-10 h-10 mr-3
+                  ${selectedCanvasId === canvas.id 
+                    ? "bg-accent-primary border-accent-primary" 
+                    : "bg-[var(--bg-tertiary)] border-border-subtle group-hover:border-border-default"
+                  }`}
               >
-                <div className="flex-shrink-0 w-10 h-10 bg-bg-tertiary rounded-md mr-3 flex items-center justify-center">
-                  <div className="w-6 h-6 bg-bg-surface rounded-sm"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  {editingId === canvas.id ? (
-                    <Input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onBlur={handleSaveRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveRename();
-                        if (e.key === "Escape") setEditingId(null);
-                      }}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-8 text-sm"
-                    />
-                  ) : (
-                    <h4 className="font-medium text-sm text-text-primary truncate">{canvas.name}</h4>
-                  )}
-                  <p className="text-xs text-text-secondary truncate">
-                    {formatDate(canvas.updatedAt)} • {canvas.elementCount} elements
-                  </p>
-                </div>
-                <div className="relative ml-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-text-secondary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpenId(menuOpenId === canvas.id ? null : canvas.id);
+                <Shapes 
+                  size={20} 
+                  className={`transition-all duration-200 ${selectedCanvasId === canvas.id ? 'text-white' : 'text-muted'}`}
+                />
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                {editingId === canvas.id ? (
+                  <Input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onBlur={handleSaveRename}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveRename();
+                      if (e.key === "Escape") setEditingId(null);
                     }}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-8 focus:ring-2 focus:ring-primary focus:ring-offset-0 focus:border-primary text-sm"
+                    aria-label="Edit canvas name"
+                  />
+                ) : (
+                  <Text 
+                    weight={selectedCanvasId === canvas.id ? 'semibold' : 'medium'}
+                    size="sm" 
+                    variant="body"
+                    className="truncate transition-all duration-200"
                   >
-                    <MoreVertical size={16} />
-                  </Button>
-                  {menuOpenId === canvas.id && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 py-2 backdrop-blur-sm"
-                         style={{
-                           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                         }}>
-                      
-                      {/* Edit Section */}
-                      <div className="px-4 py-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Edit2 size={12} className="text-blue-500" />
-                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Edit
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          <button 
-                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150"
-                            onClick={() => handleRenameCanvas(canvas.id)}
-                          >
-                            <Edit2 size={16} className="text-gray-500 dark:text-gray-400" />
-                            <span className="font-medium">Rename</span>
-                          </button>
-                          <button 
-                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors duration-150"
-                            onClick={() => handleDuplicateCanvas(canvas.id)}
-                          >
-                            <Copy size={16} className="text-gray-500 dark:text-gray-400" />
-                            <span className="font-medium">Duplicate</span>
-                          </button>
-                        </div>
+                    {canvas.name}
+                  </Text>
+                )}
+                <Caption 
+                  className={`truncate transition-all duration-200 text-xs ${
+                    selectedCanvasId === canvas.id ? 'text-accent-primary' : 'text-muted'
+                  }`}
+                >
+                  {formatDate(canvas.updatedAt)} • {canvas.elementCount} elements
+                </Caption>
+              </div>
+              
+              {/* Actions */}
+              <div className="relative ml-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-secondary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-bg-surface w-7 h-7"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpenId(menuOpenId === canvas.id ? null : canvas.id);
+                  }}
+                  aria-label={`More actions for ${canvas.name}`}
+                  aria-expanded={menuOpenId === canvas.id}
+                  aria-haspopup="menu"
+                >
+                  <MoreVertical size={16} />
+                </Button>
+                
+                {/* Context Menu */}
+                {menuOpenId === canvas.id && (
+                  <div 
+                    className="absolute right-0 top-full bg-bg-elevated border border-border-default rounded-xl shadow-xl z-50 backdrop-blur-sm mt-2 w-56 p-2"
+                    role="menu"
+                    aria-label={`Actions for ${canvas.name}`}
+                  >
+                    {/* Edit Section */}
+                    <div className="p-1">
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <Edit2 size={12} className="text-accent-primary" />
+                        <Caption className="text-muted uppercase tracking-wider text-xs font-bold">
+                          Edit
+                        </Caption>
                       </div>
-                      
-                      {/* Divider */}
-                      <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-600 to-transparent mx-2"></div>
-                      
-                      {/* Export Section */}
-                      <div className="px-4 py-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Download size={12} className="text-green-500" />
-                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                            Export
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          <button 
-                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
-                              isExporting || !stageRef?.current
-                                ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                                : 'text-gray-700 dark:text-gray-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300'
-                            }`}
-                            onClick={() => handleExportAsJPEG(canvas.id)}
-                            disabled={isExporting || !stageRef?.current}
-                          >
-                            <FileImage size={16} className={`${
-                              isExporting || !stageRef?.current
-                                ? 'text-gray-400 dark:text-gray-500' 
-                                : 'text-green-500'
-                            }`} />
-                            <span className="font-medium">
-                              {isExporting ? 'Exporting...' : 'Export as JPEG'}
-                            </span>
-                            {isExporting && (
-                              <div className="ml-auto">
-                                <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-                              </div>
-                            )}
-                          </button>
-                          <button 
-                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-150 ${
-                              isExporting || !stageRef?.current
-                                ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                                : 'text-gray-700 dark:text-gray-200 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300'
-                            }`}
-                            onClick={() => handleExportAsPDF(canvas.id)}
-                            disabled={isExporting || !stageRef?.current}
-                          >
-                            <FileText size={16} className={`${
-                              isExporting || !stageRef?.current
-                                ? 'text-gray-400 dark:text-gray-500' 
-                                : 'text-red-500'
-                            }`} />
-                            <span className="font-medium">
-                              {isExporting ? 'Exporting...' : 'Export as PDF'}
-                            </span>
-                            {isExporting && (
-                              <div className="ml-auto">
-                                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                              </div>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Divider */}
-                      <div className="h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-600 to-transparent mx-2"></div>
-                      
-                      {/* Delete Section */}
-                      <div className="px-4 py-2">
-                        <button 
-                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-colors duration-150"
-                          onClick={() => handleDeleteCanvas(canvas.id)}
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRenameCanvas(canvas.id)}
+                          className="justify-start text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] gap-3"
+                          role="menuitem"
                         >
-                          <Trash2 size={16} className="text-red-500" />
-                          <span className="font-medium">Delete Canvas</span>
-                        </button>
+                          <Edit2 size={16} className="text-muted" />
+                          <Text size="sm" weight="medium">Rename</Text>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDuplicateCanvas(canvas.id)}
+                          className="justify-start text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] gap-3"
+                          role="menuitem"
+                        >
+                          <Copy size={16} className="text-muted" />
+                          <Text size="sm" weight="medium">Duplicate</Text>
+                        </Button>
                       </div>
                     </div>
-                  )}
-                </div>
+                    
+                    {/* Divider */}
+                    <div className="bg-border-subtle h-px my-2" />
+                    
+                    {/* Export Section */}
+                    <div className="p-1">
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <Download size={12} className="text-success" />
+                        <Caption className="text-muted uppercase tracking-wider text-xs font-bold">
+                          Export
+                        </Caption>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExportAsJPEG(canvas.id)}
+                          disabled={isExporting || !stageRef?.current}
+                          className={`justify-start transition-all duration-200 gap-3 ${
+                            isExporting || !stageRef?.current
+                              ? 'text-muted cursor-not-allowed opacity-60' 
+                              : 'text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)]'
+                          }`}
+                          role="menuitem"
+                        >
+                          <FileImage size={16} className="text-success" />
+                          <Text size="sm" weight="medium">
+                            {isExporting ? 'Exporting...' : 'Export as JPEG'}
+                          </Text>
+                          {isExporting && (
+                            <div className="ml-auto">
+                              <Spinner size="sm" color="success" />
+                            </div>
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExportAsPDF(canvas.id)}
+                          disabled={isExporting || !stageRef?.current}
+                          className={`justify-start transition-all duration-200 gap-3 ${
+                            isExporting || !stageRef?.current
+                              ? 'text-muted cursor-not-allowed opacity-60' 
+                              : 'text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)]'
+                          }`}
+                          role="menuitem"
+                        >
+                          <FileText size={16} className="text-error" />
+                          <Text size="sm" weight="medium">
+                            {isExporting ? 'Exporting...' : 'Export as PDF'}
+                          </Text>
+                          {isExporting && (
+                            <div className="ml-auto">
+                              <Spinner size="sm" color="error" />
+                            </div>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Divider */}
+                    <div className="bg-border-subtle h-px my-2" />
+                    
+                    {/* Delete Section */}
+                    <div className="p-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteCanvas(canvas.id)}
+                        className="justify-start text-error hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-error focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] w-full gap-3"
+                        role="menuitem"
+                      >
+                        <Trash2 size={16} className="text-error" />
+                        <Text size="sm" weight="medium">Delete Canvas</Text>
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
     </aside>
   );
 };
-  export default CanvasSidebar;
+
+export default CanvasSidebar;

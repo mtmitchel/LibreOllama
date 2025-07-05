@@ -1,7 +1,7 @@
 // src/features/canvas/utils/textEditingUtils.tsx
-import { designSystem } from '../../../core/design-system';
 import Konva from 'konva';
 import { ElementId } from '../types/enhanced.types';
+import { getAvailableFontFamily } from './fontLoader';
 
 /**
  * CANVAS-NATIVE TEXT EDITING UTILITIES
@@ -33,11 +33,11 @@ export const CANVAS_TEXT_CONFIG: CanvasTextConfig = {
   LINE_HEIGHT: 1.25,
   FONT_WEIGHT: '400',
   LETTER_SPACING: 0, // Number, not string for Konva compatibility
-  EDIT_BACKGROUND: 'rgba(59, 130, 246, 0.1)',
-  EDIT_BORDER: '#3b82f6',
-  CURSOR_COLOR: '#3b82f6',
+  EDIT_BACKGROUND: 'var(--accent-ghost)',
+  EDIT_BORDER: 'var(--accent-primary)',
+  CURSOR_COLOR: 'var(--accent-primary)',
   CURSOR_WIDTH: 2,
-  FONT_COLOR: '#000000',
+  FONT_COLOR: 'var(--text-primary)',
 } as const;
 
 /**
@@ -255,6 +255,6 @@ export const handleTextKeyboardInput = (
  * The old DOM-based editor is no longer used
  */
 export const createTextEditor = (): (() => void) => {
-return () => {}; // No-op cleanup
+  return () => {}; // No-op cleanup
 };
 

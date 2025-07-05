@@ -1,0 +1,14 @@
+{
+  "projectToken": "CHROMATIC_PROJECT_TOKEN",
+  "buildScriptName": "ladle:build",
+  "storybookBuildDir": "build",
+  "exitZeroOnChanges": true,
+  "exitOnceUploaded": false,
+  "ignoreLastBuildOnBranch": "main",
+  "skip": "dependabot/**",
+  "externals": [
+    "public/**"
+  ],
+  "fileHashing": true,
+  "zip": true
+} 

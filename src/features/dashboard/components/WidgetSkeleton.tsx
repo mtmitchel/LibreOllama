@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from "../../../components/ui";
+import { Card, Skeleton } from "../../../components/ui";
 
 interface WidgetSkeletonProps {
   className?: string;
@@ -15,25 +15,25 @@ export const WidgetSkeleton: React.FC<WidgetSkeletonProps> = ({
       <div className="animate-pulse">
         {/* Header skeleton */}
         <div className="flex justify-between items-center mb-4">
-          <div className="h-6 bg-bg-secondary rounded w-32"></div>
-          <div className="h-8 bg-bg-secondary rounded w-20"></div>
+          <Skeleton variant="text" width="8rem" height="1.5rem" />
+          <Skeleton variant="rectangular" width="5rem" height="2rem" />
         </div>
         
         {/* Progress bar skeleton (optional) */}
         <div className="mb-4">
-          <div className="w-full bg-bg-secondary rounded-full h-2.5"></div>
+          <Skeleton variant="rectangular" width="100%" height="0.625rem" className="rounded-full" />
         </div>
         
         {/* Rows skeleton */}
         <div className="space-y-3">
           {Array.from({ length: rows }).map((_, index) => (
             <div key={index} className="flex items-center gap-3">
-              <div className="w-4 h-4 bg-bg-secondary rounded-full flex-shrink-0"></div>
+              <Skeleton variant="circular" width="1rem" height="1rem" className="flex-shrink-0" />
               <div className="flex-1">
-                <div className="h-4 bg-bg-secondary rounded w-3/4 mb-1"></div>
-                <div className="h-3 bg-bg-secondary rounded w-1/2"></div>
+                <Skeleton variant="text" width="75%" height="1rem" className="mb-1" />
+                <Skeleton variant="text" width="50%" height="0.75rem" />
               </div>
-              <div className="h-3 bg-bg-secondary rounded w-12 flex-shrink-0"></div>
+              <Skeleton variant="text" width="3rem" height="0.75rem" className="flex-shrink-0" />
             </div>
           ))}
         </div>

@@ -1,4 +1,5 @@
 import { Plus, MessagesSquare } from 'lucide-react';
+import { Button, Heading, Text } from '../../../components/ui';
 
 interface EmptyStateProps {
   onNewChat: () => void;
@@ -6,21 +7,24 @@ interface EmptyStateProps {
 
 export function EmptyState({ onNewChat }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-      <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 flex items-center justify-center mb-6">
-        <MessagesSquare size={36} className="text-primary" />
+    <div className="flex flex-col items-center justify-center h-full text-center p-[var(--space-8)]">
+      <div className="w-20 h-20 rounded-[var(--radius-3xl)] bg-gradient-to-br from-[var(--accent-primary)]/20 to-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 flex items-center justify-center mb-[var(--space-6)]">
+        <MessagesSquare size={36} className="text-[var(--accent-primary)]" />
       </div>
-      <h3 className="text-xl font-semibold text-foreground mb-3">Welcome to LibreOllama Chat</h3>
-      <p className="text-muted-foreground max-w-md leading-relaxed mb-6">
+      <Heading level={3} className="text-[var(--text-primary)] mb-[var(--space-3)]">
+        Welcome to LibreOllama Chat
+      </Heading>
+      <Text variant="secondary" className="max-w-md leading-relaxed mb-[var(--space-6)]">
         Select a conversation from the list or start a new one to begin chatting with AI assistants.
-      </p>
-      <button 
+      </Text>
+      <Button 
         onClick={onNewChat} 
-        className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all duration-200 font-medium hover:scale-105 shadow-sm"
+        variant="primary"
+        className="gap-[var(--space-2)] hover:scale-105 transition-transform"
       >
         <Plus size={16} />
         Start New Conversation
-      </button>
+      </Button>
     </div>
   );
 }

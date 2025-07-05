@@ -12,41 +12,58 @@
 }
 
 :root {
-  /* Dark Theme Variables (Default) */
-  --bg-primary: #0f1419; 
-  --bg-secondary: #1a2332; 
-  --bg-tertiary: #242b3d; 
-  --bg-surface: #2a3441; 
-  --bg-elevated: #323a47;
+  /* Dark Theme Variables (Default) - Refined for better readability */
+  --bg-primary: #0d1117; 
+  --bg-secondary: #1c2128; 
+  --bg-tertiary: #262c36; 
+  --bg-surface: #30363d; 
+  --bg-elevated: #373e47;
   
-  --text-primary: #ffffff; 
-  --text-secondary: #94a3b8; 
-  --text-tertiary: #64748b; 
-  --text-muted: #475569;
-  --text-muted-rgb: 71, 85, 105;
+  --text-primary: #f0f6fc; 
+  --text-secondary: #c9d1d9; 
+  --text-tertiary: #b1bac4; 
+  --text-muted: #8b949e;
+  --text-muted-rgb: 72, 79, 88;
   
-  --accent-primary: #3b82f6; 
-  --accent-secondary: #1d4ed8; 
-  --accent-soft: rgba(59, 130, 246, 0.1);
+  /* Refined accent colors - more sophisticated and calming (Muted Blue) */
+  --accent-primary: #6366f1; 
+  --accent-secondary: #4f46e5; 
+  --accent-soft: rgba(99, 102, 241, 0.12);
+  --accent-muted: #6b7280;
+  --accent-ghost: rgba(99, 102, 241, 0.08);
+  --accent-violet: #8B5CF6;
   
-  --success: #10b981; 
+  /* Semantic Colors - Calming and Accessible */
+  --success: #10b981;        /* Calming Green (Emerald 500) */
+  --success-fg: #f0fdf4;       /* Green 50 */
+  --warning: #f59e0b;        /* Orange 500 */
+  --warning-fg: #fff7ed;       /* Orange 50 */
+  --error: #f87171;          /* Enhanced Red for better dark mode visibility */
+  --error-fg: #fef2f2;         /* Red 50 */
+  
   --success-rgb: 16, 185, 129;
-  --warning: #f59e0b; 
-  --error: #ef4444;
+  --warning-rgb: 245, 158, 11;
+  --error-rgb: 248, 113, 113;
+  --error-ghost: rgba(var(--error-rgb), 0.08);
   
-  --border-subtle: rgba(148, 163, 184, 0.1); 
-  --border-default: rgba(148, 163, 184, 0.2);
+    --border-default: rgba(139, 148, 158, 0.18);
   
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   
+  /* Spacing Scale - 4px base, extended for page layouts */
   --space-1: 4px; 
   --space-2: 8px; 
   --space-3: 12px; 
   --space-4: 16px; 
   --space-5: 20px; 
   --space-6: 24px; 
+  --space-7: 28px;  /* Filling the gap */
   --space-8: 32px; 
+  --space-10: 40px; /* For section spacing */
+  --space-12: 48px; /* For page-level layouts */
+  --space-16: 64px; /* For major layout sections */
+  --space-20: 80px; /* For hero sections */
   --space-layout-gutter: 24px; /* Standardized gutter */
   --space-content-internal: 16px; /* Internal padding for content blocks */
 
@@ -60,26 +77,46 @@
   --font-sans: 'Inter', 'system-ui', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
+  /* Typography Scale - Refined with better h3/h4 distinction */
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-base: 14px;
   --font-size-lg: 16px;
-  --font-size-xl: 18px;
-  --font-size-2xl: 20px;
+  --font-size-xl: 20px;  /* Improved from 18px for better h3 distinction */
+  --font-size-2xl: 24px; /* Improved from 20px */
+  --font-size-3xl: 30px; /* New size for h1 */
+
+  /* Line Heights - Optimized for readability */
+  --line-height-tight: 1.25;   /* For headings */
+  --line-height-snug: 1.375;   /* For subheadings */
+  --line-height-normal: 1.5;   /* For body text */
+  --line-height-relaxed: 1.625; /* For long-form content */
+  --line-height-loose: 2;      /* For captions */
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Shadows */
+  /* Shadows - Enhanced for better visual hierarchy */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-button: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-button-hover: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
   
   /* Input specific variables */
   --input-bg: var(--bg-tertiary);
   --input-placeholder: var(--text-tertiary);
   --input-focus-ring: var(--accent-primary);
+  
+  /* Focus ring variables for consistent accessibility */
+  --focus-ring: var(--accent-primary);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-color: var(--bg-primary);
   
   /* Canvas specific variables */
   --canvas-bg: #fafafa; /* Very light gray canvas background for dark theme */
@@ -96,24 +133,48 @@
   --canvas-editor-focus-shadow: 0 2px 12px rgba(0, 120, 212, 0.3);
   --canvas-editor-border-focus: #0078d4;
   --canvas-editor-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  /* Sticky Note Colors */
+  --stickynote-yellow: #FFF2CC;
+  --stickynote-green: #E8F5E8;
+  --stickynote-teal: #E0F7F7;
+  --stickynote-blue: #E6F3FF;
+  --stickynote-violet: #F0E6FF;
+  --stickynote-pink: #FFE6F2;
+  --stickynote-coral: #FFE8E6;
+  --stickynote-peach: #FFF0E6;
+  --stickynote-white: #FFFFFF;
+  --stickynote-gray: #F5F5F5;
 }
 
 html.light {
-  /* Light Theme Variables */
-  --bg-primary: #ffffff; 
-  --bg-secondary: #f8fafc; 
-  --bg-tertiary: #f1f5f9; 
-  --bg-surface: #ffffff; 
-  --bg-elevated: #ffffff;
+  /* Light Theme Variables - Much warmer, paper-like, eye-friendly */
+  --bg-primary: #f7f5f3; 
+  --bg-secondary: #f1ede9; 
+  --bg-tertiary: #ebe6e0; 
+  --bg-surface: #f9f7f4; 
+  --bg-elevated: #fcfaf8;
   
-  --text-primary: #0f172a; 
-  --text-secondary: #475569; 
-  --text-tertiary: #64748b; 
-  --text-muted: #94a3b8;
+  --text-primary: #1a1614; 
+  --text-secondary: #4a4a4a; 
+  --text-tertiary: #6b635d; 
+  --text-muted: #9c8f87;
   
-  --border-subtle: rgba(0, 0, 0, 0.05);
-  --border-default: rgba(0, 0, 0, 0.1);
+  --border-default: rgba(107, 99, 93, 0.2);
   
+  /* Refined accent colors for light mode - muted blue for better contrast */
+  --accent-primary: #4f46e5;
+  --accent-secondary: #4338ca;
+  --accent-soft: rgba(79, 70, 229, 0.08);
+  
+  /* Semantic Colors - Light Theme */
+  --success: #059669;        /* Calming Green (Emerald 600) */
+  --success-fg: #f0fdf4;       /* Green 50 */
+  --warning: #d97706;        /* Orange 600 */
+  --warning-fg: #fff7ed;       /* Orange 50 */
+  --error: #dc2626;          /* Red 600 */
+  --error-fg: #fef2f2;         /* Red 50 */
+
   /* Canvas light theme overrides */
   --canvas-bg: #fafafa; /* Very light gray canvas background for light theme */
   --canvas-grid-dot: rgba(0, 0, 0, 0.12); /* Darker dots to match FigJam style */
@@ -747,5 +808,131 @@ body {
   background: rgba(59, 130, 246, 0.08);
   color: #3B82F6;
   transform: translateX(4px);
+}
+
+/* =============================================================================
+   GLOBAL ACCESSIBILITY FOCUS STATES
+   ============================================================================= */
+
+/* Global focus ring for all interactive elements */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[role="menuitem"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="checkbox"]:focus-visible,
+[role="radio"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Remove default browser focus outline */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus,
+[role="button"]:focus,
+[role="link"]:focus,
+[role="menuitem"]:focus,
+[role="tab"]:focus,
+[role="checkbox"]:focus,
+[role="radio"]:focus,
+[tabindex]:focus {
+  outline: none;
+}
+
+/* Special focus states for specific elements */
+.canvas-button:focus-visible,
+.konva-toolbar-btn:focus-visible,
+.konva-toolbar-tool-btn:focus-visible,
+.konva-toolbar-action-btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+}
+
+/* Focus states for custom UI components */
+.canvas-context-menu-item:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+/* Chat input focus enhancement */
+.chat-input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 var(--focus-ring-offset) var(--focus-ring-offset-color);
+}
+
+/* =============================================================================
+   ACCESSIBILITY ENHANCEMENTS
+   ============================================================================= */
+
+/* Minimum tappable area enforcement (44x44px minimum) */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+a[href],
+[role="link"],
+[role="menuitem"],
+[role="tab"],
+select,
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Exception for text inputs which need different treatment */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+textarea {
+  min-height: 44px;
+  min-width: auto;
+}
+
+/* Enhanced screen reader support */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--accent-primary);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  z-index: 9999;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 6px;
 }
 

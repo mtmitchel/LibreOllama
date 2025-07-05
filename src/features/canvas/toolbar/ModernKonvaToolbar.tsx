@@ -24,11 +24,13 @@ import {
   Brush,
   GitBranch,
   Workflow,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import ShapesDropdown from './ShapesDropdown';
 import ConnectorDropdown from './ConnectorDropdown';
-import styles from './ModernToolbar.module.css';
+import { Button } from '../../../components/ui';
 
 const basicTools = [
   { id: 'select', name: 'Select', icon: MousePointer2 },
@@ -83,6 +85,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const setStickyNoteColor = useUnifiedCanvasStore(state => state.setStickyNoteColor);
   const canUndo = useUnifiedCanvasStore(state => state.canUndo);
   const canRedo = useUnifiedCanvasStore(state => state.canRedo);
+  const viewport = useUnifiedCanvasStore(state => state.viewport);
+  const setViewport = useUnifiedCanvasStore(state => state.setViewport);
 
   // STABLE: Use useMemo to prevent recalculation on every render
   const selectedElementId = React.useMemo(() => {
@@ -93,6 +97,24 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const selectedElement = useUnifiedCanvasStore(state => 
     selectedElementId ? state.elements.get(selectedElementId) || null : null
   );
+
+  // Zoom controls functions
+  const currentZoom = Math.round(viewport.scale * 100);
+
+  const zoomIn = () => {
+    const newScale = Math.min(10, viewport.scale * 1.2);
+    setViewport({ scale: newScale });
+  };
+
+  const zoomOut = () => {
+    const newScale = Math.max(0.1, viewport.scale / 1.2);
+    setViewport({ scale: newScale });
+  };
+
+  const resetZoom = () => {
+    setViewport({ scale: 1 });
+  };
+
   const groupElements = (elementIds: string[]) => {
 // TODO: Implement in unified store
     return null;
@@ -246,69 +268,73 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   return (
-    <div className={styles.toolbarContainer}>
-      <div className={styles.modernToolbar}>
+    <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-[1000]">
+      <div className="pointer-events-auto flex items-center justify-center gap-3 px-3 py-1.5 bg-bg-elevated border border-border-default rounded-lg shadow-xl backdrop-blur-sm max-w-[95vw] overflow-visible">
         {/* Basic Tools */}
-        <div className={styles.toolbarGroup}>
+        <div className="flex items-center gap-1">
           {basicTools.map(tool => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
             return (
-              <button
+              <Button
                 key={tool.id}
+                variant={isActive ? "primary" : "ghost"}
+                size="icon"
                 onClick={() => handleToolClick(tool.id)}
-                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                className="h-9 w-9"
                 title={tool.name}
                 aria-label={tool.name}
               >
                 <IconComponent size={16} />
-              </button>
+              </Button>
             );
           })}
         </div>
 
-        <div className={styles.separator} />
-
         {/* Content Tools */}
-        <div className={styles.toolbarGroup}>
+        <div className="flex items-center gap-1">
           {contentTools.map(tool => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
             return (
-              <div key={tool.id} className={styles.toolContainer}>
-                <button
+              <div key={tool.id} className="relative">
+                <Button
+                  variant={isActive ? "primary" : "ghost"}
+                  size="icon"
                   onClick={() => handleToolClick(tool.id)}
-                  className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                  className="h-9 w-9"
                   title={tool.name}
                   aria-label={tool.name}
                 >
                   <IconComponent size={16} />
-                </button>
+                </Button>
                 
                 {/* Color bar for sticky note tool when active */}
                 {tool.id === 'sticky-note' && isActive && (
-                  <div className={styles.stickyColorBar}>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex gap-1 p-3 bg-bg-elevated border border-border-default rounded-xl shadow-xl backdrop-blur-sm">
                     {[
-                      { color: '#FFF2CC', label: 'Soft Yellow (Default)' },
-                      { color: '#E8F5E8', label: 'Soft Green' },
-                      { color: '#E0F7F7', label: 'Soft Teal' },
-                      { color: '#E6F3FF', label: 'Soft Blue' },
-                      { color: '#F0E6FF', label: 'Soft Violet' },
-                      { color: '#FFE6F2', label: 'Soft Pink' },
-                      { color: '#FFE8E6', label: 'Soft Coral' },
-                      { color: '#FFF0E6', label: 'Soft Peach' },
-                      { color: '#FFFFFF', label: 'White' },
-                      { color: '#F5F5F5', label: 'Soft Gray' }
+                      { color: 'var(--stickynote-yellow)', label: 'Soft Yellow (Default)' },
+                      { color: 'var(--stickynote-green)', label: 'Soft Green' },
+                      { color: 'var(--stickynote-teal)', label: 'Soft Teal' },
+                      { color: 'var(--stickynote-blue)', label: 'Soft Blue' },
+                      { color: 'var(--stickynote-violet)', label: 'Soft Violet' },
+                      { color: 'var(--stickynote-pink)', label: 'Soft Pink' },
+                      { color: 'var(--stickynote-coral)', label: 'Soft Coral' },
+                      { color: 'var(--stickynote-peach)', label: 'Soft Peach' },
+                      { color: 'var(--stickynote-white)', label: 'White' },
+                      { color: 'var(--stickynote-gray)', label: 'Soft Gray' }
                     ].map((colorOption, index) => (
                       <button
                         key={index}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Use the consolidated color change handler
                           handleColorChange(colorOption.color);
-}}
-                        className={styles.colorButton}
-                        style={{ backgroundColor: colorOption.color, border: colorOption.color === '#FFFFFF' ? '1px solid #E5E7EB' : 'none' }}
+                        }}
+                        className="w-4 h-4 rounded-full border-2 hover:scale-110 hover:border-accent-primary transition-transform"
+                        style={{ 
+                          backgroundColor: colorOption.color, 
+                          border: colorOption.color === 'var(--stickynote-white)' ? '1px solid var(--border-default)' : '2px solid transparent'
+                        }}
                         title={colorOption.label}
                       />
                     ))}
@@ -319,118 +345,144 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
           })}
         </div>
 
-        <div className={styles.separator} />
-
-        {/* Shapes */}
-        <div className={styles.toolbarGroup}>
-          <div className={styles.dropdownContainer}>
+        {/* Shapes & Drawing Tools - Combined cluster */}
+        <div className="flex items-center gap-1">
+          <div className="relative">
             <ShapesDropdown onToolSelect={handleToolClick} />
           </div>
-        </div>
-
-        <div className={styles.separator} />
-
-        {/* Drawing Tools */}
-        <div className={styles.toolbarGroup}>
+          
           {drawingTools.map(tool => {
             const IconComponent = tool.icon;
             const isActive = selectedTool === tool.id;
             return (
-              <button
+              <Button
                 key={tool.id}
+                variant={isActive ? "primary" : "ghost"}
+                size="icon"
                 onClick={() => handleToolClick(tool.id)}
-                className={`${styles.toolButton} ${isActive ? styles.active : ''}`}
+                className="h-9 w-9"
                 title={tool.name}
                 aria-label={tool.name}
               >
                 <IconComponent size={16} />
-              </button>
+              </Button>
             );
           })}
         </div>
 
-        <div className={styles.separator} />
-
         {/* Connection Tools */}
-        <div className={styles.toolbarGroup}>
+        <div className="flex items-center gap-1">
           <ConnectorDropdown onToolSelect={handleToolClick} />
         </div>
 
-        <div className={styles.separator} />
-
-        {/* Action Tools */}
-        <div className={styles.toolbarGroup}>
-          <button
+        {/* Action Tools & Zoom - Combined right cluster */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onUndo}
             disabled={!canUndo}
-            className={`${styles.toolButton} ${!canUndo ? styles.disabled : ''}`}
             title={canUndo ? "Undo" : "Nothing to undo"}
             aria-label="Undo"
+            className="h-9 w-9"
           >
             <Undo2 size={16} />
-          </button>
+          </Button>
           
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onRedo}
             disabled={!canRedo}
-            className={`${styles.toolButton} ${!canRedo ? styles.disabled : ''}`}
             title={canRedo ? "Redo" : "Nothing to redo"}
             aria-label="Redo"
+            className="h-9 w-9"
           >
             <Redo2 size={16} />
-          </button>
+          </Button>
           
           {selectedElementId && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleDeleteSelected}
-              className={styles.toolButton}
               title="Delete Selected Element (Delete/Backspace)"
               aria-label="Delete Selected Element"
+              className="h-9 w-9"
             >
               <Trash2 size={16} />
-            </button>
-          )}
-        </div>
-
-        <div className={styles.separator} />
-
-        {/* Group/Ungroup Tools */}
-        <div className={styles.toolbarGroup}>
-          {canGroup && (
-            <button
-              onClick={handleGroupElements}
-              className={styles.toolButton}
-              title="Group Elements"
-              aria-label="Group Elements"
-            >
-              <Group size={16} />
-            </button>
+            </Button>
           )}
           
-          {canUngroup && (
-            <button
-              onClick={handleUngroupElements}
-              className={styles.toolButton}
-              title="Ungroup Elements"
-              aria-label="Ungroup Elements"
-            >
-              <Ungroup size={16} />
-            </button>
-          )}
+          <div className="w-px h-5 bg-border-subtle mx-1" />
           
-          {/* Layer Panel Toggle - Temporarily Disabled
-          <button
-            onClick={() => setShowLayersPanel()}
-            className={`${styles.toolButton} ${showLayersPanel ? styles.active : ''}`}
-            title="Toggle Layers Panel"
-            aria-label="Toggle Layers Panel"
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={zoomOut}
+            disabled={currentZoom <= 10}
+            title="Zoom Out (Ctrl + -)"
+            aria-label="Zoom Out"
+            className="h-9 w-9"
           >
-            <Layers size={16} />
-          </button>
-          */}
+            <ZoomOut size={16} />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={resetZoom}
+            title="Reset to 100% (Ctrl + 0)"
+            aria-label="Reset Zoom"
+            className="h-9 w-9 min-w-[45px] text-xs font-medium"
+          >
+            {currentZoom}%
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={zoomIn}
+            disabled={currentZoom >= 1000}
+            title="Zoom In (Ctrl + +)"
+            aria-label="Zoom In"
+            className="h-9 w-9"
+          >
+            <ZoomIn size={16} />
+          </Button>
         </div>
 
-        {/* Removed duplicate color picker - sticky notes now use inline color picker */}
+        {/* Group/Ungroup Tools - Only show when needed */}
+        {(canGroup || canUngroup) && (
+          <div className="flex items-center gap-1">
+            <div className="w-px h-5 bg-border-subtle mx-1" />
+            {canGroup && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleGroupElements}
+                title="Group Elements"
+                aria-label="Group Elements"
+                className="h-9 w-9"
+              >
+                <Group size={16} />
+              </Button>
+            )}
+            
+            {canUngroup && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleUngroupElements}
+                title="Ungroup Elements"
+                aria-label="Ungroup Elements"
+                className="h-9 w-9"
+              >
+                <Ungroup size={16} />
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Hidden file input for image tool */}

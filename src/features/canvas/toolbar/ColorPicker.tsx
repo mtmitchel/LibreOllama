@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { Palette } from 'lucide-react';
 import { HexColorPicker } from "react-colorful";
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { designSystem } from '../../../core/design-system';
+import { canvasTheme } from '../utils/canvasTheme';
 
 interface ColorPickerProps {
   selectedColor?: string;
@@ -29,17 +29,17 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   disabled = false 
 }) => {
   const colors = type === 'sticky' ? [
-    { value: designSystem.colors.stickyNote.yellow, label: 'Yellow' },
-    { value: designSystem.colors.stickyNote.green, label: 'Green' },
-    { value: designSystem.colors.stickyNote.blue, label: 'Blue' },
-    { value: designSystem.colors.stickyNote.purple, label: 'Purple' },
-    { value: designSystem.colors.stickyNote.orange, label: 'Orange' }
+    { value: canvasTheme.colors.stickyNote.yellow, label: 'Yellow' },
+    { value: canvasTheme.colors.stickyNote.green, label: 'Green' },
+    { value: canvasTheme.colors.stickyNote.blue, label: 'Blue' },
+    { value: canvasTheme.colors.stickyNote.purple, label: 'Purple' },
+    { value: canvasTheme.colors.stickyNote.orange, label: 'Orange' }
   ] : [
-    { value: designSystem.colors.primary[500], label: 'Primary' },
-    { value: designSystem.colors.secondary[500], label: 'Secondary' },
-    { value: designSystem.colors.success[500], label: 'Success' },
-    { value: designSystem.colors.warning[500], label: 'Warning' },
-    { value: designSystem.colors.error[500], label: 'Error' },
+    { value: canvasTheme.colors.primary, label: 'Primary' },
+    { value: canvasTheme.colors.secondary[500], label: 'Secondary' },
+    { value: canvasTheme.colors.success, label: 'Success' },
+    { value: canvasTheme.colors.warning, label: 'Warning' },
+    { value: canvasTheme.colors.error, label: 'Error' },
     { value: '#FFFFFF', label: 'White' },
     { value: '#000000', label: 'Black' },
     { value: 'transparent', label: 'None' }
@@ -53,13 +53,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         alignItems: 'center',
         gap: '8px',
         padding: '8px',
-        background: disabled ? designSystem.colors.secondary[50] : designSystem.colors.secondary[100],
+        background: disabled ? canvasTheme.colors.secondary[50] : canvasTheme.colors.secondary[100],
         borderRadius: '8px',
-        border: `1px solid ${designSystem.colors.secondary[300]}`,
+        border: `1px solid ${canvasTheme.colors.secondary[300]}`,
         opacity: disabled ? 0.5 : 1
       }}
     >
-      <Palette size={16} style={{ color: designSystem.colors.secondary[600] }} />
+      <Palette size={16} style={{ color: canvasTheme.colors.secondary[600] }} />
       <div style={{ display: 'flex', gap: '4px' }}>
         {colors.map(color => (
           <button
@@ -71,8 +71,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               height: '24px',
               borderRadius: '4px',
               border: color.value === selectedColor ? 
-                `2px solid ${designSystem.colors.primary[500]}` : 
-                `1px solid ${designSystem.colors.secondary[400]}`,
+                `2px solid ${canvasTheme.colors.primary}` : 
+                `1px solid ${canvasTheme.colors.secondary[400]}`,
               background: color.value === 'transparent' ? 
                 `repeating-linear-gradient(45deg, #ccc, #ccc 2px, white 2px, white 4px)` : 
                 color.value,

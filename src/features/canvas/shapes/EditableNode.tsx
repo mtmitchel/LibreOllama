@@ -13,7 +13,7 @@ import { TableElement } from '../elements/TableElement';
 // import ImageElement from '../components/ImageElement';
 // import { ConnectorRenderer } from '../components/ConnectorRenderer'; // REMOVED: Missing module
 import { Line, Star, Text, Rect } from 'react-konva';
-import { designSystem } from '../../../core/design-system';
+import { canvasTheme } from '../utils/canvasTheme';
 import { Html } from 'react-konva-utils';
 import { ElementId } from '../types/enhanced.types';
 
@@ -71,7 +71,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
       draggable: isDraggable,
       // REMOVED: onClick, onDragEnd, onDragStart, onDragMove - handled by UnifiedEventHandler
       opacity: 1,
-      stroke: isSelected ? designSystem.colors.primary[500] : (element as any).stroke,
+      stroke: isSelected ? canvasTheme.colors.primary : (element as any).stroke,
       strokeWidth: isSelected ? ((element as any).strokeWidth || 1) + 1.5 : (element as any).strokeWidth,
       perfectDrawEnabled: false, // Performance optimization
     };
@@ -80,7 +80,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
     if (isSelected) {
       return {
         ...baseProps,
-        shadowColor: designSystem.colors.primary[300],
+        shadowColor: canvasTheme.colors.primaryLight,
         shadowBlur: 10,
         shadowOpacity: 0.7,
       };
@@ -176,7 +176,7 @@ export const EditableNode: React.FC<EditableNodeProps> = React.memo(({
         <Line
           {...commonProps}
           points={element.points || [0, 0, 100, 0]}
-          stroke={element.stroke || designSystem.colors.secondary[800]}
+          stroke={element.stroke || canvasTheme.colors.secondary[800]}
           strokeWidth={element.strokeWidth || 3}
           lineCap="round"
           lineJoin="round"

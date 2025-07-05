@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../../../components/ui';
+import { Card, Heading, Text, Button } from '../../../components/ui';
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
 import { MoreHorizontal } from 'lucide-react';
 import { FocusItem } from '../../../core/lib/mockData';
@@ -24,13 +24,14 @@ export const TodaysFocusWidget: React.FC<TodaysFocusWidgetProps> = ({ items, onT
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-text-primary">Today's focus</h3>        <DropdownMenu
+    <Card>
+      <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-4)' }}>
+        <Heading level={3}>Today's focus</Heading>
+        <DropdownMenu
           trigger={
-            <div className="flex items-center justify-center w-8 h-8 text-text-secondary hover:text-text-primary hover:bg-bg-secondary rounded-md transition-colors cursor-pointer">
+            <Button variant="ghost" size="icon" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
               <MoreHorizontal className="w-4 h-4" />
-            </div>
+            </Button>
           }
         >
           <DropdownMenuItem onClick={handleAddEvent}>
@@ -45,18 +46,24 @@ export const TodaysFocusWidget: React.FC<TodaysFocusWidgetProps> = ({ items, onT
           </DropdownMenuItem>
         </DropdownMenu>
       </div>
-      <ul className="space-y-4">
+      <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         {items.map((item) => (
-          <li key={item.id} className="flex items-start gap-3">
-            <div className="flex flex-col items-center text-center min-w-[50px] pt-0.5">
-              <div className="text-sm font-semibold text-text-primary">{item.time.split(' ')[0]}</div>
-              <div className="text-xs text-text-secondary font-medium">{item.time.split(' ')[1]}</div>
+          <li key={item.id} className="flex items-start" style={{ gap: 'var(--space-3)' }}>
+            <div className="flex flex-col items-center text-center" style={{ 
+              minWidth: '50px', 
+              paddingTop: 'var(--space-1)' 
+            }}>
+              <Text size="sm" weight="semibold" variant="body">{item.time.split(' ')[0]}</Text>
+              <Text size="xs" variant="secondary" weight="medium">{item.time.split(' ')[1]}</Text>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary mb-1">{item.title}</div>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 ${item.color} rounded-full flex-shrink-0`}></div>
-                <span className="text-xs text-text-secondary">{item.team}</span>
+              <Text size="sm" weight="medium" variant="body" style={{ marginBottom: 'var(--space-1)' }}>{item.title}</Text>
+              <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                <div className={`${item.color} rounded-full flex-shrink-0`} style={{ 
+                  width: 'var(--space-2)', 
+                  height: 'var(--space-2)' 
+                }}></div>
+                <Text size="xs" variant="secondary">{item.team}</Text>
               </div>
             </div>
           </li>

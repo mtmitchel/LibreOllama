@@ -26,7 +26,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar />
-      <main className="flex-1 overflow-y-auto bg-background">
+      <main className="flex-1 overflow-y-auto bg-[var(--bg-primary)]">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/chat" element={<Chat />} />
@@ -52,7 +52,7 @@ export default function App() {
     <ThemeProvider>
       <Router>
         <HeaderProvider>
-          <div className="flex h-screen bg-bg-primary text-text-primary font-sans">
+          <div className="flex h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
             <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
             <AppContent isSidebarOpen={isSidebarOpen} />
             <CommandPalette isOpen={isOpen} onClose={close} />

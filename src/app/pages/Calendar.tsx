@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react';
-import { Card, Button } from '../../components/ui';
+import { Card, Button, Tag } from '../../components/ui';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import { PageLayout } from '../../components/layout/PageLayout';
@@ -26,6 +26,7 @@ interface Task {
 type CalendarView = 'month' | 'week' | 'day';
 
 const Calendar: React.FC = () => {
+  const { setHeaderProps, clearHeaderProps } = useHeader();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('month');
   const [showTaskPanel, setShowTaskPanel] = useState(true);
@@ -94,6 +95,16 @@ const Calendar: React.FC = () => {
     setCurrentDate(new Date());
   };
 
+  const getPriorityColor = (priority: string): 'error' | 'warning' | 'success' => {
+    if (priority === 'high') return 'error';
+    if (priority === 'medium') return 'warning';
+    return 'success';
+  };
+
+  const formatPriority = (priority: string): string => {
+    return priority.charAt(0).toUpperCase() + priority.slice(1);
+  };
+
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -146,26 +157,29 @@ const Calendar: React.FC = () => {
 
   const days = getDaysInMonth(currentDate);
 
-  const handleNewEvent = () => {
+  const handleNewEvent = useCallback(() => {
     // TODO: Implement new event creation
     console.log('Create new event');
-  };
+  }, []);
 
-  const headerProps = {
+  const headerProps = useMemo(() => ({
     title: "Calendar",
     primaryAction: {
       label: 'New event',
       onClick: handleNewEvent,
       icon: <Plus size={16} />,
-      variant: 'primary' // Added variant for consistency
+      variant: 'primary' as const
     },
     viewSwitcher: (
-      <div className="flex items-center gap-1"> {/* Added items-center for vertical alignment */}
-        {/* Using Button component for consistency */}
+      <div 
+        className="flex items-center"
+        style={{ gap: 'var(--space-1)' }}
+      >
         <Button 
           variant={view === 'month' ? 'primary' : 'ghost'} 
           size="sm" 
           onClick={() => setView('month')}
+          className="focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2"
         >
           Month
         </Button>
@@ -173,6 +187,7 @@ const Calendar: React.FC = () => {
           variant={view === 'week' ? 'primary' : 'ghost'} 
           size="sm" 
           onClick={() => setView('week')}
+          className="focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2"
         >
           Week
         </Button>
@@ -180,63 +195,89 @@ const Calendar: React.FC = () => {
           variant={view === 'day' ? 'primary' : 'ghost'} 
           size="sm" 
           onClick={() => setView('day')}
+          className="focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2"
         >
           Day
         </Button>
       </div>
     )
-  };
+  }), [view, handleNewEvent]);
+
+  useEffect(() => {
+    setHeaderProps(headerProps);
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps, headerProps]);
 
   return (
     <PageLayout headerProps={headerProps}>
-      {/* Standardized gap and padding for consistency */}
-      <div className="flex flex-1 gap-6 p-4 md:p-6"> {/* Moved padding here */}
-        <div className="flex-1 flex flex-col gap-6"> {/* Added flex-col and gap for consistent spacing */}
+      {/* Design system aligned layout */}
+      <div className="flex flex-1 gap-6 p-4 md:p-6"> 
+        <div className="flex-1 flex flex-col gap-6">
           {/* Calendar Navigation */}
-          <Card> {/* Using Card from ui/index.tsx, default padding will apply */}
-            <div className="flex items-center justify-between gap-4"> {/* Adjusted for better spacing and alignment */}
-              <Button variant="ghost" size="icon" onClick={() => navigateMonth('prev')}>
+          <Card> 
+            <div className="flex items-center gap-4"> 
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigateMonth('prev')}
+                className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Previous month"
+              >
                 <ChevronLeft size={20} />
               </Button>
-              <h2 className="text-lg font-semibold text-text-primary">
+              <h2 className="text-lg font-semibold text-primary">
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
-              <Button variant="ghost" size="icon" onClick={() => navigateMonth('next')}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigateMonth('next')}
+                className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Next month"
+              >
                 <ChevronRight size={20} />
               </Button>
-              <Button variant="secondary" size="sm" onClick={goToToday} className="ml-auto"> {/* Adjusted button style */}
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={goToToday} 
+                className="ml-auto focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              >
                 Today
               </Button>
             </div>
           </Card>
 
           {/* Calendar Grid */}
-          <Card className="flex-1"> {/* Using Card and ensuring it fills available space */}
-            <div className="grid grid-cols-7 gap-px border-l border-t border-border-subtle bg-border-subtle">
+          <Card className="flex-1"> 
+            <div className="grid grid-cols-7 gap-px border-l border-t border-border-default bg-border-default">
               {dayNames.map(day => (
-                <div key={day} className="py-2 text-center text-xs font-medium text-text-secondary bg-bg-surface border-r border-b border-border-subtle">
+                <div key={day} className="text-center p-2 text-xs font-medium text-muted bg-surface border-r border-b border-border-default">
                   {day}
                 </div>
               ))}
               {days.map((dayObj, index) => (
                 <div 
                   key={index} 
-                  className={`p-2 h-32 relative bg-bg-surface border-r border-b border-border-subtle 
-                    ${!dayObj.isCurrentMonth ? 'bg-bg-muted text-text-disabled' : 'hover:bg-bg-hover'}
-                    ${isToday(dayObj.date) ? 'bg-accent-soft ring-1 ring-accent-primary' : ''}
+                  className={`relative cursor-pointer transition-all duration-200 hover:scale-102 p-2 h-32 border-r border-b border-border-default
+                    ${!dayObj.isCurrentMonth ? 'bg-bg-secondary' : isToday(dayObj.date) ? 'bg-accent-ghost' : 'bg-surface'}
+                    ${isToday(dayObj.date) ? 'border-2 border-accent-primary' : ''}
                   `}
                 >
-                  <span className={`text-sm ${isToday(dayObj.date) ? 'font-bold text-accent-primary' : dayObj.isCurrentMonth ? 'text-text-primary' : 'text-text-disabled'}`}>
+                  <span 
+                    className={`text-sm ${isToday(dayObj.date) ? 'font-bold text-accent-primary' : dayObj.isCurrentMonth ? 'text-primary' : 'text-muted'}`}
+                  >
                     {dayObj.date.getDate()}
                   </span>
-                  <div className="mt-1 space-y-1 overflow-y-auto max-h-20">
+                  <div className="overflow-y-auto mt-1 flex flex-col gap-1 max-h-20">
                     {getEventsForDate(dayObj.date).map(event => (
                       <div 
                         key={event.id} 
-                        className={`px-1.5 py-0.5 text-[11px] rounded 
-                          ${event.type === 'event' ? 'bg-accent-soft text-primary' : 
-                            event.type === 'meeting' ? 'bg-bg-tertiary text-text-primary border border-border-default' :
-                            'bg-accent-soft text-success'}`}
+                        className={`rounded-sm transition-all duration-200 hover:scale-105 p-1 text-xs
+                          ${event.type === 'event' ? 'bg-accent-ghost text-accent-primary' : 
+                            event.type === 'meeting' ? 'bg-bg-tertiary text-primary border border-border-default' : 
+                            'bg-success/10 text-success'
+                          }`}
                       >
                         {event.title}
                       </div>
@@ -251,44 +292,59 @@ const Calendar: React.FC = () => {
         {/* Task Panel */}
         {showTaskPanel && (
           <div className="w-80 flex-shrink-0">
-            <Card className="h-full flex flex-col"> {/* Using Card and ensuring it fills height */}
-              <div className="flex items-center justify-between p-4 border-b border-border-subtle">
-                <h3 className="text-base font-semibold text-text-primary">Tasks</h3>
-                <Button variant="ghost" size="icon" onClick={() => setShowTaskPanel(false)}>
-                  <ListChecks size={18} /> {/* Placeholder, consider a close icon */}
-                </Button>
+            <Card className="h-full flex flex-col"> 
+              <div className="flex items-center justify-between p-4 border-b border-border-default">
+                <h3 className="text-base font-semibold text-primary">
+                  Tasks
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <Plus size={16} className="mr-2" /> Add Task
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setShowTaskPanel(false)}
+                    className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    aria-label="Close tasks panel"
+                  >
+                    <ListChecks size={18} />
+                  </Button>
+                </div>
               </div>
-              <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                 {tasks.map(task => (
-                  <Card key={task.id} className="p-3 bg-bg-subtle"> {/* Nested Card with specific padding */}
-                    <h4 className="text-sm font-medium text-text-primary mb-1">{task.title}</h4>
-                    <div className="flex items-center justify-between text-xs text-text-secondary">
-                      <span className={`px-1.5 py-0.5 rounded-full text-white text-[10px]
-                        ${task.priority === 'high' ? 'bg-error' : task.priority === 'medium' ? 'bg-warning' : 'bg-success'}`}
-                      >
-                        {task.priority}
-                      </span>
-                      {task.project && <span>{task.project}</span>}
+                  <Card 
+                    key={task.id} 
+                    className="transition-all duration-200 hover:shadow-md hover:scale-102 p-3 bg-bg-secondary"
+                  >
+                    <h4 className="text-sm font-medium text-primary mb-1">
+                      {task.title}
+                    </h4>
+                    <div className="flex items-center justify-between text-xs text-muted">
+                      <Tag variant="solid" color={getPriorityColor(task.priority)} size="xs">
+                        {formatPriority(task.priority)}
+                      </Tag>
+                      {task.project && (
+                        <span className="text-secondary">
+                          {task.project}
+                        </span>
+                      )}
                     </div>
                   </Card>
                 ))}
-              </div>
-              <div className="p-4 border-t border-border-subtle">
-                <Button variant="primary" className="w-full"> {/* Consistent primary button */}
-                  <Plus size={16} className="mr-1.5" /> Add new task
-                </Button>
               </div>
             </Card>
           </div>
         )}
 
-        {/* Task Panel Toggle Button - consider moving or integrating better */}
+        {/* Task Panel Toggle Button */}
         {!showTaskPanel && (
-          <div className="fixed bottom-6 right-6 z-50">
+          <div className="fixed z-50 bottom-6 right-6">
             <Button 
               variant="primary" 
               size="icon" 
-              className="rounded-full shadow-lg w-12 h-12" // Custom sizing for FAB
+              className="rounded-full shadow-lg focus:ring-2 focus:ring-primary focus:ring-offset-2 w-12 h-12"
               onClick={() => setShowTaskPanel(true)}
               aria-label="Show tasks"
             >

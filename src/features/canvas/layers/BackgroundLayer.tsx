@@ -13,9 +13,10 @@ interface BackgroundLayerProps {
 
 /**
  * BackgroundLayer - Renders FigJam-style dot grid background
- * - White background with subtle dot grid pattern
+ * - Clean background with subtle dot grid pattern
  * - Non-interactive grid elements (listening={false} for performance)
  * - Includes invisible background rect for deselection
+ * - Uses design system colors and spacing
  */
 export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   width,
@@ -27,17 +28,17 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   const viewport = useUnifiedCanvasStore(state => state.viewport);
   const scale = viewport.scale || 1;
   
-  // Grid configuration (FigJam-style)
-  const GRID_SIZE = 12; // Distance between dots in pixels (reduced from 16 for even denser grid)
-  const DOT_SIZE = 1.2; // Base dot radius in pixels
-  const DOT_COLOR = 'rgba(0, 0, 0, 0.12)'; // Slightly darker gray dots (increased from 0.08)
+  // Grid configuration using design system tokens
+  const GRID_SIZE = 16; // Distance between dots in pixels - aligned with design system spacing
+  const DOT_SIZE = 1; // Base dot radius in pixels
+  const DOT_COLOR = 'var(--border-subtle, rgba(0, 0, 0, 0.08))'; // Use design system border color
   
   // Use default size if width/height are not available yet
   const canvasWidth = width || 1920;
   const canvasHeight = height || 1080;
   
   // Performance optimization: Hide dots when zoomed out too far
-  const MIN_SCALE_FOR_DOTS = 0.25; // Hide dots below 25% zoom
+  const MIN_SCALE_FOR_DOTS = 0.3; // Hide dots below 30% zoom
   const shouldShowDots = scale >= MIN_SCALE_FOR_DOTS;
   
   // Calculate viewport bounds accounting for current pan/zoom
@@ -87,7 +88,7 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
         />
       )}
       
-      {/* FigJam-style dot grid pattern */}
+      {/* Design system aligned dot grid pattern */}
       {shouldShowDots && (
         <Group name="dot-grid" listening={false}>
           {dots.map((dot, index) => (
@@ -99,6 +100,7 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
               fill={DOT_COLOR}
               perfectDrawEnabled={false}
               listening={false}
+              opacity={0.4}
             />
           ))}
         </Group>

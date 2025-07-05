@@ -15,7 +15,6 @@ import React, { useRef } from 'react';
 import Konva from 'konva';
 import CanvasStage from './CanvasStage';
 import ModernKonvaToolbar from '../toolbar/ModernKonvaToolbar';
-import { ZoomControls } from './ui/ZoomControls';
 import { CanvasDragDropHandler } from './ui/CanvasDragDropHandler';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 
@@ -47,8 +46,20 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({ onStageReady }
   };
 
   return (
-    <div className="flex h-full w-full bg-gray-100 dark:bg-gray-900">
-      <div className="relative flex-1 h-full w-full overflow-hidden">
+    <div 
+      className="flex h-full w-full"
+      style={{ 
+        backgroundColor: 'var(--bg-primary)',
+        color: 'var(--text-primary)'
+      }}
+    >
+      <div 
+        className="relative flex-1 h-full w-full overflow-hidden"
+        style={{
+          backgroundColor: 'var(--canvas-bg, var(--bg-surface))',
+          backgroundImage: 'var(--canvas-pattern, none)'
+        }}
+      >
         <ModernKonvaToolbar 
           onUndo={undo} 
           onRedo={redo} 
@@ -58,7 +69,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({ onStageReady }
         <CanvasDragDropHandler stageRef={stageRef}>
           <CanvasStage stageRef={stageRef} />
         </CanvasDragDropHandler>
-        <ZoomControls stageRef={stageRef} className="absolute bottom-6 right-6 z-10" />
       </div>
     </div>
   );

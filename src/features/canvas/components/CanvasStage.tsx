@@ -173,7 +173,11 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
       <Stage
         ref={stageRef}
         {...stageConfig}
-        style={{ backgroundColor: 'var(--canvas-bg)' }}
+        style={{ 
+          backgroundColor: 'var(--canvas-bg, var(--bg-surface))',
+          fontFamily: 'var(--font-sans)',
+          color: 'var(--text-primary)'
+        }}
         onWheel={handleWheel}
       >
         <UnifiedEventHandler stageRef={stageRef} />

@@ -39,12 +39,16 @@ const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
 export const HeaderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [headerProps, setHeaderProps] = useState<HeaderProps>({});
 
+  const updateHeaderProps = useCallback((props: HeaderProps) => {
+    setHeaderProps(props);
+  }, []);
+
   const clearHeaderProps = useCallback(() => {
     setHeaderProps({});
   }, []);
 
   return (
-    <HeaderContext.Provider value={{ headerProps, setHeaderProps, clearHeaderProps }}>
+    <HeaderContext.Provider value={{ headerProps, setHeaderProps: updateHeaderProps, clearHeaderProps }}>
       {children}
     </HeaderContext.Provider>
   );
