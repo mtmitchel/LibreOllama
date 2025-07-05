@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
-import { Input, Card } from '../../../components/ui';
-import { BlockRenderer } from './BlockEditor';
-import { SlashCommandMenu } from './SlashCommandMenu';
+import React, { useState, useCallback } from 'react';
+import { Card, Text, Button, Badge } from '../../../components/ui';
+import { DropdownMenu } from '../../../components/ui/DropdownMenu';
+import { TiptapEditor } from './TiptapEditor';
 import type { Note, Block } from '../types';
+import { Tag, Clock, ChevronDown } from 'lucide-react';
 
 interface NotesEditorProps {
   selectedNote: Note;
@@ -11,196 +12,213 @@ interface NotesEditorProps {
 }
 
 export function NotesEditor({ selectedNote, onUpdateNote, onUpdateBlocks }: NotesEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
-  const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
-  const [showSlashCommand, setShowSlashCommand] = useState(false);
-  const [slashCommandPosition, setSlashCommandPosition] = useState<{ x: number, y: number } | null>(null);
+  const [status, setStatus] = useState<'draft' | 'active' | 'archived' | 'published'>('draft');
 
-  const handleTitleChange = (title: string) => {
-    onUpdateNote({ ...selectedNote, title });
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onUpdateNote({ ...selectedNote, title: e.target.value });
   };
 
-  const handleAddBlock = (currentBlockId: string, type: Block['type']) => {
-    const newBlock: Block = { id: `block-${Date.now()}`, type: type, content: '', metadata: {} };
-    let currentIndex = selectedNote.blocks.findIndex(b => b.id === currentBlockId);
-    if (currentBlockId === 'ADD_TO_END') { 
-      currentIndex = selectedNote.blocks.length - 1;
+  // Convert blocks to HTML and vice versa for Tiptap
+  const blocksToHtml = useCallback((blocks: Block[]): string => {
+    if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
+      return '<p>Start writing your note...</p>';
     }
 
-    const newBlocks = [...selectedNote.blocks];
-    if (currentIndex === -1 && currentBlockId !== 'ADD_TO_END') { 
-      newBlocks.push(newBlock);
-    } else {
-      newBlocks.splice(currentIndex + 1, 0, newBlock);
-    }
-    
-    onUpdateBlocks(newBlocks);
-  };
-
-  const handleBlockContentChange = (blockId: string, newContent: string) => {
-    const newBlocks = selectedNote.blocks.map(b => b.id === blockId ? { ...b, content: newContent } : b);
-    onUpdateBlocks(newBlocks);
-    
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = newContent;
-    const textContent = tempDiv.textContent || tempDiv.innerText || "";
-
-    if (textContent.endsWith('/')) {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (range && editorRef.current) {
-          const caretRect = range.getBoundingClientRect();
-          const editorRect = editorRef.current.getBoundingClientRect();
-          
-          let currentNode = range.startContainer;
-          let currentElement = currentNode.nodeType === Node.ELEMENT_NODE ? currentNode as HTMLElement : currentNode.parentElement;
-          let blockWrapper = currentElement?.closest('.group') as HTMLElement | null;
-          let blockTop = 0;
-          if (blockWrapper && editorRef.current) {
-            blockTop = blockWrapper.offsetTop - editorRef.current.scrollTop;
-          }
-
-          setSlashCommandPosition({ 
-            x: caretRect.left - editorRect.left, 
-            y: blockTop + caretRect.height + 5
-          }); 
-          setShowSlashCommand(true);
-        }
+    const html = blocks.map(block => {
+      const content = block.content || '';
+      switch (block.type) {
+        case 'text':
+          return `<p>${content}</p>`;
+        case 'heading1':
+          return `<h1>${content}</h1>`;
+        case 'heading2':
+          return `<h2>${content}</h2>`;
+        case 'heading3':
+          return `<h3>${content}</h3>`;
+        case 'list':
+          return `<ul><li>${content}</li></ul>`;
+        case 'quote':
+          return `<blockquote><p>${content}</p></blockquote>`;
+        case 'code':
+          return `<pre><code>${content}</code></pre>`;
+        default:
+          return `<p>${content}</p>`;
       }
-    } else {
-      setShowSlashCommand(false);
+    }).join('');
+
+    return html || '<p>Start writing your note...</p>';
+  }, []);
+
+  const htmlToBlocks = useCallback((html: string): Block[] => {
+    if (!html || html.trim() === '') {
+      return [];
     }
-  };
 
-  const handleSlashCommandSelect = (type: Block['type']) => {
-    if (!editorRef.current) return;
-
-    let currentBlockId: string | null = null;
-    const selection = window.getSelection();
-    if (selection && selection.focusNode) {
-      let node = selection.focusNode;
-      let parentElement = node.nodeType === Node.ELEMENT_NODE ? node as HTMLElement : node.parentElement;
-      while (parentElement && !parentElement.classList.contains('group')) {
-        parentElement = parentElement.parentElement;
+    // Simple HTML to blocks conversion
+    // This is a basic implementation - you could enhance it with proper HTML parsing
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const blocks: Block[] = [];
+    
+    let blockIndex = 0;
+    const elements = doc.body.children;
+    
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
+      const content = element.textContent || '';
+      
+      if (content.trim() === '') continue;
+      
+      let type: Block['type'] = 'text';
+      switch (element.tagName.toLowerCase()) {
+        case 'h1':
+          type = 'heading1';
+          break;
+        case 'h2':
+          type = 'heading2';
+          break;
+        case 'h3':
+          type = 'heading3';
+          break;
+        case 'ul':
+        case 'ol':
+          type = 'list';
+          break;
+        case 'blockquote':
+          type = 'quote';
+          break;
+        case 'pre':
+          type = 'code';
+          break;
+        default:
+          type = 'text';
       }
-      if (parentElement) {
-        const renderedBlocks = Array.from(editorRef.current.querySelectorAll('.group [contenteditable="true"]'));
-        const focusedEditorElement = selection.focusNode.parentElement?.closest('[contenteditable="true"]');
-        const focusedBlockIndex = renderedBlocks.findIndex(el => el === focusedEditorElement);
-        if (focusedBlockIndex !== -1 && selectedNote.blocks[focusedBlockIndex]) {
-          currentBlockId = selectedNote.blocks[focusedBlockIndex].id;
-          const blockToClean = selectedNote.blocks.find(b => b.id === currentBlockId);
-          if (blockToClean) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = blockToClean.content;
-            let textContent = tempDiv.textContent || tempDiv.innerText || "";
-            if (textContent.endsWith('/')) {
-              textContent = textContent.slice(0, -1);
-              blockToClean.content = textContent; 
-            }
-          }
-        }
-      }
+
+      blocks.push({
+        id: `block-${blockIndex++}`,
+        type,
+        content,
+      });
     }
-    
-    const newBlock: Block = { id: `block-${Date.now()}`, type: type, content: '', metadata: {} };
-    const currentIndex = currentBlockId ? selectedNote.blocks.findIndex(b => b.id === currentBlockId) : selectedNote.blocks.length - 1;
-    
-    const newBlocks = [...selectedNote.blocks];
-    newBlocks.splice(currentIndex + 1, 0, newBlock);
-    
-    onUpdateBlocks(newBlocks);
-    setShowSlashCommand(false);
-  };
 
-  const handleDeleteBlock = (blockId: string) => {
-    const newBlocks = selectedNote.blocks.filter(b => b.id !== blockId);
-    onUpdateBlocks(newBlocks);
-  };
+    return blocks;
+  }, []);
 
-  const handleTransformBlock = (blockId: string, newType: Block['type']) => {
-    const newBlocks = selectedNote.blocks.map(b => b.id === blockId ? { ...b, type: newType, content: b.content } : b);
-    onUpdateBlocks(newBlocks);
-  };
-
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, blockId: string) => {
-    setDraggingBlockId(blockId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, blockId: string) => {
-    e.preventDefault();
-    if (blockId !== draggingBlockId) {
-      setDragOverBlockId(blockId);
+  const handleEditorChange = useCallback((html: string) => {
+    try {
+      const blocks = htmlToBlocks(html);
+      onUpdateBlocks(blocks);
+    } catch (error) {
+      console.error('Error in handleEditorChange:', error);
+      // Don't crash, just skip the update
     }
-  };
-  
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropTargetId: string) => {
-    e.preventDefault();
-    if (!draggingBlockId || draggingBlockId === dropTargetId) return;
-    
-    const dragIndex = selectedNote.blocks.findIndex(b => b.id === draggingBlockId);
-    const dropIndex = selectedNote.blocks.findIndex(b => b.id === dropTargetId);
+  }, [htmlToBlocks, onUpdateBlocks]);
 
-    if (dragIndex === -1 || dropIndex === -1) return;
-
-    const newBlocks = [...selectedNote.blocks];
-    const [draggedBlock] = newBlocks.splice(dragIndex, 1);
-    newBlocks.splice(dropIndex, 0, draggedBlock);
-
-    onUpdateBlocks(newBlocks);
-    setDraggingBlockId(null);
-    setDragOverBlockId(null);
+  const statusColors = {
+    'draft': 'bg-gray-100 text-gray-700 border border-gray-200',
+    'active': 'bg-blue-50 text-blue-700 border border-blue-200',
+    'archived': 'bg-amber-50 text-amber-700 border border-amber-200',
+    'published': 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   };
 
-  const handleDragEnd = () => {
-    setDraggingBlockId(null);
-    setDragOverBlockId(null);
-  };
+  const currentStatus = selectedNote.metadata?.status || 'draft';
 
   return (
-    <Card className="flex-1 flex flex-col overflow-hidden" padding="none">
-      <header className="p-[var(--space-4)] border-b border-[var(--border-default)] flex items-center justify-between flex-shrink-0">
-        <Input 
-          type="text" 
-          value={selectedNote.title} 
-          onChange={(e) => handleTitleChange(e.target.value)} 
-          className="text-lg font-semibold bg-transparent focus:ring-0 border-0 text-[var(--text-primary)] w-full p-0 h-auto focus-visible:ring-offset-0 focus-visible:ring-0"
-          placeholder="Untitled Note"
-        />
-      </header>
-      
-      <div 
-        ref={editorRef} 
-        className="flex-1 p-[var(--space-6)] md:p-[var(--space-8)] lg:px-[var(--space-24)] overflow-y-auto bg-[var(--bg-primary)] relative" 
-        onDragOver={(e) => e.preventDefault()}
-      >
-        <div className="max-w-3xl mx-auto">
-          {selectedNote.blocks.map(block => (
-            <BlockRenderer
-              key={block.id}
-              block={block}
-              onContentChange={handleBlockContentChange}
-              onDragStart={handleDragStart}
-              onDragOver={(e) => handleDragOver(e, block.id)}
-              onDrop={(e) => handleDrop(e, block.id)}
-              onDragEnd={handleDragEnd}
-              isDraggingOver={dragOverBlockId === block.id}
-              onDelete={handleDeleteBlock}
-              onTransform={handleTransformBlock}
-              onAddBlock={handleAddBlock}
+    <div className="h-full flex flex-col bg-white rounded-lg border border-gray-200 shadow-sm">
+      {/* Header */}
+      <div className="flex-shrink-0 p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={selectedNote.title}
+              onChange={handleTitleChange}
+              className="
+                text-2xl font-semibold text-gray-900
+                bg-transparent border-none outline-none
+                placeholder:text-gray-400
+                hover:bg-gray-50 
+                focus:bg-gray-50
+                rounded-lg px-3 py-1 -ml-3
+                transition-all duration-200
+                min-w-0 flex-1
+              "
+              placeholder="Untitled Note"
             />
-          ))}
+            <Badge className={`${statusColors[currentStatus]} px-3 py-1 text-xs font-medium rounded-full`}>
+              {currentStatus}
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenu.Trigger asChild>
+                <Button variant="outline" size="sm" className="h-8 px-3 text-sm border-gray-200 hover:border-gray-300">
+                  <Tag className="h-3.5 w-3.5 mr-2" />
+                  Status
+                  <ChevronDown className="h-3.5 w-3.5 ml-2" />
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content>
+                <DropdownMenu.Item onClick={() => {
+                  const updatedNote = {
+                    ...selectedNote,
+                    metadata: { ...selectedNote.metadata, status: 'draft' as const }
+                  };
+                  onUpdateNote(updatedNote);
+                }}>
+                  Draft
+                </DropdownMenu.Item>
+                <DropdownMenu.Item onClick={() => {
+                  const updatedNote = {
+                    ...selectedNote,
+                    metadata: { ...selectedNote.metadata, status: 'active' as const }
+                  };
+                  onUpdateNote(updatedNote);
+                }}>
+                  Active
+                </DropdownMenu.Item>
+                <DropdownMenu.Item onClick={() => {
+                  const updatedNote = {
+                    ...selectedNote,
+                    metadata: { ...selectedNote.metadata, status: 'archived' as const }
+                  };
+                  onUpdateNote(updatedNote);
+                }}>
+                  Archived
+                </DropdownMenu.Item>
+                <DropdownMenu.Item onClick={() => {
+                  const updatedNote = {
+                    ...selectedNote,
+                    metadata: { ...selectedNote.metadata, status: 'published' as const }
+                  };
+                  onUpdateNote(updatedNote);
+                }}>
+                  Published
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
+            
+            <div className="flex items-center text-sm text-gray-500">
+              <Clock className="h-3.5 w-3.5 mr-1.5" />
+              {selectedNote.metadata?.updatedAt ? 
+                new Date(selectedNote.metadata.updatedAt).toLocaleDateString() : 
+                'Never'
+              }
+            </div>
+          </div>
         </div>
-        {showSlashCommand && (
-          <SlashCommandMenu 
-            onSelect={handleSlashCommandSelect} 
-            position={slashCommandPosition} 
-          />
-        )}
       </div>
-    </Card>
+
+      {/* Editor */}
+      <div className="flex-1 overflow-hidden">
+        <TiptapEditor
+          initialValue={blocksToHtml(selectedNote.blocks)}
+          onChange={handleEditorChange}
+          placeholder="Start writing your note... Type / for commands or use markdown shortcuts"
+          className="border-0 shadow-none"
+        />
+      </div>
+    </div>
   );
 } 

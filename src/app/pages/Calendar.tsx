@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, ListChecks, Plus } from 'lucide-react';
 import { Card, Button, Tag } from '../../components/ui';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
-import { PageLayout } from '../../components/layout/PageLayout';
 import { useHeader } from '../contexts/HeaderContext';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -209,10 +208,10 @@ const Calendar: React.FC = () => {
   }, [setHeaderProps, clearHeaderProps, headerProps]);
 
   return (
-    <PageLayout headerProps={headerProps}>
-      {/* Design system aligned layout */}
-      <div className="flex flex-1 gap-6 p-4 md:p-6"> 
-        <div className="flex-1 flex flex-col gap-6">
+    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+      {/* Main Calendar Area */}
+      <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
+        <div className="flex-1 flex flex-col gap-6 p-6">
           {/* Calendar Navigation */}
           <Card> 
             <div className="flex items-center gap-4"> 
@@ -288,72 +287,70 @@ const Calendar: React.FC = () => {
             </div>
           </Card>
         </div>
-
-        {/* Task Panel */}
-        {showTaskPanel && (
-          <div className="w-80 flex-shrink-0">
-            <Card className="h-full flex flex-col"> 
-              <div className="flex items-center justify-between p-4 border-b border-border-default">
-                <h3 className="text-base font-semibold text-primary">
-                  Tasks
-                </h3>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                    <Plus size={16} className="mr-2" /> Add Task
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => setShowTaskPanel(false)}
-                    className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    aria-label="Close tasks panel"
-                  >
-                    <ListChecks size={18} />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                {tasks.map(task => (
-                  <Card 
-                    key={task.id} 
-                    className="transition-all duration-200 hover:shadow-md hover:scale-102 p-3 bg-bg-secondary"
-                  >
-                    <h4 className="text-sm font-medium text-primary mb-1">
-                      {task.title}
-                    </h4>
-                    <div className="flex items-center justify-between text-xs text-muted">
-                      <Tag variant="solid" color={getPriorityColor(task.priority)} size="xs">
-                        {formatPriority(task.priority)}
-                      </Tag>
-                      {task.project && (
-                        <span className="text-secondary">
-                          {task.project}
-                        </span>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Task Panel Toggle Button */}
-        {!showTaskPanel && (
-          <div className="fixed z-50 bottom-6 right-6">
-            <Button 
-              variant="primary" 
-              size="icon" 
-              className="rounded-full shadow-lg focus:ring-2 focus:ring-primary focus:ring-offset-2 w-12 h-12"
-              onClick={() => setShowTaskPanel(true)}
-              aria-label="Show tasks"
-            >
-              <ListChecks size={22} />
-            </Button>
-          </div>
-        )}
       </div>
-    </PageLayout>
+
+      {/* Task Panel */}
+      {showTaskPanel && (
+        <Card className="w-80 flex-shrink-0 h-full flex flex-col"> 
+          <div className="flex items-center justify-between p-4 border-b border-border-default">
+            <h3 className="text-base font-semibold text-primary">
+              Tasks
+            </h3>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <Plus size={16} className="mr-2" /> Add Task
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setShowTaskPanel(false)}
+                className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Close tasks panel"
+              >
+                <ListChecks size={18} />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+            {tasks.map(task => (
+              <Card 
+                key={task.id} 
+                className="transition-all duration-200 hover:shadow-md hover:scale-102 p-3 bg-bg-secondary"
+              >
+                <h4 className="text-sm font-medium text-primary mb-1">
+                  {task.title}
+                </h4>
+                <div className="flex items-center justify-between text-xs text-muted">
+                  <Tag variant="solid" color={getPriorityColor(task.priority)} size="xs">
+                    {formatPriority(task.priority)}
+                  </Tag>
+                  {task.project && (
+                    <span className="text-secondary">
+                      {task.project}
+                    </span>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Task Panel Toggle Button */}
+      {!showTaskPanel && (
+        <div className="fixed z-50 bottom-6 right-6">
+          <Button 
+            variant="primary" 
+            size="icon" 
+            className="rounded-full shadow-lg focus:ring-2 focus:ring-primary focus:ring-offset-2 w-12 h-12"
+            onClick={() => setShowTaskPanel(true)}
+            aria-label="Show tasks"
+          >
+            <ListChecks size={22} />
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 

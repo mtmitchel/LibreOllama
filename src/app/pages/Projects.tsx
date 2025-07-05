@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useHeader, HeaderProps } from '../contexts/HeaderContext';
-import { Button, Card, Text, Heading, Caption, StatusBadge, Progress, Tag } from '../../components/ui';
+import { Button, Card, Text, Heading, Caption, StatusBadge, Progress, Tag, FlexibleGrid } from '../../components/ui';
 import {
   Plus,
   Settings,
@@ -35,8 +35,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import NewProjectModal from '../../features/projects/components/NewProjectModal';
-import { ProjectDetails } from '../../features/projects/components/ProjectDetails';
-import { NoProjectSelected } from '../../features/projects/components/NoProjectSelected';
+import { ProjectDetails, NoProjectSelected, ProjectsSidebar } from '../../features/projects/components';
 
 interface FileItem {
   id: string;
@@ -226,6 +225,7 @@ export function Projects() {
     'Schedule stakeholder review'
   ]);
   const [customSuggestion, setCustomSuggestion] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -246,11 +246,6 @@ export function Projects() {
   useEffect(() => {
     const headerProps: HeaderProps = {
       title: 'Projects',
-      primaryAction: {
-        label: 'New project',
-        onClick: handleCreateProject,
-        icon: <Plus size={16} />
-      },
       secondaryActions: [
         {
           label: 'Project settings',
@@ -274,6 +269,11 @@ export function Projects() {
     console.log('New project created:', projectData);
     setNewProjectModalOpen(false);
     // Here you would typically add the new project to your projects list
+  };
+
+  const handleSelectProject = (projectId: string) => {
+    const project = mockProjects.find(p => p.id === projectId);
+    setSelectedProject(project || null);
   };
 
   const handleCreateAsset = (type: string) => {
@@ -374,124 +374,19 @@ export function Projects() {
   };
 
   return (
-    <div 
-      className="flex h-full"
-      style={{ 
-        gap: 'var(--space-6)',
-        padding: 'var(--space-layout-gutter)'
-      }}
-    >
-      {/* === Left Panel: Project List === */}
-      <aside 
-        className="flex flex-col"
-        style={{ 
-          width: '33.333333%',
-          maxWidth: '24rem'
-        }}
-      >
-        <div 
-          className="flex justify-between items-center"
-          style={{ marginBottom: 'var(--space-4)' }}
-        >
-          <Heading level={2}>All projects</Heading>
-          <Button 
-            onClick={() => setNewProjectModalOpen(true)}
-            variant="primary"
-            size="sm"
-          >
-            <Plus size={16} style={{ marginRight: 'var(--space-2)' }} />
-            <Text as="span" size="sm" weight="medium">New project</Text>
-          </Button>
-        </div>
-        <div 
-          className="flex-1 overflow-y-auto"
-          style={{ 
-            paddingRight: 'var(--space-2)',
-            gap: 'var(--space-2)'
-          }}
-        >
-          <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
-            {Object.entries(groupedProjects).map(([status, projects]) => (
-              <div key={status}>
-                <Caption 
-                  className="uppercase tracking-wider text-[var(--text-secondary)]"
-                  style={{ 
-                    padding: `var(--space-4) var(--space-3) var(--space-2)`,
-                    fontWeight: 'var(--font-weight-semibold)'
-                  }}
-                >
-                  {status}
-                </Caption>
-                {projects.map(project => (
-                  <Card
-                    key={project.id}
-                    padding="none"
-                    className={`cursor-pointer group relative ${
-                      selectedProject?.id === project.id 
-                        ? 'bg-accent-soft border-primary' 
-                        : 'hover:bg-[var(--bg-surface)]'
-                    }`}
-                  >
-                    <div 
-                      style={{ padding: 'var(--space-3)' }}
-                      onClick={() => setSelectedProject(project)}
-                    >
-                      <div 
-                        className="flex items-center"
-                        style={{ gap: 'var(--space-3)' }}
-                      >
-                        <span 
-                          className="flex-shrink-0 rounded-full"
-                          style={{ 
-                            backgroundColor: project.color,
-                            width: 'calc(var(--space-2) + var(--space-1))',
-                            height: 'calc(var(--space-2) + var(--space-1))'
-                          }}
-                        />
-                        <Text weight="semibold" variant="body" className="truncate">
-                          {project.name}
-                        </Text>
-                      </div>
-                      <Text 
-                        size="sm" 
-                        variant="secondary" 
-                        className="truncate"
-                        style={{ 
-                          marginTop: 'var(--space-1)',
-                          marginLeft: 'calc(var(--space-5) + var(--space-1))'
-                        }}
-                      >
-                        {project.description}
-                      </Text>
-                      {project.progress !== undefined && (
-                        <div style={{ 
-                          marginTop: 'var(--space-2)',
-                          marginLeft: 'calc(var(--space-5) + var(--space-1))'
-                        }}>
-                          <div 
-                            className="flex justify-between"
-                            style={{ marginBottom: 'var(--space-1)' }}
-                          >
-                            <Caption>Progress</Caption>
-                            <Caption>{project.progress}%</Caption>
-                          </div>
-                          <Progress 
-                            value={project.progress} 
-                            className="h-1.5"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
+    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+      {/* Projects Sidebar */}
+      <ProjectsSidebar
+        projects={mockProjects}
+        selectedProjectId={selectedProject?.id || null}
+        onSelectProject={handleSelectProject}
+        onNewProject={handleCreateProject}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
 
-      {/* === Right Panel: Unified Project Dashboard === */}
-      <main className="flex-1">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
         {selectedProject && (
           <Card className="h-full flex flex-col" padding="none">
             {/* Project Header */}
@@ -709,10 +604,7 @@ export function Projects() {
                   <Heading level={3} style={{ marginBottom: 'var(--space-4)' }}>
                     Project assets
                   </Heading>
-                  <div 
-                    className="grid grid-cols-2 md:grid-cols-3"
-                    style={{ gap: 'var(--space-4)' }}
-                  >
+                  <FlexibleGrid minItemWidth={180} gap={4}>
                     {mockAssets.map(asset => {
                       const Icon = asset.icon;
                       return (
@@ -745,7 +637,7 @@ export function Projects() {
                         </Button>
                       );
                     })}
-                  </div>
+                  </FlexibleGrid>
                 </Card>
 
                 {/* Project Status */}
@@ -769,7 +661,7 @@ export function Projects() {
         )}
 
         {!selectedProject && <NoProjectSelected />}
-      </main>
+      </div>
 
       {/* New Project Modal */}
       {newProjectModalOpen && (

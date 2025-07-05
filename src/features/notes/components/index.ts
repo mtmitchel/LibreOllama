@@ -1,8 +1,12 @@
 export { FolderTree } from './FolderTree';
 export { SlashCommandMenu } from './SlashCommandMenu';
-export { BlockRenderer } from './BlockEditor';
 export { NotesHeader } from './NotesHeader';
 export { NotesSidebar } from './NotesSidebar';
 export { NotesEditor } from './NotesEditor';
 export { NotesEmptyState } from './NotesEmptyState';
+export { BlockEditor } from './BlockEditor';
+export { TiptapEditor } from './TiptapEditor';
+export { TiptapFixedToolbar } from './TiptapFixedToolbar';
+export { TiptapSlashCommand } from './TiptapSlashCommand';
+export { createSlashCommandExtension } from './TiptapSlashExtension';
 export type { Block, Note, Folder } from '../types'; 

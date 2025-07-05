@@ -196,15 +196,19 @@ export default function Tasks() {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 md:p-6">
+    <div className="flex flex-col h-full p-6 lg:p-8">
       {viewMode === 'kanban' && (
-        <div className="flex-1 overflow-x-auto p-6">
-          <div className="flex justify-center min-w-max">
-            <div className="flex gap-6">
-              {columns.map(column => (
-                <div
-                  key={column.id}
-                  className={`flex-shrink-0 w-80 min-w-[20rem] max-w-[24rem] transition-all duration-200
+        <div className="flex-1 overflow-x-auto">
+          <div 
+            className="grid gap-6 w-full"
+            style={{
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))'
+            }}
+          >
+            {columns.map(column => (
+              <div
+                key={column.id}
+                className={`min-w-0 transition-all duration-200
                     ${dragState.draggedOver === column.id ? 'border-2 border-primary bg-accent-ghost rounded-lg shadow-lg scale-102 p-2' : 'border-none'}
                   `}
                   onDragOver={handleDragOver}
@@ -293,16 +297,15 @@ export default function Tasks() {
                       </Button>
                     </div>
                   </Card>
-                </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
       
       {viewMode === 'list' && (
-        <div className="flex-1 overflow-y-auto pt-6">
-          <Card className="mx-auto max-w-4xl">
+        <div className="flex-1 overflow-y-auto">
+          <Card className="w-full max-w-none">
             <div className="p-4 border-b border-border-default">
               <h2 className="text-lg font-semibold text-primary">
                 All Tasks ({tasks.length})

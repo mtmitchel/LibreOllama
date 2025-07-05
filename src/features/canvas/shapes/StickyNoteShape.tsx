@@ -8,6 +8,7 @@ import { measureTextDimensions } from '../utils/textEditingUtils';
 import { ensureFontsLoaded, getAvailableFontFamily } from '../utils/fontLoader';
 import { logger } from "@/core/lib/logger";
 import { nanoid } from 'nanoid';
+import { resolveCSSVariable, calculateBorderColor } from '../utils/colorUtils';
 
 /**
  * Create text editor for sticky notes - adapted from TextShape
@@ -416,30 +417,11 @@ const finalText = newText.trim();
     : '#9CA3AF'; // Light gray for placeholder
   
   // Use the element's background color or default soft pastel yellow
-  const backgroundColor = element.backgroundColor || '#FFF2CC';
+  // Resolve CSS variables to actual color values for Konva
+  const backgroundColor = resolveCSSVariable(element.backgroundColor || '#FFF2CC');
   
-  // Calculate border color (slightly darker than background) for new soft pastels
-  const getBorderColor = (bgColor: string): string => {
-    // Simple darkening for soft pastel colors
-    const colorMap: Record<string, string> = {
-      '#FFF2CC': '#F4E4A6', // Soft Yellow
-      '#E8F5E8': '#D4E6D4', // Soft Green
-      '#E0F7F7': '#C7E9E9', // Soft Teal
-      '#E6F3FF': '#CCE7FF', // Soft Blue
-      '#F0E6FF': '#E1CCFF', // Soft Violet
-      '#FFE6F2': '#FFCCDD', // Soft Pink
-      '#FFE8E6': '#FFCCCC', // Soft Coral
-      '#FFF0E6': '#FFD9B3', // Soft Peach
-      '#FFFFFF': '#E5E7EB', // White
-      '#F5F5F5': '#E0E0E0', // Soft Gray
-      // Legacy colors for backward compatibility
-      '#FFE299': '#F4E4A6', // Old yellow
-    };
-    
-    return colorMap[bgColor] || '#E0E0E0';
-  };
-
-  const borderColor = getBorderColor(backgroundColor);
+  // Calculate border color using the utility function
+  const borderColor = calculateBorderColor(backgroundColor);
   
   // Dynamic font size calculation based on element dimensions (with reasonable bounds)
   const baseFontSize = element.fontSize || 14;

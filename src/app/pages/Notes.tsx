@@ -18,7 +18,7 @@ const mockFoldersData: Omit<Folder, 'children'>[] = [
         blocks: [
           { id: 'b1', type: 'heading1', content: 'June 8th, 2025' },
           { id: 'b2', type: 'text', content: 'Today was a productive day. I focused on implementing the core features for the block editor in LibreOllama.' },
-          { id: 'b3', type: 'checklist', content: 'Implement Block Action Menu|true\nImplement Slash Command|true\nRefine Block Rendering|false' },
+          { id: 'b3', type: 'list', content: 'Implement Block Action Menu, Implement Slash Command, Refine Block Rendering' },
         ]
       },
       {
@@ -28,7 +28,7 @@ const mockFoldersData: Omit<Folder, 'children'>[] = [
         blocks: [
           { id: 'b4', type: 'heading2', content: 'New ideas for projects page' },
           { id: 'b5', type: 'text', content: 'Here is a quick sketch of the new project creation flow.' },
-          { id: 'b6', type: 'canvas', content: 'Initial sketch of the wizard flow', metadata: {} },
+          { id: 'b6', type: 'code', content: 'Initial sketch of the wizard flow' },
           { id: 'b7', type: 'quote', content: 'The best way to predict the future is to invent it.' },
         ]
       },
@@ -197,15 +197,17 @@ export function Notes() {
         onNewFolder={handleNewFolder}
       />
 
-      {selectedNote ? (
-        <NotesEditor
-          selectedNote={selectedNote}
-          onUpdateNote={updateNote}
-          onUpdateBlocks={updateNoteBlocks}
-        />
-      ) : (
-        <NotesEmptyState onNewNote={handleNewNote} />
-      )}
+      <div className="flex-1 max-w-4xl">
+        {selectedNote ? (
+          <NotesEditor
+            selectedNote={selectedNote}
+            onUpdateNote={updateNote}
+            onUpdateBlocks={updateNoteBlocks}
+          />
+        ) : (
+          <NotesEmptyState onNewNote={handleNewNote} />
+        )}
+      </div>
     </div>
   );
 }

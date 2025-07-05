@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Button, Heading } from '../../../components/ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
+import { DropdownMenu } from '../../../components/ui/DropdownMenu';
 import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate, MoreHorizontal } from 'lucide-react';
 
 interface QuickAction {
@@ -57,11 +57,11 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
   };
 
   return (
-    <Card className="lg:col-span-2 xl:col-span-1">
+    <Card>
       <div className="flex justify-between items-center mb-4">
         <Heading level={3}>Quick actions</Heading>
-        <DropdownMenu
-          trigger={
+        <DropdownMenu>
+          <DropdownMenu.Trigger asChild>
             <Button
               variant="ghost"
               size="icon"
@@ -69,18 +69,19 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
             >
               <Settings2 className="w-4 h-4" />
             </Button>
-          }
-        >
-          <DropdownMenuItem onClick={handleCustomizeActions}>
-            Customize actions
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleAddAction}>
-            Add new action
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleResetActions}>
-            Reset to defaults
-          </DropdownMenuItem>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content>
+            <DropdownMenu.Item onSelect={handleCustomizeActions}>
+              Customize actions
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onSelect={handleAddAction}>
+              Add new action
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator />
+            <DropdownMenu.Item onSelect={handleResetActions}>
+              Reset to defaults
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
         </DropdownMenu>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

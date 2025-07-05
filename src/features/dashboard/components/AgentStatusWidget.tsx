@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, StatusBadge, Heading, Text, Button } from '../../../components/ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
+import { DropdownMenu } from '../../../components/ui/DropdownMenu';
 import { CheckCircle2, XCircle, Zap, Settings2, MoreHorizontal, Plus } from 'lucide-react';
 import { AgentStatus } from '../../../core/lib/mockData';
 
@@ -33,23 +33,24 @@ export const AgentStatusWidget: React.FC<AgentStatusWidgetProps> = ({ agents }) 
           <Button variant="secondary" size="sm" onClick={handleConfigureAgents}>
             Configure
           </Button>
-          <DropdownMenu
-            trigger={
+          <DropdownMenu>
+            <DropdownMenu.Trigger asChild>
               <Button variant="ghost" size="icon" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
-            }
-          >
-            <DropdownMenuItem onClick={handleViewAllStatuses}>
-              View all statuses
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleRestartAgent}>
-              Restart agents
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleAgentSettings}>
-              Agent settings
-            </DropdownMenuItem>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content>
+              <DropdownMenu.Item onSelect={handleViewAllStatuses}>
+                View all statuses
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              <DropdownMenu.Item onSelect={handleRestartAgent}>
+                Restart agents
+              </DropdownMenu.Item>
+              <DropdownMenu.Item onSelect={handleAgentSettings}>
+                Agent settings
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
           </DropdownMenu>
         </div>
       </div>

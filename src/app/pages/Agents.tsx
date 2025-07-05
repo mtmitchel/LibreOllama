@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, AddNewCard, Button, Input, Badge, Tag, Heading, Text } from '../../components/ui';
+import { Card, AddNewCard, Button, Input, Badge, Tag, Heading, Text, FlexibleGrid } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle } from 'lucide-react';
 
@@ -102,8 +102,8 @@ const Agents: React.FC = () => {
   }, [newHeaderProps, setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="w-full p-4 md:p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="w-full h-full p-6 lg:p-8">
+      <FlexibleGrid minItemWidth={320} gap={6} className="w-full">
         {filteredAgents.map((agent) => (
           <Card 
             key={agent.id} 
@@ -186,7 +186,7 @@ const Agents: React.FC = () => {
           onAdd={handleCreateAgent}
           minHeight="280px"
         />
-      </div>
+      </FlexibleGrid>
     </div>
   );
 };

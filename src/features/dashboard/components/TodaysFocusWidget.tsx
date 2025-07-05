@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Heading, Text, Button } from '../../../components/ui';
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from '../../../components/ui/DropdownMenu';
+import { DropdownMenu } from '../../../components/ui/DropdownMenu';
 import { MoreHorizontal } from 'lucide-react';
 import { FocusItem } from '../../../core/lib/mockData';
 
@@ -27,23 +27,24 @@ export const TodaysFocusWidget: React.FC<TodaysFocusWidgetProps> = ({ items, onT
     <Card>
       <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-4)' }}>
         <Heading level={3}>Today's focus</Heading>
-        <DropdownMenu
-          trigger={
+        <DropdownMenu>
+          <DropdownMenu.Trigger asChild>
             <Button variant="ghost" size="icon" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
               <MoreHorizontal className="w-4 h-4" />
             </Button>
-          }
-        >
-          <DropdownMenuItem onClick={handleAddEvent}>
-            Add new event
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleViewCalendar}>
-            View full calendar
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleEditSchedule}>
-            Edit schedule
-          </DropdownMenuItem>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content>
+            <DropdownMenu.Item onSelect={handleAddEvent}>
+              Add new event
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onSelect={handleViewCalendar}>
+              View full calendar
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator />
+            <DropdownMenu.Item onSelect={handleEditSchedule}>
+              Edit schedule
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
         </DropdownMenu>
       </div>
       <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>

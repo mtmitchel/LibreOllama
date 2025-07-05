@@ -963,3 +963,6 @@ export { Tag } from './Tag';
 
 // Export the Avatar component
 export { Avatar } from './Avatar';
+
+// Export the FlexibleGrid component
+export { FlexibleGrid } from './FlexibleGrid';

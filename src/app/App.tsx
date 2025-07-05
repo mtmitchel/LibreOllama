@@ -10,6 +10,7 @@ import { useCommandPalette } from '../core/hooks/useCommandPalette';
 // Import all page components
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
+import Mail from './pages/Mail';
 import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
 import CanvasPage from './pages/Canvas';
@@ -30,6 +31,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/mail" element={<Mail />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/canvas" element={<CanvasPage appSidebarOpen={isSidebarOpen} />} />

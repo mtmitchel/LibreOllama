@@ -1,19 +1,8 @@
 export interface Block {
   id: string;
-  type: 'text' | 'heading1' | 'heading2' | 'heading3' | 'list' | 'checklist' | 'quote' | 'canvas' | 'code' | 'image' | 'divider';
+  type: 'text' | 'heading1' | 'heading2' | 'heading3' | 'list' | 'quote' | 'code' | 'divider';
   content: string;
   metadata?: Record<string, any>;
-}
-
-export interface NoteMetadata {
-  status?: 'draft' | 'active' | 'archived' | 'published';
-  owner?: string;
-  relatedProject?: string;
-  tags?: string[];
-  priority?: 'low' | 'medium' | 'high';
-  dueDate?: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface Note {
@@ -21,7 +10,12 @@ export interface Note {
   title: string;
   folderId: string;
   blocks: Block[];
-  metadata?: NoteMetadata;
+  metadata?: {
+    status?: 'draft' | 'active' | 'archived' | 'published';
+    tags?: string[];
+    createdAt?: string;
+    updatedAt?: string;
+  };
 }
 
 export interface Folder {

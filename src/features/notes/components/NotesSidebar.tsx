@@ -36,7 +36,7 @@ export function NotesSidebar({
         <Input 
           type="search" 
           placeholder="Search all notes..." 
-          className="pl-[var(--space-9)]"
+          className="pl-[var(--space-10)]"
           hasIcon={true}
         />
       </div>

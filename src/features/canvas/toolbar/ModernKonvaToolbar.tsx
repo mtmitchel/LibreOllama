@@ -31,6 +31,7 @@ import {
 import ShapesDropdown from './ShapesDropdown';
 import ConnectorDropdown from './ConnectorDropdown';
 import { Button } from '../../../components/ui';
+import { resolveCSSVariable } from '../utils/colorUtils';
 
 const basicTools = [
   { id: 'select', name: 'Select', icon: MousePointer2 },
@@ -191,13 +192,16 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const handleColorChange = (color: string) => {
-// Set default sticky note color for future elements
-    setStickyNoteColor(color);
+    // Resolve CSS variable to actual color value
+    const resolvedColor = resolveCSSVariable(color);
+    
+    // Set default sticky note color for future elements
+    setStickyNoteColor(resolvedColor);
     
     // If an element is selected, update its color
     if (selectedElementId && selectedElement) {
       const colorProperty = selectedElement.type === 'sticky-note' ? 'backgroundColor' : 'fill';
-      updateElement(selectedElementId, { [colorProperty]: color });
+      updateElement(selectedElementId, { [colorProperty]: resolvedColor });
     }
   };
   
@@ -311,18 +315,14 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 
                 {/* Color bar for sticky note tool when active */}
                 {tool.id === 'sticky-note' && isActive && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex gap-1 p-3 bg-bg-elevated border border-border-default rounded-xl shadow-xl backdrop-blur-sm">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex gap-0.5 p-1.5 bg-bg-elevated border border-border-default rounded-md shadow-lg backdrop-blur-sm">
                     {[
-                      { color: 'var(--stickynote-yellow)', label: 'Soft Yellow (Default)' },
-                      { color: 'var(--stickynote-green)', label: 'Soft Green' },
-                      { color: 'var(--stickynote-teal)', label: 'Soft Teal' },
-                      { color: 'var(--stickynote-blue)', label: 'Soft Blue' },
-                      { color: 'var(--stickynote-violet)', label: 'Soft Violet' },
-                      { color: 'var(--stickynote-pink)', label: 'Soft Pink' },
-                      { color: 'var(--stickynote-coral)', label: 'Soft Coral' },
-                      { color: 'var(--stickynote-peach)', label: 'Soft Peach' },
-                      { color: 'var(--stickynote-white)', label: 'White' },
-                      { color: 'var(--stickynote-gray)', label: 'Soft Gray' }
+                      { color: 'var(--stickynote-yellow)', label: 'Yellow' },
+                      { color: 'var(--stickynote-green)', label: 'Green' },
+                      { color: 'var(--stickynote-blue)', label: 'Blue' },
+                      { color: 'var(--stickynote-violet)', label: 'Violet' },
+                      { color: 'var(--stickynote-pink)', label: 'Pink' },
+                      { color: 'var(--stickynote-coral)', label: 'Coral' }
                     ].map((colorOption, index) => (
                       <button
                         key={index}
@@ -330,12 +330,13 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                           e.stopPropagation();
                           handleColorChange(colorOption.color);
                         }}
-                        className="w-4 h-4 rounded-full border-2 hover:scale-110 hover:border-accent-primary transition-transform"
+                        className="w-2.5 h-2.5 rounded-full border hover:scale-125 transition-transform focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] focus:ring-offset-1 focus:ring-offset-[var(--bg-elevated)]"
                         style={{ 
                           backgroundColor: colorOption.color, 
-                          border: colorOption.color === 'var(--stickynote-white)' ? '1px solid var(--border-default)' : '2px solid transparent'
+                          border: '1px solid transparent'
                         }}
                         title={colorOption.label}
+                        aria-label={`Select ${colorOption.label}`}
                       />
                     ))}
                   </div>

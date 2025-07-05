@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, MessagesSquare, FolderKanban, NotebookPen, Presentation,
-  CalendarDays, CheckCircle2, Cpu, Settings, PanelLeftClose, PanelRightClose
+  CalendarDays, CheckCircle2, Cpu, Settings, PanelLeftClose, PanelRightClose, Mail
 } from 'lucide-react';
 import { Text, Badge, Button } from '../ui';
 
@@ -16,6 +16,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const workspaceItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Chat', path: '/chat', icon: MessagesSquare, badge: '3' },
+    { name: 'Mail', path: '/mail', icon: Mail },
     { name: 'Projects', path: '/projects', icon: FolderKanban },
     { name: 'Notes', path: '/notes', icon: NotebookPen },
     { name: 'Canvas', path: '/canvas', icon: Presentation },

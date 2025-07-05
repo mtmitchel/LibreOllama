@@ -9,7 +9,7 @@ import {
 } from "../../features/dashboard/components";
 import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetErrorBoundary";
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
-import { LoadingState, Heading, Text } from "../../components/ui";
+import { LoadingState, Heading, Text, FlexibleGrid } from "../../components/ui";
 import {
   migrationSprintTasks,
   todaysFocusItems,
@@ -55,25 +55,25 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="w-full p-6">
+      <div className="w-full h-full p-6 lg:p-8">
         <LoadingState 
           size="lg" 
           text="Loading your dashboard..." 
           className="mb-8" 
         />
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <FlexibleGrid minItemWidth={350} gap={6} className="w-full">
           <WidgetSkeleton rows={3} />
           <WidgetSkeleton rows={2} />
           <WidgetSkeleton rows={2} />
-          <WidgetSkeleton className="lg:col-span-2 xl:col-span-1" rows={1} />
-        </div>
+          <WidgetSkeleton rows={1} />
+        </FlexibleGrid>
       </div>
     );
   }
 
   return (
-    <div className="w-full p-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="w-full h-full p-6 lg:p-8">
+      <FlexibleGrid minItemWidth={350} gap={6} className="w-full">
         <WidgetErrorBoundary widgetName="Project Progress">
           <ProjectProgressWidget 
             title="UI migration sprint"
@@ -105,7 +105,7 @@ export function Dashboard() {
         <WidgetErrorBoundary widgetName="Quick Actions">
           <QuickActionsWidget />
         </WidgetErrorBoundary>
-      </div>
+      </FlexibleGrid>
     </div>
   );
 }

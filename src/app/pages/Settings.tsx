@@ -77,7 +77,8 @@ const Settings: React.FC = () => {
     switch (activeSection) {
       case 'general':
         return (
-          <Card className="p-6">
+          <div className="h-full p-6">
+            <Card className="p-6">
             <div className="mb-6">
               <Heading level={1} className="text-2xl font-bold mb-1">General</Heading>
               <Text variant="muted">Configure general application preferences and behavior.</Text>
@@ -137,17 +138,19 @@ const Settings: React.FC = () => {
               </Card>
             </div>
           </Card>
+          </div>
         );
       case 'agents-and-models':
         return (
-          <Card className="p-6">
+          <div className="h-full p-6">
+            <Card className="p-6">
             <div className="mb-6">
               <Heading level={1} className="text-2xl font-bold mb-1">Agents and Models</Heading>
               <Text variant="muted">Manage your local AI models and agent configurations.</Text>
             </div>
             <div className="flex flex-col gap-8">
               <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-6">
                   <Heading level={2} className="text-lg font-semibold">Ollama Server</Heading>
                   <div className="flex items-center gap-2 text-sm text-success">
                     <span className="w-2.5 h-2.5 rounded-full bg-success" />
@@ -155,22 +158,27 @@ const Settings: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex-1">
-                      <Text as="label" htmlFor="ollama-endpoint" weight="medium" className="block mb-1">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    <div className="space-y-2">
+                      <Text as="label" htmlFor="ollama-endpoint" weight="medium" className="block">
                         Server endpoint
                       </Text>
                       <Text variant="muted" size="sm">
                         The local URL where your Ollama instance is running.
                       </Text>
                     </div>
-                    <Input 
-                      id="ollama-endpoint"
-                      type="text" 
-                      className="w-auto max-w-xs ml-4 focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                      defaultValue="http://localhost:11434" 
-                    />
+                    <div className="space-y-2">
+                      <Input 
+                        id="ollama-endpoint"
+                        type="text" 
+                        className="w-full focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        defaultValue="http://localhost:11434" 
+                      />
+                      <Text variant="muted" size="xs" className="text-right">
+                        Default: http://localhost:11434
+                      </Text>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -230,10 +238,12 @@ const Settings: React.FC = () => {
               </Card>
             </div>
           </Card>
+          </div>
         );
       case 'integrations':
         return (
-          <Card className="p-6">
+          <div className="h-full p-6">
+            <Card className="p-6">
             <div className="mb-6">
               <Heading level={1} className="text-2xl font-bold mb-1">Integrations</Heading>
               <Text variant="muted">Connect to external services and manage API keys.</Text>
@@ -318,10 +328,12 @@ const Settings: React.FC = () => {
               </Card>
             </div>
           </Card>
+          </div>
         );
       default:
         return (
-          <Card className="p-6">
+          <div className="h-full p-6">
+            <Card className="p-6">
             <div className="flex flex-col items-center justify-center h-full text-muted">
               <Cog size={48} className="opacity-50 mb-4" />
               <Heading level={2} className="text-xl font-semibold mb-2 text-primary">
@@ -332,6 +344,7 @@ const Settings: React.FC = () => {
               </Text>
             </div>
           </Card>
+          </div>
         );
     }
   };
@@ -345,10 +358,10 @@ const Settings: React.FC = () => {
   }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="w-full flex gap-x-6 p-4 md:p-6">
+    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
       {/* Left Navigation */}
       <div className="w-64 flex-shrink-0">
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] p-4">
+        <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] p-4 h-full">
           <h3 className="text-base font-semibold text-primary mb-3 px-3 pt-1">
             Categories
           </h3>
@@ -381,8 +394,10 @@ const Settings: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-w-0">
-        {renderSection()} 
+      <div className="flex-1 min-w-0 bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
+        <div className="h-full">
+          {renderSection()} 
+        </div>
       </div>
     </div>
   );

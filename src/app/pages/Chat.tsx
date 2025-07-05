@@ -136,7 +136,7 @@ export function Chat() {
   const selectedChat = conversations.find(c => c.id === selectedChatId);
 
   return (
-    <div className="w-full h-full flex bg-[var(--bg-primary)] px-[var(--space-4)] md:px-[var(--space-6)] pt-[var(--space-4)] md:pt-[var(--space-6)] pb-[var(--space-6)] gap-[var(--space-2)] md:gap-[var(--space-4)]">
+    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
       {/* SIDEBAR: CONVERSATION LIST */}
       <ConversationList
         conversations={conversations}
