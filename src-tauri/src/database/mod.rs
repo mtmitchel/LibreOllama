@@ -11,6 +11,7 @@ pub mod schema;
 pub mod schema_v4;
 pub mod schema_v5;
 pub mod schema_onboarding;
+pub mod sync_operations;
 
 // Re-export all the necessary items for easy access from other modules.
 // This allows other files to simply `use crate::database::ChatSession;`

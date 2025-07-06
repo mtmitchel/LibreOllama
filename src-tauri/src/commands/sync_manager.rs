@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use tauri::{command, State};
 use anyhow::{anyhow, Result};
 use reqwest::Client;
-use chrono::{DateTime, Utc};
+// use chrono::{DateTime, Utc}; // Will be used when implementing actual sync timestamps
 
 use crate::database::connection::DatabaseManager;
 use crate::commands::token_storage::get_gmail_tokens;

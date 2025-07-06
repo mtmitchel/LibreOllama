@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use tauri::{command, State};
-use anyhow::{anyhow, Result};
-use chrono::{DateTime, Utc, Duration};
+use chrono::{Utc, Duration};
 use rusqlite::{Connection, params, OptionalExtension};
 
 use crate::database::connection::DatabaseManager;
 use crate::commands::gmail_integration::ProcessedGmailMessage;
-use crate::commands::email_parser::{ParsedEmailMessage, EmailAddress, EmailAttachment};
+use crate::commands::email_parser::EmailAddress;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheConfig {
@@ -216,7 +215,7 @@ pub async fn get_cached_messages(
     if let Some(is_starred) = query.is_starred {
         where_clauses.push(format!("is_starred = ?{}", param_index));
         params.push(Box::new(is_starred));
-        param_index += 1;
+        // param_index += 1; // Removed: value never read after this point
     }
 
     let where_clause = where_clauses.join(" AND ");

@@ -192,6 +192,25 @@ pub fn run_migration_v5(conn: &Connection) -> Result<()> {
         [],
     ).context("Failed to create gmail_drafts table")?;
 
+    // Create scheduled_messages table for scheduled send functionality
+    conn.execute(
+        "CREATE TABLE scheduled_messages (
+            id TEXT PRIMARY KEY,
+            account_id TEXT NOT NULL,
+            scheduled_time DATETIME NOT NULL,
+            compose_data TEXT NOT NULL, -- JSON serialized ComposeRequest
+            status TEXT NOT NULL CHECK (status IN ('pending', 'sent', 'failed', 'cancelled')),
+            attempts INTEGER NOT NULL DEFAULT 0,
+            max_attempts INTEGER NOT NULL DEFAULT 3,
+            error_message TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            sent_at DATETIME,
+            FOREIGN KEY (account_id) REFERENCES gmail_accounts (id) ON DELETE CASCADE
+        )",
+        [],
+    ).context("Failed to create scheduled_messages table")?;
+
     // Create indexes for v5 schema
     create_indexes_v5(conn)?;
 
@@ -340,6 +359,24 @@ fn create_indexes_v5(conn: &Connection) -> Result<()> {
     )?;
     conn.execute(
         "CREATE INDEX idx_gmail_drafts_updated ON gmail_drafts (account_id, updated_at DESC)",
+        [],
+    )?;
+
+    // Scheduled messages indexes
+    conn.execute(
+        "CREATE INDEX idx_scheduled_messages_account_id ON scheduled_messages (account_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX idx_scheduled_messages_scheduled_time ON scheduled_messages (scheduled_time)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX idx_scheduled_messages_status ON scheduled_messages (status, scheduled_time)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX idx_scheduled_messages_pending ON scheduled_messages (account_id, status, scheduled_time)",
         [],
     )?;
 

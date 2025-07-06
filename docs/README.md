@@ -31,6 +31,37 @@ Welcome to the LibreOllama documentation! This index provides a comprehensive gu
 - Canvas development best practices
 - Component architecture guides
 
+## 📧 Gmail Integration Documentation
+
+### **Security & Code Review**
+
+**[GMAIL_CODE_REVIEW_SUMMARY.md](GMAIL_CODE_REVIEW_SUMMARY.md)** - Code Review Summary
+- Overview of Gmail integration architecture
+- Critical security vulnerabilities found
+- Implementation recommendations and next steps
+- **Status**: ⚠️ Security fixes required
+
+**[GMAIL_SECURITY_AUDIT.md](GMAIL_SECURITY_AUDIT.md)** - Detailed Security Audit
+- Comprehensive security vulnerability analysis
+- Performance and reliability issues
+- Compliance considerations
+- Implementation roadmap with phases
+
+### **Setup & Implementation**
+
+**[GMAIL_SECURE_SETUP.md](GMAIL_SECURE_SETUP.md)** - Setup Guide for Secure Gmail Integration
+- Environment variables configuration
+- Google Cloud Console setup steps
+- Migration from legacy storage
+- Troubleshooting common issues
+- **Status**: ✅ Ready for use
+
+### **Implementation Files Created**
+- `src-tauri/src/commands/secure_token_storage.rs` - Secure token storage using OS keyring
+- `src-tauri/src/commands/secure_oauth_flow.rs` - Backend-only OAuth implementation
+- `src-tauri/src/commands/secure_token_commands.rs` - Secure token management commands
+- `src/features/mail/components/GmailSecurityMigration.tsx` - Migration UI component
+
 ## 📋 Documentation Guidelines
 
 ### When to Create New Documentation

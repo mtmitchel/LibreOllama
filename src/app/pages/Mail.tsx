@@ -8,13 +8,15 @@ import { MessageView } from '../../features/mail/components/MessageView';
 import { ComposeModal } from '../../features/mail/components/ComposeModal';
 import { MailSearchBar } from '../../features/mail/components/MailSearchBar';
 import { MailContextSidebar } from '../../features/mail/components/MailContextSidebar';
+import { GmailAuthModal } from '../../features/mail/components/GmailAuthModal';
 import { useMailStore } from '../../features/mail/stores/mailStore';
 
 export default function Mail() {
   const { setHeaderProps } = useHeader();
-  const { currentMessage, isComposing, startCompose, currentView } = useMailStore();
+  const { currentMessage, isComposing, startCompose, currentView, isAuthenticated } = useMailStore();
   const [isMailSidebarOpen, setIsMailSidebarOpen] = useState(true);
   const [isContextOpen, setIsContextOpen] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(!isAuthenticated);
 
   const toggleMailSidebar = useCallback(() => {
     setIsMailSidebarOpen(!isMailSidebarOpen);
@@ -23,6 +25,18 @@ export default function Mail() {
   const toggleContext = useCallback(() => {
     setIsContextOpen(!isContextOpen);
   }, [isContextOpen]);
+
+  // Handle authentication state changes
+  useEffect(() => {
+    setShowAuthModal(!isAuthenticated);
+    
+    // Check for auth success in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('auth_success') === 'true' && isAuthenticated) {
+      // Clear the URL parameter
+      window.history.replaceState({}, '', '/mail');
+    }
+  }, [isAuthenticated]);
 
   // Setup header when component mounts
   useEffect(() => {
@@ -61,6 +75,29 @@ export default function Mail() {
       ]
     });
   }, [setHeaderProps, currentMessage, currentView, startCompose, toggleMailSidebar, toggleContext, isMailSidebarOpen, isContextOpen]);
+
+  // Show authentication modal if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        <div className="flex h-full bg-[var(--bg-primary)] items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+              Welcome to Mail
+            </h2>
+            <p className="text-[var(--text-secondary)] mb-4">
+              Sign in to your Gmail account to get started
+            </p>
+          </div>
+        </div>
+        <GmailAuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={() => setShowAuthModal(false)}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">

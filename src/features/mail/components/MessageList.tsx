@@ -147,13 +147,15 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
 
 export function MessageList() {
   const { 
-    messages, 
+    getMessages, 
     selectedMessages, 
     selectMessage, 
     fetchMessage,
     isLoadingMessages,
     error 
   } = useMailStore();
+
+  const messages = getMessages();
 
   const handleMessageClick = (message: ParsedEmail) => {
     fetchMessage(message.id);

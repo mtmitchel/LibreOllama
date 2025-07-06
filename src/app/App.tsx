@@ -18,6 +18,7 @@ import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';
 import Agents from './pages/Agents';
 import Settings from './pages/Settings';
+import { GmailAuthCallback } from '../features/mail/components/GmailAuthCallback';
 
 /**
  * AppContent defines the main content area and routing for the application.
@@ -39,6 +40,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/agents" element={<Agents />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/auth/gmail/callback" element={<GmailAuthCallback />} />
           
         </Routes>
       </main>

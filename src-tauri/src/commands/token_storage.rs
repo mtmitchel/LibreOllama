@@ -1,13 +1,12 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use tauri::State;
 use crate::database::connection::DatabaseManager;
 use crate::database::models::GmailAccount as DbGmailAccount;
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::{DateTime, Utc};
 use sha2::{Sha256, Digest};
 use aes_gcm::{
-    aead::{Aead, KeyInit, OsRng},
+    aead::{Aead, KeyInit},
     Aes256Gcm, Nonce, Key
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD};

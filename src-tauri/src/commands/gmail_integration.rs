@@ -1,18 +1,14 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use crate::database::connection::DatabaseManager;
-use crate::commands::gmail::{GmailConfig, OAuthStateMap};
 use crate::commands::email_parser::{
     ParsedEmailMessage, GmailApiMessage, parse_gmail_api_message, 
     sanitize_html_content, html_to_text
 };
-use crate::commands::token_storage::{get_gmail_tokens, GmailTokens};
+use crate::commands::token_storage::get_gmail_tokens;
 use reqwest::Client;
-use std::collections::HashMap;
 use base64::{engine::general_purpose, Engine as _};
-use tauri::command;
-use crate::commands::gmail::{gmail_get_messages, gmail_get_message};
 // Types are defined locally in this file
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -297,7 +293,7 @@ pub async fn sync_gmail_messages(
     db_manager: State<'_, DatabaseManager>,
 ) -> Result<EmailSyncResult, String> {
     // Get stored tokens for the account
-    let tokens = get_gmail_tokens(account_id.clone(), db_manager.clone()).await
+    let _tokens = get_gmail_tokens(account_id.clone(), db_manager.clone()).await
         .map_err(|e| format!("Failed to get tokens: {}", e))?
         .ok_or("No tokens found for account")?;
 

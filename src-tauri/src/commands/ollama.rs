@@ -1,15 +1,15 @@
-use anyhow::Result as AnyResult;
+// use anyhow::Result as AnyResult; // Will be used when implementing error handling
 use serde::{Deserialize, Serialize};
 use reqwest;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command}; // Removed Stdio - unused
 use sysinfo::{System, Pid};
 use tauri::{AppHandle, Emitter};
 use tokio::time::{sleep, Duration};
 use futures_util::StreamExt;
-use bytes::Bytes;
+// use bytes::Bytes; // Will be used when implementing streaming
 
 // Global sidecar process management
 lazy_static::lazy_static! {

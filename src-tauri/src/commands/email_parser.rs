@@ -3,7 +3,7 @@ use mailparse::{parse_mail, MailHeaderMap, ParsedMail};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use base64::{engine::general_purpose, Engine as _};
-use chrono::{DateTime, Utc};
+// use chrono::{DateTime, Utc}; // Will be used when implementing actual date parsing
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedEmailMessage {

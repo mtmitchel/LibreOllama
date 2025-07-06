@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 use tokio::sync::oneshot;
-use url::Url;
+// use url::Url; // Will be used when implementing actual OAuth redirects
 
 // Gmail API Configuration
 const GMAIL_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";

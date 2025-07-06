@@ -18,7 +18,7 @@ import { useMailStore } from '../stores/mailStore';
 export function MailToolbar() {
   const { 
     selectedMessages, 
-    messages,
+    getMessages,
     selectAllMessages,
     clearSelection,
     archiveMessages,
@@ -29,6 +29,8 @@ export function MailToolbar() {
     fetchMessages,
     isLoadingMessages 
   } = useMailStore();
+
+  const messages = getMessages();
 
   const selectedCount = selectedMessages.length;
   const isAllSelected = messages.length > 0 && selectedMessages.length === messages.length;

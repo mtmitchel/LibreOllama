@@ -17,10 +17,15 @@ use commands::links::*;
 use commands::canvas::*;
 use commands::gmail::*;
 use commands::token_storage::*;
+use commands::secure_token_storage::*;
+use commands::secure_oauth_flow::*;
+use commands::secure_token_commands::*;
 use commands::gmail_integration::*;
 use commands::sync_manager::*;
 use commands::cache_manager::*;
 use commands::rate_limiter::*;
+use commands::gmail_compose::*;
+use commands::gmail_sync::*;
 
 // Database imports
 use std::collections::HashMap;
@@ -101,6 +106,9 @@ pub fn run() {
     // Initialize OAuth state management for Gmail
     let oauth_state: commands::gmail::OAuthStateMap = Arc::new(Mutex::new(HashMap::new()));
 
+    // Initialize Gmail sync state management
+    let sync_states: commands::gmail_sync::AccountSyncStates = tokio::sync::RwLock::new(HashMap::new());
+
     // Initialize database manager for state management
     let db_manager = rt.block_on(async {
         match database::init_database().await {
@@ -115,11 +123,33 @@ pub fn run() {
         }
     });
 
-    tauri::Builder::default()
+    // Initialize secure OAuth service
+    println!("🔐 [BACKEND-DEBUG] Initializing secure OAuth service...");
+    let secure_oauth_service = match commands::secure_oauth_flow::SecureOAuthService::new() {
+        Ok(service) => {
+            println!("✅ [BACKEND-SUCCESS] Secure OAuth service initialized");
+            Some(Arc::new(service))
+        }
+        Err(e) => {
+            eprintln!("⚠️  [BACKEND-WARNING] Failed to initialize secure OAuth service: {}", e);
+            eprintln!("⚠️  [BACKEND-WARNING] OAuth will use fallback method - ensure GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET are set");
+            None
+        }
+    };
+
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .manage(oauth_state)
-        .manage(db_manager)
+        .manage(sync_states)
+        .manage(db_manager);
+
+    // Conditionally manage the secure OAuth service if it was successfully initialized
+    if let Some(oauth_service) = secure_oauth_service {
+        builder = builder.manage(oauth_service);
+    }
+
+    builder
         .invoke_handler(tauri::generate_handler![
             greet,
             database_health_check,
@@ -217,13 +247,29 @@ pub fn run() {
             gmail_get_messages,
             gmail_get_message,
             gmail_send_email,
-            // Token storage commands
+            // Secure OAuth commands
+            start_gmail_oauth,
+            complete_gmail_oauth,
+            refresh_gmail_token,
+            revoke_gmail_token,
+            // Token storage commands (legacy - deprecated)
             store_gmail_tokens,
             get_gmail_tokens,
             get_gmail_accounts,
             remove_gmail_tokens,
             update_gmail_sync_timestamp,
             check_token_validity,
+            // Secure token storage commands (recommended)
+            store_gmail_tokens_secure,
+            get_gmail_tokens_secure,
+            get_gmail_accounts_secure,
+            remove_gmail_tokens_secure,
+            update_gmail_sync_timestamp_secure,
+            check_token_validity_secure,
+            migrate_tokens_to_secure_storage,
+            create_secure_accounts_table,
+            check_legacy_gmail_accounts,
+            check_secure_accounts_table,
             // Gmail integration commands (email parsing and processing)
             parse_gmail_message,
             parse_gmail_thread,
@@ -252,7 +298,46 @@ pub fn run() {
             get_quota_status,
             get_queue_stats,
             execute_rate_limited_request,
-            execute_batch_requests
+            execute_batch_requests,
+            // Gmail compose and send commands
+            send_gmail_message,
+            save_gmail_draft,
+            get_gmail_drafts,
+            delete_gmail_draft,
+            schedule_gmail_message,
+            get_message_templates,
+            format_reply_message,
+            // Gmail sync commands
+            gmail_get_messages_batch,
+            gmail_get_history,
+            gmail_setup_push_notifications,
+            gmail_stop_push_notifications,
+            gmail_sync_get_message,
+            gmail_mark_as_read,
+            gmail_mark_as_unread,
+            gmail_star_messages,
+            gmail_unstar_messages,
+            gmail_delete_messages,
+            gmail_archive_messages,
+            gmail_modify_labels,
+            handle_push_notification,
+            get_account_sync_state,
+            update_account_sync_state,
+            // Gmail attachment commands
+            commands::gmail_attachments::init_attachment_storage,
+            commands::gmail_attachments::get_gmail_attachment_info,
+            commands::gmail_attachments::download_gmail_attachment,
+            commands::gmail_attachments::scan_attachment,
+            commands::gmail_attachments::generate_attachment_preview,
+            commands::gmail_attachments::get_attachment_storage_stats,
+            commands::gmail_attachments::get_attachment_cache,
+            commands::gmail_attachments::cleanup_expired_attachments,
+            commands::gmail_attachments::delete_attachment_file,
+            commands::gmail_attachments::add_attachment_to_cache,
+            commands::gmail_attachments::update_cache_access,
+            commands::gmail_attachments::remove_from_cache,
+            commands::gmail_attachments::update_attachment_config,
+            commands::gmail_attachments::cleanup_attachment_service
         ])
         .setup(|_app| {
             println!("✅ [BACKEND-SUCCESS] All Tauri commands registered successfully");

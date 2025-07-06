@@ -75,4 +75,4 @@ This document can serve as the complete brief for your design and development te
     * **Crucially**, the modal must feature prominent **Start Time** and **End Time** inputs, as Google Tasks due dates do not include a time. This allows the user to define the time block.
     * A "Save to Google Calendar" button will finalize the action.
 
-4.  **[ ] API Interaction:** Clicking "Save" in the modal triggers a `events.insert` API call to create the new event in the user's Google Calendar.
+4.  **[ ] API Interaction:** Clicking "Save" in the modal triggers a `events.insert` API call to create the new event in the user's Google Calendar.n

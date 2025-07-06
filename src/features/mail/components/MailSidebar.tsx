@@ -28,10 +28,12 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     currentView, 
     setCurrentView, 
     startCompose, 
-    labels, 
+    getLabels, 
     currentLabel, 
     setCurrentLabel 
   } = useMailStore();
+
+  const labels = getLabels();
 
   const [labelsExpanded, setLabelsExpanded] = React.useState(true);
 

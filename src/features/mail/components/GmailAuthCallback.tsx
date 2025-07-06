@@ -1,228 +1,136 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, CheckCircle2, AlertCircle, Mail } from 'lucide-react';
 import { useGmailAuth } from '../hooks/useGmailAuth';
+import { useMailStore } from '../stores/mailStore';
 
-interface GmailAuthCallbackProps {
-  onSuccess?: () => void;
-  onError?: (error: string) => void;
-  redirectTo?: string;
-}
-
-export const GmailAuthCallback: React.FC<GmailAuthCallbackProps> = ({
-  onSuccess,
-  onError,
-  redirectTo = '/mail',
-}) => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { completeAuth, error, isLoading, clearError } = useGmailAuth();
-  
-  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export const GmailAuthCallback: React.FC = () => {
+  const { completeAuth, error } = useGmailAuth();
+  const expectedState = useMailStore((s) => s.authState);
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [callbackError, setCallbackError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<{ received?: string | null; expected?: string | null }>({});
 
   useEffect(() => {
-    const processCallback = async () => {
+    const handleCallback = async () => {
       try {
-        setStatus('processing');
-        clearError();
+        setIsProcessing(true);
+        setCallbackError(null);
 
-        // Extract parameters from URL
-        const code = searchParams.get('code');
-        const error = searchParams.get('error');
-        const errorDescription = searchParams.get('error_description');
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const errorParam = urlParams.get('error');
+        const receivedState = urlParams.get('state');
 
-        // Handle OAuth error responses
-        if (error) {
-          const message = errorDescription || error || 'Authentication failed';
-          setErrorMessage(message);
-          setStatus('error');
-          if (onError) {
-            onError(message);
-          }
-          return;
-        }
-
-        // Validate authorization code
-        if (!code) {
-          const message = 'Authorization code not found in callback URL';
-          setErrorMessage(message);
-          setStatus('error');
-          if (onError) {
-            onError(message);
-          }
-          return;
-        }
-
-        // Complete authentication with the authorization code
-        await completeAuth(code);
+        // --- State Validation ---
+        console.log('OAuth callback validation:', { received: receivedState, expected: expectedState });
         
-        setStatus('success');
-        if (onSuccess) {
-          onSuccess();
+        if (!receivedState || !expectedState || receivedState !== expectedState) {
+          setDebugInfo({ received: receivedState, expected: expectedState });
+          throw new Error('Invalid authentication state. Please try again to protect your security.');
+        }
+        // --- End State Validation ---
+
+        if (errorParam) {
+          throw new Error(`OAuth error: ${errorParam}`);
         }
 
-        // Redirect after a short delay to show success message
+        if (!code) {
+          throw new Error('No authorization code received from Google');
+        }
+
+        // Complete authentication - pass state to hook
+        await completeAuth(code, receivedState);
+        console.log('Gmail authentication completed successfully');
+
+        // Show success briefly, then redirect
+        setIsProcessing(false);
+        
         setTimeout(() => {
-          navigate(redirectTo, { replace: true });
-        }, 2000);
+          window.location.href = '/mail';
+        }, 1500);
 
       } catch (err) {
-        console.error('Gmail auth callback error:', err);
-        const message = err instanceof Error ? err.message : 'Authentication failed';
-        setErrorMessage(message);
-        setStatus('error');
-        if (onError) {
-          onError(message);
-        }
+        console.error('Callback processing failed:', err);
+        setCallbackError(err instanceof Error ? err.message : 'Authentication failed');
+        setIsProcessing(false);
+        
+        // DO NOT REDIRECT ON ERROR, so we can debug
+        // setTimeout(() => {
+        //   window.location.href = '/mail';
+        // }, 3000);
       }
     };
 
-    processCallback();
-  }, [searchParams, completeAuth, navigate, redirectTo, onSuccess, onError, clearError]);
+    handleCallback();
+  }, [completeAuth, expectedState]);
 
-  // Also handle errors from the useGmailAuth hook
-  useEffect(() => {
-    if (error) {
-      setErrorMessage(error);
-      setStatus('error');
-      if (onError) {
-        onError(error);
-      }
-    }
-  }, [error, onError]);
+  if (callbackError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center max-w-md mx-auto p-4">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 6.5c-.77.833-.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            Authentication Failed
+          </h2>
+          <p className="text-gray-600 mb-4">{callbackError}</p>
 
-  const handleRetry = () => {
-    clearError();
-    setErrorMessage(null);
-    navigate('/mail', { replace: true });
-  };
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-left text-sm">
+            <h3 className="font-semibold text-yellow-800">Debugging Information:</h3>
+            <p className="text-yellow-700">
+              <span className="font-medium">State from Google:</span> {debugInfo.received || 'Not found'}
+            </p>
+            <p className="text-yellow-700">
+              <span className="font-medium">State expected (from store):</span> {debugInfo.expected || 'Not found'}
+            </p>
+          </div>
 
-  const handleGoBack = () => {
-    navigate('/mail', { replace: true });
-  };
-
-  const renderProcessing = () => (
-    <div className="text-center space-y-4">
-      <div className="flex justify-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          <p className="text-sm text-gray-500 mt-4">
+            Please copy this information and share it for assistance.
+          </p>
         </div>
       </div>
-      <h2 className="text-xl font-semibold text-gray-900">
-        Completing Authentication
-      </h2>
-      <p className="text-gray-600">
-        Processing your Gmail authentication...
-      </p>
-      <div className="space-y-2">
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-          <span>Exchanging authorization code</span>
-        </div>
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
-          <span>Retrieving account information</span>
-        </div>
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
-          <span>Securing access tokens</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderSuccess = () => (
-    <div className="text-center space-y-4">
-      <div className="flex justify-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-green-600" />
-        </div>
-      </div>
-      <h2 className="text-xl font-semibold text-gray-900">
-        Authentication Successful!
-      </h2>
-      <p className="text-gray-600">
-        Your Gmail account has been successfully connected.
-      </p>
-      <div className="flex items-center justify-center space-x-2 text-sm text-green-600">
-        <Mail className="w-4 h-4" />
-        <span>Redirecting to your mailbox...</span>
-      </div>
-    </div>
-  );
-
-  const renderError = () => (
-    <div className="text-center space-y-4">
-      <div className="flex justify-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-          <AlertCircle className="w-8 h-8 text-red-600" />
-        </div>
-      </div>
-      <h2 className="text-xl font-semibold text-gray-900">
-        Authentication Failed
-      </h2>
-      <p className="text-gray-600">
-        There was a problem connecting your Gmail account.
-      </p>
-      {errorMessage && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{errorMessage}</p>
-        </div>
-      )}
-      <div className="flex space-x-3 justify-center">
-        <button
-          onClick={handleRetry}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Try Again
-        </button>
-        <button
-          onClick={handleGoBack}
-          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Go Back
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderCurrentStatus = () => {
-    switch (status) {
-      case 'success':
-        return renderSuccess();
-      case 'error':
-        return renderError();
-      case 'processing':
-      default:
-        return renderProcessing();
-    }
-  };
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-        <div className="mb-6 text-center">
-          <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-            <Mail className="w-4 h-4" />
-            <span>Gmail Authentication</span>
-          </div>
-        </div>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="text-center max-w-md mx-auto">
+        {isProcessing ? (
+          <>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              Completing Authentication...
+            </h2>
+            <p className="text-gray-600">
+              Processing your Gmail authentication with Google's servers.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              Authentication Successful!
+            </h2>
+            <p className="text-gray-600">
+              Your Gmail account has been connected. Redirecting to your mailbox...
+            </p>
+          </>
+        )}
         
-        {renderCurrentStatus()}
+        {error && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-700 text-sm">Warning: {error}</p>
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-// Hook for easier integration in other components
-export const useGmailAuthCallback = () => {
-  const navigate = useNavigate();
-  
-  const handleCallback = (code: string) => {
-    // Navigate to callback page with the code
-    navigate(`/auth/gmail/callback?code=${encodeURIComponent(code)}`, { replace: true });
-  };
-
-  return { handleCallback };
 }; 
