@@ -455,7 +455,7 @@ class GmailService {
 const defaultConfig: GmailAuthConfig = {
   clientId: process.env.GMAIL_CLIENT_ID || '',
   clientSecret: process.env.GMAIL_CLIENT_SECRET || '',
-  redirectUri: process.env.GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/callback',
+  redirectUri: process.env.GMAIL_REDIRECT_URI || 'http://localhost:8080/auth/gmail/callback',
   scopes: [...GMAIL_SCOPES],
 };
 

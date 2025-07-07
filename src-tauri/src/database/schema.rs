@@ -50,6 +50,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         crate::database::schema_v5::run_migration_v5(conn)?;
         record_migration(conn, 5)?;
     }
+    
+    if current_version < 6 {
+        run_migration_v6(conn)?;
+        record_migration(conn, 6)?;
+    }
 
     Ok(())
 }
@@ -249,6 +254,44 @@ fn run_migration_v3(conn: &Connection) -> Result<()> {
         )",
         [],
     ).context("Failed to create request_cache table")?;
+
+    Ok(())
+}
+
+/// Run migration v6 - Add secure Gmail accounts table
+fn run_migration_v6(conn: &Connection) -> Result<()> {
+    // Create secure Gmail accounts table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gmail_accounts_secure (
+            id TEXT PRIMARY KEY,
+            email_address TEXT NOT NULL,
+            display_name TEXT,
+            profile_picture_url TEXT,
+            access_token_encrypted TEXT NOT NULL,
+            refresh_token_encrypted TEXT,
+            token_expires_at TEXT,
+            scopes TEXT NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT 1,
+            last_sync_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            requires_reauth BOOLEAN DEFAULT 0,
+            UNIQUE(email_address, user_id)
+        )",
+        [],
+    ).context("Failed to create gmail_accounts_secure table")?;
+
+    // Create index for efficient lookups
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gmail_accounts_secure_user_id ON gmail_accounts_secure(user_id)",
+        [],
+    ).context("Failed to create index on gmail_accounts_secure")?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gmail_accounts_secure_email ON gmail_accounts_secure(email_address)",
+        [],
+    ).context("Failed to create index on gmail_accounts_secure email")?;
 
     Ok(())
 }

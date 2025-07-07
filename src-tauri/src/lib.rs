@@ -17,7 +17,7 @@ use commands::links::*;
 use commands::canvas::*;
 use commands::gmail::*;
 use commands::token_storage::*;
-use commands::secure_token_storage::*;
+// use commands::secure_token_storage::*;
 use commands::secure_oauth_flow::*;
 use commands::secure_token_commands::*;
 use commands::gmail_integration::*;
@@ -30,6 +30,9 @@ use commands::gmail_sync::*;
 // Database imports
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+
+// Environment variable loading
+use dotenv;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -81,6 +84,12 @@ async fn init_database_system() -> Result<(), String> {
 pub fn run() {
     println!("🚀 [BACKEND-DEBUG] Starting LibreOllama Tauri application...");
     
+    // Load environment variables from .env file
+    match dotenv::dotenv() {
+        Ok(path) => println!("✅ [BACKEND-SUCCESS] Loaded .env file from: {:?}", path),
+        Err(e) => println!("⚠️  [BACKEND-WARNING] No .env file found or failed to load: {}", e),
+    }
+    
     // Initialize the async runtime for database setup
     let rt = tokio::runtime::Runtime::new().expect("Failed to create async runtime");
     
@@ -125,6 +134,13 @@ pub fn run() {
 
     // Initialize secure OAuth service
     println!("🔐 [BACKEND-DEBUG] Initializing secure OAuth service...");
+    
+    // Debug environment variables (don't log the actual values for security)
+    let client_id_set = std::env::var("GMAIL_CLIENT_ID").is_ok();
+    let client_secret_set = std::env::var("GMAIL_CLIENT_SECRET").is_ok();
+    println!("🔐 [BACKEND-DEBUG] GMAIL_CLIENT_ID set: {}", client_id_set);
+    println!("🔐 [BACKEND-DEBUG] GMAIL_CLIENT_SECRET set: {}", client_secret_set);
+    
     let secure_oauth_service = match commands::secure_oauth_flow::SecureOAuthService::new() {
         Ok(service) => {
             println!("✅ [BACKEND-SUCCESS] Secure OAuth service initialized");
@@ -252,6 +268,7 @@ pub fn run() {
             complete_gmail_oauth,
             refresh_gmail_token,
             revoke_gmail_token,
+            start_oauth_callback_server_and_wait,
             // Token storage commands (legacy - deprecated)
             store_gmail_tokens,
             get_gmail_tokens,

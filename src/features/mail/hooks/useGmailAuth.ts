@@ -1,5 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { GmailAccount, GmailTokens } from '../types';
 import { useMailStore } from '../stores/mailStore';
 import { handleGmailError } from '../services/gmailErrorHandler';
@@ -26,17 +25,115 @@ export interface UseGmailAuthReturn {
 
 // Gmail OAuth2 Configuration (client secret now handled securely on backend)
 const GMAIL_CONFIG = {
-  redirect_uri: 'http://localhost:1423/auth/gmail/callback',
+  redirect_uri: 'http://localhost:8080/auth/gmail/callback',
 };
+
+// Tauri initialization state
+let tauriInitialized = false;
+let tauriInitPromise: Promise<boolean> | null = null;
+
+// Safe invoke function that only works when Tauri is available
+let safeInvoke: any = null;
+
+// Global auth state to prevent multiple OAuth flows across hook instances
+let globalAuthInProgress = false;
+let globalAuthPromise: Promise<void> | null = null;
+let globalAuthState: string | null = null;
+let globalAuthTimeout: NodeJS.Timeout | null = null;
+
+// Hook instance counter for debugging
+let hookInstanceCount = 0;
+
+// Reset global auth state after timeout (5 minutes)
+const resetGlobalAuthAfterTimeout = () => {
+  if (globalAuthTimeout) clearTimeout(globalAuthTimeout);
+  globalAuthTimeout = setTimeout(() => {
+    console.warn('⏰ [AUTH] Global auth state timeout - resetting');
+    globalAuthInProgress = false;
+    globalAuthPromise = null;
+    globalAuthState = null;
+    globalAuthTimeout = null;
+  }, 5 * 60 * 1000); // 5 minutes
+};
+
+// OAuth callback handler for localhost server
+let oauthCallbackHandler: ((url: string) => void) | null = null;
+
+// Set up localhost server for OAuth callbacks
+async function setupOAuthListener() {
+  try {
+    console.log('🌐 [OAUTH] Setting up localhost server for OAuth callbacks');
+    
+    // The backend will handle the localhost server
+    // We just need to wait for the callback
+    console.log('✅ [OAUTH] OAuth server setup delegated to backend');
+    return true;
+  } catch (error) {
+    console.warn('⚠️ [OAUTH] Failed to set up OAuth listener:', error);
+    return false;
+  }
+}
+
+// Initialize Tauri once and cache the result
+async function initializeTauri(): Promise<boolean> {
+  if (tauriInitialized) return true;
+  
+  if (tauriInitPromise) return tauriInitPromise;
+  
+  tauriInitPromise = new Promise(async (resolve) => {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') {
+      console.log('Not in browser environment');
+      resolve(false);
+      return;
+    }
+    
+    // Check for Tauri global context first
+    if (!window.__TAURI__ && !window.__TAURI_INTERNALS__ && !window.__TAURI_METADATA__) {
+      console.log('Tauri globals not found - likely running in browser');
+      resolve(false);
+      return;
+    }
+    
+    // Try to import and use Tauri API
+    try {
+      const tauriApi = await import('@tauri-apps/api/core');
+      if (!tauriApi.invoke || typeof tauriApi.invoke !== 'function') {
+        console.log('Tauri invoke not available');
+        resolve(false);
+        return;
+      }
+      
+      // Test basic connectivity
+      await tauriApi.invoke('greet', { name: 'test' });
+      
+      // Cache the working invoke function
+      safeInvoke = tauriApi.invoke;
+      
+      // Set up OAuth listener for localhost callbacks
+      await setupOAuthListener();
+      
+      tauriInitialized = true;
+      console.log('✅ Tauri initialized successfully');
+      resolve(true);
+    } catch (error) {
+      console.log('Tauri initialization failed:', error.message);
+      resolve(false);
+    }
+  });
+  
+  return tauriInitPromise;
+}
 
 export const useGmailAuth = (): UseGmailAuthReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Helper function to check if Tauri is available
-  const isTauriAvailable = useCallback(() => {
-    return typeof window !== 'undefined' && window.__TAURI__ && typeof invoke === 'function';
-  }, []);
+  const [tauriReady, setTauriReady] = useState(false);
+  const initializationAttempted = useRef(false);
+  
+  // Track hook instances for debugging
+  const instanceId = useRef(++hookInstanceCount);
+  console.log(`🔍 [DEBUG] useGmailAuth hook instance #${instanceId.current} created`);
 
   // Get state and actions from the mail store
   const {
@@ -58,130 +155,207 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     setError(null);
   }, []);
 
-
-
-  // Initialize accounts from secure storage on mount
+  // Initialize Tauri and load accounts - only once
   useEffect(() => {
-    const initializeAccounts = async () => {
-      // Check if we're in a Tauri environment
-      if (!isTauriAvailable()) {
-        console.log('Not in Tauri environment - skipping Gmail account initialization');
+    if (initializationAttempted.current) return;
+    initializationAttempted.current = true;
+
+    const initializeSystem = async () => {
+      const ready = await initializeTauri();
+      setTauriReady(ready);
+      
+      if (!ready) {
+        console.log('Not in Tauri environment - Gmail features disabled');
         return;
       }
 
-      try {
-        // Wait a bit for Tauri to be fully initialized
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        const storedAccounts = await invoke<GmailAccount[]>('get_stored_gmail_accounts');
-        if (storedAccounts && storedAccounts.length > 0) {
-          // The store will handle initialization with these accounts
-          console.log('Initialized with stored accounts:', storedAccounts.length);
-        }
-      } catch (err) {
-        console.warn('Gmail backend commands not available yet:', err);
-        // This is expected during development - backend may not have all commands implemented
-      }
+             // Skip account loading during initialization to avoid command signature issues
+       // Accounts will be loaded when actually needed
+       console.log('Tauri initialization complete - Gmail features enabled');
     };
 
-    initializeAccounts();
-  }, [isTauriAvailable]);
+    initializeSystem();
+  }, []);
 
   const startAuth = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      if (!isTauriAvailable()) {
-        throw new Error('Gmail authentication requires the desktop app. Please use the desktop version of LibreOllama.');
+    const authId = Math.random().toString(36).substr(2, 9);
+    console.log(`🔍 [DEBUG] Hook instance #${instanceId.current} attempting to start auth with ID: ${authId}`);
+    
+    // Enhanced blocking mechanism with timeout protection
+    if (globalAuthInProgress || globalAuthPromise) {
+      console.log(`🚫 [${authId}] Authentication already in progress - BLOCKING duplicate auth attempt from instance #${instanceId.current}`);
+      console.log(`🔍 [DEBUG] Global state: inProgress=${globalAuthInProgress}, hasPromise=${!!globalAuthPromise}`);
+      
+      // If we have an existing promise, wait for it
+      if (globalAuthPromise) {
+        try {
+          await globalAuthPromise;
+        } catch (err) {
+          console.log(`⚠️ [${authId}] Previous auth promise failed:`, err);
+        }
       }
-
-      // Use secure backend OAuth flow
-      const authRequest = await invoke<{
-        auth_url: string;
-        state: string;
-        code_verifier: string;
-      }>('start_gmail_oauth', {
-        config: GMAIL_CONFIG,
-      });
-
-      // Store state for later verification
-      setAuthState(authRequest.state);
-
-      // Open auth URL in external browser
-      if (typeof window !== 'undefined' && window.open) {
-        window.open(authRequest.auth_url, '_blank');
-        console.log('✅ [SECURITY] Opened secure authentication URL in browser');
-      } else {
-        throw new Error('Unable to open authentication URL - window.open not available');
-      }
-
-    } catch (err) {
-      console.error('Failed to start Gmail auth:', err);
-      const handledError = handleGmailError(err, {
-        operation: 'start_auth',
-      });
-      setError(handledError.message);
-    } finally {
-      setIsLoading(false);
+      return;
     }
-  }, [isTauriAvailable, setAuthState]);
+
+    // Create new auth promise with enhanced state tracking
+    globalAuthPromise = (async () => {
+      try {
+        globalAuthInProgress = true;
+        setIsLoading(true);
+        setError(null);
+
+        console.log(`🔐 [${authId}] Starting NEW Gmail OAuth flow from instance #${instanceId.current}`);
+        console.log(`🔍 [DEBUG] Setting global auth in progress: ${globalAuthInProgress}`);
+        
+        // Set timeout to reset global state if auth gets stuck
+        resetGlobalAuthAfterTimeout();
+
+        if (!tauriReady) {
+          throw new Error('Gmail authentication requires the desktop app. Please use the desktop version of LibreOllama.');
+        }
+
+        // Use secure backend OAuth flow
+        const authRequest = await safeInvoke<{
+          auth_url: string;
+          state: string;
+          code_verifier: string;
+        }>('start_gmail_oauth', {
+          config: GMAIL_CONFIG,
+        });
+
+        // Store state both locally and globally for debugging
+        globalAuthState = authRequest.state;
+        setAuthState(authRequest.state);
+        console.log(`🔑 [${authId}] Storing auth state: ${authRequest.state}`);
+
+        // Set up OAuth callback handler
+        const oauthPromise = new Promise<{ code: string; state: string }>((resolve, reject) => {
+          // Start the OAuth callback server and wait for callback in one call
+          safeInvoke('start_oauth_callback_server_and_wait', {
+            port: 8080,
+            expectedState: authRequest.state,
+            timeoutMs: 300000, // 5 minutes timeout
+          }).then((callbackResult: { code: string; state: string }) => {
+            console.log(`✅ [${authId}] Successfully received OAuth callback from backend`);
+            resolve(callbackResult);
+          }).catch((err) => {
+            console.error(`❌ [${authId}] OAuth callback failed:`, err);
+            reject(new Error(`OAuth callback failed: ${err.message || err}`));
+          });
+        });
+
+        // Open auth URL in external browser using Tauri's opener plugin
+        try {
+          console.log(`🌐 [${authId}] About to open OAuth URL using Tauri opener:`, authRequest.auth_url.substring(0, 50) + '...');
+          
+          // Use Tauri's opener plugin to open URL in default browser
+          const { openUrl } = await import('@tauri-apps/plugin-opener');
+          await openUrl(authRequest.auth_url);
+          
+          console.log(`✅ [SECURITY] [${authId}] Opened secure authentication URL using Tauri opener`);
+          console.log(`⏳ [${authId}] Waiting for OAuth callback via localhost server...`);
+          
+          // Wait for the OAuth callback
+          const { code, state } = await oauthPromise;
+          
+          console.log(`🔗 [${authId}] Received OAuth callback - proceeding to complete authentication`);
+          
+          // Complete the OAuth flow directly
+          await completeAuthInternal(code, state);
+          
+        } catch (openerError) {
+          // Clean up the handler on error
+          oauthCallbackHandler = null;
+          
+          console.warn(`⚠️ [${authId}] OAuth flow failed:`, openerError);
+          throw openerError;
+        }
+
+      } catch (err) {
+        console.error(`❌ [${authId}] Failed to start Gmail auth:`, err);
+        const handledError = handleGmailError(err, {
+          operation: 'start_auth',
+        });
+        setError(handledError.message);
+      } finally {
+        console.log(`🔄 [${authId}] Cleaning up auth state from instance #${instanceId.current}`);
+        setIsLoading(false);
+        globalAuthInProgress = false;
+        globalAuthPromise = null; // Clear the promise when done
+        
+        // Clear timeout since auth is complete
+        if (globalAuthTimeout) {
+          clearTimeout(globalAuthTimeout);
+          globalAuthTimeout = null;
+        }
+        // Note: We don't clear globalAuthState here as it's needed for the callback
+      }
+    })();
+
+    return globalAuthPromise;
+  }, [tauriReady, setAuthState]);
+
+  // Internal function for completing auth (used by both deep link and manual completion)
+  const completeAuthInternal = async (authorizationCode: string, state: string) => {
+    if (!tauriReady) {
+      throw new Error('Gmail authentication requires the desktop app. Please use the desktop version of LibreOllama.');
+    }
+
+    // Use secure backend OAuth completion
+    const tokenResponse = await safeInvoke<{
+      access_token: string;
+      refresh_token?: string;
+      expires_in: number;
+      token_type: string;
+    }>('complete_gmail_oauth', {
+      code: authorizationCode,
+      state: state,
+      redirectUri: GMAIL_CONFIG.redirect_uri,
+    });
+
+    // Convert to our token format
+    const tokens: GmailTokens = {
+      access_token: tokenResponse.access_token,
+      refresh_token: tokenResponse.refresh_token || null,
+      expires_at: new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString(),
+      token_type: tokenResponse.token_type,
+    };
+
+    // Get user profile information
+    const userProfile = await getUserProfile(tokens);
+    
+    // Create account object with enhanced structure
+    const newAccount: GmailAccount = {
+      id: userProfile.id,
+      email: userProfile.email,
+      name: userProfile.name,
+      picture: userProfile.picture,
+      tokens,
+      isActive: accounts.length === 0, // First account is active by default
+      lastSync: new Date(),
+      syncStatus: 'idle',
+      quota: await getQuotaInfo(tokens).catch(() => undefined),
+    };
+
+    // Store tokens securely using new secure storage
+    await storeTokensSecurely(newAccount);
+
+    // Add account to the store
+    storeAddAccount(newAccount);
+
+    // Clear the auth state after successful authentication
+    setAuthState(null);
+    globalAuthState = null; // Also clear global state
+
+    console.log('✅ [SECURITY] Gmail authentication completed securely');
+  };
 
   const completeAuth = useCallback(async (authorizationCode: string, state: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      if (!isTauriAvailable()) {
-        throw new Error('Gmail authentication requires the desktop app. Please use the desktop version of LibreOllama.');
-      }
-
-      // Use secure backend OAuth completion
-      const tokenResponse = await invoke<{
-        access_token: string;
-        refresh_token?: string;
-        expires_in: number;
-        token_type: string;
-      }>('complete_gmail_oauth', {
-        code: authorizationCode,
-        state: state,
-        redirectUri: GMAIL_CONFIG.redirect_uri,
-      });
-
-      // Convert to our token format
-      const tokens: GmailTokens = {
-        access_token: tokenResponse.access_token,
-        refresh_token: tokenResponse.refresh_token || null,
-        expires_at: new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString(),
-        token_type: tokenResponse.token_type,
-      };
-
-      // Get user profile information
-      const userProfile = await getUserProfile(tokens);
-      
-      // Create account object with enhanced structure
-      const newAccount: GmailAccount = {
-        id: userProfile.id,
-        email: userProfile.email,
-        name: userProfile.name,
-        picture: userProfile.picture,
-        tokens,
-        isActive: accounts.length === 0, // First account is active by default
-        lastSync: new Date(),
-        syncStatus: 'idle',
-        quota: await getQuotaInfo(tokens).catch(() => undefined),
-      };
-
-      // Store tokens securely using new secure storage
-      await storeTokensSecurely(newAccount);
-
-      // Add account to the store
-      storeAddAccount(newAccount);
-
-      // Clear the auth state after successful authentication
-      setAuthState(null);
-
-      console.log('✅ [SECURITY] Gmail authentication completed securely');
+      await completeAuthInternal(authorizationCode, state);
 
     } catch (err) {
       console.error('Failed to complete Gmail auth:', err);
@@ -192,7 +366,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [storeAddAccount, accounts.length, isTauriAvailable, setAuthState]);
+  }, [storeAddAccount, accounts.length, tauriReady, setAuthState]);
 
   const refreshToken = useCallback(async (accountId: string) => {
     try {
@@ -208,12 +382,12 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
         throw new Error('No refresh token available');
       }
 
-      if (!isTauriAvailable()) {
+      if (!tauriReady) {
         throw new Error('Token refresh requires the desktop app. Please use the desktop version of LibreOllama.');
       }
       
       // Use secure backend token refresh
-      const tokenResponse = await invoke<{
+      const tokenResponse = await safeInvoke<{
         access_token: string;
         refresh_token?: string;
         expires_in: number;
@@ -257,7 +431,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [accounts, storeRefreshAccount, isTauriAvailable]);
+  }, [accounts, storeRefreshAccount, tauriReady]);
 
   const signOut = useCallback(() => {
     storeSignOut();
@@ -285,7 +459,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [storeRemoveAccount, isTauriAvailable]);
+  }, [storeRemoveAccount]);
 
   const switchAccount = useCallback((accountId: string) => {
     try {
@@ -300,6 +474,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
   // Helper functions
   const getUserProfile = async (tokens: GmailTokens) => {
     try {
+      console.log('🔍 [PROFILE] Fetching user profile...');
       const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
         headers: {
           Authorization: `Bearer ${tokens.access_token}`,
@@ -307,18 +482,23 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
+        const errorText = await response.text();
+        console.error('❌ [PROFILE] Profile fetch failed:', response.status, response.statusText, errorText);
+        throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      return await response.json();
+      const profile = await response.json();
+      console.log('✅ [PROFILE] User profile fetched successfully:', profile.email);
+      return profile;
     } catch (err) {
-      console.error('Failed to get user profile:', err);
+      console.error('❌ [PROFILE] Failed to get user profile:', err);
       throw err;
     }
   };
 
   const getQuotaInfo = async (tokens: GmailTokens) => {
     try {
+      console.log('🔍 [QUOTA] Fetching Gmail quota info...');
       const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/profile', {
         headers: {
           Authorization: `Bearer ${tokens.access_token}`,
@@ -326,29 +506,32 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch quota info');
+        const errorText = await response.text();
+        console.error('❌ [QUOTA] Quota fetch failed:', response.status, response.statusText, errorText);
+        throw new Error(`Failed to fetch quota info: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const profile = await response.json();
+      console.log('✅ [QUOTA] Gmail quota info fetched successfully');
       return {
         used: profile.historyId ? parseInt(profile.historyId) * 1000 : 0, // Approximation
         total: 15000000000, // 15GB default Gmail quota
       };
     } catch (err) {
-      console.error('Failed to get quota info:', err);
+      console.error('❌ [QUOTA] Failed to get quota info:', err);
       throw err;
     }
   };
 
   const storeTokensSecurely = async (account: GmailAccount) => {
-    if (!isTauriAvailable()) {
+    if (!tauriReady) {
       console.warn('Cannot store tokens securely - Tauri not available');
       return;
     }
     
     try {
       // Store using new secure storage with OS keyring
-      await invoke('store_gmail_tokens_secure', {
+      await safeInvoke('store_gmail_tokens_secure', {
         accountId: account.id,
         tokens: account.tokens,
         userInfo: {
@@ -363,7 +546,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       
       // Fallback to legacy storage with warning
       try {
-        await invoke('store_gmail_tokens', {
+        await safeInvoke('store_gmail_tokens', {
           accountId: account.id,
           tokens: account.tokens,
           userInfo: {
@@ -381,21 +564,21 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
   };
 
   const removeTokensFromStorage = async (accountId: string) => {
-    if (!isTauriAvailable()) {
+    if (!tauriReady) {
       console.warn('Cannot remove tokens from storage - Tauri not available');
       return;
     }
     
     try {
       // Try secure storage first
-      await invoke('remove_gmail_tokens_secure', { accountId });
+      await safeInvoke('remove_gmail_tokens_secure', { accountId });
       console.log('✅ [SECURITY] Tokens removed securely from OS keyring');
     } catch (err) {
       console.warn('Failed to remove from secure storage, trying legacy:', err);
       
       // Fallback to legacy storage
       try {
-        await invoke('remove_gmail_tokens', { accountId });
+        await safeInvoke('remove_gmail_tokens', { accountId });
         console.log('⚠️ [SECURITY] Tokens removed from legacy storage');
       } catch (legacyErr) {
         console.error('Failed to remove tokens from both storage methods:', legacyErr);

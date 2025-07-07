@@ -9,6 +9,12 @@ export const GmailAuthCallback: React.FC = () => {
   const [callbackError, setCallbackError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<{ received?: string | null; expected?: string | null }>({});
 
+  // Debug: Log the store state on component mount
+  React.useEffect(() => {
+    console.log('🔍 [DEBUG] GmailAuthCallback mounted. Expected state from store:', expectedState);
+    console.log('🔍 [DEBUG] Current localStorage gmail-auth-storage:', localStorage.getItem('gmail-auth-storage'));
+  }, [expectedState]);
+
   useEffect(() => {
     const handleCallback = async () => {
       try {
@@ -21,11 +27,29 @@ export const GmailAuthCallback: React.FC = () => {
         const errorParam = urlParams.get('error');
         const receivedState = urlParams.get('state');
 
-        // --- State Validation ---
-        console.log('OAuth callback validation:', { received: receivedState, expected: expectedState });
+        // --- Enhanced State Validation ---
+        console.log('OAuth callback validation:', { 
+          received: receivedState, 
+          expected: expectedState,
+          storeState: useMailStore.getState().authState 
+        });
         
-        if (!receivedState || !expectedState || receivedState !== expectedState) {
-          setDebugInfo({ received: receivedState, expected: expectedState });
+        // Try to get state from store directly as fallback
+        const storeState = useMailStore.getState().authState;
+        const validState = expectedState || storeState;
+        
+        console.log('Enhanced validation:', { 
+          received: receivedState, 
+          expectedFromHook: expectedState,
+          expectedFromStore: storeState,
+          finalExpected: validState
+        });
+        
+        if (!receivedState || !validState || receivedState !== validState) {
+          setDebugInfo({ 
+            received: receivedState, 
+            expected: `Hook: ${expectedState}, Store: ${storeState}` 
+          });
           throw new Error('Invalid authentication state. Please try again to protect your security.');
         }
         // --- End State Validation ---
@@ -39,7 +63,7 @@ export const GmailAuthCallback: React.FC = () => {
         }
 
         // Complete authentication - pass state to hook
-        await completeAuth(code, receivedState);
+        await completeAuth(code, validState);
         console.log('Gmail authentication completed successfully');
 
         // Show success briefly, then redirect
@@ -91,6 +115,17 @@ export const GmailAuthCallback: React.FC = () => {
           <p className="text-sm text-gray-500 mt-4">
             Please copy this information and share it for assistance.
           </p>
+          
+          <button 
+            onClick={() => {
+              console.log('🔧 [DEBUG] Clearing auth state and retrying...');
+              useMailStore.getState().setAuthState(null);
+              window.location.href = '/mail';
+            }}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Clear Auth State & Return to Mail
+          </button>
         </div>
       </div>
     );

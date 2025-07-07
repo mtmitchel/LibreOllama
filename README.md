@@ -116,6 +116,14 @@ libreollama/
 
 The single source of truth for all canvas-related architecture, development practices, and testing philosophy is the **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)**.
 
+### Gmail Integration
+
+LibreOllama includes secure Gmail integration with comprehensive security features:
+
+- **[Gmail Security Audit](./docs/GMAIL_SECURITY_AUDIT.md)** - Detailed security vulnerability analysis and fixes
+- **[Gmail Code Review Summary](./docs/GMAIL_CODE_REVIEW_SUMMARY.md)** - Executive summary of security improvements
+- **[Gmail Secure Setup Guide](./docs/GMAIL_SECURE_SETUP.md)** - Complete setup instructions for secure Gmail integration
+
 For a guide to all other project documentation, see the **[Documentation Index](./docs/README.md)**.
 
 ## 📚 Canvas Testing & Development

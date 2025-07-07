@@ -15,6 +15,7 @@ import {
 } from '../types';
 import { gmailService } from '../services/gmailService';
 import { handleGmailError } from '../services/gmailErrorHandler';
+import { getGmailApiService } from '../services/gmailApiService';
 
 // Enhanced mock data for multi-account development
 const createMockAccount = (id: string, email: string, name: string): GmailAccount => ({
@@ -102,52 +103,14 @@ const mockAccounts: GmailAccount[] = [
   createMockAccount('account2', 'personal@gmail.com', 'Personal Account'),
 ];
 
-// Check for persisted authentication state
-const getInitialAuthState = () => {
-  try {
-    const isAuth = localStorage.getItem('gmail_authenticated') === 'true';
-    const account = localStorage.getItem('gmail_account');
-    const accountData = localStorage.getItem('gmail_account_data');
-    
-    if (isAuth && account && accountData) {
-      const parsedAccount = JSON.parse(account);
-      const parsedAccountData = JSON.parse(accountData);
-      
-      return {
-        isAuthenticated: true,
-        accounts: { [parsedAccount.id]: parsedAccount },
-        accountData: { [parsedAccount.id]: parsedAccountData },
-        currentAccountId: parsedAccount.id,
-      };
-    }
-  } catch (error) {
-    console.warn('Failed to restore authentication state:', error);
-    // Clear invalid data
-    localStorage.removeItem('gmail_authenticated');
-    localStorage.removeItem('gmail_account');
-    localStorage.removeItem('gmail_account_data');
-  }
-  
-  return {
-    isAuthenticated: false,
-    accounts: {},
-    accountData: {},
-    currentAccountId: null,
-  };
-};
-
-const authState = getInitialAuthState();
-console.log('🔑 [AUTH] Initial authentication state:', {
-  isAuthenticated: authState.isAuthenticated,
-  hasAccount: !!authState.currentAccountId,
-  accountId: authState.currentAccountId
-});
+// Remove manual localStorage handling - Zustand persist will handle this
+console.log('🔑 [AUTH] Zustand persistence will restore authentication state automatically');
 
 const initialState: MailState = {
   // Multi-Account Authentication
-  accounts: authState.accounts, // Restore from localStorage or empty
-  currentAccountId: authState.currentAccountId,
-  isAuthenticated: authState.isAuthenticated, // Restore authentication state
+  accounts: {}, // Will be restored by Zustand persist
+  currentAccountId: null,
+  isAuthenticated: false, // Will be restored by Zustand persist
   
   // Loading states
   isLoading: false,
@@ -157,7 +120,7 @@ const initialState: MailState = {
   isLoadingAccounts: false,
   
   // Account-specific data
-  accountData: authState.accountData, // Restore from localStorage or empty
+  accountData: {}, // Account data not persisted for security
   
   // Current view data
   currentThread: null,
@@ -187,6 +150,9 @@ const initialState: MailState = {
 
   authState: null, // For OAuth state validation
 };
+
+// Periodic sync interval (will be set up after store creation)
+let syncInterval: NodeJS.Timeout | null = null;
 
 const useMailStore = create<EnhancedMailStore>()(
   devtools(
@@ -246,25 +212,55 @@ const useMailStore = create<EnhancedMailStore>()(
           });
 
           try {
-            // This would integrate with OAuth flow
-            // For now, simulate adding an account
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('📧 [STORE] Adding account to store:', account.email);
             
-            // Add new account and make it active
-            state.accounts[account.id] = account;
-            state.currentAccountId = account.id;
-            state.isAuthenticated = true;
-            
-            // Initialize account data
-            if (!state.accountData[account.id]) {
-              state.accountData[account.id] = createMockAccountData(account);
-            }
-            
+            // Add new account and make it active immediately (no artificial delay needed)
             set((state) => {
+              state.accounts[account.id] = account;
+              state.currentAccountId = account.id;
+              state.isAuthenticated = true;
+              
+              // Initialize account data with empty structure (real data will be fetched)
+              if (!state.accountData[account.id]) {
+                state.accountData[account.id] = {
+                  messages: [],
+                  threads: [],
+                  labels: [],
+                  drafts: [],
+                  totalMessages: 0,
+                  unreadMessages: 0,
+                  lastSyncAt: new Date(),
+                  syncInProgress: false,
+                };
+              }
+              
               state.isLoadingAccounts = false;
             });
+
+            // Fetch real data for the new account
+            const { fetchMessages, fetchLabels } = get();
+            console.log(`🔄 [STORE] Fetching initial data for new account: ${account.email}`);
+            
+            try {
+              // Fetch labels and messages in parallel
+              await Promise.all([
+                fetchLabels(account.id),
+                fetchMessages(undefined, undefined, undefined, account.id)
+              ]);
+              console.log(`✅ [STORE] Initial data loaded for account: ${account.email}`);
+            } catch (dataError) {
+              console.warn(`⚠️ [STORE] Failed to load initial data for account: ${account.email}`, dataError);
+              // Don't fail the account addition, just log the warning
+              // User can manually refresh to load data
+            }
+            
+            console.log('✅ [STORE] Account added successfully:', account.email);
           } catch (error) {
-            const handledError = handleGmailError(error);
+            console.error('❌ [STORE] Failed to add account:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'add_account',
+              accountId: account.id,
+            });
             set((state) => {
               state.error = handledError.message;
               state.isLoadingAccounts = false;
@@ -323,6 +319,14 @@ const useMailStore = create<EnhancedMailStore>()(
         },
 
         syncAllAccounts: async () => {
+          const accounts = get().accounts;
+          if (Object.keys(accounts).length === 0) {
+            console.log('📭 [SYNC] No accounts to sync');
+            return;
+          }
+
+          console.log(`🔄 [SYNC] Starting sync for ${Object.keys(accounts).length} accounts`);
+          
           set((state) => {
             state.isLoadingAccounts = true;
             state.error = null;
@@ -332,10 +336,30 @@ const useMailStore = create<EnhancedMailStore>()(
           });
 
           try {
+            const { fetchMessages, fetchLabels } = get();
+            
             // Sync all accounts in parallel
-            const syncPromises = Object.values(get().accounts).map(async (account) => {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              return account.id;
+            const syncPromises = Object.values(accounts).map(async (account) => {
+              try {
+                console.log(`🔄 [SYNC] Syncing account: ${account.email}`);
+                
+                // Fetch latest messages and labels for each account
+                await Promise.all([
+                  fetchMessages(undefined, undefined, undefined, account.id),
+                  fetchLabels(account.id)
+                ]);
+                
+                console.log(`✅ [SYNC] Account synced: ${account.email}`);
+                return account.id;
+              } catch (error) {
+                console.error(`❌ [SYNC] Failed to sync account ${account.email}:`, error);
+                set((state) => {
+                  if (state.accounts[account.id]) {
+                    state.accounts[account.id].syncStatus = 'error';
+                  }
+                });
+                throw error;
+              }
             });
 
             await Promise.all(syncPromises);
@@ -347,11 +371,19 @@ const useMailStore = create<EnhancedMailStore>()(
               });
               state.isLoadingAccounts = false;
             });
+            
+            console.log(`✅ [SYNC] All accounts synced successfully`);
           } catch (error) {
-            const handledError = handleGmailError(error);
+            console.error('❌ [SYNC] Sync failed for some accounts:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'sync_all_accounts',
+            });
             set((state) => {
+              // Only set accounts to error status if they weren't already set above
               Object.values(state.accounts).forEach(acc => {
-                acc.syncStatus = 'error';
+                if (acc.syncStatus === 'syncing') {
+                  acc.syncStatus = 'error';
+                }
               });
               state.error = handledError.message;
               state.isLoadingAccounts = false;
@@ -395,23 +427,6 @@ const useMailStore = create<EnhancedMailStore>()(
           }
         },
 
-        signOut: () => {
-          // Clear localStorage
-          localStorage.removeItem('gmail_authenticated');
-          localStorage.removeItem('gmail_account');
-          localStorage.removeItem('gmail_account_data');
-          
-          // Reset store state
-          set((state) => {
-            state.isAuthenticated = false;
-            state.accounts = {};
-            state.accountData = {};
-            state.currentAccountId = null;
-            state.error = null;
-            state.authState = null;
-          });
-        },
-
         // Message actions
         fetchMessages: async (labelId?: string, query?: string, pageToken?: string, accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
@@ -428,36 +443,50 @@ const useMailStore = create<EnhancedMailStore>()(
           });
           
           try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 500));
+            console.log(`📨 [STORE] Fetching real messages for account: ${targetAccountId}`);
             
-            const accountData = get().accountData[targetAccountId];
-            if (!accountData) {
-              throw new Error('Account data not found');
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
 
-            let filteredMessages = accountData.messages;
-            if (labelId) {
-              filteredMessages = accountData.messages.filter(msg => msg.labels.includes(labelId));
-            }
+            // Determine label IDs to fetch
+            const labelIds = labelId ? [labelId] : ['INBOX'];
             
-            if (query) {
-              const searchLower = query.toLowerCase();
-              filteredMessages = filteredMessages.filter(msg => 
-                msg.subject.toLowerCase().includes(searchLower) ||
-                msg.body.toLowerCase().includes(searchLower) ||
-                msg.from.email.toLowerCase().includes(searchLower)
-              );
-            }
+            // Fetch real messages from Gmail API
+            const result = await gmailApi.getMessages(labelIds, 50, pageToken, query);
+            
+            console.log(`✅ [STORE] Fetched ${result.messages.length} real messages`);
 
             set((state) => {
-              if (state.accountData[targetAccountId]) {
-                state.accountData[targetAccountId].messages = filteredMessages;
+              // Initialize account data if it doesn't exist
+              if (!state.accountData[targetAccountId]) {
+                state.accountData[targetAccountId] = {
+                  messages: [],
+                  threads: [],
+                  labels: [],
+                  drafts: [],
+                  totalMessages: 0,
+                  unreadMessages: 0,
+                  lastSyncAt: new Date(),
+                  syncInProgress: false,
+                };
               }
+              
+              // Update messages with real data
+              state.accountData[targetAccountId].messages = result.messages;
+              state.accountData[targetAccountId].totalMessages = result.messages.length;
+              state.accountData[targetAccountId].unreadMessages = result.messages.filter(msg => !msg.isRead).length;
+              state.accountData[targetAccountId].lastSyncAt = new Date();
               state.isLoadingMessages = false;
             });
           } catch (error) {
-            const handledError = handleGmailError(error);
+            console.error('❌ [STORE] Failed to fetch messages:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'fetch_messages',
+              accountId: targetAccountId,
+            });
             set((state) => {
               state.error = handledError.message;
               state.isLoadingMessages = false;
@@ -475,21 +504,41 @@ const useMailStore = create<EnhancedMailStore>()(
           });
           
           try {
-            await new Promise(resolve => setTimeout(resolve, 300));
+            console.log(`📧 [STORE] Fetching real message: ${messageId}`);
             
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
+            }
+
+            // First check if we already have the message in our store
             const accountData = get().accountData[targetAccountId];
-            const message = accountData?.messages.find(msg => msg.id === messageId);
+            let message = accountData?.messages.find(msg => msg.id === messageId);
+            
+            // If not found in store, fetch from API
+            if (!message) {
+              console.log(`🔍 [STORE] Message not in store, fetching from API...`);
+              message = await gmailApi.getMessage(messageId);
+            }
             
             if (!message) {
               throw new Error('Message not found');
             }
+
+            console.log(`✅ [STORE] Message fetched: ${message.subject}`);
 
             set((state) => {
               state.currentMessage = message;
               state.isLoading = false;
             });
           } catch (error) {
-            const handledError = handleGmailError(error);
+            console.error('❌ [STORE] Failed to fetch message:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'fetch_message',
+              accountId: targetAccountId,
+              messageId,
+            });
             set((state) => {
               state.error = handledError.message;
               state.isLoading = false;
@@ -544,110 +593,267 @@ const useMailStore = create<EnhancedMailStore>()(
           }
         },
 
-        // Simplified implementations for other actions
+        // Real Gmail API implementations
         markAsRead: async (messageIds: string[], accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) return;
 
-          set((state) => {
-            const accountData = state.accountData[targetAccountId];
-            if (accountData) {
-              messageIds.forEach(id => {
-                const message = accountData.messages.find(msg => msg.id === id);
-                if (message) {
-                  message.isRead = true;
-                  message.labels = message.labels.filter(label => label !== 'UNREAD');
-                }
-              });
+          try {
+            console.log(`📖 [STORE] Marking ${messageIds.length} messages as read`);
+            
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
-          });
+
+            // Update via Gmail API
+            await gmailApi.markAsRead(messageIds);
+
+            // Update local state
+            set((state) => {
+              const accountData = state.accountData[targetAccountId];
+              if (accountData) {
+                messageIds.forEach(id => {
+                  const message = accountData.messages.find(msg => msg.id === id);
+                  if (message) {
+                    message.isRead = true;
+                    message.labels = message.labels.filter(label => label !== 'UNREAD');
+                  }
+                });
+                // Update unread count
+                state.accountData[targetAccountId].unreadMessages = accountData.messages.filter(msg => !msg.isRead).length;
+              }
+            });
+            
+            console.log(`✅ [STORE] Successfully marked messages as read`);
+          } catch (error) {
+            console.error('❌ [STORE] Failed to mark messages as read:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'mark_as_read',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+            });
+          }
         },
 
         markAsUnread: async (messageIds: string[], accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) return;
 
-          set((state) => {
-            const accountData = state.accountData[targetAccountId];
-            if (accountData) {
-              messageIds.forEach(id => {
-                const message = accountData.messages.find(msg => msg.id === id);
-                if (message) {
-                  message.isRead = false;
-                  if (!message.labels.includes('UNREAD')) {
-                    message.labels.push('UNREAD');
-                  }
-                }
-              });
+          try {
+            console.log(`📩 [STORE] Marking ${messageIds.length} messages as unread`);
+            
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
-          });
+
+            // Update via Gmail API
+            await gmailApi.markAsUnread(messageIds);
+
+            // Update local state
+            set((state) => {
+              const accountData = state.accountData[targetAccountId];
+              if (accountData) {
+                messageIds.forEach(id => {
+                  const message = accountData.messages.find(msg => msg.id === id);
+                  if (message) {
+                    message.isRead = false;
+                    if (!message.labels.includes('UNREAD')) {
+                      message.labels.push('UNREAD');
+                    }
+                  }
+                });
+                // Update unread count
+                state.accountData[targetAccountId].unreadMessages = accountData.messages.filter(msg => !msg.isRead).length;
+              }
+            });
+            
+            console.log(`✅ [STORE] Successfully marked messages as unread`);
+          } catch (error) {
+            console.error('❌ [STORE] Failed to mark messages as unread:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'mark_as_unread',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+            });
+          }
         },
 
         deleteMessages: async (messageIds: string[], accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) return;
 
-          set((state) => {
-            const accountData = state.accountData[targetAccountId];
-            if (accountData) {
-              accountData.messages = accountData.messages.filter(msg => !messageIds.includes(msg.id));
+          try {
+            console.log(`🗑️ [STORE] Deleting ${messageIds.length} messages`);
+            
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
-          });
+
+            // Delete via Gmail API
+            await gmailApi.deleteMessages(messageIds);
+
+            // Update local state
+            set((state) => {
+              const accountData = state.accountData[targetAccountId];
+              if (accountData) {
+                accountData.messages = accountData.messages.filter(msg => !messageIds.includes(msg.id));
+                // Update counts
+                state.accountData[targetAccountId].totalMessages = accountData.messages.length;
+                state.accountData[targetAccountId].unreadMessages = accountData.messages.filter(msg => !msg.isRead).length;
+              }
+            });
+            
+            console.log(`✅ [STORE] Successfully deleted messages`);
+          } catch (error) {
+            console.error('❌ [STORE] Failed to delete messages:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'delete_messages',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+            });
+          }
         },
 
         archiveMessages: async (messageIds: string[], accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) return;
 
-          set((state) => {
-            const accountData = state.accountData[targetAccountId];
-            if (accountData) {
-              messageIds.forEach(id => {
-                const message = accountData.messages.find(msg => msg.id === id);
-                if (message) {
-                  message.labels = message.labels.filter(label => label !== 'INBOX');
-                }
-              });
+          try {
+            console.log(`📦 [STORE] Archiving ${messageIds.length} messages`);
+            
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
-          });
+
+            // Archive via Gmail API
+            await gmailApi.archiveMessages(messageIds);
+
+            // Update local state
+            set((state) => {
+              const accountData = state.accountData[targetAccountId];
+              if (accountData) {
+                messageIds.forEach(id => {
+                  const message = accountData.messages.find(msg => msg.id === id);
+                  if (message) {
+                    message.labels = message.labels.filter(label => label !== 'INBOX');
+                  }
+                });
+              }
+            });
+            
+            console.log(`✅ [STORE] Successfully archived messages`);
+          } catch (error) {
+            console.error('❌ [STORE] Failed to archive messages:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'archive_messages',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+            });
+          }
         },
 
         starMessages: async (messageIds: string[], accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) return;
 
-          set((state) => {
-            const accountData = state.accountData[targetAccountId];
-            if (accountData) {
-              messageIds.forEach(id => {
-                const message = accountData.messages.find(msg => msg.id === id);
-                if (message) {
-                  message.isStarred = true;
-                  if (!message.labels.includes('STARRED')) {
-                    message.labels.push('STARRED');
-                  }
-                }
-              });
+          try {
+            console.log(`⭐ [STORE] Starring ${messageIds.length} messages`);
+            
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
-          });
+
+            // Star via Gmail API
+            await gmailApi.starMessages(messageIds);
+
+            // Update local state
+            set((state) => {
+              const accountData = state.accountData[targetAccountId];
+              if (accountData) {
+                messageIds.forEach(id => {
+                  const message = accountData.messages.find(msg => msg.id === id);
+                  if (message) {
+                    message.isStarred = true;
+                    if (!message.labels.includes('STARRED')) {
+                      message.labels.push('STARRED');
+                    }
+                  }
+                });
+              }
+            });
+            
+            console.log(`✅ [STORE] Successfully starred messages`);
+          } catch (error) {
+            console.error('❌ [STORE] Failed to star messages:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'star_messages',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+            });
+          }
         },
 
         unstarMessages: async (messageIds: string[], accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) return;
 
-          set((state) => {
-            const accountData = state.accountData[targetAccountId];
-            if (accountData) {
-              messageIds.forEach(id => {
-                const message = accountData.messages.find(msg => msg.id === id);
-                if (message) {
-                  message.isStarred = false;
-                  message.labels = message.labels.filter(label => label !== 'STARRED');
-                }
-              });
+          try {
+            console.log(`☆ [STORE] Unstarring ${messageIds.length} messages`);
+            
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
-          });
+
+            // Unstar via Gmail API
+            await gmailApi.unstarMessages(messageIds);
+
+            // Update local state
+            set((state) => {
+              const accountData = state.accountData[targetAccountId];
+              if (accountData) {
+                messageIds.forEach(id => {
+                  const message = accountData.messages.find(msg => msg.id === id);
+                  if (message) {
+                    message.isStarred = false;
+                    message.labels = message.labels.filter(label => label !== 'STARRED');
+                  }
+                });
+              }
+            });
+            
+            console.log(`✅ [STORE] Successfully unstarred messages`);
+          } catch (error) {
+            console.error('❌ [STORE] Failed to unstar messages:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'unstar_messages',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+            });
+          }
         },
 
         // Labels
@@ -655,8 +861,48 @@ const useMailStore = create<EnhancedMailStore>()(
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) return;
 
-          // Labels are already loaded with mock data
-          return;
+          try {
+            console.log(`🏷️ [STORE] Fetching real labels for account: ${targetAccountId}`);
+            
+            // Get Gmail API service for the account
+            const gmailApi = getGmailApiService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
+            }
+
+            // Fetch real labels from Gmail API
+            const labels = await gmailApi.getLabels();
+            
+            console.log(`✅ [STORE] Fetched ${labels.length} real labels`);
+
+            set((state) => {
+              // Initialize account data if it doesn't exist
+              if (!state.accountData[targetAccountId]) {
+                state.accountData[targetAccountId] = {
+                  messages: [],
+                  threads: [],
+                  labels: [],
+                  drafts: [],
+                  totalMessages: 0,
+                  unreadMessages: 0,
+                  lastSyncAt: new Date(),
+                  syncInProgress: false,
+                };
+              }
+              
+              // Update labels with real data
+              state.accountData[targetAccountId].labels = labels;
+            });
+          } catch (error) {
+            console.error('❌ [STORE] Failed to fetch labels:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'fetch_labels',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+            });
+          }
         },
 
         addLabel: async (messageIds: string[], labelId: string, accountId?: string) => {
@@ -834,12 +1080,7 @@ const useMailStore = create<EnhancedMailStore>()(
 
         // Sign out and clear authentication
         signOut: () => {
-          // Clear localStorage
-          localStorage.removeItem('gmail_authenticated');
-          localStorage.removeItem('gmail_account');
-          localStorage.removeItem('gmail_account_data');
-          
-          // Reset store state
+          // Reset store state - Zustand persist will handle localStorage
           set((state) => {
             state.isAuthenticated = false;
             state.accounts = {};
@@ -850,12 +1091,51 @@ const useMailStore = create<EnhancedMailStore>()(
           });
         },
 
-        setAuthState: (authState: string | null) => set({ authState }),
+        setAuthState: (authState: string | null) => {
+          console.log('🔑 [AUTH] Setting auth state:', authState);
+          set({ authState });
+        },
+
+        // Real-time sync management
+        startPeriodicSync: (intervalMinutes: number = 5) => {
+          if (syncInterval) {
+            clearInterval(syncInterval);
+          }
+          
+          const { syncAllAccounts } = get();
+          
+          console.log(`🔄 [SYNC] Starting periodic sync every ${intervalMinutes} minutes`);
+          
+          syncInterval = setInterval(async () => {
+            const accounts = get().accounts;
+            if (Object.keys(accounts).length > 0) {
+              console.log('🔄 [SYNC] Running periodic sync...');
+              try {
+                await syncAllAccounts();
+              } catch (error) {
+                console.error('❌ [SYNC] Periodic sync failed:', error);
+              }
+            }
+          }, intervalMinutes * 60 * 1000);
+        },
+
+        stopPeriodicSync: () => {
+          if (syncInterval) {
+            console.log('⏹️ [SYNC] Stopping periodic sync');
+            clearInterval(syncInterval);
+            syncInterval = null;
+          }
+        },
       })),
       {
         name: 'gmail-auth-storage', // name of the item in the storage (must be unique)
         storage: createJSONStorage(() => localStorage), // use localStorage
-        partialize: (state) => ({ authState: state.authState }), // only persist the authState
+        partialize: (state) => ({ 
+          authState: state.authState,
+          accounts: state.accounts,
+          currentAccountId: state.currentAccountId,
+          isAuthenticated: state.isAuthenticated 
+        }), // persist auth-related state
       }
     )
   )
