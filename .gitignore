@@ -41,6 +41,9 @@ playwright-report/
 .claude/
 .agent.md
 
+# Cursor MCP config with API keys
+.cursor/mcp.json
+
 # Vitest coverage
 coverage/
 .vitest/
