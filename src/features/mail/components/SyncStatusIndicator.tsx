@@ -39,7 +39,8 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     removeEventListener,
   } = useGmailSync();
 
-  const { accounts, getCurrentAccount } = useMailStore();
+  const { accounts: accountsObject, getCurrentAccount, getAccountsArray } = useMailStore();
+  const accounts = getAccountsArray();
 
   // Track recent sync events for activity log
   useEffect(() => {

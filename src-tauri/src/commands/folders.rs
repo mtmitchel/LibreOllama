@@ -4,10 +4,10 @@
 //! in the LibreOllama application.
 
 use serde::{Deserialize, Serialize};
-use tauri::command;
-use crate::database::models::{Folder}; // Adjusted import
-// Using database operations
-use chrono::TimeZone; // Added for NaiveDateTime to DateTime<Utc> conversion
+use tauri::{command, State};
+use crate::database::models::{Folder};
+use crate::database::operations;
+use chrono::TimeZone;
 
 /// Request structure for creating a new folder
 #[derive(Debug, Deserialize)]
@@ -54,65 +54,120 @@ impl From<Folder> for FolderResponse {
 
 /// Create a new folder
 #[command]
-pub async fn create_folder(folder: CreateFolderRequest) -> Result<FolderResponse, String> {
-    let new_folder = Folder::new(
-        folder.name,
-        folder.parent_id.and_then(|id_str| id_str.parse::<i32>().ok()), // Parse String to Option<i32>
-        folder.user_id,
-        folder.color,
-    );
+pub async fn create_folder(
+    folder: CreateFolderRequest,
+    db_manager: State<'_, crate::database::DatabaseManager>,
+) -> Result<FolderResponse, String> {
+    let parent_id = folder.parent_id.and_then(|id_str| id_str.parse::<i32>().ok());
+    
+    // Clone the values we need to use after the spawn_blocking
+    let name = folder.name.clone();
+    let user_id = folder.user_id.clone();
+    let color = folder.color.clone();
 
-    crate::database::create_folder(&new_folder)
-        .await
-        .map_err(|e| format!("Failed to create folder: {}", e))?;
+    let db_manager_clone = db_manager.inner().clone();
+    let created_folder_id = tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection()?;
+        operations::folder_operations::create_folder(
+            &conn,
+            &folder.name,
+            parent_id,
+            &folder.user_id,
+            folder.color.as_deref(),
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e: anyhow::Error| e.to_string())?;
+    
+    let new_folder = Folder {
+        id: created_folder_id,
+        folder_name: name,
+        parent_id,
+        user_id,
+        color,
+        created_at: chrono::Local::now().naive_local(),
+        updated_at: chrono::Local::now().naive_local(),
+    };
 
     Ok(FolderResponse::from(new_folder))
 }
 
 /// Get all folders for a user
 #[command]
-pub async fn get_folders(user_id: String) -> Result<Vec<FolderResponse>, String> {
-    let folders = crate::database::get_folders(&user_id)
-        .await
-        .map_err(|e| format!("Failed to get folders: {}", e))?;
+pub async fn get_folders(
+    user_id: String,
+    db_manager: State<'_, crate::database::DatabaseManager>,
+) -> Result<Vec<FolderResponse>, String> {
+    let db_manager_clone = db_manager.inner().clone();
+    let folders = tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection()?;
+        operations::folder_operations::get_folders_by_user(&conn, &user_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e: anyhow::Error| e.to_string())?;
 
     Ok(folders.into_iter().map(FolderResponse::from).collect())
 }
 
 /// Update an existing folder
 #[command]
-pub async fn update_folder(id: String, folder: UpdateFolderRequest) -> Result<FolderResponse, String> {
-    let mut existing_folder = crate::database::get_folder_by_id(id.parse().unwrap_or_default()) // Parse String to i32
-        .await
-        .map_err(|e| format!("Failed to get folder: {}", e))?
-        .ok_or_else(|| "Folder not found".to_string())?;
+pub async fn update_folder(
+    id: String,
+    folder: UpdateFolderRequest,
+    db_manager: State<'_, crate::database::DatabaseManager>,
+) -> Result<FolderResponse, String> {
+    let folder_id = id.parse().map_err(|_| "Invalid folder ID".to_string())?;
+    let db_manager_clone = db_manager.inner().clone();
 
-    // Update fields if provided
-    if let Some(name) = folder.name {
-        existing_folder.folder_name = name;
-    }
-    if let Some(parent_id_str) = folder.parent_id {
-        existing_folder.parent_id = parent_id_str.parse::<i32>().ok(); // Parse String to Option<i32>
-    }
-    if let Some(color) = folder.color {
-        existing_folder.color = Some(color);
-    }
+    let mut existing_folder = tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection()?;
+        operations::folder_operations::get_folder(&conn, folder_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e: anyhow::Error| e.to_string())?
+    .ok_or_else(|| "Folder not found".to_string())?;
 
-    existing_folder.updated_at = chrono::Local::now().naive_local(); // Update timestamp
+    if let Some(name) = folder.name { existing_folder.folder_name = name; }
+    if let Some(parent_id_str) = folder.parent_id { existing_folder.parent_id = parent_id_str.parse::<i32>().ok(); }
+    if let Some(color) = folder.color { existing_folder.color = Some(color); }
+    existing_folder.updated_at = chrono::Local::now().naive_local();
 
-    crate::database::update_folder(&existing_folder)
-        .await
-        .map_err(|e| format!("Failed to update folder: {}", e))?;
+    let folder_id = existing_folder.id;
+    let folder_name = existing_folder.folder_name.clone();
+    let parent_id = existing_folder.parent_id;
+    let folder_color = existing_folder.color.clone();
+    
+    let db_manager_clone_update = db_manager.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone_update.get_connection()?;
+        operations::folder_operations::update_folder(&conn, folder_id, &folder_name, parent_id, folder_color.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e: anyhow::Error| e.to_string())?;
 
     Ok(FolderResponse::from(existing_folder))
 }
 
 /// Delete a folder
 #[command]
-pub async fn delete_folder(id: String) -> Result<(), String> {
-    crate::database::delete_folder(id.parse().unwrap_or_default()) // Parse String to i32
-        .await
-        .map_err(|e| format!("Failed to delete folder: {}", e))?;
+pub async fn delete_folder(
+    id: String,
+    db_manager: State<'_, crate::database::DatabaseManager>,
+) -> Result<(), String> {
+    let folder_id = id.parse().map_err(|_| "Invalid folder ID".to_string())?;
+    let db_manager_clone = db_manager.inner().clone();
+
+    tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection()?;
+        operations::folder_operations::delete_folder(&conn, folder_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e: anyhow::Error| e.to_string())?;
 
     Ok(())
-}
+} 

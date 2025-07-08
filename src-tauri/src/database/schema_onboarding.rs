@@ -153,84 +153,6 @@ fn create_onboarding_triggers(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// Get onboarding status for a user
-pub fn get_onboarding_status(conn: &Connection, user_id: &str) -> Result<Option<OnboardingStatus>> {
-    let mut stmt = conn.prepare(
-        "SELECT is_completed, current_step, completed_steps, selected_persona, 
-                ollama_setup_status, selected_models, sample_data_created, 
-                tour_progress, started_at, completed_at
-         FROM user_onboarding 
-         WHERE user_id = ?1"
-    )?;
-
-    let result = stmt.query_row([user_id], |row| {
-        Ok(OnboardingStatus {
-            is_completed: row.get(0)?,
-            current_step: row.get(1)?,
-            completed_steps: row.get(2)?,
-            selected_persona: row.get(3)?,
-            ollama_setup_status: row.get(4)?,
-            selected_models: row.get(5)?,
-            sample_data_created: row.get(6)?,
-            tour_progress: row.get(7)?,
-            started_at: row.get(8)?,
-            completed_at: row.get(9)?,
-        })
-    });
-
-    match result {
-        Ok(status) => Ok(Some(status)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(e.into()),
-    }
-}
-
-/// Update onboarding status for a user
-pub fn update_onboarding_status(
-    conn: &Connection, 
-    user_id: &str, 
-    status: &OnboardingStatus
-) -> Result<()> {
-    conn.execute(
-        "INSERT OR REPLACE INTO user_onboarding 
-         (id, user_id, is_completed, current_step, completed_steps, selected_persona,
-          ollama_setup_status, selected_models, sample_data_created, tour_progress,
-          started_at, completed_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-        [
-            &format!("onboarding_{}", user_id),
-            user_id,
-            &status.is_completed.to_string(),
-            &status.current_step,
-            &status.completed_steps,
-            &status.selected_persona.as_deref().unwrap_or(""),
-            &status.ollama_setup_status,
-            &status.selected_models,
-            &status.sample_data_created.to_string(),
-            &status.tour_progress,
-            &status.started_at,
-            &status.completed_at.as_deref().unwrap_or(""),
-        ],
-    )?;
-
-    Ok(())
-}
-
-/// Onboarding status structure
-#[derive(Debug)]
-pub struct OnboardingStatus {
-    pub is_completed: bool,
-    pub current_step: String,
-    pub completed_steps: String, // JSON array
-    pub selected_persona: Option<String>,
-    pub ollama_setup_status: String,
-    pub selected_models: String, // JSON array
-    pub sample_data_created: bool,
-    pub tour_progress: String, // JSON object
-    pub started_at: String,
-    pub completed_at: Option<String>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,40 +178,5 @@ mod tests {
             assert!(exists, "Table {} should exist", table);
         }
         Ok(())
-    }
-
-    #[test]
-    fn test_onboarding_status_operations() {
-        let conn = Connection::open_in_memory().unwrap();
-        run_onboarding_migration(&conn).unwrap();
-        
-        let user_id = "test_user";
-        
-        // Test getting non-existent status
-        let status = get_onboarding_status(&conn, user_id).unwrap();
-        assert!(status.is_none());
-        
-        // Test creating status
-        let new_status = OnboardingStatus {
-            is_completed: false,
-            current_step: "welcome".to_string(),
-            completed_steps: "[]".to_string(),
-            selected_persona: Some("student".to_string()),
-            ollama_setup_status: "not-started".to_string(),
-            selected_models: "[]".to_string(),
-            sample_data_created: false,
-            tour_progress: "{}".to_string(),
-            started_at: "2024-01-01T00:00:00Z".to_string(),
-            completed_at: None,
-        };
-        
-        update_onboarding_status(&conn, user_id, &new_status).unwrap();
-        
-        // Test getting existing status
-        let retrieved_status = get_onboarding_status(&conn, user_id).unwrap();
-        assert!(retrieved_status.is_some());
-        let status = retrieved_status.unwrap();
-        assert_eq!(status.current_step, "welcome");
-        assert_eq!(status.selected_persona, Some("student".to_string()));
     }
 }

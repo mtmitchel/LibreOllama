@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Mail, Shield, Users, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useGmailAuth, GmailAccount } from '../hooks/useGmailAuth';
+import { useMailStore } from '../stores/mailStore';
 
 interface GmailAuthModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
     currentAccount,
     error,
     startAuth,
+    completeAuth,
     addAccount,
     removeAccount,
     switchAccount,
@@ -30,6 +32,8 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
 
   const [authStep, setAuthStep] = useState<'intro' | 'auth' | 'success' | 'manage'>('intro');
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [authCode, setAuthCode] = useState('');
+  const [isCompletingAuth, setIsCompletingAuth] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && currentAccount) {
@@ -75,7 +79,26 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
   const handleClose = () => {
     clearError();
     setAuthStep('intro');
+    setAuthCode('');
+    setIsCompletingAuth(false);
     onClose();
+  };
+
+  const handleCompleteAuth = async () => {
+    if (!authCode.trim()) {
+      alert('Please enter the authorization code');
+      return;
+    }
+
+    setIsCompletingAuth(true);
+    try {
+      const authState = useMailStore.getState().authState;
+      await completeAuth(authCode.trim(), authState || '');
+    } catch (err) {
+      console.error('Failed to complete auth:', err);
+    } finally {
+      setIsCompletingAuth(false);
+    }
   };
 
   const renderIntroStep = () => (
@@ -195,47 +218,83 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
   );
 
   const renderAuthStep = () => (
-    <div className="space-y-6 text-center">
-      <div className="flex justify-center mb-4">
-        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-          <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <Mail className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Complete Gmail Authentication
+          </h3>
+          <p className="text-gray-600 text-sm">
+            A browser window should have opened. After you sign in, Google will show you an authorization code.
+          </p>
         </div>
-      </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        Authenticating with Gmail
-      </h3>
-      <p className="text-gray-600 text-sm">
-        Please complete the authentication in your browser. You can return to this window once done.
-      </p>
-      
-      <div className="space-y-2">
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-          <Shield className="w-4 h-4" />
-          <span>Secure connection established</span>
-        </div>
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-          <Mail className="w-4 h-4" />
-          <span>Requesting Gmail access permissions</span>
-        </div>
-      </div>
 
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-red-500" />
-            <p className="text-sm text-red-700">{error}</p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="auth-code" className="block text-sm font-medium text-gray-700">
+              Authorization Code
+            </label>
+            <input
+              id="auth-code"
+              type="text"
+              value={authCode}
+              onChange={(e) => setAuthCode(e.target.value)}
+              placeholder="Paste the authorization code here"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={isCompletingAuth}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Shield className="w-4 h-4" />
+              <span>Secure OAuth2 authentication</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Mail className="w-4 h-4" />
+              <span>Copy the code from your browser</span>
+            </div>
           </div>
         </div>
-      )}
 
-      <button
-        onClick={handleClose}
-        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-      >
-        Cancel
-      </button>
-    </div>
-  );
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex space-x-3">
+          <button
+            onClick={handleClose}
+            disabled={isCompletingAuth}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCompleteAuth}
+            disabled={!authCode.trim() || isCompletingAuth}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          >
+            {isCompletingAuth ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4" />
+            )}
+            <span>
+              {isCompletingAuth ? 'Completing...' : 'Complete Authentication'}
+            </span>
+          </button>
+        </div>
+      </div>
+    );
 
   const renderSuccessStep = () => (
     <div className="space-y-6 text-center">
@@ -308,9 +367,14 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div 
+        role="dialog" 
+        aria-labelledby="gmail-auth-title"
+        aria-modal="true"
+        className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Gmail Authentication</h2>
+          <h2 id="gmail-auth-title" className="text-xl font-semibold text-gray-900">Gmail Authentication</h2>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"

@@ -4,46 +4,48 @@
 mod commands;
 mod database;
 
-// Re-export commands for easy access
-use commands::chat::*;
+// Import foundation modules
+mod errors;
+mod utils;
+mod config;
+
+// Import services module
+mod services;
+
+// Re-export commands for easy access using new domain-grouped structure
+use commands::gmail::*;        // Gmail auth and operations (consolidated)
+use commands::agents::*;       // Agent lifecycle commands  
+use commands::chat::*;         // Chat session commands
+use commands::system::*;       // System and advanced commands
+
+// Legacy command imports (maintained for compatibility)
 use commands::ollama::*;
-use commands::agents::*;
-use commands::advanced::*;
 use commands::folders::*;
 use commands::notes::*;
 use commands::mcp::*;
 use commands::n8n::*;
 use commands::links::*;
 use commands::canvas::*;
-use commands::gmail::*;
-use commands::token_storage::*;
-// use commands::secure_token_storage::*;
-use commands::secure_oauth_flow::*;
-use commands::secure_token_commands::*;
-use commands::gmail_integration::*;
-use commands::sync_manager::*;
-use commands::cache_manager::*;
 use commands::rate_limiter::*;
-use commands::gmail_compose::*;
-use commands::gmail_sync::*;
+
+// CONSOLIDATED: All Gmail auth functionality now in commands::gmail::auth
+// - secure_oauth_flow → gmail/auth
+// - secure_token_commands → gmail/auth  
+// - secure_token_storage → gmail/auth
 
 // Database imports
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 // Environment variable loading
-use dotenv;
+
+// Import required services and configuration
+use crate::config::ConfigManager;
+use crate::services::gmail::{GmailCacheService, GmailSyncService};
+use tauri::Manager;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-/// Database health check command
-#[tauri::command]
-async fn database_health_check() -> Result<bool, String> {
-    // For now, return a simple success since we're using async operations
-    Ok(true)
 }
 
 /// Initialize database and return success status
@@ -112,11 +114,8 @@ pub fn run() {
     
     println!("🎨 [BACKEND-DEBUG] WebView2 hardware acceleration enabled for canvas rendering");
 
-    // Initialize OAuth state management for Gmail
-    let oauth_state: commands::gmail::OAuthStateMap = Arc::new(Mutex::new(HashMap::new()));
-
-    // Initialize Gmail sync state management
-    let sync_states: commands::gmail_sync::AccountSyncStates = tokio::sync::RwLock::new(HashMap::new());
+    // REMOVED: Legacy OAuth state management
+    // let oauth_state: commands::gmail::OAuthStateMap = Arc::new(Mutex::new(HashMap::new()));
 
     // Initialize database manager for state management
     let db_manager = rt.block_on(async {
@@ -132,40 +131,103 @@ pub fn run() {
         }
     });
 
-    // Initialize secure OAuth service
-    println!("🔐 [BACKEND-DEBUG] Initializing secure OAuth service...");
+    // Initialize Gmail authentication service
+    println!("🔐 [BACKEND-DEBUG] Initializing Gmail authentication service...");
     
-    // Debug environment variables (don't log the actual values for security)
-    let client_id_set = std::env::var("GMAIL_CLIENT_ID").is_ok();
-    let client_secret_set = std::env::var("GMAIL_CLIENT_SECRET").is_ok();
+    // Debug configuration (don't log the actual values for security)
+    let config = ConfigManager::new().unwrap_or_default();
+    let client_id_set = !config.oauth().client_id.is_empty();
+    let client_secret_set = !config.oauth().client_secret.is_empty();
     println!("🔐 [BACKEND-DEBUG] GMAIL_CLIENT_ID set: {}", client_id_set);
     println!("🔐 [BACKEND-DEBUG] GMAIL_CLIENT_SECRET set: {}", client_secret_set);
-    
-    let secure_oauth_service = match commands::secure_oauth_flow::SecureOAuthService::new() {
-        Ok(service) => {
-            println!("✅ [BACKEND-SUCCESS] Secure OAuth service initialized");
-            Some(Arc::new(service))
-        }
-        Err(e) => {
-            eprintln!("⚠️  [BACKEND-WARNING] Failed to initialize secure OAuth service: {}", e);
-            eprintln!("⚠️  [BACKEND-WARNING] OAuth will use fallback method - ensure GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET are set");
-            None
-        }
-    };
 
-    let mut builder = tauri::Builder::default()
+    // Initialize Gmail services
+    let db_manager_arc = Arc::new(db_manager.clone());
+    
+    let gmail_cache_service = GmailCacheService::new(db_manager_arc.clone());
+    let gmail_sync_service = GmailSyncService::new(db_manager_arc.clone());
+    
+    println!("✅ [BACKEND-SUCCESS] Gmail services initialized");
+
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
-        .manage(oauth_state)
-        .manage(sync_states)
-        .manage(db_manager);
 
-    // Conditionally manage the secure OAuth service if it was successfully initialized
-    if let Some(oauth_service) = secure_oauth_service {
-        builder = builder.manage(oauth_service);
-    }
+        // .manage(oauth_state) // REMOVED: Legacy OAuth state management
+        .manage(db_manager)
+        .manage(gmail_cache_service)
+        .manage(gmail_sync_service);
+
+    // Gmail authentication service will be initialized in setup
 
     builder
+        .setup(|app| {
+            println!("🔧 [BACKEND-DEBUG] Starting application setup...");
+            
+            // Initialize configuration first
+            let _config = match ConfigManager::new() {
+                Ok(config) => config,
+                Err(e) => {
+                    eprintln!("⚠️  [BACKEND-WARNING] Failed to initialize configuration: {}", e);
+                    eprintln!("⚠️  [BACKEND-WARNING] Using default configuration");
+                    ConfigManager::default()
+                }
+            };
+
+            // Initialize Gmail authentication service
+            let db_manager = app.state::<database::connection::DatabaseManager>();
+            let encryption_key = crate::utils::crypto::generate_encryption_key();
+            let gmail_auth_service = match crate::services::gmail::auth_service::GmailAuthService::new(Arc::new(db_manager.inner().clone()), encryption_key) {
+                Ok(service) => {
+                    println!("✅ [BACKEND-SUCCESS] Gmail authentication service initialized");
+                    Arc::new(service)
+                },
+                Err(e) => {
+                    eprintln!("⚠️  [BACKEND-WARNING] Failed to initialize Gmail auth service: {}", e);
+                    eprintln!("⚠️  [BACKEND-WARNING] Gmail authentication will use legacy methods");
+                    // Continue without the new service
+                    return Ok(());
+                }
+            };
+
+            // Initialize rate limiter
+            let rate_limiter_config = crate::commands::rate_limiter::RateLimitConfig::default();
+            let rate_limiter = Arc::new(tokio::sync::Mutex::new(
+                crate::commands::rate_limiter::RateLimiter::new(rate_limiter_config)
+            ));
+            println!("✅ [BACKEND-SUCCESS] Rate limiter initialized");
+
+            // Initialize Gmail compose service
+            let gmail_compose_service = Arc::new(
+                crate::services::gmail::compose_service::GmailComposeService::new(
+                    gmail_auth_service.clone(),
+                    Arc::new(db_manager.inner().clone()),
+                    rate_limiter.clone(),
+                )
+            );
+            println!("✅ [BACKEND-SUCCESS] Gmail compose service initialized");
+
+            // Initialize Gmail API service
+            let gmail_api_service = Arc::new(
+                crate::services::gmail::api_service::GmailApiService::new(
+                    gmail_auth_service.clone(),
+                    Arc::new(db_manager.inner().clone()),
+                    rate_limiter.clone(),
+                )
+            );
+            println!("✅ [BACKEND-SUCCESS] Gmail API service initialized");
+
+            // Store new services in app state
+            app.manage(gmail_auth_service);
+            app.manage(rate_limiter);
+            app.manage(gmail_compose_service);
+            app.manage(gmail_api_service);
+
+            println!("✅ [BACKEND-SUCCESS] All Tauri commands registered successfully");
+            println!("🔒 [BACKEND-SUCCESS] Gmail OAuth state management initialized");
+            println!("✅ [BACKEND-SUCCESS] LibreOllama backend is ready for frontend connections");
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             database_health_check,
@@ -256,112 +318,83 @@ pub fn run() {
             // Canvas commands for Konva.js integration
             save_canvas_data,
             load_canvas_data,
-            // Gmail API commands
-            gmail_generate_auth_url,
-            gmail_exchange_code,
-            gmail_get_labels,
-            gmail_get_messages,
-            gmail_get_message,
-            gmail_send_email,
-            // Secure OAuth commands
+            // LEGACY GMAIL COMMANDS REMOVED: functionality is now in services/gmail
+            // gmail_generate_auth_url,
+            // gmail_exchange_code,
+            // gmail_get_labels,
+            // gmail_get_messages,
+            // gmail_get_message,
+            // gmail_send_email,
+            // Gmail Auth commands
             start_gmail_oauth,
             complete_gmail_oauth,
             refresh_gmail_token,
             revoke_gmail_token,
-            start_oauth_callback_server_and_wait,
-            // Token storage commands (legacy - deprecated)
-            store_gmail_tokens,
-            get_gmail_tokens,
-            get_gmail_accounts,
-            remove_gmail_tokens,
-            update_gmail_sync_timestamp,
-            check_token_validity,
-            // Secure token storage commands (recommended)
+            get_gmail_user_info,
             store_gmail_tokens_secure,
             get_gmail_tokens_secure,
             get_gmail_accounts_secure,
             remove_gmail_tokens_secure,
             update_gmail_sync_timestamp_secure,
             check_token_validity_secure,
+            validate_and_refresh_gmail_tokens,
+            start_oauth_callback_server_and_wait,
             migrate_tokens_to_secure_storage,
             create_secure_accounts_table,
             check_legacy_gmail_accounts,
             check_secure_accounts_table,
-            // Gmail integration commands (email parsing and processing)
-            parse_gmail_message,
-            parse_gmail_thread,
-            search_and_parse_gmail_messages,
-            extract_text_from_html,
-            sync_gmail_messages,
+            // Gmail API commands
+            get_gmail_labels,
+            search_gmail_messages,
+            get_gmail_message,
+            get_parsed_gmail_message,
+            get_gmail_thread,
             get_gmail_attachment,
-            // Sync management commands
-            initialize_sync_state,
-            perform_full_sync,
-            perform_incremental_sync,
-            get_sync_state,
-            pause_sync,
-            resume_sync,
-            // Cache management commands
-            initialize_cache_config,
-            get_cached_messages,
-            cache_message,
-            get_cache_stats,
-            cleanup_cache,
-            enable_offline_access,
-            get_offline_messages,
-            preload_for_offline,
-            // Rate limiting and batch operation commands
-            initialize_rate_limiter,
-            get_quota_status,
-            get_queue_stats,
-            execute_rate_limited_request,
-            execute_batch_requests,
-            // Gmail compose and send commands
+            // Gmail compose commands
             send_gmail_message,
             save_gmail_draft,
             get_gmail_drafts,
             delete_gmail_draft,
-            schedule_gmail_message,
-            get_message_templates,
-            format_reply_message,
+            create_gmail_reply,
+            get_gmail_templates,
+            create_gmail_template,
             // Gmail sync commands
-            gmail_get_messages_batch,
-            gmail_get_history,
-            gmail_setup_push_notifications,
-            gmail_stop_push_notifications,
-            gmail_sync_get_message,
-            gmail_mark_as_read,
-            gmail_mark_as_unread,
-            gmail_star_messages,
-            gmail_unstar_messages,
-            gmail_delete_messages,
-            gmail_archive_messages,
-            gmail_modify_labels,
-            handle_push_notification,
-            get_account_sync_state,
-            update_account_sync_state,
-            // Gmail attachment commands
-            commands::gmail_attachments::init_attachment_storage,
-            commands::gmail_attachments::get_gmail_attachment_info,
-            commands::gmail_attachments::download_gmail_attachment,
-            commands::gmail_attachments::scan_attachment,
-            commands::gmail_attachments::generate_attachment_preview,
-            commands::gmail_attachments::get_attachment_storage_stats,
-            commands::gmail_attachments::get_attachment_cache,
-            commands::gmail_attachments::cleanup_expired_attachments,
-            commands::gmail_attachments::delete_attachment_file,
-            commands::gmail_attachments::add_attachment_to_cache,
-            commands::gmail_attachments::update_cache_access,
-            commands::gmail_attachments::remove_from_cache,
-            commands::gmail_attachments::update_attachment_config,
-            commands::gmail_attachments::cleanup_attachment_service
+            initialize_gmail_sync,
+            perform_gmail_full_sync,
+            perform_gmail_incremental_sync,
+            get_gmail_sync_state,
+            pause_gmail_sync,
+            resume_gmail_sync,
+            get_gmail_messages_batch,
+            get_gmail_history,
+            setup_gmail_push_notifications,
+            stop_gmail_push_notifications,
+            handle_gmail_push_notification,
+            get_gmail_account_sync_state,
+            update_gmail_account_sync_state,
+            mark_gmail_messages_as_read,
+            mark_gmail_messages_as_unread,
+            star_gmail_messages,
+            unstar_gmail_messages,
+            delete_gmail_messages,
+            archive_gmail_messages,
+            modify_gmail_message_labels,
+            // Gmail cache commands
+            initialize_gmail_cache_config,
+            get_gmail_cached_messages,
+            cache_gmail_message,
+            get_gmail_cache_stats,
+            cleanup_gmail_cache,
+            enable_gmail_offline_access,
+            get_gmail_offline_messages,
+            preload_gmail_for_offline,
+            // Rate limiter commands
+            initialize_rate_limiter,
+            get_quota_status,
+            get_queue_stats,
+            execute_rate_limited_request,
+            execute_batch_requests
         ])
-        .setup(|_app| {
-            println!("✅ [BACKEND-SUCCESS] All Tauri commands registered successfully");
-            println!("🔒 [BACKEND-SUCCESS] Gmail OAuth state management initialized");
-            println!("✅ [BACKEND-SUCCESS] LibreOllama backend is ready for frontend connections");
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -123,16 +123,16 @@ impl DatabaseManager {
         Ok(())
     }
 
-    /// Get the database file path
-    pub fn get_db_path(&self) -> &PathBuf {
-        &self.db_path
-    }
-
     /// Test database connectivity
     pub fn test_connection(&self) -> Result<bool> {
         let conn = self.get_connection()?;
         let result: i32 = conn.query_row("SELECT 1", [], |row| row.get(0))?;
         Ok(result == 1)
+    }
+
+    /// Get the database file path
+    pub fn get_db_path(&self) -> &PathBuf {
+        &self.db_path
     }
 }
 
@@ -205,4 +205,4 @@ mod tests {
         assert!(result.is_ok());
         assert!(result.unwrap());
     }
-}
+} 

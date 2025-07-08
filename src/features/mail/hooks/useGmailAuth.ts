@@ -25,7 +25,7 @@ export interface UseGmailAuthReturn {
 
 // Gmail OAuth2 Configuration (client secret now handled securely on backend)
 const GMAIL_CONFIG = {
-  redirect_uri: 'http://localhost:8080/auth/gmail/callback',
+  redirect_uri: 'urn:ietf:wg:oauth:2.0:oob', // Standard "out of band" redirect for desktop apps
 };
 
 // Tauri initialization state
@@ -228,22 +228,6 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
         setAuthState(authRequest.state);
         console.log(`🔑 [${authId}] Storing auth state: ${authRequest.state}`);
 
-        // Set up OAuth callback handler
-        const oauthPromise = new Promise<{ code: string; state: string }>((resolve, reject) => {
-          // Start the OAuth callback server and wait for callback in one call
-          safeInvoke('start_oauth_callback_server_and_wait', {
-            port: 8080,
-            expectedState: authRequest.state,
-            timeoutMs: 300000, // 5 minutes timeout
-          }).then((callbackResult: { code: string; state: string }) => {
-            console.log(`✅ [${authId}] Successfully received OAuth callback from backend`);
-            resolve(callbackResult);
-          }).catch((err) => {
-            console.error(`❌ [${authId}] OAuth callback failed:`, err);
-            reject(new Error(`OAuth callback failed: ${err.message || err}`));
-          });
-        });
-
         // Open auth URL in external browser using Tauri's opener plugin
         try {
           console.log(`🌐 [${authId}] About to open OAuth URL using Tauri opener:`, authRequest.auth_url.substring(0, 50) + '...');
@@ -253,20 +237,13 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
           await openUrl(authRequest.auth_url);
           
           console.log(`✅ [SECURITY] [${authId}] Opened secure authentication URL using Tauri opener`);
-          console.log(`⏳ [${authId}] Waiting for OAuth callback via localhost server...`);
+          console.log(`📋 [${authId}] Please complete authentication in your browser and copy the authorization code shown`);
           
-          // Wait for the OAuth callback
-          const { code, state } = await oauthPromise;
-          
-          console.log(`🔗 [${authId}] Received OAuth callback - proceeding to complete authentication`);
-          
-          // Complete the OAuth flow directly
-          await completeAuthInternal(code, state);
+          // For desktop apps using "out of band" redirect, Google will show the authorization code
+          // The user needs to copy this code and paste it into the app
+          // This is handled by the Gmail authentication modal in the UI
           
         } catch (openerError) {
-          // Clean up the handler on error
-          oauthCallbackHandler = null;
-          
           console.warn(`⚠️ [${authId}] OAuth flow failed:`, openerError);
           throw openerError;
         }
@@ -324,24 +301,31 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     // Get user profile information
     const userProfile = await getUserProfile(tokens);
     
-    // Create account object with enhanced structure
+    // Get quota info
+    const quotaInfo = await getQuotaInfo(tokens).catch(() => ({ used: 0, total: 0 }));
+    
+    // Create account object matching the store's GmailAccount interface
     const newAccount: GmailAccount = {
       id: userProfile.id,
       email: userProfile.email,
-      name: userProfile.name,
-      picture: userProfile.picture,
-      tokens,
+      displayName: userProfile.name,
+      avatar: userProfile.picture,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token || '',
+      tokenExpiry: new Date(tokens.expires_at || Date.now() + 3600000),
       isActive: accounts.length === 0, // First account is active by default
-      lastSync: new Date(),
       syncStatus: 'idle',
-      quota: await getQuotaInfo(tokens).catch(() => undefined),
+      lastSyncAt: new Date(),
+      errorMessage: undefined,
+      quotaUsed: quotaInfo?.used || 0,
+      quotaTotal: quotaInfo?.total || 0,
     };
 
     // Store tokens securely using new secure storage
-    await storeTokensSecurely(newAccount);
+    await storeTokensSecurely(newAccount, tokens);
 
-    // Add account to the store
-    storeAddAccount(newAccount);
+    // Add account to the store - MUST await since it's async
+    await storeAddAccount(newAccount);
 
     // Clear the auth state after successful authentication
     setAuthState(null);
@@ -378,7 +362,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
         throw new Error('Account not found');
       }
 
-      if (!account.tokens.refresh_token) {
+      if (!account.refreshToken) {
         throw new Error('No refresh token available');
       }
 
@@ -393,14 +377,14 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
         expires_in: number;
         token_type: string;
       }>('refresh_gmail_token', {
-        refreshToken: account.tokens.refresh_token,
+        refreshToken: account.refreshToken,
         redirectUri: GMAIL_CONFIG.redirect_uri,
       });
 
       // Convert to our token format
       const newTokens: GmailTokens = {
         access_token: tokenResponse.access_token,
-        refresh_token: tokenResponse.refresh_token || account.tokens.refresh_token,
+        refresh_token: tokenResponse.refresh_token || account.refreshToken,
         expires_at: new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString(),
         token_type: tokenResponse.token_type,
       };
@@ -408,13 +392,15 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       // Update account with new tokens
       const updatedAccount: GmailAccount = {
         ...account,
-        tokens: newTokens,
-        lastSync: new Date(),
+        accessToken: newTokens.access_token,
+        refreshToken: newTokens.refresh_token || account.refreshToken,
+        tokenExpiry: new Date(newTokens.expires_at || Date.now() + 3600000),
+        lastSyncAt: new Date(),
         syncStatus: 'idle',
       };
 
       // Store updated tokens securely
-      await storeTokensSecurely(updatedAccount);
+      await storeTokensSecurely(updatedAccount, newTokens);
 
       // Refresh in store
       await storeRefreshAccount(accountId);
@@ -498,46 +484,95 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
 
   const getQuotaInfo = async (tokens: GmailTokens) => {
     try {
-      console.log('🔍 [QUOTA] Fetching Gmail quota info...');
-      const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/profile', {
+      console.log('🔍 [QUOTA] Fetching storage quota from Google Drive API...');
+      
+      // Use Google Drive API to get actual storage quota information
+      // Request all storageQuota fields to see what's available
+      const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota(limit,usage,usageInDrive,usageInDriveTrash)', {
         headers: {
           Authorization: `Bearer ${tokens.access_token}`,
+          'Content-Type': 'application/json',
         },
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ [QUOTA] Quota fetch failed:', response.status, response.statusText, errorText);
-        throw new Error(`Failed to fetch quota info: ${response.status} ${response.statusText} - ${errorText}`);
+        console.warn('⚠️ [QUOTA] Drive API not available, cannot determine quota');
+        // If Drive API is not available, don't make assumptions
+        return {
+          used: 0,
+          total: 0,
+        };
       }
 
-      const profile = await response.json();
-      console.log('✅ [QUOTA] Gmail quota info fetched successfully');
-      return {
-        used: profile.historyId ? parseInt(profile.historyId) * 1000 : 0, // Approximation
-        total: 15000000000, // 15GB default Gmail quota
-      };
+      const data = await response.json();
+      console.log('🔍 [QUOTA] Raw API response:', data);
+      const storageQuota = data.storageQuota;
+      
+      if (storageQuota) {
+        const used = parseInt(storageQuota.usage || '0', 10);
+        let total = parseInt(storageQuota.limit || '0', 10);
+        
+        // Some Google accounts (Workspace, Google One) don't return a limit
+        // or return -1 for unlimited
+        if (!total || total < 0) {
+          console.log('⚠️ [QUOTA] No limit returned by API, account may have custom quota');
+          // Don't assume - the UI will need to handle this case
+          total = 0;
+        }
+        
+        console.log('✅ [QUOTA] Storage quota parsed:', {
+          used: `${(used / 1000000000).toFixed(1)}GB`,
+          total: total > 0 ? `${(total / 1000000000).toFixed(1)}GB` : 'Custom/Unlimited',
+          percentage: total > 0 ? `${((used / total) * 100).toFixed(1)}%` : 'N/A',
+          rawUsage: used,
+          rawLimit: storageQuota.limit,
+          allFields: storageQuota
+        });
+        
+        return {
+          used,
+          total,
+        };
+      } else {
+        console.warn('⚠️ [QUOTA] No storage quota data in API response');
+        return {
+          used: 0,
+          total: 0,
+        };
+      }
     } catch (err) {
       console.error('❌ [QUOTA] Failed to get quota info:', err);
-      throw err;
+      // Return zeros instead of making assumptions
+      return {
+        used: 0,
+        total: 0,
+      };
     }
   };
 
-  const storeTokensSecurely = async (account: GmailAccount) => {
+  const storeTokensSecurely = async (account: GmailAccount, tokens?: GmailTokens) => {
     if (!tauriReady) {
       console.warn('Cannot store tokens securely - Tauri not available');
       return;
     }
     
+    // Use provided tokens or extract from account
+    const tokensToStore = tokens || {
+      access_token: account.accessToken,
+      refresh_token: account.refreshToken,
+      expires_at: account.tokenExpiry.toISOString(),
+      token_type: 'Bearer',
+    };
+    
     try {
       // Store using new secure storage with OS keyring
       await safeInvoke('store_gmail_tokens_secure', {
         accountId: account.id,
-        tokens: account.tokens,
+        tokens: tokensToStore,
         userInfo: {
           email: account.email,
-          name: account.name,
-          picture: account.picture,
+          name: account.displayName,
+          picture: account.avatar,
         },
       });
       console.log('✅ [SECURITY] Tokens stored securely using OS keyring');
@@ -548,11 +583,11 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       try {
         await safeInvoke('store_gmail_tokens', {
           accountId: account.id,
-          tokens: account.tokens,
+          tokens: tokensToStore,
           userInfo: {
             email: account.email,
-            name: account.name,
-            picture: account.picture,
+            name: account.displayName,
+            picture: account.avatar,
           },
         });
         console.warn('⚠️ [SECURITY] Fell back to legacy token storage - consider upgrading');

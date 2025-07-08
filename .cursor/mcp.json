@@ -1,0 +1,23 @@
+{
+    "mcpServers": {
+      "filesystem": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem",
+          "./design-system",
+          "./src/components"
+        ]
+      },
+      "figma": {
+        "command": "npx",
+        "args": [
+          "-y", 
+          "figma-developer-mcp",
+          "--figma-api-key=figd_UQi6izXHRRWDEwLW7THiWvlYNOyo3sHCZD5KTb3h",
+          "--stdio"
+        ]
+      }
+    }
+  }
+  

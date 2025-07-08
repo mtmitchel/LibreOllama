@@ -42,18 +42,23 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     }
     
     if current_version < 4 {
-        crate::database::schema_v4::run_migration_v4(conn)?;
+        run_migration_v4(conn)?;
         record_migration(conn, 4)?;
     }
     
     if current_version < 5 {
-        crate::database::schema_v5::run_migration_v5(conn)?;
+        run_migration_v5(conn)?;
         record_migration(conn, 5)?;
     }
     
     if current_version < 6 {
         run_migration_v6(conn)?;
         record_migration(conn, 6)?;
+    }
+
+    if current_version < 7 {
+        run_migration_v7(conn)?;
+        record_migration(conn, 7)?;
     }
 
     Ok(())
@@ -258,6 +263,26 @@ fn run_migration_v3(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Run migration v4 - Placeholder for archived migration
+/// This migration was previously implemented in a separate file that has been archived.
+/// Database tables it created are already present in existing databases.
+fn run_migration_v4(_conn: &Connection) -> Result<()> {
+    // This migration was previously implemented in schema_v4.rs
+    // Since it's been archived and existing databases already have these changes,
+    // we provide a no-op placeholder to maintain migration version consistency
+    Ok(())
+}
+
+/// Run migration v5 - Placeholder for archived migration
+/// This migration was previously implemented in a separate file that has been archived.
+/// Database tables it created are already present in existing databases.
+fn run_migration_v5(_conn: &Connection) -> Result<()> {
+    // This migration was previously implemented in schema_v5.rs
+    // Since it's been archived and existing databases already have these changes,
+    // we provide a no-op placeholder to maintain migration version consistency
+    Ok(())
+}
+
 /// Run migration v6 - Add secure Gmail accounts table
 fn run_migration_v6(conn: &Connection) -> Result<()> {
     // Create secure Gmail accounts table
@@ -292,6 +317,74 @@ fn run_migration_v6(conn: &Connection) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_gmail_accounts_secure_email ON gmail_accounts_secure(email_address)",
         [],
     ).context("Failed to create index on gmail_accounts_secure email")?;
+
+    Ok(())
+}
+
+/// Run migration v7 - Drop and recreate chat_sessions and agents tables
+fn run_migration_v7(conn: &Connection) -> Result<()> {
+    // Temporarily disable foreign keys
+    conn.execute("PRAGMA foreign_keys = OFF", []).context("Failed to disable foreign keys")?;
+    
+    // Drop existing tables (including dependent tables first)
+    conn.execute("DROP TABLE IF EXISTS chat_messages", []).context("Failed to drop chat_messages table")?;
+    conn.execute("DROP TABLE IF EXISTS chat_sessions", []).context("Failed to drop chat_sessions table")?;
+    conn.execute("DROP TABLE IF EXISTS agents", []).context("Failed to drop agents table")?;
+
+    // Recreate chat_sessions table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS chat_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            session_name TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )",
+        [],
+    ).context("Failed to recreate chat_sessions table")?;
+
+    // Recreate agents table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            system_prompt TEXT NOT NULL,
+            capabilities TEXT NOT NULL,
+            parameters TEXT NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT 1,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )",
+        [],
+    ).context("Failed to recreate agents table")?;
+
+    // Recreate chat_messages table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME NOT NULL,
+            FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
+        )",
+        [],
+    ).context("Failed to recreate chat_messages table")?;
+
+    // Recreate indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id)",
+        [],
+    ).context("Failed to recreate index on chat_sessions")?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)",
+        [],
+    ).context("Failed to recreate index on chat_messages")?;
+
+    // Re-enable foreign keys
+    conn.execute("PRAGMA foreign_keys = ON", []).context("Failed to re-enable foreign keys")?;
 
     Ok(())
 }

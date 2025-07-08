@@ -10,13 +10,17 @@ import { MailSearchBar } from '../../features/mail/components/MailSearchBar';
 import { MailContextSidebar } from '../../features/mail/components/MailContextSidebar';
 import { GmailAuthModal } from '../../features/mail/components/GmailAuthModal';
 import { useMailStore } from '../../features/mail/stores/mailStore';
+import { useComposeOperation } from '../../features/mail/hooks';
+import { GmailTauriTestComponent } from '../../features/mail/components/GmailTauriTestComponent';
 
 export default function Mail() {
   const { setHeaderProps } = useHeader();
-  const { currentMessage, isComposing, startCompose, currentView, isAuthenticated } = useMailStore();
+  const { currentMessage, isComposing, currentView, isAuthenticated, currentAccountId, signOut } = useMailStore();
+  const { handleStartCompose } = useComposeOperation();
   const [isMailSidebarOpen, setIsMailSidebarOpen] = useState(true);
   const [isContextOpen, setIsContextOpen] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(!isAuthenticated);
+  const [showTestComponent, setShowTestComponent] = useState(false);
 
   const toggleMailSidebar = useCallback(() => {
     setIsMailSidebarOpen(!isMailSidebarOpen);
@@ -25,6 +29,10 @@ export default function Mail() {
   const toggleContext = useCallback(() => {
     setIsContextOpen(!isContextOpen);
   }, [isContextOpen]);
+
+  const toggleTestComponent = useCallback(() => {
+    setShowTestComponent(!showTestComponent);
+  }, [showTestComponent]);
 
   // Handle authentication state changes
   useEffect(() => {
@@ -58,10 +66,15 @@ export default function Mail() {
         : [{label: "Mail"}],
       primaryAction: {
         label: 'Compose',
-        onClick: startCompose,
+        onClick: () => handleStartCompose(),
         icon: <Edit size={16} />
       },
       secondaryActions: [
+        {
+          label: showTestComponent ? 'Hide Test' : 'Show Test',
+          onClick: toggleTestComponent,
+          icon: <Edit size={16} />
+        },
         {
           label: isMailSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar',
           onClick: toggleMailSidebar,
@@ -74,7 +87,7 @@ export default function Mail() {
         }
       ]
     });
-  }, [setHeaderProps, currentMessage, currentView, startCompose, toggleMailSidebar, toggleContext, isMailSidebarOpen, isContextOpen]);
+  }, [setHeaderProps, currentMessage, currentView, handleStartCompose, toggleMailSidebar, toggleContext, toggleTestComponent, isMailSidebarOpen, isContextOpen, showTestComponent]);
 
   // Show authentication modal if not authenticated
   if (!isAuthenticated) {
@@ -109,6 +122,18 @@ export default function Mail() {
 
       {/* Main Mail Container - Softer design with rounded corners */}
       <div className="flex-1 flex flex-col h-full bg-[var(--bg-secondary)] rounded-[var(--radius-xl)] min-w-0 overflow-hidden shadow-sm border border-[var(--border-default)]">
+        {/* Test Component - Temporarily added for validation */}
+        {showTestComponent && (
+          <div className="flex-shrink-0 p-[var(--space-4)] bg-[var(--bg-tertiary)] border-b border-[var(--border-default)]">
+            <GmailTauriTestComponent 
+              accountId={currentAccountId || 'test-account-1'} 
+              onResult={(result) => {
+                console.log('Test result:', result);
+              }}
+            />
+          </div>
+        )}
+
         {/* Search Bar */}
         <div className="flex-shrink-0 p-[var(--space-4)] bg-[var(--bg-tertiary)] rounded-t-[var(--radius-xl)]">
           <MailSearchBar />

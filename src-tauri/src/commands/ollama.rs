@@ -106,16 +106,12 @@ fn get_process_info(pid: u32) -> Option<ProcessInfo> {
     let mut system = System::new_all();
     system.refresh_all();
     
-    if let Some(process) = system.process(Pid::from(pid as usize)) {
-        Some(ProcessInfo {
+    system.process(Pid::from(pid as usize)).map(|process| ProcessInfo {
             pid: Some(pid),
             cpu_usage: process.cpu_usage(),
             memory_usage: process.memory(),
             is_sidecar: true,
         })
-    } else {
-        None
-    }
 }
 
 // Sidecar management commands
@@ -148,7 +144,7 @@ pub async fn ollama_start_sidecar() -> Result<String, String> {
     };
 
     match Command::new(ollama_command)
-        .args(&["serve"])
+        .args(["serve"])
         .env("OLLAMA_HOST", "127.0.0.1:11434")
         .env("OLLAMA_ORIGINS", "*")
         .spawn()

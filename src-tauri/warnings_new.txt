@@ -1,0 +1,1766 @@
+warning: unused import: `AuthConfig`
+  --> src\commands\gmail\auth.rs:11:23
+   |
+11 |     GmailAuthService, AuthConfig, AuthorizationRequest, GmailTokenResponse, 
+   |                       ^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `gmail::*`
+  --> src\commands\mod.rs:22:9
+   |
+22 | pub use gmail::*;
+   |         ^^^^^^^^
+
+warning: unused import: `agents::*`
+  --> src\commands\mod.rs:23:9
+   |
+23 | pub use agents::*;
+   |         ^^^^^^^^^
+
+warning: unused import: `chat::*`
+  --> src\commands\mod.rs:24:9
+   |
+24 | pub use chat::*;
+   |         ^^^^^^^
+
+warning: unused import: `system::*`
+  --> src\commands\mod.rs:25:9
+   |
+25 | pub use system::*;
+   |         ^^^^^^^^^
+
+warning: unused import: `ollama::*`
+  --> src\commands\mod.rs:28:9
+   |
+28 | pub use ollama::*;
+   |         ^^^^^^^^^
+
+warning: unused import: `folders::*`
+  --> src\commands\mod.rs:29:9
+   |
+29 | pub use folders::*;
+   |         ^^^^^^^^^^
+
+warning: unused import: `notes::*`
+  --> src\commands\mod.rs:30:9
+   |
+30 | pub use notes::*;
+   |         ^^^^^^^^
+
+warning: unused import: `mcp::*`
+  --> src\commands\mod.rs:31:9
+   |
+31 | pub use mcp::*;
+   |         ^^^^^^
+
+warning: unused import: `n8n::*`
+  --> src\commands\mod.rs:32:9
+   |
+32 | pub use n8n::*;
+   |         ^^^^^^
+
+warning: unused import: `links::*`
+  --> src\commands\mod.rs:33:9
+   |
+33 | pub use links::*;
+   |         ^^^^^^^^
+
+warning: unused import: `canvas::*`
+  --> src\commands\mod.rs:34:9
+   |
+34 | pub use canvas::*;
+   |         ^^^^^^^^^
+
+warning: unused import: `rate_limiter::*`
+  --> src\commands\mod.rs:35:9
+   |
+35 | pub use rate_limiter::*;
+   |         ^^^^^^^^^^^^^^^
+
+warning: unused import: `Context`
+ --> src\database\operations\agent_operations.rs:5:14
+  |
+5 | use anyhow::{Context, Result};
+  |              ^^^^^^^
+
+warning: unused import: `NaiveDateTime`
+ --> src\database\operations\agent_operations.rs:8:21
+  |
+8 | use chrono::{Local, NaiveDateTime};
+  |                     ^^^^^^^^^^^^^
+
+warning: unused import: `chrono::Local`
+ --> src\database\operations\conversation_operations.rs:8:5
+  |
+8 | use chrono::Local;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `chrono::Local`
+ --> src\database\operations\template_operations.rs:8:5
+  |
+8 | use chrono::Local;
+  |     ^^^^^^^^^^^^^
+
+warning: unused import: `agent_operations::*`
+  --> src\database\operations\mod.rs:26:9
+   |
+26 | pub use agent_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `cache_operations::*`
+  --> src\database\operations\mod.rs:27:9
+   |
+27 | pub use cache_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `chat_operations::*`
+  --> src\database\operations\mod.rs:28:9
+   |
+28 | pub use chat_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `conversation_operations::*`
+  --> src\database\operations\mod.rs:29:9
+   |
+29 | pub use conversation_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `folder_operations::*`
+  --> src\database\operations\mod.rs:30:9
+   |
+30 | pub use folder_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `gmail_operations::*`
+  --> src\database\operations\mod.rs:31:9
+   |
+31 | pub use gmail_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `link_operations::*`
+  --> src\database\operations\mod.rs:32:9
+   |
+32 | pub use link_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `log_operations::*`
+  --> src\database\operations\mod.rs:33:9
+   |
+33 | pub use log_operations::*;
+   |         ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `mcp_operations::*`
+  --> src\database\operations\mod.rs:34:9
+   |
+34 | pub use mcp_operations::*;
+   |         ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `n8n_operations::*`
+  --> src\database\operations\mod.rs:35:9
+   |
+35 | pub use n8n_operations::*;
+   |         ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `note_operations::*`
+  --> src\database\operations\mod.rs:36:9
+   |
+36 | pub use note_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `onboarding_operations::*`
+  --> src\database\operations\mod.rs:37:9
+   |
+37 | pub use onboarding_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `performance_operations::*`
+  --> src\database\operations\mod.rs:38:9
+   |
+38 | pub use performance_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `preference_operations::*`
+  --> src\database\operations\mod.rs:39:9
+   |
+39 | pub use preference_operations::*;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `anyhow::Result`
+ --> src\database\test.rs:5:5
+  |
+5 | use anyhow::Result;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `rusqlite::Connection`
+ --> src\database\test.rs:6:5
+  |
+6 | use rusqlite::Connection;
+  |     ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `chrono`
+ --> src\database\test.rs:7:5
+  |
+7 | use chrono;
+  |     ^^^^^^
+
+warning: unused import: `super::*`
+ --> src\database\test.rs:8:5
+  |
+8 | use super::*; // For schema, models, etc. from parent (database) module.
+  |     ^^^^^^^^
+
+warning: unused import: `schema::*`
+  --> src\database\mod.rs:22:9
+   |
+22 | pub use schema::*;
+   |         ^^^^^^^^^
+
+warning: unused import: `cache::*`
+  --> src\utils\mod.rs:15:9
+   |
+15 | pub use cache::*;
+   |         ^^^^^^^^
+
+warning: unused import: `crypto::*`
+  --> src\utils\mod.rs:16:9
+   |
+16 | pub use crypto::*;
+   |         ^^^^^^^^^
+
+warning: unused import: `networking::*`
+  --> src\utils\mod.rs:17:9
+   |
+17 | pub use networking::*;
+   |         ^^^^^^^^^^^^^
+
+warning: unused import: `time::*`
+  --> src\utils\mod.rs:18:9
+   |
+18 | pub use time::*; 
+   |         ^^^^^^^
+
+warning: unused import: `std::time::SystemTime`
+ --> src\services\gmail\compose_service.rs:6:5
+  |
+6 | use std::time::SystemTime;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Context`
+ --> src\services\gmail\compose_service.rs:7:14
+  |
+7 | use anyhow::{Context, Result};
+  |              ^^^^^^^
+
+warning: unused import: `Response`
+ --> src\services\gmail\compose_service.rs:9:23
+  |
+9 | use reqwest::{Client, Response};
+  |                       ^^^^^^^^
+
+warning: unused imports: `GmailMessage` and `ProcessedGmailMessage`
+  --> src\services\gmail\sync_service.rs:11:30
+   |
+11 | use crate::services::gmail::{ProcessedGmailMessage, GmailMessage, GmailTokens};
+   |                              ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `GmailApiService`
+  --> src\services\gmail\mod.rs:16:23
+   |
+16 | pub use api_service::{GmailApiService, GmailMessage, ProcessedGmailMessage, EmailAddress};
+   |                       ^^^^^^^^^^^^^^^
+
+warning: unused imports: `GmailAttachmentService`, `GmailAuthService`, `GmailCacheService`, and `GmailSyncService`
+ --> src\services\mod.rs:4:17
+  |
+4 | pub use gmail::{GmailAuthService, GmailCacheService, GmailSyncService, GmailAttachmentService};
+  |                 ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `port`
+   --> src\commands\gmail\auth.rs:186:5
+    |
+186 |     port: u16,
+    |     ^^^^ help: if this is intentional, prefix it with an underscore: `_port`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `conn`
+   --> src\commands\chat\sessions.rs:137:13
+    |
+137 |         let conn = db_manager_clone_update.get_connection()?;
+    |             ^^^^ help: if this is intentional, prefix it with an underscore: `_conn`
+
+warning: unused variable: `active_only`
+   --> src\database\operations\agent_operations.rs:334:19
+    |
+334 | pub fn get_agents(active_only: bool) -> Result<Vec<Agent>> {
+    |                   ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_active_only`
+
+warning: unused variable: `active_only`
+  --> src\database\operations\chat_operations.rs:25:26
+   |
+25 | pub fn get_chat_sessions(active_only: bool) -> Result<Vec<ChatSession>> {
+   |                          ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_active_only`
+
+warning: unused variable: `session_id`
+  --> src\database\operations\chat_operations.rs:76:31
+   |
+76 | pub fn get_chat_session_by_id(session_id: i32) -> Result<Option<ChatSession>> {
+   |                               ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_session_id`
+
+warning: unused variable: `session_id`
+  --> src\database\operations\chat_operations.rs:94:38
+   |
+94 | pub fn update_chat_session_timestamp(session_id: i32) -> Result<()> {
+   |                                      ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_session_id`
+
+warning: unused variable: `session_id`
+   --> src\database\operations\chat_operations.rs:156:29
+    |
+156 | pub fn get_session_messages(session_id: i32) -> Result<Vec<ChatMessage>> {
+    |                             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_session_id`
+
+warning: unused variable: `metric_type`
+   --> src\database\operations\performance_operations.rs:268:5
+    |
+268 |     metric_type: Option<MetricType>,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_metric_type`
+
+warning: unused variable: `start_date`
+   --> src\database\operations\performance_operations.rs:269:5
+    |
+269 |     start_date: Option<NaiveDateTime>,
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_start_date`
+
+warning: unused variable: `end_date`
+   --> src\database\operations\performance_operations.rs:270:5
+    |
+270 |     end_date: Option<NaiveDateTime>,
+    |     ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_end_date`
+
+warning: unused variable: `limit`
+   --> src\database\operations\performance_operations.rs:271:5
+    |
+271 |     limit: Option<usize>,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_limit`
+
+warning: unused variable: `active_only`
+   --> src\database\operations\template_operations.rs:163:27
+    |
+163 | pub fn get_chat_templates(active_only: bool) -> Result<Vec<ChatTemplate>> {
+    |                           ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_active_only`
+
+warning: variable does not need to be mutable
+   --> src\lib.rs:160:9
+    |
+160 |     let mut builder = tauri::Builder::default()
+    |         ----^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: function `get_note` is never used
+   --> src\commands\notes.rs:114:14
+    |
+114 | pub async fn get_note(
+    |              ^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: function `search_notes` is never used
+   --> src\commands\notes.rs:195:14
+    |
+195 | pub async fn search_notes(
+    |              ^^^^^^^^^^^^
+
+warning: function `get_mcp_server` is never used
+   --> src\commands\mcp.rs:125:14
+    |
+125 | pub async fn get_mcp_server(
+    |              ^^^^^^^^^^^^^^
+
+warning: function `test_mcp_server_connection` is never used
+   --> src\commands\mcp.rs:216:14
+    |
+216 | pub async fn test_mcp_server_connection(
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_n8n_connection` is never used
+   --> src\commands\n8n.rs:125:14
+    |
+125 | pub async fn get_n8n_connection(
+    |              ^^^^^^^^^^^^^^^^^^
+
+warning: function `test_n8n_connection` is never used
+   --> src\commands\n8n.rs:216:14
+    |
+216 | pub async fn test_n8n_connection(
+    |              ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_user_preference` is never used
+  --> src\database\mod.rs:41:14
+   |
+41 | pub async fn get_user_preference(key: &str) -> Result<Option<models::UserPreference>> {
+   |              ^^^^^^^^^^^^^^^^^^^
+
+warning: function `set_user_preference` is never used
+  --> src\database\mod.rs:46:14
+   |
+46 | pub async fn set_user_preference(preference: &models::UserPreference) -> Result<()> {
+   |              ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_user_preferences` is never used
+  --> src\database\mod.rs:51:14
+   |
+51 | pub async fn get_all_user_preferences(system_only: bool) -> Result<Vec<models::UserPreference>> {
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_agent_by_id` is never used
+  --> src\database\mod.rs:56:14
+   |
+56 | pub async fn get_agent_by_id(agent_id: &str) -> Result<Option<models::Agent>> {
+   |              ^^^^^^^^^^^^^^^
+
+warning: function `get_chat_session_by_id` is never used
+  --> src\database\mod.rs:72:14
+   |
+72 | pub async fn get_chat_session_by_id(session_id: i32) -> Result<Option<models::ChatSession>> {
+   |              ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_session_messages` is never used
+  --> src\database\mod.rs:79:14
+   |
+79 | pub async fn get_session_messages(session_id: i32) -> Result<Vec<models::ChatMessage>> {
+   |              ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_request_cache` is never used
+  --> src\database\mod.rs:93:14
+   |
+93 | pub async fn create_request_cache(cache: &models::RequestCache) -> Result<()> {
+   |              ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_request_cache` is never used
+   --> src\database\mod.rs:101:14
+    |
+101 | pub async fn get_request_cache(key: &str) -> Result<Option<models::RequestCache>> {
+    |              ^^^^^^^^^^^^^^^^^
+
+warning: function `get_connection` is never used
+   --> src\database\connection.rs:156:8
+    |
+156 | pub fn get_connection() -> Result<Connection> {
+    |        ^^^^^^^^^^^^^^
+
+warning: associated function `new` is never used
+  --> src\database\models.rs:40:12
+   |
+39 | impl UserPreference {
+   | ------------------- associated function in this implementation
+40 |     pub fn new(key: String, value: String, ptype: PreferenceType) -> Self {
+   |            ^^^
+
+warning: associated function `new` is never used
+  --> src\database\models.rs:89:12
+   |
+88 | impl ApplicationLog {
+   | ------------------- associated function in this implementation
+89 |     pub fn new(log_level_enum: LogLevel, message: String, module_name: String, function_name: String) -> Self {
+   |            ^^^
+
+warning: associated function `new` is never used
+   --> src\database\models.rs:111:12
+    |
+110 | impl RequestCache {
+    | ----------------- associated function in this implementation
+111 |     pub fn new(request_hash: String, response_body: String) -> Self {
+    |            ^^^
+
+warning: associated function `new` is never used
+   --> src\database\models.rs:176:12
+    |
+175 | impl Folder {
+    | ----------- associated function in this implementation
+176 |     pub fn new(name: String, parent_id: Option<i32>, user_id: String, color: Option<String>) -> Self {
+    |            ^^^
+
+warning: function `get_active_agents` is never used
+  --> src\database\operations\agent_operations.rs:79:8
+   |
+79 | pub fn get_active_agents(conn: &Connection) -> Result<Vec<Agent>> {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `set_agent_active_status` is never used
+   --> src\database\operations\agent_operations.rs:113:8
+    |
+113 | pub fn set_agent_active_status(conn: &Connection, agent_id: i32, is_active: bool) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_agent_execution` is never used
+   --> src\database\operations\agent_operations.rs:205:8
+    |
+205 | pub fn create_agent_execution(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_agent_execution` is never used
+   --> src\database\operations\agent_operations.rs:235:8
+    |
+235 | pub fn get_agent_execution(conn: &Connection, execution_id: i32) -> Result<Option<AgentExecution>> {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_agent_executions_by_agent` is never used
+   --> src\database\operations\agent_operations.rs:258:8
+    |
+258 | pub fn get_agent_executions_by_agent(conn: &Connection, agent_id: i32) -> Result<Vec<AgentExecution>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_agent_executions_by_session` is never used
+   --> src\database\operations\agent_operations.rs:286:8
+    |
+286 | pub fn get_agent_executions_by_session(conn: &Connection, session_id: i32) -> Result<Vec<AgentExecution>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_agent_execution_status` is never used
+   --> src\database\operations\agent_operations.rs:314:8
+    |
+314 | pub fn update_agent_execution_status(conn: &Connection, execution_id: i32, status: &str, error_message: Option<&str>) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_agent_execution` is never used
+   --> src\database\operations\agent_operations.rs:324:8
+    |
+324 | pub fn delete_agent_execution(conn: &Connection, execution_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_agents` is never used
+   --> src\database\operations\agent_operations.rs:334:8
+    |
+334 | pub fn get_agents(active_only: bool) -> Result<Vec<Agent>> {
+    |        ^^^^^^^^^^
+
+warning: function `cleanup_link_suggestions` is never used
+   --> src\database\operations\agent_operations.rs:353:8
+    |
+353 | pub fn cleanup_link_suggestions(conn: &Connection) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_link_statistics` is never used
+   --> src\database\operations\agent_operations.rs:363:8
+    |
+363 | pub fn get_link_statistics(conn: &Connection, user_id: &str) -> Result<LinkStatistics> {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_cache_entry_by_hash` is never used
+  --> src\database\operations\cache_operations.rs:38:8
+   |
+38 | pub fn get_cache_entry_by_hash(conn: &Connection, request_hash: &str) -> Result<Option<RequestCache>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_cache_entry` is never used
+  --> src\database\operations\cache_operations.rs:57:8
+   |
+57 | pub fn get_cache_entry(conn: &Connection, cache_id: i32) -> Result<Option<RequestCache>> {
+   |        ^^^^^^^^^^^^^^^
+
+warning: function `update_cache_entry` is never used
+  --> src\database\operations\cache_operations.rs:96:8
+   |
+96 | pub fn update_cache_entry(
+   |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `update_cache_entry_by_hash` is never used
+   --> src\database\operations\cache_operations.rs:110:8
+    |
+110 | pub fn update_cache_entry_by_hash(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_cache_entry` is never used
+   --> src\database\operations\cache_operations.rs:124:8
+    |
+124 | pub fn delete_cache_entry(conn: &Connection, cache_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_cache_entry_by_hash` is never used
+   --> src\database\operations\cache_operations.rs:133:8
+    |
+133 | pub fn delete_cache_entry_by_hash(conn: &Connection, request_hash: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_expired_cache_entries` is never used
+   --> src\database\operations\cache_operations.rs:142:8
+    |
+142 | pub fn delete_expired_cache_entries(conn: &Connection) -> Result<usize> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_cache_entries` is never used
+   --> src\database\operations\cache_operations.rs:152:8
+    |
+152 | pub fn get_all_cache_entries(conn: &Connection) -> Result<Vec<RequestCache>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_cache_entries_by_pattern` is never used
+   --> src\database\operations\cache_operations.rs:176:8
+    |
+176 | pub fn get_cache_entries_by_pattern(conn: &Connection, pattern: &str) -> Result<Vec<RequestCache>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_cache_count` is never used
+   --> src\database\operations\cache_operations.rs:201:8
+    |
+201 | pub fn get_cache_count(conn: &Connection) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `get_expired_cache_count` is never used
+   --> src\database\operations\cache_operations.rs:213:8
+    |
+213 | pub fn get_expired_cache_count(conn: &Connection) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `clear_all_cache` is never used
+   --> src\database\operations\cache_operations.rs:226:8
+    |
+226 | pub fn clear_all_cache(conn: &Connection) -> Result<usize> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `get_chat_sessions` is never used
+  --> src\database\operations\chat_operations.rs:25:8
+   |
+25 | pub fn get_chat_sessions(active_only: bool) -> Result<Vec<ChatSession>> {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `get_chat_session_by_id` is never used
+  --> src\database\operations\chat_operations.rs:76:8
+   |
+76 | pub fn get_chat_session_by_id(session_id: i32) -> Result<Option<ChatSession>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_chat_session` is never used
+  --> src\database\operations\chat_operations.rs:83:8
+   |
+83 | pub fn update_chat_session(conn: &Connection, session_id: i32, session_name: &str) -> Result<()> {
+   |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_session_messages` is never used
+   --> src\database\operations\chat_operations.rs:156:8
+    |
+156 | pub fn get_session_messages(session_id: i32) -> Result<Vec<ChatMessage>> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_chat_message` is never used
+   --> src\database\operations\chat_operations.rs:182:8
+    |
+182 | pub fn update_chat_message(conn: &Connection, message_id: i32, content: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_chat_message` is never used
+   --> src\database\operations\chat_operations.rs:192:8
+    |
+192 | pub fn delete_chat_message(conn: &Connection, message_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_recent_chat_messages` is never used
+   --> src\database\operations\chat_operations.rs:202:8
+    |
+202 | pub fn get_recent_chat_messages(conn: &Connection, session_id: i32, limit: i32) -> Result<Vec<ChatMessage>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_conversation_context` is never used
+  --> src\database\operations\conversation_operations.rs:36:8
+   |
+36 | pub fn get_conversation_context(conn: &Connection, context_id: i32) -> Result<Option<ConversationContext>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_conversation_contexts` is never used
+  --> src\database\operations\conversation_operations.rs:74:8
+   |
+74 | pub fn get_all_conversation_contexts(conn: &Connection) -> Result<Vec<ConversationContext>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_conversation_context_data` is never used
+   --> src\database\operations\conversation_operations.rs:113:8
+    |
+113 | pub fn update_conversation_context_data(conn: &Connection, context_id: i32, context_data: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_conversation_context_summary` is never used
+   --> src\database\operations\conversation_operations.rs:122:8
+    |
+122 | pub fn update_conversation_context_summary(conn: &Connection, context_id: i32, context_summary: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_conversation_context` is never used
+   --> src\database\operations\conversation_operations.rs:131:8
+    |
+131 | pub fn delete_conversation_context(conn: &Connection, context_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_conversation_context_by_name` is never used
+   --> src\database\operations\conversation_operations.rs:140:8
+    |
+140 | pub fn delete_conversation_context_by_name(conn: &Connection, context_name: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_conversation_contexts_by_window_size` is never used
+   --> src\database\operations\conversation_operations.rs:149:8
+    |
+149 | pub fn get_conversation_contexts_by_window_size(conn: &Connection, min_size: i32, max_size: i32) -> Result<Vec<ConversationContext>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `search_conversation_contexts` is never used
+   --> src\database\operations\conversation_operations.rs:173:8
+    |
+173 | pub fn search_conversation_contexts(conn: &Connection, query: &str) -> Result<Vec<ConversationContext>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_root_folders_by_user` is never used
+  --> src\database\operations\folder_operations.rs:84:8
+   |
+84 | pub fn get_root_folders_by_user(conn: &Connection, user_id: &str) -> Result<Vec<Folder>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `move_folder` is never used
+   --> src\database\operations\folder_operations.rs:153:8
+    |
+153 | pub fn move_folder(conn: &Connection, folder_id: i32, new_parent_id: Option<i32>) -> Result<()> {
+    |        ^^^^^^^^^^^
+
+warning: function `get_folder_hierarchy` is never used
+   --> src\database\operations\folder_operations.rs:180:8
+    |
+180 | pub fn get_folder_hierarchy(conn: &Connection, user_id: &str) -> Result<Vec<Folder>> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_folder_path` is never used
+   --> src\database\operations\folder_operations.rs:218:8
+    |
+218 | pub fn get_folder_path(conn: &Connection, folder_id: i32) -> Result<Vec<String>> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `create_gmail_account` is never used
+  --> src\database\operations\gmail_operations.rs:16:8
+   |
+16 | pub fn create_gmail_account(
+   |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_account` is never used
+  --> src\database\operations\gmail_operations.rs:45:8
+   |
+45 | pub fn get_gmail_account(conn: &Connection, account_id: i32) -> Result<Option<GmailAccount>> {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_account_by_email` is never used
+  --> src\database\operations\gmail_operations.rs:72:8
+   |
+72 | pub fn get_gmail_account_by_email(conn: &Connection, email: &str) -> Result<Option<GmailAccount>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_accounts_by_user` is never used
+  --> src\database\operations\gmail_operations.rs:99:8
+   |
+99 | pub fn get_gmail_accounts_by_user(conn: &Connection, user_id: &str) -> Result<Vec<GmailAccount>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_gmail_account_tokens` is never used
+   --> src\database\operations\gmail_operations.rs:131:8
+    |
+131 | pub fn update_gmail_account_tokens(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `set_gmail_account_active_status` is never used
+   --> src\database\operations\gmail_operations.rs:148:8
+    |
+148 | pub fn set_gmail_account_active_status(conn: &Connection, account_id: i32, is_active: bool) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_gmail_account` is never used
+   --> src\database\operations\gmail_operations.rs:159:8
+    |
+159 | pub fn delete_gmail_account(conn: &Connection, account_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_gmail_label` is never used
+   --> src\database\operations\gmail_operations.rs:170:8
+    |
+170 | pub fn create_gmail_label(
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_label` is never used
+   --> src\database\operations\gmail_operations.rs:200:8
+    |
+200 | pub fn get_gmail_label(conn: &Connection, id: i32) -> Result<Option<GmailLabel>> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_labels_by_account` is never used
+   --> src\database\operations\gmail_operations.rs:228:8
+    |
+228 | pub fn get_gmail_labels_by_account(conn: &Connection, account_id: i32) -> Result<Vec<GmailLabel>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_gmail_label` is never used
+   --> src\database\operations\gmail_operations.rs:261:8
+    |
+261 | pub fn update_gmail_label(
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_gmail_label` is never used
+   --> src\database\operations\gmail_operations.rs:278:8
+    |
+278 | pub fn delete_gmail_label(conn: &Connection, id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `create_gmail_thread` is never used
+   --> src\database\operations\gmail_operations.rs:289:8
+    |
+289 | pub fn create_gmail_thread(
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_thread` is never used
+   --> src\database\operations\gmail_operations.rs:315:8
+    |
+315 | pub fn get_gmail_thread(conn: &Connection, id: i32) -> Result<Option<GmailThread>> {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_threads_by_account` is never used
+   --> src\database\operations\gmail_operations.rs:342:8
+    |
+342 | pub fn get_gmail_threads_by_account(conn: &Connection, account_id: i32) -> Result<Vec<GmailThread>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_gmail_thread` is never used
+   --> src\database\operations\gmail_operations.rs:374:8
+    |
+374 | pub fn update_gmail_thread(
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_gmail_thread` is never used
+   --> src\database\operations\gmail_operations.rs:390:8
+    |
+390 | pub fn delete_gmail_thread(conn: &Connection, id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_gmail_message` is never used
+   --> src\database\operations\gmail_operations.rs:401:8
+    |
+401 | pub fn create_gmail_message(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_message` is never used
+   --> src\database\operations\gmail_operations.rs:437:8
+    |
+437 | pub fn get_gmail_message(conn: &Connection, id: i32) -> Result<Option<GmailMessage>> {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_messages_by_thread` is never used
+   --> src\database\operations\gmail_operations.rs:476:8
+    |
+476 | pub fn get_gmail_messages_by_thread(conn: &Connection, thread_id: &str) -> Result<Vec<GmailMessage>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_messages_by_account` is never used
+   --> src\database\operations\gmail_operations.rs:520:8
+    |
+520 | pub fn get_gmail_messages_by_account(conn: &Connection, account_id: i32, limit: i32) -> Result<Vec<GmailMessage>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_gmail_message_labels` is never used
+   --> src\database\operations\gmail_operations.rs:564:8
+    |
+564 | pub fn update_gmail_message_labels(conn: &Connection, id: i32, label_ids: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_gmail_message` is never used
+   --> src\database\operations\gmail_operations.rs:575:8
+    |
+575 | pub fn delete_gmail_message(conn: &Connection, id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_gmail_attachment` is never used
+   --> src\database\operations\gmail_operations.rs:586:8
+    |
+586 | pub fn create_gmail_attachment(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_attachment` is never used
+   --> src\database\operations\gmail_operations.rs:616:8
+    |
+616 | pub fn get_gmail_attachment(conn: &Connection, id: i32) -> Result<Option<GmailAttachment>> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_attachments_by_message` is never used
+   --> src\database\operations\gmail_operations.rs:641:8
+    |
+641 | pub fn get_gmail_attachments_by_message(conn: &Connection, message_id: i32) -> Result<Vec<GmailAttachment>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_gmail_attachment_data` is never used
+   --> src\database\operations\gmail_operations.rs:671:8
+    |
+671 | pub fn update_gmail_attachment_data(conn: &Connection, id: i32, data: &[u8]) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_gmail_attachment` is never used
+   --> src\database\operations\gmail_operations.rs:682:8
+    |
+682 | pub fn delete_gmail_attachment(conn: &Connection, id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_gmail_sync_state` is never used
+   --> src\database\operations\gmail_operations.rs:693:8
+    |
+693 | pub fn create_gmail_sync_state(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_sync_state_by_account` is never used
+   --> src\database\operations\gmail_operations.rs:718:8
+    |
+718 | pub fn get_gmail_sync_state_by_account(conn: &Connection, account_id: i32) -> Result<Option<GmailSyncState>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_gmail_sync_state` is never used
+   --> src\database\operations\gmail_operations.rs:746:8
+    |
+746 | pub fn update_gmail_sync_state(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_gmail_sync_state` is never used
+   --> src\database\operations\gmail_operations.rs:762:8
+    |
+762 | pub fn delete_gmail_sync_state(conn: &Connection, account_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_gmail_draft` is never used
+   --> src\database\operations\gmail_operations.rs:773:8
+    |
+773 | pub fn create_gmail_draft(
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_draft` is never used
+   --> src\database\operations\gmail_operations.rs:797:8
+    |
+797 | pub fn get_gmail_draft(conn: &Connection, id: i32) -> Result<Option<GmailDraft>> {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `get_gmail_drafts_by_account` is never used
+   --> src\database\operations\gmail_operations.rs:826:8
+    |
+826 | pub fn get_gmail_drafts_by_account(conn: &Connection, account_id: i32) -> Result<Vec<GmailDraft>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_gmail_draft` is never used
+   --> src\database\operations\gmail_operations.rs:860:8
+    |
+860 | pub fn update_gmail_draft(conn: &Connection, id: i32, message: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_gmail_draft` is never used
+   --> src\database\operations\gmail_operations.rs:871:8
+    |
+871 | pub fn delete_gmail_draft(conn: &Connection, id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `get_application_log` is never used
+  --> src\database\operations\log_operations.rs:39:8
+   |
+39 | pub fn get_application_log(conn: &Connection, log_id: i32) -> Result<Option<ApplicationLog>> {
+   |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_application_logs_by_level` is never used
+  --> src\database\operations\log_operations.rs:59:8
+   |
+59 | pub fn get_application_logs_by_level(conn: &Connection, log_level: &str) -> Result<Vec<ApplicationLog>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_application_logs_by_module` is never used
+  --> src\database\operations\log_operations.rs:84:8
+   |
+84 | pub fn get_application_logs_by_module(conn: &Connection, module_name: &str) -> Result<Vec<ApplicationLog>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_application_logs_in_range` is never used
+   --> src\database\operations\log_operations.rs:109:8
+    |
+109 | pub fn get_application_logs_in_range(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_recent_application_logs` is never used
+   --> src\database\operations\log_operations.rs:138:8
+    |
+138 | pub fn get_recent_application_logs(conn: &Connection, limit: i32) -> Result<Vec<ApplicationLog>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `search_application_logs` is never used
+   --> src\database\operations\log_operations.rs:163:8
+    |
+163 | pub fn search_application_logs(conn: &Connection, query: &str) -> Result<Vec<ApplicationLog>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_application_logs_by_level_and_module` is never used
+   --> src\database\operations\log_operations.rs:189:8
+    |
+189 | pub fn get_application_logs_by_level_and_module(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_old_application_logs` is never used
+   --> src\database\operations\log_operations.rs:218:8
+    |
+218 | pub fn delete_old_application_logs(conn: &Connection, before_timestamp: NaiveDateTime) -> Result<usize> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_application_logs_by_level` is never used
+   --> src\database\operations\log_operations.rs:227:8
+    |
+227 | pub fn delete_application_logs_by_level(conn: &Connection, log_level: &str) -> Result<usize> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_application_log_count` is never used
+   --> src\database\operations\log_operations.rs:236:8
+    |
+236 | pub fn get_application_log_count(conn: &Connection) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_application_log_count_by_level` is never used
+   --> src\database\operations\log_operations.rs:248:8
+    |
+248 | pub fn get_application_log_count_by_level(conn: &Connection, log_level: &str) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `clear_all_application_logs` is never used
+   --> src\database\operations\log_operations.rs:260:8
+    |
+260 | pub fn clear_all_application_logs(conn: &Connection) -> Result<usize> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_active_mcp_servers` is never used
+   --> src\database\operations\mcp_operations.rs:119:8
+    |
+119 | pub fn get_active_mcp_servers(conn: &Connection, user_id: &str) -> Result<Vec<McpServer>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `set_mcp_server_active_status` is never used
+   --> src\database\operations\mcp_operations.rs:178:8
+    |
+178 | pub fn set_mcp_server_active_status(conn: &Connection, server_id: i32, is_active: bool) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_mcp_server_by_name` is never used
+   --> src\database\operations\mcp_operations.rs:198:8
+    |
+198 | pub fn get_mcp_server_by_name(conn: &Connection, user_id: &str, name: &str) -> Result<Option<McpServer>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_mcp_servers` is never used
+   --> src\database\operations\mcp_operations.rs:233:8
+    |
+233 | pub fn get_all_mcp_servers(conn: &Connection) -> Result<Vec<McpServer>> {
+    |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `test_mcp_server_connection` is never used
+   --> src\database\operations\mcp_operations.rs:273:8
+    |
+273 | pub fn test_mcp_server_connection(conn: &Connection, server_id: i32) -> Result<bool> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `set_n8n_connection_active_status` is never used
+   --> src\database\operations\n8n_operations.rs:130:8
+    |
+130 | pub fn set_n8n_connection_active_status(conn: &Connection, connection_id: i32, is_active: bool) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_active_n8n_connections` is never used
+   --> src\database\operations\n8n_operations.rs:152:8
+    |
+152 | pub fn get_active_n8n_connections(conn: &Connection, user_id: &str) -> Result<Vec<N8nConnection>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_n8n_connection_by_name` is never used
+   --> src\database\operations\n8n_operations.rs:189:8
+    |
+189 | pub fn get_n8n_connection_by_name(conn: &Connection, user_id: &str, name: &str) -> Result<Option<N8nConnection>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_n8n_connection_by_workflow_id` is never used
+   --> src\database\operations\n8n_operations.rs:221:8
+    |
+221 | pub fn get_n8n_connection_by_workflow_id(conn: &Connection, user_id: &str, workflow_id: &str) -> Result<Option<N8nConnection>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `test_n8n_webhook` is never used
+   --> src\database\operations\n8n_operations.rs:253:8
+    |
+253 | pub fn test_n8n_webhook(conn: &Connection, connection_id: i32) -> Result<bool> {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: function `get_notes_by_tag` is never used
+  --> src\database\operations\note_operations.rs:94:8
+   |
+94 | pub fn get_notes_by_tag(conn: &Connection, user_id: &str, tag: &str) -> Result<Vec<Note>> {
+   |        ^^^^^^^^^^^^^^^^
+
+warning: function `search_notes` is never used
+   --> src\database\operations\note_operations.rs:124:8
+    |
+124 | pub fn search_notes(conn: &Connection, user_id: &str, query: &str) -> Result<Vec<Note>> {
+    |        ^^^^^^^^^^^^
+
+warning: function `get_all_tags_by_user` is never used
+   --> src\database\operations\note_operations.rs:182:8
+    |
+182 | pub fn get_all_tags_by_user(conn: &Connection, user_id: &str) -> Result<Vec<String>> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_recent_notes` is never used
+   --> src\database\operations\note_operations.rs:207:8
+    |
+207 | pub fn get_recent_notes(conn: &Connection, user_id: &str, limit: i32) -> Result<Vec<Note>> {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: function `get_note_count_by_user` is never used
+   --> src\database\operations\note_operations.rs:236:8
+    |
+236 | pub fn get_note_count_by_user(conn: &Connection, user_id: &str) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_onboarding_status` is never used
+  --> src\database\operations\onboarding_operations.rs:25:8
+   |
+25 | pub fn get_onboarding_status(conn: &Connection, user_id: &str) -> Result<Option<OnboardingStatus>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_onboarding_status` is never used
+  --> src\database\operations\onboarding_operations.rs:53:8
+   |
+53 | pub fn update_onboarding_status(
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_performance_metrics_by_name` is never used
+   --> src\database\operations\performance_operations.rs:109:8
+    |
+109 | pub fn get_performance_metrics_by_name(conn: &Connection, metric_name: &str) -> Result<Vec<PerformanceMetric>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_performance_metrics_in_range` is never used
+   --> src\database\operations\performance_operations.rs:142:8
+    |
+142 | pub fn get_performance_metrics_in_range(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_latest_performance_metrics` is never used
+   --> src\database\operations\performance_operations.rs:185:8
+    |
+185 | pub fn get_latest_performance_metrics(conn: &Connection, limit: i32) -> Result<Vec<PerformanceMetric>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_average_metric_value` is never used
+   --> src\database\operations\performance_operations.rs:221:8
+    |
+221 | pub fn get_average_metric_value(conn: &Connection, metric_type: MetricType) -> Result<Option<f64>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_old_performance_metrics` is never used
+   --> src\database\operations\performance_operations.rs:244:8
+    |
+244 | pub fn delete_old_performance_metrics(conn: &Connection, before_timestamp: NaiveDateTime) -> Result<usize> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_performance_metrics_count` is never used
+   --> src\database\operations\performance_operations.rs:254:8
+    |
+254 | pub fn get_performance_metrics_count(conn: &Connection) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_performance_metrics` is never used
+   --> src\database\operations\performance_operations.rs:267:8
+    |
+267 | pub fn get_performance_metrics(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_user_preference` is never used
+  --> src\database\operations\preference_operations.rs:17:8
+   |
+17 | pub fn create_user_preference(
+   |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_user_preference` is never used
+  --> src\database\operations\preference_operations.rs:38:8
+   |
+38 | pub fn get_user_preference(conn: &Connection, preference_id: i32) -> Result<Option<UserPreference>> {
+   |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_user_preferences_by_type` is never used
+  --> src\database\operations\preference_operations.rs:79:8
+   |
+79 | pub fn get_user_preferences_by_type(
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_user_preference` is never used
+   --> src\database\operations\preference_operations.rs:130:8
+    |
+130 | pub fn update_user_preference(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_user_preference_by_key` is never used
+   --> src\database\operations\preference_operations.rs:144:8
+    |
+144 | pub fn update_user_preference_by_key(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_user_preference` is never used
+   --> src\database\operations\preference_operations.rs:178:8
+    |
+178 | pub fn delete_user_preference(conn: &Connection, preference_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_user_preference_by_key` is never used
+   --> src\database\operations\preference_operations.rs:188:8
+    |
+188 | pub fn delete_user_preference_by_key(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_user_preferences_by_type` is never used
+   --> src\database\operations\preference_operations.rs:201:8
+    |
+201 | pub fn delete_user_preferences_by_type(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_user_preference_count` is never used
+   --> src\database\operations\preference_operations.rs:214:8
+    |
+214 | pub fn get_user_preference_count(conn: &Connection) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `search_user_preferences` is never used
+   --> src\database\operations\preference_operations.rs:227:8
+    |
+227 | pub fn search_user_preferences(conn: &Connection, query: &str) -> Result<Vec<UserPreference>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `user_preference_exists` is never used
+   --> src\database\operations\preference_operations.rs:283:8
+    |
+283 | pub fn user_preference_exists(conn: &Connection, preference_key: &str) -> Result<bool> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_preference_value` is never used
+   --> src\database\operations\preference_operations.rs:296:8
+    |
+296 | pub fn get_preference_value(conn: &Connection, preference_key: &str) -> Result<Option<String>> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `set_preference_value` is never used
+   --> src\database\operations\preference_operations.rs:309:8
+    |
+309 | pub fn set_preference_value(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_preference_keys` is never used
+   --> src\database\operations\preference_operations.rs:319:8
+    |
+319 | pub fn get_all_preference_keys(conn: &Connection) -> Result<Vec<String>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_preference_types` is never used
+   --> src\database\operations\preference_operations.rs:337:8
+    |
+337 | pub fn get_all_preference_types(conn: &Connection) -> Result<Vec<String>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_user_preference_async` is never used
+   --> src\database\operations\preference_operations.rs:444:14
+    |
+444 | pub async fn get_user_preference_async(key: &str) -> Result<Option<UserPreference>> {
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `set_user_preference_async` is never used
+   --> src\database\operations\preference_operations.rs:451:14
+    |
+451 | pub async fn set_user_preference_async(preference: &UserPreference) -> Result<()> {
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_user_preferences_async` is never used
+   --> src\database\operations\preference_operations.rs:463:14
+    |
+463 | pub async fn get_all_user_preferences_async(system_only: bool) -> Result<Vec<UserPreference>> {
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_all_chat_templates` is never used
+  --> src\database\operations\template_operations.rs:12:8
+   |
+12 | pub fn get_all_chat_templates(conn: &Connection) -> Result<Vec<ChatTemplate>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_chat_template_by_name` is never used
+  --> src\database\operations\template_operations.rs:51:8
+   |
+51 | pub fn get_chat_template_by_name(conn: &Connection, template_name: &str) -> Result<Option<ChatTemplate>> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `update_chat_template_content` is never used
+   --> src\database\operations\template_operations.rs:100:8
+    |
+100 | pub fn update_chat_template_content(conn: &Connection, template_id: i32, template_content: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_chat_template` is never used
+   --> src\database\operations\template_operations.rs:109:8
+    |
+109 | pub fn delete_chat_template(conn: &Connection, template_id: i32) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `delete_chat_template_by_name` is never used
+   --> src\database\operations\template_operations.rs:118:8
+    |
+118 | pub fn delete_chat_template_by_name(conn: &Connection, template_name: &str) -> Result<()> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `search_chat_templates` is never used
+   --> src\database\operations\template_operations.rs:127:8
+    |
+127 | pub fn search_chat_templates(conn: &Connection, query: &str) -> Result<Vec<ChatTemplate>> {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `get_chat_template_count` is never used
+   --> src\database\operations\template_operations.rs:150:8
+    |
+150 | pub fn get_chat_template_count(conn: &Connection) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `run_onboarding_migration` is never used
+ --> src\database\schema_onboarding.rs:9:8
+  |
+9 | pub fn run_onboarding_migration(conn: &Connection) -> Result<()> {
+  |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_onboarding_indexes` is never used
+  --> src\database\schema_onboarding.rs:79:4
+   |
+79 | fn create_onboarding_indexes(conn: &Connection) -> Result<()> {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `create_onboarding_triggers` is never used
+   --> src\database\schema_onboarding.rs:122:4
+    |
+122 | fn create_onboarding_triggers(conn: &Connection) -> Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: associated items `new`, `with_user_id`, `with_account_id`, `with_session_id`, and `with_metadata` are never used
+   --> src\errors\mod.rs:128:12
+    |
+127 | impl ErrorContext {
+    | ----------------- associated items in this implementation
+128 |     pub fn new(operation: &str, component: &str) -> Self {
+    |            ^^^
+...
+140 |     pub fn with_user_id(mut self, user_id: &str) -> Self {
+    |            ^^^^^^^^^^^^
+...
+145 |     pub fn with_account_id(mut self, account_id: &str) -> Self {
+    |            ^^^^^^^^^^^^^^^
+...
+150 |     pub fn with_session_id(mut self, session_id: &str) -> Self {
+    |            ^^^^^^^^^^^^^^^
+...
+155 |     pub fn with_metadata(mut self, key: &str, value: &str) -> Self {
+    |            ^^^^^^^^^^^^^
+
+warning: associated items `new` and `with_location` are never used
+   --> src\errors\mod.rs:170:12
+    |
+169 | impl ContextualError {
+    | -------------------- associated items in this implementation
+170 |     pub fn new(error: LibreOllamaError, context: ErrorContext) -> Self {
+    |            ^^^
+...
+178 |     pub fn with_location(mut self, location: &str) -> Self {
+    |            ^^^^^^^^^^^^^
+
+warning: methods `is_retryable`, `retry_delay_ms`, `user_message`, and `category` are never used
+   --> src\errors\mod.rs:353:12
+    |
+351 | impl LibreOllamaError {
+    | --------------------- methods in this implementation
+352 |     /// Check if error is retryable
+353 |     pub fn is_retryable(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+364 |     pub fn retry_delay_ms(&self) -> Option<u64> {
+    |            ^^^^^^^^^^^^^^
+...
+374 |     pub fn user_message(&self) -> String {
+    |            ^^^^^^^^^^^^
+...
+399 |     pub fn category(&self) -> &'static str {
+    |            ^^^^^^^^
+
+warning: struct `SimpleCache` is never constructed
+ --> src\utils\cache.rs:9:12
+  |
+9 | pub struct SimpleCache<K, V> {
+  |            ^^^^^^^^^^^
+
+warning: associated items `new`, `insert`, `get`, `remove`, `clear`, and `cleanup_expired` are never used
+  --> src\utils\cache.rs:19:12
+   |
+14 | / impl<K, V> SimpleCache<K, V>
+15 | | where
+16 | |     K: std::hash::Hash + Eq + Clone,
+17 | |     V: Clone,
+   | |_____________- associated items in this implementation
+18 |   {
+19 |       pub fn new(ttl: Duration) -> Self {
+   |              ^^^
+...
+26 |       pub fn insert(&mut self, key: K, value: V) {
+   |              ^^^^^^
+...
+30 |       pub fn get(&mut self, key: &K) -> Option<V> {
+   |              ^^^
+...
+45 |       pub fn remove(&mut self, key: &K) -> Option<V> {
+   |              ^^^^^^
+...
+49 |       pub fn clear(&mut self) {
+   |              ^^^^^
+...
+53 |       pub fn cleanup_expired(&mut self) {
+   |              ^^^^^^^^^^^^^^^
+
+warning: function `is_port_available` is never used
+ --> src\utils\networking.rs:8:8
+  |
+8 | pub fn is_port_available(port: u16) -> bool {
+  |        ^^^^^^^^^^^^^^^^^
+
+warning: function `find_available_port` is never used
+  --> src\utils\networking.rs:16:8
+   |
+16 | pub fn find_available_port(start: u16, end: u16) -> Option<u16> {
+   |        ^^^^^^^^^^^^^^^^^^^
+
+warning: function `http_get_with_timeout` is never used
+  --> src\utils\networking.rs:26:14
+   |
+26 | pub async fn http_get_with_timeout(url: &str, timeout_secs: u64) -> Result<String> {
+   |              ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `format_timestamp` is never used
+ --> src\utils\time.rs:8:8
+  |
+8 | pub fn format_timestamp(timestamp: &DateTime<Utc>) -> String {
+  |        ^^^^^^^^^^^^^^^^
+
+warning: function `parse_rfc3339` is never used
+  --> src\utils\time.rs:13:8
+   |
+13 | pub fn parse_rfc3339(timestamp: &str) -> Result<DateTime<Utc>, String> {
+   |        ^^^^^^^^^^^^^
+
+warning: function `current_timestamp` is never used
+  --> src\utils\time.rs:20:8
+   |
+20 | pub fn current_timestamp() -> String {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `parse_naive_datetime` is never used
+  --> src\utils\time.rs:25:8
+   |
+25 | pub fn parse_naive_datetime(datetime_str: &str) -> Result<NaiveDateTime, String> {
+   |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `time_ago` is never used
+  --> src\utils\time.rs:31:8
+   |
+31 | pub fn time_ago(timestamp: &DateTime<Utc>) -> String {
+   |        ^^^^^^^^
+
+warning: fields `id` and `thread_id` are never read
+   --> src\services\gmail\sync_service.rs:149:5
+    |
+148 | struct GmailHistoryMessage {
+    |        ------------------- fields in this struct
+149 |     id: String,
+    |     ^^
+150 |     #[serde(rename = "threadId")]
+151 |     thread_id: String,
+    |     ^^^^^^^^^
+    |
+    = note: `GmailHistoryMessage` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: fields `message` and `label_ids` are never read
+   --> src\services\gmail\sync_service.rs:156:5
+    |
+155 | struct GmailLabelChange {
+    |        ---------------- fields in this struct
+156 |     message: GmailHistoryMessage,
+    |     ^^^^^^^
+157 |     #[serde(rename = "labelIds")]
+158 |     label_ids: Vec<String>,
+    |     ^^^^^^^^^
+    |
+    = note: `GmailLabelChange` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+    Checking tauri-app v0.1.0 (C:\Projects\LibreOllama\src-tauri)
+warning: `tauri-app` (lib) generated 236 warnings (run `cargo fix --lib -p tauri-app` to apply 47 suggestions)
+warning: unused imports: `DateTime` and `Utc`
+  --> src\database\integration_tests.rs:64:18
+   |
+64 |     use chrono::{DateTime, Utc, TimeZone};
+   |                  ^^^^^^^^  ^^^
+
+warning: unused import: `super::test_helpers::*`
+   --> src\database\integration_tests.rs:339:9
+    |
+339 |     use super::test_helpers::*;
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::test_helpers::*`
+   --> src\database\integration_tests.rs:472:9
+    |
+472 |     use super::test_helpers::*;
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::test_helpers::*`
+   --> src\database\integration_tests.rs:598:9
+    |
+598 |     use super::test_helpers::*;
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::test_helpers::*`
+   --> src\database\integration_tests.rs:723:9
+    |
+723 |     use super::test_helpers::*;
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0061]: this function takes 3 arguments but 2 arguments were supplied
+   --> src\database\integration_tests.rs:193:26
+    |
+193 |         let session_id = operations::chat_operations::create_chat_session(&conn, &title)?;
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------- argument #3 of type `&str` is missing
+    |
+note: function defined here
+   --> src\database\operations\chat_operations.rs:13:8
+    |
+13  | pub fn create_chat_session(conn: &Connection, user_id: &str, session_name: &str) -> Result<i32> {
+    |        ^^^^^^^^^^^^^^^^^^^                                   ------------------
+help: provide the argument
+    |
+193 |         let session_id = operations::chat_operations::create_chat_session(&conn, &title, /* &str */)?;
+    |                                                                                        ++++++++++++
+
+error[E0061]: this function takes 1 argument but 2 arguments were supplied
+   --> src\database\integration_tests.rs:202:27
+    |
+202 |         let db_sessions = operations::chat_operations::get_chat_sessions(&conn, true)?;
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ----- unexpected argument #1 of type `&Connection`
+    |
+note: function defined here
+   --> src\database\operations\chat_operations.rs:25:8
+    |
+25  | pub fn get_chat_sessions(active_only: bool) -> Result<Vec<ChatSession>> {
+    |        ^^^^^^^^^^^^^^^^^
+help: remove the extra argument
+    |
+202 -         let db_sessions = operations::chat_operations::get_chat_sessions(&conn, true)?;
+202 +         let db_sessions = operations::chat_operations::get_chat_sessions(true)?;
+    |
+
+error[E0061]: this function takes 1 argument but 2 arguments were supplied
+   --> src\database\integration_tests.rs:231:27
+    |
+231 |         let db_messages = operations::chat_operations::get_session_messages(&conn, session_id_int)?;
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ----- unexpected argument #1 of type `&Connection`
+    |
+note: function defined here
+   --> src\database\operations\chat_operations.rs:156:8
+    |
+156 | pub fn get_session_messages(session_id: i32) -> Result<Vec<ChatMessage>> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+help: remove the extra argument
+    |
+231 -         let db_messages = operations::chat_operations::get_session_messages(&conn, session_id_int)?;
+231 +         let db_messages = operations::chat_operations::get_session_messages(session_id_int)?;
+    |
+
+error[E0061]: this function takes 1 argument but 2 arguments were supplied
+   --> src\database\integration_tests.rs:250:24
+    |
+250 |         let sessions = operations::chat_operations::get_chat_sessions(&conn, true)?;
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ----- unexpected argument #1 of type `&Connection`
+    |
+note: function defined here
+   --> src\database\operations\chat_operations.rs:25:8
+    |
+25  | pub fn get_chat_sessions(active_only: bool) -> Result<Vec<ChatSession>> {
+    |        ^^^^^^^^^^^^^^^^^
+help: remove the extra argument
+    |
+250 -         let sessions = operations::chat_operations::get_chat_sessions(&conn, true)?;
+250 +         let sessions = operations::chat_operations::get_chat_sessions(true)?;
+    |
+
+error[E0061]: this function takes 1 argument but 2 arguments were supplied
+   --> src\database\integration_tests.rs:253:28
+    |
+253 |             let messages = operations::chat_operations::get_session_messages(&conn, session.id)?;
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ----- unexpected argument #1 of type `&Connection`
+    |
+note: function defined here
+   --> src\database\operations\chat_operations.rs:156:8
+    |
+156 | pub fn get_session_messages(session_id: i32) -> Result<Vec<ChatMessage>> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+help: remove the extra argument
+    |
+253 -             let messages = operations::chat_operations::get_session_messages(&conn, session.id)?;
+253 +             let messages = operations::chat_operations::get_session_messages(session.id)?;
+    |
+
+error[E0609]: no field `title` on type `models::ChatSession`
+  --> src\database\integration_tests.rs:44:35
+   |
+44 |                 title: db_session.title,
+   |                                   ^^^^^ unknown field
+   |
+   = note: available fields are: `id`, `user_id`, `session_name`, `created_at`, `updated_at`
+
+error[E0609]: no field `message_count` on type `models::ChatSession`
+  --> src\database\integration_tests.rs:45:43
+   |
+45 |                 message_count: db_session.message_count,
+   |                                           ^^^^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `id`, `user_id`, `session_name`, `created_at`, `updated_at`
+
+error[E0609]: no field `is_active` on type `models::ChatSession`
+  --> src\database\integration_tests.rs:48:39
+   |
+48 |                 is_active: db_session.is_active,
+   |                                       ^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `id`, `user_id`, `session_name`, `created_at`, `updated_at`
+
+error[E0599]: no method named `get_db_path` found for struct `connection::DatabaseManager` in the current scope
+   --> src\database\integration_tests.rs:311:34
+    |
+311 |         let db_path = db_manager.get_db_path();
+    |                                  ^^^^^^^^^^^ method not found in `DatabaseManager`
+    |
+   ::: src\database\connection.rs:16:1
+    |
+16  | pub struct DatabaseManager {
+    | -------------------------- method `get_db_path` not found for this struct
+
+error[E0599]: no method named `get_db_path` found for struct `connection::DatabaseManager` in the current scope
+   --> src\database\integration_tests.rs:325:34
+    |
+325 |         let db_path = db_manager.get_db_path();
+    |                                  ^^^^^^^^^^^ method not found in `DatabaseManager`
+    |
+   ::: src\database\connection.rs:16:1
+    |
+16  | pub struct DatabaseManager {
+    | -------------------------- method `get_db_path` not found for this struct
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src\database\integration_tests.rs:776:26
+    |
+776 |         let session_id = crate::commands::chat::create_session("Performance Test Session".to_string()).await
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^---------------------------------------- argument #2 of type `tauri::State<'_, connection::DatabaseManager>` is missing
+    |
+note: function defined here
+   --> src\commands\chat\sessions.rs:68:14
+    |
+68  | pub async fn create_session(
+    |              ^^^^^^^^^^^^^^
+69  |     title: String,
+70  |     db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    |     --------------------------------------------------------------
+help: provide the argument
+    |
+776 |         let session_id = crate::commands::chat::create_session("Performance Test Session".to_string(), /* tauri::State<'_, connection::DatabaseManager> */).await
+    |                                                                                                      +++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 3 arguments but 2 arguments were supplied
+   --> src\database\integration_tests.rs:781:13
+    |
+781 |             crate::commands::chat::send_message(session_id.clone(), format!("Performance test message {}", i)).await
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------------------------------------------------- argument #3 of type `tauri::State<'_, connection::DatabaseManager>` is missing
+    |
+note: function defined here
+   --> src\commands\chat\sessions.rs:118:14
+    |
+118 | pub async fn send_message(
+    |              ^^^^^^^^^^^^
+...
+121 |     db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    |     --------------------------------------------------------------
+help: provide the argument
+    |
+781 |             crate::commands::chat::send_message(session_id.clone(), format!("Performance test message {}", i), /* tauri::State<'_, connection::DatabaseManager> */).await
+    |                                                                                                              +++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src\database\integration_tests.rs:790:24
+    |
+790 |         let messages = crate::commands::chat::get_session_messages(session_id.clone()).await
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-------------------- argument #2 of type `tauri::State<'_, connection::DatabaseManager>` is missing
+    |
+note: function defined here
+   --> src\commands\chat\sessions.rs:159:14
+    |
+159 | pub async fn get_session_messages(
+    |              ^^^^^^^^^^^^^^^^^^^^
+160 |     session_id_str: String,
+161 |     db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    |     --------------------------------------------------------------
+help: provide the argument
+    |
+790 |         let messages = crate::commands::chat::get_session_messages(session_id.clone(), /* tauri::State<'_, connection::DatabaseManager> */).await
+    |                                                                                      +++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 1 argument but 0 arguments were supplied
+   --> src\database\integration_tests.rs:799:24
+    |
+799 |         let sessions = crate::commands::chat::get_sessions().await.expect("Should get sessions");
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^-- argument #1 of type `tauri::State<'_, connection::DatabaseManager>` is missing
+    |
+note: function defined here
+   --> src\commands\chat\sessions.rs:85:14
+    |
+85  | pub async fn get_sessions(
+    |              ^^^^^^^^^^^^
+86  |     db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    |     --------------------------------------------------------------
+help: provide the argument
+    |
+799 |         let sessions = crate::commands::chat::get_sessions(/* tauri::State<'_, connection::DatabaseManager> */).await.expect("Should get sessions");
+    |                                                            +++++++++++++++++++++++++++++++++++++++++++++++++++
+
+error[E0061]: this function takes 2 arguments but 1 argument was supplied
+   --> src\database\integration_tests.rs:812:9
+    |
+812 |         crate::commands::chat::delete_session(session_id).await.expect("Should delete session");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^------------ argument #2 of type `tauri::State<'_, connection::DatabaseManager>` is missing
+    |
+note: function defined here
+   --> src\commands\chat\sessions.rs:238:14
+    |
+238 | pub async fn delete_session(
+    |              ^^^^^^^^^^^^^^
+239 |     session_id: String,
+240 |     db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    |     --------------------------------------------------------------
+help: provide the argument
+    |
+812 |         crate::commands::chat::delete_session(session_id, /* tauri::State<'_, connection::DatabaseManager> */).await.expect("Should delete session");
+    |                                                         +++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+warning: unused variable: `session`
+  --> src\database\test.rs:29:13
+   |
+29 |         let session = models::ChatSession {
+   |             ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_session`
+
+Some errors have detailed explanations: E0061, E0599, E0609.
+For more information about an error, try `rustc --explain E0061`.
+warning: `tauri-app` (lib test) generated 61 warnings (55 duplicates)
+error: could not compile `tauri-app` (lib test) due to 15 previous errors; 61 warnings emitted

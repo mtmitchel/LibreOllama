@@ -54,12 +54,12 @@ pub enum LogLevel {
     Error,
 }
 
-impl ToString for LogLevel {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LogLevel::Info => "Info".to_string(),
-            LogLevel::Warn => "Warn".to_string(),
-            LogLevel::Error => "Error".to_string(),
+            LogLevel::Info => write!(f, "Info"),
+            LogLevel::Warn => write!(f, "Warn"),
+            LogLevel::Error => write!(f, "Error"),
         }
     }
 }
@@ -80,16 +80,20 @@ pub struct ApplicationLog {
     pub id: i32,
     pub log_level: String, // Storing LogLevel as a string
     pub message: String,
-    pub created_at: chrono::NaiveDateTime,
+    pub module_name: String,
+    pub function_name: String,
+    pub timestamp: NaiveDateTime,
 }
 
 impl ApplicationLog {
-    pub fn new(log_level_enum: LogLevel, message: String, details: Option<String>) -> Self {
+    pub fn new(log_level_enum: LogLevel, message: String, module_name: String, function_name: String) -> Self {
         Self {
             id: 0, // Placeholder
             log_level: log_level_enum.to_string(),
-            message: details.map_or(message.clone(), |d| format!("{} Details: {}", message, d)),
-            created_at: Local::now().naive_local(),
+            message,
+            module_name,
+            function_name,
+            timestamp: Local::now().naive_local(),
         }
     }
 }
@@ -99,7 +103,8 @@ pub struct RequestCache {
     pub id: i32,
     pub request_hash: String,
     pub response_body: String,
-    pub created_at: chrono::NaiveDateTime,
+    pub expires_at: NaiveDateTime,
+    pub created_at: NaiveDateTime,
 }
 
 impl RequestCache {
@@ -108,6 +113,7 @@ impl RequestCache {
             id: 0, // Placeholder
             request_hash,
             response_body,
+            expires_at: Local::now().naive_local(),
             created_at: Local::now().naive_local(),
         }
     }
@@ -272,7 +278,24 @@ pub enum MetricType {
     ResponseTime,
     TokenCount,
     CpuUsage,
+    Throughput,
+    ErrorRate,
+    MemoryUsage,
     Placeholder,
+}
+
+impl std::fmt::Display for MetricType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MetricType::ResponseTime => write!(f, "response_time"),
+            MetricType::TokenCount => write!(f, "token_count"),
+            MetricType::CpuUsage => write!(f, "cpu_usage"),
+            MetricType::Throughput => write!(f, "throughput"),
+            MetricType::ErrorRate => write!(f, "error_rate"),
+            MetricType::MemoryUsage => write!(f, "memory_usage"),
+            MetricType::Placeholder => write!(f, "placeholder"),
+        }
+    }
 }
 
 impl From<String> for MetricType {
@@ -281,6 +304,9 @@ impl From<String> for MetricType {
             "responsetime" | "response_time" => MetricType::ResponseTime,
             "tokencount" | "token_count" => MetricType::TokenCount,
             "cpuusage" | "cpu_usage" => MetricType::CpuUsage,
+            "throughput" => MetricType::Throughput,
+            "errorrate" | "error_rate" => MetricType::ErrorRate,
+            "memoryusage" | "memory_usage" => MetricType::MemoryUsage,
             _ => MetricType::Placeholder,
         }
     }
@@ -332,34 +358,6 @@ pub struct GmailAccount {
     pub user_id: String,
 }
 
-impl GmailAccount {
-    pub fn new(
-        id: String,
-        email_address: String,
-        display_name: Option<String>,
-        access_token_encrypted: String,
-        scopes: Vec<String>,
-        user_id: String,
-    ) -> Self {
-        let now = chrono::Utc::now().to_rfc3339();
-        Self {
-            id,
-            email_address,
-            display_name,
-            profile_picture_url: None,
-            access_token_encrypted,
-            refresh_token_encrypted: None,
-            token_expires_at: None,
-            scopes,
-            is_active: true,
-            last_sync_at: None,
-            created_at: now.clone(),
-            updated_at: now,
-            user_id,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GmailLabel {
     pub id: String,
@@ -378,35 +376,6 @@ pub struct GmailLabel {
     pub updated_at: NaiveDateTime,
 }
 
-impl GmailLabel {
-    pub fn new(
-        id: String,
-        account_id: String,
-        name: String,
-        message_list_visibility: String,
-        label_list_visibility: String,
-        label_type: String,
-    ) -> Self {
-        let now = Local::now().naive_local();
-        Self {
-            id,
-            account_id,
-            name,
-            message_list_visibility,
-            label_list_visibility,
-            label_type,
-            messages_total: Some(0),
-            messages_unread: Some(0),
-            threads_total: Some(0),
-            threads_unread: Some(0),
-            color_text: None,
-            color_background: None,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GmailThread {
     pub id: String,
@@ -422,27 +391,6 @@ pub struct GmailThread {
     pub last_message_date: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
-}
-
-impl GmailThread {
-    pub fn new(id: String, account_id: String) -> Self {
-        let now = Local::now().naive_local();
-        Self {
-            id,
-            account_id,
-            history_id: None,
-            snippet: None,
-            message_count: 0,
-            is_read: false,
-            is_starred: false,
-            has_attachments: false,
-            participants: Vec::new(),
-            subject: None,
-            last_message_date: None,
-            created_at: now,
-            updated_at: now,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -474,44 +422,6 @@ pub struct GmailMessage {
     pub updated_at: NaiveDateTime,
 }
 
-impl GmailMessage {
-    pub fn new(
-        id: String,
-        thread_id: String,
-        account_id: String,
-        from_email: String,
-    ) -> Self {
-        let now = Local::now().naive_local();
-        Self {
-            id,
-            thread_id,
-            account_id,
-            history_id: None,
-            internal_date: None,
-            size_estimate: None,
-            snippet: None,
-            is_read: false,
-            is_starred: false,
-            is_important: false,
-            from_email,
-            from_name: None,
-            to_emails: Vec::new(),
-            cc_emails: Vec::new(),
-            bcc_emails: Vec::new(),
-            subject: None,
-            date_header: None,
-            message_id_header: None,
-            reply_to: None,
-            body_text: None,
-            body_html: None,
-            raw_headers: serde_json::Value::Object(serde_json::Map::new()),
-            has_attachments: false,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GmailAttachment {
     pub id: String,
@@ -525,33 +435,6 @@ pub struct GmailAttachment {
     pub local_path: Option<String>,
     pub download_date: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
-}
-
-impl GmailAttachment {
-    pub fn new(
-        id: String,
-        message_id: String,
-        account_id: String,
-        attachment_id: String,
-        filename: String,
-        mime_type: String,
-        size_bytes: i64,
-    ) -> Self {
-        let now = Local::now().naive_local();
-        Self {
-            id,
-            message_id,
-            account_id,
-            attachment_id,
-            filename,
-            mime_type,
-            size_bytes,
-            is_downloaded: false,
-            local_path: None,
-            download_date: None,
-            created_at: now,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -572,33 +455,6 @@ pub struct GmailSyncState {
     pub updated_at: NaiveDateTime,
 }
 
-impl GmailSyncState {
-    pub fn new(
-        id: String,
-        account_id: String,
-        sync_type: String,
-        sync_status: String,
-    ) -> Self {
-        let now = Local::now().naive_local();
-        Self {
-            id,
-            account_id,
-            sync_type,
-            last_sync_at: now,
-            last_history_id: None,
-            next_page_token: None,
-            sync_status,
-            error_message: None,
-            messages_synced: Some(0),
-            total_messages: Some(0),
-            started_at: None,
-            completed_at: None,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GmailDraft {
     pub id: String,
@@ -616,31 +472,4 @@ pub struct GmailDraft {
     pub thread_id: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
-}
-
-impl GmailDraft {
-    pub fn new(
-        id: String,
-        account_id: String,
-        to_emails: Vec<String>,
-    ) -> Self {
-        let now = Local::now().naive_local();
-        Self {
-            id,
-            message_id: None,
-            account_id,
-            to_emails,
-            cc_emails: Vec::new(),
-            bcc_emails: Vec::new(),
-            subject: None,
-            body_text: None,
-            body_html: None,
-            attachments: serde_json::Value::Array(Vec::new()),
-            is_reply: false,
-            reply_to_message_id: None,
-            thread_id: None,
-            created_at: now,
-            updated_at: now,
-        }
-    }
 }

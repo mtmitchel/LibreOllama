@@ -59,6 +59,7 @@
     "@babel/preset-env": "^7.27.2",
     "@babel/preset-react": "^7.27.1",
     "@ladle/react": "^5.0.3",
+    "@modelcontextprotocol/server-filesystem": "^2025.7.1",
     "@rollup/rollup-win32-x64-msvc": "^4.44.1",
     "@tauri-apps/cli": "^2.5.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -73,6 +74,7 @@
     "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.21",
     "chromatic": "^11.16.2",
+    "figma-developer-mcp": "^0.4.3",
     "glob": "^11.0.3",
     "happy-dom": "^18.0.1",
     "immer": "^10.1.1",
@@ -86,5 +88,21 @@
     "vitest": "^3.2.4",
     "vitest-canvas-mock": "^0.3.3",
     "webpack-bundle-analyzer": "^4.10.2"
-  }
+  },
+  "description": "<p align=\"center\">   <img src=\"https://raw.githubusercontent.com/mtmitchel/libreollama/main/src-tauri/icons/icon.png?raw=true\" alt=\"LibreOllama Logo\" width=\"128\"> </p>",
+  "main": "postcss.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mtmitchel/LibreOllama.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mtmitchel/LibreOllama/issues"
+  },
+  "homepage": "https://github.com/mtmitchel/LibreOllama#readme"
 }

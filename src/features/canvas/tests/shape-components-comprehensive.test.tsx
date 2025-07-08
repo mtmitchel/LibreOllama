@@ -72,8 +72,8 @@ vi.mock('../utils/canvasTheme', () => ({
 
 // Mock the whole module
 vi.mock('../utils/fontLoader', () => ({
-  // ... existing code ...
-  // ... existing code ...
+  ensureFontsLoaded: vi.fn().mockResolvedValue(true),
+  getAvailableFontFamily: vi.fn().mockReturnValue('Inter, -apple-system, system-ui, sans-serif')
 }));
 
 // Common test element factory

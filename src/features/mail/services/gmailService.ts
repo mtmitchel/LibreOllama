@@ -453,9 +453,9 @@ class GmailService {
 // Create a default service instance with placeholder config
 // In a real app, these would come from environment variables or user input
 const defaultConfig: GmailAuthConfig = {
-  clientId: process.env.GMAIL_CLIENT_ID || '',
-  clientSecret: process.env.GMAIL_CLIENT_SECRET || '',
-  redirectUri: process.env.GMAIL_REDIRECT_URI || 'http://localhost:8080/auth/gmail/callback',
+  clientId: import.meta.env.VITE_GMAIL_CLIENT_ID || '',
+  clientSecret: import.meta.env.VITE_GMAIL_CLIENT_SECRET || '',
+  redirectUri: import.meta.env.VITE_GMAIL_REDIRECT_URI || 'http://localhost:8080/auth/gmail/callback',
   scopes: [...GMAIL_SCOPES],
 };
 

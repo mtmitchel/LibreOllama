@@ -60,7 +60,8 @@ export const useGmailSync = (): UseGmailSyncReturn => {
   const [config, setConfig] = useState<SyncConfig>(gmailSyncService.getConfig());
   const [overallStatus, setOverallStatus] = useState(gmailSyncService.getOverallStatus());
   
-  const { accounts } = useMailStore();
+  const { accounts: accountsObject, getAccountsArray } = useMailStore();
+  const accounts = getAccountsArray();
   const eventListenersRef = useRef<Map<SyncEventType, Set<(event: SyncEvent) => void>>>(new Map());
 
   // Initialize sync service with accounts

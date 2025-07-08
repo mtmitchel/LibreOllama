@@ -1,0 +1,311 @@
+
+> libreollama@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Projects/LibreOllama[39m
+
+[90mstdout[2m | src/tests/integration/gmail-ui-integration.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/shape-tools.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/comprehensive-store-validation.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/error-boundary-resilience.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/connector-tool.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/mindmap-tool.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/performance/canvas.performance.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/integration-validation.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/core-canvas-store.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/integration/canvas-mvp-critical.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/table-tool.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/shape-components-comprehensive.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/memory-leak-detection.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/CircleShape.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/text-tool.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/sections-comprehensive.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/drawing-tools.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/integration/gmail-complete-workflow.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/sticky-note-tool.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/hooks/useTauriCanvas.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/eraser-tool.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/sections-comprehensive.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/error-boundary-resilience.test.ts
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/core-canvas-store.test.ts
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/shape-tools.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/eraser-tool.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/integration-validation.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/table-tool.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/memory-leak-detection.test.ts
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/shape-components-comprehensive.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/drawing-tools.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/text-tool.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/integration/canvas-mvp-critical.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/comprehensive-store-validation.test.ts
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/performance/canvas.performance.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/CircleShape.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/mindmap-tool.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/connector-tool.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/features/canvas/tests/sticky-note-tool.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+ [32mΓ£ô[39m src/features/canvas/tests/drawing-tools.test.tsx [2m([22m[2m15 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/core-canvas-store.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+ [32mΓ£ô[39m src/features/canvas/tests/eraser-tool.test.tsx [2m([22m[2m16 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/hooks/useTauriCanvas.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 155[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/integration/canvas-mvp-critical.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[32m 100[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/comprehensive-store-validation.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 136[2mms[22m[39m
+ [32mΓ£ô[39m src/features/canvas/tests/sections-comprehensive.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[32m 144[2mms[22m[39m
+[90mstdout[2m | src/tests/integration/gmail-ui-integration.test.tsx
+[22m[39m≡ƒöæ [AUTH] Zustand persistence will restore authentication state automatically
+
+[90mstdout[2m | src/tests/integration/gmail-complete-workflow.test.tsx
+[22m[39m≡ƒöæ [AUTH] Zustand persistence will restore authentication state automatically
+
+ [32mΓ£ô[39m src/features/canvas/tests/table-tool.test.tsx [2m([22m[2m34 tests[22m[2m)[22m[32m 159[2mms[22m[39m
+[90mstdout[2m | src/tests/integration-validation.test.tsx
+[22m[39mFeature flag registered: grouped-section-rendering {
+  name: [32m'grouped-section-rendering'[39m,
+  enabled: [33mtrue[39m,
+  fallbackEnabled: [33mtrue[39m,
+  fallbackValue: [33mfalse[39m,
+  criticalityLevel: [32m'high'[39m,
+  healthCheck: [36m[AsyncFunction: healthCheck][39m
+}
+Feature flag registered: centralized-transformer {
+  name: [32m'centralized-transformer'[39m,
+  enabled: [33mfalse[39m,
+  fallbackEnabled: [33mtrue[39m,
+  fallbackValue: [33mfalse[39m,
+  criticalityLevel: [32m'critical'[39m,
+  dependencies: [ [32m'grouped-section-rendering'[39m ],
+  healthCheck: [36m[AsyncFunction: healthCheck][39m
+}
+
+ [32mΓ£ô[39m src/features/canvas/tests/mindmap-tool.test.tsx [2m([22m[2m27 tests[22m[2m)[22m[32m 153[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/error-boundary-resilience.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 474[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/integration-validation.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/performance/canvas.performance.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 242[2mms[22m[39m
+ [32mΓ£ô[39m src/features/canvas/tests/sticky-note-tool.test.tsx [2m([22m[2m27 tests[22m[2m)[22m[32m 222[2mms[22m[39m
+ [32mΓ£ô[39m src/features/canvas/tests/connector-tool.test.tsx [2m([22m[2m23 tests[22m[2m)[22m[32m 128[2mms[22m[39m
+ [32mΓ£ô[39m src/features/canvas/tests/shape-tools.test.tsx [2m([22m[2m37 tests[22m[2m)[22m[32m 166[2mms[22m[39m
+ [32mΓ£ô[39m src/features/canvas/tests/CircleShape.test.tsx [2m([22m[2m25 tests[22m[2m)[22m[32m 238[2mms[22m[39m
+stderr | src/tests/integration/gmail-ui-integration.test.tsx
+Failed to initialize AttachmentService: TypeError: Cannot read properties of undefined (reading 'invoke')
+    at invoke (file:///C:/Projects/LibreOllama/node_modules/@tauri-apps/api/core.js:190:39)
+    at AttachmentService.initializeService (C:\Projects\LibreOllama\src\features\mail\services\attachmentService.ts:66:13)
+    at new AttachmentService (C:\Projects\LibreOllama\src\features\mail\services\attachmentService.ts:60:10)
+    at C:\Projects\LibreOllama\src\features\mail\services\attachmentService.ts:581:34
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at VitestExecutor.runModule (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:397:4)
+    at VitestExecutor.directRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:375:3)
+    at VitestExecutor.cachedRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:189:11)
+    at VitestExecutor.dependencyRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:239:10)
+    at C:\Projects\LibreOllama\src\features\mail\hooks\useAttachments.ts:10:1
+
+ [32mΓ£ô[39m src/features/canvas/tests/text-tool.test.tsx [2m([22m[2m13 tests[22m[2m)[22m[33m 668[2mms[22m[39m
+stderr | src/tests/integration/gmail-complete-workflow.test.tsx
+Failed to set up Tauri event listeners: TypeError: Cannot read properties of undefined (reading 'transformCallback')
+    at transformCallback (file:///C:/Projects/LibreOllama/node_modules/@tauri-apps/api/core.js:72:39)
+    at listen (file:///C:/Projects/LibreOllama/node_modules/@tauri-apps/api/event.js:77:18)
+    at GmailSyncService.initializeTauriEventListeners (C:\Projects\LibreOllama\src\features\mail\services\gmailSyncService.ts:642:34)
+    at new GmailSyncService (C:\Projects\LibreOllama\src\features\mail\services\gmailSyncService.ts:100:10)
+    at C:\Projects\LibreOllama\src\features\mail\services\gmailSyncService.ts:774:33
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at VitestExecutor.runModule (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:397:4)
+    at VitestExecutor.directRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:375:3)
+    at VitestExecutor.cachedRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:189:11)
+    at VitestExecutor.dependencyRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:239:10)
+
+stderr | src/tests/integration/gmail-complete-workflow.test.tsx
+Failed to initialize AttachmentService: TypeError: Cannot read properties of undefined (reading 'invoke')
+    at invoke (file:///C:/Projects/LibreOllama/node_modules/@tauri-apps/api/core.js:190:39)
+    at AttachmentService.initializeService (C:\Projects\LibreOllama\src\features\mail\services\attachmentService.ts:66:13)
+    at new AttachmentService (C:\Projects\LibreOllama\src\features\mail\services\attachmentService.ts:60:10)
+    at C:\Projects\LibreOllama\src\features\mail\services\attachmentService.ts:581:34
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at VitestExecutor.runModule (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:397:4)
+    at VitestExecutor.directRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:375:3)
+    at VitestExecutor.cachedRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:189:11)
+    at VitestExecutor.dependencyRequest (file:///C:/Projects/LibreOllama/node_modules/vite-node/dist/client.mjs:239:10)
+    at C:\Projects\LibreOllama\src\features\mail\hooks\useAttachments.ts:10:1
+
+[90mstdout[2m | src/tests/components/simple-canvas.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/element-creation-and-selection.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/stores/canvasElementTypes.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/tests/stores/canvasHistoryStore.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/store-methods-validation.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+ [32mΓ£ô[39m src/features/canvas/tests/shape-components-comprehensive.test.tsx [2m([22m[2m24 tests[22m[2m)[22m[33m 636[2mms[22m[39m
+[90mstdout[2m | src/tests/element-creation-and-selection.test.ts
+[22m[39m[Store] Unified Canvas Store initialized
+
+[90mstdout[2m | src/tests/system/environment.diagnostic.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+ [32mΓ£ô[39m src/tests/element-creation-and-selection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/stores/canvasHistoryStore.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/components/simple-canvas.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 29[2mms[22m[39m
+[90mstdout[2m | src/features/canvas/tests/store-methods-validation.test.ts
+[22m[39m[Store] Unified Canvas Store initialized
+
+ [32mΓ£ô[39m src/tests/stores/canvasElementTypes.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32mΓ£ô[39m src/features/canvas/tests/store-methods-validation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/system/environment.diagnostic.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+[90mstdout[2m | src/features/canvas/tests/konva-minimal.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/reliability-validation.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/sections-drawing-connectors.test.tsx
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+ [32mΓ£ô[39m src/features/canvas/tests/konva-minimal.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+[90mstdout[2m | src/tests/system/logger.isolation.test.ts
+[22m[39mΓ£à Hoisted canvas mocks loaded
+
+[90mstdout[2m | src/features/canvas/tests/reliability-validation.test.ts
+[22m[39mFeature flag registered: grouped-section-rendering {
+  name: [32m'grouped-section-rendering'[39m,
+  enabled: [33mtrue[39m,
+  fallbackEnabled: [33mtrue[39m,
+  fallbackValue: [33mfalse[39m,
+  criticalityLevel: [32m'high'[39m,
+  healthCheck: [36m[AsyncFunction: healthCheck][39m
+}
+Feature flag registered: centralized-transformer {
+  name: [32m'centralized-transformer'[39m,
+  enabled: [33mfalse[39m,
+  fallbackEnabled: [33mtrue[39m,
+  fallbackValue: [33mfalse[39m,
+  criticalityLevel: [32m'critical'[39m,
+  dependencies: [ [32m'grouped-section-rendering'[39m ],
+  healthCheck: [36m[AsyncFunction: healthCheck][39m
+}
+
+ [32mΓ£ô[39m src/features/canvas/tests/reliability-validation.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/system/logger.isolation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+[90mstdout[2m | src/features/canvas/tests/sections-drawing-connectors.test.tsx
+[22m[39m[Store] Unified Canvas Store initialized
+
+ [32mΓ£ô[39m src/features/canvas/tests/sections-drawing-connectors.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mΓ£ô[39m src/tests/memory-leak-detection.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 4033[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Memory Leak Detection Tests[2m > [22mElement Memory Management[2m > [22mshould not leak memory when creating and deleting many elements [33m 1859[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Memory Leak Detection Tests[2m > [22mElement Memory Management[2m > [22mshould handle element updates without memory accumulation [33m 775[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Memory Leak Detection Tests[2m > [22mSelection Memory Management[2m > [22mshould not leak memory with frequent selection changes [33m 378[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Memory Leak Detection Tests[2m > [22mOverall Memory Stability[2m > [22mshould recover memory after stress testing [33m 372[2mms[22m[39m
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Suites 2 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  src/tests/integration/gmail-complete-workflow.test.tsx [ src/tests/integration/gmail-complete-workflow.test.tsx ]
+ FAIL  src/tests/integration/gmail-ui-integration.test.tsx [ src/tests/integration/gmail-ui-integration.test.tsx ]
+Error: Transform failed with 1 error:
+C:/Projects/LibreOllama/src/features/mail/hooks/useAuthGuard.ts:73:13: ERROR: Expected ">" but found "className"
+  Plugin: vite:esbuild
+  File: C:/Projects/LibreOllama/src/features/mail/hooks/useAuthGuard.ts:73:13
+  
+  Expected ">" but found "className"
+  71 |      if (!authState.hasValidAuth) {
+  72 |        return (
+  73 |          <div className="flex items-center justify-center h-32 bg-[var(--bg-secondary)] rounded-lg border-2 border-dashed border-[var(--border-default)]">
+     |               ^
+  74 |            <div className="text-center">
+  75 |              <p className="text-[var(--text-secondary)] text-sm mb-2">
+  
+ Γ¥» failureErrorWithLog node_modules/esbuild/lib/main.js:1463:15
+ Γ¥» node_modules/esbuild/lib/main.js:734:50
+ Γ¥» responseCallbacks.<computed> node_modules/esbuild/lib/main.js:601:9
+ Γ¥» handleIncomingPacket node_modules/esbuild/lib/main.js:656:12
+ Γ¥» Socket.readFromStdout node_modules/esbuild/lib/main.js:579:7
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/2]ΓÄ»
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m29 passed[39m[22m[90m (31)[39m
+[2m      Tests [22m [1m[32m386 passed[39m[22m[90m (386)[39m
+[2m   Start at [22m 22:41:19
+[2m   Duration [22m 8.30s[2m (transform 9.39s, setup 14.51s, collect 23.98s, tests 8.03s, environment 32.62s, prepare 12.52s)[22m
+

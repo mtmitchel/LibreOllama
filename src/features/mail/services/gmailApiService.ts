@@ -13,6 +13,7 @@ import type {
 
 export class GmailApiService {
   private static BASE_URL = 'https://www.googleapis.com/gmail/v1';
+  private refreshAttempted = false;
   
   constructor(private accountId: string) {}
 
@@ -61,27 +62,40 @@ export class GmailApiService {
       });
 
       if (response.status === 401) {
-        // Token expired, attempt refresh
-        console.log('🔄 [API] Token expired, attempting refresh...');
-        await this.refreshTokens();
-        
-        // Retry with new token
-        const newTokens = await this.getTokens();
-        const retryResponse = await fetch(url, {
-          ...options,
-          headers: {
-            ...headers,
-            'Authorization': `Bearer ${newTokens.access_token}`,
-          },
-        });
-        
-        if (!retryResponse.ok) {
-          throw new Error(`API request failed: ${retryResponse.status} ${retryResponse.statusText}`);
+        // Token expired, attempt refresh (but only once per service instance)
+        if (this.refreshAttempted) {
+          throw new Error('Authentication failed - already attempted token refresh. User needs to re-authenticate.');
         }
         
-        const data = await retryResponse.json();
-        console.log(`✅ [API] Request successful (after refresh): ${endpoint}`);
-        return data;
+        console.log('🔄 [API] Token expired, attempting refresh...');
+        this.refreshAttempted = true;
+        
+        try {
+          await this.refreshTokens();
+          
+          // Retry with new token
+          const newTokens = await this.getTokens();
+          const retryResponse = await fetch(url, {
+            ...options,
+            headers: {
+              ...headers,
+              'Authorization': `Bearer ${newTokens.access_token}`,
+            },
+          });
+          
+          if (!retryResponse.ok) {
+            throw new Error(`API request failed after token refresh: ${retryResponse.status} ${retryResponse.statusText}`);
+          }
+          
+          const data = await retryResponse.json();
+          console.log(`✅ [API] Request successful (after refresh): ${endpoint}`);
+          // Reset the flag on successful refresh
+          this.refreshAttempted = false;
+          return data;
+        } catch (refreshError) {
+          console.error('❌ [API] Token refresh failed:', refreshError);
+          throw new Error('Authentication failed - token refresh unsuccessful. User needs to re-authenticate.');
+        }
       }
 
       if (!response.ok) {
@@ -110,7 +124,7 @@ export class GmailApiService {
       const tokens = await this.getTokens();
       
       if (!tokens.refresh_token) {
-        throw new Error('No refresh token available');
+        throw new Error('No refresh token available - user needs to re-authenticate');
       }
 
       console.log('🔄 [API] Refreshing tokens...');
@@ -120,12 +134,37 @@ export class GmailApiService {
         redirectUri: 'http://localhost:8080/auth/gmail/callback',
       });
 
+      if (!newTokens || !newTokens.access_token) {
+        throw new Error('Failed to get new access token - refresh token may be invalid');
+      }
+
+      // Get the account email before storing tokens
+      let accountEmail = '';
+      try {
+        // Try to get email from user profile using the new tokens directly
+        const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            Authorization: `Bearer ${newTokens.access_token}`,
+          },
+        });
+        
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json();
+          accountEmail = profile.email;
+        } else {
+          throw new Error('Failed to fetch profile');
+        }
+      } catch (profileError) {
+        console.warn('⚠️ [API] Could not fetch user profile, using account ID as email fallback');
+        accountEmail = this.accountId; // Use account ID as fallback
+      }
+
       // Store the refreshed tokens
       await invoke('store_gmail_tokens_secure', {
         accountId: this.accountId,
         tokens: newTokens,
         userInfo: {
-          email: '', // Email will be fetched if needed
+          email: accountEmail,
           name: '',
           picture: '',
         },
@@ -134,6 +173,22 @@ export class GmailApiService {
       console.log('✅ [API] Tokens refreshed successfully');
     } catch (error) {
       console.error('❌ [API] Failed to refresh tokens:', error);
+      
+      // If refresh fails, the user likely needs to re-authenticate
+      if (error instanceof Error && (
+        error.message.includes('Invalid input') ||
+        error.message.includes('invalid_grant') ||
+        error.message.includes('refresh token')
+      )) {
+        console.error('🔐 [API] Refresh token is invalid - user needs to re-authenticate');
+        // Clear invalid tokens to prevent retry loops
+        try {
+          await invoke('clear_gmail_tokens', { accountId: this.accountId });
+        } catch (clearError) {
+          console.warn('⚠️ [API] Failed to clear invalid tokens:', clearError);
+        }
+      }
+      
       throw error;
     }
   }
@@ -175,8 +230,34 @@ export class GmailApiService {
    */
   async getLabels(): Promise<GmailLabel[]> {
     try {
-      const data = await this.makeApiRequest<GmailListResponse<GmailLabel>>('/users/me/labels');
-      return data.labels || [];
+      // First get the list of labels
+      const listData = await this.makeApiRequest<GmailListResponse<GmailLabel>>('/users/me/labels');
+      const labelIds = listData.labels || [];
+      
+      if (labelIds.length === 0) {
+        return [];
+      }
+      
+      console.log(`🏷️ [API] Fetching details for ${labelIds.length} labels...`);
+      
+      // Fetch detailed information for each label to get messagesTotal
+      const labelPromises = labelIds.map(label =>
+        this.makeApiRequest<GmailLabel>(`/users/me/labels/${label.id}`)
+          .catch(err => {
+            console.warn(`⚠️ [API] Failed to fetch details for label ${label.id}:`, err);
+            return label; // Return basic label info if detailed fetch fails
+          })
+      );
+      
+      const detailedLabels = await Promise.all(labelPromises);
+      
+      // Log INBOX label info specifically for debugging
+      const inboxLabel = detailedLabels.find(label => label.id === 'INBOX');
+      if (inboxLabel) {
+        console.log(`📧 [API] INBOX label stats - Total: ${inboxLabel.messagesTotal}, Unread: ${inboxLabel.messagesUnread}`);
+      }
+      
+      return detailedLabels;
     } catch (error) {
       console.error('❌ [API] Failed to fetch labels:', error);
       throw error;

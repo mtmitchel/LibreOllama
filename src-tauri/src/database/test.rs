@@ -2,10 +2,7 @@
 //!
 //! These tests verify that the database system works correctly with SQLCipher
 
-use anyhow::Result;
-use rusqlite::Connection;
-use chrono;
-use super::*; // For schema, models, etc. from parent (database) module.
+ // Import specific modules
 
 #[cfg(test)]
 mod tests {
@@ -74,32 +71,76 @@ mod tests {
         // For now, we just test that our encryption key generation works
         let key = hex::encode("test_key_for_validation");
         assert!(!key.is_empty());
-        assert_eq!(key.len(), 32); // 16 bytes * 2 (hex encoding)
+        assert_eq!(key.len(), 46); // 23 bytes * 2 (hex encoding) = 46 characters
+    }
+
+    /// Test that schema migrations include required columns
+    #[test]
+    fn test_schema_columns() -> anyhow::Result<()> {
+        let conn = Connection::open_in_memory()?;
+        schema::run_migrations(&conn)?;
+        
+        // Check that chat_sessions table has user_id column
+        let mut has_user_id = false;
+        let mut stmt = conn.prepare("PRAGMA table_info(chat_sessions)")?;
+        let rows = stmt.query_map([], |row| {
+            let column_name: String = row.get(1)?;
+            Ok(column_name)
+        })?;
+        
+        for row in rows {
+            if row? == "user_id" {
+                has_user_id = true;
+                break;
+            }
+        }
+        
+        assert!(has_user_id, "chat_sessions table should have user_id column");
+        
+        // Check that agents table has capabilities column
+        let mut has_capabilities = false;
+        let mut stmt = conn.prepare("PRAGMA table_info(agents)")?;
+        let rows = stmt.query_map([], |row| {
+            let column_name: String = row.get(1)?;
+            Ok(column_name)
+        })?;
+        
+        for row in rows {
+            if row? == "capabilities" {
+                has_capabilities = true;
+                break;
+            }
+        }
+        
+        assert!(has_capabilities, "agents table should have capabilities column");
+        
+        println!("✅ Schema columns verification passed");
+        Ok(())
     }
 }
 
 /// Helper function to create test database with sample data
 #[cfg(test)]
-pub fn create_test_database() -> Result<Connection, anyhow::Error> {
-    let conn = Connection::open_in_memory()?;
-    schema::run_migrations(&conn)?;
+pub fn create_test_database() -> Result<rusqlite::Connection, anyhow::Error> {
+    let conn = rusqlite::Connection::open_in_memory()?;
+    crate::database::schema::run_migrations(&conn)?;
     
-    // Insert some test data
+    // Insert test data using correct schema
     conn.execute(
-        "INSERT INTO agents (id, name, description, model_name, system_prompt, created_at, updated_at)
-         VALUES ('test-agent-1', 'Test Agent', 'A test agent', 'llama2', 'You are helpful', datetime('now'), datetime('now'))",
+        "INSERT INTO agents (name, description, system_prompt, capabilities, parameters, is_active, created_at, updated_at)
+         VALUES ('Test Agent', 'A test agent', 'You are helpful', '[]', '{}', 1, datetime('now'), datetime('now'))",
         [],
     )?;
     
     conn.execute(
-        "INSERT INTO chat_sessions (id, title, model_name, agent_id, created_at, updated_at)
-         VALUES ('test-session-1', 'Test Session', 'llama2', 'test-agent-1', datetime('now'), datetime('now'))",
+        "INSERT INTO chat_sessions (user_id, session_name, created_at, updated_at)
+         VALUES ('test_user', 'Test Session', datetime('now'), datetime('now'))",
         [],
     )?;
     
     conn.execute(
-        "INSERT INTO chat_messages (id, session_id, role, content, created_at)
-         VALUES ('test-msg-1', 'test-session-1', 'user', 'Hello', datetime('now'))",
+        "INSERT INTO chat_messages (session_id, role, content, created_at)
+         VALUES (1, 'user', 'Hello', datetime('now'))",
         [],
     )?;
     

@@ -378,7 +378,51 @@ export function ComposeModal({
     return null;
   };
 
-  if (!composeDraft) return null;
+  // Handle case where compose modal is open but draft creation failed
+  if (!composeDraft) {
+    return (
+      <div className="fixed bottom-0 right-4 w-[700px] h-[400px] bg-[var(--bg-primary)] border border-border-subtle rounded-t-lg shadow-xl z-50 flex flex-col">
+        <div className="flex items-center justify-between p-3 border-b border-border-subtle bg-[var(--bg-secondary)]">
+          <Text size="sm" weight="medium" className="text-primary">
+            New Message
+          </Text>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={cancelCompose}
+            className="h-6 w-6 text-secondary hover:text-primary"
+          >
+            <X size={14} />
+          </Button>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle size={24} className="text-error mx-auto mb-2" />
+            <Text size="sm" className="text-primary mb-1">
+              Failed to initialize compose
+            </Text>
+            <Text size="xs" className="text-secondary mb-4">
+              Please try again or check your connection
+            </Text>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                cancelCompose();
+                // Trigger a retry by closing and reopening
+                setTimeout(() => {
+                  const store = useMailStore.getState();
+                  store.startCompose();
+                }, 100);
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isMinimized) {
     return (

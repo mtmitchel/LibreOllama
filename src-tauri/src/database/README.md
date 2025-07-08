@@ -21,7 +21,7 @@ This directory contains the database functionality for LibreOllama, using SQLCip
 - `schema_v2.rs` - Schema extensions for advanced features
 
 #### Version 4 (Bidirectional Linking)
-- `operations_v4.rs` - Operations for bidirectional linking system
+- `operations/link_operations.rs` - Operations for bidirectional linking system
   - Link relationships
   - Content indexing
   - Link suggestions
@@ -62,10 +62,10 @@ pub use models::*;
 pub use models_v2::*;
 pub use operations::*;
 pub use operations_v2::*;
-pub use operations_v4::*;
+pub use operations::*;
 ```
 
 ### Feature Dependencies
 
 - Advanced features (`commands/advanced.rs`) depend on `models_v2` and `operations_v2`
-- Link functionality (`commands/links.rs`) depends on `operations_v4`
+- Link functionality (`commands/links.rs`) depends on `operations/link_operations`

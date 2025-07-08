@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tokio::time::sleep;
 
-use crate::database::connection::DatabaseManager;
+use crate::database::DatabaseManager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RateLimitConfig {
@@ -97,34 +97,20 @@ pub struct QueueStats {
 }
 
 #[derive(Debug)]
+#[derive(Default)]
 pub struct RequestQueue {
-    pub pending: VecDeque<BatchRequest>,
-    pub processing: HashMap<String, BatchRequest>,
     pub completed: u64,
     pub failed: u64,
     pub last_request_time: Option<Instant>,
     pub request_times: VecDeque<Instant>,
 }
 
-impl Default for RequestQueue {
-    fn default() -> Self {
-        Self {
-            pending: VecDeque::new(),
-            processing: HashMap::new(),
-            completed: 0,
-            failed: 0,
-            last_request_time: None,
-            request_times: VecDeque::new(),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct RateLimiter {
     pub config: RateLimitConfig,
     pub quota_status: ApiQuotaStatus,
     pub request_queue: Arc<Mutex<RequestQueue>>,
-    pub last_quota_check: Instant,
     pub adaptive_delay: u64,
 }
 
@@ -144,7 +130,6 @@ impl RateLimiter {
                 quota_utilization_percent: 0.0,
             },
             request_queue: Arc::new(Mutex::new(RequestQueue::default())),
-            last_quota_check: Instant::now(),
             adaptive_delay: 0,
         }
     }
@@ -311,10 +296,8 @@ impl RateLimiter {
         self.quota_status.quota_utilization_percent = daily_utilization * 100.0;
 
         // Adaptive rate limiting
-        if self.config.enable_adaptive_rate_limiting {
-            if minute_utilization > 0.7 {
-                self.adaptive_delay = ((minute_utilization - 0.7) * 5000.0) as u64; // Up to 1.5 second delay
-            }
+        if self.config.enable_adaptive_rate_limiting && minute_utilization > 0.7 {
+            self.adaptive_delay = ((minute_utilization - 0.7) * 5000.0) as u64; // Up to 1.5 second delay
         }
 
         Ok(())
@@ -643,7 +626,7 @@ pub async fn execute_batch_requests(
     let mut rate_limiter = RateLimiter::new(config);
 
     let batch_requests: Result<Vec<BatchRequest>, _> = requests.into_iter()
-        .map(|req| serde_json::from_value(req))
+        .map(serde_json::from_value)
         .collect();
 
     let batch_requests = batch_requests

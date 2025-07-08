@@ -77,9 +77,12 @@ GMAIL_CLIENT_SECRET=your_client_secret_here
    - Set application name: "LibreOllama"
    - Add required scopes:
      - `https://www.googleapis.com/auth/gmail.readonly`
-     - `https://www.googleapis.com/auth/gmail.send`
-     - `https://www.googleapis.com/auth/gmail.modify`
-     - `https://www.googleapis.com/auth/gmail.compose`
+- `https://www.googleapis.com/auth/gmail.send`
+- `https://www.googleapis.com/auth/gmail.modify`
+- `https://www.googleapis.com/auth/gmail.compose`
+- `https://www.googleapis.com/auth/userinfo.email`
+- `https://www.googleapis.com/auth/userinfo.profile`
+- `https://www.googleapis.com/auth/drive.metadata.readonly`
      - `https://www.googleapis.com/auth/userinfo.email`
      - `https://www.googleapis.com/auth/userinfo.profile`
 
@@ -219,11 +222,15 @@ RUST_LOG=info
 2. **Scopes Configuration**:
    ```
    https://www.googleapis.com/auth/gmail.readonly
-   https://www.googleapis.com/auth/gmail.send  
-   https://www.googleapis.com/auth/gmail.modify
-   https://www.googleapis.com/auth/gmail.compose
+https://www.googleapis.com/auth/gmail.send
+https://www.googleapis.com/auth/gmail.modify
+https://www.googleapis.com/auth/gmail.compose
+https://www.googleapis.com/auth/userinfo.email
+https://www.googleapis.com/auth/userinfo.profile
+https://www.googleapis.com/auth/drive.metadata.readonly
    https://www.googleapis.com/auth/userinfo.email
    https://www.googleapis.com/auth/userinfo.profile
+   https://www.googleapis.com/auth/drive.metadata.readonly
    ```
 
 3. **Test Users** (for development):

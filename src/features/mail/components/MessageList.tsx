@@ -2,7 +2,9 @@ import React from 'react';
 import { Star, Paperclip } from 'lucide-react';
 import { Text, Card } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
+import { useMailOperation } from '../hooks';
 import { ParsedEmail } from '../types';
+import { MailPagination } from './MailPagination';
 
 interface MessageItemProps {
   message: ParsedEmail;
@@ -13,13 +15,23 @@ interface MessageItemProps {
 
 function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageItemProps) {
   const { starMessages, unstarMessages } = useMailStore();
+  const { executeMessageOperation } = useMailOperation();
 
-  const handleStarClick = (e: React.MouseEvent) => {
+  const handleStarClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
     if (message.isStarred) {
-      unstarMessages([message.id]);
+      await executeMessageOperation(
+        () => unstarMessages([message.id]),
+        [message.id],
+        'unstar'
+      );
     } else {
-      starMessages([message.id]);
+      await executeMessageOperation(
+        () => starMessages([message.id]),
+        [message.id],
+        'star'
+      );
     }
   };
 
@@ -154,11 +166,15 @@ export function MessageList() {
     isLoadingMessages,
     error 
   } = useMailStore();
+  const { executeFetchOperation } = useMailOperation();
 
   const messages = getMessages();
 
-  const handleMessageClick = (message: ParsedEmail) => {
-    fetchMessage(message.id);
+  const handleMessageClick = async (message: ParsedEmail) => {
+    await executeFetchOperation(
+      () => fetchMessage(message.id),
+      'message details'
+    );
   };
 
   const handleSelect = (messageId: string, isSelected: boolean) => {
@@ -166,15 +182,29 @@ export function MessageList() {
   };
 
   if (error) {
+    const handleRetry = async () => {
+      // Use standardized error handling for retry
+      await executeFetchOperation(
+        () => useMailStore.getState().fetchMessages(),
+        'messages'
+      );
+    };
+
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <Text size="lg" variant="body" style={{ marginBottom: 'var(--space-2)' }}>
             Unable to load messages
           </Text>
-          <Text size="sm" variant="secondary">
+          <Text size="sm" variant="secondary" style={{ marginBottom: 'var(--space-3)' }}>
             {error}
           </Text>
+          <button
+            onClick={handleRetry}
+            className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded hover:bg-[var(--accent-primary-hover)] transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -208,17 +238,24 @@ export function MessageList() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="min-h-full">
-        {messages.map((message) => (
-          <MessageItem
-            key={message.id}
-            message={message}
-            isSelected={selectedMessages.includes(message.id)}
-            onSelect={handleSelect}
-            onMessageClick={handleMessageClick}
-          />
-        ))}
+    <div className="flex-1 flex flex-col">
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="min-h-full">
+          {messages.map((message) => (
+            <MessageItem
+              key={message.id}
+              message={message}
+              isSelected={selectedMessages.includes(message.id)}
+              onSelect={handleSelect}
+              onMessageClick={handleMessageClick}
+            />
+          ))}
+        </div>
+      </div>
+      
+      {/* Pagination */}
+      <div className="flex-shrink-0">
+        <MailPagination />
       </div>
     </div>
   );

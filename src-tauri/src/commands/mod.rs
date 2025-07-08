@@ -1,43 +1,38 @@
-// Module declarations for Tauri commands
-pub mod chat;
+//! Tauri Commands Module
+//!
+//! This module organizes all Tauri commands by domain for better maintainability.
+
+// Domain-grouped command modules
+pub mod gmail;    // Gmail authentication and operations
+pub mod agents;   // Agent lifecycle and execution  
+pub mod chat;     // Chat sessions and messages
+pub mod system;   // System health and advanced features
+
+// Legacy flat modules (to be reorganized)
 pub mod ollama;
-pub mod agents;
-pub mod advanced;
 pub mod folders;
 pub mod notes;
 pub mod mcp;
 pub mod n8n;
-pub mod links; // Added links module for bidirectional linking
-pub mod canvas; // Added canvas module for Konva.js integration
-pub mod gmail; // Added gmail module for Gmail API integration
-pub mod token_storage; // Added token storage module for secure Gmail token management
-pub mod secure_token_storage; // Secure token storage using OS keyring
-pub mod secure_oauth_flow; // Secure OAuth flow with backend-only client secret
-pub mod secure_token_commands; // Secure token management commands
-pub mod email_parser; // Added email parser module for MIME parsing and content extraction
-pub mod gmail_integration; // Added gmail_integration module for complete email processing pipeline
-pub mod sync_manager; // Added sync manager module for Gmail sync state and delta management
-pub mod cache_manager; // Added cache manager module for efficient message storage and offline access
-pub mod rate_limiter; // Added rate limiter module for Gmail API quota management and batch operations
-pub mod gmail_compose;
-pub mod gmail_sync;
-pub mod gmail_attachments; // Added gmail_compose module for email composition and sending functionality
+pub mod links;
+pub mod canvas;
+pub mod rate_limiter;
 
-// Re-export commonly used types (commented out to reduce warnings)
-// Uncomment individual exports as needed by the frontend
-// pub use advanced::*;
-// pub use agents::*;
-// pub use canvas::*;
-// pub use chat::*;
-// pub use folders::*;
-// pub use gmail::*;
-// pub use links::*;
-// pub use mcp::*;
-// pub use notes::*;
-// pub use token_storage::*;
-// pub use email_parser::*;
-// pub use gmail_integration::*;
-// pub use sync_manager::*;
-// pub use cache_manager::*;
-// pub use rate_limiter::*;
-// pub use gmail_compose::*;
+// Re-exports removed - commands are imported directly in lib.rs
+// This eliminates unused import warnings and makes dependencies clearer
+
+// ARCHIVED MODULES (functionality consolidated into services/):
+// - secure_oauth_flow.rs → gmail/auth.rs
+// - secure_token_commands.rs → gmail/auth.rs  
+// - secure_token_storage.rs → gmail/auth.rs
+// - agents.rs → agents/lifecycle.rs
+// - chat.rs → chat/sessions.rs
+// - advanced.rs → system/advanced.rs
+//
+// - email_parser.rs → services/gmail/api_service.rs
+// - gmail_integration.rs → services/gmail/api_service.rs  
+// - sync_manager.rs → services/gmail/sync_service.rs
+// - cache_manager.rs → services/gmail/cache_service.rs
+// - gmail_compose.rs → services/gmail/compose_service.rs
+// - gmail_sync.rs → services/gmail/sync_service.rs
+// - gmail_attachments.rs → services/gmail/attachment_service.rs

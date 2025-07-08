@@ -27,7 +27,13 @@ export function MailToolbar() {
     markAsUnread,
     starMessages,
     fetchMessages,
-    isLoadingMessages 
+    isLoadingMessages,
+    // Token-based pagination
+    totalMessages,
+    messagesLoadedSoFar,
+    nextPageToken,
+    prevPage,
+    nextPage
   } = useMailStore();
 
   const messages = getMessages();
@@ -76,6 +82,18 @@ export function MailToolbar() {
 
   const handleRefresh = () => {
     fetchMessages();
+  };
+
+  const handlePreviousPage = async () => {
+    if (messagesLoadedSoFar > 0 && !isLoadingMessages) {
+      await prevPage();
+    }
+  };
+
+  const handleNextPage = async () => {
+    if (nextPageToken && !isLoadingMessages) {
+      await nextPage();
+    }
   };
 
   return (
@@ -199,14 +217,37 @@ export function MailToolbar() {
       {/* Right Side - Pagination */}
       <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
         <Text size="sm" variant="secondary">
-          1-50 of 1,234
+          {(() => {
+            if (messages.length === 0) {
+              return `0-0 of ${totalMessages}`;
+            }
+            
+            const start = messagesLoadedSoFar + 1;
+            const end = messagesLoadedSoFar + messages.length;
+            
+            console.log(`📄 [TOOLBAR] Token-based pagination display:`, {
+              start,
+              end,
+              totalMessages,
+              messagesLoadedSoFar,
+              currentPageMessages: messages.length
+            });
+            
+            const safeTotal = typeof totalMessages === 'number' && !isNaN(totalMessages) && totalMessages > 0 
+              ? totalMessages 
+              : (nextPageToken ? `${end}+` : end);
+            
+            return `${start}-${end} of ${safeTotal}`;
+          })()}
         </Text>
         
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          title="Older"
+          onClick={handlePreviousPage}
+          disabled={messagesLoadedSoFar === 0 || isLoadingMessages}
+          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Previous page"
         >
           <ChevronLeft size={16} />
         </Button>
@@ -214,8 +255,10 @@ export function MailToolbar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          title="Newer"
+          onClick={handleNextPage}
+          disabled={!nextPageToken || isLoadingMessages}
+          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Next page"
         >
           <ChevronRight size={16} />
         </Button>

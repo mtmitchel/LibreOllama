@@ -14,7 +14,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
   const [showManageModal, setShowManageModal] = useState(false);
   
   const {
-    accounts,
+    accounts: accountsObject,
     currentAccountId,
     isLoadingAccounts,
     error,
@@ -24,7 +24,10 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
     refreshAccount,
     syncAllAccounts,
     clearError,
+    getAccountsArray,
   } = useMailStore();
+
+  const accounts = getAccountsArray();
 
   const {
     isOnline,
@@ -264,7 +267,7 @@ interface AccountManageModalProps {
 
 const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose }) => {
   const {
-    accounts,
+    accounts: accountsObject,
     currentAccountId,
     isLoadingAccounts,
     error,
@@ -273,7 +276,10 @@ const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose
     refreshAccount,
     syncAllAccounts,
     clearError,
+    getAccountsArray,
   } = useMailStore();
+
+  const accounts = getAccountsArray();
 
   const formatQuota = (account: GmailAccount) => {
     if (!account.quota) return 'Unknown';

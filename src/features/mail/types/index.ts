@@ -56,6 +56,57 @@ export interface GmailLabel {
   };
 }
 
+// Backend Service Types (for Tauri integration)
+export interface ProcessedGmailMessage {
+  id: string;
+  thread_id: string;
+  parsed_content: ParsedEmailContent;
+  labels: string[];
+  snippet?: string;
+  internal_date?: string;
+  size_estimate?: number;
+}
+
+export interface ParsedEmailContent {
+  message_id?: string;
+  thread_id?: string;
+  subject?: string;
+  from: BackendEmailAddress;
+  to: BackendEmailAddress[];
+  cc: BackendEmailAddress[];
+  bcc: BackendEmailAddress[];
+  reply_to?: BackendEmailAddress;
+  date?: string;
+  body_text?: string;
+  body_html?: string;
+  attachments: BackendEmailAttachment[];
+  headers: Record<string, string>;
+  is_multipart: boolean;
+  content_type: string;
+  size_estimate?: number;
+}
+
+export interface BackendEmailAddress {
+  email: string;
+  name?: string;
+}
+
+export interface BackendEmailAttachment {
+  id: string;
+  filename?: string;
+  content_type: string;
+  size?: number;
+  content_id?: string;
+  is_inline: boolean;
+  data?: Uint8Array;
+}
+
+export interface MessageSearchResult {
+  messages: ProcessedGmailMessage[];
+  next_page_token?: string;
+  result_size_estimate?: number;
+}
+
 // Multi-Account Types
 export interface GmailTokens {
   access_token: string;
@@ -181,7 +232,7 @@ export interface MailState {
   
   // UI State
   selectedMessages: string[];
-  currentView: 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | 'all' | 'starred' | 'important' | 'label';
+  currentView: 'INBOX' | 'SENT' | 'DRAFT' | 'TRASH' | 'SPAM' | 'all' | 'STARRED' | 'IMPORTANT' | 'label';
   searchQuery: string;
   currentLabel: string | null;
   
@@ -227,15 +278,18 @@ export interface MailState {
   sortBy: 'date' | 'subject' | 'sender' | 'importance';
   sortOrder: 'asc' | 'desc';
   
-  // Pagination
-  currentPage: number;
-  pageSize: number;
-  totalPages: number;
+  // Token-based pagination (Gmail API style)
+  nextPageToken?: string;
+  pageTokens: string[]; // Stack of page tokens for backward navigation
+  totalMessages: number;
+  messagesLoadedSoFar: number; // Track cumulative messages loaded
+  currentPageSize: number;
+  isNavigatingBackwards: boolean; // Flag to prevent pageTokens modification during backwards navigation
 }
 
 export interface MailActions {
   // Account Management
-  addAccount: () => Promise<void>;
+  addAccount: (account: GmailAccount) => Promise<void>;
   removeAccount: (accountId: string) => Promise<void>;
   switchAccount: (accountId: string) => void;
   refreshAccount: (accountId: string) => Promise<void>;
@@ -286,8 +340,22 @@ export interface MailActions {
   setError: (error: string | null) => void;
   clearError: () => void;
   
+  // Pagination
+  nextPage: () => Promise<void>;
+  prevPage: () => Promise<void>;
+  goToPage: (pageToken?: string) => Promise<void>;
+  
   // Authentication
   signOut: () => void;
+  
+  // Test helper methods (for compatibility with existing tests)
+  setAuthenticated: (isAuthenticated: boolean) => void;
+  setCurrentAccountId: (accountId: string | null) => void;
+  setMessages: (messages: ParsedEmail[], accountId?: string) => void;
+  setAccounts: (accounts: GmailAccount[]) => void;
+  setSyncInProgress: (inProgress: boolean, accountId?: string) => void;
+  setCurrentMessage: (message: ParsedEmail | null) => void;
+  setLabels: (labels: GmailLabel[], accountId?: string) => void;
 }
 
 export type MailStore = MailState & MailActions;
@@ -302,6 +370,7 @@ export interface MultiAccountHelpers {
   getAllThreads: () => EmailThread[];
   getLabels: () => GmailLabel[];
   getMessages: () => ParsedEmail[];
+  getAccountsArray: () => GmailAccount[];
 }
 
 export type EnhancedMailStore = MailStore & MultiAccountHelpers;
@@ -377,4 +446,5 @@ export const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/gmail.labels',
+  'https://www.googleapis.com/auth/drive.metadata.readonly',
 ] as const; 
