@@ -244,20 +244,9 @@ export function Projects() {
   }, [isProjectMenuOpen]);
 
   useEffect(() => {
-    const headerProps: HeaderProps = {
-      title: 'Projects',
-      secondaryActions: [
-        {
-          label: 'Project settings',
-          onClick: () => console.log('Project settings'),
-          icon: <Settings size={16} />,
-          variant: 'ghost' as const
-        }
-      ]
-    };
-
-    setHeaderProps(headerProps);
-
+    setHeaderProps({
+      title: "Projects"
+    });
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);
 
@@ -411,7 +400,7 @@ export function Projects() {
                     size="icon"
                     onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
                   >
-                    <MoreVertical className="text-[var(--text-secondary)]" style={{ width: 'var(--space-5)', height: 'var(--space-5)' }} />
+                    <MoreVertical className="text-[var(--text-secondary)]" size={20} />
                   </Button>
                   
                   {/* Dropdown Menu */}
@@ -434,7 +423,7 @@ export function Projects() {
                         className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         style={{ gap: 'var(--space-2)' }}
                       >
-                        <Edit3 style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Edit3 size={16} />
                         <Text size="sm">Edit project</Text>
                       </Button>
                       <Button
@@ -447,7 +436,7 @@ export function Projects() {
                         className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         style={{ gap: 'var(--space-2)' }}
                       >
-                        <Share2 style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Share2 size={16} />
                         <Text size="sm">Share project</Text>
                       </Button>
                       <Button
@@ -460,7 +449,7 @@ export function Projects() {
                         className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         style={{ gap: 'var(--space-2)' }}
                       >
-                        <UserPlus style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <UserPlus size={16} />
                         <Text size="sm">Add collaborators</Text>
                       </Button>
                       <Button
@@ -473,7 +462,7 @@ export function Projects() {
                         className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         style={{ gap: 'var(--space-2)' }}
                       >
-                        <Copy style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Copy size={16} />
                         <Text size="sm">Duplicate project</Text>
                       </Button>
                       <Button
@@ -486,7 +475,7 @@ export function Projects() {
                         className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         style={{ gap: 'var(--space-2)' }}
                       >
-                        <Download style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Download size={16} />
                         <Text size="sm">Export project</Text>
                       </Button>
                       <div 
@@ -503,7 +492,7 @@ export function Projects() {
                         className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         style={{ gap: 'var(--space-2)' }}
                       >
-                        <Archive style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Archive size={16} />
                         <Text size="sm">Archive project</Text>
                       </Button>
                       <Button
@@ -516,7 +505,7 @@ export function Projects() {
                         className="w-full justify-start text-[var(--error)] hover:bg-[var(--bg-secondary)]"
                         style={{ gap: 'var(--space-2)' }}
                       >
-                        <Trash2 style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                        <Trash2 size={16} />
                         <Text size="sm">Delete project</Text>
                       </Button>
                     </div>
@@ -566,7 +555,7 @@ export function Projects() {
                 {/* Active Goals Section */}
                 <Card>
                   <Heading level={3} className="flex items-center" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-                    <CheckCircle2 className="text-primary" style={{ width: 'var(--space-5)', height: 'var(--space-5)' }} />
+                    <CheckCircle2 className="text-primary" size={20} />
                     Active goals
                   </Heading>
                   <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
@@ -584,9 +573,9 @@ export function Projects() {
                         }}
                       >
                         {goal.completed ? (
-                          <CheckCircle2 className="text-[var(--success)]" style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                          <CheckCircle2 className="text-[var(--success)]" size={16} />
                         ) : (
-                          <Circle className="text-[var(--text-secondary)]" style={{ width: 'var(--space-4)', height: 'var(--space-4)' }} />
+                                                      <Circle className="text-[var(--text-secondary)]" size={16} />
                         )}
                         <Text 
                           variant={goal.completed ? "secondary" : "body"}
@@ -626,7 +615,7 @@ export function Projects() {
                               height: 'calc(var(--space-8) + var(--space-4))'
                             }}
                           >
-                            <Icon className="text-primary" style={{ width: 'var(--space-6)', height: 'var(--space-6)' }} />
+                            <Icon className="text-primary" size={24} />
                           </div>
                           <div className="text-center">
                             <Text size="lg" weight="bold" variant="body">

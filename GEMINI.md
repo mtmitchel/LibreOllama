@@ -5,13 +5,13 @@
 
 ## 1. Source of Truth
 
-- Follow `CANVAS_DEVELOPMENT_ROADMAP.md` (strategy, architecture, phases)
-- Follow `CANVAS_TESTING_PLAN.md` (test methodology; update with outcomes)
-- Use **Canvas Implementation Checklist** for verifying section behavior and readiness
-- DO NOT CREATE NET NEW DOCUMENTATION UNDER ANY CICRUMSTANCES UNLESS GIVEN EXPLICIT PERMISSION 
+- Follow `docs/PROJECT_STATUS.md` (current implementation status and roadmap)
+- Follow `docs/IMPLEMENTATION_GUIDE.md` (development patterns and architecture)
+- Follow `docs/TECHNICAL_DEBT.md` (known issues and improvement plans)
+- DO NOT CREATE NET NEW DOCUMENTATION UNDER ANY CIRCUMSTANCES UNLESS GIVEN EXPLICIT PERMISSION 
 - WHEN YOU ARE ASKED TO READ A FILE OR DOCUMENT DO NOT SKIM IT -- READ **ALL** OF IT!
 
-**As of June 25, 2025:**
+**As of January 2025:**
 - Core canvas operations stable
 - Functional: section tool, connectors, pen, table, image upload
 - Central event handling via `CanvasEventHandler` and `EventHandlerManager`
@@ -88,7 +88,7 @@
 ## 5. Engineering Mindset
 
 - Prioritize working features over early optimization
-- Don’t rewrite stable features to solve integration bugs
+- Don't rewrite stable features to solve integration bugs
 - Reuse existing store logic and components
 - Keep code modular and idiomatic
 - Use Perplexity MCP for help if stuck
@@ -125,4 +125,3 @@
 
 - Recreate store in `beforeEach`
 - Silence logs unless debugging
-```

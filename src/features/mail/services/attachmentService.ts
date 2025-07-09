@@ -62,8 +62,9 @@ export class AttachmentService {
 
   private async initializeService(): Promise<void> {
     try {
+      // TODO: Enable when backend attachment commands are implemented
       // Initialize backend storage
-      await invoke('init_attachment_storage', { config: this.config });
+      // await invoke('init_attachment_storage', { config: this.config });
       
       // Load existing cache entries
       await this.loadCacheFromStorage();
@@ -71,7 +72,7 @@ export class AttachmentService {
       // Schedule cleanup
       this.scheduleCleanup();
       
-      console.log('AttachmentService initialized successfully');
+      console.log('AttachmentService initialized successfully (backend commands disabled)');
     } catch (error) {
       console.error('Failed to initialize AttachmentService:', error);
     }
@@ -80,7 +81,8 @@ export class AttachmentService {
   // Configuration management
   updateConfig(newConfig: Partial<AttachmentStorageConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    invoke('update_attachment_config', { config: this.config }).catch(console.error);
+    // TODO: Enable when backend attachment commands are implemented
+    // invoke('update_attachment_config', { config: this.config }).catch(console.error);
   }
 
   getConfig(): AttachmentStorageConfig {
@@ -170,17 +172,25 @@ export class AttachmentService {
       this.updateDownload(download);
 
       // Download from backend with progress tracking
-      const result = await invoke<{
-        localPath: string;
-        thumbnailPath?: string;
-        checksum: string;
-      }>('download_gmail_attachment', {
-        accountId: download.accountId,
-        messageId: download.messageId,
-        attachmentId: download.attachmentId,
-        generateThumbnail: generateThumbnail && canPreviewFile(download.mimeType),
-        signal: abortController.signal,
-      });
+      // TODO: Enable when backend attachment commands are implemented
+      // const result = await invoke<{
+      //   localPath: string;
+      //   thumbnailPath?: string;
+      //   checksum: string;
+      // }>('download_gmail_attachment', {
+      //   accountId: download.accountId,
+      //   messageId: download.messageId,
+      //   attachmentId: download.attachmentId,
+      //   generateThumbnail: generateThumbnail && canPreviewFile(download.mimeType),
+      //   signal: abortController.signal,
+      // });
+      
+      // Mock result for now
+      const result = {
+        localPath: `temp/${download.filename}`,
+        thumbnailPath: undefined,
+        checksum: 'mock-checksum'
+      };
 
       download.localPath = result.localPath;
       download.thumbnailPath = result.thumbnailPath;
@@ -217,11 +227,13 @@ export class AttachmentService {
     if (!download.localPath) return;
 
     try {
-      const scanResult = await invoke<AttachmentSecurity>('scan_attachment', {
-        filePath: download.localPath,
-        filename: download.filename,
-        mimeType: download.mimeType,
-      });
+      // TODO: Enable when backend attachment commands are implemented
+      // const scanResult = await invoke<AttachmentSecurity>('scan_attachment', {
+      //   filePath: download.localPath,
+      //   filename: download.filename,
+      //   mimeType: download.mimeType,
+      // });
+      const scanResult = { isSafe: true, isQuarantined: false } as AttachmentSecurity;
 
       if (!scanResult.isSafe) {
         if (scanResult.isQuarantined) {
@@ -230,7 +242,8 @@ export class AttachmentService {
           
           // Remove from local storage
           if (download.localPath) {
-            await invoke('delete_attachment_file', { filePath: download.localPath });
+            // TODO: Enable when backend attachment commands are implemented
+            // await invoke('delete_attachment_file', { filePath: download.localPath });
           }
           
           throw new Error('File failed security scan and was quarantined');
@@ -268,7 +281,8 @@ export class AttachmentService {
     this.cache.set(download.attachmentId, cacheEntry);
     
     // Store in backend cache
-    await invoke('add_attachment_to_cache', { cacheEntry });
+    // TODO: Enable when backend attachment commands are implemented
+    // await invoke('add_attachment_to_cache', { cacheEntry });
     
     this.emitEvent('cache_updated', download.attachmentId, { cacheEntry });
   }
@@ -291,11 +305,12 @@ export class AttachmentService {
       cached.lastAccessedAt = new Date();
       cached.accessCount++;
       
-      await invoke('update_cache_access', {
-        attachmentId,
-        lastAccessedAt: cached.lastAccessedAt.toISOString(),
-        accessCount: cached.accessCount,
-      });
+      // TODO: Enable when backend attachment commands are implemented
+      // await invoke('update_cache_access', {
+      //   attachmentId,
+      //   lastAccessedAt: cached.lastAccessedAt.toISOString(),
+      //   accessCount: cached.accessCount,
+      // });
     }
   }
 
@@ -303,16 +318,18 @@ export class AttachmentService {
     const cached = this.cache.get(attachmentId);
     if (cached) {
       // Delete local files
-      if (cached.localPath) {
-        await invoke('delete_attachment_file', { filePath: cached.localPath });
-      }
-      if (cached.thumbnailPath) {
-        await invoke('delete_attachment_file', { filePath: cached.thumbnailPath });
-      }
+      // TODO: Enable when backend attachment commands are implemented
+      // if (cached.localPath) {
+      //   await invoke('delete_attachment_file', { filePath: cached.localPath });
+      // }
+      // if (cached.thumbnailPath) {
+      //   await invoke('delete_attachment_file', { filePath: cached.thumbnailPath });
+      // }
       
       // Remove from cache
       this.cache.delete(attachmentId);
-      await invoke('remove_from_cache', { attachmentId });
+      // TODO: Enable when backend attachment commands are implemented
+      // await invoke('remove_from_cache', { attachmentId });
     }
   }
 
@@ -335,11 +352,20 @@ export class AttachmentService {
     }
 
     try {
-      const preview = await invoke<AttachmentPreview>('generate_attachment_preview', {
-        filePath: cached.localPath,
-        mimeType: cached.mimeType,
-        filename: cached.filename,
-      });
+      // TODO: Enable when backend attachment commands are implemented
+      // const preview = await invoke<AttachmentPreview>('generate_attachment_preview', {
+      //   filePath: cached.localPath,
+      //   mimeType: cached.mimeType,
+      //   filename: cached.filename,
+      // });
+      
+      // Return mock preview for now
+      const preview: AttachmentPreview = {
+        attachmentId,
+        type: fileTypeInfo.category,
+        canPreview: false,
+        requiresDownload: true,
+      };
 
       return {
         ...preview,
@@ -372,12 +398,22 @@ export class AttachmentService {
     attachmentId: string
   ): Promise<GmailAttachment> {
     try {
-      const attachment = await invoke<GmailAttachment>('get_gmail_attachment_info', {
-        accountId,
-        messageId,
-        attachmentId,
-      });
-      return attachment;
+      // TODO: Enable when backend attachment commands are implemented
+      // const attachment = await invoke<GmailAttachment>('get_gmail_attachment_info', {
+      //   accountId,
+      //   messageId,
+      //   attachmentId,
+      // });
+      // return attachment;
+      
+      // Return mock attachment for now
+      return {
+        id: attachmentId,
+        filename: 'mock-attachment.pdf',
+        mimeType: 'application/pdf',
+        size: 1024 * 1024, // 1MB
+        data: ''
+      } as GmailAttachment;
     } catch (error) {
       throw handleGmailError(error);
     }
@@ -420,8 +456,18 @@ export class AttachmentService {
   // Storage management
   async getStorageStats(): Promise<AttachmentStorageStats> {
     try {
-      const stats = await invoke<AttachmentStorageStats>('get_attachment_storage_stats');
-      return stats;
+      // TODO: Enable when backend attachment commands are implemented
+      // const stats = await invoke<AttachmentStorageStats>('get_attachment_storage_stats');
+      // return stats;
+      
+      // Return calculated stats for now
+      return {
+        totalFiles: this.cache.size,
+        totalSize: Array.from(this.cache.values()).reduce((sum, c) => sum + c.size, 0),
+        availableSpace: this.config.maxTotalStorage,
+        cacheHitRate: 0,
+        downloadCount: 0,
+      };
     } catch (error) {
       console.error('Failed to get storage stats:', error);
       return {
@@ -450,7 +496,8 @@ export class AttachmentService {
       }
 
       // Backend cleanup
-      await invoke('cleanup_expired_attachments');
+      // TODO: Enable when backend attachment commands are implemented
+      // await invoke('cleanup_expired_attachments');
       
       this.emitEvent('storage_cleaned', '', { cleanedCount: expiredIds.length });
     } catch (error) {
@@ -500,10 +547,11 @@ export class AttachmentService {
 
   private async loadCacheFromStorage(): Promise<void> {
     try {
-      const cacheEntries = await invoke<AttachmentCache[]>('get_attachment_cache');
-      for (const entry of cacheEntries) {
-        this.cache.set(entry.attachmentId, entry);
-      }
+      // TODO: Enable when backend attachment commands are implemented
+      // const cacheEntries = await invoke<AttachmentCache[]>('get_attachment_cache');
+      // for (const entry of cacheEntries) {
+      //   this.cache.set(entry.attachmentId, entry);
+      // }
     } catch (error) {
       console.error('Failed to load cache from storage:', error);
     }
@@ -573,7 +621,8 @@ export class AttachmentService {
     this.eventListeners.clear();
 
     // Backend cleanup
-    await invoke('cleanup_attachment_service').catch(console.error);
+    // TODO: Enable when backend attachment commands are implemented
+    // await invoke('cleanup_attachment_service').catch(console.error);
   }
 }
 

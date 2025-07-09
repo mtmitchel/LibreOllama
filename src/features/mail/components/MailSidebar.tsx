@@ -493,7 +493,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
           }
           
           // Check for authentication errors
-          if (currentAccount.syncStatus === 'error' && currentAccount.errorMessage) {
+          if (currentAccount && currentAccount.syncStatus === 'error' && currentAccount.errorMessage) {
             return (
               <>
                 <Text size="xs" variant="danger" style={{ marginBottom: 'var(--space-2)' }}>

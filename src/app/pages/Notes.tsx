@@ -175,12 +175,7 @@ export function Notes() {
   // Header effect
   useEffect(() => {
     setHeaderProps({
-      title: "Notes",
-      primaryAction: {
-        label: 'New note',
-        onClick: handleNewNote,
-        icon: <Plus size={16} />
-      }
+      title: "Notes"
     });
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);

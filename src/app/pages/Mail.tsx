@@ -14,7 +14,7 @@ import { useComposeOperation } from '../../features/mail/hooks';
 import { GmailTauriTestComponent } from '../../features/mail/components/GmailTauriTestComponent';
 
 export default function Mail() {
-  const { setHeaderProps } = useHeader();
+  const { setHeaderProps, clearHeaderProps } = useHeader();
   const { currentMessage, isComposing, currentView, isAuthenticated, currentAccountId, signOut } = useMailStore();
   const { handleStartCompose } = useComposeOperation();
   const [isMailSidebarOpen, setIsMailSidebarOpen] = useState(true);
@@ -48,46 +48,11 @@ export default function Mail() {
 
   // Setup header when component mounts
   useEffect(() => {
-    const viewNames = {
-      'inbox': 'Inbox',
-      'starred': 'Starred',
-      'sent': 'Sent',
-      'drafts': 'Drafts',
-      'archive': 'Archive',
-      'trash': 'Trash'
-    };
-    
-    const currentViewName = viewNames[currentView as keyof typeof viewNames] || 'Mail';
-    
     setHeaderProps({
-      title: currentMessage ? `${currentMessage.subject}` : currentViewName,
-      breadcrumb: currentMessage 
-        ? [{label: "Mail", onClick: () => {}}, {label: currentViewName}, {label: currentMessage.subject}] 
-        : [{label: "Mail"}],
-      primaryAction: {
-        label: 'Compose',
-        onClick: () => handleStartCompose(),
-        icon: <Edit size={16} />
-      },
-      secondaryActions: [
-        {
-          label: showTestComponent ? 'Hide Test' : 'Show Test',
-          onClick: toggleTestComponent,
-          icon: <Edit size={16} />
-        },
-        {
-          label: isMailSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar',
-          onClick: toggleMailSidebar,
-          icon: <PanelLeft size={16} />
-        },
-        {
-          label: isContextOpen ? 'Hide Context' : 'Show Context',
-          onClick: toggleContext,
-          icon: <PanelRight size={16} />
-        }
-      ]
+      title: "Mail"
     });
-  }, [setHeaderProps, currentMessage, currentView, handleStartCompose, toggleMailSidebar, toggleContext, toggleTestComponent, isMailSidebarOpen, isContextOpen, showTestComponent]);
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps]);
 
   // Show authentication modal if not authenticated
   if (!isAuthenticated) {

@@ -20,10 +20,6 @@ export function Dashboard() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleAddWidget = useCallback(() => {
-    console.log('Add widget');
-  }, []);
-
   // Simulate loading data
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -35,23 +31,10 @@ export function Dashboard() {
 
   useEffect(() => {
     setHeaderProps({
-      title: "Good morning, Alex",
-      primaryAction: {
-        label: 'Add widget',
-        onClick: handleAddWidget,
-        icon: <PlusCircle size={16} />
-      },
-      secondaryActions: [
-        {
-          label: 'More options',
-          onClick: () => console.log('More options'),
-          icon: <MoreHorizontal size={16} />,
-          variant: 'ghost' as const
-        }
-      ]
+      title: "Good morning, Alex"
     });
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps, handleAddWidget]);
+  }, [setHeaderProps, clearHeaderProps]);
 
   if (isLoading) {
     return (

@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✅ Completed
 
+#### Calendar & Tasks Integration System ✅
+- **Complete Google Calendar & Tasks Integration** ✅
+  - Implemented comprehensive Google Calendar and Tasks API integration
+  - Created TypeScript type system for Google services in `src/types/google.ts`
+  - Built GoogleCalendarService and GoogleTasksService with authentication
+  - Added mock service layer with development mode fallback
+  - Implemented Zustand store for Google accounts, tasks, and calendar events
+  - Location: `src/services/googleCalendarService.ts`, `src/services/googleTasksService.ts`, `src/stores/googleStore.ts`
+
+- **Tasks Page Kanban Board Implementation** ✅
+  - Converted Tasks page to use real Google Tasks data from API
+  - Implemented drag-and-drop functionality using @dnd-kit for task reordering
+  - Added multi-account support with account selector dropdown
+  - Created task list management with column-based Kanban layout
+  - Fixed infinite loops and data format issues in store integration
+  - Added proper loading states and error handling
+  - Location: `src/app/pages/Tasks.tsx`
+
+- **Calendar Page FullCalendar Integration** ✅
+  - Replaced react-big-calendar with FullCalendar v6 implementation
+  - Fixed CSS import issues (FullCalendar v6 auto-injects CSS)
+  - Integrated Google Calendar events display with proper formatting
+  - Added tasks sidebar with live Google Tasks data
+  - Implemented calendar event creation and editing functionality
+  - Added multi-view support (Month, Week, Day) with proper navigation
+  - Location: `src/app/pages/Calendar.tsx`
+
+- **Drag-and-Drop Time Blocking System** ✅
+  - Implemented task dragging from sidebar to calendar for time blocking
+  - Added drag state management in store with proper cleanup
+  - Created visual feedback for drag operations (ghost cards, drop zones)
+  - Prepared Schedule Task Modal architecture for time block creation
+  - Integrated with Google Calendar API for event creation
+  - Added proper drag cursor and interaction states
+  - Location: Calendar sidebar and drag handlers
+
+- **Dependency Management & Build System** ✅
+  - Installed and configured @dnd-kit packages for drag-and-drop functionality
+  - Added @fullcalendar/react, @fullcalendar/daygrid, @fullcalendar/timegrid, @fullcalendar/interaction
+  - Resolved googleapis browser compatibility issues using Tauri command architecture
+  - Fixed FullCalendar v6 CSS import issues (removed unnecessary CSS imports)
+  - Created proper mock data architecture for development mode
+  - Location: `package.json`, various service files
+
 #### Gmail Pagination System ✅
 - **Complete Email Pagination Implementation** ✅
   - Fixed critical pagination bug where "inbox" (lowercase) was breaking Gmail API calls
@@ -134,6 +178,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Batch download operations and storage statistics
 
 ### 🚧 Work In Progress
+
+#### Schedule Task Modal Implementation
+- **Time Block Creation Interface** 🚧
+  - Implementing Schedule Task Modal for drag-and-drop time blocking
+  - Adding start/end time inputs for converting tasks to timed calendar events
+  - Integrating with Google Calendar API for event creation
+  - Target completion: Next iteration
+  - Location: `src/components/ui/ScheduleTaskModal.tsx` (to be restored)
+
+#### Multi-Account Google Services
+- **Enhanced Account Management** 🚧
+  - Implementing full multi-account authentication flow
+  - Adding account switching with proper data isolation
+  - Enhancing credentials management across services
+  - Location: Google services and store modules
+
+### 🔧 Recent Fixes
+
+#### FullCalendar CSS Import Resolution ✅
+- **Fixed FullCalendar v6 CSS Import Issues**
+  - Resolved "Missing specifier" errors for @fullcalendar/core CSS imports
+  - Removed unnecessary CSS imports (v6 auto-injects CSS via JavaScript)
+  - Fixed build errors preventing Calendar page from loading
+  - Updated Calendar.tsx to use proper FullCalendar v6 architecture
+  - Location: `src/app/pages/Calendar.tsx`
 
 ### 🐛 Current Issues
 

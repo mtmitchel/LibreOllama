@@ -1,30 +1,73 @@
 import '@testing-library/jest-dom';
 import { vi, beforeEach, afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
 import { enableMapSet } from 'immer';
+import { resetAllStores } from '../test-utils/zustand-reset';
 
 enableMapSet();
 
-// Mock import.meta for Vitest environment
-(global as any).importMeta = {
-  env: {
-    DEV: false,
-    PROD: true,
-    MODE: 'test'
-  }
+// Mock import.meta for Vitest environment to ensure DEV mode is true
+Object.defineProperty(import.meta, 'env', {
+  value: {
+    MODE: 'test',
+    DEV: true,
+    VITE_APP_NAME: 'LibreOllama',
+    VITE_APP_VERSION: '1.0.0',
+    BASE_URL: '/',
+    PROD: false,
+    SSR: false,
+  },
+  writable: true,
+});
+
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+// Mock IntersectionObserver
+global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+// Mock fetch
+global.fetch = vi.fn();
+
+// Mock localStorage for tests
+const localStorageMock = {
+  getItem: vi.fn((key: string) => {
+    return localStorageMock.storage[key] || null;
+  }),
+  setItem: vi.fn((key: string, value: string) => {
+    localStorageMock.storage[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete localStorageMock.storage[key];
+  }),
+  clear: vi.fn(() => {
+    localStorageMock.storage = {};
+  }),
+  storage: {} as Record<string, string>,
 };
 
-// Create a more comprehensive import.meta mock
-Object.defineProperty(global, 'import', {
-  value: {
-    meta: {
-      env: {
-        DEV: false,
-        PROD: true,
-        MODE: 'test'
-      }
-    }
-  }
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
 });
+
+// Mock requestAnimationFrame
+global.requestAnimationFrame = vi.fn(cb => setTimeout(cb, 0));
+global.cancelAnimationFrame = vi.fn();
+
+// Mock performance
+global.performance = {
+  ...global.performance,
+  now: vi.fn(() => Date.now()),
+};
 
 // Mock window.matchMedia 
 Object.defineProperty(window, 'matchMedia', {
@@ -41,13 +84,6 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
 // Note: ESM modules don't support vi.mock in setup files
 // Individual test files should use vi.mock() for proper ESM module mocking
 // as recommended in the testing guide
@@ -56,12 +92,6 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 // This provides better test reliability and validates actual store implementation
 
 // Global test utilities
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn()
-}));
-
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
@@ -71,16 +101,26 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 // Suppress console warnings in tests unless explicitly testing them
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
-const originalConsoleLog = console.log; // Add this
+const originalConsoleLog = console.log;
 
 beforeEach(() => {
   console.error = vi.fn();
   console.warn = vi.fn();
-  console.log = vi.fn(); // Add this
+  console.log = vi.fn();
 });
 
+// Cleanup after each test
 afterEach(() => {
+  cleanup();
+  resetAllStores();
+  vi.clearAllMocks();
+  
+  // Clean up localStorage
+  if (typeof localStorage !== 'undefined') {
+    localStorage.clear();
+  }
+  
   console.error = originalConsoleError;
   console.warn = originalConsoleWarn;
-  console.log = originalConsoleLog; // Add this
+  console.log = originalConsoleLog;
 });

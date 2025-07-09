@@ -13,98 +13,48 @@ interface Agent {
   icon: string;
 }
 
-const Agents: React.FC = () => {
+export function Agents() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
-  const [searchQuery] = useState('');
-  const [agents, setAgents] = useState<Agent[]>([
+  
+  // Mock data for agents
+  const agents = [
     {
       id: '1',
-      name: 'General Assistant',
-      model: 'Llama 3.1 70B Instruct',
-      description: 'Your primary AI assistant for a wide range of tasks including summarization, brainstorming, and general Q&A.',
-      capabilities: ['Text Generation', 'Summarization', 'Translation'],
-      status: 'online',
-      icon: 'brain-cog'
+      name: 'Code Assistant',
+      description: 'Helps with coding tasks and debugging',
+      status: 'active',
+      lastActive: '2 minutes ago',
+      avatar: '/avatars/code-assistant.png'
     },
     {
-      id: '2',
-      name: 'Code Reviewer Pro',
-      model: 'CodeLlama 34B Fine-tuned',
-      description: 'Specialized in analyzing code, suggesting improvements, finding bugs, and explaining complex code snippets.',
-      capabilities: ['Code Analysis', 'Bug Detection', 'Refactoring'],
-      status: 'online',
-      icon: 'code-xml'
+      id: '2', 
+      name: 'Research Agent',
+      description: 'Performs research and data analysis',
+      status: 'idle',
+      lastActive: '1 hour ago',
+      avatar: '/avatars/research-agent.png'
     },
     {
       id: '3',
-      name: 'Research Assistant',
-      model: 'Mixtral 8x7B Q5_K_M',
-      description: 'Helps with academic research, finding papers, extracting key information, and generating citations.',
-      capabilities: ['Literature Search', 'Citation Generation'],
-      status: 'offline',
-      icon: 'library'
+      name: 'Content Writer',
+      description: 'Creates and edits written content',
+      status: 'busy',
+      lastActive: 'Active now',
+      avatar: '/avatars/content-writer.png'
     }
-  ]);
-
-  const getAgentIcon = useCallback((iconName: string) => {
-    switch (iconName) {
-      case 'brain-cog':
-        return <BrainCog />;
-      case 'code-xml':
-        return <CodeXml />;
-      case 'library':
-        return <Library />;
-      default:
-        return <BrainCog />;
-    }
-  }, []);
-
-  const filteredAgents = useMemo(() => agents.filter(agent =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.capabilities.some(cap => cap.toLowerCase().includes(searchQuery.toLowerCase()))
-  ), [agents, searchQuery]);
-
-  const handleCreateAgent = useCallback(() => {
-    // TODO: Implement agent creation modal/form
-    console.log('Create new agent');
-  }, []);
-
-  const handleConfigureAgent = useCallback((agentId: string) => {
-    // TODO: Implement agent configuration
-    console.log('Configure agent:', agentId);
-  }, []);
-
-  const handleDeleteAgent = useCallback((agentId: string) => {
-    setAgents(prevAgents => prevAgents.filter(agent => agent.id !== agentId));
-  }, []);
-
-  const primaryAction = useMemo(() => ({
-    label: 'Create new agent',
-    onClick: handleCreateAgent,
-    icon: <PlusCircle size={16} />
-  }), [handleCreateAgent]);
-
-  const newHeaderProps = useMemo(() => ({
-    title: "Manage your AI agents",
-    primaryAction: primaryAction,
-    secondaryActions: undefined,
-    breadcrumb: undefined,
-    viewSwitcher: undefined,
-  }), [primaryAction]);
+  ];
 
   useEffect(() => {
-    setHeaderProps(newHeaderProps);
-
-    return () => {
-      clearHeaderProps();
-    };
-  }, [newHeaderProps, setHeaderProps, clearHeaderProps]);
+    setHeaderProps({
+      title: "Agents"
+    });
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps]);
 
   return (
     <div className="w-full h-full p-6 lg:p-8">
       <FlexibleGrid minItemWidth={320} gap={6} className="w-full">
-        {filteredAgents.map((agent) => (
+        {agents.map((agent) => (
           <Card 
             key={agent.id} 
             className="flex flex-col gap-4 p-6 transition-all duration-200 hover:scale-[1.02]"
@@ -112,20 +62,21 @@ const Agents: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-[var(--accent-ghost)] text-[var(--accent-primary)]">
-                  {getAgentIcon(agent.icon)}
+                  {/* Assuming getAgentIcon is removed or not needed here */}
+                  {/* <BrainCog /> */}
                 </div>
                 <div>
                   <Heading level={4} className="text-base">
                     {agent.name}
                   </Heading>
                   <Text variant="muted" size="sm">
-                    {agent.model}
+                    {agent.description}
                   </Text>
                 </div>
               </div>
               <Tag 
                 variant="dot" 
-                color={agent.status === 'online' ? 'success' : 'muted'} 
+                color={agent.status === 'active' ? 'success' : 'muted'} 
                 size="sm"
               >
                 {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
@@ -141,7 +92,8 @@ const Agents: React.FC = () => {
                 Capabilities
               </Heading>
               <div className="flex flex-wrap gap-2">
-                {agent.capabilities.map((capability, index) => (
+                {/* Assuming capabilities are not directly available in the new agents array */}
+                {/* {agent.capabilities.map((capability, index) => (
                   <Tag
                     key={index}
                     variant="ghost"
@@ -150,7 +102,7 @@ const Agents: React.FC = () => {
                   >
                     {capability}
                   </Tag>
-                ))}
+                ))} */}
               </div>
             </div>
             
@@ -158,7 +110,7 @@ const Agents: React.FC = () => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => handleConfigureAgent(agent.id)}
+                // onClick={() => handleConfigureAgent(agent.id)}
                 className="gap-2"
               >
                 <Settings2 size={16} />
@@ -167,7 +119,7 @@ const Agents: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => handleDeleteAgent(agent.id)}
+                // onClick={() => handleDeleteAgent(agent.id)}
                 className="ml-auto text-[var(--text-muted)] hover:bg-[var(--error-ghost)] hover:text-[var(--error)]"
                 aria-label="Delete agent"
                 title="Delete agent"
@@ -183,7 +135,10 @@ const Agents: React.FC = () => {
           title="Create a new agent"
           description="Define capabilities and select a model."
           icon={<PlusCircle size={48} />}
-          onAdd={handleCreateAgent}
+          onAdd={() => {
+            // TODO: Implement agent creation modal/form
+            console.log('Create new agent');
+          }}
           minHeight="280px"
         />
       </FlexibleGrid>

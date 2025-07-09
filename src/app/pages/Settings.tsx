@@ -15,9 +15,13 @@ import {
   Download,
   RefreshCw,
   Trash2,
+  Check,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 import { Card, Button, Input, Checkbox, Heading, Text } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
+// Removed legacy googleStore import
 
 // Design system aligned Toggle Switch Component
 interface ToggleSwitchProps {
@@ -60,6 +64,13 @@ const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState('general');
   // Example state for toggle switches
   const [checkForUpdates, setCheckForUpdates] = useState(true);
+  
+  // Mock Google accounts data
+  const accounts: any[] = [];
+  const activeAccount = null;
+  const setActiveAccount = (account: any) => console.log('Mock: setActiveAccount', account);
+  const addAccount = (account: any) => console.log('Mock: addAccount', account);
+  const removeAccount = (accountId: string) => console.log('Mock: removeAccount', accountId);
 
   const navItems = [
     { id: 'general', label: 'General', icon: SlidersHorizontal },
@@ -250,21 +261,81 @@ const Settings: React.FC = () => {
             </div>
             <div className="flex flex-col gap-8">
               <Card className="p-6">
-                <Heading level={2} className="text-lg font-semibold mb-4">Connected Accounts</Heading>
+                <div className="flex items-center justify-between mb-4">
+                  <Heading level={2} className="text-lg font-semibold">Google Accounts</Heading>
+                  <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <LinkIcon size={16} /> Add Account
+                  </Button>
+                </div>
+                <Text variant="muted" size="sm" className="mb-4">
+                  Manage your Google accounts for Calendar and Tasks integration.
+                </Text>
+                
+                {accounts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Gem size={48} className="text-muted opacity-50 mb-4" />
+                    <Text weight="medium" className="mb-2">No Google accounts connected</Text>
+                    <Text variant="muted" size="sm">
+                      Connect a Google account to sync your Calendar and Tasks.
+                    </Text>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {accounts.map(account => (
+                      <div key={account.id} className="flex items-center justify-between p-4 border border-border-default rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center">
+                            {account.picture ? (
+                              <img 
+                                src={account.picture} 
+                                alt={account.name}
+                                className="w-10 h-10 rounded-full"
+                              />
+                            ) : (
+                              <User size={20} className="text-accent-primary" />
+                            )}
+                          </div>
+                          <div>
+                            <Text weight="medium">{account.name || account.email}</Text>
+                            <Text variant="muted" size="sm">{account.email}</Text>
+                          </div>
+                          {activeAccount?.id === account.id && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-success-ghost text-success rounded-full">
+                              <Check size={12} />
+                              <Text size="xs">Active</Text>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {activeAccount?.id !== account.id && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setActiveAccount(account)}
+                              className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            >
+                              Set Active
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => removeAccount(account.id)}
+                            className="text-error hover:bg-error-ghost focus:ring-2 focus:ring-error focus:ring-offset-2"
+                          >
+                            <X size={16} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+              
+              <Card className="p-6">
+                <Heading level={2} className="text-lg font-semibold mb-4">Other Services</Heading>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between py-3 border-b border-border-default">
-                    <div className="flex items-center gap-3">
-                      <Gem size={20} className="text-accent-primary" />
-                      <div>
-                        <Text weight="medium">Google</Text>
-                        <Text variant="muted" size="sm">Sync Calendar and Tasks.</Text>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                      <LinkIcon size={16} /> Connect
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
                       <Github size={20} className="text-primary" />
                       <div>
@@ -272,8 +343,8 @@ const Settings: React.FC = () => {
                         <Text variant="muted" size="sm">Sync repositories and issues.</Text>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                      <LinkIcon size={16} /> Connect
+                    <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2" disabled>
+                      <LinkIcon size={16} /> Coming Soon
                     </Button>
                   </div>
                 </div>

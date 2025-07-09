@@ -2,11 +2,20 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import analyzer from 'rollup-plugin-analyzer';
+import detectPort from 'detect-port';
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(async () => {
+  const DEFAULT_PORT = 1423;
+  const port = await detectPort(DEFAULT_PORT);
+  
+  if (port !== DEFAULT_PORT) {
+    console.log(`⚠️  Port ${DEFAULT_PORT} is in use, using port ${port} instead`);
+  }
+
+  return {
   plugins: [react()],
   resolve: {
     alias: {
@@ -85,10 +94,10 @@ export default defineConfig({
   //
   // 1. prevent vite from obscuring rust errors
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
+  // 2. use dynamic port detection to avoid conflicts
   server: {
-    port: 1423,
-    strictPort: true,
+    port: port,
+    strictPort: false, // Allow fallback to alternative ports
     host: host ? host : "0.0.0.0",
     hmr: host
       ? {
@@ -102,4 +111,5 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
+  };
 });

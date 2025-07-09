@@ -7,16 +7,28 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: 'happy-dom',
+    environment: 'jsdom',
     setupFiles: [
-      './vitest.hoisted.setup.ts', // Hoisted mocks run first
-      './src/tests/setup.ts',
-      // vitest-canvas-mock removed to avoid conflicts with custom mocks
+      'vitest-localstorage-mock',    // Auto-mocks localStorage/sessionStorage
+      '@vitest/web-worker',          // Web Worker testing support
+      './vitest.hoisted.setup.ts',   // Hoisted mocks run first
+      './src/tests/setup.ts',        // Manual setup and additional mocks
     ],
     testTimeout: 20000,
+    mockReset: true,
+    hookTimeout: 10000,
+    silent: false,                   // Enable console output for debugging
+  },
+  // ESBuild configuration for JSX support in all contexts
+  esbuild: {
+    jsx: 'automatic',
+    jsxInject: 'import React from "react"'
   },
   optimizeDeps: {
     include: ['konva', 'react-konva'],
+    esbuildOptions: {
+      jsx: 'automatic'
+    }
   },
   resolve: {
     alias: {

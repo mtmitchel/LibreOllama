@@ -22,7 +22,7 @@ import {
 } from "../../core/lib/chatMockData";
 
 export function Chat() {
-  const { setHeaderProps } = useHeader();
+  const { setHeaderProps, clearHeaderProps } = useHeader();
   
   // --- STATE MANAGEMENT ---
   const [conversations, setConversations] = useState(mockConversations);
@@ -82,13 +82,6 @@ export function Chat() {
     setIsContextOpen(!isContextOpen);
   }, [isContextOpen]);
 
-  const handleNewChat = useCallback(() => {
-    const newConversation = createNewConversation("New Chat");
-    setConversations(prev => [newConversation, ...prev]);
-    setSelectedChatId(newConversation.id);
-    setMessages([]);
-  }, []);
-
   const togglePinConversation = useCallback((conversationId: string) => {
     setConversations(prev =>
       prev.map(conv =>
@@ -119,19 +112,11 @@ export function Chat() {
 
   // Setup header when component mounts and when selectedChat changes
   useEffect(() => {
-    const selectedChat = conversations.find(c => c.id === selectedChatId);
     setHeaderProps({
-      title: selectedChat ? selectedChat.title : "Chat",
-      breadcrumb: selectedChat 
-        ? [{label: "Chat", onClick: () => setSelectedChatId(null)}, {label: selectedChat.title}] 
-        : [{label: "Chat"}],
-      primaryAction: {
-        label: 'New chat',
-        onClick: handleNewChat,
-        icon: <Plus size={16} />
-      }
+      title: "Chat"
     });
-  }, [setHeaderProps, handleNewChat, selectedChatId, conversations]);
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps]);
 
   const selectedChat = conversations.find(c => c.id === selectedChatId);
 
@@ -145,7 +130,7 @@ export function Chat() {
         hoveredConversationId={hoveredConversationId}
         isOpen={isConvoListOpen}
         onSelectChat={handleSelectChat}
-        onNewChat={handleNewChat}
+        onNewChat={() => {}} // Removed handleNewChat
         onSearchChange={setSearchQuery}
         onHoverConversation={setHoveredConversationId}
         onTogglePin={togglePinConversation}
@@ -195,7 +180,7 @@ export function Chat() {
             </div>
           </>
         ) : (
-          <EmptyState onNewChat={handleNewChat} />
+          <EmptyState onNewChat={() => {}} />
         )}
       </div>
 

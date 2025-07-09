@@ -14,6 +14,7 @@ mod services;
 
 // Re-export commands for easy access using new domain-grouped structure
 use commands::gmail::*;        // Gmail auth and operations (consolidated)
+use commands::tasks::*;        // Google Tasks API operations
 use commands::agents::*;       // Agent lifecycle commands  
 use commands::chat::*;         // Chat session commands
 use commands::system::*;       // System and advanced commands
@@ -335,6 +336,7 @@ pub fn run() {
             get_gmail_tokens_secure,
             get_gmail_accounts_secure,
             remove_gmail_tokens_secure,
+            clear_gmail_tokens,
             update_gmail_sync_timestamp_secure,
             check_token_validity_secure,
             validate_and_refresh_gmail_tokens,
@@ -388,6 +390,16 @@ pub fn run() {
             enable_gmail_offline_access,
             get_gmail_offline_messages,
             preload_gmail_for_offline,
+            // Google Tasks API commands
+            get_task_lists,
+            get_tasks,
+            create_task,
+            update_task,
+            move_task,
+            delete_task,
+            create_task_list,
+            update_task_list,
+            delete_task_list,
             // Rate limiter commands
             initialize_rate_limiter,
             get_quota_status,

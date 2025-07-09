@@ -353,6 +353,19 @@ const useMailStore = create<EnhancedMailStore>()(
               tokens = await gmailApi.getTokens();
             } catch (error) {
               console.error('❌ [QUOTA] Token decryption failed - account needs re-authentication:', error);
+              
+              // If tokens are corrupted, they've already been cleared by the API service
+              if (error instanceof Error && error.message.includes('Authentication tokens are corrupted')) {
+                // Remove the account from the store to force re-authentication
+                set((state) => {
+                  delete state.accounts[accountId];
+                  if (state.currentAccountId === accountId) {
+                    const remainingAccounts = Object.keys(state.accounts);
+                    state.currentAccountId = remainingAccounts.length > 0 ? remainingAccounts[0] : null;
+                  }
+                });
+              }
+              
               throw new Error('Token corrupted - please sign out and sign in again');
             }
             
@@ -1134,6 +1147,19 @@ const useMailStore = create<EnhancedMailStore>()(
             });
           } catch (error) {
             console.error('❌ [STORE] Failed to fetch labels:', error);
+            
+            // If tokens are corrupted, they've already been cleared by the API service
+            if (error instanceof Error && error.message.includes('Authentication tokens are corrupted')) {
+              // Remove the account from the store to force re-authentication
+              set((state) => {
+                delete state.accounts[targetAccountId];
+                if (state.currentAccountId === targetAccountId) {
+                  const remainingAccounts = Object.keys(state.accounts);
+                  state.currentAccountId = remainingAccounts.length > 0 ? remainingAccounts[0] : null;
+                }
+              });
+              return; // Don't set fallback labels for corrupted accounts
+            }
             
             // As a fallback, set some basic system labels
             set((state) => {

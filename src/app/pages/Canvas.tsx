@@ -21,31 +21,9 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
     setCanvasStageRef(stageRef);
   };
 
-  const handleNewCanvas = () => {
-    // TODO: Implement new canvas creation
-    console.log('Create new canvas');
-  };
-
-  const handleSaveCanvas = () => {
-    // TODO: Implement canvas save
-    console.log('Save canvas');
-  };
-
   useEffect(() => {
     setHeaderProps({
-      title: "Canvas",
-      primaryAction: {
-        label: 'New canvas',
-        onClick: handleNewCanvas,
-        icon: <Plus size={16} />
-      },
-      secondaryActions: [
-        {
-          label: 'Save',
-          onClick: handleSaveCanvas,
-          icon: <Save size={16} />
-        }
-      ]
+      title: "Canvas"
     });
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);

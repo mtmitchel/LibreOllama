@@ -139,6 +139,18 @@ pub async fn remove_gmail_tokens_secure(
         .map_err(|e| e.to_string())
 }
 
+/// Clear Gmail tokens for a specific account (for token corruption recovery)
+#[tauri::command]
+pub async fn clear_gmail_tokens(
+    account_id: String,
+    auth_service: State<'_, Arc<GmailAuthService>>,
+) -> Result<(), String> {
+    auth_service
+        .remove_account(&account_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Update Gmail sync timestamp
 #[tauri::command]
 pub async fn update_gmail_sync_timestamp_secure(

@@ -33,6 +33,19 @@ export class GmailApiService {
       return tokens;
     } catch (error) {
       console.error('❌ [API] Failed to get tokens:', error);
+      
+      // If decryption failed, clear the corrupted tokens
+      if (error instanceof Error && error.message.includes('Decryption failed')) {
+        console.log('🧹 [API] Clearing corrupted tokens for account:', this.accountId);
+        try {
+          await invoke('clear_gmail_tokens', { accountId: this.accountId });
+          console.log('✅ [API] Corrupted tokens cleared, user needs to re-authenticate');
+        } catch (clearError) {
+          console.warn('⚠️ [API] Failed to clear corrupted tokens:', clearError);
+        }
+        throw new Error('Authentication tokens are corrupted - please sign out and sign in again');
+      }
+      
       throw error;
     }
   }

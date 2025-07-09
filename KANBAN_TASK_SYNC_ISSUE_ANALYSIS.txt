@@ -1,0 +1,566 @@
+KANBAN TASK SYNCHRONIZATION ISSUE - COMPREHENSIVE ANALYSIS
+================================================================
+
+PROBLEM SUMMARY:
+===============
+The task management system has persistent synchronization issues where:
+1. Labels and due dates sometimes don't show up until tasks are moved to a new list
+2. Due date updates are not reliable
+3. Adding multiple labels doesn't update in real-time consistently
+4. Race conditions occur between move and update operations causing "Task not found" errors
+
+CURRENT ARCHITECTURE:
+====================
+The system uses:
+- React + TypeScript frontend
+- Zustand for state management
+- Mock Google Tasks API for development
+- Web Workers for background sync operations
+- Optimistic updates for UI responsiveness
+
+KEY FILES AND THEIR ROLES:
+==========================
+
+1. MAIN TASK PAGE:
+   File: src/app/pages/Tasks.tsx
+   Role: Main kanban board component, handles task submission and updates
+
+2. TASK FORM HOOK:
+   File: src/features/tasks/hooks/useTaskForm.ts
+   Role: Manages task form state, including labels and due dates
+
+3. GOOGLE STORE:
+   File: src/stores/googleStore.ts
+   Role: Zustand store managing task state and API operations
+
+4. MOCK SERVICE:
+   File: src/services/google/mockGoogleService.ts
+   Role: Simulates Google Tasks API with task operation queue
+
+5. SYNC WORKER:
+   File: src/features/tasks/workers/taskSync.worker.ts
+   Role: Handles background task move operations
+
+6. SYNC QUEUE HOOK:
+   File: src/features/tasks/hooks/useTaskSyncQueue.ts
+   Role: Manages sync operations and worker communication
+
+DETAILED CODE ANALYSIS:
+======================
+
+TASK SUBMISSION FLOW (src/app/pages/Tasks.tsx):
+-----------------------------------------------
+```typescript
+const handleSubmitTask = async (taskListId: string, taskData: any) => {
+  try {
+    // Import helper lazily to avoid circular deps
+    const { encodeEnhancedTaskData } = await import('../../features/tasks/utils/taskHelpers');
+
+    /* 1. Start with any enhanced properties that already exist on the task being edited.
+       This prevents us from accidentally stripping data (e.g. labels / priority) in cases
+       where the user opens the edit modal but does not touch those fields. */
+    const existingEnhancedProps: Record<string, any> = modalState.type === 'edit' && modalState.task
+      ? {
+          labels: modalState.task.labels,
+          priority: modalState.task.priority,
+          subtasks: modalState.task.subtasks,
+          recurring: modalState.task.recurring,
+        }
+      : {};
+
+    // 2. Overlay the latest values coming from the form.  We intentionally allow users to
+    //    clear a field – e.g. remove all labels – so an empty array should REMOVE the property.
+    const enhancedData: Record<string, any> = { ...existingEnhancedProps };
+
+    const mergeOrDelete = (key: keyof typeof taskData, value: any) => {
+      if (value === undefined) return;
+      if (Array.isArray(value) && value.length === 0) {
+        delete enhancedData[key as string];
+      } else if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
+        // Empty object -> delete
+        delete enhancedData[key as string];
+      } else {
+        enhancedData[key as string] = value;
+      }
+    };
+
+    mergeOrDelete('labels', taskData.labels);
+    mergeOrDelete('priority', taskData.priority && taskData.priority !== 'normal' ? taskData.priority : undefined);
+    mergeOrDelete('subtasks', taskData.subtasks);
+    mergeOrDelete('recurring', taskData.recurring && taskData.recurring.enabled ? taskData.recurring : undefined);
+
+    /* 3. Build the Google-compatible payload. */
+    const googleTaskData: any = {
+      title: taskData.title,
+      notes: taskData.notes || '',
+      due: taskData.due ? new Date(taskData.due + 'T00:00:00.000Z').toISOString() : undefined,
+    };
+
+    // 4. Re-encode enhanced data (if any) into the notes field.  We always include it so that
+    //    previously saved metadata is preserved even if the user doesn't change it in this edit. */
+    if (Object.keys(enhancedData).length > 0) {
+      const encodedData = encodeEnhancedTaskData(enhancedData);
+      googleTaskData.notes = googleTaskData.notes.trim()
+        ? `${googleTaskData.notes} ${encodedData}`
+        : encodedData;
+    }
+
+    if (modalState.type === 'edit' && modalState.task) {
+      // Resolve the authoritative list ID from the store's mapping in case the task was moved
+      const mappedListId = taskIdToListId.get(modalState.task.id) || taskListId;
+      
+      console.log('[Tasks] Updating task:', {
+        taskId: modalState.task.id,
+        originalListId: taskListId,
+        mappedListId,
+        taskData: googleTaskData,
+        enhancedData
+      });
+      
+      // Apply optimistic update for immediate visual feedback
+      optimisticUpdateTask(mappedListId, modalState.task.id, {
+        title: googleTaskData.title,
+        notes: googleTaskData.notes,
+        due: googleTaskData.due,
+        labels: enhancedData.labels,
+        priority: enhancedData.priority,
+        subtasks: enhancedData.subtasks,
+        recurring: enhancedData.recurring,
+      });
+      
+      const success = await handleUpdateTask(mappedListId, modalState.task.id, googleTaskData);
+      if (!success) {
+        addToast('error', 'Update Failed', 'Unable to update the task. Please try again.');
+        // Revert optimistic update on failure
+        optimisticUpdateTask(mappedListId, modalState.task.id, {
+          title: modalState.task.title,
+          notes: modalState.task.notes,
+          due: modalState.task.due,
+          labels: modalState.task.labels,
+          priority: modalState.task.priority,
+          subtasks: modalState.task.subtasks,
+          recurring: modalState.task.recurring,
+        });
+      }
+      return success;
+    }
+    
+    const success = await handleCreateTask(taskListId, googleTaskData);
+    if (!success) {
+      addToast('error', 'Creation Failed', 'Unable to create the task. Please try again.');
+    }
+    return success;
+  } catch (error) {
+    console.error('Error in handleSubmitTask:', error);
+    addToast('error', 'Operation Failed', error instanceof Error ? error.message : 'An unexpected error occurred');
+    return false;
+  }
+};
+```
+
+TASK FORM STATE MANAGEMENT (src/features/tasks/hooks/useTaskForm.ts):
+--------------------------------------------------------------------
+```typescript
+const addLabel = useCallback((label: string) => {
+  if (label.trim() && !taskForm.labels?.includes(label.trim())) {
+    setTaskForm(prev => ({
+      ...prev,
+      labels: [...(prev.labels || []), label.trim()]
+    }));
+  }
+}, [taskForm.labels]);
+
+const removeLabel = useCallback((labelToRemove: string) => {
+  setTaskForm(prev => ({
+    ...prev,
+    labels: (prev.labels || []).filter(label => label !== labelToRemove)
+  }));
+}, []);
+
+const openEditModal = useCallback((task: EnhancedGoogleTask, listId: string) => {
+  setModalState({
+    type: 'edit',
+    columnId: listId,
+    columnTitle: null,
+    isOpen: true,
+    task: task,
+  });
+
+  // Populate form with task data (enhanced data is already extracted by store)
+  setTaskForm({
+    title: task.title,
+    notes: task.notes || '', // Notes are already cleaned by store
+    due: task.due ? new Date(task.due).toISOString().split('T')[0] : '',
+    priority: task.priority || 'normal',
+    recurring: task.recurring || {
+      enabled: false,
+      frequency: 'weekly',
+      interval: 1,
+      endDate: '',
+    },
+    labels: [...(task.labels || [])], // Create a new array to avoid reference issues
+    subtasks: [...(task.subtasks || [])], // Create a new array to avoid reference issues
+  });
+  setFormErrors({});
+}, []);
+```
+
+GOOGLE STORE UPDATE LOGIC (src/stores/googleStore.ts):
+------------------------------------------------------
+```typescript
+updateTask: async (taskListId: string, taskId: string, updates: Partial<TaskCreateData>) => {
+  const { activeAccount, taskSyncState, kanbanColumns } = get();
+  if (!activeAccount) throw new Error("No active account");
+  
+  // Check sync state
+  const syncState = taskSyncState.get(taskId);
+  const isUnsynced = syncState && syncState.status !== 'synced';
+  
+  // Determine which lists to try - be more comprehensive
+  const listsToTry: string[] = [];
+  
+  if (isUnsynced && syncState) {
+    // If unsynced, try target list first, then original list
+    if (syncState.targetListId) listsToTry.push(syncState.targetListId);
+    if (syncState.originalListId && syncState.originalListId !== syncState.targetListId) {
+      listsToTry.push(syncState.originalListId);
+    }
+  } else {
+    // Try the provided list first
+    listsToTry.push(taskListId);
+  }
+  
+  // Add all other lists as fallbacks
+  for (const column of kanbanColumns) {
+    if (!listsToTry.includes(column.taskList.id)) {
+      listsToTry.push(column.taskList.id);
+    }
+  }
+  
+  const attemptUpdate = async (listIds: string[], currentIndex = 0): Promise<any> => {
+    if (currentIndex >= listIds.length) {
+      throw new Error('Task not found in any list');
+    }
+    
+    const listId = listIds[currentIndex];
+    try {
+      const response = await googleTasksService.updateTask(activeAccount, listId, taskId, updates);
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error(response.error || 'Failed to update task');
+    } catch (error: any) {
+      if (error.message?.includes('not found') && currentIndex < listIds.length - 1) {
+        // Task not found in this list, try the next one
+        console.log(`[Store] Task not found in ${listId}, trying next list...`);
+        return attemptUpdate(listIds, currentIndex + 1);
+      }
+      throw error;
+    }
+  };
+  
+  try {
+    const updatedTask = await attemptUpdate(listsToTry);
+    const enhancedTask = enhanceTask(updatedTask);
+    
+    set(produce(draft => {
+      // Clear sync issues if update succeeded
+      if (syncState) {
+        draft.taskSyncState.set(taskId, {
+          ...syncState,
+          status: 'synced'
+        });
+      }
+      
+      // Find and update the task in whichever column it currently exists
+      let updated = false;
+      for (const column of draft.kanbanColumns) {
+        const updateInTasks = (tasks: HierarchicalTask[]): boolean => {
+          for (let i = 0; i < tasks.length; i++) {
+            if (tasks[i].id === taskId) {
+              // Preserve existing enhanced properties and merge with new ones
+              const existingTask = tasks[i];
+              tasks[i] = { 
+                ...existingTask,
+                ...enhancedTask,
+                // Ensure enhanced properties are preserved
+                labels: enhancedTask.labels || existingTask.labels,
+                priority: enhancedTask.priority || existingTask.priority,
+                subtasks: enhancedTask.subtasks || existingTask.subtasks,
+                recurring: enhancedTask.recurring || existingTask.recurring,
+              };
+              return true;
+            }
+            if (tasks[i].children && updateInTasks(tasks[i].children)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        
+        if (updateInTasks(column.tasks)) {
+          column.tasks = [...column.tasks]; // Force re-render
+          updated = true;
+          break;
+        }
+      }
+      
+      if (!updated) {
+        console.error(`[Store] Failed to find task ${taskId} in any column`);
+      }
+      
+      draft.lastUpdateTime = Date.now();
+    }));
+  } catch (error) {
+    console.error(`[Store] Failed to update task after all attempts:`, error);
+    throw error;
+  }
+},
+```
+
+MOCK SERVICE WITH TASK QUEUE (src/services/google/mockGoogleService.ts):
+------------------------------------------------------------------------
+```typescript
+// Task operation queue to prevent race conditions
+const taskOperationQueue = new Map<string, Promise<any>>();
+
+// Queue task operations to prevent race conditions
+const queueTaskOperation = async <T>(taskId: string, operation: () => Promise<T>): Promise<T> => {
+  // Wait for any existing operation on this task to complete
+  const existingOperation = taskOperationQueue.get(taskId);
+  if (existingOperation) {
+    try {
+      await existingOperation;
+    } catch (error) {
+      // Ignore errors from previous operations
+      console.log(`[Mock] Previous operation for task ${taskId} failed, continuing...`);
+    }
+  }
+
+  // Create and queue the new operation
+  const newOperation = operation();
+  taskOperationQueue.set(taskId, newOperation);
+
+  try {
+    const result = await newOperation;
+    return result;
+  } finally {
+    // Clean up completed operation
+    if (taskOperationQueue.get(taskId) === newOperation) {
+      taskOperationQueue.delete(taskId);
+    }
+  }
+};
+
+case 'update_task':
+  // Queue update operations to prevent race conditions
+  queueTaskOperation(args.taskId, async () => {
+    const listId = args.taskListId;
+    const taskId = args.taskId;
+    
+    console.log(`[Mock] 🔄 Updating task ${taskId} in list ${listId} with data:`, args.taskData);
+    
+    // Search all lists for the task (in case it was moved)
+    let foundTask = null;
+    let foundListId = null;
+    
+    for (const currentListId in mockTasks) {
+      const taskList = mockTasks[currentListId];
+      const taskIndex = taskList.findIndex(t => t.id === taskId);
+      if (taskIndex !== -1) {
+        foundTask = taskList[taskIndex];
+        foundListId = currentListId;
+        
+        const updatedTask = { 
+          ...foundTask, 
+          ...args.taskData, 
+          updated: new Date().toISOString() 
+        };
+        taskList[taskIndex] = updatedTask;
+        
+        console.log(`[Mock] ✅ Task updated successfully in list ${currentListId}`);
+        console.log(`[Mock] Updated fields:`, {
+          title: foundTask.title !== updatedTask.title ? `"${foundTask.title}" -> "${updatedTask.title}"` : 'unchanged',
+          due: foundTask.due !== updatedTask.due ? `"${foundTask.due}" -> "${updatedTask.due}"` : 'unchanged',
+          notes: foundTask.notes !== updatedTask.notes ? `"${foundTask.notes}" -> "${updatedTask.notes}"` : 'unchanged'
+        });
+        return updatedTask;
+      }
+    }
+    
+    console.log(`[Mock] ❌ Task ${taskId} not found in any list`);
+    throw new Error('Task not found');
+  })
+  .then(resolve)
+  .catch(reject);
+  return; // Exit early since we're handling async
+```
+
+SYNC QUEUE MANAGEMENT (src/features/tasks/hooks/useTaskSyncQueue.ts):
+--------------------------------------------------------------------
+```typescript
+case 'operation-success':
+  console.log(`Task ${payload.taskId} synced successfully.`);
+  // Mark as synced in store (don't trigger another move operation)
+  store.optimisticUpdateTask('', payload.taskId, { unsynced: false });
+  break;
+```
+
+TASK ENHANCEMENT UTILITIES (src/features/tasks/utils/taskHelpers.ts):
+---------------------------------------------------------------------
+```typescript
+export const parseEnhancedTaskData = (notes: string) => {
+  const libreOllamaPattern = /\[LibreOllama:(.+?)\]$/;
+  const match = notes.match(libreOllamaPattern);
+  if (match) {
+    try {
+      return JSON.parse(match[1]);
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+};
+
+export const cleanTaskNotes = (notes: string): string => {
+  return notes ? notes.replace(/\[LibreOllama:(.+?)\]$/, '').trim() : '';
+};
+
+export const encodeEnhancedTaskData = (data: any): string => {
+  return `[LibreOllama:${JSON.stringify(data)}]`;
+};
+```
+
+WHAT WE'VE TRIED AND THEIR RESULTS:
+==================================
+
+1. TASK OPERATION QUEUE SYSTEM:
+   What: Added a per-task operation queue in mock service to prevent race conditions
+   Result: PARTIALLY WORKED - Reduced race conditions but didn't solve label/due date persistence
+   Status: Currently implemented
+
+2. COMPREHENSIVE LIST SEARCHING:
+   What: Modified update operations to search all lists for moved tasks
+   Result: PARTIALLY WORKED - Reduced "task not found" errors but didn't fix data persistence
+   Status: Currently implemented
+
+3. OPTIMISTIC UPDATES:
+   What: Added immediate UI updates with server sync afterwards
+   Result: MIXED - UI feels responsive but doesn't solve underlying persistence issues
+   Status: Currently implemented
+
+4. DUE DATE FORMAT CONVERSION:
+   What: Convert date strings to ISO format for Google Tasks API
+   Result: UNKNOWN - Recently implemented, needs testing
+   Status: Currently implemented
+
+5. ENHANCED DEBUGGING:
+   What: Added comprehensive logging throughout the system
+   Result: HELPFUL - Better visibility but revealed the core issues persist
+   Status: Currently implemented
+
+6. REMOVED DUPLICATE MOVE OPERATIONS:
+   What: Fixed sync queue to not trigger additional move operations after success
+   Result: IMPROVED - Reduced duplicate operations but core issues remain
+   Status: Currently implemented
+
+CURRENT SYMPTOMS AND ERROR PATTERNS:
+===================================
+
+CONSOLE LOG PATTERNS:
+---------------------
+```
+[Mock] Invoking command: move_task {accountId: 'mock-account-1', taskListId: 'list-2', taskId: 'task-1752027923009', options: {…}}
+[Worker] Task task-1752027923009 moved successfully
+Task task-1752027923009 synced successfully.
+[Mock] Invoking command: update_task {accountId: 'mock-account-1', taskListId: 'list-2', taskId: 'task-1752027923009', taskData: {…}}
+[Mock] 🔄 Updating task task-1752027923009 in list list-2 with data: {title: 'hey', notes: '[LibreOllama:{"labels":["sadfdsads","sadfdsfdsdsfsddsaf"],"priority":"high"}]', due: '2025-08-01'}
+[Mock] ❌ Task task-1752027923009 not found in list list-2
+Google Tasks API Error: Error: Task not found
+[Store] Failed to update task after all attempts: Error: [object Object]
+Failed to update task: Error: [object Object]
+```
+
+SPECIFIC FAILURE SCENARIOS:
+--------------------------
+1. Task is moved from list-3 to list-2 successfully
+2. Immediate update attempt tries to find task in list-2
+3. Task is not found, causing update to fail
+4. Labels and due dates are lost in the process
+
+TIMING ISSUES:
+--------------
+- Move operations and update operations happen asynchronously
+- There's a timing window where the task location is inconsistent
+- The task queue system helps but doesn't eliminate the issue completely
+
+DATA ENCODING ISSUES:
+--------------------
+- Enhanced data (labels, priority, etc.) is stored in the notes field as JSON
+- The encoding/decoding process may have edge cases
+- Multiple rapid updates might cause data corruption
+
+CURRENT UNKNOWNS AND INVESTIGATION NEEDED:
+==========================================
+
+1. ROOT CAUSE ANALYSIS:
+   - Is the issue in the mock service task location tracking?
+   - Is there a fundamental flaw in the data encoding approach?
+   - Are there React state update timing issues?
+
+2. DATA FLOW VERIFICATION:
+   - Does the enhanced data actually make it to the server?
+   - Is the data correctly decoded when tasks are loaded?
+   - Are there race conditions in the Zustand store updates?
+
+3. ASYNC OPERATION SEQUENCING:
+   - Should move and update operations be strictly sequential?
+   - Is the current queue system sufficient?
+   - Do we need a more sophisticated state machine?
+
+4. REAL API BEHAVIOR:
+   - How does the real Google Tasks API handle rapid updates?
+   - Are there API rate limits or consistency guarantees we're missing?
+   - Should we batch operations differently?
+
+SUGGESTED INVESTIGATION APPROACHES:
+==================================
+
+1. ADD COMPREHENSIVE STATE TRACKING:
+   - Log every state change in the Zustand store
+   - Track task location changes explicitly
+   - Monitor enhanced data throughout the entire flow
+
+2. IMPLEMENT STRICT OPERATION SEQUENCING:
+   - Force all operations on a task to be strictly sequential
+   - Add operation IDs and tracking
+   - Implement proper rollback mechanisms
+
+3. SIMPLIFY DATA FLOW:
+   - Consider storing enhanced data separately from notes
+   - Implement a more robust data synchronization strategy
+   - Add data integrity checks
+
+4. CREATE ISOLATED TEST CASES:
+   - Build minimal reproduction cases for each failure scenario
+   - Test with real Google Tasks API to compare behavior
+   - Add automated tests for the critical paths
+
+ENVIRONMENT DETAILS:
+===================
+- React 18+ with TypeScript
+- Zustand for state management
+- Vite for development server
+- Windows 11 development environment
+- Mock Google Tasks API for development
+
+FILES TO EXAMINE FOR DEBUGGING:
+===============================
+1. src/app/pages/Tasks.tsx (main task management logic)
+2. src/stores/googleStore.ts (state management)
+3. src/services/google/mockGoogleService.ts (API simulation)
+4. src/features/tasks/hooks/useTaskForm.ts (form state)
+5. src/features/tasks/hooks/useTaskSyncQueue.ts (sync management)
+6. src/features/tasks/utils/taskHelpers.ts (data encoding/decoding)
+
+The issue remains unresolved and requires deeper investigation into the fundamental data flow and timing issues in the task synchronization system. 

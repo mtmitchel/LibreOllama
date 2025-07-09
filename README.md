@@ -40,9 +40,10 @@ LibreOllama provides a suite of deeply integrated tools designed to work togethe
 | **AI Chat**   | A powerful, clean interface for interacting with your local LLMs. Supports conversation history, model switching, and more.                                                                                                                                                                         |
 | **Projects**  | A dedicated hub for each of your projects. Track progress, manage assets, and see a unified view of all related notes, tasks, and canvases.                                                                                                                                                           |
 | **Notes**     | A block-based editor for capturing ideas, structuring thoughts, and creating rich documents. Think Notion, but private and local.                                                                                                                                                                 |
-| **Canvas**    | A production-ready, infinite whiteboard for visual thinking. Features a robust, modular architecture and a full suite of tools for drawing, diagramming, and brainstorming. For a deep dive into its architecture and functionality, see the **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)**. |
+| **Canvas**    | A production-ready, infinite whiteboard for visual thinking. Features a robust, modular architecture and a full suite of tools for drawing, diagramming, and brainstorming.                                                                                                                       |
 | **Tasks**     | A visual Kanban board to manage your to-do lists. Drag and drop tasks between "To Do," "In Progress," and "Done."                                                                                                                                                                                |
 | **Calendar**  | Plan your time and visualize your schedule. Designed to integrate with your tasks and project timelines.                                                                                                                                                                                            |
+| **Mail**      | Secure Gmail integration with multi-account support and comprehensive email management.                                                                                                                                                                                                             |
 | **Agents**    | The intelligence layer. Configure, manage, and monitor your local AI agents and models.                                                                                                                                                                                                             |
 | **Settings**  | Granular control over the application, including theme, integrations, and model management.                                                                                                                                                                                                         |
 | **Command Palette** | The power-user's best friend. Press `Ctrl+K` (`Cmd+K` on Mac) to instantly navigate anywhere, create new items, or perform actions.                                                                                                                                                             |
@@ -114,33 +115,35 @@ libreollama/
 
 ## Documentation
 
-The single source of truth for all canvas-related architecture, development practices, and testing philosophy is the **[Canvas Master Documentation](./docs/CANVAS_MASTER_DOCUMENTATION.md)**.
+For comprehensive project documentation, see the **[Documentation Index](./docs/README.md)**.
 
-### Gmail Integration
+### Key Documentation Files:
+- **[Project Status](./docs/PROJECT_STATUS.md)** - Current implementation status and roadmap
+- **[Implementation Guide](./docs/IMPLEMENTATION_GUIDE.md)** - Development patterns and best practices
+- **[Technical Debt](./docs/TECHNICAL_DEBT.md)** - Known issues and improvement plans
 
-LibreOllama includes secure Gmail integration with comprehensive security features:
+## Testing & Development
 
-- **[Gmail Security Audit](./docs/GMAIL_SECURITY_AUDIT.md)** - Detailed security vulnerability analysis and fixes
-- **[Gmail Code Review Summary](./docs/GMAIL_CODE_REVIEW_SUMMARY.md)** - Executive summary of security improvements
-- **[Gmail Secure Setup Guide](./docs/GMAIL_SECURE_SETUP.md)** - Complete setup instructions for secure Gmail integration
-
-For a guide to all other project documentation, see the **[Documentation Index](./docs/README.md)**.
-
-## 📚 Canvas Testing & Development
-
-The LibreOllama Canvas includes comprehensive testing coverage. See the master documentation for our testing philosophy.
+LibreOllama includes comprehensive testing coverage with a focus on integration testing and real-world workflows.
 
 ```bash
 # Run all tests
 npm test
 
-# Run specific canvas tests
+# Run specific test suites
 npm test -- --testPathPattern=canvas
+npm test -- --testPathPattern=gmail
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
 ```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to open an issue or submit a pull request.
+Contributions are welcome! Please feel free to open an issue or submit a pull request. Check the [Implementation Guide](./docs/IMPLEMENTATION_GUIDE.md) for development patterns and best practices.
 
 ## License
 
