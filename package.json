@@ -84,7 +84,6 @@
     "autoprefixer": "^10.4.21",
     "chromatic": "^11.16.2",
     "detect-port": "^2.1.0",
-    "figma-developer-mcp": "^0.4.3",
     "glob": "^11.0.3",
     "happy-dom": "^18.0.1",
     "immer": "^10.1.1",
