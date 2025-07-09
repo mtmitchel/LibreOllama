@@ -1,89 +1,40 @@
-# LibreOllama Documentation
+# LibreOllama Documentation Hub
 
-**Welcome to the LibreOllama documentation!** This index provides a comprehensive guide to all available documentation, organized for easy navigation.
-
-## 📋 Core Documentation
-
-### **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - **PRIMARY REFERENCE**
-- Current implementation status for all systems
-- Accurate assessment without exaggerated claims
-- Production readiness evaluation
-- Known issues and limitations
-- **Status**: ✅ Current and accurate
-
-### **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - **DEVELOPER GUIDE**
-- Practical development patterns and best practices
-- Architecture guidelines for each system
-- Common development tasks and troubleshooting
-- Testing strategies and setup requirements
-- **Status**: ✅ Consolidated from multiple sources
-
-## 🎯 System-Specific Documentation
-
-### Canvas System
-- **Current Status**: Functional with active development
-- **Architecture**: React Konva with unified store pattern
-- **Key Tools**: Text, Sticky Notes, Sections, Connectors, Pen tool
-- **Location**: `src/features/canvas/`
-
-### Gmail Integration
-- **Current Status**: Functional backend with frontend integration
-- **Architecture**: Service-oriented Rust backend with Tauri commands
-- **Security**: OAuth2 with OS keyring token storage
-- **Location**: `src-tauri/src/services/gmail/`, `src/features/mail/`
-
-### Calendar & Tasks Integration
-- **Current Status**: Implemented with Google Services
-- **Architecture**: Real Google API integration with TypeScript types
-- **Features**: FullCalendar integration, Kanban board, multi-account support
-- **Location**: `src/services/google/`, `src/stores/googleStore.ts`
-
-## 🔧 Technical References
-
-### **[TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)** - Issue Tracking
-- High-priority technical debt items
-- Known issues and their solutions
-- Production insights from testing
-
-### **[KONVA REACT GUIDES/](KONVA%20REACT%20GUIDES/)** - Canvas Technical Reference
-- Detailed Konva React implementation patterns
-- Canvas development best practices
-- Component architecture guides
-
-## 📁 Archived Documentation
-
-Historical documentation is preserved in `docs/_archive/` for reference only. These files represent previous iterations of the development process and should not be used for current development work.
-
-**Note**: The archived documentation contains outdated information and exaggerated claims. Always refer to the current documentation above.
-
-## 🚀 Quick Start
-
-1. **Check Status**: Review [PROJECT_STATUS.md](PROJECT_STATUS.md) for current implementation status
-2. **Development**: Follow [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) for practical development patterns
-3. **Issues**: Check [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) for known issues and solutions
-
-## 📋 Documentation Guidelines
-
-### When to Update Documentation
-- ✅ Implementation status changes → Update PROJECT_STATUS.md
-- ✅ New development patterns → Update IMPLEMENTATION_GUIDE.md
-- ✅ Technical issues identified → Update TECHNICAL_DEBT.md
-
-### When NOT to Create New Documentation
-- ❌ Duplicate information already covered in existing docs
-- ❌ Temporary implementation details
-- ❌ Exaggerated claims about production readiness
-
-## 🎯 Current Project Status Summary
-
-- **Canvas**: Functional with known consistency issues
-- **Gmail**: Backend complete, frontend integration ongoing
-- **Calendar/Tasks**: Implemented with Google API integration
-- **Backend**: Service-oriented architecture with 95% test success rate
-- **Overall**: Active development with solid foundations
+Welcome to the central documentation hub for the LibreOllama project. This document is the primary entry point for all team members to find the information they need.
 
 ---
 
-**Last Updated**: January 2025  
-**Documentation Status**: Consolidated and accurate  
-**Next Review**: After major implementation milestones
+### For Product Managers & High-Level Overview
+
+- **[Project Roadmap](./ROADMAP.md):** The master plan. See what features are planned, in progress, and completed. Each feature links to a detailed roadmap with more context.
+
+---
+
+### For Designers & UI/UX Professionals
+
+- **[Design Overview](../../design/system/overview.md):** **(Primary Document)** This is the authoritative source for our design philosophy, color palettes, typography, and component-level design thinking.
+- **[Design Mockups](../../design/mockups/):** A directory containing all the visual mockups for various application screens.
+- **[Design Specs](../../design/specs/):** A directory containing detailed design specifications.
+- **Ladle Component Explorer (Interactive):** Run `npm run ladle` to launch an interactive workshop of all our UI components. This is the best way to see the design system in action.
+
+---
+
+### For Developers & Engineers
+
+- **[Developer Design Guide](./DEVELOPER_DESIGN_GUIDE.md):** **(Start Here)** A practical guide on how to work with the design system, including how to use the design tokens, run the component explorer (Ladle), and write component stories.
+- **[Implementation Guide](./IMPLEMENTATION_GUIDE.md):** A deep-dive into the technical architecture of the application's various features.
+- **[Project Roadmap](./ROADMAP.md):** Your guide to the work that needs to be done, with links to detailed, feature-specific roadmaps containing technical implementation notes.
+
+## Design & UI/UX
+
+- **[Design System Overview](../design/system/overview.md)**: The foundational guide to our design philosophy, color palette, typography, and core principles. **(Required reading for Designers and PMs)**.
+- **[Component Library (Ladle)](../.ladle)**: An interactive workshop for viewing, testing, and understanding our React components in isolation.
+- **[Developer Design Guide](./DEVELOPER_DESIGN_GUIDE.md)**: A practical guide for developers on how to use the token-based design system, Tailwind configuration, and component library.
+
+## Code & Design Audits
+
+- **[Design System Audit](./DESIGN_SYSTEM_AUDIT.md)**: A detailed, component-by-component analysis of the design system's implementation status across the application. Use this to identify and prioritize UI technical debt.
+
+## Backend & Architecture
+
+- **[Backend Services Overview](./roadmap/05_backend_services.md)**: A high-level look at the backend architecture, services, and APIs.

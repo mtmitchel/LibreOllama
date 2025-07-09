@@ -43,7 +43,7 @@ const createMockMessages = (accountId: string, accountEmail: string): ParsedEmai
     bcc: [],
     subject: `Welcome to ${accountEmail}!`,
     body: 'Thanks for joining us. Here\'s everything you need to know...',
-    htmlBody: '<p>Thanks for joining us. Here\'s everything you need to know...</p>',
+
     attachments: [],
     date: new Date('2024-01-15T10:30:00'),
     isRead: false,
@@ -51,6 +51,9 @@ const createMockMessages = (accountId: string, accountEmail: string): ParsedEmai
     labels: ['INBOX', 'UNREAD'],
     snippet: 'Thanks for joining us. Here\'s everything you need to know...',
     accountId,
+    hasAttachments: false,
+    importance: 'normal',
+    messageId: `${accountId}-msg1`,
   },
   {
     id: `${accountId}-msg2`,
@@ -61,7 +64,7 @@ const createMockMessages = (accountId: string, accountEmail: string): ParsedEmai
     bcc: [],
     subject: `Account verified for ${accountEmail}`,
     body: 'Great news! Your account verification is complete.',
-    htmlBody: '<p>Great news! Your account verification is complete.</p>',
+
     attachments: [],
     date: new Date('2024-01-14T14:20:00'),
     isRead: true,
@@ -69,6 +72,9 @@ const createMockMessages = (accountId: string, accountEmail: string): ParsedEmai
     labels: ['INBOX', 'STARRED'],
     snippet: 'Great news! Your account verification is complete.',
     accountId,
+    hasAttachments: false,
+    importance: 'normal',
+    messageId: `${accountId}-msg2`,
   },
 ];
 
@@ -129,7 +135,15 @@ const initialState: MailState = {
   
   // Compose
   isComposing: false,
-  composeDraft: null,
+  composeData: {
+    to: [],
+    cc: [],
+    bcc: [],
+    subject: '',
+    body: '',
+    attachments: [],
+    isScheduled: false,
+  },
   
   // Error state
   error: null,
@@ -138,10 +152,24 @@ const initialState: MailState = {
   // Settings
   settings: {
     syncInterval: 5, // 5 minutes
-    enableNotifications: true,
-    enableOfflineMode: false,
-    unifiedInbox: false,
+    notifications: true,
+    autoSave: false,
+    enableUnifiedInbox: false,
+    emailSignature: '',
+    maxAttachmentSize: 25,
+    readReceipts: true,
   },
+
+  // Filters and sorting
+  filters: {
+    dateRange: undefined,
+    hasAttachments: undefined,
+    isUnread: undefined,
+    importance: undefined,
+    labels: undefined,
+  },
+  sortBy: 'date',
+  sortOrder: 'desc',
 
   // Token-based pagination (Gmail API style)
   nextPageToken: undefined,
@@ -150,8 +178,6 @@ const initialState: MailState = {
   messagesLoadedSoFar: 0, // Track cumulative messages loaded
   currentPageSize: 50,
   isNavigatingBackwards: false, // Flag to prevent pageTokens modification during backwards navigation
-
-  authState: null, // For OAuth state validation
 };
 
 // Periodic sync interval (will be set up after store creation)
@@ -212,6 +238,22 @@ const useMailStore = create<EnhancedMailStore>()(
         getAccountsArray: () => {
           const state = get();
           return Object.values(state.accounts);
+        },
+
+        // Pagination computed properties
+        get currentPage() {
+          const state = get();
+          return state.pageTokens.length + 1;
+        },
+
+        get pageSize() {
+          const state = get();
+          return state.currentPageSize;
+        },
+
+        get currentPageStartIndex() {
+          const state = get();
+          return state.messagesLoadedSoFar - state.getMessages().length;
         },
 
         // Account Management
@@ -308,7 +350,10 @@ const useMailStore = create<EnhancedMailStore>()(
               state.isLoadingAccounts = false;
             });
           } catch (error) {
-            const handledError = handleGmailError(error);
+            const handledError = handleGmailError(error, {
+              operation: 'remove_account',
+              accountId,
+            });
             set((state) => {
               state.error = handledError.message;
               state.isLoadingAccounts = false;
@@ -347,16 +392,15 @@ const useMailStore = create<EnhancedMailStore>()(
               throw new Error('Failed to initialize Gmail API service');
             }
 
-            // Get valid access token through the API service (handles decryption and refresh)
-            let tokens;
+            // Verify authentication by getting user profile (this handles token validation internally)
+            let userProfile;
             try {
-              tokens = await gmailApi.getTokens();
+              userProfile = await gmailApi.getUserProfile();
             } catch (error) {
-              console.error('❌ [QUOTA] Token decryption failed - account needs re-authentication:', error);
+              console.error('❌ [QUOTA] Authentication verification failed - account needs re-authentication:', error);
               
-              // If tokens are corrupted, they've already been cleared by the API service
-              if (error instanceof Error && error.message.includes('Authentication tokens are corrupted')) {
-                // Remove the account from the store to force re-authentication
+              // If authentication fails, remove the account from the store to force re-authentication
+              if (error instanceof Error && error.message.includes('Authentication')) {
                 set((state) => {
                   delete state.accounts[accountId];
                   if (state.currentAccountId === accountId) {
@@ -366,100 +410,30 @@ const useMailStore = create<EnhancedMailStore>()(
                 });
               }
               
-              throw new Error('Token corrupted - please sign out and sign in again');
+              throw new Error('Authentication failed - please sign out and sign in again');
             }
             
-            if (!tokens || !tokens.access_token) {
-              throw new Error('Failed to get valid access token');
+            if (!userProfile) {
+              throw new Error('Failed to verify account authentication');
             }
 
-            // Fetch fresh quota from Google Drive API
-            const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota(limit,usage,usageInDrive,usageInDriveTrash)', {
-              headers: {
-                Authorization: `Bearer ${tokens.access_token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              console.log('🔍 [QUOTA] Raw API response:', JSON.stringify(data, null, 2));
-              const storageQuota = data.storageQuota;
-              
-              if (storageQuota) {
-                // Log all available fields in storageQuota
-                console.log('🔍 [QUOTA] StorageQuota fields:', {
-                  limit: storageQuota.limit,
-                  usage: storageQuota.usage, 
-                  usageInDrive: storageQuota.usageInDrive,
-                  usageInDriveTrash: storageQuota.usageInDriveTrash,
-                  allFields: Object.keys(storageQuota)
-                });
-                
-                const used = parseInt(storageQuota.usage || '0', 10);
-                let total = parseInt(storageQuota.limit || '0', 10);
-                
-                // Log the exact values we're parsing
-                console.log('🔍 [QUOTA] Parsing values:', {
-                  rawUsage: storageQuota.usage,
-                  rawLimit: storageQuota.limit,
-                  parsedUsed: used,
-                  parsedTotal: total,
-                  usedGB: (used / 1000000000).toFixed(3),
-                  totalGB: (total / 1000000000).toFixed(3),
-                  usedGiB: (used / (1024*1024*1024)).toFixed(3),
-                  totalGiB: (total / (1024*1024*1024)).toFixed(3),
-                  is100GiB: total === 100 * 1024 * 1024 * 1024,
-                  is107GB: Math.round(total / 1000000000) === 107,
-                  expected100GiB: 100 * 1024 * 1024 * 1024,
-                  actualBytes: total
-                });
-                
-                // Some Google accounts don't return a limit
-                if (!total || total < 0) {
-                  console.log('⚠️ [QUOTA] No limit returned by API, value was:', storageQuota.limit);
-                  total = 0;
-                }
-                
-                console.log('✅ [QUOTA] Storage quota final values:', {
-                  used: `${(used / 1000000000).toFixed(3)}GB (${used} bytes)`,
-                  total: total > 0 ? `${(total / 1000000000).toFixed(3)}GB (${total} bytes)` : 'Unknown',
-                });
-                
-                // Update account with new quota
-                set((state) => {
-                  if (state.accounts[accountId]) {
-                    state.accounts[accountId].quotaUsed = used;
-                    state.accounts[accountId].quotaTotal = total;
-                    state.accounts[accountId].syncStatus = 'idle';
-                    state.accounts[accountId].lastSyncAt = new Date();
-                    
-                    console.log('✅ [QUOTA] Updated account in store:', {
-                      accountId,
-                      quotaUsed: state.accounts[accountId].quotaUsed,
-                      quotaTotal: state.accounts[accountId].quotaTotal,
-                      quotaUsedGB: (state.accounts[accountId].quotaUsed / 1000000000).toFixed(3),
-                      quotaTotalGB: (state.accounts[accountId].quotaTotal / 1000000000).toFixed(3)
-                    });
-                  }
-                });
-              } else {
-                console.error('❌ [QUOTA] No storageQuota in response! Full response:', JSON.stringify(data, null, 2));
-                throw new Error('No storage quota data in API response');
+            // For now, we'll skip quota refresh since it requires direct token access
+            // This functionality should be moved to the backend service
+            console.log('⚠️ [QUOTA] Quota refresh temporarily disabled - needs backend implementation');
+            
+            set((state) => {
+              if (state.accounts[accountId]) {
+                state.accounts[accountId].syncStatus = 'idle';
+                state.accounts[accountId].lastSyncAt = new Date();
               }
-            } else {
-              console.warn('⚠️ [QUOTA] Failed to fetch quota:', response.status, response.statusText);
-              const errorText = await response.text();
-              console.error('⚠️ [QUOTA] Error response:', errorText);
-              throw new Error(`Failed to fetch quota: ${response.status} ${response.statusText}`);
-            }
+            });
           } catch (error) {
             console.error('❌ [STORE] Failed to refresh account:', error);
             set((state) => {
               if (state.accounts[accountId]) {
                 state.accounts[accountId].syncStatus = 'error';
-                // If token is corrupted, set a clear error message
-                if (error instanceof Error && error.message.includes('Token corrupted')) {
+                // If authentication failed, set a clear error message
+                if (error instanceof Error && error.message.includes('Authentication failed')) {
                   state.accounts[accountId].errorMessage = 'Authentication expired - please sign out and sign in again';
                 }
               }
@@ -545,8 +519,9 @@ const useMailStore = create<EnhancedMailStore>()(
             state.error = null;
           });
           
+          const targetAccountId = accountId || get().currentAccountId;
+          
           try {
-            const targetAccountId = accountId || state.currentAccountId;
             if (!targetAccountId) {
               throw new Error('No account specified for authentication');
             }
@@ -565,7 +540,10 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
           } catch (error) {
-            const handledError = handleGmailError(error);
+            const handledError = handleGmailError(error, {
+              operation: 'authenticate',
+              accountId: targetAccountId || undefined,
+            });
             set((state) => {
               state.error = handledError.message;
               state.isLoading = false;
@@ -731,7 +709,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to fetch messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'fetch_messages',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -765,7 +743,7 @@ const useMailStore = create<EnhancedMailStore>()(
             // If not found in store, fetch from API
             if (!message) {
               console.log(`🔍 [STORE] Message not in store, fetching from API...`);
-              message = await gmailApi.getMessage(messageId);
+              message = (await gmailApi.getMessage(messageId)) || undefined;
             }
             
             if (!message) {
@@ -782,7 +760,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to fetch message:', error);
             const handledError = handleGmailError(error, {
               operation: 'fetch_message',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
               messageId,
             });
             set((state) => {
@@ -823,7 +801,9 @@ const useMailStore = create<EnhancedMailStore>()(
               isStarred: threadMessages.some(msg => msg.isStarred),
               labels: Array.from(new Set(threadMessages.flatMap(msg => msg.labels))),
               messageCount: threadMessages.length,
-              accountId: targetAccountId,
+              accountId: targetAccountId!,
+              hasAttachments: threadMessages.some(msg => msg.hasAttachments),
+              snippet: threadMessages[0]?.snippet || '',
             };
 
             set((state) => {
@@ -831,7 +811,11 @@ const useMailStore = create<EnhancedMailStore>()(
               state.isLoadingThreads = false;
             });
           } catch (error) {
-            const handledError = handleGmailError(error);
+            const handledError = handleGmailError(error, {
+              operation: 'fetch_thread',
+              threadId,
+              accountId: targetAccountId || undefined,
+            });
             set((state) => {
               state.error = handledError.message;
               state.isLoadingThreads = false;
@@ -877,7 +861,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to mark messages as read:', error);
             const handledError = handleGmailError(error, {
               operation: 'mark_as_read',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -924,7 +908,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to mark messages as unread:', error);
             const handledError = handleGmailError(error, {
               operation: 'mark_as_unread',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -964,7 +948,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to delete messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'delete_messages',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -1006,7 +990,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to archive messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'archive_messages',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -1051,7 +1035,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to star messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'star_messages',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -1094,7 +1078,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.error('❌ [STORE] Failed to unstar messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'unstar_messages',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -1189,7 +1173,7 @@ const useMailStore = create<EnhancedMailStore>()(
             
             const handledError = handleGmailError(error, {
               operation: 'fetch_labels',
-              accountId: targetAccountId,
+              accountId: targetAccountId || undefined,
             });
             set((state) => {
               state.error = handledError.message;
@@ -1235,12 +1219,14 @@ const useMailStore = create<EnhancedMailStore>()(
         startCompose: (draft?: Partial<ComposeEmail>) => {
           set((state) => {
             state.isComposing = true;
-            state.composeDraft = {
+                                      state.composeData = {
               to: [],
               cc: [],
               bcc: [],
               subject: '',
               body: '',
+              attachments: [],
+              isScheduled: false,
               accountId: state.currentAccountId || undefined,
               ...draft,
             };
@@ -1249,8 +1235,8 @@ const useMailStore = create<EnhancedMailStore>()(
 
         updateCompose: (updates: Partial<ComposeEmail>) => {
           set((state) => {
-            if (state.composeDraft) {
-              Object.assign(state.composeDraft, updates);
+            if (state.composeData) {
+              Object.assign(state.composeData, updates);
             }
           });
         },
@@ -1273,10 +1259,21 @@ const useMailStore = create<EnhancedMailStore>()(
             set((state) => {
               state.isSending = false;
               state.isComposing = false;
-              state.composeDraft = null;
+              state.composeData = {
+                to: [],
+                cc: [],
+                bcc: [],
+                subject: '',
+                body: '',
+                attachments: [],
+                isScheduled: false,
+              };
             });
           } catch (error) {
-            const handledError = handleGmailError(error);
+            const handledError = handleGmailError(error, {
+              operation: 'send_email',
+              accountId: email.accountId || get().currentAccountId || undefined,
+            });
             set((state) => {
               state.error = handledError.message;
               state.isSending = false;
@@ -1292,7 +1289,15 @@ const useMailStore = create<EnhancedMailStore>()(
         cancelCompose: () => {
           set((state) => {
             state.isComposing = false;
-            state.composeDraft = null;
+            state.composeData = {
+              to: [],
+              cc: [],
+              bcc: [],
+              subject: '',
+              body: '',
+              attachments: [],
+              isScheduled: false,
+            };
           });
         },
 
@@ -1386,10 +1391,10 @@ const useMailStore = create<EnhancedMailStore>()(
           
           console.log('📄 [STORE] Fetching next page with token:', state.nextPageToken);
           await state.fetchMessages(
-            state.currentView === 'label' ? state.currentLabel : state.currentView,
+            state.currentView === 'label' ? state.currentLabel || undefined : state.currentView,
             state.searchQuery,
             state.nextPageToken,
-            state.currentAccountId
+            state.currentAccountId || undefined
           );
         },
 
@@ -1420,10 +1425,10 @@ const useMailStore = create<EnhancedMailStore>()(
           
           try {
             await state.fetchMessages(
-              state.currentView === 'label' ? state.currentLabel : state.currentView,
+              state.currentView === 'label' ? state.currentLabel || undefined : state.currentView,
               state.searchQuery,
               prevPageToken,
-              state.currentAccountId
+              state.currentAccountId || undefined
             );
             console.log('🔙 [STORE] Previous page fetch completed successfully');
           } catch (error) {
@@ -1440,15 +1445,15 @@ const useMailStore = create<EnhancedMailStore>()(
           const state = get();
           
           await state.fetchMessages(
-            state.currentView === 'label' ? state.currentLabel : state.currentView,
+            state.currentView === 'label' ? state.currentLabel || undefined : state.currentView,
             state.searchQuery,
             pageToken,
-            state.currentAccountId
+            state.currentAccountId || undefined
           );
         },
 
         // Sign out and clear authentication
-        signOut: () => {
+        signOut: async (accountId?: string) => {
           // Reset store state - Zustand persist will handle localStorage
           set((state) => {
             state.isAuthenticated = false;
@@ -1456,13 +1461,7 @@ const useMailStore = create<EnhancedMailStore>()(
             state.accountData = {};
             state.currentAccountId = null;
             state.error = null;
-            state.authState = null;
           });
-        },
-
-        setAuthState: (authState: string | null) => {
-          console.log('🔑 [AUTH] Setting auth state:', authState);
-          set({ authState });
         },
 
         // Real-time sync management
@@ -1496,13 +1495,95 @@ const useMailStore = create<EnhancedMailStore>()(
           }
         },
 
+        // Test helper methods (for compatibility with existing tests)
+        setAuthenticated: (isAuthenticated: boolean) => {
+          set((state) => {
+            state.isAuthenticated = isAuthenticated;
+          });
+        },
+
+        setCurrentAccountId: (accountId: string | null) => {
+          set((state) => {
+            state.currentAccountId = accountId;
+          });
+        },
+
+        setMessages: (messages: ParsedEmail[], accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+
+          set((state) => {
+            if (!state.accountData[targetAccountId]) {
+              state.accountData[targetAccountId] = {
+                messages: [],
+                threads: [],
+                labels: [],
+                drafts: [],
+                totalMessages: 0,
+                unreadMessages: 0,
+                lastSyncAt: new Date(),
+                syncInProgress: false,
+              };
+            }
+            state.accountData[targetAccountId].messages = messages;
+            state.accountData[targetAccountId].unreadMessages = messages.filter(msg => !msg.isRead).length;
+            state.accountData[targetAccountId].totalMessages = messages.length;
+          });
+        },
+
+        setAccounts: (accounts: GmailAccount[]) => {
+          set((state) => {
+            state.accounts = {};
+            accounts.forEach(account => {
+              state.accounts[account.id] = account;
+            });
+          });
+        },
+
+        setSyncInProgress: (inProgress: boolean, accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+
+          set((state) => {
+            if (state.accountData[targetAccountId]) {
+              state.accountData[targetAccountId].syncInProgress = inProgress;
+            }
+          });
+        },
+
+        setCurrentMessage: (message: ParsedEmail | null) => {
+          set((state) => {
+            state.currentMessage = message;
+          });
+        },
+
+        setLabels: (labels: GmailLabel[], accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+
+          set((state) => {
+            if (!state.accountData[targetAccountId]) {
+              state.accountData[targetAccountId] = {
+                messages: [],
+                threads: [],
+                labels: [],
+                drafts: [],
+                totalMessages: 0,
+                unreadMessages: 0,
+                lastSyncAt: new Date(),
+                syncInProgress: false,
+              };
+            }
+            state.accountData[targetAccountId].labels = labels;
+          });
+        },
+
         // PRODUCTION METHODS ONLY - Test helpers moved to __tests__/mailStoreTestUtils.ts
       })),
       {
         name: 'gmail-auth-storage', // name of the item in the storage (must be unique)
         storage: createJSONStorage(() => localStorage), // use localStorage
         partialize: (state) => ({ 
-          authState: state.authState,
           accounts: state.accounts,
           currentAccountId: state.currentAccountId,
           isAuthenticated: state.isAuthenticated 

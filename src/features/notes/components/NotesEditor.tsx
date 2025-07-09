@@ -160,7 +160,7 @@ export function NotesEditor({ selectedNote, onUpdateNote, onUpdateBlocks }: Note
                 </Button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Content>
-                <DropdownMenu.Item onClick={() => {
+                <DropdownMenu.Item onSelect={() => {
                   const updatedNote = {
                     ...selectedNote,
                     metadata: { ...selectedNote.metadata, status: 'draft' as const }
@@ -169,7 +169,7 @@ export function NotesEditor({ selectedNote, onUpdateNote, onUpdateBlocks }: Note
                 }}>
                   Draft
                 </DropdownMenu.Item>
-                <DropdownMenu.Item onClick={() => {
+                <DropdownMenu.Item onSelect={() => {
                   const updatedNote = {
                     ...selectedNote,
                     metadata: { ...selectedNote.metadata, status: 'active' as const }
@@ -178,7 +178,7 @@ export function NotesEditor({ selectedNote, onUpdateNote, onUpdateBlocks }: Note
                 }}>
                   Active
                 </DropdownMenu.Item>
-                <DropdownMenu.Item onClick={() => {
+                <DropdownMenu.Item onSelect={() => {
                   const updatedNote = {
                     ...selectedNote,
                     metadata: { ...selectedNote.metadata, status: 'archived' as const }
@@ -187,7 +187,7 @@ export function NotesEditor({ selectedNote, onUpdateNote, onUpdateBlocks }: Note
                 }}>
                   Archived
                 </DropdownMenu.Item>
-                <DropdownMenu.Item onClick={() => {
+                <DropdownMenu.Item onSelect={() => {
                   const updatedNote = {
                     ...selectedNote,
                     metadata: { ...selectedNote.metadata, status: 'published' as const }

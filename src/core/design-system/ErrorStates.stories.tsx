@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@ladle/react';
+import type { Meta, Story } from '@ladle/react';
 import { useState } from 'react';
 import { Alert, Toast, ErrorState, EmptyState, StatusBadge, Card, Button } from '../../components/ui';
 
 const meta: Meta = {
-  title: 'Design System/Error States',
+  title: 'Design System/Error & Alert States',
   parameters: {
     layout: 'padded',
   },
@@ -12,427 +12,367 @@ const meta: Meta = {
 export default meta;
 
 // Alert Component Stories
-export const AlertVariants: StoryObj = {
-  render: () => (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Alert Variants</h2>
-        <div className="space-y-4">
-          <Alert variant="info" title="Information">
-            This is an informational alert with some helpful details.
-          </Alert>
-          <Alert variant="success" title="Success">
-            Your changes have been saved successfully.
-          </Alert>
-          <Alert variant="warning" title="Warning">
-            Please review your settings before proceeding.
-          </Alert>
-          <Alert variant="error" title="Error">
-            There was a problem processing your request.
-          </Alert>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Dismissible Alerts</h2>
-        <div className="space-y-4">
-          <Alert 
-            variant="warning" 
-            title="Dismissible Warning"
-            dismissible
-            onDismiss={() => console.log('Alert dismissed')}
-          >
-            This alert can be dismissed by clicking the X button.
-          </Alert>
-          <Alert 
-            variant="error"
-            dismissible
-            onDismiss={() => console.log('Alert dismissed')}
-          >
-            This is a dismissible error alert without a title.
-          </Alert>
-        </div>
+export const AlertVariants: Story = () => (
+  <div className="space-y-6">
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Alert Variants</h2>
+      <div className="space-y-3">
+        <Alert variant="info" title="Information">
+          This is an informational alert. Everything is working as expected.
+        </Alert>
+        <Alert variant="success" title="Success">
+          Your operation completed successfully!
+        </Alert>
+        <Alert variant="warning" title="Warning">
+          Please review your settings before proceeding.
+        </Alert>
+        <Alert variant="error" title="Error">
+          Something went wrong. Please try again.
+        </Alert>
       </div>
     </div>
-  ),
-};
+
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Dismissible Alerts</h2>
+      <div className="space-y-3">
+        <Alert 
+          variant="warning" 
+          title="Dismissible Alert"
+          dismissible={true}
+          onDismiss={() => console.log('Alert dismissed')}
+        >
+          This alert can be dismissed by clicking the X button.
+        </Alert>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Alert Without Title</h2>
+      <div className="space-y-3">
+        <Alert variant="info">
+          This is an alert without a title.
+        </Alert>
+      </div>
+    </div>
+  </div>
+);
 
 // Toast Component Stories
-export const ToastDemo: StoryObj = {
-  render: () => {
-    const [toasts, setToasts] = useState<Array<{
-      id: string;
-      variant: 'info' | 'success' | 'warning' | 'error';
-      title?: string;
-      message: string;
-    }>>([]);
+export const ToastDemo: Story = () => {
+  const [toasts, setToasts] = useState<Array<{ id: number; variant: 'info' | 'success' | 'warning' | 'error'; title?: string; message: string }>>([]);
 
-    const addToast = (variant: 'info' | 'success' | 'warning' | 'error', title?: string) => {
-      const messages = {
-        info: 'This is an informational message.',
-        success: 'Operation completed successfully!',
-        warning: 'Please check your input.',
-        error: 'Something went wrong. Please try again.'
-      };
+  const showToast = (variant: 'info' | 'success' | 'warning' | 'error', title: string, message: string) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, variant, title, message }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
 
-      const newToast = {
-        id: Date.now().toString(),
-        variant,
-        title,
-        message: messages[variant]
-      };
-
-      setToasts(prev => [...prev, newToast]);
-    };
-
-    const removeToast = (id: string) => {
-      setToasts(prev => prev.filter(toast => toast.id !== id));
-    };
-
-    return (
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Toast Notifications</h2>
-          <div className="flex gap-4 flex-wrap">
-            <Button onClick={() => addToast('info', 'Info')}>Show Info Toast</Button>
-            <Button onClick={() => addToast('success', 'Success')}>Show Success Toast</Button>
-            <Button onClick={() => addToast('warning', 'Warning')}>Show Warning Toast</Button>
-            <Button onClick={() => addToast('error', 'Error')}>Show Error Toast</Button>
-          </div>
-        </div>
-
-        {/* Toast Container */}
-        <div className="fixed top-4 right-4 z-50 space-y-2">
-          {toasts.map(toast => (
-            <Toast
-              key={toast.id}
-              variant={toast.variant}
-              title={toast.title}
-              message={toast.message}
-              onDismiss={() => removeToast(toast.id)}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  },
-};
-
-// Error State Component Stories
-export const ErrorStateDemo: StoryObj = {
-  render: () => (
-    <div className="space-y-8">
+  return (
+    <div className="space-y-6">
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Error State Sizes</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-4">
-            <ErrorState
-              size="sm"
-              title="Small Error"
-              message="This is a small error state."
-              onRetry={() => console.log('Retry clicked')}
-            />
-          </Card>
-          <Card className="p-4">
-            <ErrorState
-              size="md"
-              title="Medium Error"
-              message="This is a medium error state with more details."
-              onRetry={() => console.log('Retry clicked')}
-            />
-          </Card>
-          <Card className="p-4">
-            <ErrorState
-              size="lg"
-              title="Large Error"
-              message="This is a large error state for major failures."
-              onRetry={() => console.log('Retry clicked')}
-            />
-          </Card>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Toast Notifications</h2>
+        <div className="flex gap-3 flex-wrap">
+          <Button 
+            onClick={() => showToast('info', 'Info', 'This is an informational message')}
+            variant="secondary"
+          >
+            Show Info Toast
+          </Button>
+          <Button 
+            onClick={() => showToast('success', 'Success', 'Operation completed successfully!')}
+            variant="secondary"
+          >
+            Show Success Toast
+          </Button>
+          <Button 
+            onClick={() => showToast('warning', 'Warning', 'Please check your input')}
+            variant="secondary"
+          >
+            Show Warning Toast
+          </Button>
+          <Button 
+            onClick={() => showToast('error', 'Error', 'Something went wrong')}
+            variant="secondary"
+          >
+            Show Error Toast
+          </Button>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Custom Error Messages</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-4">
-            <ErrorState
-              title="Canvas Export Failed"
-              message="Unable to export your canvas. Please check your connection and try again."
-              onRetry={() => console.log('Retry export')}
-              retryText="Try Export Again"
-            />
-          </Card>
-          <Card className="p-4">
-            <ErrorState
-              title="Widget Load Error"
-              message="The dashboard widget couldn't load. This might be due to a temporary issue."
-              onRetry={() => console.log('Retry widget load')}
-              retryText="Reload Widget"
-            />
-          </Card>
-        </div>
+      {/* Toast Container */}
+      <div className="fixed top-4 right-4 space-y-2 z-50">
+        {toasts.map(toast => (
+          <Toast
+            key={toast.id}
+            variant={toast.variant}
+            title={toast.title}
+            message={toast.message}
+            onDismiss={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+          />
+        ))}
       </div>
     </div>
-  ),
+  );
 };
 
-// Empty State Component Stories
-export const EmptyStateDemo: StoryObj = {
-  render: () => (
-    <div className="space-y-8">
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Empty State Variants</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-4">
-            <EmptyState
-              title="No Projects"
-              message="You haven't created any projects yet. Start by creating your first project."
-              action={{
-                label: 'Create Project',
-                onClick: () => console.log('Create project clicked')
-              }}
-              icon="📁"
-            />
-          </Card>
-          <Card className="p-4">
-            <EmptyState
-              title="No Messages"
-              message="Your inbox is empty. New messages will appear here."
-              icon="📬"
-            />
-          </Card>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Different Sizes</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-4">
-            <EmptyState
-              size="sm"
-              title="Small Empty"
-              message="No data available."
-              icon="📊"
-            />
-          </Card>
-          <Card className="p-4">
-            <EmptyState
-              size="md"
-              title="Medium Empty"
-              message="No content to display at this time."
-              icon="📋"
-            />
-          </Card>
-          <Card className="p-4">
-            <EmptyState
-              size="lg"
-              title="Large Empty"
-              message="This section is currently empty. Add some content to get started."
-              icon="🎨"
-            />
-          </Card>
-        </div>
+// Error State Stories
+export const ErrorStateDemo: Story = () => (
+  <div className="space-y-8">
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Error State Sizes</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-4 min-h-[200px]">
+          <ErrorState 
+            size="sm" 
+            title="Small Error"
+            message="A compact error state for smaller UI areas."
+            onRetry={() => console.log('Retry clicked')}
+          />
+        </Card>
+        <Card className="p-4 min-h-[250px]">
+          <ErrorState 
+            size="md" 
+            title="Medium Error"
+            message="A medium-sized error state for general use cases."
+            onRetry={() => console.log('Retry clicked')}
+          />
+        </Card>
+        <Card className="p-4 min-h-[300px]">
+          <ErrorState 
+            size="lg" 
+            title="Large Error"
+            message="A large error state for prominent error displays."
+            onRetry={() => console.log('Retry clicked')}
+          />
+        </Card>
       </div>
     </div>
-  ),
-};
 
-// Status Badge Component Stories
-export const StatusBadgeDemo: StoryObj = {
-  render: () => (
-    <div className="space-y-8">
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Status Badge Variants</h2>
-        <div className="flex flex-wrap gap-4">
-          <StatusBadge status="success">Completed</StatusBadge>
-          <StatusBadge status="warning">In Progress</StatusBadge>
-          <StatusBadge status="error">Failed</StatusBadge>
-          <StatusBadge status="info">Information</StatusBadge>
-          <StatusBadge status="pending">Pending</StatusBadge>
-        </div>
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Error Without Retry</h2>
+      <Card className="p-6">
+        <ErrorState 
+          title="Connection Failed"
+          message="Unable to connect to the server. Please check your internet connection."
+        />
+      </Card>
+    </div>
+  </div>
+);
+
+// Empty State Stories  
+export const EmptyStateDemo: Story = () => (
+  <div className="space-y-8">
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Empty State Variations</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="p-6 min-h-[250px]">
+          <EmptyState 
+            title="No Messages"
+            message="You don't have any messages yet. Start a conversation!"
+            action={{
+              label: "Compose Message",
+              onClick: () => console.log('Compose clicked')
+            }}
+            icon="✉️"
+          />
+        </Card>
+        <Card className="p-6 min-h-[250px]">
+          <EmptyState 
+            title="No Projects"
+            message="Create your first project to get started."
+            action={{
+              label: "Create Project",
+              onClick: () => console.log('Create clicked')
+            }}
+            icon="📁"
+          />
+        </Card>
       </div>
+    </div>
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Badge Sizes</h2>
-        <div className="flex flex-wrap gap-4 items-center">
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Empty State Sizes</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-4">
+          <EmptyState 
+            size="sm"
+            title="Small"
+            message="Compact empty state"
+            icon="📭"
+          />
+        </Card>
+        <Card className="p-4">
+          <EmptyState 
+            size="md"
+            title="Medium"
+            message="Standard empty state"
+            icon="📭"
+          />
+        </Card>
+        <Card className="p-4">
+          <EmptyState 
+            size="lg"
+            title="Large"
+            message="Prominent empty state"
+            icon="📭"
+          />
+        </Card>
+      </div>
+    </div>
+  </div>
+);
+
+// Status Badge Stories
+export const StatusBadgeDemo: Story = () => (
+  <div className="space-y-8">
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Status Badge Variants</h2>
+      <div className="flex flex-wrap gap-4">
+        <StatusBadge status="success">Active</StatusBadge>
+        <StatusBadge status="warning">Warning</StatusBadge>
+        <StatusBadge status="error">Error</StatusBadge>
+        <StatusBadge status="info">Info</StatusBadge>
+        <StatusBadge status="pending">Pending</StatusBadge>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Status Badge Sizes</h2>
+      <div className="space-y-3">
+        <div className="flex items-center gap-4">
           <StatusBadge status="success" size="sm">Small</StatusBadge>
+          <StatusBadge status="success" size="md">Medium</StatusBadge>
+        </div>
+        <div className="flex items-center gap-4">
+          <StatusBadge status="warning" size="sm">Small</StatusBadge>
           <StatusBadge status="warning" size="md">Medium</StatusBadge>
         </div>
       </div>
-
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Project Priority Examples</h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-[var(--text-secondary)] w-20">High:</span>
-            <StatusBadge status="error" size="sm">High</StatusBadge>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-[var(--text-secondary)] w-20">Medium:</span>
-            <StatusBadge status="warning" size="sm">Medium</StatusBadge>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-[var(--text-secondary)] w-20">Low:</span>
-            <StatusBadge status="success" size="sm">Low</StatusBadge>
-          </div>
-        </div>
-      </div>
     </div>
-  ),
-};
+  </div>
+);
 
-// Real-world Usage Examples
-export const RealWorldExamples: StoryObj = {
-  render: () => {
-    const [showError, setShowError] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
+// Real-world examples
+export const RealWorldExamples: Story = () => {
+  const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle');
 
-    return (
-      <div className="space-y-8">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Form Validation</h2>
-          <Card className="p-4">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  Project Name
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md"
-                  placeholder="Enter project name"
-                />
-              </div>
-              <Alert variant="error" title="Validation Error">
-                Project name is required and must be at least 3 characters long.
-              </Alert>
-            </div>
-          </Card>
-        </div>
+  const simulateLoading = () => {
+    setLoadingState('loading');
+    setTimeout(() => {
+      const outcomes = ['error', 'empty', 'idle'];
+      setLoadingState(outcomes[Math.floor(Math.random() * outcomes.length)] as any);
+    }, 2000);
+  };
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Dashboard Widget Error</h2>
-          <Card className="p-4">
-            <ErrorState
-              title="Widget Error"
-              message="The analytics widget encountered an error and couldn't load properly."
-              onRetry={() => {
-                setShowError(false);
-                setTimeout(() => setShowSuccess(true), 1000);
-              }}
-              retryText="Reload Widget"
-            />
-          </Card>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Task List with Status</h2>
-          <Card className="p-4">
-            <div className="space-y-3">
-              {[
-                { id: 1, title: 'Design mockups', status: 'success' as const },
-                { id: 2, title: 'Implement API', status: 'warning' as const },
-                { id: 3, title: 'Write tests', status: 'error' as const },
-                { id: 4, title: 'Deploy to staging', status: 'pending' as const }
-              ].map(task => (
-                <div key={task.id} className="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-lg">
-                  <span className="text-sm text-[var(--text-primary)]">{task.title}</span>
-                  <StatusBadge status={task.status} size="sm">
-                    {task.status === 'success' ? 'Done' : 
-                     task.status === 'warning' ? 'In Progress' :
-                     task.status === 'error' ? 'Failed' : 'Pending'}
-                  </StatusBadge>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Interactive Examples</h2>
-          <Card className="p-4">
-            <div className="flex gap-4">
-              <Button 
-                onClick={() => setShowError(true)}
-                variant="outline"
-              >
-                Trigger Error Toast
-              </Button>
-              <Button 
-                onClick={() => setShowSuccess(true)}
-                variant="outline"
-              >
-                Trigger Success Toast
-              </Button>
-            </div>
-          </Card>
-        </div>
-
-        {/* Interactive Toasts */}
-        {showError && (
-          <Toast
-            variant="error"
-            title="Operation Failed"
-            message="Unable to save changes. Please try again."
-            onDismiss={() => setShowError(false)}
-          />
-        )}
-        {showSuccess && (
-          <Toast
-            variant="success"
-            title="Success"
-            message="Changes saved successfully!"
-            onDismiss={() => setShowSuccess(false)}
-          />
-        )}
-      </div>
-    );
-  },
-};
-
-// Accessibility Features
-export const AccessibilityFeatures: StoryObj = {
-  render: () => (
+  return (
     <div className="space-y-8">
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Accessibility Features</h2>
-        <div className="space-y-4">
-          <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
-            <h3 className="font-medium text-[var(--text-primary)] mb-2">ARIA Labels</h3>
-            <p className="text-sm text-[var(--text-secondary)] mb-3">
-              All error components include proper ARIA labels and roles for screen readers.
-            </p>
-            <Alert variant="error" title="Error with ARIA">
-              This alert has role="alert" and aria-live="polite" attributes.
-            </Alert>
-          </div>
-
-          <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
-            <h3 className="font-medium text-[var(--text-primary)] mb-2">Keyboard Navigation</h3>
-            <p className="text-sm text-[var(--text-secondary)] mb-3">
-              Interactive elements maintain focus states and keyboard accessibility.
-            </p>
-            <ErrorState
-              title="Keyboard Accessible"
-              message="The retry button can be focused and activated with keyboard."
-              onRetry={() => console.log('Keyboard retry')}
-            />
-          </div>
-
-          <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
-            <h3 className="font-medium text-[var(--text-primary)] mb-2">Color Contrast</h3>
-            <p className="text-sm text-[var(--text-secondary)] mb-3">
-              All error states meet WCAG AA contrast requirements.
-            </p>
-            <div className="flex gap-2">
-              <StatusBadge status="error">High Contrast</StatusBadge>
-              <StatusBadge status="warning">Good Contrast</StatusBadge>
-              <StatusBadge status="success">Accessible</StatusBadge>
-            </div>
-          </div>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Email Interface Example</h2>
+        <div className="flex gap-3 mb-4">
+          <Button onClick={() => setLoadingState('idle')} variant="secondary">
+            Show Data
+          </Button>
+          <Button onClick={() => setLoadingState('empty')} variant="secondary">
+            Show Empty
+          </Button>
+          <Button onClick={() => setLoadingState('error')} variant="secondary">
+            Show Error
+          </Button>
+          <Button onClick={simulateLoading} variant="secondary">
+            Simulate Loading
+          </Button>
         </div>
+        
+        <Card className="min-h-[400px] p-6">
+          {loadingState === 'idle' && (
+            <div className="space-y-4">
+              <Alert variant="success" title="Connected">
+                Successfully connected to your email account.
+              </Alert>
+              <div className="space-y-2">
+                <div className="p-3 border border-[var(--border-default)] rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Welcome to LibreOllama</span>
+                    <StatusBadge status="success">Delivered</StatusBadge>
+                  </div>
+                  <span className="text-sm text-[var(--text-secondary)]">admin@example.com</span>
+                </div>
+                <div className="p-3 border border-[var(--border-default)] rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Project Update</span>
+                    <StatusBadge status="info">Read</StatusBadge>
+                  </div>
+                  <span className="text-sm text-[var(--text-secondary)]">team@example.com</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {loadingState === 'empty' && (
+            <EmptyState 
+              title="No Emails"
+              message="Your inbox is empty. New messages will appear here."
+              action={{
+                label: "Refresh Inbox",
+                onClick: () => setLoadingState('idle')
+              }}
+              icon="📫"
+            />
+          )}
+          
+          {loadingState === 'error' && (
+            <ErrorState 
+              title="Failed to Load Emails"
+              message="Unable to fetch your emails. Please check your connection and try again."
+              onRetry={() => simulateLoading()}
+              retryText="Try Again"
+            />
+          )}
+          
+          {loadingState === 'loading' && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin w-8 h-8 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-[var(--text-secondary)]">Loading emails...</p>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
-  ),
-}; 
+  );
+};
+
+// Accessibility features
+export const AccessibilityFeatures: Story = () => (
+  <div className="space-y-8">
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)]">Accessibility Features</h2>
+      <div className="space-y-6">
+        <Card className="p-4">
+          <h3 className="text-lg font-medium mb-3 text-[var(--text-primary)]">Keyboard Navigation</h3>
+          <Alert variant="info">
+            All interactive elements support keyboard navigation. Use Tab to navigate and Enter/Space to activate.
+          </Alert>
+        </Card>
+        
+        <Card className="p-4">
+          <h3 className="text-lg font-medium mb-3 text-[var(--text-primary)]">Screen Reader Support</h3>
+          <Alert variant="success">
+            Error states and alerts include proper ARIA labels and roles for screen reader compatibility.
+          </Alert>
+        </Card>
+        
+        <Card className="p-4">
+          <h3 className="text-lg font-medium mb-3 text-[var(--text-primary)]">Color Contrast</h3>
+          <Alert variant="warning">
+            All text meets WCAG AA color contrast requirements for accessibility.
+          </Alert>
+        </Card>
+      </div>
+    </div>
+  </div>
+); 

@@ -205,36 +205,13 @@ export class GmailSyncService {
       this.emitEvent('sync_completed', accountId, result);
       return result;
 
-    } catch (error) {
-      const handledError = handleGmailError(error);
-      const shouldRetry = this.shouldRetry(accountState);
-
-      this.updateAccountState(accountId, {
-        status: shouldRetry ? 'idle' : 'error',
-        error: handledError.message,
-        retryCount: accountState.retryCount + 1,
-      });
-
-      if (shouldRetry) {
-        // Schedule retry with exponential backoff
-        const delay = Math.pow(2, accountState.retryCount) * 1000;
-        setTimeout(() => this.syncAccount(accountId), delay);
-      }
-
-      this.emitEvent('sync_error', accountId, { error: handledError.message });
-
-      const syncDuration = Date.now() - startTime;
-      return {
+    } catch (error: unknown) {
+      console.error('Failed to sync Gmail data:', error);
+      const handledError = handleGmailError(error, {
+        operation: 'sync_gmail_data',
         accountId,
-        success: false,
-        newMessages: [],
-        updatedMessages: [],
-        deletedMessageIds: [],
-        newLabels: [],
-        updatedLabels: [],
-        error: handledError.message,
-        syncDuration,
-      };
+      });
+      throw handledError;
     }
   }
 

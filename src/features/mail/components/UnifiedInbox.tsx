@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useMailStore } from '../stores/mailStore';
-import { ParsedEmail, GmailAccount } from '../types';
+import { ParsedEmail, EmailAddress, GmailAccount } from '../types';
+import { handleGmailError } from '../services/gmailErrorHandler';
 import { ErrorDisplay } from './ErrorDisplay';
+import { MailPagination } from './MailPagination';
+import { AttachmentPreviewModal } from './AttachmentPreviewModal';
 
 interface UnifiedInboxProps {
   className?: string;
@@ -14,7 +17,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
   const [showOnlyUnread, setShowOnlyUnread] = useState(false);
 
   const {
-    accounts,
+    getAccountsArray,
     accountData,
     settings,
     isLoadingMessages,
@@ -28,6 +31,8 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
     selectedMessages,
     clearError,
   } = useMailStore();
+
+  const accounts = getAccountsArray();
 
   // Get all messages from all accounts
   const allMessages = useMemo(() => {
@@ -122,7 +127,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
     }
   };
 
-  const handleSelectMessage = (message: ParsedEmail, e: React.MouseEvent) => {
+  const handleSelectMessage = (message: ParsedEmail, e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     const isSelected = selectedMessages.includes(message.id);
     selectMessage(message.id, !isSelected);
@@ -144,7 +149,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
     }
   };
 
-  if (!settings.unifiedInbox) {
+  if (!settings.enableUnifiedInbox) {
     return (
       <div className={`flex items-center justify-center h-64 ${className}`}>
         <div className="text-center">
@@ -155,7 +160,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
             Enable unified inbox in settings to view emails from all accounts in one place.
           </p>
           <button
-            onClick={() => useMailStore.getState().updateSettings({ unifiedInbox: true })}
+            onClick={() => useMailStore.getState().updateSettings({ enableUnifiedInbox: true })}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors"
           >
             Enable Unified Inbox
@@ -189,7 +194,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
             <option value="">All Accounts</option>
             {accounts.map(account => (
               <option key={account.id} value={account.id}>
-                {account.name} ({account.email})
+                {account.displayName} ({account.email})
               </option>
             ))}
           </select>
@@ -231,13 +236,10 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
 
       {/* Error Display */}
       {error && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <ErrorDisplay
-            error={error}
-            onRetry={clearError}
-            compact={true}
-          />
-        </div>
+        <ErrorDisplay
+          error={handleGmailError(error, { operation: 'unified_inbox' })}
+          onRetry={() => clearError()}
+        />
       )}
 
       {/* Loading State */}
@@ -292,7 +294,7 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
                   <div className="flex items-center space-x-2">
                     <div className={`w-3 h-3 rounded-full ${getAccountColor(message.accountId)}`} title={account?.email}></div>
                     <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
-                      {account?.name?.substring(0, 10)}
+                      {account?.displayName?.substring(0, 10)}
                     </span>
                   </div>
 

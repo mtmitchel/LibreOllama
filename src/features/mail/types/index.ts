@@ -160,7 +160,7 @@ export interface ParsedEmail {
   isRead: boolean;
   isStarred: boolean;
   hasAttachments: boolean;
-  attachments: GmailAttachment[];
+  attachments: EmailAttachment[];
   labels: string[];
   importance: 'low' | 'normal' | 'high';
   messageId: string;
@@ -239,9 +239,9 @@ export interface MailState {
   // Compose
   isComposing: boolean;
   composeData: {
-    to: string;
-    cc: string;
-    bcc: string;
+    to: EmailAddress[];
+    cc: EmailAddress[];
+    bcc: EmailAddress[];
     subject: string;
     body: string;
     attachments: File[];
@@ -345,9 +345,6 @@ export interface MailActions {
   prevPage: () => Promise<void>;
   goToPage: (pageToken?: string) => Promise<void>;
   
-  // Authentication
-  signOut: () => void;
-  
   // Test helper methods (for compatibility with existing tests)
   setAuthenticated: (isAuthenticated: boolean) => void;
   setCurrentAccountId: (accountId: string | null) => void;
@@ -371,6 +368,11 @@ export interface MultiAccountHelpers {
   getLabels: () => GmailLabel[];
   getMessages: () => ParsedEmail[];
   getAccountsArray: () => GmailAccount[];
+  
+  // Pagination computed properties
+  readonly currentPage: number;
+  readonly pageSize: number;
+  readonly currentPageStartIndex: number;
 }
 
 export type EnhancedMailStore = MailStore & MultiAccountHelpers;

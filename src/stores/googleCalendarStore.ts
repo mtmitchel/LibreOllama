@@ -12,6 +12,8 @@ interface GoogleCalendarStore {
   setActiveAccount: (account: GoogleAccount) => void;
   fetchCalendarEvents: () => Promise<void>;
   createCalendarEvent: (eventData: any) => Promise<void>;
+  updateCalendarEvent: (eventId: string, eventData: any) => Promise<void>;
+  deleteCalendarEvent: (eventId: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -101,6 +103,42 @@ const useGoogleCalendarStore = create<GoogleCalendarStore>()(
         console.error('Failed to create calendar event:', error);
         set({ error: 'Failed to create calendar event' });
       }
+    },
+
+    updateCalendarEvent: async (eventId, eventData) => {
+        const { activeAccount } = get();
+        if (!activeAccount) return;
+
+        try {
+            // Mock event update
+            set(state => ({
+                calendarEvents: state.calendarEvents.map(event =>
+                    event.id === eventId ? { ...event, ...eventData, id: eventId } : event
+                ),
+            }));
+
+            console.log('Event updated successfully:', eventId);
+        } catch (error) {
+            console.error('Failed to update calendar event:', error);
+            set({ error: 'Failed to update calendar event' });
+        }
+    },
+
+    deleteCalendarEvent: async (eventId) => {
+        const { activeAccount } = get();
+        if (!activeAccount) return;
+
+        try {
+            // Mock event deletion
+            set(state => ({
+                calendarEvents: state.calendarEvents.filter(event => event.id !== eventId),
+            }));
+
+            console.log('Event deleted successfully:', eventId);
+        } catch (error) {
+            console.error('Failed to delete calendar event:', error);
+            set({ error: 'Failed to delete calendar event' });
+        }
     },
 
     clearError: () => {

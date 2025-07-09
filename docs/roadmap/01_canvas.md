@@ -1,0 +1,82 @@
+**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
+
+# Canvas Development Roadmap
+
+This document provides a comprehensive overview of the Canvas feature, including its current implementation details and future development plans.
+
+## Design Assets
+
+- **Mockup:** [canvas mockup.png](../../design/mockups/canvas%20mockup.png)
+- **Spec:** [canvas.html](../../design/specs/canvas.html)
+
+## Current Implementation
+
+The canvas is a core feature of the application, built using React Konva and a sophisticated state management system.
+
+### Frontend Architecture
+
+- **Rendering Engine:** `react-konva` & `konva` for 2D canvas rendering.
+- **State Management:** A unified Zustand store (`unifiedCanvasStore.ts`) manages all canvas-related state, including elements, tools, and UI properties. It uses Immer for immutable state updates.
+- **Component Structure:**
+    - `CanvasContainer.tsx`: The main wrapper component.
+    - `CanvasLayerManager.tsx`: Manages the different layers (background, main, connector, UI).
+    - `ElementRenderer.tsx`: A key component responsible for rendering different canvas elements (shapes, text, etc.) based on their type.
+    - `UnifiedEventHandler.tsx`: A centralized handler for all canvas events (mouse, keyboard, drag), which translates user interactions into store actions.
+- **Tools System:** A modular tool system is located in `src/features/canvas/tools/`. It includes base classes for creation tools (`BaseCreationTool.tsx`) and specific tools like `PenTool`, `TextTool`, and `ConnectorTool`.
+- **Performance:** Optimizations include viewport culling, `React.memo` on heavy components, and granular selectors to minimize re-renders.
+
+### Backend Architecture
+
+- **Persistence:** The backend currently has a command `save_canvas_state` in `src-tauri/src/commands/canvas.rs` which saves the current canvas JSON to `canvas-save.json`.
+- **No Real-time:** There is currently no real-time backend support for the canvas.
+
+### Implemented Features
+
+- Core tools: Pen, Text, Sticky Notes, Sections, Connectors.
+- Selection and transformation of elements.
+- Undo/redo functionality via the `useCanvasHistory` hook.
+- A layer management system.
+
+## Future Work & Todos
+
+This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core individual-focused capabilities first.
+
+### High Priority / Known Issues
+
+- [ ] **Bugfix:** Fix tool consistency issues that appear under intensive use.
+- [ ] **Bugfix:** Address the occasional need for re-selection of transform handles.
+- [ ] **Bugfix:** Investigate and fix inconsistent element movement.
+
+### MVP Must-Haves
+
+- [x] **Core Tools:** Pen, text, shape creation (rectangles/ovals), sticky notes. *(Existing)*
+- [x] **Connectors:** Straight arrow connectors. *(Existing)*
+- [x] **Undo/Redo:** Standard undo/redo functionality. *(Existing)*
+- [ ] **Layer Visibility:** A simple toggle to show/hide layers.
+- [ ] **Export:** Export the canvas as a PNG or PDF file.
+
+### Post-MVP Enhancements
+
+- [ ] **Real-time Collaboration:** Deferring all team, sharing, and real-time features.
+- [ ] **Template & Shape Library:** A library of pre-made shapes and templates.
+- [ ] **Auto-layout & Smart Routing:** Advanced connector routing and diagram formatting.
+
+### Future Vision & "Wow" Delighters
+
+- [ ] **Intelligent Guides:** Smart grouping, alignment, and snap-to-grid/proximity guides.
+- [ ] **Version History:** A visual timeline/slider to track canvas changes.
+- [ ] **Personal Macros:** Record and replay drawing sequences.
+- [ ] **AI Assistance:** Convert text prompts into initial diagram stencils.
+
+### UX/UI Improvements
+
+- [ ] **Toolbar Redesign:** Refine the visual design of the toolbar and tool icons for better clarity and aesthetics.
+- [ ] **Keyboard Shortcuts:** Implement a comprehensive set of keyboard shortcuts for all major tools and actions to improve power-user workflow.
+- [ ] **Alignment Guides:** Improve the "snap-to-grid" and smart alignment guides for easier element positioning.
+
+### Technical Debt & Refactoring
+
+- [ ] **Refactor `UnifiedEventHandler`:** Review and refactor the central event handler for better clarity, performance, and maintainability.
+- [ ] **Increase Test Coverage:** Add more tests for complex user interactions like drag-and-drop and multi-select to improve stability.
+- [ ] **Documentation:** Create detailed documentation for the canvas store architecture, data flow, and event handling logic.
+- [ ] **Backend Persistence:** Move from a single JSON file to a proper database solution for storing canvas data, especially for multi-canvas and multi-user support. 

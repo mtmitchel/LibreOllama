@@ -22,7 +22,7 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "src/tests"],
+  "include": ["src", "src/tests", "src/vite-env.d.ts"],
   "exclude": ["src/**/_legacy_archive/**"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

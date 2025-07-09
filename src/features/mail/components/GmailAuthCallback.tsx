@@ -1,19 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useGmailAuth } from '../hooks/useGmailAuth';
-import { useMailStore } from '../stores/mailStore';
 
 export const GmailAuthCallback: React.FC = () => {
   const { completeAuth, error } = useGmailAuth();
-  const expectedState = useMailStore((s) => s.authState);
   const [isProcessing, setIsProcessing] = useState(true);
   const [callbackError, setCallbackError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<{ received?: string | null; expected?: string | null }>({});
-
-  // Debug: Log the store state on component mount
-  React.useEffect(() => {
-    console.log('🔍 [DEBUG] GmailAuthCallback mounted. Expected state from store:', expectedState);
-    console.log('🔍 [DEBUG] Current localStorage gmail-auth-storage:', localStorage.getItem('gmail-auth-storage'));
-  }, [expectedState]);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -27,32 +18,11 @@ export const GmailAuthCallback: React.FC = () => {
         const errorParam = urlParams.get('error');
         const receivedState = urlParams.get('state');
 
-        // --- Enhanced State Validation ---
-        console.log('OAuth callback validation:', { 
-          received: receivedState, 
-          expected: expectedState,
-          storeState: useMailStore.getState().authState 
+        console.log('OAuth callback processing:', { 
+          hasCode: !!code,
+          hasError: !!errorParam,
+          receivedState 
         });
-        
-        // Try to get state from store directly as fallback
-        const storeState = useMailStore.getState().authState;
-        const validState = expectedState || storeState;
-        
-        console.log('Enhanced validation:', { 
-          received: receivedState, 
-          expectedFromHook: expectedState,
-          expectedFromStore: storeState,
-          finalExpected: validState
-        });
-        
-        if (!receivedState || !validState || receivedState !== validState) {
-          setDebugInfo({ 
-            received: receivedState, 
-            expected: `Hook: ${expectedState}, Store: ${storeState}` 
-          });
-          throw new Error('Invalid authentication state. Please try again to protect your security.');
-        }
-        // --- End State Validation ---
 
         if (errorParam) {
           throw new Error(`OAuth error: ${errorParam}`);
@@ -62,8 +32,8 @@ export const GmailAuthCallback: React.FC = () => {
           throw new Error('No authorization code received from Google');
         }
 
-        // Complete authentication - pass state to hook
-        await completeAuth(code, validState);
+        // Complete authentication - the hook will handle state validation internally
+        await completeAuth(code, receivedState || '');
         console.log('Gmail authentication completed successfully');
 
         // Show success briefly, then redirect
@@ -77,16 +47,11 @@ export const GmailAuthCallback: React.FC = () => {
         console.error('Callback processing failed:', err);
         setCallbackError(err instanceof Error ? err.message : 'Authentication failed');
         setIsProcessing(false);
-        
-        // DO NOT REDIRECT ON ERROR, so we can debug
-        // setTimeout(() => {
-        //   window.location.href = '/mail';
-        // }, 3000);
       }
     };
 
     handleCallback();
-  }, [completeAuth, expectedState]);
+  }, [completeAuth]);
 
   if (callbackError) {
     return (
@@ -101,30 +66,14 @@ export const GmailAuthCallback: React.FC = () => {
             Authentication Failed
           </h2>
           <p className="text-gray-600 mb-4">{callbackError}</p>
-
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-left text-sm">
-            <h3 className="font-semibold text-yellow-800">Debugging Information:</h3>
-            <p className="text-yellow-700">
-              <span className="font-medium">State from Google:</span> {debugInfo.received || 'Not found'}
-            </p>
-            <p className="text-yellow-700">
-              <span className="font-medium">State expected (from store):</span> {debugInfo.expected || 'Not found'}
-            </p>
-          </div>
-
-          <p className="text-sm text-gray-500 mt-4">
-            Please copy this information and share it for assistance.
-          </p>
           
           <button 
             onClick={() => {
-              console.log('🔧 [DEBUG] Clearing auth state and retrying...');
-              useMailStore.getState().setAuthState(null);
               window.location.href = '/mail';
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Clear Auth State & Return to Mail
+            Return to Mail
           </button>
         </div>
       </div>

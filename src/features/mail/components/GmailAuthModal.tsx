@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Mail, Shield, Users, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { useGmailAuth, GmailAccount } from '../hooks/useGmailAuth';
+import { useGmailAuth } from '../hooks/useGmailAuth';
+import { GmailAccount } from '../types';
 import { useMailStore } from '../stores/mailStore';
 
 interface GmailAuthModalProps {
@@ -92,8 +93,7 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
 
     setIsCompletingAuth(true);
     try {
-      const authState = useMailStore.getState().authState;
-      await completeAuth(authCode.trim(), authState || '');
+      await completeAuth(authCode.trim(), '');
     } catch (err) {
       console.error('Failed to complete auth:', err);
     } finally {
@@ -133,21 +133,21 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    {account.picture ? (
+                    {account.avatar ? (
                       <img
-                        src={account.picture}
-                        alt={account.name || account.email}
-                        className="w-8 h-8 rounded-full"
+                        src={account.avatar}
+                        alt={account.displayName || account.email}
+                        className="w-6 h-6 rounded-full"
                       />
                     ) : (
-                      <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                        <Mail className="w-4 h-4 text-gray-600" />
+                      <div className="w-6 h-6 rounded-full bg-accent-primary text-white flex items-center justify-center text-xs">
+                        {(account.displayName || account.email).charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {account.name || account.email}
-                      </p>
+                    <div className="flex-1 text-left">
+                      <div className="text-sm font-medium text-primary">
+                        {account.displayName || account.email}
+                      </div>
                       <p className="text-xs text-gray-500">{account.email}</p>
                     </div>
                   </div>
@@ -313,21 +313,21 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
       {currentAccount && (
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-center justify-center space-x-3">
-            {currentAccount.picture ? (
+            {currentAccount.avatar ? (
               <img
-                src={currentAccount.picture}
-                alt={currentAccount.name || currentAccount.email}
-                className="w-10 h-10 rounded-full"
+                src={currentAccount.avatar}
+                alt={currentAccount.displayName || currentAccount.email}
+                className="w-8 h-8 rounded-full"
               />
             ) : (
-              <div className="w-10 h-10 bg-green-300 rounded-full flex items-center justify-center">
-                <Mail className="w-5 h-5 text-green-700" />
+              <div className="w-8 h-8 rounded-full bg-accent-primary text-white flex items-center justify-center text-sm">
+                {(currentAccount.displayName || currentAccount.email).charAt(0).toUpperCase()}
               </div>
             )}
             <div>
-              <p className="text-sm font-medium text-green-900">
-                {currentAccount.name || currentAccount.email}
-              </p>
+              <div className="text-sm font-medium text-primary">
+                {currentAccount.displayName || currentAccount.email}
+              </div>
               <p className="text-xs text-green-700">{currentAccount.email}</p>
             </div>
           </div>

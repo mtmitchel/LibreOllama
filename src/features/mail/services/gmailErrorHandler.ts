@@ -36,7 +36,7 @@ export enum GmailErrorType {
   NOT_FOUND = 'NOT_FOUND'
 }
 
-export interface GmailError {
+export interface GmailError extends Error {
   type: GmailErrorType;
   message: string;
   userMessage: string;
@@ -331,6 +331,7 @@ export class GmailErrorHandler {
     const isRetryable = this.DEFAULT_RETRY_CONFIG.retryableErrors.includes(type);
     
     return {
+      name: 'GmailError',
       type,
       message: message || errorInfo.message,
       userMessage: errorInfo.userMessage,

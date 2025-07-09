@@ -1,33 +1,34 @@
 /**
- * Unified Test Store Factory - Phase 1.2 Completion
+ * Test Store Factory for Unified Canvas Store
  * 
- * Replaces legacy createCanvasTestStore.ts with unified architecture support
- * Uses the production unifiedCanvasStore for authentic testing
+ * Creates isolated test instances of the unified canvas store for testing.
+ * Replaces legacy createCanvasTestStore.ts with unified architecture support.
  */
 
-import { createStore } from 'zustand/vanilla';
+import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { enableMapSet } from 'immer';
-import { createCanvasStoreSlice } from '../../features/canvas/stores/unifiedCanvasStore';
+import { createCanvasStoreSlice } from '@/features/canvas/stores/unifiedCanvasStore';
+import type { UnifiedCanvasStore } from '@/features/canvas/stores/unifiedCanvasStore';
 
+// Enable Map and Set support for Immer
 enableMapSet();
 
 /**
- * Creates a test-specific vanilla Zustand store that uses the actual unified canvas store implementation.
- * This ensures tests run against the real store logic.
+ * Creates a fresh instance of the unified canvas store for testing.
+ * Each call returns a completely isolated store instance.
  */
-export const createUnifiedTestStore = () => {
-  // Create a new store instance using the same slice creator
-  return createStore(
+export function createUnifiedTestStore() {
+  return create<UnifiedCanvasStore>()(
     subscribeWithSelector(
       immer(createCanvasStoreSlice)
     )
   );
-};
+}
 
 /**
  * Legacy compatibility export - gradually migrate tests to use createUnifiedTestStore
  * @deprecated Use createUnifiedTestStore instead
  */
-export const createCanvasTestStore = createUnifiedTestStore;
+export const createCanvasTestStore = createUnifiedTestStore; 

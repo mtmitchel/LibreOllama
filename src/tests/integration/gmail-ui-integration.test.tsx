@@ -116,11 +116,20 @@ describe('Gmail UI Integration Tests', () => {
     });
     
     vi.spyOn(gmailApiService, 'getGmailApiService').mockReturnValue({
-      getMessages: vi.fn().mockResolvedValue([]),
+      getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
       getLabels: vi.fn().mockResolvedValue([]),
+      getMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+      getMessage: vi.fn().mockResolvedValue(null),
+      getThread: vi.fn().mockResolvedValue({ messages: [] }),
       markAsRead: vi.fn().mockResolvedValue(undefined),
+      markAsUnread: vi.fn().mockResolvedValue(undefined),
       starMessages: vi.fn().mockResolvedValue(undefined),
-    });
+      unstarMessages: vi.fn().mockResolvedValue(undefined),
+      archiveMessages: vi.fn().mockResolvedValue(undefined),
+      deleteMessages: vi.fn().mockResolvedValue(undefined),
+      refreshAttempted: false,
+      accountId: 'test-account'
+    } as any);
   });
 
   afterEach(() => {
@@ -482,8 +491,20 @@ describe('Gmail UI Integration Tests', () => {
 
     it('should handle network errors gracefully', async () => {
       vi.spyOn(gmailApiService, 'getGmailApiService').mockReturnValue({
-        getMessages: vi.fn().mockRejectedValue(new Error('Network error')),
-      });
+      getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
+      getLabels: vi.fn().mockResolvedValue([]),
+      getMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+      getMessage: vi.fn().mockResolvedValue(null),
+      getThread: vi.fn().mockResolvedValue({ messages: [] }),
+      markAsRead: vi.fn().mockResolvedValue(undefined),
+      markAsUnread: vi.fn().mockResolvedValue(undefined),
+      starMessages: vi.fn().mockResolvedValue(undefined),
+      unstarMessages: vi.fn().mockResolvedValue(undefined),
+      archiveMessages: vi.fn().mockResolvedValue(undefined),
+      deleteMessages: vi.fn().mockResolvedValue(undefined),
+      refreshAttempted: false,
+      accountId: 'test-account'
+    } as any);
       
       // Set up authenticated state to avoid auth modal
       const testStore = createTestMailStore();
@@ -504,8 +525,20 @@ describe('Gmail UI Integration Tests', () => {
         .mockResolvedValueOnce([createMockGmailMessage()]);
       
       vi.spyOn(gmailApiService, 'getGmailApiService').mockReturnValue({
-        getMessages: getMessagesMock,
-      });
+      getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
+      getLabels: vi.fn().mockResolvedValue([]),
+      getMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+      getMessage: vi.fn().mockResolvedValue(null),
+      getThread: vi.fn().mockResolvedValue({ messages: [] }),
+      markAsRead: vi.fn().mockResolvedValue(undefined),
+      markAsUnread: vi.fn().mockResolvedValue(undefined),
+      starMessages: vi.fn().mockResolvedValue(undefined),
+      unstarMessages: vi.fn().mockResolvedValue(undefined),
+      archiveMessages: vi.fn().mockResolvedValue(undefined),
+      deleteMessages: vi.fn().mockResolvedValue(undefined),
+      refreshAttempted: false,
+      accountId: 'test-account'
+    } as any);
       
       // Set up authenticated state to avoid auth modal
       const testStore = createTestMailStore();

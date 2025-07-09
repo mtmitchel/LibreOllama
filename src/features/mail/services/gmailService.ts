@@ -115,6 +115,7 @@ class GmailService {
         refresh_token: tokens.refresh_token || '',
         expires_in: tokens.expires_at ? this.calculateExpiresIn(tokens.expires_at) : 0,
         token_type: tokens.token_type,
+        scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
       };
     } catch (error) {
       throw this.handleError(error);
@@ -307,41 +308,48 @@ class GmailService {
     };
   }
 
-  parseMessage(gmailMessage: GmailMessage): ParsedEmail {
+  parseMessage(gmailMessage: GmailMessage, accountId: string = ''): ParsedEmail {
     const headers = gmailMessage.payload.headers || [];
     const getHeader = (name: string) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+    const attachments = this.extractAttachments(gmailMessage.payload);
     
     return {
       id: gmailMessage.id,
       threadId: gmailMessage.threadId,
+      accountId,
       from: this.parseEmailAddress(getHeader('from')),
       to: this.parseEmailAddresses(getHeader('to')),
       cc: this.parseEmailAddresses(getHeader('cc')),
       bcc: this.parseEmailAddresses(getHeader('bcc')),
       subject: getHeader('subject'),
       body: this.extractBody(gmailMessage.payload, 'text/plain'),
-      htmlBody: this.extractBody(gmailMessage.payload, 'text/html'),
       snippet: gmailMessage.snippet,
       date: new Date(gmailMessage.internalDate ? parseInt(gmailMessage.internalDate) : Date.now()),
       isRead: !gmailMessage.labelIds.includes(GMAIL_LABELS.UNREAD),
       isStarred: gmailMessage.labelIds.includes(GMAIL_LABELS.STARRED),
+      hasAttachments: attachments.length > 0,
+      attachments,
       labels: gmailMessage.labelIds,
-      attachments: this.extractAttachments(gmailMessage.payload),
+      importance: this.determineImportance(headers),
+      messageId: getHeader('message-id'),
     };
   }
 
-  parseThread(gmailThread: GmailThread): EmailThread {
-    const messages = gmailThread.messages?.map(msg => this.parseMessage(msg)) || [];
+  parseThread(gmailThread: GmailThread, accountId: string = ''): EmailThread {
+    const messages = gmailThread.messages?.map(msg => this.parseMessage(msg, accountId)) || [];
     
     return {
       id: gmailThread.id,
+      accountId,
       messages,
       participants: this.extractParticipants(messages),
       subject: messages[0]?.subject || '',
       lastMessageDate: messages[messages.length - 1]?.date || new Date(),
       isRead: messages.every(msg => msg.isRead),
       isStarred: messages.some(msg => msg.isStarred),
+      hasAttachments: messages.some(msg => msg.hasAttachments),
       labels: Array.from(new Set(messages.flatMap(msg => msg.labels))),
+      snippet: messages[0]?.snippet || '',
       messageCount: messages.length,
     };
   }
@@ -363,6 +371,24 @@ class GmailService {
   private parseEmailAddresses(addressString: string): EmailAddress[] {
     if (!addressString) return [];
     return addressString.split(',').map(addr => this.parseEmailAddress(addr.trim()));
+  }
+
+  private determineImportance(headers: any[]): 'low' | 'normal' | 'high' {
+    const getHeader = (name: string) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+    
+    const importance = getHeader('importance').toLowerCase();
+    const priority = getHeader('x-priority');
+    const msImportance = getHeader('x-msmail-priority').toLowerCase();
+    
+    if (importance === 'high' || priority === '1' || msImportance === 'high') {
+      return 'high';
+    }
+    
+    if (importance === 'low' || priority === '5' || msImportance === 'low') {
+      return 'low';
+    }
+    
+    return 'normal';
   }
 
   private extractBody(payload: any, mimeType: string = 'text/plain'): string {

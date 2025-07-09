@@ -16,19 +16,23 @@ export function Heading({ level = 1, children, className = '', ...props }: Headi
     4: 'text-lg font-semibold leading-snug'
   };
   
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const classes = `text-primary font-sans ${levelStyles[level]} ${className}`.trim();
   
-  return (
-    <Tag
-      className={`text-primary font-sans ${levelStyles[level]} ${className}`.trim()}
-      {...props}
-    >
-      {children}
-    </Tag>
-  );
+  switch (level) {
+    case 1:
+      return <h1 className={classes} {...props}>{children}</h1>;
+    case 2:
+      return <h2 className={classes} {...props}>{children}</h2>;
+    case 3:
+      return <h3 className={classes} {...props}>{children}</h3>;
+    case 4:
+      return <h4 className={classes} {...props}>{children}</h4>;
+    default:
+      return <h1 className={classes} {...props}>{children}</h1>;
+  }
 }
 
-interface TextProps extends React.HTMLAttributes<HTMLParagraphElement> {
+interface TextProps extends React.HTMLAttributes<HTMLElement> {
   variant?: 'body' | 'secondary' | 'tertiary' | 'muted' | 'caption';
   size?: 'xs' | 'sm' | 'base' | 'lg' | '2xl' | '3xl';
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
@@ -90,23 +94,25 @@ export function Text({
   // Auto line-height based on size if not specified
   const autoLineHeight = lineHeight || (size === 'xs' || size === 'sm' ? 'normal' : size === 'lg' || size === '2xl' || size === '3xl' ? 'relaxed' : 'normal');
   
-  const Tag = as;
+  const classes = `
+    ${variantClasses[variant]} 
+    ${sizeClasses[size]} 
+    ${weightClasses[weight]}
+    ${lineHeightClasses[autoLineHeight]}
+    ${fontClasses[font]}
+    ${className}
+  `.trim();
   
-  return (
-    <Tag
-      className={`
-        ${variantClasses[variant]} 
-        ${sizeClasses[size]} 
-        ${weightClasses[weight]}
-        ${lineHeightClasses[autoLineHeight]}
-        ${fontClasses[font]}
-        ${className}
-      `.trim()}
-      {...props}
-    >
-      {children}
-    </Tag>
-  );
+  switch (as) {
+    case 'span':
+      return <span className={classes} {...props}>{children}</span>;
+    case 'div':
+      return <div className={classes} {...props}>{children}</div>;
+    case 'label':
+      return <label className={classes} {...props}>{children}</label>;
+    default:
+      return <p className={classes} {...props}>{children}</p>;
+  }
 }
 
 interface CaptionProps extends React.HTMLAttributes<HTMLElement> {
@@ -116,16 +122,16 @@ interface CaptionProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 export function Caption({ children, className = '', as = 'p', ...props }: CaptionProps) {
-  const Tag = as;
+  const classes = `text-xs text-muted font-normal font-sans leading-loose ${className}`.trim();
   
-  return (
-    <Tag
-      className={`text-xs text-muted font-normal font-sans leading-loose ${className}`.trim()}
-      {...props}
-    >
-      {children}
-    </Tag>
-  );
+  switch (as) {
+    case 'span':
+      return <span className={classes} {...props}>{children}</span>;
+    case 'div':
+      return <div className={classes} {...props}>{children}</div>;
+    default:
+      return <p className={classes} {...props}>{children}</p>;
+  }
 }
 
 // Button Component - Uses Tailwind utilities with design system variables
@@ -175,13 +181,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   hasIcon?: boolean;
 }
 
-export function Input({ 
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ 
   className = '', 
   error, 
   hasIcon,
   style,
   ...props 
-}: InputProps) {
+}, ref) => {
   const baseClasses = 'w-full bg-input-bg border border-border-default rounded-md font-sans text-primary transition-all duration-150 placeholder:text-input-placeholder focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-secondary';
   
   const paddingClasses = hasIcon ? 'py-3 pr-10 pl-4' : 'py-3 px-4';
@@ -193,6 +199,7 @@ export function Input({
   return (
     <div className="w-full">
       <input
+        ref={ref}
         className={`${baseClasses} ${paddingClasses} ${stateClasses} text-sm ${className}`.trim()}
         style={style}
         onFocus={(e) => {
@@ -214,7 +221,9 @@ export function Input({
       )}
     </div>
   );
-}
+});
+
+Input.displayName = 'Input';
 
 // Card Component - Uses Tailwind utilities with design system variables
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {

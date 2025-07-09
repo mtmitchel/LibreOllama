@@ -4,8 +4,8 @@ import React, { useState, useRef, useEffect, createContext, useContext } from 'r
 interface DropdownMenuContextProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  triggerRef: React.RefObject<HTMLElement>;
-  menuRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLElement | null>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const DropdownMenuContext = createContext<DropdownMenuContextProps | null>(null);
@@ -62,7 +62,7 @@ const DropdownMenuTrigger = ({ children, asChild = false }: DropdownMenuTriggerP
 
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children, {
-      ref: triggerRef,
+      ref: triggerRef as any,
       onClick: handleTriggerClick,
       'aria-expanded': isOpen,
       'aria-haspopup': true,

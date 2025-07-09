@@ -29,11 +29,11 @@ export const mockTauriCore = {
 // Setup comprehensive Tauri mocks
 export function setupTauriMocks() {
   // Set up Tauri environment indicators
-  global.__TAURI_INTERNALS__ = {};
-  global.__TAURI_METADATA__ = { version: '2.0.0' };
+  (global as any).__TAURI_INTERNALS__ = {};
+  (global as any).__TAURI_METADATA__ = { version: '2.0.0' };
   
   // Mock the global Tauri object
-  global.__TAURI__ = {
+  (global as any).__TAURI__ = {
     invoke: mockTauriInvoke,
     event: mockTauriEvent,
     core: mockTauriCore,
@@ -72,8 +72,8 @@ export function setupTauriMocks() {
   }));
 
   vi.mock('@tauri-apps/api/app', () => ({
-    getName: global.__TAURI__.app.getName,
-    getVersion: global.__TAURI__.app.getVersion,
+    getName: (global as any).__TAURI__.app.getName,
+    getVersion: (global as any).__TAURI__.app.getVersion,
   }));
 
   // Mock Tauri opener plugin
@@ -215,9 +215,9 @@ let originalFetch: typeof fetch | undefined;
 // Clean up Tauri mocks
 export function cleanupTauriMocks() {
   vi.clearAllMocks();
-  delete global.__TAURI__;
-  delete global.__TAURI_INTERNALS__;
-  delete global.__TAURI_METADATA__;
+  delete (global as any).__TAURI__;
+  delete (global as any).__TAURI_INTERNALS__;
+  delete (global as any).__TAURI_METADATA__;
   
   // Restore original fetch if it was stored
   if (originalFetch) {

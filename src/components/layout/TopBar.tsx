@@ -134,12 +134,13 @@ export const TopBar = () => {
           <HelpCircle size={18} />
         </Button>
         
-        <Avatar 
-          name="Admin"
-          size="md"
-          className="cursor-pointer hover:opacity-90 transition-opacity ml-2"
-          title="User Profile"
-        />
+        <div title="User Profile">
+          <Avatar 
+            name="Admin"
+            size="md"
+            className="cursor-pointer hover:opacity-90 transition-opacity ml-2"
+          />
+        </div>
       </div>
     </header>
   );

@@ -153,10 +153,10 @@ export class AttachmentService {
       await this.performDownload(download, generateThumbnail);
       return download;
     } catch (error) {
-      download.status = 'failed';
-      download.error = error instanceof Error ? error.message : 'Download failed';
-      this.emitEvent('download_failed', attachmentId, { download, error });
-      throw error;
+      console.error('Failed to download attachment:', error);
+      throw handleGmailError(error, {
+        operation: 'download_attachment_fallback',
+      });
     }
   }
 
@@ -409,13 +409,18 @@ export class AttachmentService {
       // Return mock attachment for now
       return {
         id: attachmentId,
+        messageId: messageId,
         filename: 'mock-attachment.pdf',
         mimeType: 'application/pdf',
         size: 1024 * 1024, // 1MB
+        isInline: false,
         data: ''
       } as GmailAttachment;
     } catch (error) {
-      throw handleGmailError(error);
+      throw handleGmailError(error, {
+        operation: 'get_attachment_info',
+        messageId,
+      });
     }
   }
 

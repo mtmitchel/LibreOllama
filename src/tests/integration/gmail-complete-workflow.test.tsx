@@ -91,14 +91,24 @@ const setupAuthenticatedUserScenario = () => {
   
   // Mock the API to return the messages when fetchMessages is called by addAccount
   vi.spyOn(gmailApiService, 'getGmailApiService').mockReturnValue({
-    ...gmailApiService.getGmailApiService(),
+    getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
+    getLabels: vi.fn().mockResolvedValue(labels),
     getMessages: vi.fn().mockResolvedValue({
       messages,
       hasMore: false,
       nextPageToken: undefined
     }),
-    getLabels: vi.fn().mockResolvedValue(labels),
-  });
+    getMessage: vi.fn().mockResolvedValue(null),
+    getThread: vi.fn().mockResolvedValue({ messages: [] }),
+    markAsRead: vi.fn().mockResolvedValue(undefined),
+    markAsUnread: vi.fn().mockResolvedValue(undefined),
+    starMessages: vi.fn().mockResolvedValue(undefined),
+    unstarMessages: vi.fn().mockResolvedValue(undefined),
+    archiveMessages: vi.fn().mockResolvedValue(undefined),
+    deleteMessages: vi.fn().mockResolvedValue(undefined),
+    refreshAttempted: false,
+    accountId: 'test-account'
+  } as any);
   
   // Ensure the store is set up correctly with the account as current
   // Step 1: Set the accounts first
@@ -137,14 +147,24 @@ const setupMultiAccountScenario = () => {
   
   // Mock the API to return messages for each account
   vi.spyOn(gmailApiService, 'getGmailApiService').mockReturnValue({
-    ...gmailApiService.getGmailApiService(),
+    getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
+    getLabels: vi.fn().mockResolvedValue(labels),
     getMessages: vi.fn().mockImplementation(async (labelIds, limit, pageToken, accountId) => ({
       messages: accountId === accounts[0].id ? messages : [],
       hasMore: false,
       nextPageToken: undefined
     })),
-    getLabels: vi.fn().mockResolvedValue(labels),
-  });
+    getMessage: vi.fn().mockResolvedValue(null),
+    getThread: vi.fn().mockResolvedValue({ messages: [] }),
+    markAsRead: vi.fn().mockResolvedValue(undefined),
+    markAsUnread: vi.fn().mockResolvedValue(undefined),
+    starMessages: vi.fn().mockResolvedValue(undefined),
+    unstarMessages: vi.fn().mockResolvedValue(undefined),
+    archiveMessages: vi.fn().mockResolvedValue(undefined),
+    deleteMessages: vi.fn().mockResolvedValue(undefined),
+    refreshAttempted: false,
+    accountId: 'test-account'
+  } as any);
   
   // Set up accounts and ensure the first one is current
   // Step 1: Set the accounts
@@ -222,6 +242,7 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
     }));
 
     vi.spyOn(gmailApiService, 'getGmailApiService').mockImplementation(() => ({
+      getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
       getMessages: defaultGetMessages,
       getMessage: vi.fn().mockImplementation(async (messageId: string) => 
         MOCK_SAMPLE_MESSAGES.find(msg => msg.id === messageId) || null
@@ -231,13 +252,16 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
         { id: 'STARRED', name: 'Starred', messagesTotal: 8, messagesUnread: 2 },
         { id: 'SENT', name: 'Sent', messagesTotal: 50, messagesUnread: 0 },
       ]),
+      getThread: vi.fn().mockResolvedValue({ messages: [] }),
       markAsRead: vi.fn().mockResolvedValue(undefined),
       markAsUnread: vi.fn().mockResolvedValue(undefined),
       starMessages: vi.fn().mockResolvedValue(undefined),
       unstarMessages: vi.fn().mockResolvedValue(undefined),
       archiveMessages: vi.fn().mockResolvedValue(undefined),
       deleteMessages: vi.fn().mockResolvedValue(undefined),
-    }));
+      refreshAttempted: false,
+      accountId: 'test-account'
+    } as any));
 
     vi.spyOn(gmailTauriService, 'sendGmailMessage').mockImplementation(async (messageData) => ({
       success: true,
@@ -262,7 +286,7 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
       useMailStore.setState({
         isAuthenticated: false,
         currentAccountId: null,
-        accounts: [],
+        accounts: {},
         accountData: {}
       });
       
@@ -417,7 +441,7 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
       await user.click(markReadButton);
       
       await waitFor(() => {
-        expect(gmailApiService.getGmailApiService().markAsRead).toHaveBeenCalled();
+        expect(gmailApiService.getGmailApiService()!.markAsRead).toHaveBeenCalled();
       });
       
       // 4. Star the message
@@ -425,7 +449,7 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
       await user.click(starButton);
       
       await waitFor(() => {
-        expect(gmailApiService.getGmailApiService().starMessages).toHaveBeenCalled();
+        expect(gmailApiService.getGmailApiService()!.starMessages).toHaveBeenCalled();
       });
       
       // 5. Archive the message
@@ -433,7 +457,7 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
       await user.click(archiveButton);
       
       await waitFor(() => {
-        expect(gmailApiService.getGmailApiService().archiveMessages).toHaveBeenCalled();
+        expect(gmailApiService.getGmailApiService()!.archiveMessages).toHaveBeenCalled();
       });
     });
 
@@ -641,7 +665,7 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
       });
       
       await waitFor(() => {
-        expect(gmailApiService.getGmailApiService().getMessages).toHaveBeenCalledWith(
+        expect(gmailApiService.getGmailApiService()!.getMessages).toHaveBeenCalledWith(
           expect.arrayContaining(['INBOX']),
           expect.any(Number),
           undefined,
@@ -747,9 +771,20 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
         });
       
       vi.spyOn(gmailApiService, 'getGmailApiService').mockReturnValue({
-        ...gmailApiService.getGmailApiService(),
-        getMessages: mockGetMessages,
-      });
+      getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
+      getLabels: vi.fn().mockResolvedValue([]),
+      getMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+      getMessage: vi.fn().mockResolvedValue(null),
+      getThread: vi.fn().mockResolvedValue({ messages: [] }),
+      markAsRead: vi.fn().mockResolvedValue(undefined),
+      markAsUnread: vi.fn().mockResolvedValue(undefined),
+      starMessages: vi.fn().mockResolvedValue(undefined),
+      unstarMessages: vi.fn().mockResolvedValue(undefined),
+      archiveMessages: vi.fn().mockResolvedValue(undefined),
+      deleteMessages: vi.fn().mockResolvedValue(undefined),
+      refreshAttempted: false,
+      accountId: 'test-account'
+    } as any);
       
       // Render component which should trigger message fetching
       render(<Mail />, { wrapper: CompleteAppWrapper });
@@ -786,10 +821,21 @@ describe.skip('Gmail Complete User Workflow Tests - DISABLED: Race condition wit
       
       // Mock token expiration error
       vi.spyOn(gmailApiService, 'getGmailApiService').mockReturnValue({
-        ...gmailApiService.getGmailApiService(),
+        getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
+        getLabels: vi.fn().mockResolvedValue([]),
         getMessages: vi.fn()
           .mockRejectedValueOnce({ status: 401, message: 'Unauthorized' }),
-      });
+        getMessage: vi.fn().mockResolvedValue(null),
+        getThread: vi.fn().mockResolvedValue({ messages: [] }),
+        markAsRead: vi.fn().mockResolvedValue(undefined),
+        markAsUnread: vi.fn().mockResolvedValue(undefined),
+        starMessages: vi.fn().mockResolvedValue(undefined),
+        unstarMessages: vi.fn().mockResolvedValue(undefined),
+        archiveMessages: vi.fn().mockResolvedValue(undefined),
+        deleteMessages: vi.fn().mockResolvedValue(undefined),
+        refreshAttempted: false,
+        accountId: 'test-account'
+      } as any);
       
       render(<Mail />, { wrapper: CompleteAppWrapper });
       

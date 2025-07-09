@@ -1,6 +1,15 @@
 import React from 'react';
 import { GmailAttachment, AttachmentDownload, formatFileSize } from '../types/attachments';
 
+// Local window type extension
+declare global {
+  interface Window {
+    electronAPI?: {
+      openFile: (filePath: string) => Promise<void>;
+    };
+  }
+}
+
 interface AttachmentDownloadButtonProps {
   attachment: GmailAttachment;
   download?: AttachmentDownload;

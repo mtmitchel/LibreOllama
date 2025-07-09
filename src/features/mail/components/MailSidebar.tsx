@@ -461,16 +461,9 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
           let quotaTotal = 15000000000; // 15GB default
           
           if (currentAccount) {
-            // Check various possible quota field names
-            quotaUsed = currentAccount.quotaUsed || 
-                       currentAccount.quota?.used || 
-                       currentAccount.storageQuota?.usage || 
-                       0;
-                       
-            quotaTotal = currentAccount.quotaTotal || 
-                        currentAccount.quota?.total || 
-                        currentAccount.storageQuota?.limit ||
-                        0; // Don't assume a default
+            // Use the correct GmailAccount properties
+            quotaUsed = currentAccount.quotaUsed || 0;
+            quotaTotal = currentAccount.quotaTotal || 0; // Don't assume a default
             
             // Don't modify the quota values - they should come from the API
             // If they're wrong, the issue is in the data fetching, not here
@@ -486,8 +479,6 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
           if (currentAccount) {
             console.log('💾 [SIDEBAR] currentAccount.quotaUsed:', currentAccount.quotaUsed);
             console.log('💾 [SIDEBAR] currentAccount.quotaTotal:', currentAccount.quotaTotal);
-            console.log('💾 [SIDEBAR] currentAccount.quota:', currentAccount.quota);
-            console.log('💾 [SIDEBAR] currentAccount.storageQuota:', currentAccount.storageQuota);
             console.log('💾 [SIDEBAR] currentAccount keys:', Object.keys(currentAccount));
             console.log('💾 [SIDEBAR] Full currentAccount:', currentAccount);
           }
@@ -496,14 +487,14 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
           if (currentAccount && currentAccount.syncStatus === 'error' && currentAccount.errorMessage) {
             return (
               <>
-                <Text size="xs" variant="danger" style={{ marginBottom: 'var(--space-2)' }}>
+                <Text size="xs" variant="muted" className="text-red-500" style={{ marginBottom: 'var(--space-2)' }}>
                   Authentication Error
                 </Text>
                 <Text size="xs" variant="tertiary" style={{ marginBottom: 'var(--space-2)' }}>
                   {currentAccount.errorMessage}
                 </Text>
                 <Button
-                  variant="danger"
+                  variant="destructive"
                   size="sm"
                   onClick={() => signOut()}
                   className="w-full"
@@ -592,7 +583,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
           
           return (
             <>
-              <Text size="xs" variant={isOverQuota ? "danger" : "secondary"} style={{ marginBottom: 'var(--space-2)' }}>
+              <Text size="xs" variant="secondary" className={isOverQuota ? "text-red-500" : ""} style={{ marginBottom: 'var(--space-2)' }}>
                 {usedDisplay} {unit} of {totalDisplay} {unit} used
                 {isOverQuota && " (Over quota)"}
               </Text>

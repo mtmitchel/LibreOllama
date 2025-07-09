@@ -66,10 +66,19 @@ const Settings: React.FC = () => {
   const [checkForUpdates, setCheckForUpdates] = useState(true);
   
   // Mock Google accounts data
-  const accounts: any[] = [];
-  const activeAccount = null;
-  const setActiveAccount = (account: any) => console.log('Mock: setActiveAccount', account);
-  const addAccount = (account: any) => console.log('Mock: addAccount', account);
+  interface MockAccount {
+    id: string;
+    email: string;
+    name?: string;
+    picture?: string;
+  }
+  
+  const accounts: MockAccount[] = [];
+  const activeAccount: MockAccount | null = null;
+
+  // Mock functions
+  const setActiveAccount = (account: MockAccount) => console.log('Mock: setActiveAccount', account);
+  const addAccount = (account: MockAccount) => console.log('Mock: addAccount', account);
   const removeAccount = (accountId: string) => console.log('Mock: removeAccount', accountId);
 
   const navItems = [
@@ -101,7 +110,7 @@ const Settings: React.FC = () => {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between py-3 border-b border-border-default">
                     <div className="flex-1">
-                      <Text as="label" htmlFor="startup-view" weight="medium" className="block mb-1">Startup view</Text>
+                      <label htmlFor="startup-view" className="block mb-1 text-sm font-medium">Startup view</label>
                       <Text variant="muted" size="sm">Choose which module to open when you start the application.</Text>
                     </div>
                     {/* Select component removed */}
@@ -125,9 +134,9 @@ const Settings: React.FC = () => {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between py-3 border-b border-border-default">
                     <div className="flex-1">
-                      <Text as="label" htmlFor="language-select" weight="medium" className="block mb-1">
+                      <label htmlFor="language-select" className="block mb-1 text-sm font-medium">
                         Language
-                      </Text>
+                      </label>
                       <Text variant="muted" size="sm">
                         Set the display language for the entire application.
                       </Text>
@@ -136,9 +145,9 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <Text as="label" htmlFor="first-day-select" weight="medium" className="block mb-1">
+                      <label htmlFor="first-day-select" className="block mb-1 text-sm font-medium">
                         First day of the week
-                      </Text>
+                      </label>
                       <Text variant="muted" size="sm">
                         Set the first day for calendars and date pickers.
                       </Text>
@@ -172,9 +181,9 @@ const Settings: React.FC = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                     <div className="space-y-2">
-                      <Text as="label" htmlFor="ollama-endpoint" weight="medium" className="block">
+                      <label htmlFor="ollama-endpoint" className="block text-sm font-medium">
                         Server endpoint
-                      </Text>
+                      </label>
                       <Text variant="muted" size="sm">
                         The local URL where your Ollama instance is running.
                       </Text>
@@ -281,7 +290,7 @@ const Settings: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {accounts.map(account => (
+                    {(accounts as MockAccount[]).map((account: MockAccount) => (
                       <div key={account.id} className="flex items-center justify-between p-4 border border-border-default rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center">
@@ -299,7 +308,7 @@ const Settings: React.FC = () => {
                             <Text weight="medium">{account.name || account.email}</Text>
                             <Text variant="muted" size="sm">{account.email}</Text>
                           </div>
-                          {activeAccount?.id === account.id && (
+                          {(activeAccount as MockAccount | null)?.id === account.id && (
                             <div className="flex items-center gap-1 px-2 py-1 bg-success-ghost text-success rounded-full">
                               <Check size={12} />
                               <Text size="xs">Active</Text>
@@ -307,7 +316,7 @@ const Settings: React.FC = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {activeAccount?.id !== account.id && (
+                          {(activeAccount as MockAccount | null)?.id !== account.id && (
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -354,9 +363,9 @@ const Settings: React.FC = () => {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between py-3 border-b border-border-default">
                     <div className="flex-1">
-                      <Text as="label" htmlFor="gemini-api-key" weight="medium" className="block mb-1">
+                      <label htmlFor="gemini-api-key" className="block mb-1 text-sm font-medium">
                         Google Gemini
-                      </Text>
+                      </label>
                       <Text variant="muted" size="sm">
                         Required for accessing Google's cloud-based AI models.
                       </Text>
@@ -376,9 +385,9 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <Text as="label" htmlFor="anthropic-api-key" weight="medium" className="block mb-1">
+                      <label htmlFor="anthropic-api-key" className="block mb-1 text-sm font-medium">
                         Anthropic Claude
-                      </Text>
+                      </label>
                       <Text variant="muted" size="sm">
                         Required for accessing Claude models via API.
                       </Text>

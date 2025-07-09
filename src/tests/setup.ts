@@ -60,7 +60,10 @@ Object.defineProperty(global, 'localStorage', {
 });
 
 // Mock requestAnimationFrame
-global.requestAnimationFrame = vi.fn(cb => setTimeout(cb, 0));
+global.requestAnimationFrame = vi.fn(cb => {
+  setTimeout(cb, 0);
+  return 1; // Return a mock request ID
+}) as any;
 global.cancelAnimationFrame = vi.fn();
 
 // Mock performance

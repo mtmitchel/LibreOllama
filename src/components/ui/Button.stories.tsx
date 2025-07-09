@@ -67,10 +67,10 @@ Primary.meta = {
   description: 'Primary button used for main call-to-action elements. Uses --accent-primary color.',
 };
 
-export const Secondary: Story = ({ children = 'Secondary Button', disabled = false, size = 'default' }) => (
-  <Button variant="secondary" disabled={disabled} size={size}>
+export const Secondary: Story = () => (
+  <Button variant="secondary">
     <Download size={16} />
-    {children}
+    Secondary Button
   </Button>
 );
 
@@ -91,10 +91,10 @@ Secondary.meta = {
   description: 'Secondary button for less prominent actions. Uses --bg-tertiary background.',
 };
 
-export const Ghost: Story = ({ children = 'Ghost Button', disabled = false, size = 'default' }) => (
-  <Button variant="ghost" disabled={disabled} size={size}>
+export const Ghost: Story = () => (
+  <Button variant="ghost">
     <Settings size={16} />
-    {children}
+    Ghost Button
   </Button>
 );
 

@@ -68,16 +68,17 @@ export function ComposeModal({
   scheduledTime 
 }: ComposeModalProps) {
   const { 
-    composeDraft, 
+    composeData, 
     updateCompose, 
     cancelCompose, 
-    accounts,
+    getAccountsArray,
     currentAccountId,
     getCurrentAccount,
     switchAccount
   } = useMailStore();
 
   const activeAccount = getCurrentAccount();
+  const accounts = getAccountsArray();
 
   // UI State
   const [isMinimized, setIsMinimized] = useState(false);
@@ -379,7 +380,7 @@ export function ComposeModal({
   };
 
   // Handle case where compose modal is open but draft creation failed
-  if (!composeDraft) {
+  if (!composeData) {
     return (
       <div className="fixed bottom-0 right-4 w-[700px] h-[400px] bg-[var(--bg-primary)] border border-border-subtle rounded-t-lg shadow-xl z-50 flex flex-col">
         <div className="flex items-center justify-between p-3 border-b border-border-subtle bg-[var(--bg-secondary)]">
@@ -497,7 +498,7 @@ export function ComposeModal({
                 >
                   {accounts.map(account => (
                     <option key={account.id} value={account.id} className="bg-[var(--bg-primary)] text-primary">
-                      {account.name} ({account.email})
+                      {account.displayName} ({account.email})
                     </option>
                   ))}
                 </select>
@@ -721,7 +722,7 @@ export function ComposeModal({
             {/* Importance indicator */}
             <div className="flex items-center gap-1 ml-2">
               {compose.importance === MessageImportance.High && (
-                <AlertTriangle size={16} className="text-error" title="High importance" />
+                <AlertTriangle size={16} className="text-error" />
               )}
               {compose.importance === MessageImportance.Low && (
                 <div className="w-4 h-4 rounded-full bg-secondary/30" title="Low importance" />

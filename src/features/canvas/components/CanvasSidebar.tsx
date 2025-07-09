@@ -268,7 +268,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
     try {
       const canvas = canvases.find((c) => c.id === canvasId);
-      const filename = getSuggestedFilename(canvas?.name || "canvas", "jpeg");
+      const filename = getSuggestedFilename(canvas?.name || "canvas", "jpg");
       await exportCanvasAsJPEG(stageRef.current, filename);
     } catch (error) {
       console.error("Export failed:", error);

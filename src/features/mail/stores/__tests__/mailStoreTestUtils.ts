@@ -161,26 +161,37 @@ export const createTestMailStore = () => {
         searchQuery: '',
         currentLabel: null,
         isComposing: false,
-        composeDraft: null,
+        composeData: {
+          to: [],
+          cc: [],
+          bcc: [],
+          subject: '',
+          body: '',
+          attachments: [],
+          isScheduled: false,
+        },
         error: null,
         connectionStatus: 'connected',
         settings: {
           syncInterval: 5,
-          enableNotifications: true,
-          enableOfflineMode: false,
-          unifiedInbox: false,
+          notifications: true,
+          autoSave: false,
+          enableUnifiedInbox: false,
+          emailSignature: '',
+          maxAttachmentSize: 25,
+          readReceipts: true,
         },
         // Pagination
-        currentPage: 1,
-        pageSize: 50,
-        totalPages: 1,
+
+
+
         nextPageToken: undefined,
-        prevPageToken: undefined,
+
         pageTokens: [],
         totalMessages: 0,
-        currentPageStartIndex: 0,
+
         isNavigatingBackwards: false,
-        authState: null,
+
       });
     },
 
@@ -199,21 +210,15 @@ export const createTestMailStore = () => {
 export const createMockTestAccount = (id: string, email: string, name: string): GmailAccount => ({
   id,
   email,
-  name,
-  picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=40&background=random`,
-  tokens: {
-    access_token: `mock-token-${id}`,
-    refresh_token: `mock-refresh-${id}`,
-    token_type: 'Bearer',
-    expires_at: new Date(Date.now() + 3600000).toISOString(),
-  },
+  displayName: name,
+  avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=40&background=random`,
+
   isActive: id === 'account1',
-  lastSync: new Date(),
+  lastSyncAt: new Date(),
   syncStatus: 'idle',
-  quota: {
-    used: Math.floor(Math.random() * 10000000000),
-    total: 15000000000,
-  },
+  accessToken: `mock-token-${id}`,
+  refreshToken: `mock-refresh-${id}`,
+  tokenExpiry: new Date(Date.now() + 3600000),
 });
 
 export const createMockTestMessages = (accountId: string, accountEmail: string): ParsedEmail[] => [
@@ -226,7 +231,7 @@ export const createMockTestMessages = (accountId: string, accountEmail: string):
     bcc: [],
     subject: `Test Welcome to ${accountEmail}!`,
     body: 'Test message for unit testing...',
-    htmlBody: '<p>Test message for unit testing...</p>',
+
     attachments: [],
     date: new Date('2024-01-15T10:30:00'),
     isRead: false,
@@ -234,6 +239,9 @@ export const createMockTestMessages = (accountId: string, accountEmail: string):
     labels: ['INBOX', 'UNREAD'],
     snippet: 'Test message for unit testing...',
     accountId,
+    hasAttachments: false,
+    importance: 'normal',
+    messageId: `${accountId}-msg1`,
   },
   {
     id: `${accountId}-msg2`,
@@ -244,7 +252,7 @@ export const createMockTestMessages = (accountId: string, accountEmail: string):
     bcc: [],
     subject: `Test Account verified for ${accountEmail}`,
     body: 'Test verification message.',
-    htmlBody: '<p>Test verification message.</p>',
+
     attachments: [],
     date: new Date('2024-01-14T14:20:00'),
     isRead: true,
@@ -252,6 +260,9 @@ export const createMockTestMessages = (accountId: string, accountEmail: string):
     labels: ['INBOX', 'STARRED'],
     snippet: 'Test verification message.',
     accountId,
+    hasAttachments: false,
+    importance: 'normal',
+    messageId: `${accountId}-msg2`,
   },
 ];
 

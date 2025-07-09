@@ -77,6 +77,12 @@ interface ProgressTask {
   dependencies?: string[];
 }
 
+interface ProjectForm {
+  name: string;
+  description: string;
+  color: string;
+}
+
 const mockProjects: Project[] = [
   {
     id: '1',
@@ -226,6 +232,13 @@ export function Projects() {
   ]);
   const [customSuggestion, setCustomSuggestion] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [projectForm, setProjectForm] = useState<ProjectForm>({
+    name: '',
+    description: '',
+    color: 'var(--accent-primary)'
+  });
+  const [newProjectStep, setNewProjectStep] = useState(1);
+  const [aiAssist, setAiAssist] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -254,10 +267,21 @@ export function Projects() {
     setNewProjectModalOpen(true);
   };
 
-  const handleProjectCreated = (projectData: any) => {
-    console.log('New project created:', projectData);
+  const handleActualProjectCreation = () => {
+    console.log('Creating project:', projectForm);
+    // Add actual project creation logic here
+    handleProjectCreated();
+  };
+
+  const handleProjectCreated = () => {
     setNewProjectModalOpen(false);
-    // Here you would typically add the new project to your projects list
+    setProjectForm({
+      name: '',
+      description: '',
+      color: 'var(--accent-primary)'
+    });
+    setNewProjectStep(1);
+    setAiAssist(false);
   };
 
   const handleSelectProject = (projectId: string) => {
@@ -615,7 +639,7 @@ export function Projects() {
                               height: 'calc(var(--space-8) + var(--space-4))'
                             }}
                           >
-                            <Icon className="text-primary" size={24} />
+                            <Icon className="text-primary w-6 h-6" />
                           </div>
                           <div className="text-center">
                             <Text size="lg" weight="bold" variant="body">
@@ -649,7 +673,7 @@ export function Projects() {
           </Card>
         )}
 
-        {!selectedProject && <NoProjectSelected />}
+        {!selectedProject && <NoProjectSelected onCreateProject={handleCreateProject} />}
       </div>
 
       {/* New Project Modal */}
@@ -657,7 +681,13 @@ export function Projects() {
         <NewProjectModal
           isOpen={newProjectModalOpen}
           onClose={() => setNewProjectModalOpen(false)}
-          onProjectCreated={handleProjectCreated}
+          projectForm={projectForm}
+          setProjectForm={setProjectForm}
+          newProjectStep={newProjectStep}
+          setNewProjectStep={setNewProjectStep}
+          aiAssist={aiAssist}
+          setAiAssist={setAiAssist}
+          onCreateProject={handleActualProjectCreation}
         />
       )}
     </div>

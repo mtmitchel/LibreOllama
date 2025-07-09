@@ -3,6 +3,15 @@ import { GmailAccount, GmailTokens } from '../types';
 import { useMailStore } from '../stores/mailStore';
 import { handleGmailError } from '../services/gmailErrorHandler';
 
+// Local window type extension
+declare global {
+  interface Window {
+    __TAURI__?: any;
+    __TAURI_INTERNALS__?: any;
+    __TAURI_METADATA__?: any;
+  }
+}
+
 export interface GmailConfig {
   redirect_uri: string;
 }
@@ -33,7 +42,7 @@ let tauriInitialized = false;
 let tauriInitPromise: Promise<boolean> | null = null;
 
 // Safe invoke function that only works when Tauri is available
-let safeInvoke: any = null;
+let safeInvoke: (<T = any>(cmd: string, args?: any) => Promise<T>) | null = null;
 
 // Global auth state to prevent multiple OAuth flows across hook instances
 let globalAuthInProgress = false;
@@ -117,7 +126,7 @@ async function initializeTauri(): Promise<boolean> {
       console.log('✅ Tauri initialized successfully');
       resolve(true);
     } catch (error) {
-      console.log('Tauri initialization failed:', error.message);
+      console.log('Tauri initialization failed:', error instanceof Error ? error.message : String(error));
       resolve(false);
     }
   });
@@ -137,7 +146,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
 
   // Get state and actions from the mail store
   const {
-    accounts,
+    getAccountsArray,
     currentAccountId,
     isAuthenticated,
     getCurrentAccount,
@@ -146,9 +155,9 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     addAccount: storeAddAccount,
     removeAccount: storeRemoveAccount,
     refreshAccount: storeRefreshAccount,
-    setAuthState,
   } = useMailStore();
 
+  const accounts = getAccountsArray();
   const currentAccount = getCurrentAccount();
 
   const clearError = useCallback(() => {
@@ -215,6 +224,10 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
         }
 
         // Use secure backend OAuth flow
+        if (!safeInvoke) {
+          throw new Error('Tauri invoke is not available');
+        }
+        
         const authRequest = await safeInvoke<{
           auth_url: string;
           state: string;
@@ -225,7 +238,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
 
         // Store state both locally and globally for debugging
         globalAuthState = authRequest.state;
-        setAuthState(authRequest.state);
+        // setAuthState(authRequest.state); // Removed as per edit hint
         console.log(`🔑 [${authId}] Storing auth state: ${authRequest.state}`);
 
         // Open auth URL in external browser using Tauri's opener plugin
@@ -270,7 +283,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     })();
 
     return globalAuthPromise;
-  }, [tauriReady, setAuthState]);
+  }, [tauriReady]); // Removed setAuthState from dependency array
 
   // Internal function for completing auth (used by both deep link and manual completion)
   const completeAuthInternal = async (authorizationCode: string, state: string) => {
@@ -279,6 +292,10 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     }
 
     // Use secure backend OAuth completion
+    if (!safeInvoke) {
+      throw new Error('Tauri invoke is not available');
+    }
+    
     const tokenResponse = await safeInvoke<{
       access_token: string;
       refresh_token?: string;
@@ -293,7 +310,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     // Convert to our token format
     const tokens: GmailTokens = {
       access_token: tokenResponse.access_token,
-      refresh_token: tokenResponse.refresh_token || null,
+      refresh_token: tokenResponse.refresh_token || undefined,
       expires_at: new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString(),
       token_type: tokenResponse.token_type,
     };
@@ -328,7 +345,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     await storeAddAccount(newAccount);
 
     // Clear the auth state after successful authentication
-    setAuthState(null);
+    // setAuthState(null); // Removed as per edit hint
     globalAuthState = null; // Also clear global state
 
     console.log('✅ [SECURITY] Gmail authentication completed securely');
@@ -350,7 +367,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [storeAddAccount, accounts.length, tauriReady, setAuthState]);
+  }, [storeAddAccount, accounts.length, tauriReady]);
 
   const refreshToken = useCallback(async (accountId: string) => {
     try {
@@ -371,6 +388,10 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       }
       
       // Use secure backend token refresh
+      if (!safeInvoke) {
+        throw new Error('Tauri invoke is not available');
+      }
+      
       const tokenResponse = await safeInvoke<{
         access_token: string;
         refresh_token?: string;
@@ -440,7 +461,10 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
 
     } catch (err) {
       console.error('Failed to remove Gmail account:', err);
-      const handledError = handleGmailError(err);
+      const handledError = handleGmailError(err, {
+        operation: 'remove_account',
+        accountId,
+      });
       setError(handledError.message);
     } finally {
       setIsLoading(false);
@@ -452,7 +476,10 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       storeSwitchAccount(accountId);
     } catch (err) {
       console.error('Failed to switch account:', err);
-      const handledError = handleGmailError(err);
+      const handledError = handleGmailError(err, {
+        operation: 'switch_account',
+        accountId,
+      });
       setError(handledError.message);
     }
   }, [storeSwitchAccount]);
@@ -566,6 +593,9 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     
     try {
       // Store using new secure storage with OS keyring
+      if (!safeInvoke) {
+        throw new Error('Tauri invoke is not available');
+      }
       await safeInvoke('store_gmail_tokens_secure', {
         accountId: account.id,
         tokens: tokensToStore,
@@ -581,6 +611,9 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       
       // Fallback to legacy storage with warning
       try {
+        if (!safeInvoke) {
+          throw new Error('Tauri invoke is not available');
+        }
         await safeInvoke('store_gmail_tokens', {
           accountId: account.id,
           tokens: tokensToStore,
@@ -606,6 +639,9 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     
     try {
       // Try secure storage first
+      if (!safeInvoke) {
+        throw new Error('Tauri invoke is not available');
+      }
       await safeInvoke('remove_gmail_tokens_secure', { accountId });
       console.log('✅ [SECURITY] Tokens removed securely from OS keyring');
     } catch (err) {
@@ -613,6 +649,9 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
       
       // Fallback to legacy storage
       try {
+        if (!safeInvoke) {
+          throw new Error('Tauri invoke is not available');
+        }
         await safeInvoke('remove_gmail_tokens', { accountId });
         console.log('⚠️ [SECURITY] Tokens removed from legacy storage');
       } catch (legacyErr) {

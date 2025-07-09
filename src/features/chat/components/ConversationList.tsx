@@ -129,7 +129,7 @@ export function ConversationList({
               {conv.lastMessage}
             </Text>
           )}
-          <Caption variant="muted" size="xs">{conv.timestamp}</Caption>
+          <Caption>{conv.timestamp}</Caption>
         </div>
         
         {/* Hover Actions */}

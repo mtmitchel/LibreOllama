@@ -104,7 +104,7 @@ export const SlashCommandSuggestion = {
           return true;
         }
 
-        return component?.ref?.onKeyDown(props.event) || false;
+        return (component?.ref as any)?.onKeyDown?.(props.event) || false;
       },
 
       onExit() {

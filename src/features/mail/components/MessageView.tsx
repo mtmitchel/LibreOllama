@@ -327,8 +327,8 @@ export function MessageView() {
       <div className="flex-1 overflow-y-auto bg-[var(--bg-tertiary)]">
         <div style={{ padding: 'var(--space-4)' }}>
           <div className="prose prose-sm max-w-none text-[var(--text-primary)]">
-            {currentMessage.htmlBody ? (
-              <div dangerouslySetInnerHTML={{ __html: currentMessage.htmlBody }} />
+            {currentMessage.body ? (
+              <div dangerouslySetInnerHTML={{ __html: currentMessage.body }} />
             ) : (
               <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
                 {currentMessage.body}

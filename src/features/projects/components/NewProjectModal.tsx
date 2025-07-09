@@ -136,9 +136,9 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   onCheckedChange={setAiAssist}
                   id="ai-assist"
                 />
-                <Text as="label" htmlFor="ai-assist" size="sm" weight="medium">
+                <label htmlFor="ai-assist" className="text-sm font-medium">
                   Enable AI Assistant for this project
-                </Text>
+                </label>
               </div>
               {aiAssist && (
               <div className="mt-4 p-4 bg-accent-ghost rounded-lg border border-accent-soft">

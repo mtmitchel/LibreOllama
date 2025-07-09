@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useMailStore } from '../stores/mailStore';
+import { useGmailAuth } from '../hooks/useGmailAuth';
 import { useGmailSync } from '../hooks/useGmailSync';
 import { GmailAccount } from '../types';
+import { GmailErrorType, handleGmailError } from '../services/gmailErrorHandler';
 import { ErrorDisplay } from './ErrorDisplay';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 
@@ -19,13 +21,14 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
     isLoadingAccounts,
     error,
     switchAccount,
-    addAccount,
     removeAccount,
     refreshAccount,
     syncAllAccounts,
     clearError,
     getAccountsArray,
   } = useMailStore();
+
+  const { addAccount: addGmailAccount } = useGmailAuth();
 
   const accounts = getAccountsArray();
 
@@ -46,8 +49,12 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
   };
 
   const handleAddAccount = async () => {
-    setIsOpen(false);
-    await addAccount();
+    try {
+      setIsOpen(false);
+      await addGmailAccount();
+    } catch (err) {
+      console.error('Failed to add account:', err);
+    }
   };
 
   const handleRemoveAccount = async (accountId: string, e: React.MouseEvent) => {
@@ -70,12 +77,12 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
     }
   };
 
-  const formatQuota = (account: GmailAccount) => {
-    if (!account.quota) return '';
-    const usedGB = (account.quota.used / 1024 / 1024 / 1024).toFixed(1);
-    const totalGB = (account.quota.total / 1024 / 1024 / 1024).toFixed(0);
-    const percentage = ((account.quota.used / account.quota.total) * 100).toFixed(0);
-    return `${usedGB}GB / ${totalGB}GB (${percentage}%)`;
+  const formatQuotaText = (account: GmailAccount): string => {
+    if (!account.quotaUsed || !account.quotaTotal) return '';
+    const usedGB = (account.quotaUsed / 1024 / 1024 / 1024).toFixed(1);
+    const totalGB = (account.quotaTotal / 1024 / 1024 / 1024).toFixed(0);
+    const percentage = ((account.quotaUsed / account.quotaTotal) * 100).toFixed(0);
+    return `${usedGB} GB of ${totalGB} GB used (${percentage}%)`;
   };
 
   const getStatusColor = (accountId: string) => {
@@ -104,15 +111,15 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
       >
         <div className="relative">
           <img
-            src={currentAccount?.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentAccount?.name || 'User')}&size=32&background=random`}
-            alt={currentAccount?.name || 'User'}
+            src={currentAccount?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentAccount?.displayName || 'User')}&size=32&background=random`}
+            alt={currentAccount?.displayName || 'User'}
             className="w-8 h-8 rounded-full"
           />
           <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(currentAccount?.id || '')}`}></div>
         </div>
         <div className="flex-1 text-left">
           <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-            {currentAccount?.name || 'No Account'}
+            {currentAccount?.displayName || 'No Account'}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {currentAccount?.email || 'Not connected'}
@@ -155,24 +162,24 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
                 >
                   <div className="relative">
                     <img
-                      src={account.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(account.name || 'User')}&size=32&background=random`}
-                      alt={account.name || 'User'}
+                      src={account.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(account.displayName || 'User')}&size=32&background=random`}
+                      alt={account.displayName || 'User'}
                       className="w-8 h-8 rounded-full"
                     />
                     <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${getStatusColor(account.id)}`}></div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
-                      {account.name || 'Unknown User'}
+                      {account.displayName || 'Unknown User'}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {account.email}
                     </div>
                     <div className="text-xs text-gray-400 dark:text-gray-500">
                       {getStatusText(account.id)}
-                      {account.lastSync && (
+                      {account.lastSyncAt && (
                         <span className="ml-1">
-                          • {new Date(account.lastSync).toLocaleTimeString()}
+                          • {new Date(account.lastSyncAt).toLocaleTimeString()}
                         </span>
                       )}
                     </div>
@@ -241,7 +248,7 @@ export const AccountSwitcher: React.FC<AccountSwitcherProps> = ({ className = ''
       {error && (
         <div className="absolute top-full left-0 right-0 mt-2 z-50">
           <ErrorDisplay
-            error={error}
+            error={handleGmailError(error, { operation: 'account_switcher' })}
             onRetry={clearError}
             compact={true}
           />
@@ -271,7 +278,6 @@ const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose
     currentAccountId,
     isLoadingAccounts,
     error,
-    addAccount,
     removeAccount,
     refreshAccount,
     syncAllAccounts,
@@ -279,14 +285,16 @@ const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose
     getAccountsArray,
   } = useMailStore();
 
+  const { addAccount: addGmailAccount } = useGmailAuth();
+
   const accounts = getAccountsArray();
 
-  const formatQuota = (account: GmailAccount) => {
-    if (!account.quota) return 'Unknown';
-    const usedGB = (account.quota.used / 1024 / 1024 / 1024).toFixed(1);
-    const totalGB = (account.quota.total / 1024 / 1024 / 1024).toFixed(0);
-    const percentage = ((account.quota.used / account.quota.total) * 100).toFixed(0);
-    return `${usedGB}GB / ${totalGB}GB (${percentage}%)`;
+  const formatQuotaDisplay = (account: GmailAccount): string => {
+    if (!account.quotaUsed || !account.quotaTotal) return 'Unknown';
+    const usedGB = (account.quotaUsed / 1024 / 1024 / 1024).toFixed(1);
+    const totalGB = (account.quotaTotal / 1024 / 1024 / 1024).toFixed(0);
+    const percentage = ((account.quotaUsed / account.quotaTotal) * 100).toFixed(0);
+    return `${usedGB}/${totalGB} GB (${percentage}%)`;
   };
 
   const getStatusColor = (status: GmailAccount['syncStatus']) => {
@@ -343,7 +351,7 @@ const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose
                 {isLoadingAccounts ? 'Syncing...' : 'Sync All'}
               </button>
               <button
-                onClick={addAccount}
+                onClick={() => addGmailAccount()}
                 disabled={isLoadingAccounts}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50"
               >
@@ -356,9 +364,8 @@ const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose
           {error && (
             <div className="mb-6">
               <ErrorDisplay
-                error={error}
-                onRetry={clearError}
-                compact={false}
+                error={handleGmailError(error, { operation: 'account_management' })}
+                onRetry={() => clearError()}
               />
             </div>
           )}
@@ -377,13 +384,13 @@ const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-4">
                     <img
-                      src={account.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(account.name || 'User')}&size=48&background=random`}
-                      alt={account.name || 'User'}
+                      src={account.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(account.displayName || 'User')}&size=48&background=random`}
+                      alt={account.displayName || 'User'}
                       className="w-12 h-12 rounded-full"
                     />
                     <div>
                       <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                        {account.name || 'Unknown User'}
+                        {account.displayName || 'Unknown User'}
                         {account.id === currentAccountId && (
                           <span className="ml-2 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full">
                             Active
@@ -404,10 +411,10 @@ const AccountManageModal: React.FC<AccountManageModalProps> = ({ isOpen, onClose
                            account.syncStatus === 'error' ? 'Error' :
                            'Offline'}
                         </span>
-                        <span>Storage: {formatQuota(account)}</span>
-                        {account.lastSync && (
+                        <span>Storage: {formatQuotaDisplay(account)}</span>
+                        {account.lastSyncAt && (
                           <span>
-                            Last sync: {new Date(account.lastSync).toLocaleString()}
+                            Last sync: {new Date(account.lastSyncAt).toLocaleString()}
                           </span>
                         )}
                       </div>
