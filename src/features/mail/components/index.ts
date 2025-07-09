@@ -4,6 +4,7 @@ export { MailSearchBar } from './MailSearchBar';
 export { MailToolbar } from './MailToolbar';
 export { MailPagination } from './MailPagination';
 export { MessageList } from './MessageList';
+export { ThreadedMessageList } from './ThreadedMessageList';
 export { MessageView } from './MessageView';
 export { MailContextSidebar } from './MailContextSidebar';
 

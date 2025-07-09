@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useTheme as useSettingsTheme, useSettingsStore } from '../stores/settingsStore';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -23,11 +24,10 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('theme') as Theme;
-    return stored || 'system';
-  });
-
+  // Get theme from settings store instead of localStorage
+  const theme = useSettingsTheme();
+  const setTheme = useSettingsStore((state) => state.setTheme);
+  
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -60,9 +60,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
   }, [theme]);
 
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+  // Remove localStorage effect since settings store handles persistence
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, actualTheme }}>

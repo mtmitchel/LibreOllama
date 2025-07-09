@@ -5,7 +5,9 @@ import {
   TodaysFocusWidget,
   ProjectProgressWidget,
   AgentStatusWidget,
-  QuickActionsWidget
+  QuickActionsWidget,
+  UpcomingEventsWidget,
+  PendingTasksWidget
 } from "../../features/dashboard/components";
 import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetErrorBoundary";
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
@@ -49,6 +51,8 @@ export function Dashboard() {
           <WidgetSkeleton rows={2} />
           <WidgetSkeleton rows={2} />
           <WidgetSkeleton rows={1} />
+          <WidgetSkeleton rows={3} />
+          <WidgetSkeleton rows={3} />
         </FlexibleGrid>
       </div>
     );
@@ -87,6 +91,14 @@ export function Dashboard() {
         
         <WidgetErrorBoundary widgetName="Quick Actions">
           <QuickActionsWidget />
+        </WidgetErrorBoundary>
+        
+        <WidgetErrorBoundary widgetName="Upcoming Events">
+          <UpcomingEventsWidget />
+        </WidgetErrorBoundary>
+        
+        <WidgetErrorBoundary widgetName="Pending Tasks">
+          <PendingTasksWidget />
         </WidgetErrorBoundary>
       </FlexibleGrid>
     </div>

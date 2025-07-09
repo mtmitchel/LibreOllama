@@ -4,6 +4,7 @@ import { Edit, PanelRight, PanelLeft } from 'lucide-react';
 import { MailSidebar } from '../../features/mail/components/MailSidebar';
 import { MailToolbar } from '../../features/mail/components/MailToolbar';
 import { MessageList } from '../../features/mail/components/MessageList';
+import { ThreadedMessageList } from '../../features/mail/components/ThreadedMessageList';
 import { MessageView } from '../../features/mail/components/MessageView';
 import { ComposeModal } from '../../features/mail/components/ComposeModal';
 import { MailSearchBar } from '../../features/mail/components/MailSearchBar';
@@ -21,6 +22,7 @@ export default function Mail() {
   const [isContextOpen, setIsContextOpen] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(!isAuthenticated);
   const [showTestComponent, setShowTestComponent] = useState(false);
+  const [isThreadedView, setIsThreadedView] = useState(true); // Default to threaded view for MVP
 
   const toggleMailSidebar = useCallback(() => {
     setIsMailSidebarOpen(!isMailSidebarOpen);
@@ -78,7 +80,7 @@ export default function Mail() {
   }
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
       {/* Mail Sidebar */}
       <MailSidebar 
         isOpen={isMailSidebarOpen}
@@ -106,7 +108,35 @@ export default function Mail() {
 
         {/* Mail Toolbar */}
         <div className="flex-shrink-0 bg-[var(--bg-tertiary)] border-b border-[var(--border-default)]">
-          <MailToolbar />
+          <div className="flex items-center justify-between">
+            <MailToolbar />
+            {/* Threading Toggle */}
+            <div className="flex items-center gap-2 px-4">
+              <span className="text-sm text-[var(--text-secondary)]">View:</span>
+              <div className="flex bg-[var(--bg-primary)] rounded-lg p-1">
+                <button
+                  onClick={() => setIsThreadedView(true)}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    isThreadedView 
+                      ? 'bg-[var(--accent-primary)] text-white' 
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  Conversations
+                </button>
+                <button
+                  onClick={() => setIsThreadedView(false)}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    !isThreadedView 
+                      ? 'bg-[var(--accent-primary)] text-white' 
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  Messages
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Content Area - Card-like design with softer borders */}
@@ -117,7 +147,7 @@ export default function Mail() {
               ? `${isContextOpen ? 'w-72' : 'w-80'} flex-shrink-0` 
               : 'flex-1'
           } flex flex-col ${currentMessage ? 'border-r border-[var(--border-default)]' : ''} min-w-0 overflow-hidden bg-[var(--bg-tertiary)]`}>
-            <MessageList />
+            {isThreadedView ? <ThreadedMessageList /> : <MessageList />}
           </div>
 
           {/* Message View - Card-like styling */}

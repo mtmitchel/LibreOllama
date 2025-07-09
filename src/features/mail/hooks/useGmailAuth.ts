@@ -22,7 +22,7 @@ export interface UseGmailAuthReturn {
   accounts: GmailAccount[];
   error: string | null;
   startAuth: () => Promise<void>;
-  completeAuth: (authorizationCode: string, state: string) => Promise<void>;
+  completeAuth: (authorizationCode: string, state?: string) => Promise<void>;
   refreshToken: (accountId: string) => Promise<void>;
   signOut: () => void;
   addAccount: () => Promise<void>;
@@ -30,6 +30,7 @@ export interface UseGmailAuthReturn {
   switchAccount: (accountId: string) => void;
   currentAccount: GmailAccount | null;
   clearError: () => void;
+  authState: string | null;
 }
 
 // Gmail OAuth2 Configuration (client secret now handled securely on backend)
@@ -351,12 +352,14 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     console.log('✅ [SECURITY] Gmail authentication completed securely');
   };
 
-  const completeAuth = useCallback(async (authorizationCode: string, state: string) => {
+  const completeAuth = useCallback(async (authorizationCode: string, state?: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      await completeAuthInternal(authorizationCode, state);
+      // Use provided state or fall back to global auth state
+      const authState = state || globalAuthState || '';
+      await completeAuthInternal(authorizationCode, authState);
 
     } catch (err) {
       console.error('Failed to complete Gmail auth:', err);
@@ -675,5 +678,6 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     removeAccount,
     switchAccount,
     clearError,
+    authState: globalAuthState,
   };
 }; 

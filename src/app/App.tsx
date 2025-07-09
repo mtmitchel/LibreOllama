@@ -25,9 +25,15 @@ import Settings from './pages/Settings';
  */
 const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => {
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar />
-      <main className="flex-1 overflow-y-auto bg-[var(--bg-primary)]">
+    <div className="h-full flex-1 flex flex-col overflow-hidden">
+      <header role="banner">
+        <TopBar />
+      </header>
+      <main 
+        role="main" 
+        className="flex-1 overflow-y-auto bg-[var(--bg-primary)]"
+        aria-label="Main content"
+      >
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/chat" element={<Chat />} />
@@ -55,8 +61,22 @@ export default function App() {
       <Router>
         <HeaderProvider>
           <div className="flex h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
-            <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
-            <AppContent isSidebarOpen={isSidebarOpen} />
+            {/* Skip to main content link for keyboard users */}
+            <a 
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--accent-primary)] focus:text-white focus:rounded focus:outline-none"
+            >
+              Skip to main content
+            </a>
+            
+            <nav role="navigation" aria-label="Main navigation">
+              <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
+            </nav>
+            
+            <div id="main-content" className="flex-1 min-w-0">
+              <AppContent isSidebarOpen={isSidebarOpen} />
+            </div>
+            
             <CommandPalette isOpen={isOpen} onClose={close} />
           </div>
         </HeaderProvider>

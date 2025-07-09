@@ -31,12 +31,12 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
   return (
     <aside 
-      className={`flex flex-col bg-[var(--bg-secondary)] border-r border-border-subtle transition-all duration-300 ease-in-out shadow-lg`}
+      className={`h-full flex flex-col bg-[var(--bg-secondary)] border-r border-border-subtle transition-all duration-300 ease-in-out shadow-lg`}
       style={{ width: isOpen ? '16rem' : '4rem' }}
     >
       {/* Header */}
       <div 
-        className={`flex items-center justify-between border-b border-border-subtle bg-[var(--bg-primary)] min-h-[73px] ${isOpen ? 'p-4' : 'p-3'}`}
+        className={`flex items-center justify-between border-b border-border-subtle bg-[var(--bg-primary)] h-20 ${isOpen ? 'px-6' : 'px-4'}`}
       >
         {isOpen && (
           <Text 
@@ -61,11 +61,11 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
       {/* Navigation */}
       <nav 
-        className="flex-1 overflow-y-auto p-2"
+        className={`flex-1 overflow-y-auto ${isOpen ? 'p-4' : 'p-3'}`}
         role="navigation"
         aria-label="Main navigation"
       >
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-2">
           {workspaceItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -119,7 +119,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       </nav>
 
       {/* Settings Section */}
-      <div className="p-2 border-t border-border-subtle bg-[var(--bg-primary)]">
+      <div className={`border-t border-border-subtle bg-[var(--bg-primary)] ${isOpen ? 'p-4' : 'p-3'}`}>
         <Link 
           to="/settings" 
           className={`${linkBaseClasses} ${location.pathname === '/settings' ? linkActiveClasses : linkInactiveClasses} ${isOpen ? 'p-3 gap-3' : 'p-2.5 gap-2.5'} text-sm font-medium`}

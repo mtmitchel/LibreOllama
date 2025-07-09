@@ -42,7 +42,7 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - [x] **Chat UI:** A complete chat UI with a conversation list, message bubbles, and input. *(Existing Prototype)*
 - [ ] **Persistent Local History:** Connect the frontend to the backend to store chat history in the database.
-- [ ] **AI Integration Stub:** Integrate with a real AI backend (e.g., local Ollama instance) to provide responses, replacing mock data.
+- [ ] **Fully Functional Ollama Integration:** Complete integration with local Ollama instance for AI responses, including model management, streaming responses, and error handling.
 
 ### Post-MVP Enhancements
 

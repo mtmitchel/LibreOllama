@@ -139,6 +139,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'destructive' | 'default';
   size?: 'sm' | 'default' | 'icon';
   children: React.ReactNode;
+  isLoading?: boolean;
+  loadingText?: string;
 }
 
 export function Button({
@@ -146,6 +148,10 @@ export function Button({
   variant = 'secondary',
   size = 'default',
   children,
+  isLoading = false,
+  loadingText,
+  disabled,
+  'aria-label': ariaLabel,
   ...props
 }: ButtonProps) {
   const baseClasses = 'inline-flex items-center justify-center gap-2 border-none rounded-[var(--radius-md)] font-[var(--font-sans)] font-[var(--font-weight-medium)] leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]';
@@ -164,13 +170,24 @@ export function Button({
     default: 'py-2.5 px-4 text-sm',
     icon: 'p-2.5 w-11 h-11 flex items-center justify-center [&>svg]:align-middle'
   };
+
+  const isDisabled = disabled || isLoading;
   
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`.trim()}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${isLoading ? 'cursor-not-allowed' : ''} ${className}`.trim()}
+      disabled={isDisabled}
+      aria-disabled={isDisabled}
+      aria-label={ariaLabel}
       {...props}
     >
-      {children}
+      {isLoading && (
+        <div
+          className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"
+          aria-hidden="true"
+        />
+      )}
+      {isLoading ? (loadingText || 'Loading...') : children}
     </button>
   );
 }
@@ -179,15 +196,24 @@ export function Button({
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   hasIcon?: boolean;
+  label?: string;
+  description?: string;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ 
   className = '', 
   error, 
   hasIcon,
+  label,
+  description,
   style,
+  id,
   ...props 
 }, ref) => {
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const errorId = error ? `${inputId}-error` : undefined;
+  const descriptionId = description ? `${inputId}-description` : undefined;
+  
   const baseClasses = 'w-full bg-input-bg border border-border-default rounded-md font-sans text-primary transition-all duration-150 placeholder:text-input-placeholder focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-secondary';
   
   const paddingClasses = hasIcon ? 'py-3 pr-10 pl-4' : 'py-3 px-4';
@@ -196,12 +222,33 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
     ? 'border-error focus:border-error focus:ring-2 focus:ring-error/20'
     : 'focus:border-input-focus-ring focus:ring-2 focus:ring-primary/20';
 
+  const ariaDescribedBy = [errorId, descriptionId].filter(Boolean).join(' ') || undefined;
+
   return (
     <div className="w-full">
+      {label && (
+        <label 
+          htmlFor={inputId}
+          className="block text-sm font-medium text-[var(--text-primary)] mb-1"
+        >
+          {label}
+        </label>
+      )}
+      {description && (
+        <p 
+          id={descriptionId}
+          className="text-sm text-[var(--text-secondary)] mb-2"
+        >
+          {description}
+        </p>
+      )}
       <input
         ref={ref}
+        id={inputId}
         className={`${baseClasses} ${paddingClasses} ${stateClasses} text-sm ${className}`.trim()}
         style={style}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={ariaDescribedBy}
         onFocus={(e) => {
           props.onFocus?.(e);
         }}
@@ -211,11 +258,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
         {...props}
       />
       {error && (
-        <p style={{
-          marginTop: 'var(--space-1)',
-          fontSize: 'var(--font-size-xs)',
-          color: 'var(--error)'
-        }}>
+        <p 
+          id={errorId}
+          role="alert"
+          aria-live="polite"
+          style={{
+            marginTop: 'var(--space-1)',
+            fontSize: 'var(--font-size-xs)',
+            color: 'var(--error)'
+          }}
+        >
           {error}
         </p>
       )}
@@ -600,6 +652,7 @@ export function Tabs({ defaultValue = '', value, onValueChange, children, classN
 export function TabsList({ children, className = '' }: TabsListProps) {
   return (
     <div
+      role="tablist"
       className={`inline-flex h-10 items-center justify-center rounded-md bg-[var(--bg-tertiary)] p-1 text-[var(--text-secondary)] ${className}`}
     >
       {children}
@@ -616,6 +669,10 @@ export function TabsTrigger({ value, children, className = '' }: TabsTriggerProp
 
   return (
     <button
+      role="tab"
+      aria-selected={isActive}
+      aria-controls={`tabpanel-${value}`}
+      id={`tab-${value}`}
       onClick={() => setActiveTab(value)}
       className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-bg-primary transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${isActive ? 'bg-primary text-primary shadow-sm' : ''} ${className}`}
     >
@@ -628,36 +685,90 @@ export function TabsContent({ value, children, className = '' }: TabsContentProp
   const context = React.useContext(TabsContext);
   if (!context) throw new Error('TabsContent must be used within a Tabs component');
   
-  return context.activeTab === value ? <div className={`mt-2 ${className}`}>{children}</div> : null;
+  return context.activeTab === value ? (
+    <div 
+      role="tabpanel"
+      id={`tabpanel-${value}`}
+      aria-labelledby={`tab-${value}`}
+      className={`mt-2 ${className}`}
+    >
+      {children}
+    </div>
+  ) : null;
 }
 
 // Checkbox Component
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'onChange'> {
   label?: string;
+  description?: string;
+  error?: string;
   onCheckedChange?: (checked: boolean) => void;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function Checkbox({ label, className = '', onCheckedChange, onChange, ...props }: CheckboxProps) {
+export function Checkbox({ 
+  label, 
+  description,
+  error,
+  className = '', 
+  onCheckedChange, 
+  onChange, 
+  id,
+  ...props 
+}: CheckboxProps) {
+  const checkboxId = id || `checkbox-${Math.random().toString(36).substr(2, 9)}`;
+  const errorId = error ? `${checkboxId}-error` : undefined;
+  const descriptionId = description ? `${checkboxId}-description` : undefined;
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onCheckedChange?.(e.target.checked);
     onChange?.(e);
   };
+
+  const ariaDescribedBy = [errorId, descriptionId].filter(Boolean).join(' ') || undefined;
   
   return (
-    <div className="flex items-center gap-2">
-      <div className="relative flex items-center justify-center w-11 h-11">
-        <input
-          type="checkbox"
-          className={`h-4 w-4 rounded-sm border-border-default text-accent-primary focus:ring-accent-primary focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-          onChange={handleChange}
-          {...props}
-        />
+    <div className="flex flex-col gap-1">
+      <div className="flex items-start gap-3">
+        <div className="relative flex items-center justify-center w-5 h-5 mt-0.5">
+          <input
+            id={checkboxId}
+            type="checkbox"
+            className={`h-4 w-4 rounded-sm border-border-default text-accent-primary focus:ring-accent-primary focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${error ? 'border-error' : ''} ${className}`}
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={ariaDescribedBy}
+            onChange={handleChange}
+            {...props}
+          />
+        </div>
+        <div className="flex-1">
+          {label && (
+            <label 
+              htmlFor={checkboxId} 
+              className="text-sm font-medium leading-none text-primary cursor-pointer block"
+            >
+              {label}
+            </label>
+          )}
+          {description && (
+            <p 
+              id={descriptionId}
+              className="text-sm text-[var(--text-secondary)] mt-1"
+            >
+              {description}
+            </p>
+          )}
+        </div>
       </div>
-      {label && (
-        <label htmlFor={props.id} className="text-sm font-medium leading-none text-primary cursor-pointer">
-          {label}
-        </label>
+      {error && (
+        <p 
+          id={errorId}
+          role="alert"
+          aria-live="polite"
+          className="text-sm text-[var(--error)] ml-8"
+        >
+          {error}
+        </p>
       )}
     </div>
   );

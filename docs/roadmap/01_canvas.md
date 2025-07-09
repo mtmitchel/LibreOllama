@@ -52,11 +52,11 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 - [x] **Core Tools:** Pen, text, shape creation (rectangles/ovals), sticky notes. *(Existing)*
 - [x] **Connectors:** Straight arrow connectors. *(Existing)*
 - [x] **Undo/Redo:** Standard undo/redo functionality. *(Existing)*
-- [ ] **Layer Visibility:** A simple toggle to show/hide layers.
-- [ ] **Export:** Export the canvas as a PNG or PDF file.
 
 ### Post-MVP Enhancements
 
+- [ ] **Layer Visibility:** A simple toggle to show/hide layers.
+- [ ] **Export:** Export the canvas as a PNG or PDF file.
 - [ ] **Real-time Collaboration:** Deferring all team, sharing, and real-time features.
 - [ ] **Template & Shape Library:** A library of pre-made shapes and templates.
 - [ ] **Auto-layout & Smart Routing:** Advanced connector routing and diagram formatting.

@@ -11,30 +11,31 @@ This document provides a comprehensive overview of the Calendar & Tasks Integrat
 
 ## Current Implementation
 
-The current implementation consists of two separate, functional systems that are not yet properly integrated.
+The Calendar page is a fully functional calendar with integrated task management capabilities.
 
 ### Frontend Architecture
 
-- **Calendar View:** The `Calendar.tsx` page uses the `FullCalendar` library to display events from Google Calendar. It includes a sidebar that displays tasks from the `googleTasksService`.
-- **Tasks View:** The `Tasks.tsx` page is a fully functional Kanban board that uses the `googleTasksService` to manage task lists and tasks.
-- **Services:**
-    - `googleCalendarService.ts`: Interacts with the Google Calendar API.
-    - `googleTasksService.ts`: Interacts with the Google Tasks API.
-- **State Management:** A legacy Zustand store, `googleStore.ts`, manages the state for both calendar events and Google Tasks. This is separate from the `useKanbanStore` used for the local-only tasks board.
+- **Calendar View:** The `Calendar.tsx` page uses the `FullCalendar` library to display events with Day, Week, and Month view switching.
+- **Event Management:** Full CRUD operations for calendar events (create, read, update, delete) with a comprehensive event modal.
+- **Task Integration:** A sidebar that displays tasks from the `useKanbanStore` with column filtering and task creation capabilities.
+- **Drag-and-Drop Scheduling:** Tasks can be dragged from the sidebar onto the calendar to create scheduled events.
+- **State Management:** Uses `useGoogleCalendarStore` for calendar events and `useKanbanStore` for tasks, providing seamless integration.
 
 ### Backend Architecture
 
-- **Direct API Calls:** The frontend services make calls to Tauri commands which in turn call the Google Calendar and Tasks APIs via the Rust backend services. There is no specific integration logic on the backend; it simply provides access to the Google APIs.
+- **Mock Calendar Service:** Currently uses mock data for calendar events with full CRUD operations.
+- **Task Persistence:** Tasks are persisted via the `useKanbanStore` to localStorage.
+- **Event Scheduling:** Task-to-event conversion with time selection modal.
 
-### Implementation Gap: The Missing Workflow
+### Implemented Features
 
-The core value proposition of this feature was the ability to seamlessly schedule tasks by dragging them from a task list onto the calendar. **This workflow is completely missing.**
-
-- **What Works:** You can view calendar events. You can manage Google Tasks in a separate Kanban view.
-- **What Doesn't Work:**
-    - You cannot drag a task from the sidebar and drop it onto the calendar to schedule it.
-    - There is no "Schedule Task" modal to set a time when a task is dropped.
-    - The core logic to convert a task into a calendar event (`task-to-event`) is not implemented.
+- Day, Week, and Month calendar views with navigation.
+- Create, edit, and delete calendar events.
+- Task sidebar with column selector dropdown.
+- "New Task" button with full task creation modal.
+- Drag-and-drop task scheduling with time selection.
+- Event rescheduling via drag-and-drop.
+- Task completion marking from scheduled events.
 
 ## Future Work & Todos
 
@@ -42,14 +43,14 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### MVP Must-Haves
 
-- [ ] **Calendar View:** Standard Day/Week/Month views.
-- [ ] **Create/Edit Events:** Basic functionality to add and modify calendar events.
-- [ ] **Task Sidebar:** A read-only view of the task list next to the calendar.
+- [x] **Calendar View:** Standard Day/Week/Month views. *(Existing)*
+- [x] **Create/Edit Events:** Basic functionality to add and modify calendar events. *(Existing)*
+- [x] **Task Sidebar:** A read-only view of the task list next to the calendar. *(Existing)*
 
 ### Post-MVP Enhancements
 
-- [ ] **Drag-and-Drop Scheduling:** Drag tasks from the sidebar onto the calendar to schedule them.
-- [ ] **Task-to-Event Modal:** A modal to confirm time/details when scheduling a task.
+- [x] **Drag-and-Drop Scheduling:** Drag tasks from the sidebar onto the calendar to schedule them. *(Existing)*
+- [x] **Task-to-Event Modal:** A modal to confirm time/details when scheduling a task. *(Existing)*
 - [ ] **Complete from Calendar:** Mark tasks as complete directly from the calendar view.
 - [ ] **Enhanced Event Modal:** Replace the basic event creation prompt with a full-featured modal.
 - [ ] **Event Resizing:** Allow users to resize events directly on the calendar to change their duration.
@@ -69,6 +70,6 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### Technical Debt & Refactoring
 
-- [ ] **Consolidate Stores:** This is critical. Refactor the state management to have a single source of truth for tasks, merging logic from `googleStore.ts` and `useKanbanStore.ts`.
+- [ ] **Google Calendar Integration:** Connect to real Google Calendar API instead of mock data.
 - [ ] **Improve Test Coverage:** Write integration tests that specifically cover the new drag-and-drop scheduling workflow.
 - [ ] **Recurring Tasks:** Add the ability to see and manage recurring tasks on the calendar. 

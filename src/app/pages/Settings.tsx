@@ -21,7 +21,18 @@ import {
 } from 'lucide-react';
 import { Card, Button, Input, Checkbox, Heading, Text } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
-// Removed legacy googleStore import
+import { 
+  useGeneralSettings, 
+  useAppearanceSettings, 
+  useOllamaSettings, 
+  useIntegrationSettings,
+  useUpdateGeneralSettings,
+  useUpdateAppearanceSettings,
+  useSetTheme,
+  useSetOllamaEndpoint,
+  useSetActiveGoogleAccount,
+  useRemoveGoogleAccount
+} from '../../stores/settingsStore';
 
 // Design system aligned Toggle Switch Component
 interface ToggleSwitchProps {
@@ -62,24 +73,24 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId 
 const Settings: React.FC = () => {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [activeSection, setActiveSection] = useState('general');
-  // Example state for toggle switches
-  const [checkForUpdates, setCheckForUpdates] = useState(true);
   
-  // Mock Google accounts data
-  interface MockAccount {
-    id: string;
-    email: string;
-    name?: string;
-    picture?: string;
-  }
+  // Settings from global store
+  const generalSettings = useGeneralSettings();
+  const appearanceSettings = useAppearanceSettings();
+  const ollamaSettings = useOllamaSettings();
+  const integrationSettings = useIntegrationSettings();
   
-  const accounts: MockAccount[] = [];
-  const activeAccount: MockAccount | null = null;
-
-  // Mock functions
-  const setActiveAccount = (account: MockAccount) => console.log('Mock: setActiveAccount', account);
-  const addAccount = (account: MockAccount) => console.log('Mock: addAccount', account);
-  const removeAccount = (accountId: string) => console.log('Mock: removeAccount', accountId);
+  // Individual action hooks
+  const updateGeneralSettings = useUpdateGeneralSettings();
+  const updateAppearanceSettings = useUpdateAppearanceSettings();
+  const setTheme = useSetTheme();
+  const setOllamaEndpoint = useSetOllamaEndpoint();
+  const setActiveGoogleAccount = useSetActiveGoogleAccount();
+  const removeGoogleAccount = useRemoveGoogleAccount();
+  
+  // Google accounts from settings store
+  const accounts = integrationSettings.googleAccounts;
+  const activeAccount = accounts.find(acc => acc.isActive) || null;
 
   const navItems = [
     { id: 'general', label: 'General', icon: SlidersHorizontal },
@@ -124,7 +135,11 @@ const Settings: React.FC = () => {
                         Automatically check for new versions when the application launches.
                       </Text>
                     </div>
-                    <ToggleSwitch enabled={checkForUpdates} onChange={setCheckForUpdates} labelId="check-updates-label" />
+                    <ToggleSwitch 
+                      enabled={generalSettings.checkForUpdates} 
+                      onChange={(enabled) => updateGeneralSettings({ checkForUpdates: enabled })} 
+                      labelId="check-updates-label" 
+                    />
                   </div>
                 </div>
               </Card>
@@ -193,7 +208,8 @@ const Settings: React.FC = () => {
                         id="ollama-endpoint"
                         type="text" 
                         className="w-full focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        defaultValue="http://localhost:11434" 
+                        value={ollamaSettings.endpoint}
+                        onChange={(e) => setOllamaEndpoint(e.target.value)}
                       />
                       <Text variant="muted" size="xs" className="text-right">
                         Default: http://localhost:11434
@@ -290,7 +306,7 @@ const Settings: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {(accounts as MockAccount[]).map((account: MockAccount) => (
+                    {accounts.map((account) => (
                       <div key={account.id} className="flex items-center justify-between p-4 border border-border-default rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center">
@@ -308,7 +324,7 @@ const Settings: React.FC = () => {
                             <Text weight="medium">{account.name || account.email}</Text>
                             <Text variant="muted" size="sm">{account.email}</Text>
                           </div>
-                          {(activeAccount as MockAccount | null)?.id === account.id && (
+                          {activeAccount?.id === account.id && (
                             <div className="flex items-center gap-1 px-2 py-1 bg-success-ghost text-success rounded-full">
                               <Check size={12} />
                               <Text size="xs">Active</Text>
@@ -316,11 +332,11 @@ const Settings: React.FC = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {(activeAccount as MockAccount | null)?.id !== account.id && (
+                          {activeAccount?.id !== account.id && (
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => setActiveAccount(account)}
+                              onClick={() => setActiveGoogleAccount(account.id)}
                               className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
                             >
                               Set Active
@@ -329,7 +345,7 @@ const Settings: React.FC = () => {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => removeAccount(account.id)}
+                            onClick={() => removeGoogleAccount(account.id)}
                             className="text-error hover:bg-error-ghost focus:ring-2 focus:ring-error focus:ring-offset-2"
                           >
                             <X size={16} />
@@ -410,6 +426,94 @@ const Settings: React.FC = () => {
           </Card>
           </div>
         );
+      case 'appearance':
+        return (
+          <div className="h-full p-6">
+            <Card className="p-6">
+            <div className="mb-6">
+              <Heading level={1} className="text-2xl font-bold mb-1">Appearance</Heading>
+              <Text variant="muted">Customize the visual appearance and theme of the application.</Text>
+            </div>
+            
+            <div className="flex flex-col gap-8">
+              <Card className="p-6">
+                <Heading level={2} className="text-lg font-semibold mb-4">Theme</Heading>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between py-3 border-b border-border-default">
+                    <div className="flex-1">
+                      <label htmlFor="theme-select" className="block mb-1 text-sm font-medium">
+                        Color theme
+                      </label>
+                      <Text variant="muted" size="sm">
+                        Choose between light, dark, or system preference.
+                      </Text>
+                    </div>
+                    <div className="flex gap-2">
+                      {(['light', 'dark', 'system'] as const).map((themeOption) => (
+                        <Button
+                          key={themeOption}
+                          variant={appearanceSettings.theme === themeOption ? 'primary' : 'outline'}
+                          size="sm"
+                                                     onClick={() => setTheme(themeOption)}
+                          className="capitalize"
+                        >
+                          {themeOption}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between py-3 border-b border-border-default">
+                    <div className="flex-1">
+                      <label htmlFor="font-size-select" className="block mb-1 text-sm font-medium">
+                        Font size
+                      </label>
+                      <Text variant="muted" size="sm">
+                        Adjust the base font size for better readability.
+                      </Text>
+                    </div>
+                    <div className="flex gap-2">
+                      {(['small', 'medium', 'large'] as const).map((sizeOption) => (
+                        <Button
+                          key={sizeOption}
+                          variant={appearanceSettings.fontSize === sizeOption ? 'primary' : 'outline'}
+                          size="sm"
+                          onClick={() => updateAppearanceSettings({ fontSize: sizeOption })}
+                          className="capitalize"
+                        >
+                          {sizeOption}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <div className="flex-1">
+                      <label htmlFor="density-select" className="block mb-1 text-sm font-medium">
+                        Interface density
+                      </label>
+                      <Text variant="muted" size="sm">
+                        Control the spacing and padding throughout the interface.
+                      </Text>
+                    </div>
+                    <div className="flex gap-2">
+                      {(['compact', 'comfortable', 'spacious'] as const).map((densityOption) => (
+                        <Button
+                          key={densityOption}
+                          variant={appearanceSettings.density === densityOption ? 'primary' : 'outline'}
+                          size="sm"
+                          onClick={() => updateAppearanceSettings({ density: densityOption })}
+                          className="capitalize"
+                        >
+                          {densityOption}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </Card>
+          </div>
+        );
       default:
         return (
           <div className="h-full p-6">
@@ -438,7 +542,7 @@ const Settings: React.FC = () => {
   }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
       {/* Left Navigation */}
       <div className="w-64 flex-shrink-0">
         <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] p-4 h-full">

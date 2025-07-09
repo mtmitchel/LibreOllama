@@ -29,6 +29,7 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
     removeAccount,
     switchAccount,
     clearError,
+    authState,
   } = useGmailAuth();
 
   const [authStep, setAuthStep] = useState<'intro' | 'auth' | 'success' | 'manage'>('intro');
@@ -93,7 +94,8 @@ export const GmailAuthModal: React.FC<GmailAuthModalProps> = ({
 
     setIsCompletingAuth(true);
     try {
-      await completeAuth(authCode.trim(), '');
+      // Use the auth state from the hook (will be used automatically in completeAuth)
+      await completeAuth(authCode.trim());
     } catch (err) {
       console.error('Failed to complete auth:', err);
     } finally {
