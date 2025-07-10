@@ -17,92 +17,7 @@ import { gmailService } from '../services/gmailService';
 import { handleGmailError } from '../services/gmailErrorHandler';
 import { getGmailApiService } from '../services/gmailApiService';
 
-// Enhanced mock data for multi-account development
-const createMockAccount = (id: string, email: string, name: string): GmailAccount => ({
-  id,
-  email,
-  displayName: name,
-  avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=40&background=random`,
-  accessToken: `mock-token-${id}`,
-  refreshToken: `mock-refresh-${id}`,
-  tokenExpiry: new Date(Date.now() + 3600000), // 1 hour from now
-  isActive: id === 'account1',
-  lastSyncAt: new Date(),
-  syncStatus: 'idle',
-  quotaUsed: Math.floor(Math.random() * 10000000000), // Random usage (0-10GB)
-  quotaTotal: 15000000000, // 15GB
-});
 
-const createMockMessages = (accountId: string, accountEmail: string): ParsedEmail[] => [
-  {
-    id: `${accountId}-msg1`,
-    threadId: `${accountId}-thread1`,
-    from: { name: 'John Doe', email: 'john@example.com' },
-    to: [{ name: 'You', email: accountEmail }],
-    cc: [],
-    bcc: [],
-    subject: `Welcome to ${accountEmail}!`,
-    body: 'Thanks for joining us. Here\'s everything you need to know...',
-
-    attachments: [],
-    date: new Date('2024-01-15T10:30:00'),
-    isRead: false,
-    isStarred: false,
-    labels: ['INBOX', 'UNREAD'],
-    snippet: 'Thanks for joining us. Here\'s everything you need to know...',
-    accountId,
-    hasAttachments: false,
-    importance: 'normal',
-    messageId: `${accountId}-msg1`,
-  },
-  {
-    id: `${accountId}-msg2`,
-    threadId: `${accountId}-thread2`,
-    from: { name: 'Support Team', email: 'support@company.com' },
-    to: [{ name: 'You', email: accountEmail }],
-    cc: [],
-    bcc: [],
-    subject: `Account verified for ${accountEmail}`,
-    body: 'Great news! Your account verification is complete.',
-
-    attachments: [],
-    date: new Date('2024-01-14T14:20:00'),
-    isRead: true,
-    isStarred: true,
-    labels: ['INBOX', 'STARRED'],
-    snippet: 'Great news! Your account verification is complete.',
-    accountId,
-    hasAttachments: false,
-    importance: 'normal',
-    messageId: `${accountId}-msg2`,
-  },
-];
-
-const createMockLabels = (): GmailLabel[] => [
-  { id: 'INBOX', name: 'Inbox', messageListVisibility: 'show', labelListVisibility: 'labelShow', type: 'system', messagesTotal: 25, messagesUnread: 3, threadsTotal: 20, threadsUnread: 3 },
-  { id: 'STARRED', name: 'Starred', messageListVisibility: 'show', labelListVisibility: 'labelShow', type: 'system', messagesTotal: 5, messagesUnread: 0, threadsTotal: 5, threadsUnread: 0 },
-  { id: 'SENT', name: 'Sent', messageListVisibility: 'show', labelListVisibility: 'labelShow', type: 'system', messagesTotal: 15, messagesUnread: 0, threadsTotal: 12, threadsUnread: 0 },
-  { id: 'DRAFTS', name: 'Drafts', messageListVisibility: 'show', labelListVisibility: 'labelShow', type: 'system', messagesTotal: 3, messagesUnread: 0, threadsTotal: 3, threadsUnread: 0 },
-  { id: 'WORK', name: 'Work', messageListVisibility: 'show', labelListVisibility: 'labelShow', type: 'user', messagesTotal: 8, messagesUnread: 2, threadsTotal: 6, threadsUnread: 2 },
-  { id: 'PERSONAL', name: 'Personal', messageListVisibility: 'show', labelListVisibility: 'labelShow', type: 'user', messagesTotal: 12, messagesUnread: 1, threadsTotal: 10, threadsUnread: 1 }
-];
-
-const createMockAccountData = (account: GmailAccount): AccountData => ({
-  messages: createMockMessages(account.id, account.email),
-  threads: [],
-  labels: createMockLabels(),
-  drafts: [],
-  totalMessages: 0,
-  unreadMessages: 0,
-  lastSyncAt: new Date(),
-  syncInProgress: false,
-});
-
-// Mock accounts for development
-const mockAccounts: GmailAccount[] = [
-  createMockAccount('account1', 'work@company.com', 'Work Account'),
-  createMockAccount('account2', 'personal@gmail.com', 'Personal Account'),
-];
 
 // Remove manual localStorage handling - Zustand persist will handle this
 console.log('🔑 [AUTH] Zustand persistence will restore authentication state automatically');
@@ -112,6 +27,7 @@ const initialState: MailState = {
   accounts: {}, // Will be restored by Zustand persist
   currentAccountId: null,
   isAuthenticated: false, // Will be restored by Zustand persist
+  isHydrated: false, // Track if store has been hydrated from localStorage
   
   // Loading states
   isLoading: false,
@@ -1588,9 +1504,27 @@ const useMailStore = create<EnhancedMailStore>()(
           currentAccountId: state.currentAccountId,
           isAuthenticated: state.isAuthenticated 
         }), // persist auth-related state
+        onRehydrateStorage: () => (state) => {
+          console.log('🔄 [STORE] Store hydrated from localStorage, setting isHydrated to true');
+          if (state) {
+            state.isHydrated = true;
+          } else {
+            // If no persisted state, still set hydrated to true after attempt
+            console.log('🔄 [STORE] No persisted state found, marking as hydrated');
+          }
+        },
       }
     )
   )
 );
+
+// Fallback hydration trigger - ensure isHydrated is set to true even if persist doesn't work
+setTimeout(() => {
+  const state = useMailStore.getState();
+  if (!state.isHydrated) {
+    console.log('🔄 [STORE] Manual hydration fallback triggered');
+    useMailStore.setState({ isHydrated: true });
+  }
+}, 100);
 
 export { useMailStore }; 

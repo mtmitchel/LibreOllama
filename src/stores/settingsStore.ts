@@ -23,13 +23,23 @@ export interface OllamaSettings {
   defaultModel: string;
 }
 
+export interface GoogleAccount {
+  id: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  isActive: boolean;
+  connectedAt: string;
+  scopes: string[];
+  services: {
+    gmail: boolean;
+    calendar: boolean;
+    tasks: boolean;
+  };
+}
+
 export interface IntegrationSettings {
-  googleAccounts: Array<{
-    id: string;
-    email: string;
-    name?: string;
-    isActive: boolean;
-  }>;
+  googleAccounts: Array<GoogleAccount>;
   apiKeys: {
     gemini?: string;
     anthropic?: string;
@@ -84,7 +94,7 @@ export interface SettingsActions {
   setTheme: (theme: AppearanceSettings['theme']) => void;
   setOllamaEndpoint: (endpoint: string) => void;
   setStartupView: (view: string) => void;
-  addGoogleAccount: (account: IntegrationSettings['googleAccounts'][0]) => void;
+  addGoogleAccount: (account: GoogleAccount) => void;
   removeGoogleAccount: (accountId: string) => void;
   setActiveGoogleAccount: (accountId: string) => void;
   setApiKey: (service: keyof IntegrationSettings['apiKeys'], key: string) => void;

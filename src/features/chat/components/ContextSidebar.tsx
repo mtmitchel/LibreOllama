@@ -27,42 +27,7 @@ interface ContextSidebarProps {
 }
 
 // Mock context data - in real app, this would come from the store/API
-const mockContextData: ContextItem[] = [
-  {
-    id: 'note-1',
-    title: 'Design System Component Specifications',
-    type: 'note',
-    date: '2 days ago'
-  },
-  {
-    id: 'task-1',
-    title: 'Implement chat message actions',
-    type: 'task',
-    status: 'in-progress',
-    priority: 'high',
-    date: 'Due today'
-  },
-  {
-    id: 'task-2',
-    title: 'Update button component variants',
-    type: 'task',
-    status: 'completed',
-    priority: 'medium',
-    date: 'Completed yesterday'
-  },
-  {
-    id: 'message-1',
-    title: 'Earlier discussion about color tokens',
-    type: 'message',
-    date: '1 hour ago'
-  },
-  {
-    id: 'project-1',
-    title: 'LibreOllama Design System',
-    type: 'project',
-    date: 'Active project'
-  }
-];
+const mockContextData: ContextItem[] = [];
 
 const getItemIcon = (type: ContextItem['type']) => {
   switch (type) {

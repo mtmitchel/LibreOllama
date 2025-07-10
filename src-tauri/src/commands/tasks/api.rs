@@ -2,9 +2,9 @@
 //!
 //! This module provides Tauri command handlers for Google Tasks API operations.
 
-use tauri::State;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tauri::State;
 
 // Define the task structures that match the frontend types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,38 +78,49 @@ pub struct TasksResponse {
 
 /// Get all task lists for an account
 #[tauri::command]
-pub async fn get_task_lists(account_id: String) -> Result<Vec<GoogleTaskList>, String> {
-    // For now, return mock data since we're in development mode
-    // In production, this would make actual API calls
-    let mock_lists = vec![
-        GoogleTaskList {
-            id: "default".to_string(),
-            title: "My Tasks".to_string(),
-            updated: Some("2024-01-01T00:00:00.000Z".to_string()),
-            self_link: None,
-            etag: None,
-            kind: Some("tasks#taskList".to_string()),
-        },
-        GoogleTaskList {
-            id: "work".to_string(),
-            title: "Work Tasks".to_string(),
-            updated: Some("2024-01-01T00:00:00.000Z".to_string()),
-            self_link: None,
-            etag: None,
-            kind: Some("tasks#taskList".to_string()),
-        },
-        GoogleTaskList {
-            id: "personal".to_string(),
-            title: "Personal Tasks".to_string(),
-            updated: Some("2024-01-01T00:00:00.000Z".to_string()),
-            self_link: None,
-            etag: None,
-            kind: Some("tasks#taskList".to_string()),
-        },
-    ];
-
+pub async fn get_task_lists(
+    account_id: String,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
+) -> Result<Vec<GoogleTaskList>, String> {
     println!("📋 [TASKS-API] Getting task lists for account: {}", account_id);
-    Ok(mock_lists)
+    
+    // Get access token
+    let tokens = auth_service.get_account_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get tokens: {}", e))?
+        .ok_or("No tokens found for account")?;
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://www.googleapis.com/tasks/v1/users/@me/lists")
+        .bearer_auth(&tokens.access_token)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Tasks API failed: {}", response.status()));
+    }
+
+    let task_lists_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    let mut task_lists = Vec::new();
+    if let Some(items) = task_lists_data["items"].as_array() {
+        for item in items {
+            task_lists.push(GoogleTaskList {
+                id: item["id"].as_str().unwrap_or("").to_string(),
+                title: item["title"].as_str().unwrap_or("").to_string(),
+                updated: item["updated"].as_str().map(|s| s.to_string()),
+                self_link: item["selfLink"].as_str().map(|s| s.to_string()),
+                etag: item["etag"].as_str().map(|s| s.to_string()),
+                kind: item["kind"].as_str().map(|s| s.to_string()),
+            });
+        }
+    }
+    
+    println!("✅ [TASKS-API] Retrieved {} task lists", task_lists.len());
+    Ok(task_lists)
 }
 
 /// Get tasks for a specific task list
@@ -120,97 +131,67 @@ pub async fn get_tasks(
     show_completed: Option<bool>,
     show_deleted: Option<bool>,
     max_results: Option<u32>,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
 ) -> Result<TasksResponse, String> {
-    let _show_completed = show_completed.unwrap_or(false);
-    let _show_deleted = show_deleted.unwrap_or(false);
-    let _max_results = max_results.unwrap_or(100);
+    let show_completed = show_completed.unwrap_or(false);
+    let show_deleted = show_deleted.unwrap_or(false);
+    let max_results = max_results.unwrap_or(100);
 
     println!("📋 [TASKS-API] Getting tasks for list: {} (account: {})", task_list_id, account_id);
 
-    // Mock tasks data
-    let mock_tasks = match task_list_id.as_str() {
-        "default" => vec![
-            GoogleTask {
-                id: "task-1".to_string(),
-                title: "Review project proposal".to_string(),
-                notes: Some("Check budget and timeline".to_string()),
-                status: "needsAction".to_string(),
-                due: Some("2024-01-15T00:00:00.000Z".to_string()),
-                completed: None,
-                updated: Some("2024-01-01T00:00:00.000Z".to_string()),
-                parent: None,
-                position: Some("00000000000000000000".to_string()),
-                kind: Some("tasks#task".to_string()),
-                etag: None,
-                self_link: None,
-                links: None,
-                hidden: Some(false),
-                deleted: Some(false),
-            },
-            GoogleTask {
-                id: "task-2".to_string(),
-                title: "Schedule team meeting".to_string(),
-                notes: None,
-                status: "needsAction".to_string(),
-                due: None,
-                completed: None,
-                updated: Some("2024-01-01T00:00:00.000Z".to_string()),
-                parent: None,
-                position: Some("00000000000000000001".to_string()),
-                kind: Some("tasks#task".to_string()),
-                etag: None,
-                self_link: None,
-                links: None,
-                hidden: Some(false),
-                deleted: Some(false),
-            },
-        ],
-        "work" => vec![
-            GoogleTask {
-                id: "task-3".to_string(),
-                title: "Prepare quarterly report".to_string(),
-                notes: Some("Include Q4 metrics and analysis".to_string()),
-                status: "needsAction".to_string(),
-                due: Some("2024-01-20T00:00:00.000Z".to_string()),
-                completed: None,
-                updated: Some("2024-01-01T00:00:00.000Z".to_string()),
-                parent: None,
-                position: Some("00000000000000000000".to_string()),
-                kind: Some("tasks#task".to_string()),
-                etag: None,
-                self_link: None,
-                links: None,
-                hidden: Some(false),
-                deleted: Some(false),
-            },
-        ],
-        "personal" => vec![
-            GoogleTask {
-                id: "task-4".to_string(),
-                title: "Buy groceries".to_string(),
-                notes: Some("Milk, bread, eggs".to_string()),
-                status: "needsAction".to_string(),
-                due: None,
-                completed: None,
-                updated: Some("2024-01-01T00:00:00.000Z".to_string()),
-                parent: None,
-                position: Some("00000000000000000000".to_string()),
-                kind: Some("tasks#task".to_string()),
-                etag: None,
-                self_link: None,
-                links: None,
-                hidden: Some(false),
-                deleted: Some(false),
-            },
-        ],
-        _ => vec![],
-    };
+    // Get access token
+    let tokens = auth_service.get_account_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get tokens: {}", e))?
+        .ok_or("No tokens found for account")?;
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let mut url = format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks", task_list_id);
+    url.push_str(&format!("?showCompleted={}&showDeleted={}&maxResults={}", 
+                         show_completed, show_deleted, max_results));
+
+    let response = client
+        .get(&url)
+        .bearer_auth(&tokens.access_token)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Tasks API failed: {}", response.status()));
+    }
+
+    let tasks_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    let mut tasks = Vec::new();
+    if let Some(items) = tasks_data["items"].as_array() {
+        for item in items {
+            tasks.push(GoogleTask {
+                id: item["id"].as_str().unwrap_or("").to_string(),
+                title: item["title"].as_str().unwrap_or("").to_string(),
+                notes: item["notes"].as_str().map(|s| s.to_string()),
+                status: item["status"].as_str().unwrap_or("needsAction").to_string(),
+                due: item["due"].as_str().map(|s| s.to_string()),
+                completed: item["completed"].as_str().map(|s| s.to_string()),
+                updated: item["updated"].as_str().map(|s| s.to_string()),
+                parent: item["parent"].as_str().map(|s| s.to_string()),
+                position: item["position"].as_str().map(|s| s.to_string()),
+                kind: item["kind"].as_str().map(|s| s.to_string()),
+                etag: item["etag"].as_str().map(|s| s.to_string()),
+                self_link: item["selfLink"].as_str().map(|s| s.to_string()),
+                links: None, // Can be parsed if needed
+                hidden: item["hidden"].as_bool(),
+                deleted: item["deleted"].as_bool(),
+            });
+        }
+    }
 
     Ok(TasksResponse {
-        kind: "tasks#tasks".to_string(),
-        etag: "etag-placeholder".to_string(),
-        next_page_token: None,
-        items: mock_tasks,
+        kind: tasks_data["kind"].as_str().unwrap_or("tasks#tasks").to_string(),
+        etag: tasks_data["etag"].as_str().unwrap_or("").to_string(),
+        next_page_token: tasks_data["nextPageToken"].as_str().map(|s| s.to_string()),
+        items: tasks,
     })
 }
 

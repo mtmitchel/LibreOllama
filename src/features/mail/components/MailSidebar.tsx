@@ -79,15 +79,21 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     console.log('🏷️ [SIDEBAR] All user labels regardless of visibility:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
   }, [labels]);
 
+  // Get real counts from labels
+  const getLabelCount = (labelId: string) => {
+    const label = labels.find(l => l.id === labelId);
+    return label?.messagesUnread || 0;
+  };
+
   const mainFolders = [
-    { id: 'inbox', name: 'Inbox', icon: Inbox, count: 25 },
-    { id: 'starred', name: 'Starred', icon: Star },
-    { id: 'snoozed', name: 'Snoozed', icon: Clock },
-    { id: 'sent', name: 'Sent', icon: Send },
-    { id: 'drafts', name: 'Drafts', icon: FileText },
+    { id: 'inbox', name: 'Inbox', icon: Inbox, count: getLabelCount('INBOX') },
+    { id: 'starred', name: 'Starred', icon: Star, count: getLabelCount('STARRED') },
+    { id: 'snoozed', name: 'Snoozed', icon: Clock, count: getLabelCount('SNOOZED') },
+    { id: 'sent', name: 'Sent', icon: Send, count: getLabelCount('SENT') },
+    { id: 'drafts', name: 'Drafts', icon: FileText, count: getLabelCount('DRAFT') },
     { id: 'all', name: 'All Mail', icon: Archive },
-    { id: 'spam', name: 'Spam', icon: AlertTriangle },
-    { id: 'trash', name: 'Trash', icon: Trash2 },
+    { id: 'spam', name: 'Spam', icon: AlertTriangle, count: getLabelCount('SPAM') },
+    { id: 'trash', name: 'Trash', icon: Trash2, count: getLabelCount('TRASH') },
   ];
 
   const handleFolderClick = async (folderId: string) => {
@@ -309,7 +315,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     >
                       {folder.name}
                     </Text>
-                    {folder.count && (
+                    {folder.count && folder.count > 0 && (
                       <Badge variant="secondary" className="text-xs">
                         {folder.count}
                       </Badge>

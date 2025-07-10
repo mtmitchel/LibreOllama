@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ListChecks, Plus, X, Calendar as CalendarIcon, Clock, MapPin, FileText, Flag, Hash, Repeat, List as ListIcon, CheckCircle, CircleDashed, ChevronDown } from 'lucide-react';
 import { Card, Button, Tag, Input } from '../../components/ui';
 import FullCalendar from '@fullcalendar/react';
@@ -9,8 +10,11 @@ import { useHeader } from '../contexts/HeaderContext';
 import { useKanbanStore, KanbanTask, TaskMetadata } from '../../stores/useKanbanStore';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 import { GoogleCalendarEvent } from '../../types/google';
+import { useActiveGoogleAccount } from '../../stores/settingsStore';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
+
+// Google Calendar authentication now handled centrally in Settings
 
 // Simple Task Modal Component (copied from Tasks.tsx)
 const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
@@ -513,6 +517,7 @@ const ScheduleTaskModal = ({
 };
 
 const Calendar: React.FC = () => {
+  const navigate = useNavigate();
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const calendarRef = useRef<FullCalendar>(null);
   const taskPanelRef = useRef<HTMLDivElement>(null);
@@ -545,14 +550,15 @@ const Calendar: React.FC = () => {
   } = useKanbanStore();
 
   const { 
-    activeAccount, 
-    calendarEvents, 
-    fetchCalendarEvents,
-    createCalendarEvent,
-    updateCalendarEvent,
-    deleteCalendarEvent,
-    setActiveAccount,
+    events: calendarEvents, 
+    fetchEvents: fetchCalendarEvents,
+    createEvent: createCalendarEvent,
+    updateEvent: updateCalendarEvent,
+    deleteEvent: deleteCalendarEvent,
+    isAuthenticated,
   } = useGoogleCalendarStore();
+
+  const activeAccount = useActiveGoogleAccount();
 
   useEffect(() => {
     if (!isInitialized) {
@@ -587,19 +593,7 @@ const Calendar: React.FC = () => {
     }
   }, [taskPanelRef.current]);
 
-  useEffect(() => {
-    if (!activeAccount) {
-      const mockAccount = {
-        id: 'mock-account',
-        email: 'user@example.com',
-        name: 'Mock User',
-        accessToken: 'mock-token',
-        refreshToken: 'mock-refresh',
-        expiresAt: Date.now() + 3600000,
-      };
-      setActiveAccount(mockAccount);
-    }
-  }, [activeAccount, setActiveAccount]);
+
 
   useEffect(() => {
     if (activeAccount) {
@@ -611,7 +605,7 @@ const Calendar: React.FC = () => {
     }
   }, [activeAccount, fetchCalendarEvents]);
 
-  const fullCalendarEvents = calendarEvents.map(event => ({
+  const fullCalendarEvents = (calendarEvents || []).map(event => ({
     id: event.id,
     title: event.summary,
     start: event.start.dateTime || event.start.date,
@@ -821,12 +815,15 @@ const Calendar: React.FC = () => {
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);
 
-  if (!activeAccount) {
+  if (!activeAccount || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-lg font-semibold text-primary mb-2">No Google Account Connected</h2>
-          <p className="text-muted">Please connect a Google account to view your calendar.</p>
+          <p className="text-muted mb-4">Please connect a Google account in Settings to view your calendar.</p>
+          <Button variant="primary" onClick={() => navigate('/settings')}>
+            Go to Settings
+          </Button>
         </div>
       </div>
     );
@@ -834,7 +831,9 @@ const Calendar: React.FC = () => {
 
   return (
     <>
-      <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+      {/* Google Calendar authentication now handled centrally in Settings */}
+      
+      <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
         {/* Main Calendar Area */}
         <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
           <div className="flex-1 flex flex-col gap-6 p-6">

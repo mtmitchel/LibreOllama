@@ -1,150 +1,315 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { GoogleCalendarEvent, GoogleAccount } from '../types/google';
+import { devtools, persist, createJSONStorage } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import { GoogleCalendarEvent, GoogleAccount, CalendarEventCreateRequest } from '../types/google';
+import { googleCalendarService } from '../services/google/googleCalendarService';
+import { useSettingsStore } from './settingsStore';
 
-interface GoogleCalendarStore {
-  accounts: GoogleAccount[];
-  activeAccount: GoogleAccount | null;
-  calendarEvents: GoogleCalendarEvent[];
-  isLoadingCalendar: boolean;
-  error?: string;
-
-  setActiveAccount: (account: GoogleAccount) => void;
-  fetchCalendarEvents: () => Promise<void>;
-  createCalendarEvent: (eventData: any) => Promise<void>;
-  updateCalendarEvent: (eventId: string, eventData: any) => Promise<void>;
-  deleteCalendarEvent: (eventId: string) => Promise<void>;
-  clearError: () => void;
+interface GoogleCalendarState {
+  // Authentication
+  isAuthenticated: boolean;
+  isHydrated: boolean;
+  
+  // Data
+  events: GoogleCalendarEvent[];
+  calendars: any[];
+  
+  // UI State
+  isLoading: boolean;
+  error: string | null;
+  lastSyncAt: Date | null;
+  currentCalendarId: string;
 }
 
-const useGoogleCalendarStore = create<GoogleCalendarStore>()(
-  devtools((set, get) => ({
-    accounts: [],
-    activeAccount: null,
-    calendarEvents: [],
-    isLoadingCalendar: false,
-    error: undefined,
+interface GoogleCalendarActions {
+  // Authentication
+  authenticate: (account: GoogleAccount) => void;
+  signOut: () => void;
+  
+  // Data fetching
+  fetchCalendars: () => Promise<void>;
+  fetchEvents: (timeMin?: string, timeMax?: string) => Promise<void>;
+  syncCalendar: () => Promise<void>;
+  
+  // Event management
+  createEvent: (eventData: CalendarEventCreateRequest) => Promise<void>;
+  updateEvent: (eventId: string, eventData: Partial<CalendarEventCreateRequest>) => Promise<void>;
+  deleteEvent: (eventId: string) => Promise<void>;
+  
+  // Calendar management
+  setCurrentCalendar: (calendarId: string) => void;
+  
+  // Utility
+  clearError: () => void;
+  getEvent: (eventId: string) => GoogleCalendarEvent | undefined;
+}
 
-    setActiveAccount: (account) => {
-      set({ activeAccount: account });
-    },
+type GoogleCalendarStore = GoogleCalendarState & GoogleCalendarActions;
 
-    fetchCalendarEvents: async () => {
-      const { activeAccount } = get();
-      if (!activeAccount) return;
+const initialState: GoogleCalendarState = {
+  isAuthenticated: false,
+  isHydrated: false,
+  events: [],
+  calendars: [],
+  isLoading: false,
+  error: null,
+  lastSyncAt: null,
+  currentCalendarId: 'primary',
+};
 
-      set({ isLoadingCalendar: true, error: undefined });
+export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
+  devtools(
+    persist(
+      immer((set, get) => ({
+        ...initialState,
 
-      try {
-        // Mock calendar events for now
-        const mockEvents: GoogleCalendarEvent[] = [
-          {
-            id: 'event-1',
-            summary: 'Team Meeting',
-            description: 'Weekly team sync',
-            start: {
-              dateTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-            end: {
-              dateTime: new Date(Date.now() + 86400000 + 3600000).toISOString(), // Tomorrow + 1 hour
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-            status: 'confirmed',
-          },
-          {
-            id: 'event-2',
-            summary: 'Project Review',
-            description: 'Quarterly project review',
-            start: {
-              dateTime: new Date(Date.now() + 172800000).toISOString(), // Day after tomorrow
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-            end: {
-              dateTime: new Date(Date.now() + 172800000 + 7200000).toISOString(), // Day after tomorrow + 2 hours
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            },
-            status: 'confirmed',
-          },
-        ];
+        // Helper to get current account
+        getCurrentAccount: (): GoogleAccount | null => {
+          const settingsState = useSettingsStore.getState();
+          return settingsState.integrations.googleAccounts.find(acc => acc.isActive) || null;
+        },
 
-        set({ calendarEvents: mockEvents, isLoadingCalendar: false });
-      } catch (error) {
-        console.error('Failed to fetch calendar events:', error);
-        set({ 
-          error: 'Failed to fetch calendar events', 
-          isLoadingCalendar: false 
-        });
+        // Authentication
+        authenticate: (account: GoogleAccount) => {
+          console.log('🔐 [GOOGLE-CALENDAR] Authenticating account:', account.email);
+          set((state) => {
+            state.isAuthenticated = true;
+          });
+          
+          // The account should already be added to settings store by the Settings page
+          // Just mark as authenticated here
+          
+          // Auto-fetch calendars and events after authentication
+          get().fetchCalendars();
+          get().fetchEvents();
+        },
+
+        signOut: () => {
+          console.log('🚪 [GOOGLE-CALENDAR] Signing out');
+          set((state) => {
+            state.isAuthenticated = false;
+            state.events = [];
+            state.calendars = [];
+            state.error = null;
+          });
+        },
+
+        // Data fetching
+        fetchCalendars: async () => {
+          const account = get().getCurrentAccount();
+          if (!account) {
+            set((state) => {
+              state.error = 'No authenticated account found';
+            });
+            return;
+          }
+
+          try {
+            console.log('📅 [GOOGLE-CALENDAR] Fetching calendars for:', account.email);
+            const response = await googleCalendarService.getCalendars(account);
+            
+            if (response.success && response.data) {
+              set((state) => {
+                state.calendars = response.data!;
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to fetch calendars');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-CALENDAR] Failed to fetch calendars:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to fetch calendars';
+            });
+          }
+        },
+
+        fetchEvents: async (timeMin?: string, timeMax?: string) => {
+          const account = get().getCurrentAccount();
+          if (!account) {
+            set((state) => {
+              state.error = 'No authenticated account found';
+            });
+            return;
+          }
+
+          set((state) => {
+            state.isLoading = true;
+            state.error = null;
+          });
+
+          try {
+            console.log('📆 [GOOGLE-CALENDAR] Fetching events for:', account.email);
+            
+            // Set default time range if not provided (current month)
+            const now = new Date();
+            const defaultTimeMin = timeMin || new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+            const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+            
+            const response = await googleCalendarService.getEvents(
+              account, 
+              get().currentCalendarId, 
+              defaultTimeMin, 
+              defaultTimeMax
+            );
+            
+            if (response.success && response.data) {
+              set((state) => {
+                state.events = response.data!.items || [];
+                state.isLoading = false;
+                state.lastSyncAt = new Date();
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to fetch events');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-CALENDAR] Failed to fetch events:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to fetch events';
+              state.isLoading = false;
+            });
+          }
+        },
+
+        syncCalendar: async () => {
+          console.log('🔄 [GOOGLE-CALENDAR] Syncing calendar');
+          await Promise.all([
+            get().fetchCalendars(),
+            get().fetchEvents()
+          ]);
+        },
+
+        // Event management
+        createEvent: async (eventData: CalendarEventCreateRequest) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            console.log('➕ [GOOGLE-CALENDAR] Creating event:', eventData.summary);
+            const response = await googleCalendarService.createEvent(
+              account, 
+              eventData, 
+              get().currentCalendarId
+            );
+
+            if (response.success && response.data) {
+              set((state) => {
+                state.events.unshift(response.data!);
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to create event');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-CALENDAR] Failed to create event:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to create event';
+            });
+          }
+        },
+
+        updateEvent: async (eventId: string, eventData: Partial<CalendarEventCreateRequest>) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            console.log(`✏️ [GOOGLE-CALENDAR] Updating event: ${eventId}`);
+            const response = await googleCalendarService.updateEvent(
+              account, 
+              eventId, 
+              eventData, 
+              get().currentCalendarId
+            );
+
+            if (response.success && response.data) {
+              set((state) => {
+                const index = state.events.findIndex(e => e.id === eventId);
+                if (index !== -1) {
+                  state.events[index] = response.data!;
+                }
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to update event');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-CALENDAR] Failed to update event:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to update event';
+            });
+          }
+        },
+
+        deleteEvent: async (eventId: string) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            console.log(`🗑️ [GOOGLE-CALENDAR] Deleting event: ${eventId}`);
+            const response = await googleCalendarService.deleteEvent(
+              account, 
+              eventId, 
+              get().currentCalendarId
+            );
+
+            if (response.success) {
+              set((state) => {
+                state.events = state.events.filter(e => e.id !== eventId);
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to delete event');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-CALENDAR] Failed to delete event:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to delete event';
+            });
+          }
+        },
+
+        // Calendar management
+        setCurrentCalendar: (calendarId: string) => {
+          set((state) => {
+            state.currentCalendarId = calendarId;
+          });
+          // Refetch events for the new calendar
+          get().fetchEvents();
+        },
+
+        // Utility
+        clearError: () => {
+          set((state) => {
+            state.error = null;
+          });
+        },
+
+        getEvent: (eventId: string) => {
+          return get().events.find(event => event.id === eventId);
+        },
+      })),
+      {
+        name: 'google-calendar-storage',
+        storage: createJSONStorage(() => localStorage),
+        partialize: (state) => ({
+          isAuthenticated: state.isAuthenticated,
+          events: state.events,
+          calendars: state.calendars,
+          currentCalendarId: state.currentCalendarId,
+          lastSyncAt: state.lastSyncAt,
+        }),
+        onRehydrateStorage: () => (state) => {
+          console.log('🔄 [GOOGLE-CALENDAR] Store hydrated from localStorage');
+          if (state) {
+            state.isHydrated = true;
+          }
+        },
       }
-    },
-
-    createCalendarEvent: async (eventData) => {
-      const { activeAccount } = get();
-      if (!activeAccount) return;
-
-      try {
-        // Mock event creation
-        const newEvent: GoogleCalendarEvent = {
-          id: `event-${Date.now()}`,
-          summary: eventData.summary,
-          description: eventData.description,
-          start: eventData.start,
-          end: eventData.end,
-          location: eventData.location,
-          status: 'confirmed',
-        };
-
-        set(state => ({
-          calendarEvents: [...state.calendarEvents, newEvent]
-        }));
-
-        console.log('Event created successfully:', newEvent);
-      } catch (error) {
-        console.error('Failed to create calendar event:', error);
-        set({ error: 'Failed to create calendar event' });
-      }
-    },
-
-    updateCalendarEvent: async (eventId, eventData) => {
-        const { activeAccount } = get();
-        if (!activeAccount) return;
-
-        try {
-            // Mock event update
-            set(state => ({
-                calendarEvents: state.calendarEvents.map(event =>
-                    event.id === eventId ? { ...event, ...eventData, id: eventId } : event
-                ),
-            }));
-
-            console.log('Event updated successfully:', eventId);
-        } catch (error) {
-            console.error('Failed to update calendar event:', error);
-            set({ error: 'Failed to update calendar event' });
-        }
-    },
-
-    deleteCalendarEvent: async (eventId) => {
-        const { activeAccount } = get();
-        if (!activeAccount) return;
-
-        try {
-            // Mock event deletion
-            set(state => ({
-                calendarEvents: state.calendarEvents.filter(event => event.id !== eventId),
-            }));
-
-            console.log('Event deleted successfully:', eventId);
-        } catch (error) {
-            console.error('Failed to delete calendar event:', error);
-            set({ error: 'Failed to delete calendar event' });
-        }
-    },
-
-    clearError: () => {
-      set({ error: undefined });
-    },
-  }))
+    )
+  )
 );
 
-export { useGoogleCalendarStore }; 
+// Fallback hydration
+setTimeout(() => {
+  const state = useGoogleCalendarStore.getState();
+  if (!state.isHydrated) {
+    console.log('🔄 [GOOGLE-CALENDAR] Manual hydration fallback triggered');
+    useGoogleCalendarStore.setState({ isHydrated: true });
+  }
+}, 100); 

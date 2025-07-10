@@ -30,48 +30,12 @@ interface MailContextSidebarProps {
   onToggle?: () => void;
 }
 
-// Mock context data - in real app, this would come from the store/API
-const mockMailContextData: ContextItem[] = [
-  {
-    id: 'attachment-1',
-    title: 'Project Proposal.pdf',
-    type: 'attachment',
-    size: '2.3 MB',
-    date: 'Today'
-  },
-  {
-    id: 'task-1',
-    title: 'Review email campaign strategy',
-    type: 'task',
-    status: 'pending',
-    priority: 'high',
-    date: 'Due tomorrow'
-  },
-  {
-    id: 'note-1',
-    title: 'Meeting notes from Q4 planning',
-    type: 'note',
-    date: '3 days ago'
-  },
-  {
-    id: 'message-1',
-    title: 'Related thread: Budget discussion',
-    type: 'message',
-    date: 'Last week'
-  },
-  {
-    id: 'project-1',
-    title: 'Q4 Marketing Campaign',
-    type: 'project',
-    date: 'Active project'
-  },
-  {
-    id: 'label-1',
-    title: 'Important',
-    type: 'label',
-    date: 'Applied to 12 messages'
-  }
-];
+// In real app, this would come from the store/API based on the selected message
+const getContextData = (messageId?: string): ContextItem[] => {
+  // TODO: Implement real context data fetching based on messageId
+  // For now, return empty array until real implementation
+  return [];
+};
 
 const getItemIcon = (type: ContextItem['type']) => {
   switch (type) {
@@ -110,6 +74,9 @@ const getStatusBadge = (item: ContextItem) => {
 };
 
 export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailContextSidebarProps) {
+  // Get context data for the current message
+  const contextData = getContextData(messageId);
+  
   // If closed, show only the toggle button
   if (!isOpen) {
     return (
@@ -192,7 +159,7 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
           >
             <div className="w-6 h-6 bg-[var(--accent-primary)] rounded-full flex items-center justify-center">
               <Text size="xs" weight="bold" className="text-white">
-                {mockMailContextData.length}
+                {contextData.length}
               </Text>
             </div>
             <Text size="xs" variant="tertiary" className="text-center">
@@ -204,12 +171,12 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
     );
   }
 
-  const attachments = mockMailContextData.filter(item => item.type === 'attachment');
-  const relatedTasks = mockMailContextData.filter(item => item.type === 'task');
-  const linkedNotes = mockMailContextData.filter(item => item.type === 'note');
-  const relatedMessages = mockMailContextData.filter(item => item.type === 'message');
-  const labels = mockMailContextData.filter(item => item.type === 'label');
-  const relatedProjects = mockMailContextData.filter(item => item.type === 'project');
+  const attachments = contextData.filter(item => item.type === 'attachment');
+  const relatedTasks = contextData.filter(item => item.type === 'task');
+  const linkedNotes = contextData.filter(item => item.type === 'note');
+  const relatedMessages = contextData.filter(item => item.type === 'message');
+  const labels = contextData.filter(item => item.type === 'label');
+  const relatedProjects = contextData.filter(item => item.type === 'project');
 
   const ContextSection = ({ title, items, icon }: { title: string; items: ContextItem[]; icon: React.ReactNode }) => {
     if (items.length === 0) return null;
@@ -351,42 +318,59 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
             </div>
           </div>
 
-          {/* Context Sections */}
-          <ContextSection 
-            title="Attachments" 
-            items={attachments} 
-            icon={<Paperclip size={16} />} 
-          />
-          
-          <ContextSection 
-            title="Related Tasks" 
-            items={relatedTasks} 
-            icon={<CheckSquare size={16} />} 
-          />
-          
-          <ContextSection 
-            title="Linked Notes" 
-            items={linkedNotes} 
-            icon={<FileText size={16} />} 
-          />
-          
-          <ContextSection 
-            title="Related Messages" 
-            items={relatedMessages} 
-            icon={<Mail size={16} />} 
-          />
-          
-          <ContextSection 
-            title="Projects" 
-            items={relatedProjects} 
-            icon={<Calendar size={16} />} 
-          />
-          
-          <ContextSection 
-            title="Labels" 
-            items={labels} 
-            icon={<Tag size={16} />} 
-          />
+          {/* Show empty state if no context data */}
+          {contextData.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-[var(--text-tertiary)] mb-2">
+                <FileText size={24} className="mx-auto" />
+              </div>
+              <Text size="sm" variant="secondary" className="mb-1">
+                No related items
+              </Text>
+              <Text size="xs" variant="tertiary">
+                Select a message to see related tasks, notes, and attachments
+              </Text>
+            </div>
+          ) : (
+            <>
+              {/* Context Sections */}
+              <ContextSection 
+                title="Attachments" 
+                items={attachments} 
+                icon={<Paperclip size={16} />} 
+              />
+              
+              <ContextSection 
+                title="Related Tasks" 
+                items={relatedTasks} 
+                icon={<CheckSquare size={16} />} 
+              />
+              
+              <ContextSection 
+                title="Linked Notes" 
+                items={linkedNotes} 
+                icon={<FileText size={16} />} 
+              />
+              
+              <ContextSection 
+                title="Related Messages" 
+                items={relatedMessages} 
+                icon={<Mail size={16} />} 
+              />
+              
+              <ContextSection 
+                title="Projects" 
+                items={relatedProjects} 
+                icon={<Calendar size={16} />} 
+              />
+              
+              <ContextSection 
+                title="Labels" 
+                items={labels} 
+                icon={<Tag size={16} />} 
+              />
+            </>
+          )}
         </div>
       </div>
     </Card>

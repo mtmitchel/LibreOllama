@@ -25,7 +25,7 @@ export function Chat() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   
   // --- STATE MANAGEMENT ---
-  const [conversations, setConversations] = useState(mockConversations);
+  const [conversations, setConversations] = useState([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -37,18 +37,14 @@ export function Chat() {
 
   // --- DATA LOADING & SYNC ---
   useEffect(() => {
-    // Simulate fetching conversations (replace with actual API call)
-    setConversations(mockConversations);
-    const defaultChat = mockConversations.find(c => c.isPinned) || mockConversations[0];
-    if (defaultChat) {
-      setSelectedChatId(defaultChat.id);
-    }
+    // Initialize with empty data - API integration needed
+    setConversations([]);
   }, []);
 
   useEffect(() => {
-    // Simulate fetching messages when a chat is selected
+    // Load messages for selected chat - API integration needed
     if (selectedChatId) {
-      setMessages(mockMessages[selectedChatId] || []);
+      setMessages([]);
     } else {
       setMessages([]);
     }
@@ -121,7 +117,7 @@ export function Chat() {
   const selectedChat = conversations.find(c => c.id === selectedChatId);
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
       {/* SIDEBAR: CONVERSATION LIST */}
       <ConversationList
         conversations={conversations}

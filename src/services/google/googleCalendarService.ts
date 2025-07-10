@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { mockInvoke } from './mockGoogleService';
 import { 
   GoogleAccount, 
   GoogleCalendarEvent, 
@@ -9,9 +8,8 @@ import {
   GoogleApiError 
 } from '../../types/google';
 
-// Use mock in development mode
-const isDevMode = import.meta.env.DEV;
-const apiInvoke = isDevMode ? mockInvoke : invoke;
+// Always use real Tauri invoke - no mock data
+const apiInvoke = invoke;
 
 class GoogleCalendarService {
   private async handleApiError(error: any): Promise<GoogleApiError> {

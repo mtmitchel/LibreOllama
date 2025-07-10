@@ -68,6 +68,7 @@ interface KanbanStore {
   // Utility
   getTask(taskId: string): { task: KanbanTask; columnId: string } | null;
   clearError(): void;
+  clearAllData(): void;
 }
 
 const useKanbanStore = create<KanbanStore>()(
@@ -145,26 +146,15 @@ const useKanbanStore = create<KanbanStore>()(
             return;
           }
           
-          // If no stored data, use the mock service as fallback
-          // const mockAccount = createMockAccount();
-          // const lists = await googleTasksService.getTaskLists(mockAccount);
+          // If no stored data, create default empty columns
+          const defaultColumns: KanbanColumn[] = [
+            { id: 'todo', title: 'To Do', tasks: [], isLoading: false },
+            { id: 'in-progress', title: 'In Progress', tasks: [], isLoading: false },
+            { id: 'done', title: 'Done', tasks: [], isLoading: false }
+          ];
           
-          // if (lists.success && lists.data) {
-          //   const columns = lists.data.map(list => ({
-          //     id: list.id,
-          //     title: list.title,
-          //     tasks: [],
-          //     isLoading: false
-          //   }));
-            
-          //   set({ columns });
-          //   saveToStorage(columns);
-            
-          //   // Load tasks for each column
-          //   await Promise.all(
-          //     lists.data.map(list => get().loadTasks(list.id))
-          //   );
-          // }
+          set({ columns: defaultColumns });
+          saveToStorage(defaultColumns);
         } catch (error) {
           console.error('Failed to load task lists:', error);
           set({ error: 'Failed to load task lists' });
@@ -317,6 +307,35 @@ const useKanbanStore = create<KanbanStore>()(
 
       clearError() {
         set({ error: undefined });
+      },
+
+      clearAllData() {
+        try {
+          // Clear localStorage
+          localStorage.removeItem(STORAGE_KEY);
+          
+          // Reset store to initial state with empty columns
+          const emptyColumns: KanbanColumn[] = [
+            { id: 'todo', title: 'To Do', tasks: [], isLoading: false },
+            { id: 'in-progress', title: 'In Progress', tasks: [], isLoading: false },
+            { id: 'done', title: 'Done', tasks: [], isLoading: false }
+          ];
+          
+          set({ 
+            columns: emptyColumns, 
+            isInitialized: true, 
+            error: undefined,
+            isSyncing: false 
+          });
+          
+          // Save empty state to localStorage
+          saveToStorage(emptyColumns);
+          
+          console.log('✅ [KANBAN] All mock data cleared successfully');
+        } catch (error) {
+          console.error('❌ [KANBAN] Failed to clear data:', error);
+          set({ error: 'Failed to clear data' });
+        }
       }
     };
   })

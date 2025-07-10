@@ -6,50 +6,7 @@ import { NotesSidebar, NotesEditor, NotesEmptyState } from '../../features/notes
 import type { Note, Folder, Block } from '../../features/notes/types';
 
 // --- Mock Data ---
-const mockFoldersData: Omit<Folder, 'children'>[] = [
-  {
-    id: 'personal',
-    name: 'Personal',
-    notes: [
-      {
-        id: 'note1',
-        title: 'Daily journal',
-        folderId: 'personal',
-        blocks: [
-          { id: 'b1', type: 'heading1', content: 'June 8th, 2025' },
-          { id: 'b2', type: 'text', content: 'Today was a productive day. I focused on implementing the core features for the block editor in LibreOllama.' },
-          { id: 'b3', type: 'list', content: 'Implement Block Action Menu, Implement Slash Command, Refine Block Rendering' },
-        ]
-      },
-      {
-        id: 'note2',
-        title: 'Feature brainstorm',
-        folderId: 'personal',
-        blocks: [
-          { id: 'b4', type: 'heading2', content: 'New ideas for projects page' },
-          { id: 'b5', type: 'text', content: 'Here is a quick sketch of the new project creation flow.' },
-          { id: 'b6', type: 'code', content: 'Initial sketch of the wizard flow' },
-          { id: 'b7', type: 'quote', content: 'The best way to predict the future is to invent it.' },
-        ]
-      },
-    ],
-  },
-  {
-    id: 'work',
-    name: 'Work',
-    notes: [
-      { id: 'note3', title: 'Project alpha meeting notes', folderId: 'work', blocks: [{ id: 'b8', type: 'text', content: 'Discussed milestones for Q3.' }] }
-    ]
-  },
-  {
-    id: 'work-projects',
-    name: 'Client Projects', parentId: 'work',
-    notes: [
-      { id: 'note4', title: 'Project beta - design specs', folderId: 'work-projects', blocks: [{ id: 'b9', type: 'text', content: 'Finalized UI mockups.' }] }
-    ]
-  },
-  { id: 'recipes', name: 'Recipes', notes: [] }
-];
+const mockFoldersData: Omit<Folder, 'children'>[] = [];
 
 const buildFolderTree = (folders: Omit<Folder, 'children'>[]): Folder[] => {
   const folderMap = new Map<string, Folder>();
@@ -181,7 +138,7 @@ export function Notes() {
   }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
       <NotesSidebar
         folders={folders}
         selectedNoteId={selectedNote?.id || null}

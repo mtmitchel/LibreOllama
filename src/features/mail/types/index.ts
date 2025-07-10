@@ -215,6 +215,7 @@ export interface MailState {
   accounts: Record<string, GmailAccount>;
   currentAccountId: string | null;
   isAuthenticated: boolean;
+  isHydrated: boolean;
   
   // Loading states
   isLoading: boolean;
@@ -449,4 +450,6 @@ export const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/gmail.labels',
   'https://www.googleapis.com/auth/drive.metadata.readonly',
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/tasks',
 ] as const; 

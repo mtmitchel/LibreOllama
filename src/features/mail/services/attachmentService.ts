@@ -173,41 +173,7 @@ export class AttachmentService {
 
       // Download from backend with progress tracking
       // TODO: Enable when backend attachment commands are implemented
-      // const result = await invoke<{
-      //   localPath: string;
-      //   thumbnailPath?: string;
-      //   checksum: string;
-      // }>('download_gmail_attachment', {
-      //   accountId: download.accountId,
-      //   messageId: download.messageId,
-      //   attachmentId: download.attachmentId,
-      //   generateThumbnail: generateThumbnail && canPreviewFile(download.mimeType),
-      //   signal: abortController.signal,
-      // });
-      
-      // Mock result for now
-      const result = {
-        localPath: `temp/${download.filename}`,
-        thumbnailPath: undefined,
-        checksum: 'mock-checksum'
-      };
-
-      download.localPath = result.localPath;
-      download.thumbnailPath = result.thumbnailPath;
-      download.downloadedSize = download.size;
-      download.progress = 100;
-      download.status = 'completed';
-      download.completedAt = new Date();
-
-      // Security scanning
-      if (this.config.enableVirusScanning && !isSecureFileType(download.mimeType)) {
-        await this.scanAttachment(download);
-      }
-
-      // Add to cache
-      await this.addToCache(download, result.checksum);
-
-      this.emitEvent('download_completed', download.attachmentId, { download });
+      throw new Error('Attachment download functionality is not yet implemented. Backend integration required.');
 
     } catch (error) {
       if (abortController.signal.aborted) {
@@ -353,27 +319,7 @@ export class AttachmentService {
 
     try {
       // TODO: Enable when backend attachment commands are implemented
-      // const preview = await invoke<AttachmentPreview>('generate_attachment_preview', {
-      //   filePath: cached.localPath,
-      //   mimeType: cached.mimeType,
-      //   filename: cached.filename,
-      // });
-      
-      // Return mock preview for now
-      const preview: AttachmentPreview = {
-        attachmentId,
-        type: fileTypeInfo.category,
-        canPreview: false,
-        requiresDownload: true,
-      };
-
-      return {
-        ...preview,
-        attachmentId,
-        type: fileTypeInfo.category,
-        canPreview: true,
-        requiresDownload: false,
-      };
+      throw new Error('Attachment preview functionality is not yet implemented. Backend integration required.');
     } catch (error) {
       console.error('Failed to generate preview:', error);
       return {
@@ -399,23 +345,7 @@ export class AttachmentService {
   ): Promise<GmailAttachment> {
     try {
       // TODO: Enable when backend attachment commands are implemented
-      // const attachment = await invoke<GmailAttachment>('get_gmail_attachment_info', {
-      //   accountId,
-      //   messageId,
-      //   attachmentId,
-      // });
-      // return attachment;
-      
-      // Return mock attachment for now
-      return {
-        id: attachmentId,
-        messageId: messageId,
-        filename: 'mock-attachment.pdf',
-        mimeType: 'application/pdf',
-        size: 1024 * 1024, // 1MB
-        isInline: false,
-        data: ''
-      } as GmailAttachment;
+      throw new Error('Attachment info retrieval functionality is not yet implemented. Backend integration required.');
     } catch (error) {
       throw handleGmailError(error, {
         operation: 'get_attachment_info',

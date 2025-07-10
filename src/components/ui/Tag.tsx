@@ -21,38 +21,38 @@ const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
 
     const variantClasses = {
       solid: {
-        primary: 'bg-primary text-primary-foreground',
-        success: 'bg-success-soft text-success',
-        warning: 'bg-warning-soft text-warning',
-        error: 'bg-error-soft text-error',
-        muted: 'bg-muted text-muted-foreground',
-        info: 'bg-accent-soft text-primary',
+        primary: 'bg-[var(--accent-primary)] text-white',
+        success: 'bg-[var(--success-ghost)] text-[var(--success)]',
+        warning: 'bg-[var(--warning-ghost)] text-[var(--warning)]',
+        error: 'bg-[var(--error-ghost)] text-[var(--error)]',
+        muted: 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]',
+        info: 'bg-[var(--info-ghost)] text-[var(--info)]',
       },
       ghost: {
-        primary: 'border border-primary text-primary bg-transparent',
-        success: 'border border-success text-success bg-transparent',
-        warning: 'border border-warning text-warning bg-transparent',
-        error: 'border border-error text-error bg-transparent',
-        muted: 'border border-border text-muted-foreground bg-transparent',
-        info: 'border border-primary text-primary bg-transparent',
+        primary: 'border border-[var(--accent-primary)] text-[var(--accent-primary)] bg-transparent',
+        success: 'border border-[var(--success)] text-[var(--success)] bg-transparent',
+        warning: 'border border-[var(--warning)] text-[var(--warning)] bg-transparent',
+        error: 'border border-[var(--error)] text-[var(--error)] bg-transparent',
+        muted: 'border border-[var(--border-default)] text-[var(--text-secondary)] bg-transparent',
+        info: 'border border-[var(--info)] text-[var(--info)] bg-transparent',
       },
       dot: {
-        primary: 'text-foreground',
-        success: 'text-foreground',
-        warning: 'text-foreground',
-        error: 'text-foreground',
-        muted: 'text-muted-foreground',
-        info: 'text-foreground',
+        primary: 'text-[var(--text-primary)]',
+        success: 'text-[var(--text-primary)]',
+        warning: 'text-[var(--text-primary)]',
+        error: 'text-[var(--text-primary)]',
+        muted: 'text-[var(--text-secondary)]',
+        info: 'text-[var(--text-primary)]',
       },
     };
 
     const dotClasses = {
-      primary: 'bg-primary',
-      success: 'bg-success',
-      warning: 'bg-warning',
-      error: 'bg-error',
-      muted: 'bg-muted-foreground',
-      info: 'bg-primary',
+      primary: 'bg-[var(--accent-primary)]',
+      success: 'bg-[var(--success)]',
+      warning: 'bg-[var(--warning)]',
+      error: 'bg-[var(--error)]',
+      muted: 'bg-[var(--text-secondary)]',
+      info: 'bg-[var(--info)]',
     };
 
     return (

@@ -83,142 +83,11 @@ interface ProjectForm {
   color: string;
 }
 
-const mockProjects: Project[] = [
-  {
-    id: '1',
-    name: 'UI Migration Sprint',
-    description: 'Modernizing the interface and migrating to new component architecture for better performance and maintainability across the platform.',
-            color: 'var(--primary)',
-    active: true,
-    progress: 75,
-    statusTag: 'Active',
-    icon: <Star size={18} />,
-    keyGoals: [
-      { id: 'g1', text: 'Complete UI component migration', completed: true },
-      { id: 'g2', text: 'Implement design system globally', completed: true },
-      { id: 'g3', text: 'Performance optimization (Phase 1)', completed: false },
-      { id: 'g4', text: 'User testing and feedback collection for new UI', completed: false },
-    ],
-    files: [
-      { id: 'f1', name: 'Project Brief.pdf', type: 'pdf', size: '1.2MB', uploadedAt: '2025-05-10' },
-      { id: 'f2', name: 'User Persona Research.docx', type: 'doc', size: '850KB', uploadedAt: '2025-05-15' },
-      { id: 'f3', name: 'Initial Mockups.png', type: 'png', size: '2.5MB', uploadedAt: '2025-05-20' },
-    ],
-    assets: [
-      { id: 'a1', type: 'Notes', count: 15, icon: NotebookPen },
-      { id: 'a2', type: 'Tasks', count: 32, icon: ListChecks },
-      { id: 'a3', type: 'Canvas', count: 3, icon: Presentation },
-      { id: 'a4', type: 'Chats', count: 5, icon: MessageSquare },
-      { id: 'a5', type: 'Agents', count: 2, icon: Bot },
-    ]
-  },
-  {
-    id: '2',
-    name: 'Q3 Marketing Campaign',
-    description: 'Strategic marketing initiatives for Q3 growth, focusing on new market segments and product awareness.',
-    color: 'var(--success)',
-    progress: 45,
-    statusTag: 'In progress',
-    icon: <NotebookPen size={18} />,
-    keyGoals: [
-        { id: 'g1', text: 'Finalize campaign strategy', completed: true },
-        { id: 'g2', text: 'Develop marketing materials', completed: false },
-        { id: 'g3', text: 'Launch social media campaign', completed: false },
-    ],
-    files: [
-      { id: 'f1', name: 'Campaign_Plan_Q3.pdf', type: 'pdf', size: '2.1MB', uploadedAt: '2025-06-01' },
-    ],
-    assets: [
-        { id: 'a1', type: 'Notes', count: 8, icon: NotebookPen },
-        { id: 'a2', type: 'Tasks', count: 12, icon: ListChecks },
-        { id: 'a3', type: 'Chats', count: 3, icon: MessageSquare },
-        { id: 'a4', type: 'Agents', count: 1, icon: Bot },
-    ]
-  },
-  {
-    id: '3',
-    name: 'Backend Optimization',
-    description: 'Performance improvements and database optimization to enhance scalability and reduce response times.',
-    color: 'var(--warning)',
-    progress: 30,
-    statusTag: 'Planning',
-    icon: <Settings size={18} />,
-    keyGoals: [
-        { id: 'g1', text: 'Identify performance bottlenecks', completed: true },
-        { id: 'g2', text: 'Refactor database queries', completed: false },
-        { id: 'g3', text: 'Implement caching strategies', completed: false },
-    ],
-    files: [],
-    assets: [
-        { id: 'a1', type: 'Notes', count: 5, icon: NotebookPen },
-        { id: 'a2', type: 'Tasks', count: 20, icon: ListChecks },
-        { id: 'a3', type: 'Knowledge base articles', count: 7, icon: Brain },
-        { id: 'a4', type: 'Chats', count: 2, icon: MessageSquare },
-        { id: 'a5', type: 'Agents', count: 1, icon: Bot },
-    ]
-  }
-];
+const mockProjects: Project[] = [];
 
-const mockAssets: ProjectAsset[] = [
-  { type: 'notes', count: 24, icon: NotebookPen, label: 'Notes' },
-  { type: 'tasks', count: 18, icon: ListChecks, label: 'Tasks' },
-  { type: 'canvas', count: 6, icon: Presentation, label: 'Canvas' },
-  { type: 'files', count: 42, icon: FolderOpen, label: 'Knowledge' },
-  { type: 'chat', count: 8, icon: MessageSquare, label: 'Chats' },
-  { type: 'agent', count: 3, icon: Bot, label: 'Agents' }
-];
+const mockAssets: ProjectAsset[] = [];
 
-const mockProgressTasks: ProgressTask[] = [
-  {
-    id: '1',
-    name: 'Project setup & planning',
-    startDate: '2025-06-01',
-    endDate: '2025-06-07',
-    progress: 100,
-    status: 'completed',
-    assignee: 'John D.'
-  },
-  {
-    id: '2',
-    name: 'UI/UX design system',
-    startDate: '2025-06-08',
-    endDate: '2025-06-20',
-    progress: 85,
-    status: 'in-progress',
-    assignee: 'Sarah M.',
-    dependencies: ['1']
-  },
-  {
-    id: '3',
-    name: 'Frontend development',
-    startDate: '2025-06-15',
-    endDate: '2025-07-05',
-    progress: 45,
-    status: 'in-progress',
-    assignee: 'Mike R.',
-    dependencies: ['2']
-  },
-  {
-    id: '4',
-    name: 'Backend API development',
-    startDate: '2025-06-18',
-    endDate: '2025-07-08',
-    progress: 20,
-    status: 'not-started',
-    assignee: 'Alex K.',
-    dependencies: ['1']
-  },
-  {
-    id: '5',
-    name: 'Testing & QA',
-    startDate: '2025-07-01',
-    endDate: '2025-07-15',
-    progress: 0,
-    status: 'not-started',
-    assignee: 'Lisa S.',
-    dependencies: ['3', '4']
-  }
-];
+const mockProgressTasks: ProgressTask[] = [];
 
 export function Projects() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
@@ -387,7 +256,7 @@ export function Projects() {
   };
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-[var(--space-4)] md:p-[var(--space-6)] gap-[var(--space-4)] md:gap-[var(--space-6)]">
+    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
       {/* Projects Sidebar */}
       <ProjectsSidebar
         projects={mockProjects}

@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { mockInvoke } from './mockGoogleService';
 import { 
   GoogleAccount, 
   GoogleTask, 
@@ -10,13 +9,8 @@ import {
   GoogleApiError 
 } from '../../types/google';
 
-// Use mock in development mode, but allow tests to override with vi.mocked(invoke)
-const isDevMode = import.meta.env.DEV;
-const isTestMode = import.meta.env.MODE === 'test';
-
-// In test mode, always use invoke (which can be mocked with vi.mocked)
-// In dev mode, use mockInvoke unless invoke is explicitly mocked
-const apiInvoke = isTestMode ? invoke : (isDevMode ? mockInvoke : invoke);
+// Always use real Tauri invoke - no mock data
+const apiInvoke = invoke;
 
 class GoogleTasksService {
   private async handleApiError(error: any): Promise<GoogleApiError> {

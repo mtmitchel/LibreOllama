@@ -101,6 +101,8 @@ impl Default for OAuthConfig {
                 "https://www.googleapis.com/auth/userinfo.email".to_string(),
                 "https://www.googleapis.com/auth/userinfo.profile".to_string(),
                 "https://www.googleapis.com/auth/drive.metadata.readonly".to_string(),
+                "https://www.googleapis.com/auth/calendar".to_string(),
+                "https://www.googleapis.com/auth/tasks".to_string(),
             ],
         }
     }

@@ -11,43 +11,11 @@ const mockInvoke = vi.hoisted(() => {
         try {
           switch (command) {
             case 'get_task_lists':
-              resolve([
-                {
-                  id: 'list-1',
-                  title: 'My Tasks',
-                  updated: new Date().toISOString(),
-                  selfLink: 'https://example.com/list-1',
-                  etag: 'etag-1',
-                },
-                {
-                  id: 'list-2',
-                  title: 'Work Tasks',
-                  updated: new Date().toISOString(),
-                  selfLink: 'https://example.com/list-2',
-                  etag: 'etag-2',
-                }
-              ]);
+              resolve([]);
               break;
               
             case 'get_tasks':
-              const taskListId = args.taskListId;
-              const mockTasks = {
-                'list-1': [
-                  {
-                    id: 'task-1',
-                    title: 'Complete project proposal',
-                    notes: 'Test notes',
-                    status: 'needsAction',
-                    due: new Date(Date.now() + 86400000).toISOString(),
-                    position: '1',
-                    updated: new Date().toISOString(),
-                    selfLink: 'https://example.com/task-1',
-                    etag: 'etag-task-1',
-                  }
-                ],
-                'list-2': []
-              };
-              resolve({ items: mockTasks[taskListId] || [] });
+              resolve({ items: [] });
               break;
               
             case 'create_task':
@@ -247,43 +215,11 @@ beforeEach(() => {
         try {
           switch (command) {
             case 'get_task_lists':
-              resolve([
-                {
-                  id: 'list-1',
-                  title: 'My Tasks',
-                  updated: new Date().toISOString(),
-                  selfLink: 'https://example.com/list-1',
-                  etag: 'etag-1',
-                },
-                {
-                  id: 'list-2',
-                  title: 'Work Tasks',
-                  updated: new Date().toISOString(),
-                  selfLink: 'https://example.com/list-2',
-                  etag: 'etag-2',
-                }
-              ]);
+              resolve([]);
               break;
               
             case 'get_tasks':
-              const taskListId = args.taskListId;
-              const mockTasks = {
-                'list-1': [
-                  {
-                    id: 'task-1',
-                    title: 'Complete project proposal',
-                    notes: 'Test notes',
-                    status: 'needsAction',
-                    due: new Date(Date.now() + 86400000).toISOString(),
-                    position: '1',
-                    updated: new Date().toISOString(),
-                    selfLink: 'https://example.com/task-1',
-                    etag: 'etag-task-1',
-                  }
-                ],
-                'list-2': []
-              };
-              resolve({ items: mockTasks[taskListId] || [] });
+              resolve({ items: [] });
               break;
               
             case 'create_task':

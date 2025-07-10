@@ -15,6 +15,7 @@ mod services;
 // Re-export commands for easy access using new domain-grouped structure
 use commands::gmail::*;        // Gmail auth and operations (consolidated)
 use commands::tasks::*;        // Google Tasks API operations
+use commands::calendar::*;     // Google Calendar API operations
 use commands::agents::*;       // Agent lifecycle commands  
 use commands::chat::*;         // Chat session commands
 use commands::system::*;       // System and advanced commands
@@ -400,6 +401,12 @@ pub fn run() {
             create_task_list,
             update_task_list,
             delete_task_list,
+            // Google Calendar API commands
+            get_calendars,
+            get_calendar_events,
+            create_calendar_event,
+            update_calendar_event,
+            delete_calendar_event,
             // Rate limiter commands
             initialize_rate_limiter,
             get_quota_status,

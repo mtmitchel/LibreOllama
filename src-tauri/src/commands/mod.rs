@@ -4,7 +4,8 @@
 
 // Domain-grouped command modules
 pub mod gmail;    // Gmail authentication and operations
-pub mod tasks;  // Add this line
+pub mod tasks;    // Google Tasks API operations
+pub mod calendar; // Google Calendar API operations
 pub mod agents;   // Agent lifecycle and execution  
 pub mod chat;     // Chat sessions and messages
 pub mod system;   // System health and advanced features

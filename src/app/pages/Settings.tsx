@@ -21,6 +21,10 @@ import {
 } from 'lucide-react';
 import { Card, Button, Input, Checkbox, Heading, Text } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
+import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModal';
+import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
+import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useMailStore } from '../../features/mail/stores/mailStore';
 import { 
   useGeneralSettings, 
   useAppearanceSettings, 
@@ -31,7 +35,8 @@ import {
   useSetTheme,
   useSetOllamaEndpoint,
   useSetActiveGoogleAccount,
-  useRemoveGoogleAccount
+  useRemoveGoogleAccount,
+  useAddGoogleAccount
 } from '../../stores/settingsStore';
 
 // Design system aligned Toggle Switch Component
@@ -73,6 +78,7 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId 
 const Settings: React.FC = () => {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [activeSection, setActiveSection] = useState('general');
+  const [showGoogleAuthModal, setShowGoogleAuthModal] = useState(false);
   
   // Settings from global store
   const generalSettings = useGeneralSettings();
@@ -87,10 +93,68 @@ const Settings: React.FC = () => {
   const setOllamaEndpoint = useSetOllamaEndpoint();
   const setActiveGoogleAccount = useSetActiveGoogleAccount();
   const removeGoogleAccount = useRemoveGoogleAccount();
+  const addGoogleAccount = useAddGoogleAccount();
+  
+  // Google service stores for authentication
+  const { authenticate: authenticateCalendar } = useGoogleCalendarStore();
+  const { authenticate: authenticateTasks } = useGoogleTasksStore();
+  const { addAccount: addGmailAccount } = useMailStore();
   
   // Google accounts from settings store
   const accounts = integrationSettings.googleAccounts;
   const activeAccount = accounts.find(acc => acc.isActive) || null;
+
+  const handleGoogleAuth = async (account: any) => {
+    // Add account to settings store with comprehensive information
+    addGoogleAccount({
+      id: account.id,
+      email: account.email,
+      name: account.name,
+      picture: account.picture,
+      isActive: accounts.length === 0, // Make first account active
+      connectedAt: new Date().toISOString(),
+      scopes: account.scopes || [
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/tasks',
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/gmail.compose',
+        'https://www.googleapis.com/auth/gmail.labels',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/drive.metadata.readonly'
+      ],
+      services: {
+        gmail: true,
+        calendar: true,
+        tasks: true
+      }
+    });
+    
+    // Authenticate with all Google service stores
+    authenticateCalendar(account);
+    authenticateTasks(account);
+    
+    // Add account to Gmail store (expects specific format)
+    await addGmailAccount({
+      id: account.id,
+      email: account.email,
+      name: account.name,
+      picture: account.picture,
+      accessToken: account.accessToken,
+      refreshToken: account.refreshToken,
+      expiresAt: account.expiresAt,
+      scopes: account.scopes || [],
+      isActive: true,
+      syncStatus: 'idle',
+      lastSyncAt: new Date(),
+      totalMessages: 0,
+      unreadMessages: 0,
+    });
+    
+    setShowGoogleAuthModal(false);
+  };
 
   const navItems = [
     { id: 'general', label: 'General', icon: SlidersHorizontal },
@@ -288,12 +352,17 @@ const Settings: React.FC = () => {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Heading level={2} className="text-lg font-semibold">Google Accounts</Heading>
-                  <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    onClick={() => setShowGoogleAuthModal(true)}
+                  >
                     <LinkIcon size={16} /> Add Account
                   </Button>
                 </div>
                 <Text variant="muted" size="sm" className="mb-4">
-                  Manage your Google accounts for Calendar and Tasks integration.
+                  Manage your Google accounts for Gmail, Calendar, and Tasks integration.
                 </Text>
                 
                 {accounts.length === 0 ? (
@@ -301,7 +370,7 @@ const Settings: React.FC = () => {
                     <Gem size={48} className="text-muted opacity-50 mb-4" />
                     <Text weight="medium" className="mb-2">No Google accounts connected</Text>
                     <Text variant="muted" size="sm">
-                      Connect a Google account to sync your Calendar and Tasks.
+                      Connect a Google account to sync your Gmail, Calendar, and Tasks.
                     </Text>
                   </div>
                 ) : (
@@ -323,6 +392,19 @@ const Settings: React.FC = () => {
                           <div>
                             <Text weight="medium">{account.name || account.email}</Text>
                             <Text variant="muted" size="sm">{account.email}</Text>
+                            {account.services && (
+                              <div className="flex gap-1 mt-1">
+                                {account.services.gmail && (
+                                  <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">Gmail</span>
+                                )}
+                                {account.services.calendar && (
+                                  <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded">Calendar</span>
+                                )}
+                                {account.services.tasks && (
+                                  <span className="px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">Tasks</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                           {activeAccount?.id === account.id && (
                             <div className="flex items-center gap-1 px-2 py-1 bg-success-ghost text-success rounded-full">
@@ -578,10 +660,44 @@ const Settings: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-w-0 bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
+      <div className="flex-1 min-w-0 bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] relative">
         <div className="h-full">
           {renderSection()} 
         </div>
+
+        {/* Google Authentication Modal - positioned relative to main content area */}
+        {showGoogleAuthModal && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6 rounded-[var(--radius-lg)]">
+            <div className="w-full max-w-md">
+              <GoogleAuthModal
+                isOpen={showGoogleAuthModal}
+                onClose={() => setShowGoogleAuthModal(false)}
+                onSuccess={handleGoogleAuth}
+                title="Connect Google Account" 
+                description="Sign in to sync your Gmail, Calendar, and Tasks with Google"
+                icon={<LinkIcon size={24} className="text-[var(--accent-primary)]" />}
+                scopes={[
+          // Calendar permissions
+          'https://www.googleapis.com/auth/calendar',
+          // Tasks permissions  
+          'https://www.googleapis.com/auth/tasks',
+          // Gmail permissions
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send',
+          'https://www.googleapis.com/auth/gmail.modify',
+          'https://www.googleapis.com/auth/gmail.compose',
+          'https://www.googleapis.com/auth/gmail.labels',
+          // User profile permissions
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+          // Drive metadata (for Gmail attachments)
+          'https://www.googleapis.com/auth/drive.metadata.readonly'
+        ]}
+                isInlineModal={true}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

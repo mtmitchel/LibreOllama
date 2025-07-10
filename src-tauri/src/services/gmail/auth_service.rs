@@ -31,6 +31,8 @@ const GMAIL_SCOPES: &[&str] = &[
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
     "https://www.googleapis.com/auth/drive.metadata.readonly",
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/tasks",
 ];
 
 /// Gmail OAuth2 endpoints
@@ -77,6 +79,7 @@ pub struct GmailTokens {
 /// User information from Gmail
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInfo {
+    pub id: String,
     pub email: String,
     pub name: Option<String>,
     pub picture: Option<String>,
@@ -378,7 +381,7 @@ impl GmailAuthService {
 
         // Store account with encrypted tokens
         conn.execute(
-            "INSERT OR REPLACE INTO gmail_accounts (
+            "INSERT OR REPLACE INTO gmail_accounts_secure (
                 id, email_address, display_name, profile_picture_url,
                 access_token_encrypted, refresh_token_encrypted, token_expires_at,
                 scopes, is_active, last_sync_at, created_at, updated_at, user_id
@@ -416,7 +419,7 @@ impl GmailAuthService {
 
         let result = conn.query_row(
             "SELECT access_token_encrypted, refresh_token_encrypted, token_expires_at
-             FROM gmail_accounts WHERE id = ?1 AND is_active = 1",
+             FROM gmail_accounts_secure WHERE id = ?1 AND is_active = 1",
             [account_id],
             |row| {
                 let access_token_encrypted: String = row.get(0)?;
@@ -493,7 +496,7 @@ impl GmailAuthService {
         let mut stmt = conn.prepare(
             "SELECT id, email_address, display_name, profile_picture_url, 
                     is_active, last_sync_at, created_at
-             FROM gmail_accounts WHERE user_id = ?1"
+             FROM gmail_accounts_secure WHERE user_id = ?1"
         ).map_err(|e| LibreOllamaError::DatabaseQuery {
             message: format!("Failed to prepare statement: {}", e),
             query_type: "prepare".to_string(),
@@ -546,7 +549,7 @@ impl GmailAuthService {
             })?;
 
         conn.execute(
-            "DELETE FROM gmail_accounts WHERE id = ?1",
+            "DELETE FROM gmail_accounts_secure WHERE id = ?1",
             [account_id],
         ).map_err(|e| LibreOllamaError::DatabaseQuery {
             message: format!("Failed to delete account: {}", e),
@@ -628,7 +631,7 @@ impl GmailAuthService {
                     };
 
                     conn.execute(
-                        "UPDATE gmail_accounts 
+                        "UPDATE gmail_accounts_secure 
                          SET access_token_encrypted = ?1, refresh_token_encrypted = ?2, token_expires_at = ?3
                          WHERE id = ?4",
                         (
@@ -668,7 +671,7 @@ impl GmailAuthService {
             })?;
 
         conn.execute(
-            "UPDATE gmail_accounts SET last_sync_at = ?1 WHERE id = ?2",
+            "UPDATE gmail_accounts_secure SET last_sync_at = ?1 WHERE id = ?2",
             [&chrono::Utc::now().to_rfc3339(), account_id],
         ).map_err(|e| LibreOllamaError::DatabaseQuery {
             message: format!("Failed to update sync timestamp: {}", e),

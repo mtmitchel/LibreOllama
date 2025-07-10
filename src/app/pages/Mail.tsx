@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useHeader } from '../contexts/HeaderContext';
 import { Edit, PanelRight, PanelLeft } from 'lucide-react';
 import { MailSidebar } from '../../features/mail/components/MailSidebar';
@@ -9,20 +10,24 @@ import { MessageView } from '../../features/mail/components/MessageView';
 import { ComposeModal } from '../../features/mail/components/ComposeModal';
 import { MailSearchBar } from '../../features/mail/components/MailSearchBar';
 import { MailContextSidebar } from '../../features/mail/components/MailContextSidebar';
-import { GmailAuthModal } from '../../features/mail/components/GmailAuthModal';
 import { useMailStore } from '../../features/mail/stores/mailStore';
 import { useComposeOperation } from '../../features/mail/hooks';
 import { GmailTauriTestComponent } from '../../features/mail/components/GmailTauriTestComponent';
+import { useActiveGoogleAccount } from '../../stores/settingsStore';
+import { Button } from '../../components/ui';
 
 export default function Mail() {
+  const navigate = useNavigate();
   const { setHeaderProps, clearHeaderProps } = useHeader();
-  const { currentMessage, isComposing, currentView, isAuthenticated, currentAccountId, signOut } = useMailStore();
+  const { currentMessage, isComposing, currentView, currentAccountId, signOut, isHydrated } = useMailStore();
   const { handleStartCompose } = useComposeOperation();
   const [isMailSidebarOpen, setIsMailSidebarOpen] = useState(true);
   const [isContextOpen, setIsContextOpen] = useState(true);
-  const [showAuthModal, setShowAuthModal] = useState(!isAuthenticated);
   const [showTestComponent, setShowTestComponent] = useState(false);
   const [isThreadedView, setIsThreadedView] = useState(true); // Default to threaded view for MVP
+  
+  // Use centralized Google authentication
+  const activeGoogleAccount = useActiveGoogleAccount();
 
   const toggleMailSidebar = useCallback(() => {
     setIsMailSidebarOpen(!isMailSidebarOpen);
@@ -36,17 +41,7 @@ export default function Mail() {
     setShowTestComponent(!showTestComponent);
   }, [showTestComponent]);
 
-  // Handle authentication state changes
-  useEffect(() => {
-    setShowAuthModal(!isAuthenticated);
-    
-    // Check for auth success in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('auth_success') === 'true' && isAuthenticated) {
-      // Clear the URL parameter
-      window.history.replaceState({}, '', '/mail');
-    }
-  }, [isAuthenticated]);
+  // No local authentication handling needed - using centralized auth from Settings
 
   // Setup header when component mounts
   useEffect(() => {
@@ -56,26 +51,37 @@ export default function Mail() {
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);
 
-  // Show authentication modal if not authenticated
-  if (!isAuthenticated) {
+  // Show loading while waiting for hydration
+  if (!isHydrated) {
     return (
-      <>
-        <div className="flex h-full bg-[var(--bg-primary)] items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
-              Welcome to Mail
-            </h2>
-            <p className="text-[var(--text-secondary)] mb-4">
-              Sign in to your Gmail account to get started
-            </p>
-          </div>
+      <div className="flex h-full bg-[var(--bg-primary)] items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-primary)] mx-auto mb-4"></div>
+          <p className="text-[var(--text-secondary)]">Loading...</p>
         </div>
-        <GmailAuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={() => setShowAuthModal(false)}
-        />
-      </>
+      </div>
+    );
+  }
+
+  // Check centralized Google authentication
+  if (!activeGoogleAccount || !activeGoogleAccount.services?.gmail) {
+    return (
+      <div className="flex h-full bg-[var(--bg-primary)] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+            No Google Account Connected
+          </h2>
+          <p className="text-[var(--text-secondary)] mb-4">
+            Please connect a Google account in Settings to access your Gmail
+          </p>
+          <Button 
+            variant="primary" 
+            onClick={() => navigate('/settings')}
+          >
+            Go to Settings
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -92,12 +98,14 @@ export default function Mail() {
         {/* Test Component - Temporarily added for validation */}
         {showTestComponent && (
           <div className="flex-shrink-0 p-[var(--space-4)] bg-[var(--bg-tertiary)] border-b border-[var(--border-default)]">
-            <GmailTauriTestComponent 
-              accountId={currentAccountId || 'test-account-1'} 
-              onResult={(result) => {
-                console.log('Test result:', result);
-              }}
-            />
+            {currentAccountId && (
+              <GmailTauriTestComponent 
+                accountId={currentAccountId} 
+                onResult={(result) => {
+                  console.log('Test result:', result);
+                }}
+              />
+            )}
           </div>
         )}
 
