@@ -283,6 +283,7 @@ export interface MailState {
   nextPageToken?: string;
   pageTokens: string[]; // Stack of page tokens for backward navigation
   totalMessages: number;
+  totalUnreadMessages: number; // Total unread messages for current view
   messagesLoadedSoFar: number; // Track cumulative messages loaded
   currentPageSize: number;
   isNavigatingBackwards: boolean; // Flag to prevent pageTokens modification during backwards navigation
@@ -345,6 +346,7 @@ export interface MailActions {
   nextPage: () => Promise<void>;
   prevPage: () => Promise<void>;
   goToPage: (pageToken?: string) => Promise<void>;
+  resetPagination: () => void;
   
   // Test helper methods (for compatibility with existing tests)
   setAuthenticated: (isAuthenticated: boolean) => void;

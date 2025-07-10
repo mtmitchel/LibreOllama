@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ListChecks, Plus, X, Calendar as CalendarIcon, Clock, MapPin, FileText, Flag, Hash, Repeat, List as ListIcon, CheckCircle, CircleDashed, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListChecks, Plus, X, Calendar as CalendarIcon, Clock, MapPin, FileText, Flag, Hash, Repeat, List as ListIcon, CheckCircle, CircleDashed, ChevronDown, RefreshCw, Search } from 'lucide-react';
 import { Card, Button, Tag, Input } from '../../components/ui';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -9,17 +9,18 @@ import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
 import { useHeader } from '../contexts/HeaderContext';
 import { useKanbanStore, KanbanTask, TaskMetadata } from '../../stores/useKanbanStore';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
-import { GoogleCalendarEvent } from '../../types/google';
+import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { GoogleCalendarEvent, GoogleTask, GoogleTaskList } from '../../types/google';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
 
 // Google Calendar authentication now handled centrally in Settings
 
-// Simple Task Modal Component (copied from Tasks.tsx)
+// Simple Task Modal Component for Google Tasks
 const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
   isOpen: boolean;
-  task?: KanbanTask | null;
+  task?: GoogleTask | null;
   onClose: () => void;
   onSubmit: (data: { title: string; notes?: string; due?: string; metadata?: TaskMetadata }) => void;
   onDelete?: () => void;
@@ -45,14 +46,14 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
       setFormData({
         title: task.title,
         notes: task.notes || '',
-        due: task.due || '',
-        priority: task.metadata?.priority || 'normal',
-        labels: task.metadata?.labels || [],
-        subtasks: task.metadata?.subtasks || [],
-        recurringEnabled: task.metadata?.recurring?.enabled || false,
-        recurringFrequency: task.metadata?.recurring?.frequency || 'daily',
-        recurringInterval: task.metadata?.recurring?.interval || 1,
-        recurringEndDate: task.metadata?.recurring?.endDate || '',
+        due: task.due ? task.due.split('T')[0] : '',
+        priority: 'normal', // Google Tasks don't have priority, default to normal
+        labels: [],
+        subtasks: [],
+        recurringEnabled: false,
+        recurringFrequency: 'daily',
+        recurringInterval: 1,
+        recurringEndDate: '',
       });
     } else {
       setFormData({
@@ -377,7 +378,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
   );
 };
 
-// Schedule Task Modal Component
+// Schedule Task Modal Component for Google Tasks
 const ScheduleTaskModal = ({ 
   isOpen, 
   task, 
@@ -386,7 +387,7 @@ const ScheduleTaskModal = ({
   onSchedule 
 }: {
   isOpen: boolean;
-  task: KanbanTask | null;
+  task: GoogleTask | null;
   selectedDate: Date | null;
   onClose: () => void;
   onSchedule: (data: { 
@@ -527,9 +528,11 @@ const Calendar: React.FC = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<any>(null);
-  const [selectedTaskForScheduling, setSelectedTaskForScheduling] = useState<KanbanTask | null>(null);
+  const [selectedTaskForScheduling, setSelectedTaskForScheduling] = useState<GoogleTask | null>(null);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
@@ -542,12 +545,21 @@ const Calendar: React.FC = () => {
   const [editingEvent, setEditingEvent] = useState<any>(null);
 
   const {
-    columns,
-    isInitialized,
-    initialize: initializeKanban,
-    toggleComplete,
-    createTask,
-  } = useKanbanStore();
+    taskLists,
+    tasks: googleTasks,
+    isLoading: isTasksLoading,
+    error: tasksError,
+    fetchTaskLists,
+    fetchTasks,
+    createTask: createGoogleTask,
+    updateTask: updateGoogleTask,
+    deleteTask: deleteGoogleTask,
+    toggleTaskComplete,
+    authenticate: authenticateTasks,
+    isAuthenticated: isTasksAuthenticated,
+    isHydrated: isTasksHydrated,
+    syncAllTasks,
+  } = useGoogleTasksStore();
 
   const { 
     events: calendarEvents, 
@@ -555,19 +567,25 @@ const Calendar: React.FC = () => {
     createEvent: createCalendarEvent,
     updateEvent: updateCalendarEvent,
     deleteEvent: deleteCalendarEvent,
-    isAuthenticated,
+    isAuthenticated: isCalendarAuthenticated,
   } = useGoogleCalendarStore();
 
   const activeAccount = useActiveGoogleAccount();
 
   useEffect(() => {
-    if (!isInitialized) {
-      initializeKanban().catch((err) => {
-        console.error('Failed to initialize kanban store:', err);
-        setError('Failed to load tasks. Please refresh the page.');
+    if (activeAccount && !isTasksAuthenticated && isTasksHydrated) {
+      authenticateTasks(activeAccount);
+    }
+  }, [activeAccount, isTasksAuthenticated, isTasksHydrated, authenticateTasks]);
+
+  useEffect(() => {
+    if (isTasksAuthenticated && taskLists.length === 0) {
+      fetchTaskLists().catch((err) => {
+        console.error('Failed to fetch task lists:', err);
+        setError('Failed to load task lists. Please refresh the page.');
       });
     }
-  }, [isInitialized, initializeKanban]);
+  }, [isTasksAuthenticated, taskLists.length, fetchTaskLists]);
   
   useEffect(() => {
     if (taskPanelRef.current) {
@@ -678,9 +696,12 @@ const Calendar: React.FC = () => {
       await createCalendarEvent(eventData);
       
       if (confirm('Mark the original task as completed?')) {
-        const taskData = useKanbanStore.getState().getTask(selectedTaskForScheduling.id);
-        if (taskData) {
-          await toggleComplete(taskData.columnId, selectedTaskForScheduling.id, true);
+        // Find which task list this task belongs to
+        const taskListId = Object.keys(googleTasks).find(listId => 
+          googleTasks[listId].some(t => t.id === selectedTaskForScheduling.id)
+        );
+        if (taskListId) {
+          await toggleTaskComplete(taskListId, selectedTaskForScheduling.id, true);
         }
       }
       
@@ -789,25 +810,62 @@ const Calendar: React.FC = () => {
 
   const handleTaskModalSubmit = async (data: { title: string; notes?: string; due?: string; metadata?: TaskMetadata }) => {
     try {
-      const targetColumnId = selectedColumnId === 'all' ? columns[0]?.id || 'todo' : selectedColumnId;
-      await createTask(targetColumnId, data);
-      setShowTaskModal(false);
+      const targetTaskListId = selectedColumnId === 'all' ? taskLists[0]?.id : selectedColumnId;
+      if (targetTaskListId) {
+        await createGoogleTask(targetTaskListId, {
+          title: data.title,
+          notes: data.notes,
+          due: data.due,
+        });
+        setShowTaskModal(false);
+      } else {
+        setError('No task list available. Please ensure you have Google Tasks set up.');
+      }
     } catch (err) {
       console.error('Failed to create task:', err);
       setError('Failed to create task. Please try again.');
     }
   };
 
-  // Get filtered tasks based on selected column
+  // Get filtered tasks based on selected task list
   const getFilteredTasks = () => {
     if (selectedColumnId === 'all') {
-      return columns.flatMap(column => column.tasks);
+      return Object.values(googleTasks).flat();
     }
-    const selectedColumn = columns.find(col => col.id === selectedColumnId);
-    return selectedColumn ? selectedColumn.tasks : [];
+    return googleTasks[selectedColumnId] || [];
   };
 
   const filteredTasks = getFilteredTasks();
+
+  // Handle refresh
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setError(null);
+    try {
+      await Promise.all([
+        fetchCalendarEvents(),
+        fetchTaskLists(),
+        syncAllTasks()
+      ]);
+    } catch (err) {
+      console.error('Failed to refresh calendar data:', err);
+      setError('Failed to refresh calendar data. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchCalendarEvents, fetchTaskLists, syncAllTasks]);
+
+  // Filter events by search query
+  const filteredCalendarEvents = useMemo(() => {
+    if (!searchQuery) return fullCalendarEvents;
+    
+    const query = searchQuery.toLowerCase();
+    return fullCalendarEvents.filter(event => 
+      event.title.toLowerCase().includes(query) ||
+      (event.extendedProps.description && event.extendedProps.description.toLowerCase().includes(query)) ||
+      (event.extendedProps.location && event.extendedProps.location.toLowerCase().includes(query))
+    );
+  }, [fullCalendarEvents, searchQuery]);
 
   useEffect(() => {
     const headerProps = { title: "Calendar" };
@@ -815,12 +873,12 @@ const Calendar: React.FC = () => {
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);
 
-  if (!activeAccount || !isAuthenticated) {
+  if (!activeAccount || (!isCalendarAuthenticated && !isTasksAuthenticated)) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-lg font-semibold text-primary mb-2">No Google Account Connected</h2>
-          <p className="text-muted mb-4">Please connect a Google account in Settings to view your calendar.</p>
+          <p className="text-muted mb-4">Please connect a Google account in Settings to view your calendar and tasks.</p>
           <Button variant="primary" onClick={() => navigate('/settings')}>
             Go to Settings
           </Button>
@@ -873,10 +931,33 @@ const Calendar: React.FC = () => {
                         Day
                     </Button>
                 </div>
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
                 <Button variant="primary" onClick={() => { setEditingEvent(null); setShowEventModal(true); }}>
                   <Plus size={16} className="mr-2" />
                   New Event
                 </Button>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-border-default rounded-md bg-card text-primary placeholder-muted"
+                />
               </div>
             </div>
 
@@ -902,7 +983,7 @@ const Calendar: React.FC = () => {
                 initialView={view}
                 headerToolbar={false}
                 height="100%"
-                events={fullCalendarEvents}
+                events={filteredCalendarEvents}
                 selectable={true}
                 editable={true}
                 droppable={true}
@@ -924,7 +1005,7 @@ const Calendar: React.FC = () => {
               <Button variant="ghost" size="sm" onClick={() => setShowTaskPanel(false)}><X size={16} /></Button>
             </div>
             
-            {/* Column Selector and New Task Button */}
+            {/* Task List Selector and New Task Button */}
             <div className="p-4 border-b border-border-default space-y-3">
               <div className="relative">
                 <select
@@ -933,8 +1014,8 @@ const Calendar: React.FC = () => {
                   className="w-full p-2 border border-border-default rounded-md bg-card text-primary appearance-none pr-8"
                 >
                   <option value="all">All Tasks</option>
-                  {columns.map(column => (
-                    <option key={column.id} value={column.id}>{column.title}</option>
+                  {taskLists.map(taskList => (
+                    <option key={taskList.id} value={taskList.id}>{taskList.title}</option>
                   ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted pointer-events-none" />
@@ -951,23 +1032,38 @@ const Calendar: React.FC = () => {
             </div>
             
             <div ref={taskPanelRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-              {filteredTasks.map(task => (
-                <Card 
-                    key={task.id} 
-                    className="p-3 cursor-grab draggable-task"
-                    data-task={JSON.stringify(task)}
-                >
-                  <p className="text-sm font-medium text-primary">{task.title}</p>
-                  {task.due && <p className="text-xs text-muted">Due: {new Date(task.due).toLocaleDateString()}</p>}
-                </Card>
-              ))}
-              {filteredTasks.length === 0 && (
+              {isTasksLoading ? (
                 <div className="text-center text-muted py-8">
-                  <p className="text-sm">No tasks found</p>
-                  <p className="text-xs mt-1">
-                    {selectedColumnId === 'all' ? 'Create a task to get started' : `No tasks in ${columns.find(c => c.id === selectedColumnId)?.title}`}
-                  </p>
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm">Loading tasks...</p>
                 </div>
+              ) : tasksError ? (
+                <div className="text-center text-error py-8">
+                  <p className="text-sm">Failed to load tasks</p>
+                  <p className="text-xs mt-1">{tasksError}</p>
+                </div>
+              ) : (
+                <>
+                  {filteredTasks.map(task => (
+                    <Card 
+                        key={task.id} 
+                        className="p-3 cursor-grab draggable-task"
+                        data-task={JSON.stringify(task)}
+                    >
+                      <p className="text-sm font-medium text-primary">{task.title}</p>
+                      {task.due && <p className="text-xs text-muted">Due: {new Date(task.due).toLocaleDateString()}</p>}
+                      {task.status === 'completed' && <p className="text-xs text-success">✓ Completed</p>}
+                    </Card>
+                  ))}
+                  {filteredTasks.length === 0 && (
+                    <div className="text-center text-muted py-8">
+                      <p className="text-sm">No tasks found</p>
+                      <p className="text-xs mt-1">
+                        {selectedColumnId === 'all' ? 'Create a task to get started' : `No tasks in ${taskLists.find(list => list.id === selectedColumnId)?.title}`}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </Card>

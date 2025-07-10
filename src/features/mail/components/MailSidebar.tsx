@@ -16,13 +16,80 @@ import {
   Mail,
   PanelLeft,
   RefreshCw,
-  LogOut
+  LogOut,
+  ExternalLink
 } from 'lucide-react';
 import { useMailStore } from '../stores/mailStore';
+import { GmailAccount } from '../types';
+import { useState } from 'react';
 
 interface MailSidebarProps {
   isOpen?: boolean;
   onToggle?: () => void;
+}
+
+// Separate component for storage info to prevent render crashes
+function StorageInfo({
+  account,
+  onRefresh
+}: {
+  account: GmailAccount;
+  onRefresh: () => void;
+}) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { quotaUsed, quotaTotal } = account;
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await onRefresh();
+    setIsRefreshing(false);
+  };
+  
+  if (typeof quotaUsed !== 'number' || typeof quotaTotal !== 'number' || quotaTotal <= 0) {
+    return (
+      <div className="text-center py-2">
+        <Text size="xs" variant="tertiary">
+          {isRefreshing ? 'Loading storage info...' : 'Storage info unavailable'}
+        </Text>
+      </div>
+    );
+  }
+
+  const usedGiB = (quotaUsed / (1024 * 1024 * 1024)).toFixed(1);
+  const totalGiB = (quotaTotal / (1024 * 1024 * 1024)).toFixed(1);
+  const percentage = (quotaUsed / quotaTotal) * 100;
+
+  return (
+    <>
+      <div className="flex justify-between items-center mb-1">
+        <Text size="xs" weight="semibold" variant="secondary">Storage</Text>
+        <div className="flex items-center">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title="Refresh storage quota"
+          >
+            <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6" title="Manage storage">
+            <ExternalLink size={12} />
+          </Button>
+        </div>
+      </div>
+      <Text size="xs" variant="tertiary" className="mb-2">
+        {usedGiB} GiB of {totalGiB} GiB used
+      </Text>
+      <div className="w-full bg-[var(--bg-tertiary)] rounded-full h-1">
+        <div 
+          className="bg-[var(--accent-primary)] h-1 rounded-full" 
+          style={{ width: `${percentage}%` }}
+        ></div>
+      </div>
+    </>
+  );
 }
 
 export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
@@ -42,6 +109,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   } = useMailStore();
 
   const labels = getLabels();
+  const activeAccount = getCurrentAccount();
 
   const [labelsExpanded, setLabelsExpanded] = React.useState(true);
   const [isRefreshingQuota, setIsRefreshingQuota] = React.useState(false);
@@ -62,6 +130,22 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     }
   }, [isAuthenticated, currentAccountId, fetchLabels, refreshAccount]);
 
+  // Auto-refresh quota if it's missing
+  React.useEffect(() => {
+    const currentAccount = getCurrentAccount();
+    if (currentAccount && currentAccountId && !isRefreshingQuota) {
+      const hasQuotaData = typeof currentAccount.quotaUsed !== 'undefined' || typeof currentAccount.quotaTotal !== 'undefined';
+      
+      if (!hasQuotaData) {
+        console.log('🔄 [SIDEBAR] Auto-refreshing missing quota data');
+        setIsRefreshingQuota(true);
+        refreshAccount(currentAccountId).finally(() => {
+          setIsRefreshingQuota(false);
+        });
+      }
+    }
+  }, [currentAccountId, getCurrentAccount, refreshAccount, isRefreshingQuota]);
+
   // Debug logging for labels
   React.useEffect(() => {
     console.log('🏷️ [SIDEBAR] Labels updated:', labels.length, labels);
@@ -79,16 +163,20 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     console.log('🏷️ [SIDEBAR] All user labels regardless of visibility:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
   }, [labels]);
 
-  // Get real counts from labels
+  // Get real counts from labels (use threadsUnread for conversations count)
   const getLabelCount = (labelId: string) => {
     const label = labels.find(l => l.id === labelId);
-    return label?.messagesUnread || 0;
+    return label?.threadsUnread || 0;
   };
 
+  // Check if SNOOZED label exists before including it
+  const hasSnoozedLabel = labels.some(label => label.id === 'SNOOZED');
+  
   const mainFolders = [
     { id: 'inbox', name: 'Inbox', icon: Inbox, count: getLabelCount('INBOX') },
     { id: 'starred', name: 'Starred', icon: Star, count: getLabelCount('STARRED') },
-    { id: 'snoozed', name: 'Snoozed', icon: Clock, count: getLabelCount('SNOOZED') },
+    // Only include Snoozed if the label exists
+    ...(hasSnoozedLabel ? [{ id: 'snoozed', name: 'Snoozed', icon: Clock, count: getLabelCount('SNOOZED') }] : []),
     { id: 'sent', name: 'Sent', icon: Send, count: getLabelCount('SENT') },
     { id: 'drafts', name: 'Drafts', icon: FileText, count: getLabelCount('DRAFT') },
     { id: 'all', name: 'All Mail', icon: Archive },
@@ -391,9 +479,9 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                             >
                               {label.name}
                             </Text>
-                            {label.messagesUnread && label.messagesUnread > 0 && (
+                            {label.threadsUnread && label.threadsUnread > 0 && (
                               <Badge variant="secondary" className="text-xs">
-                                {label.messagesUnread}
+                                {label.threadsUnread}
                               </Badge>
                             )}
                           </div>
@@ -415,197 +503,18 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       </div>
 
       {/* Storage Info */}
-      <div style={{ 
-        marginTop: 'var(--space-4)',
-        padding: 'var(--space-4)',
-        borderTop: '1px solid var(--border-default)'
-      }}>
-        <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-2)' }}>
-          <Text size="xs" weight="semibold" variant="secondary">Storage</Text>
-          <div className="flex items-center" style={{ gap: 'var(--space-1)' }}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={async () => {
-                if (currentAccountId && !isRefreshingQuota) {
-                  setIsRefreshingQuota(true);
-                  try {
-                    await refreshAccount(currentAccountId);
-                  } finally {
-                    setIsRefreshingQuota(false);
-                  }
-                }
-              }}
-              title="Refresh storage quota"
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-6 h-6"
-              disabled={isRefreshingQuota}
-            >
-              <RefreshCw size={14} className={isRefreshingQuota ? 'animate-spin' : ''} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (window.confirm('Are you sure you want to sign out? You will need to sign in again to access your emails.')) {
-                  signOut();
-                }
-              }}
-              title="Sign out"
-              className="text-[var(--text-secondary)] hover:text-[var(--text-danger)] w-6 h-6"
-            >
-              <LogOut size={14} />
-            </Button>
+      <div className="mt-auto p-4 border-t border-[var(--border-default)]">
+        {activeAccount ? (
+          <StorageInfo 
+            account={activeAccount} 
+            onRefresh={() => refreshAccount(activeAccount.id)} 
+          />
+        ) : (
+          <div className="text-center py-2">
+            <Text size="xs" variant="tertiary">Sign in to view storage</Text>
           </div>
-        </div>
-        {(() => {
-          const currentAccount = getCurrentAccount();
-          console.log('💾 [SIDEBAR] Current account for storage:', currentAccount);
-          console.log('💾 [SIDEBAR] Account keys:', currentAccount ? Object.keys(currentAccount) : 'no account');
-          
-          // Try to get quota from account with multiple possible field names
-          let quotaUsed = 0;
-          let quotaTotal = 15000000000; // 15GB default
-          
-          if (currentAccount) {
-            // Use the correct GmailAccount properties
-            quotaUsed = currentAccount.quotaUsed || 0;
-            quotaTotal = currentAccount.quotaTotal || 0; // Don't assume a default
-            
-            // Don't modify the quota values - they should come from the API
-            // If they're wrong, the issue is in the data fetching, not here
-          }
-          
-          console.log('💾 [SIDEBAR] quotaUsed:', quotaUsed, 'bytes');
-          console.log('💾 [SIDEBAR] quotaTotal:', quotaTotal, 'bytes');
-          console.log('💾 [SIDEBAR] usedGB:', (quotaUsed / 1000000000).toFixed(3));
-          console.log('💾 [SIDEBAR] totalGB:', (quotaTotal / 1000000000).toFixed(3));
-          console.log('💾 [SIDEBAR] usedGiB:', (quotaUsed / (1024*1024*1024)).toFixed(3));
-          console.log('💾 [SIDEBAR] totalGiB:', (quotaTotal / (1024*1024*1024)).toFixed(3));
-          console.log('💾 [SIDEBAR] is 100 GiB?:', quotaTotal === 107374182400);
-          if (currentAccount) {
-            console.log('💾 [SIDEBAR] currentAccount.quotaUsed:', currentAccount.quotaUsed);
-            console.log('💾 [SIDEBAR] currentAccount.quotaTotal:', currentAccount.quotaTotal);
-            console.log('💾 [SIDEBAR] currentAccount keys:', Object.keys(currentAccount));
-            console.log('💾 [SIDEBAR] Full currentAccount:', currentAccount);
-          }
-          
-          // Check for authentication errors
-          if (currentAccount && currentAccount.syncStatus === 'error' && currentAccount.errorMessage) {
-            return (
-              <>
-                <Text size="xs" variant="muted" className="text-red-500" style={{ marginBottom: 'var(--space-2)' }}>
-                  Authentication Error
-                </Text>
-                <Text size="xs" variant="tertiary" style={{ marginBottom: 'var(--space-2)' }}>
-                  {currentAccount.errorMessage}
-                </Text>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => signOut()}
-                  className="w-full"
-                >
-                  <LogOut size={14} />
-                  Sign Out
-                </Button>
-              </>
-            );
-          }
-          
-          // If no quota data available at all
-          if ((!quotaUsed || quotaUsed === 0) && (!quotaTotal || quotaTotal === 0)) {
-            return (
-              <>
-                <Text size="xs" variant="secondary" style={{ marginBottom: 'var(--space-2)' }}>
-                  Storage info unavailable
-                </Text>
-                <Text size="xs" variant="tertiary">
-                  Sign out and sign in again to enable quota
-                </Text>
-              </>
-            );
-          }
-          
-          // Convert bytes to GB or GiB
-          const BYTES_PER_GB = 1000000000;
-          const BYTES_PER_GIB = 1024 * 1024 * 1024;
-          
-          // Common Google storage tiers in GiB
-          const COMMON_GIB_QUOTAS = [
-            15 * BYTES_PER_GIB,    // 15 GiB (free tier)
-            100 * BYTES_PER_GIB,   // 100 GiB
-            200 * BYTES_PER_GIB,   // 200 GiB
-            2048 * BYTES_PER_GIB,  // 2 TiB
-          ];
-          
-          // Check if the quota matches common GiB tiers
-          const isLikelyGiB = COMMON_GIB_QUOTAS.includes(quotaTotal);
-          
-          let usedDisplay: string;
-          let totalDisplay: string;
-          let unit: string;
-          
-          if (isLikelyGiB) {
-            // Display in GiB for cleaner numbers (100 GiB instead of 107 GB)
-            usedDisplay = (quotaUsed / BYTES_PER_GIB).toFixed(1);
-            totalDisplay = Math.round(quotaTotal / BYTES_PER_GIB).toString();
-            unit = "GB"; // Use GB for consistency even though it's actually GiB
-          } else {
-            // Display in GB
-            usedDisplay = (quotaUsed / BYTES_PER_GB).toFixed(1);
-            totalDisplay = Math.round(quotaTotal / BYTES_PER_GB).toString();
-            unit = "GB";
-          }
-          
-          console.log('💾 [SIDEBAR] Display values:', {
-            isLikelyGiB,
-            usedDisplay,
-            totalDisplay,
-            unit,
-            quotaTotalBytes: quotaTotal,
-            matchesCommonGiB: COMMON_GIB_QUOTAS.map(q => ({
-              sizeGiB: q / BYTES_PER_GIB,
-              bytes: q,
-              matches: q === quotaTotal
-            }))
-          });
-          
-          // Handle cases where Google doesn't return a quota limit
-          if (quotaTotal === 0 && quotaUsed > 0) {
-            return (
-              <>
-                <Text size="xs" variant="secondary" style={{ marginBottom: 'var(--space-2)' }}>
-                  {usedDisplay} {unit} used
-                </Text>
-                <Text size="xs" variant="tertiary">
-                  Storage limit info not available
-                </Text>
-              </>
-            );
-          }
-          
-          const usagePercentage = quotaTotal > 0 ? (quotaUsed / quotaTotal) * 100 : 0;
-          const isOverQuota = quotaUsed > quotaTotal && quotaTotal > 0;
-          
-          return (
-            <>
-              <Text size="xs" variant="secondary" className={isOverQuota ? "text-red-500" : ""} style={{ marginBottom: 'var(--space-2)' }}>
-                {usedDisplay} {unit} of {totalDisplay} {unit} used
-                {isOverQuota && " (Over quota)"}
-              </Text>
-              <div 
-                className="w-full bg-[var(--bg-tertiary)] rounded-full"
-                style={{ height: 'var(--space-1)' }}
-              >
-                <div 
-                  className={`h-full rounded-full ${isOverQuota ? 'bg-red-500' : 'bg-[var(--accent-primary)]'}`}
-                  style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-                />
-              </div>
-            </>
-          );
-        })()}
+        )}
       </div>
     </Card>
   );
-} 
+}

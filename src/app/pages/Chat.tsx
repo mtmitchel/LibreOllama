@@ -30,7 +30,7 @@ export function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConvoListOpen, setIsConvoListOpen] = useState(true);
-  const [isContextOpen, setIsContextOpen] = useState(true);
+  const [isContextOpen, setIsContextOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredConversationId, setHoveredConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);

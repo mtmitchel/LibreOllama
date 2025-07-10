@@ -25,10 +25,11 @@ interface GoogleTasksActions {
   // Authentication
   authenticate: (account: GoogleAccount) => void;
   signOut: () => void;
+  getCurrentAccount: () => GoogleAccount | null;
   
   // Data fetching
-  fetchTaskLists: () => Promise<void>;
-  fetchTasks: (taskListId: string) => Promise<void>;
+  fetchTaskLists: (accountId?: string) => Promise<void>;
+  fetchTasks: (taskListId: string, accountId?: string) => Promise<void>;
   syncAllTasks: () => Promise<void>;
   
   // Task management
@@ -71,21 +72,17 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
         // Helper to get current account
         getCurrentAccount: (): GoogleAccount | null => {
           const settingsState = useSettingsStore.getState();
-          return settingsState.integrations.googleAccounts.find(acc => acc.isActive) || null;
+          const account = settingsState.integrations.googleAccounts.find(acc => acc.isActive);
+          return account ? account as unknown as GoogleAccount : null;
         },
 
         // Authentication
         authenticate: (account: GoogleAccount) => {
           console.log('🔐 [GOOGLE-TASKS] Authenticating account:', account.email);
-          set((state) => {
-            state.isAuthenticated = true;
-          });
-          
-          // The account should already be added to settings store by the Settings page
-          // Just mark as authenticated here
+          set({ isAuthenticated: true });
           
           // Auto-fetch task lists after authentication
-          get().fetchTaskLists();
+          get().fetchTaskLists(account.id);
         },
 
         signOut: () => {
@@ -99,73 +96,52 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
         },
 
         // Data fetching
-        fetchTaskLists: async () => {
-          const account = get().getCurrentAccount();
+        fetchTaskLists: async (accountId?: string) => {
+          const account = accountId ? useSettingsStore.getState().integrations.googleAccounts.find(a => a.id === accountId) : get().getCurrentAccount();
           if (!account) {
-            set((state) => {
-              state.error = 'No authenticated account found';
-            });
+            set({ error: 'No authenticated account found' });
             return;
           }
-
-          set((state) => {
-            state.isLoading = true;
-            state.error = null;
-          });
-
+          set({ isLoading: true, error: null });
           try {
-            console.log('📋 [GOOGLE-TASKS] Fetching task lists for:', account.email);
+            console.log('📝 [GOOGLE-TASKS] Fetching task lists for:', account.email);
             const response = await googleTasksService.getTaskLists(account);
-            
             if (response.success && response.data) {
-              set((state) => {
-                state.taskLists = response.data!;
-                state.isLoading = false;
-                state.lastSyncAt = new Date();
-              });
-              
-              // Auto-fetch tasks for each list
-              for (const taskList of response.data) {
-                get().fetchTasks(taskList.id);
-              }
+              console.log('✅ [GOOGLE-TASKS] Setting task lists:', response.data.length);
+              set({ taskLists: response.data });
             } else {
               throw new Error(response.error?.message || 'Failed to fetch task lists');
             }
           } catch (error) {
             console.error('❌ [GOOGLE-TASKS] Failed to fetch task lists:', error);
-            set((state) => {
-              state.error = error instanceof Error ? error.message : 'Failed to fetch task lists';
-              state.isLoading = false;
-            });
+            set({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
+          } finally {
+            set({ isLoading: false });
           }
         },
 
-        fetchTasks: async (taskListId: string) => {
-          const account = get().getCurrentAccount();
-          if (!account) return;
-
-          set((state) => {
-            state.isLoadingTasks[taskListId] = true;
-          });
-
+        fetchTasks: async (taskListId: string, accountId?: string) => {
+          const account = accountId ? useSettingsStore.getState().integrations.googleAccounts.find(a => a.id === accountId) : get().getCurrentAccount();
+          if (!account) {
+            set({ error: 'No authenticated account found' });
+            return;
+          }
+          set({ isLoading: true, error: null });
           try {
-            console.log(`📝 [GOOGLE-TASKS] Fetching tasks for list: ${taskListId}`);
-            const response = await googleTasksService.getTasks(account, taskListId, true, false, 100);
-            
+            console.log(`✅ [GOOGLE-TASKS] Fetching tasks for list: ${taskListId}`);
+            const response = await googleTasksService.getTasks(account, taskListId);
             if (response.success && response.data) {
               set((state) => {
                 state.tasks[taskListId] = response.data!.items || [];
-                state.isLoadingTasks[taskListId] = false;
               });
             } else {
               throw new Error(response.error?.message || 'Failed to fetch tasks');
             }
           } catch (error) {
-            console.error(`❌ [GOOGLE-TASKS] Failed to fetch tasks for ${taskListId}:`, error);
-            set((state) => {
-              state.isLoadingTasks[taskListId] = false;
-              state.error = error instanceof Error ? error.message : 'Failed to fetch tasks';
-            });
+            console.error('❌ [GOOGLE-TASKS] Failed to fetch tasks:', error);
+            set({ error: error instanceof Error ? error.message : 'An unknown error occurred' });
+          } finally {
+            set({ isLoading: false });
           }
         },
 

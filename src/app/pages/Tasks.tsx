@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Toast, FlexibleGrid } from '../../components/ui';
-import { Plus, LayoutGrid, List as ListIcon, Calendar, CheckSquare } from 'lucide-react';
+import { Card, Button, Toast, FlexibleGrid, Input } from '../../components/ui';
+import { Plus, LayoutGrid, List as ListIcon, Calendar, CheckSquare, RefreshCw, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
 import { useShallow } from 'zustand/shallow';
 import { useHeader } from '../contexts/HeaderContext';
 
@@ -267,6 +267,11 @@ export default function Tasks() {
   const [selectedTaskListId, setSelectedTaskListId] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'title' | 'due' | 'status' | 'created'>('created');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toasts, setToasts] = useState<Array<{
     id: string;
     variant: 'success' | 'error' | 'warning';
@@ -295,7 +300,82 @@ export default function Tasks() {
     authenticate,
     isAuthenticated,
     isHydrated,
+    syncAllTasks,
   } = useGoogleTasksStore();
+
+  // Filter and sort tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    const allTasksFlat = Object.values(allTasks).flat();
+    
+    // Filter by search query
+    let filtered = allTasksFlat.filter(task => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        task.title.toLowerCase().includes(query) ||
+        (task.notes && task.notes.toLowerCase().includes(query))
+      );
+    });
+
+    // Sort tasks
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'due':
+          const aDue = a.due ? new Date(a.due).getTime() : 0;
+          const bDue = b.due ? new Date(b.due).getTime() : 0;
+          comparison = aDue - bDue;
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'created':
+          const aCreated = a.updated ? new Date(a.updated).getTime() : 0;
+          const bCreated = b.updated ? new Date(b.updated).getTime() : 0;
+          comparison = aCreated - bCreated;
+          break;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [allTasks, searchQuery, sortBy, sortOrder]);
+
+  // Group filtered tasks by task list for display
+  const groupedFilteredTasks = useMemo(() => {
+    const grouped: Record<string, GoogleTask[]> = {};
+    
+    taskLists.forEach(taskList => {
+      grouped[taskList.id] = filteredAndSortedTasks.filter(task => {
+        // Find which task list this task belongs to
+        return allTasks[taskList.id]?.some(t => t.id === task.id);
+      });
+    });
+    
+    return grouped;
+  }, [taskLists, filteredAndSortedTasks, allTasks]);
+
+  // Handle refresh
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchTaskLists(),
+        syncAllTasks()
+      ]);
+      addToast('success', 'Refresh Complete', 'Tasks updated successfully');
+    } catch (error) {
+      console.error('Failed to refresh tasks:', error);
+      addToast('error', 'Refresh Failed', 'Failed to refresh tasks. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchTaskLists, syncAllTasks]);
 
   const addToast = (variant: 'success' | 'error' | 'warning', title: string, message: string) => {
     const id = Date.now().toString();
@@ -466,21 +546,84 @@ export default function Tasks() {
               <CheckSquare size={20} className="text-primary" />
               <span className="font-semibold">Google Tasks</span>
             </div>
-            {isLoading && (
+            {(isLoading || isRefreshing) && (
               <div className="flex items-center gap-2 text-sm text-muted">
                 <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                <span>Loading...</span>
+                <span>{isRefreshing ? 'Refreshing...' : 'Loading...'}</span>
               </div>
             )}
           </div>
-          {taskLists.length > 0 && (
+          <div className="flex items-center gap-2">
             <Button 
-              variant="primary" 
-              onClick={() => handleCreateTask(taskLists[0].id)} 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoading}
               className="flex items-center gap-2"
             >
-              <Plus size={16} /> New Task
+              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+              Refresh
             </Button>
+            {taskLists.length > 0 && (
+              <Button 
+                variant="primary" 
+                onClick={() => handleCreateTask(taskLists[0].id)} 
+                className="flex items-center gap-2"
+              >
+                <Plus size={16} /> New Task
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Search and Filter Controls */}
+        <div className="border-t border-border-default p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
+              <Input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter size={16} />
+              Filters
+            </Button>
+          </div>
+
+          {showFilters && (
+            <div className="flex items-center gap-3 pt-3 border-t border-border-default">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted">Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'title' | 'due' | 'status' | 'created')}
+                  className="px-2 py-1 border border-border-default rounded bg-card text-primary text-sm"
+                >
+                  <option value="created">Date Created</option>
+                  <option value="title">Title</option>
+                  <option value="due">Due Date</option>
+                  <option value="status">Status</option>
+                </select>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="flex items-center gap-1"
+              >
+                {sortOrder === 'asc' ? <SortAsc size={16} /> : <SortDesc size={16} />}
+                {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+              </Button>
+            </div>
           )}
         </div>
       </Card>
@@ -492,7 +635,7 @@ export default function Tasks() {
             <div key={taskList.id} className="flex-1 min-w-0">
               <TaskListColumn
                 taskList={taskList}
-                tasks={allTasks[taskList.id] || []}
+                tasks={groupedFilteredTasks[taskList.id] || []}
                 isLoading={isLoadingTasks[taskList.id] || false}
                 onTaskClick={handleTaskClick}
                 onToggleCompletion={handleToggleCompletion}

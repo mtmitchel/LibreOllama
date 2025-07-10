@@ -38,6 +38,89 @@ pub async fn start_gmail_oauth(
         .map_err(|e| e.to_string())
 }
 
+/// Start OAuth flow with automatic callback handling
+#[tauri::command]
+pub async fn start_gmail_oauth_with_callback(
+    auth_service: State<'_, Arc<GmailAuthService>>,
+) -> Result<GmailTokenResponse, String> {
+    use std::sync::{Arc, Mutex};
+    use std::thread;
+    use std::time::Duration;
+    use std::collections::HashMap;
+    use url::Url;
+    
+    // Start a temporary HTTP server on localhost:8080
+    let result = Arc::new(Mutex::new(None));
+    let result_clone = result.clone();
+    
+    let server_handle = thread::spawn(move || {
+        use std::io::prelude::*;
+        use std::net::{TcpListener, TcpStream};
+        
+        let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        
+        for _ in 0..300 { // 30 second timeout (100ms * 300)
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buffer = [0; 1024];
+                if let Ok(_) = stream.read(&mut buffer) {
+                    let request = String::from_utf8_lossy(&buffer[..]);
+                    if let Some(line) = request.lines().next() {
+                        if line.contains("GET /auth/callback") {
+                            // Extract code from URL
+                            if let Some(query_start) = line.find("?") {
+                                if let Some(query_end) = line.find(" HTTP/") {
+                                    let query = &line[query_start+1..query_end];
+                                    let params: HashMap<&str, &str> = query
+                                        .split('&')
+                                        .filter_map(|param| {
+                                            let mut parts = param.split('=');
+                                            Some((parts.next()?, parts.next()?))
+                                        })
+                                        .collect();
+                                    
+                                    if let (Some(code), Some(state)) = (params.get("code"), params.get("state")) {
+                                        *result_clone.lock().unwrap() = Some((code.to_string(), state.to_string()));
+                                        
+                                        // Send success response
+                                        let response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Authentication successful!</h1><p>You can close this window.</p></body></html>";
+                                        let _ = stream.write(response.as_bytes());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+    });
+    
+    // Start OAuth flow
+    let auth_request = auth_service
+        .start_authorization(Some("http://localhost:8080/auth/callback".to_string()))
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    // Open browser
+    if let Err(e) = open::that(&auth_request.auth_url) {
+        return Err(format!("Failed to open browser: {}", e));
+    }
+    
+    // Wait for callback
+    server_handle.join().map_err(|_| "Server thread failed")?;
+    
+    let (code, state) = result.lock().unwrap().take()
+        .ok_or("OAuth callback timeout or failed")?;
+    
+    // Complete OAuth flow
+    auth_service
+        .complete_authorization(code, state, Some("http://localhost:8080/auth/callback".to_string()))
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Complete Gmail OAuth2 authorization flow
 #[tauri::command]
 pub async fn complete_gmail_oauth(

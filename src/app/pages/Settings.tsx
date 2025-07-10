@@ -5,12 +5,10 @@ import {
   Bell,
   Palette,
   Cpu,
-  NotebookPen,
   Shield,
   Info,
   SlidersHorizontal,
   Link as LinkIcon,
-  Github,
   Gem,
   Download,
   RefreshCw,
@@ -36,7 +34,8 @@ import {
   useSetOllamaEndpoint,
   useSetActiveGoogleAccount,
   useRemoveGoogleAccount,
-  useAddGoogleAccount
+  useAddGoogleAccount,
+  useRefreshGoogleAccount
 } from '../../stores/settingsStore';
 
 // Design system aligned Toggle Switch Component
@@ -75,6 +74,42 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId 
   );
 };
 
+// New component to handle image fetching with fallback
+const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(src);
+    setError(false);
+  }, [src]);
+
+  const handleError = () => {
+    if (!error) {
+      setError(true);
+    }
+  };
+
+  if (error || !imgSrc) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center">
+        <User size={20} className="text-accent-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={imgSrc} 
+      alt={alt}
+      onError={handleError}
+      className="w-10 h-10 rounded-full"
+      crossOrigin="anonymous" // Attempt to fix cross-origin issues
+    />
+  );
+};
+
+
 const Settings: React.FC = () => {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [activeSection, setActiveSection] = useState('general');
@@ -94,9 +129,10 @@ const Settings: React.FC = () => {
   const setActiveGoogleAccount = useSetActiveGoogleAccount();
   const removeGoogleAccount = useRemoveGoogleAccount();
   const addGoogleAccount = useAddGoogleAccount();
+  const refreshGoogleAccount = useRefreshGoogleAccount();
   
   // Google service stores for authentication
-  const { authenticate: authenticateCalendar } = useGoogleCalendarStore();
+  const { authenticate: authenticateCalendar, fetchCalendars, fetchEvents } = useGoogleCalendarStore();
   const { authenticate: authenticateTasks } = useGoogleTasksStore();
   const { addAccount: addGmailAccount } = useMailStore();
   
@@ -161,7 +197,6 @@ const Settings: React.FC = () => {
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'agents-and-models', label: 'Agents and models', icon: Cpu },
     { id: 'integrations', label: 'Integrations', icon: LinkIcon },
-    { id: 'notes-and-editor', label: 'Notes and editor', icon: NotebookPen },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security-and-privacy', label: 'Security and privacy', icon: Shield },
     { id: 'account', label: 'Account', icon: User },
@@ -367,7 +402,6 @@ const Settings: React.FC = () => {
                 
                 {accounts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Gem size={48} className="text-muted opacity-50 mb-4" />
                     <Text weight="medium" className="mb-2">No Google accounts connected</Text>
                     <Text variant="muted" size="sm">
                       Connect a Google account to sync your Gmail, Calendar, and Tasks.
@@ -378,31 +412,35 @@ const Settings: React.FC = () => {
                     {accounts.map((account) => (
                       <div key={account.id} className="flex items-center justify-between p-4 border border-border-default rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center">
-                            {account.picture ? (
-                              <img 
-                                src={account.picture} 
-                                alt={account.name}
-                                className="w-10 h-10 rounded-full"
-                              />
-                            ) : (
-                              <User size={20} className="text-accent-primary" />
-                            )}
-                          </div>
+                          <UserAvatar src={account.picture} alt={account.name} />
                           <div>
                             <Text weight="medium">{account.name || account.email}</Text>
                             <Text variant="muted" size="sm">{account.email}</Text>
                             {account.services && (
                               <div className="flex gap-1 mt-1">
-                                {account.services.gmail && (
-                                  <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">Gmail</span>
-                                )}
-                                {account.services.calendar && (
-                                  <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded">Calendar</span>
-                                )}
-                                {account.services.tasks && (
-                                  <span className="px-1.5 py-0.5 text-xs bg-purple-100 text-purple-700 rounded">Tasks</span>
-                                )}
+                                {Object.entries(account.services).map(([service, enabled]) => {
+                                  if (!enabled) return null;
+                                  let serviceName = service.charAt(0).toUpperCase() + service.slice(1);
+                                  let styles = '';
+                                  switch (service) {
+                                    case 'gmail':
+                                      styles = 'bg-blue-100 text-blue-700';
+                                      break;
+                                    case 'calendar':
+                                      styles = 'bg-green-100 text-green-700';
+                                      break;
+                                    case 'tasks':
+                                      styles = 'bg-purple-100 text-purple-700';
+                                      break;
+                                    default:
+                                      styles = 'bg-gray-100 text-gray-700';
+                                  }
+                                  return (
+                                    <span key={service} className={`px-1.5 py-0.5 text-xs rounded ${styles}`}>
+                                      {serviceName}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -426,9 +464,19 @@ const Settings: React.FC = () => {
                           )}
                           <Button 
                             variant="ghost" 
-                            size="sm"
+                            size="icon"
+                            onClick={() => refreshGoogleAccount(account.id)}
+                            className="text-muted hover:text-primary"
+                            title="Refresh Account Data"
+                          >
+                            <RefreshCw size={16} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
                             onClick={() => removeGoogleAccount(account.id)}
-                            className="text-error hover:bg-error-ghost focus:ring-2 focus:ring-error focus:ring-offset-2"
+                            className="text-error hover:bg-error-ghost focus:ring-2 focus:ring-error focus:ring-offset-2 w-8 h-8"
+                            title="Remove Account"
                           >
                             <X size={16} />
                           </Button>
@@ -440,68 +488,49 @@ const Settings: React.FC = () => {
               </Card>
               
               <Card className="p-6">
-                <Heading level={2} className="text-lg font-semibold mb-4">Other Services</Heading>
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-default">
-                    <div className="flex items-center gap-3">
-                      <Github size={20} className="text-primary" />
-                      <div>
-                        <Text weight="medium">GitHub</Text>
-                        <Text variant="muted" size="sm">Sync repositories and issues.</Text>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2" disabled>
-                      <LinkIcon size={16} /> Coming Soon
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-              <Card className="p-6">
                 <Heading level={2} className="text-lg font-semibold mb-4">Cloud Model API Keys</Heading>
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-default">
-                    <div className="flex-1">
-                      <label htmlFor="gemini-api-key" className="block mb-1 text-sm font-medium">
-                        Google Gemini
-                      </label>
-                      <Text variant="muted" size="sm">
-                        Required for accessing Google's cloud-based AI models.
-                      </Text>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        id="gemini-api-key"
-                        type="password" 
-                        className="w-auto max-w-xs focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        placeholder="Enter Gemini API key..." 
-                        defaultValue="••••••••••••••••"
-                      />
-                      <Button variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                        Save
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex-1">
-                      <label htmlFor="anthropic-api-key" className="block mb-1 text-sm font-medium">
-                        Anthropic Claude
-                      </label>
-                      <Text variant="muted" size="sm">
-                        Required for accessing Claude models via API.
-                      </Text>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        id="anthropic-api-key"
-                        type="password" 
-                        className="w-auto max-w-xs focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        placeholder="Enter Anthropic API key..." 
-                      />
-                      <Button variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                        Save
-                      </Button>
-                    </div>
-                  </div>
+                  {[
+                    {
+                      id: 'gemini-api-key',
+                      label: 'Google Gemini',
+                      description: "Required for accessing Google's cloud-based AI models.",
+                      placeholder: 'Enter Gemini API key...',
+                      defaultValue: '••••••••••••••••',
+                    },
+                    {
+                      id: 'anthropic-api-key',
+                      label: 'Anthropic Claude',
+                      description: 'Required for accessing Claude models via API.',
+                      placeholder: 'Enter Anthropic API key...',
+                      defaultValue: '',
+                    },
+                  ].map((apiKey) => (
+                    <React.Fragment key={apiKey.id}>
+                      <div className="flex items-center justify-between py-3 border-b border-border-default">
+                        <div className="flex-1">
+                          <label htmlFor={apiKey.id} className="block mb-1 text-sm font-medium">
+                            {apiKey.label}
+                          </label>
+                          <Text variant="muted" size="sm">
+                            {apiKey.description}
+                          </Text>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={apiKey.id}
+                            type="password"
+                            className="w-auto max-w-xs focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            placeholder={apiKey.placeholder}
+                            defaultValue={apiKey.defaultValue}
+                          />
+                          <Button variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  ))}
                 </div>
               </Card>
             </div>
@@ -600,16 +629,16 @@ const Settings: React.FC = () => {
         return (
           <div className="h-full p-6">
             <Card className="p-6">
-            <div className="flex flex-col items-center justify-center h-full text-muted">
-              <Cog size={48} className="opacity-50 mb-4" />
-              <Heading level={2} className="text-xl font-semibold mb-2 text-primary">
-                {navItems.find(item => item.id === activeSection)?.label}
-              </Heading>
-              <Text>
-                Settings for this section are not yet implemented.
-              </Text>
-            </div>
-          </Card>
+              <div className="flex flex-col items-center justify-center h-full text-muted">
+                <Cog size={48} className="opacity-50 mb-4" />
+                <Heading level={2} className="text-xl font-semibold mb-2 text-primary">
+                  {navItems.find(item => item.id === activeSection)?.label}
+                </Heading>
+                <Text>
+                  Settings for this section are not yet implemented.
+                </Text>
+              </div>
+            </Card>
           </div>
         );
     }

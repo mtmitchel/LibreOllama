@@ -25,10 +25,11 @@ interface GoogleCalendarActions {
   // Authentication
   authenticate: (account: GoogleAccount) => void;
   signOut: () => void;
+  getCurrentAccount: () => GoogleAccount | null;
   
   // Data fetching
-  fetchCalendars: () => Promise<void>;
-  fetchEvents: (timeMin?: string, timeMax?: string) => Promise<void>;
+  fetchCalendars: (accountId?: string) => Promise<void>;
+  fetchEvents: (timeMin?: string, timeMax?: string, accountId?: string) => Promise<void>;
   syncCalendar: () => Promise<void>;
   
   // Event management
@@ -66,7 +67,8 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
         // Helper to get current account
         getCurrentAccount: (): GoogleAccount | null => {
           const settingsState = useSettingsStore.getState();
-          return settingsState.integrations.googleAccounts.find(acc => acc.isActive) || null;
+          const account = settingsState.integrations.googleAccounts.find(acc => acc.isActive);
+          return account ? account as unknown as GoogleAccount : null;
         },
 
         // Authentication
@@ -80,8 +82,8 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           // Just mark as authenticated here
           
           // Auto-fetch calendars and events after authentication
-          get().fetchCalendars();
-          get().fetchEvents();
+          get().fetchCalendars(account.id);
+          get().fetchEvents(undefined, undefined, account.id);
         },
 
         signOut: () => {
@@ -95,8 +97,8 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
         },
 
         // Data fetching
-        fetchCalendars: async () => {
-          const account = get().getCurrentAccount();
+        fetchCalendars: async (accountId?: string) => {
+          const account = accountId ? useSettingsStore.getState().integrations.googleAccounts.find(a => a.id === accountId) : get().getCurrentAccount();
           if (!account) {
             set((state) => {
               state.error = 'No authenticated account found';
@@ -106,7 +108,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
 
           try {
             console.log('📅 [GOOGLE-CALENDAR] Fetching calendars for:', account.email);
-            const response = await googleCalendarService.getCalendars(account);
+            const response = await googleCalendarService.getCalendars(account as GoogleAccount);
             
             if (response.success && response.data) {
               set((state) => {
@@ -123,8 +125,8 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           }
         },
 
-        fetchEvents: async (timeMin?: string, timeMax?: string) => {
-          const account = get().getCurrentAccount();
+        fetchEvents: async (timeMin?: string, timeMax?: string, accountId?: string) => {
+          const account = accountId ? useSettingsStore.getState().integrations.googleAccounts.find(a => a.id === accountId) : get().getCurrentAccount();
           if (!account) {
             set((state) => {
               state.error = 'No authenticated account found';
@@ -146,7 +148,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
             const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
             
             const response = await googleCalendarService.getEvents(
-              account, 
+              account as GoogleAccount, 
               get().currentCalendarId, 
               defaultTimeMin, 
               defaultTimeMax

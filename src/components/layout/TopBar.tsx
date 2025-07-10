@@ -15,9 +15,8 @@ export const TopBar = () => {
 
   return (
     <header 
-      className="flex items-center justify-between border-b bg-[var(--bg-surface)] flex-shrink-0"
+      className="flex items-center justify-between border-b bg-[var(--bg-surface)] flex-shrink-0 h-20"
       style={{ 
-        height: '73px',
         padding: `0 var(--space-6)`,
         borderColor: 'var(--border-subtle)'
       }}
@@ -133,14 +132,6 @@ export const TopBar = () => {
         >
           <HelpCircle size={18} />
         </Button>
-        
-        <div title="User Profile">
-          <Avatar 
-            name="Admin"
-            size="md"
-            className="cursor-pointer hover:opacity-90 transition-opacity ml-2"
-          />
-        </div>
       </div>
     </header>
   );

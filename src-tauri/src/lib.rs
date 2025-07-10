@@ -329,6 +329,7 @@ pub fn run() {
             // gmail_send_email,
             // Gmail Auth commands
             start_gmail_oauth,
+            start_gmail_oauth_with_callback,
             complete_gmail_oauth,
             refresh_gmail_token,
             revoke_gmail_token,
@@ -412,7 +413,7 @@ pub fn run() {
             get_quota_status,
             get_queue_stats,
             execute_rate_limited_request,
-            execute_batch_requests
+            execute_batch_requests,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

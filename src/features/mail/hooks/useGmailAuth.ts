@@ -590,7 +590,7 @@ export const useGmailAuth = (): UseGmailAuthReturn => {
     const tokensToStore = tokens || {
       access_token: account.accessToken,
       refresh_token: account.refreshToken,
-      expires_at: account.tokenExpiry.toISOString(),
+      expires_at: account.tokenExpiry ? account.tokenExpiry.toISOString() : new Date(Date.now() + 3600000).toISOString(),
       token_type: 'Bearer',
     };
     

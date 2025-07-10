@@ -6,35 +6,46 @@ import { useKanbanStore } from '../../../stores/useKanbanStore';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 
 export const PendingTasksWidget: React.FC = () => {
-  const { tasks, columns, toggleTaskCompleted } = useKanbanStore();
+  const { columns, toggleComplete } = useKanbanStore();
 
   // Memoize the pending tasks calculation to prevent re-render loops
   const pendingTasks = useMemo(() => {
-    if (!tasks || typeof tasks !== 'object') {
+    if (!columns || !Array.isArray(columns)) {
       return [];
     }
 
     try {
-      return Object.values(tasks)
+      // Get all tasks from all columns
+      const allTasks = columns.flatMap(column => 
+        column.tasks.map(task => ({
+          ...task,
+          columnId: column.id,
+          completed: task.status === 'completed'
+        }))
+      );
+
+      return allTasks
         .filter(task => task && !task.completed)
         .sort((a, b) => {
           // Sort by due date (tasks with due dates first, then by priority)
-          if (a.dueDate && b.dueDate) {
-            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          if (a.due && b.due) {
+            return new Date(a.due).getTime() - new Date(b.due).getTime();
           }
-          if (a.dueDate && !b.dueDate) return -1;
-          if (!a.dueDate && b.dueDate) return 1;
+          if (a.due && !b.due) return -1;
+          if (!a.due && b.due) return 1;
           
           // If no due dates, sort by priority
           const priorityOrder = { high: 3, medium: 2, low: 1 };
-          return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+          const aPriority = a.metadata?.priority || 'normal';
+          const bPriority = b.metadata?.priority || 'normal';
+          return (priorityOrder[bPriority as keyof typeof priorityOrder] || 0) - (priorityOrder[aPriority as keyof typeof priorityOrder] || 0);
         })
         .slice(0, 5); // Show max 5 tasks
     } catch (error) {
       console.error('Error processing tasks:', error);
       return [];
     }
-  }, [tasks]);
+  }, [columns]);
 
   const formatDueDate = (dateStr?: string) => {
     if (!dateStr) return null;
@@ -59,7 +70,8 @@ export const PendingTasksWidget: React.FC = () => {
   };
 
   const getColumnName = (columnId: string) => {
-    return columns?.[columnId]?.title || 'Unknown';
+    const column = columns.find(c => c.id === columnId);
+    return column?.title || 'Unknown';
   };
 
   const handleAddTask = () => {
@@ -71,10 +83,10 @@ export const PendingTasksWidget: React.FC = () => {
     window.location.href = '/tasks';
   };
 
-  const handleToggleTask = (taskId: string) => {
+  const handleToggleTask = (taskId: string, columnId: string) => {
     try {
-      if (toggleTaskCompleted) {
-        toggleTaskCompleted(taskId);
+      if (toggleComplete) {
+        toggleComplete(columnId, taskId, true);
       }
     } catch (error) {
       console.error('Error toggling task:', error);
@@ -119,13 +131,14 @@ export const PendingTasksWidget: React.FC = () => {
       ) : (
         <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {pendingTasks.map((task) => {
-            const dueDate = formatDueDate(task.dueDate);
-            const isOverdue = task.dueDate && isPast(new Date(task.dueDate));
+            const dueDate = formatDueDate(task.due);
+            const isOverdue = task.due && isPast(new Date(task.due));
+            const priority = task.metadata?.priority;
             
             return (
               <li key={task.id} className="flex items-start" style={{ gap: 'var(--space-3)' }}>
                 <button
-                  onClick={() => handleToggleTask(task.id)}
+                  onClick={() => handleToggleTask(task.id, task.columnId)}
                   className="mt-1 w-4 h-4 border border-[var(--border-primary)] rounded hover:bg-[var(--background-secondary)] transition-colors flex-shrink-0"
                   aria-label={`Mark ${task.title} as completed`}
                 />
@@ -134,9 +147,9 @@ export const PendingTasksWidget: React.FC = () => {
                     <Text size="sm" weight="medium" variant="body" className="flex-1 min-w-0">
                       {task.title}
                     </Text>
-                    {task.priority && (
-                      <span className={`text-xs font-medium ml-2 ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
+                    {priority && (
+                      <span className={`text-xs font-medium ml-2 ${getPriorityColor(priority)}`}>
+                        {priority}
                       </span>
                     )}
                   </div>

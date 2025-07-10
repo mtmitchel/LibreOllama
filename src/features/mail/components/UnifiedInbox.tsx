@@ -3,7 +3,6 @@ import { useMailStore } from '../stores/mailStore';
 import { ParsedEmail, EmailAddress, GmailAccount } from '../types';
 import { handleGmailError } from '../services/gmailErrorHandler';
 import { ErrorDisplay } from './ErrorDisplay';
-import { MailPagination } from './MailPagination';
 import { AttachmentPreviewModal } from './AttachmentPreviewModal';
 
 interface UnifiedInboxProps {

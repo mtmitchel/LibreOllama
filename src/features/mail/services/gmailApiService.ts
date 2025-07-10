@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { handleGmailError } from './gmailErrorHandler';
+import { gmailThrottler } from '../utils/apiThrottle';
 import type { 
   GmailMessage, 
   GmailLabel, 
@@ -244,25 +245,38 @@ export class GmailApiService {
   async getLabels(): Promise<GmailLabel[]> {
     try {
       // First get the list of labels
-      const listData = await this.makeApiRequest<GmailListResponse<GmailLabel>>('/users/me/labels');
+      const listData = await gmailThrottler.throttle(() =>
+        this.makeApiRequest<GmailListResponse<GmailLabel>>('/users/me/labels')
+      );
       const labelIds = listData.labels || [];
       
       if (labelIds.length === 0) {
         return [];
       }
       
-      console.log(`🏷️ [API] Fetching details for ${labelIds.length} labels...`);
+      console.log(`🏷️ [API] Got ${labelIds.length} labels, fetching details for system labels only...`);
       
-      // Fetch detailed information for each label to get messagesTotal
-      const labelPromises = labelIds.map(label =>
-        this.makeApiRequest<GmailLabel>(`/users/me/labels/${label.id}`)
-          .catch(err => {
-            console.warn(`⚠️ [API] Failed to fetch details for label ${label.id}:`, err);
-            return label; // Return basic label info if detailed fetch fails
-          })
-      );
+      // Only fetch details for important system labels to avoid rate limiting
+      const systemLabelsToFetch = ['INBOX', 'SENT', 'DRAFT', 'STARRED', 'SPAM', 'TRASH'];
+      const detailedLabels = [...labelIds];
       
-      const detailedLabels = await Promise.all(labelPromises);
+      // Fetch details sequentially with throttling for system labels only
+      for (const labelId of systemLabelsToFetch) {
+        const basicLabel = labelIds.find(l => l.id === labelId);
+        if (basicLabel) {
+          try {
+            const detailed = await gmailThrottler.throttle(() =>
+              this.makeApiRequest<GmailLabel>(`/users/me/labels/${labelId}`)
+            );
+            const index = detailedLabels.findIndex(l => l.id === labelId);
+            if (index >= 0) {
+              detailedLabels[index] = detailed;
+            }
+          } catch (err) {
+            console.warn(`⚠️ [API] Failed to fetch details for label ${labelId}:`, err);
+          }
+        }
+      }
       
       // Log INBOX label info specifically for debugging
       const inboxLabel = detailedLabels.find(label => label.id === 'INBOX');
@@ -285,41 +299,62 @@ export class GmailApiService {
     maxResults: number = 50,
     pageToken?: string,
     query?: string
-  ): Promise<{ messages: ParsedEmail[]; nextPageToken?: string }> {
+  ): Promise<{ messages: ParsedEmail[]; nextPageToken?: string; resultSizeEstimate?: number }> {
     try {
       // Build query parameters
       const params = new URLSearchParams({
         maxResults: maxResults.toString(),
-        labelIds: labelIds.join(','),
       });
+      
+      // Only add labelIds if they are valid
+      const validLabelIds = labelIds.filter(id => id && id !== 'undefined');
+      if (validLabelIds.length > 0) {
+        params.append('labelIds', validLabelIds.join(','));
+      }
       
       if (pageToken) params.append('pageToken', pageToken);
       if (query) params.append('q', query);
 
-      console.log(`🔍 [API] Fetching messages with labels: ${labelIds.join(', ')}`);
+      console.log(`🔍 [API] Fetching messages with labels: ${validLabelIds.join(', ')}`);
       
-      // First, get list of message IDs
-      const listData = await this.makeApiRequest<GmailListResponse<{ id: string; threadId: string }>>(`/users/me/messages?${params}`);
+      // First, get list of message IDs (throttled)
+      const listData = await gmailThrottler.throttle(() =>
+        this.makeApiRequest<GmailListResponse<{ id: string; threadId: string }>>(`/users/me/messages?${params}`)
+      );
       
       if (!listData.messages || listData.messages.length === 0) {
         console.log('📭 [API] No messages found');
-        return { messages: [], nextPageToken: listData.nextPageToken };
+        return { 
+          messages: [], 
+          nextPageToken: listData.nextPageToken,
+          resultSizeEstimate: listData.resultSizeEstimate || 0
+        };
       }
 
-      console.log(`📨 [API] Found ${listData.messages.length} messages, fetching details...`);
+      console.log(`📨 [API] Found ${listData.messages.length} messages (estimated total: ${listData.resultSizeEstimate}), fetching details sequentially...`);
       
-      // Fetch detailed information for each message
-      const messagePromises = listData.messages.map(msg => 
-        this.getMessage(msg.id)
-      );
-      
-      const messages = await Promise.all(messagePromises);
+      // Fetch messages sequentially with throttling to avoid rate limits
+      const messages: ParsedEmail[] = [];
+      for (const msgRef of listData.messages) {
+        try {
+          const message = await gmailThrottler.throttle(() =>
+            this.getMessage(msgRef.id)
+          );
+          if (message) {
+            messages.push(message);
+          }
+        } catch (error) {
+          console.warn(`⚠️ [API] Failed to fetch message ${msgRef.id}:`, error);
+          // Continue with other messages instead of failing entirely
+        }
+      }
       
       console.log(`✅ [API] Successfully parsed ${messages.length} messages`);
       
       return {
-        messages: messages.filter(msg => msg !== null) as ParsedEmail[],
+        messages,
         nextPageToken: listData.nextPageToken,
+        resultSizeEstimate: listData.resultSizeEstimate,
       };
     } catch (error) {
       console.error('❌ [API] Failed to fetch messages:', error);

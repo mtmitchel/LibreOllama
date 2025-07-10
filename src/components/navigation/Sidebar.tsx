@@ -15,7 +15,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
   const workspaceItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Chat', path: '/chat', icon: MessagesSquare, badge: '3' },
+    { name: 'Chat', path: '/chat', icon: MessagesSquare },
     { name: 'Mail', path: '/mail', icon: Mail },
     { name: 'Projects', path: '/projects', icon: FolderKanban },
     { name: 'Notes', path: '/notes', icon: NotebookPen },

@@ -6,11 +6,11 @@ import { useGoogleCalendarStore } from '../../../stores/googleCalendarStore';
 import { format, isToday, isTomorrow, addDays } from 'date-fns';
 
 export const UpcomingEventsWidget: React.FC = () => {
-  const { calendarEvents } = useGoogleCalendarStore();
+  const { events } = useGoogleCalendarStore();
 
   // Memoize the upcoming events calculation to prevent re-render loops
   const upcomingEvents = useMemo(() => {
-    if (!calendarEvents || !Array.isArray(calendarEvents)) {
+    if (!events || !Array.isArray(events)) {
       return [];
     }
 
@@ -18,7 +18,7 @@ export const UpcomingEventsWidget: React.FC = () => {
       const now = new Date();
       const nextWeek = addDays(now, 7);
       
-      return calendarEvents
+      return events
         .filter(event => {
           try {
             const eventDate = new Date(event.start?.dateTime || event.start?.date || '');
@@ -41,7 +41,7 @@ export const UpcomingEventsWidget: React.FC = () => {
       console.error('Error processing calendar events:', error);
       return [];
     }
-  }, [calendarEvents]);
+  }, [events]);
 
   const formatEventDate = (event: any) => {
     try {
@@ -129,7 +129,7 @@ export const UpcomingEventsWidget: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <Text size="sm" weight="medium" variant="body" style={{ marginBottom: 'var(--space-1)' }}>
-                  {event.summary || event.title}
+                  {event.summary || 'Untitled Event'}
                 </Text>
                 {event.description && (
                   <Text size="xs" variant="secondary" className="line-clamp-1">

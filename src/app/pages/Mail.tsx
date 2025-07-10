@@ -22,7 +22,7 @@ export default function Mail() {
   const { currentMessage, isComposing, currentView, currentAccountId, signOut, isHydrated } = useMailStore();
   const { handleStartCompose } = useComposeOperation();
   const [isMailSidebarOpen, setIsMailSidebarOpen] = useState(true);
-  const [isContextOpen, setIsContextOpen] = useState(true);
+  const [isContextOpen, setIsContextOpen] = useState(false);
   const [showTestComponent, setShowTestComponent] = useState(false);
   const [isThreadedView, setIsThreadedView] = useState(true); // Default to threaded view for MVP
   
@@ -148,22 +148,25 @@ export default function Mail() {
         </div>
 
         {/* Content Area - Card-like design with softer borders */}
-        <div className="flex-1 flex min-h-0 overflow-hidden bg-[var(--bg-tertiary)]">
-          {/* Message List - Softer styling */}
-          <div className={`${
-            currentMessage 
-              ? `${isContextOpen ? 'w-72' : 'w-80'} flex-shrink-0` 
-              : 'flex-1'
-          } flex flex-col ${currentMessage ? 'border-r border-[var(--border-default)]' : ''} min-w-0 overflow-hidden bg-[var(--bg-tertiary)]`}>
-            {isThreadedView ? <ThreadedMessageList /> : <MessageList />}
-          </div>
-
-          {/* Message View - Card-like styling */}
-          {currentMessage && (
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--bg-tertiary)]">
-              <MessageView />
+        <div className="flex-1 flex flex-col min-h-0 bg-[var(--bg-tertiary)]">
+          {/* This inner div is the flex container for the message list and message view */}
+          <div className="flex-1 flex min-h-0 overflow-hidden">
+            {/* Message List - Softer styling */}
+            <div className={`${
+              currentMessage 
+                ? 'w-1/3 flex-shrink-0' 
+                : 'flex-1'
+            } flex flex-col min-w-0 overflow-y-auto border-r border-[var(--border-default)] bg-[var(--bg-tertiary)]`}>
+              {isThreadedView ? <ThreadedMessageList /> : <MessageList />}
             </div>
-          )}
+
+            {/* Message View - Card-like styling */}
+            {currentMessage && (
+              <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-tertiary)]">
+                <MessageView />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -33,7 +33,7 @@ export function Dashboard() {
 
   useEffect(() => {
     setHeaderProps({
-      title: "Good morning, Alex"
+      title: "Dashboard"
     });
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);

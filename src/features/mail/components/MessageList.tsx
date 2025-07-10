@@ -4,7 +4,6 @@ import { Text, Card } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail } from '../types';
-import { MailPagination } from './MailPagination';
 
 interface MessageItemProps {
   message: ParsedEmail;
@@ -171,10 +170,43 @@ export function MessageList() {
   const messages = getMessages();
 
   const handleMessageClick = async (message: ParsedEmail) => {
-    await executeFetchOperation(
-      () => fetchMessage(message.id),
-      'message details'
-    );
+    console.log('🔍 [DEBUG] Email clicked:', {
+      messageId: message.id,
+      subject: message.subject,
+      currentMessage: useMailStore.getState().currentMessage?.id
+    });
+    
+    try {
+      // Immediate fallback: Set the message directly from the list data
+      // This ensures emails open instantly while we try to fetch full details
+      useMailStore.setState({ 
+        currentMessage: message,
+        isLoading: false,
+        error: null 
+      });
+      
+      console.log('🚀 [DEBUG] Set message immediately from list data');
+      
+      // Try to fetch full message details in the background
+      try {
+        await executeFetchOperation(
+          () => fetchMessage(message.id),
+          'message details'
+        );
+        
+        console.log('✅ [DEBUG] Full message details fetched successfully');
+      } catch (fetchError) {
+        console.warn('⚠️ [DEBUG] Full message fetch failed, using list data:', fetchError);
+        // Keep the message from list data - it's better than nothing
+      }
+      
+    } catch (error) {
+      console.error('❌ [DEBUG] Message click failed completely:', error);
+      useMailStore.setState({ 
+        error: `Failed to open email: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        isLoading: false 
+      });
+    }
   };
 
   const handleSelect = (messageId: string, isSelected: boolean) => {
@@ -251,11 +283,6 @@ export function MessageList() {
             />
           ))}
         </div>
-      </div>
-      
-      {/* Pagination */}
-      <div className="flex-shrink-0">
-        <MailPagination />
       </div>
     </div>
   );

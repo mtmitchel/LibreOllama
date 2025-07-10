@@ -30,14 +30,16 @@ export function MailToolbar() {
     isLoadingMessages,
     // Token-based pagination
     totalMessages,
+    totalUnreadMessages,
     messagesLoadedSoFar,
     nextPageToken,
+    isHydrated,
     prevPage,
-    nextPage
+    nextPage,
+    resetPagination
   } = useMailStore();
 
   const messages = getMessages();
-
   const selectedCount = selectedMessages.length;
   const isAllSelected = messages.length > 0 && selectedMessages.length === messages.length;
   const isPartiallySelected = selectedMessages.length > 0 && selectedMessages.length < messages.length;
@@ -81,17 +83,19 @@ export function MailToolbar() {
   };
 
   const handleRefresh = () => {
+    // Reset pagination state and fetch messages from beginning
+    resetPagination();
     fetchMessages();
   };
 
   const handlePreviousPage = async () => {
-    if (messagesLoadedSoFar > 0 && !isLoadingMessages) {
+    if (isHydrated && messagesLoadedSoFar > 0 && !isLoadingMessages) {
       await prevPage();
     }
   };
 
   const handleNextPage = async () => {
-    if (nextPageToken && !isLoadingMessages) {
+    if (isHydrated && nextPageToken && !isLoadingMessages) {
       await nextPage();
     }
   };
@@ -216,28 +220,36 @@ export function MailToolbar() {
 
       {/* Right Side - Pagination */}
       <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+        {/* Pagination Display */}
         <Text size="sm" variant="secondary">
           {(() => {
             if (messages.length === 0) {
-              return `0-0 of ${totalMessages}`;
+              return `0-0 of ${totalMessages || 0}`;
             }
             
             const start = messagesLoadedSoFar + 1;
             const end = messagesLoadedSoFar + messages.length;
             
-            console.log(`📄 [TOOLBAR] Token-based pagination display:`, {
+            // CLARIFIED LOGIC: Always use totalMessages for "of X" to represent the total count being paginated
+            // This should represent the total messages in the current view/label, not unread count
+            let displayTotal = totalMessages;
+            
+            // Fallback logic if totalMessages is not available
+            if (!displayTotal || displayTotal <= 0) {
+              displayTotal = nextPageToken ? `${end}+` : end;
+            }
+            
+            console.log(`📄 [TOOLBAR] PAGINATION DISPLAY - START: ${start}, END: ${end}, TOTAL: ${displayTotal}`, {
               start,
               end,
               totalMessages,
+              totalUnreadMessages, // Still track but don't use in main display
               messagesLoadedSoFar,
-              currentPageMessages: messages.length
+              currentPageMessages: messages.length,
+              displayTotal
             });
             
-            const safeTotal = typeof totalMessages === 'number' && !isNaN(totalMessages) && totalMessages > 0 
-              ? totalMessages 
-              : (nextPageToken ? `${end}+` : end);
-            
-            return `${start}-${end} of ${safeTotal}`;
+            return `${start}-${end} of ${displayTotal}`;
           })()}
         </Text>
         
@@ -245,9 +257,9 @@ export function MailToolbar() {
           variant="ghost"
           size="icon"
           onClick={handlePreviousPage}
-          disabled={messagesLoadedSoFar === 0 || isLoadingMessages}
+          disabled={!isHydrated || messagesLoadedSoFar === 0 || isLoadingMessages}
           className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Previous page"
+          title={!isHydrated ? "Loading..." : "Previous page"}
         >
           <ChevronLeft size={16} />
         </Button>
@@ -256,9 +268,9 @@ export function MailToolbar() {
           variant="ghost"
           size="icon"
           onClick={handleNextPage}
-          disabled={!nextPageToken || isLoadingMessages}
+          disabled={!isHydrated || !nextPageToken || isLoadingMessages}
           className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Next page"
+          title={!isHydrated ? "Loading..." : "Next page"}
         >
           <ChevronRight size={16} />
         </Button>

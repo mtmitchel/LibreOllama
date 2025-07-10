@@ -11,6 +11,7 @@ pub mod cache;
 pub mod crypto;
 pub mod networking;
 pub mod time;
+pub mod http;
 
 // Re-export all utilities for convenience
 // Note: These are infrastructure utilities - some are used by current features,

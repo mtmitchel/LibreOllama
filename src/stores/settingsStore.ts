@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { useMailStore } from '../features/mail/stores/mailStore';
+import { useGoogleCalendarStore } from './googleCalendarStore';
+import { useGoogleTasksStore } from './googleTasksStore';
 
 // Settings interfaces
 export interface GeneralSettings {
@@ -97,6 +100,7 @@ export interface SettingsActions {
   addGoogleAccount: (account: GoogleAccount) => void;
   removeGoogleAccount: (accountId: string) => void;
   setActiveGoogleAccount: (accountId: string) => void;
+  refreshGoogleAccount: (accountId: string) => Promise<void>;
   setApiKey: (service: keyof IntegrationSettings['apiKeys'], key: string) => void;
   
   // Utility actions
@@ -252,6 +256,39 @@ export const useSettingsStore = create<SettingsStore>()(
           });
         },
 
+        refreshGoogleAccount: async (accountId) => {
+          console.log(`🔄 [SETTINGS] Refreshing data for Google account: ${accountId}`);
+          set(state => ({ isLoading: true, error: null }));
+          try {
+            const { refreshAccount } = useMailStore.getState();
+            const { fetchCalendars, fetchEvents } = useGoogleCalendarStore.getState();
+            const { fetchTaskLists, syncAllTasks } = useGoogleTasksStore.getState();
+
+            // Find the account to ensure it exists
+            const account = get().integrations.googleAccounts.find(acc => acc.id === accountId);
+            if (!account) {
+              throw new Error('Account not found');
+            }
+
+            // Perform all refreshes in parallel
+            await Promise.all([
+              refreshAccount(accountId), // From mailStore
+              fetchCalendars(accountId),       // From googleCalendarStore
+              fetchEvents(undefined, undefined, accountId), // From googleCalendarStore
+              fetchTaskLists(accountId),      // From googleTasksStore
+              // syncAllTasks(), // This might be too broad, let's stick to list-based for now
+            ]);
+
+            console.log(`✅ [SETTINGS] Successfully refreshed data for account: ${accountId}`);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error during refresh';
+            console.error(`❌ [SETTINGS] Failed to refresh account ${accountId}:`, errorMessage);
+            set({ error: errorMessage });
+          } finally {
+            set({ isLoading: false });
+          }
+        },
+
         setApiKey: (service, key) => {
           set((state) => {
             state.integrations.apiKeys[service] = key;
@@ -373,6 +410,7 @@ export const useSetStartupView = () => useSettingsStore((state) => state.setStar
 export const useAddGoogleAccount = () => useSettingsStore((state) => state.addGoogleAccount);
 export const useRemoveGoogleAccount = () => useSettingsStore((state) => state.removeGoogleAccount);
 export const useSetActiveGoogleAccount = () => useSettingsStore((state) => state.setActiveGoogleAccount);
+export const useRefreshGoogleAccount = () => useSettingsStore((state) => state.refreshGoogleAccount);
 export const useSetApiKey = () => useSettingsStore((state) => state.setApiKey);
 export const useResetToDefaults = () => useSettingsStore((state) => state.resetToDefaults);
 export const useExportSettings = () => useSettingsStore((state) => state.exportSettings);

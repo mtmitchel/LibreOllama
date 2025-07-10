@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-shell';
 import { Card, Button, Text, Heading } from '../../../components/ui';
 import { Calendar, CheckSquare, Mail, X, ExternalLink } from 'lucide-react';
 
@@ -23,15 +24,14 @@ export function GoogleAuthModal({
     'https://www.googleapis.com/auth/tasks'
   ],
   title = "Connect Google Account",
-  description = "Sign in to your Google account to sync your calendar and tasks",
+  description = "Click below to automatically sign in with Google - your browser will open and authentication will complete automatically",
   icon = <Calendar size={24} className="text-[var(--accent-primary)]" />,
   isInlineModal = false
 }: GoogleAuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [oauthUrl, setOauthUrl] = useState<string | null>(null);
   const [authState, setAuthState] = useState<string | null>(null);
-  const [step, setStep] = useState<'initial' | 'url-display' | 'code-entry'>('initial');
+  const [step, setStep] = useState<'initial'>('initial');
 
   // Handle escape key and reset state when modal opens/closes
   useEffect(() => {
@@ -52,9 +52,7 @@ export function GoogleAuthModal({
     if (isOpen) {
       setStep('initial');
       setError(null);
-      setOauthUrl(null);
       setAuthState(null);
-      setAuthCode('');
     }
   }, [isOpen]);
 
@@ -63,84 +61,19 @@ export function GoogleAuthModal({
     setError(null);
 
     try {
-      console.log('🔐 [GOOGLE] Starting OAuth flow with scopes:', scopes);
-      console.log('🔐 [GOOGLE] Invoking Tauri command: start_gmail_oauth');
+      console.log('🔐 [GOOGLE] Starting fully automated OAuth flow...');
       
-      // Add timeout to the request
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000)
-      );
-      
-      // Step 1: Start OAuth flow - get authorization URL  
-      const authRequestPromise = invoke('start_gmail_oauth', {
-        config: {
-          redirect_uri: 'urn:ietf:wg:oauth:2.0:oob'
-        }
-      }).then(result => {
-        console.log('🔐 [GOOGLE] Tauri command returned:', result);
-        return result;
-      }).catch(err => {
-        console.error('🔐 [GOOGLE] Tauri command error:', err);
-        throw err;
-      });
-
-      const authRequest = await Promise.race([authRequestPromise, timeoutPromise]) as { auth_url: string; state: string };
-
-      console.log('🔗 [GOOGLE] Authorization URL generated:', authRequest.auth_url);
-
-      // Step 2: Show URL in modal
-      setOauthUrl(authRequest.auth_url);
-      setAuthState(authRequest.state);
-      setStep('url-display');
-      setIsLoading(false);
-
-    } catch (err) {
-      console.error('❌ [GOOGLE] Authentication failed:', err);
-      let errorMessage = 'Authentication failed';
-      
-      if (err instanceof Error) {
-        errorMessage = err.message;
-        
-        // Provide specific help for common issues
-        if (err.message.includes('timeout')) {
-          errorMessage = 'Request timed out. The Tauri backend may not be responding. Check the console for details.';
-        } else if (err.message.includes('not found') || err.message.includes('command')) {
-          errorMessage = 'Google OAuth commands not available. Please ensure the Tauri backend is running with Gmail support.';
-        } else if (err.message.includes('OAuth') || err.message.includes('client')) {
-          errorMessage = 'OAuth configuration error. Please check that GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET are set in your environment.';
-        } else if (err.message.includes('database') || err.message.includes('storage')) {
-          errorMessage = 'Database error. Please ensure the database is properly initialized.';
-        }
-      }
-      
-      setError(errorMessage);
-      setStep('initial'); // Go back to initial state so user can try again
-      setIsLoading(false);
-    }
-  };
-
-  const handleCodeSubmit = async (authorizationCode: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log('✅ [GOOGLE] Received authorization code, completing OAuth...');
-
-      // Complete OAuth flow with authorization code
-      const tokenResponse = await invoke('complete_gmail_oauth', {
-        code: authorizationCode.trim(),
-        state: authState,
-        redirectUri: 'urn:ietf:wg:oauth:2.0:oob'
-      }) as { 
+      // Single step: Complete OAuth flow automatically
+      const tokenResponse = await invoke('start_gmail_oauth_with_callback') as { 
         access_token: string; 
         refresh_token: string; 
         expires_in: number;
         token_type: string;
       };
 
-      console.log('🎯 [GOOGLE] Tokens received, getting user info...');
-
-      // Get user information
+      console.log('🎯 [GOOGLE] Tokens received automatically!');
+      
+      // Get user information and store account
       const userInfo = await invoke('get_gmail_user_info', {
         accessToken: tokenResponse.access_token
       }) as {
@@ -191,38 +124,19 @@ export function GoogleAuthModal({
       };
 
       onSuccess(accountData);
+      setIsLoading(false);
 
     } catch (err) {
       console.error('❌ [GOOGLE] Authentication failed:', err);
-      setError(err instanceof Error ? err.message : 'Authentication failed');
-    } finally {
+      const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
+      setError(errorMessage);
       setIsLoading(false);
     }
   };
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      // Fallback for browsers that don't support clipboard API
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    }
-  };
 
-  const handleNext = () => {
-    setStep('code-entry');
-  };
 
-  const handleBack = () => {
-    setStep('url-display');
-  };
 
-  const [authCode, setAuthCode] = useState('');
 
   if (!isOpen) return null;
 
@@ -233,11 +147,7 @@ export function GoogleAuthModal({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             {icon}
-            <Heading level={3}>
-              {step === 'initial' ? title : 
-               step === 'url-display' ? 'Step 1: Open Google Authentication' :
-               'Step 2: Enter Authorization Code'}
-            </Heading>
+            <Heading level={3}>{title}</Heading>
           </div>
           {!isLoading && (
             <Button variant="ghost" size="icon" onClick={onClose}>
@@ -246,117 +156,41 @@ export function GoogleAuthModal({
           )}
         </div>
 
-        {/* Step Indicator */}
-        {step !== 'initial' && (
-          <div className="flex items-center gap-2 mb-6">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === 'url-display' ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--success)] text-white'
-            }`}>
-              1
-            </div>
-            <div className={`h-1 flex-1 rounded ${
-              step === 'code-entry' ? 'bg-[var(--success)]' : 'bg-[var(--bg-tertiary)]'
-            }`} />
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-              step === 'code-entry' ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
-            }`}>
-              2
-            </div>
-          </div>
-        )}
+        {/* Content */}
+        <Text variant="secondary" className="mb-6">
+          {description}
+        </Text>
 
-        {/* Content based on step */}
-        {step === 'initial' && (
-          <>
-            <Text variant="secondary" className="mb-6">
-              {description}
-            </Text>
-
-            {/* Benefits */}
-            <div className="mb-6 space-y-3">
-              <div className="flex items-start gap-3">
-                <Mail size={16} className="text-[var(--success)] mt-0.5" />
-                <div>
-                  <Text size="sm" weight="medium">Gmail Integration</Text>
-                  <Text size="xs" variant="tertiary">
-                    Access your emails, compose messages, and manage your inbox
-                  </Text>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Calendar size={16} className="text-[var(--success)] mt-0.5" />
-                <div>
-                  <Text size="sm" weight="medium">Calendar Integration</Text>
-                  <Text size="xs" variant="tertiary">
-                    Sync events, create meetings, and manage your schedule
-                  </Text>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckSquare size={16} className="text-[var(--success)] mt-0.5" />
-                <div>
-                  <Text size="sm" weight="medium">Task Management</Text>
-                  <Text size="xs" variant="tertiary">
-                    Access your Google Tasks and keep everything organized
-                  </Text>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {step === 'url-display' && (
-          <div className="space-y-4">
-            {oauthUrl ? (
-              <>
-                <Text variant="secondary">
-                  Copy the URL below and open it in your browser to sign in with Google:
-                </Text>
-                
-                <div className="p-4 bg-[var(--bg-tertiary)] rounded-lg border">
-                  <Text size="sm" className="break-all font-mono">{oauthUrl}</Text>
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => copyToClipboard(oauthUrl)}
-                  className="w-full"
-                >
-                  Copy URL to Clipboard
-                </Button>
-                
-                <Text size="sm" variant="tertiary">
-                  After signing in with Google, you'll be redirected to a page that shows "This site can't be reached" - this is normal! 
-                  Look for a long authorization code in the URL (after "code=") and copy it to paste in the next step.
-                </Text>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-8 h-8 border-2 border-[var(--accent-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <Text variant="secondary">Generating authentication URL...</Text>
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === 'code-entry' && (
-          <div className="space-y-4">
-            <Text variant="secondary">
-              Paste the authorization code from your browser here. Look for the long code after "code=" in the URL:
-            </Text>
-            
-            <div className="space-y-2">
-              <Text size="sm" weight="medium">Authorization Code</Text>
-              <input
-                type="text"
-                value={authCode}
-                onChange={(e) => setAuthCode(e.target.value)}
-                className="w-full p-3 border border-[var(--border-default)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)]"
-                placeholder="Paste authorization code here..."
-              />
+        {/* Benefits */}
+        <div className="mb-6 space-y-3">
+          <div className="flex items-start gap-3">
+            <Mail size={16} className="text-[var(--success)] mt-0.5" />
+            <div>
+              <Text size="sm" weight="medium">Gmail Integration</Text>
+              <Text size="xs" variant="tertiary">
+                Access your emails, compose messages, and manage your inbox
+              </Text>
             </div>
           </div>
-        )}
+          <div className="flex items-start gap-3">
+            <Calendar size={16} className="text-[var(--success)] mt-0.5" />
+            <div>
+              <Text size="sm" weight="medium">Calendar Integration</Text>
+              <Text size="xs" variant="tertiary">
+                Sync events, create meetings, and manage your schedule
+              </Text>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckSquare size={16} className="text-[var(--success)] mt-0.5" />
+            <div>
+              <Text size="sm" weight="medium">Task Management</Text>
+              <Text size="xs" variant="tertiary">
+                Access your Google Tasks and keep everything organized
+              </Text>
+            </div>
+          </div>
+        </div>
 
         {/* Error Display */}
         {error && (
@@ -369,104 +203,32 @@ export function GoogleAuthModal({
 
         {/* Action Buttons */}
         <div className="flex gap-3 mt-6">
-          {step === 'initial' && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={onClose}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={handleGoogleAuth}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Connecting...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <ExternalLink size={16} />
-                    Start Authentication
-                  </div>
-                )}
-              </Button>
-            </>
-          )}
-          
-          {step === 'url-display' && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={onClose}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              {oauthUrl ? (
-                <Button 
-                  variant="primary" 
-                  onClick={handleNext}
-                  className="flex-1"
-                >
-                  I've Opened the URL
-                </Button>
-              ) : error ? (
-                <Button 
-                  variant="primary" 
-                  onClick={() => {
-                    setStep('initial');
-                    setError(null);
-                  }}
-                  className="flex-1"
-                >
-                  Try Again
-                </Button>
-              ) : (
-                <Button 
-                  variant="primary" 
-                  disabled
-                  className="flex-1"
-                >
-                  Generating URL...
-                </Button>
-              )}
-            </>
-          )}
-          
-          {step === 'code-entry' && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={handleBack}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                Back
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={() => handleCodeSubmit(authCode)}
-                disabled={isLoading || !authCode.trim()}
-                className="flex-1"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Verifying...
-                  </div>
-                ) : (
-                  'Complete Authentication'
-                )}
-              </Button>
-            </>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleGoogleAuth}
+            disabled={isLoading}
+            className="flex-1"
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Authenticating...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <ExternalLink size={16} />
+                Connect Google Account
+              </div>
+            )}
+          </Button>
         </div>
 
         {/* Privacy Note */}

@@ -464,511 +464,274 @@ export function ComposeModal({
   }
 
   return (
-    <div className={`fixed ${isFullscreen ? 'inset-0' : 'bottom-0 right-4 w-[700px] h-[600px]'} bg-[var(--bg-primary)] border border-border-subtle ${isFullscreen ? '' : 'rounded-t-lg'} shadow-xl z-50 flex flex-col`}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border-subtle bg-[var(--bg-secondary)]">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              {replyType === 'reply' && <Reply size={16} className="text-secondary" />}
-              {replyType === 'reply_all' && <Users size={16} className="text-secondary" />}
-              {replyType === 'forward' && <Forward size={16} className="text-secondary" />}
-              <Text size="sm" weight="medium" className="text-primary">
-                {replyType === 'reply' ? 'Reply' : 
-                 replyType === 'reply_all' ? 'Reply All' : 
-                 replyType === 'forward' ? 'Forward' : 'New Message'}
-              </Text>
-            </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="w-full max-w-4xl max-h-[90vh] bg-[var(--bg-primary)] rounded-lg shadow-2xl border border-[var(--border-default)] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-default)] bg-[var(--bg-secondary)]">
+          <div className="flex items-center gap-3">
+            {replyType === 'reply' && <Reply size={18} className="text-[var(--text-secondary)]" />}
+            {replyType === 'reply_all' && <Users size={18} className="text-[var(--text-secondary)]" />}
+            {replyType === 'forward' && <Forward size={18} className="text-[var(--text-secondary)]" />}
+            <Text size="md" weight="semibold" className="text-[var(--text-primary)]">
+              {replyType === 'reply' ? 'Reply' : 
+               replyType === 'reply_all' ? 'Reply All' : 
+               replyType === 'forward' ? 'Forward' : 'New Message'}
+            </Text>
             
-            {/* Account Selector */}
-            {accounts.length > 1 && (
-              <div className="flex items-center gap-2">
-                <Text size="xs" className="text-secondary">
-                  From:
-                </Text>
-                <select
-                  value={currentAccountId || ''}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      switchAccount(e.target.value);
-                      setCompose(prev => ({ ...prev, accountId: e.target.value }));
-                    }
-                  }}
-                  className="bg-transparent border border-border-subtle rounded px-2 py-1 text-xs text-primary hover:border-accent-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-                >
-                  {accounts.map(account => (
-                    <option key={account.id} value={account.id} className="bg-[var(--bg-primary)] text-primary">
-                      {account.displayName} ({account.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-          
-          {/* Auto-save status */}
-          <div className="flex items-center gap-1">
+            {/* Auto-save indicator */}
             {autoSaveStatus === 'saving' && (
-              <div className="flex items-center gap-1 text-xs text-secondary">
-                <div className="animate-pulse h-2 w-2 bg-accent-primary rounded-full" />
+              <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-[var(--accent-primary)] border-t-transparent"></div>
                 Saving...
               </div>
             )}
             {autoSaveStatus === 'saved' && (
-              <div className="flex items-center gap-1 text-xs text-success">
+              <div className="flex items-center gap-1 text-xs text-[var(--success)]">
                 <CheckCircle size={12} />
                 Saved
               </div>
             )}
-            {autoSaveStatus === 'error' && (
-              <div className="flex items-center gap-1 text-xs text-error">
-                <AlertCircle size={12} />
-                Save failed
-              </div>
-            )}
           </div>
-        </div>
-        
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMinimized(true)}
-            className="h-6 w-6 text-secondary hover:text-primary"
-          >
-            <Minimize2 size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="h-6 w-6 text-secondary hover:text-primary"
-          >
-            <Maximize2 size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={cancelCompose}
-            className="h-6 w-6 text-secondary hover:text-primary"
-          >
-            <X size={14} />
-          </Button>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <SuccessMessage
-          message={successMessage}
-          onDismiss={() => setSuccessMessage(null)}
-          className="m-3 -mb-3"
-        />
-      )}
-
-      {/* Loading Message */}
-      {isSending && (
-        <LoadingMessage
-          message="Sending email..."
-          className="m-3 -mb-3"
-        />
-      )}
-
-      {/* Error Display */}
-      {gmailError && (
-        <ErrorDisplay
-          error={gmailError}
-          onRetry={() => {
-            if (gmailError.type === GmailErrorType.GMAIL_SEND_ERROR) {
-              handleSend();
-            } else if (gmailError.type === GmailErrorType.GMAIL_DRAFT_ERROR) {
-              handleSaveDraft();
-            }
-          }}
-          onDismiss={() => setGmailError(null)}
-          className="m-3 -mb-3"
-        />
-      )}
-
-      {/* Validation Errors */}
-      {validationErrors.length > 0 && (
-        <div className="bg-warning/10 border-b border-warning/20 px-3 py-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={16} className="text-warning" />
-            <Text size="sm" className="text-warning">
-              {validationErrors[0]}
-            </Text>
-          </div>
-        </div>
-      )}
-
-      {/* Size Warning */}
-      {getMessageSizeWarning() && (
-        <div className="bg-warning/10 border-b border-warning/20 px-3 py-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={16} className="text-warning" />
-            <Text size="sm" className="text-warning">
-              {getMessageSizeWarning()}
-            </Text>
-          </div>
-        </div>
-      )}
-
-      {/* Form */}
-      <div className="flex-1 flex flex-col">
-        {/* Recipients */}
-        <div className="border-b border-border-subtle">
-          {/* To Field */}
-          <div className="flex items-center px-3 py-2 border-b border-border-subtle">
-            <Text size="sm" className="text-secondary w-12 flex-shrink-0">
-              To
-            </Text>
-            <input
-              ref={toInputRef}
-              type="text"
-              value={formatEmailAddresses(compose.to)}
-              onChange={(e) => handleEmailAddressChange('to', e.target.value)}
-              placeholder="Recipients"
-              className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder-secondary"
-            />
-            <div className="flex items-center gap-1 ml-2">
-              {!ccVisible && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCcVisible(true)}
-                  className="text-secondary hover:text-primary text-xs px-2 py-1"
-                >
-                  Cc
-                </Button>
-              )}
-              {!bccVisible && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setBccVisible(true)}
-                  className="text-secondary hover:text-primary text-xs px-2 py-1"
-                >
-                  Bcc
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Cc Field */}
-          {ccVisible && (
-            <div className="flex items-center px-3 py-2 border-b border-border-subtle">
-              <Text size="sm" className="text-secondary w-12 flex-shrink-0">
-                Cc
-              </Text>
-              <input
-                ref={ccInputRef}
-                type="text"
-                value={formatEmailAddresses(compose.cc || [])}
-                onChange={(e) => handleEmailAddressChange('cc', e.target.value)}
-                placeholder="Carbon copy"
-                className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder-secondary"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCcVisible(false)}
-                className="h-6 w-6 text-secondary hover:text-primary ml-2"
-              >
-                <X size={12} />
-              </Button>
-            </div>
-          )}
-
-          {/* Bcc Field */}
-          {bccVisible && (
-            <div className="flex items-center px-3 py-2 border-b border-border-subtle">
-              <Text size="sm" className="text-secondary w-12 flex-shrink-0">
-                Bcc
-              </Text>
-              <input
-                ref={bccInputRef}
-                type="text"
-                value={formatEmailAddresses(compose.bcc || [])}
-                onChange={(e) => handleEmailAddressChange('bcc', e.target.value)}
-                placeholder="Blind carbon copy"
-                className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder-secondary"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setBccVisible(false)}
-                className="h-6 w-6 text-secondary hover:text-primary ml-2"
-              >
-                <X size={12} />
-              </Button>
-            </div>
-          )}
-
-          {/* Subject Field */}
-          <div className="flex items-center px-3 py-2">
-            <Text size="sm" className="text-secondary w-12 flex-shrink-0">
-              Subject
-            </Text>
-            <input
-              ref={subjectInputRef}
-              type="text"
-              value={compose.subject}
-              onChange={(e) => setCompose(prev => ({ ...prev, subject: e.target.value }))}
-              placeholder="Subject"
-              className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder-secondary"
-            />
-            
-            {/* Importance indicator */}
-            <div className="flex items-center gap-1 ml-2">
-              {compose.importance === MessageImportance.High && (
-                <AlertTriangle size={16} className="text-error" />
-              )}
-              {compose.importance === MessageImportance.Low && (
-                <div className="w-4 h-4 rounded-full bg-secondary/30" title="Low importance" />
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Toolbar */}
-        <div className="border-b border-border-subtle p-2">
+          
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleToggleRichText}
-              className={richTextMode ? 'bg-accent-primary/10 text-accent-primary' : 'text-secondary hover:text-primary'}
+              onClick={cancelCompose}
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
-              <Edit3 size={14} className="mr-1" />
-              {richTextMode ? 'Plain Text' : 'Rich Text'}
+              <X size={16} />
             </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowTemplates(!showTemplates)}
-              className="text-secondary hover:text-primary"
-            >
-              <FileText size={14} className="mr-1" />
-              Templates
-            </Button>
-            
-            <div className="flex items-center gap-1 ml-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleImportanceChange(MessageImportance.High)}
-                className={compose.importance === MessageImportance.High ? 'bg-error/10 text-error' : 'text-secondary hover:text-primary'}
-                title="High importance"
-              >
-                <AlertTriangle size={14} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleImportanceChange(MessageImportance.Low)}
-                className={compose.importance === MessageImportance.Low ? 'bg-secondary/10 text-secondary' : 'text-secondary hover:text-primary'}
-                title="Low importance"
-              >
-                <div className="w-4 h-4 rounded-full bg-current opacity-50" />
-              </Button>
-            </div>
           </div>
         </div>
 
-        {/* Templates Panel */}
-        {showTemplates && (
-          <div className="border-b border-border-subtle p-3 bg-[var(--bg-secondary)]">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText size={16} className="text-secondary" />
-              <Text size="sm" weight="medium" className="text-primary">
-                Message Templates
+        {/* Account Selector (if multiple accounts) */}
+        {accounts.length > 1 && (
+          <div className="px-4 py-2 border-b border-[var(--border-default)] bg-[var(--bg-tertiary)]">
+            <div className="flex items-center gap-2">
+              <Text size="sm" className="text-[var(--text-secondary)] min-w-0">
+                From:
               </Text>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {templates.map((template) => (
-                <Button
-                  key={template.templateId}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleApplyTemplate(template)}
-                  disabled={isLoadingTemplate}
-                  className="border border-border-subtle hover:bg-accent-primary/10 hover:border-accent-primary/20"
-                >
-                  {template.name}
-                </Button>
-              ))}
+              <select
+                value={currentAccountId || ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    switchAccount(e.target.value);
+                    setCompose(prev => ({ ...prev, accountId: e.target.value }));
+                  }
+                }}
+                className="flex-1 bg-transparent border border-[var(--border-default)] rounded-md px-3 py-1 text-sm text-[var(--text-primary)] hover:border-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              >
+                {accounts.map(account => (
+                  <option key={account.id} value={account.id} className="bg-[var(--bg-primary)] text-[var(--text-primary)]">
+                    {account.displayName} ({account.email})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}
 
-        {/* Message Body */}
-        <div className="flex-1 p-3">
-          {richTextMode ? (
-            <div
-              ref={richTextEditorRef}
-              contentEditable
-              className="w-full h-full bg-transparent border-none outline-none text-sm text-primary resize-none"
-              style={{ minHeight: '200px' }}
-              onInput={(e) => {
-                const html = e.currentTarget.innerHTML;
-                setCompose(prev => ({ ...prev, bodyHtml: html }));
-              }}
-              dangerouslySetInnerHTML={{ __html: compose.bodyHtml || '' }}
-            />
-          ) : (
-            <textarea
-              ref={bodyTextareaRef}
-              value={compose.bodyText}
-              onChange={(e) => setCompose(prev => ({ ...prev, bodyText: e.target.value }))}
-              placeholder="Compose email"
-              className="w-full h-full bg-transparent border-none outline-none text-sm text-primary placeholder-secondary resize-none"
-            />
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-border-subtle p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleSend}
-                disabled={isSending || validationErrors.length > 0}
-                className="bg-accent-primary hover:bg-accent-primary/90 text-white disabled:opacity-50"
-              >
-                {isSending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} className="mr-2" />
-                    Send
-                  </>
-                )}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleSaveDraft}
-                disabled={isSavingDraft}
-                className="border-border-subtle hover:bg-accent-primary/10"
-              >
-                {isSavingDraft ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} className="mr-2" />
-                    Save Draft
-                  </>
-                )}
-              </Button>
-
+        {/* Form Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Recipients Section */}
+          <div className="p-4 space-y-3 border-b border-[var(--border-default)]">
+            {/* To Field */}
+            <div className="flex items-center gap-3">
+              <Text size="sm" className="text-[var(--text-secondary)] w-12 text-right">
+                To:
+              </Text>
+              <input
+                ref={toInputRef}
+                type="text"
+                value={formatEmailAddresses(compose.to)}
+                onChange={(e) => handleEmailAddressChange('to', e.target.value)}
+                placeholder="Enter recipients..."
+                className="flex-1 bg-transparent border border-[var(--border-default)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] hover:border-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              />
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-secondary hover:text-primary"
-                  title="Attach files"
+                  size="sm"
+                  onClick={() => setCcVisible(!ccVisible)}
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
-                  <Paperclip size={16} />
+                  Cc
                 </Button>
-                
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-secondary hover:text-primary"
-                  title="Insert photo"
+                  size="sm"
+                  onClick={() => setBccVisible(!bccVisible)}
+                  className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
-                  <Image size={16} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-secondary hover:text-primary"
-                  title="Insert emoji"
-                >
-                  <Smile size={16} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowScheduler(!showScheduler)}
-                  className="h-8 w-8 text-secondary hover:text-primary"
-                  title="Schedule send"
-                >
-                  <Timer size={16} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-secondary hover:text-primary"
-                  title="More options"
-                >
-                  <MoreHorizontal size={16} />
+                  Bcc
                 </Button>
               </div>
             </div>
 
+            {/* CC Field */}
+            {ccVisible && (
+              <div className="flex items-center gap-3">
+                <Text size="sm" className="text-[var(--text-secondary)] w-12 text-right">
+                  Cc:
+                </Text>
+                <input
+                  ref={ccInputRef}
+                  type="text"
+                  value={formatEmailAddresses(compose.cc)}
+                  onChange={(e) => handleEmailAddressChange('cc', e.target.value)}
+                  placeholder="Enter CC recipients..."
+                  className="flex-1 bg-transparent border border-[var(--border-default)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] hover:border-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+                />
+              </div>
+            )}
+
+            {/* BCC Field */}
+            {bccVisible && (
+              <div className="flex items-center gap-3">
+                <Text size="sm" className="text-[var(--text-secondary)] w-12 text-right">
+                  Bcc:
+                </Text>
+                <input
+                  ref={bccInputRef}
+                  type="text"
+                  value={formatEmailAddresses(compose.bcc)}
+                  onChange={(e) => handleEmailAddressChange('bcc', e.target.value)}
+                  placeholder="Enter BCC recipients..."
+                  className="flex-1 bg-transparent border border-[var(--border-default)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] hover:border-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+                />
+              </div>
+            )}
+
+            {/* Subject Field */}
+            <div className="flex items-center gap-3">
+              <Text size="sm" className="text-[var(--text-secondary)] w-12 text-right">
+                Subject:
+              </Text>
+              <input
+                ref={subjectInputRef}
+                type="text"
+                value={compose.subject}
+                onChange={(e) => setCompose(prev => ({ ...prev, subject: e.target.value }))}
+                placeholder="Enter subject..."
+                className="flex-1 bg-transparent border border-[var(--border-default)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] hover:border-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              />
+            </div>
+          </div>
+
+          {/* Message Body */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 p-4">
+              <textarea
+                ref={bodyTextareaRef}
+                value={compose.bodyText}
+                onChange={(e) => setCompose(prev => ({ ...prev, bodyText: e.target.value }))}
+                placeholder="Write your message..."
+                className="w-full h-full resize-none bg-transparent border border-[var(--border-default)] rounded-md p-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] hover:border-[var(--accent-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+                style={{ minHeight: '200px' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {validationErrors.length > 0 && (
+          <div className="px-4 py-2 border-t border-[var(--border-default)] bg-[var(--error-ghost)]">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={16} className="text-[var(--error)]" />
+              <Text size="sm" className="text-[var(--error)]">
+                {validationErrors[0]}
+              </Text>
+            </div>
+          </div>
+        )}
+
+        {gmailError && (
+          <div className="px-4 py-2 border-t border-[var(--border-default)] bg-[var(--error-ghost)]">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-[var(--error)]" />
+              <Text size="sm" className="text-[var(--error)]">
+                {gmailError.message}
+              </Text>
+            </div>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="px-4 py-2 border-t border-[var(--border-default)] bg-[var(--success-ghost)]">
+            <div className="flex items-center gap-2">
+              <CheckCircle size={16} className="text-[var(--success)]" />
+              <Text size="sm" className="text-[var(--success)]">
+                {successMessage}
+              </Text>
+            </div>
+          </div>
+        )}
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between p-4 border-t border-[var(--border-default)] bg-[var(--bg-secondary)]">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="primary"
+              onClick={handleSend}
+              disabled={isSending || validationErrors.length > 0}
+              className="flex items-center gap-2"
+            >
+              {isSending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send size={16} />
+                  Send
+                </>
+              )}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft}
+              className="flex items-center gap-2"
+            >
+              {isSavingDraft ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-[var(--accent-primary)] border-t-transparent"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  Save Draft
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="icon"
-              onClick={cancelCompose}
-              className="h-8 w-8 text-secondary hover:text-primary"
-              title="Discard"
+              size="sm"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Attach files"
             >
-              <Trash2 size={16} />
+              <Paperclip size={16} />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowScheduler(!showScheduler)}
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Schedule send"
+            >
+              <Timer size={16} />
             </Button>
           </div>
-          
-          {/* Message size indicator */}
-          {compose.bodyText || compose.bodyHtml ? (
-            <div className="mt-2 text-xs text-secondary">
-              Size: {(gmailComposeUtils.estimateMessageSize(compose) / 1024).toFixed(1)} KB
-            </div>
-          ) : null}
         </div>
       </div>
-
-      {/* Schedule Panel */}
-      {showScheduler && (
-        <div className="absolute bottom-full left-0 right-0 bg-[var(--bg-primary)] border border-border-subtle rounded-t-lg shadow-lg p-4 mb-2">
-          <div className="flex items-center gap-2 mb-3">
-            <Calendar size={16} className="text-secondary" />
-            <Text size="sm" weight="medium" className="text-primary">
-              Schedule Send
-            </Text>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="datetime-local"
-              className="flex-1 bg-transparent border border-border-subtle rounded px-3 py-2 text-sm text-primary"
-              min={new Date().toISOString().slice(0, 16)}
-            />
-            <Button
-              onClick={() => {
-                const input = document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
-                if (input?.value) {
-                  handleScheduleSend(new Date(input.value).toISOString());
-                }
-              }}
-              disabled={isSending}
-              className="bg-accent-primary hover:bg-accent-primary/90 text-white"
-            >
-              <Timer size={16} className="mr-2" />
-              Schedule
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 

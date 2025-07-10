@@ -4,7 +4,6 @@ import { Text, Card } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail, EmailThread } from '../types';
-import { MailPagination } from './MailPagination';
 
 interface ThreadItemProps {
   thread: EmailThread;
@@ -342,10 +341,45 @@ export function ThreadedMessageList() {
   }, [messages]);
 
   const handleThreadClick = async (thread: EmailThread) => {
-    await executeFetchOperation(
-      () => fetchThread(thread.id),
-      'thread details'
-    );
+    console.log('🔍 [DEBUG] Thread clicked:', {
+      threadId: thread.id,
+      subject: thread.subject,
+      messageCount: thread.messageCount
+    });
+    
+    try {
+      // Immediate fallback: Set the latest message from the thread directly
+      // This ensures the email view opens instantly
+      const latestMessage = thread.messages[thread.messages.length - 1];
+      useMailStore.setState({ 
+        currentMessage: latestMessage,
+        currentThread: thread,
+        isLoading: false,
+        error: null 
+      });
+      
+      console.log('🚀 [DEBUG] Set thread message immediately from list data');
+      
+      // Try to fetch full thread details in the background
+      try {
+        await executeFetchOperation(
+          () => fetchThread(thread.id),
+          'thread details'
+        );
+        
+        console.log('✅ [DEBUG] Full thread details fetched successfully');
+      } catch (fetchError) {
+        console.warn('⚠️ [DEBUG] Full thread fetch failed, using list data:', fetchError);
+        // Keep the message/thread from list data - it's better than nothing
+      }
+      
+    } catch (error) {
+      console.error('❌ [DEBUG] Thread click failed completely:', error);
+      useMailStore.setState({ 
+        error: `Failed to open thread: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        isLoading: false 
+      });
+    }
   };
 
   const handleSelect = (threadId: string, isSelected: boolean) => {
@@ -445,11 +479,6 @@ export function ThreadedMessageList() {
             );
           })}
         </div>
-      </div>
-      
-      {/* Pagination */}
-      <div className="flex-shrink-0">
-        <MailPagination />
       </div>
     </div>
   );

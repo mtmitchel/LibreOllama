@@ -1,4 +1,37 @@
-import { create } from 'zustand';
+GMAIL PAGINATION ISSUE - COMPREHENSIVE CODE ANALYSIS
+================================================================
+
+## ISSUE OVERVIEW
+The Gmail integration has persistent pagination problems:
+1. Second page still shows "1-50" instead of "51-100" 
+2. Total message count is incorrect
+3. Multiple attempts to fix have failed
+
+## ATTEMPTED FIXES (CHRONOLOGICAL)
+1. Removed duplicate MailPagination component from ThreadedMessageList.tsx
+2. Cleaned up MailPagination imports from MessageList.tsx and UnifiedInbox.tsx
+3. Fixed messagesLoadedSoFar calculation conflicts between fetchMessages and navigation methods
+4. Added comprehensive debugging logs
+5. Simplified token management logic
+6. Added resetPagination method
+7. Fixed variable ordering error (safeTotal before initialization)
+
+## CURRENT SYMPTOMS
+- Page 2 shows "1-50" instead of "51-100" 
+- Total count appears incorrect
+- Only MailToolbar displays pagination (no duplicate components confirmed)
+
+## FILES INCLUDED IN THIS ANALYSIS
+1. src/features/mail/stores/mailStore.ts (Complete mail store with pagination logic)
+2. src/features/mail/components/MailToolbar.tsx (Pagination display component)
+3. src/app/pages/Mail.tsx (Main mail page layout)
+4. src/features/mail/components/MessageList.tsx (Message list component)
+5. src/features/mail/components/ThreadedMessageList.tsx (Threaded message list)
+6. src/features/mail/types/index.ts (Type definitions)
+
+================================================================
+FILE: src/features/mail/stores/mailStore.ts
+================================================================ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -534,19 +567,6 @@ const useMailStore = create<EnhancedMailStore>()(
             return;
           }
 
-          // Wait for store hydration to complete before fetching messages
-          const state = get();
-          if (!state.isHydrated) {
-            console.log('⏳ [STORE] Waiting for store hydration before fetching messages...');
-            // Wait a bit for hydration to complete
-            await new Promise(resolve => setTimeout(resolve, 50));
-            // Check again after waiting
-            const updatedState = get();
-            if (!updatedState.isHydrated) {
-              console.warn('⚠️ [STORE] Store not hydrated after waiting - proceeding anyway');
-            }
-          }
-
           set((state) => {
             state.isLoadingMessages = true;
             state.error = null;
@@ -651,9 +671,8 @@ const useMailStore = create<EnhancedMailStore>()(
               
               if (targetLabel && typeof targetLabel.messagesTotal === 'number' && targetLabel.messagesTotal > 0) {
                 totalMessages = targetLabel.messagesTotal;
-                // Use threadsUnread instead of messagesUnread for conversation count
-                totalUnreadMessages = targetLabel.threadsUnread || 0;
-                console.log(`📄 [STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread conversations: ${totalUnreadMessages}`);
+                totalUnreadMessages = targetLabel.messagesUnread || 0;
+                console.log(`📄 [STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread: ${totalUnreadMessages}`);
               } else if (result.resultSizeEstimate && result.resultSizeEstimate > 0) {
                 // Secondary: Use API's resultSizeEstimate (often inaccurate)
                 totalMessages = result.resultSizeEstimate;
@@ -1390,38 +1409,20 @@ const useMailStore = create<EnhancedMailStore>()(
               nextPageToken: state.nextPageToken
             });
             
-            // ATOMIC UPDATE: Consolidate all pagination state changes into single set call
-            const nextPageToken = state.nextPageToken;
             set(s => {
-              // Add current page token for navigation history FIRST
-              const newPageTokens = [...s.pageTokens, nextPageToken];
+              // Set messagesLoadedSoFar to the number of messages we've loaded before this page
+              s.messagesLoadedSoFar = s.pageTokens.length * s.currentPageSize;
               
-              // Calculate messagesLoadedSoFar based on NEW token stack (after adding token)
-              const newMessagesLoadedSoFar = newPageTokens.length * s.currentPageSize;
+              // Add current page token for navigation history
+              s.pageTokens.push(s.nextPageToken!);
               
-              // Update both values atomically
-              s.pageTokens = newPageTokens;
-              s.messagesLoadedSoFar = newMessagesLoadedSoFar;
-              
-              console.log('🔄 [PAGINATION] Atomic state update complete:', {
+              console.log('🔄 [PAGINATION] State after nextPage update:', {
                 tokens: s.pageTokens.length,
-                messagesLoadedSoFar: s.messagesLoadedSoFar,
-                calculation: `${newPageTokens.length} tokens * ${s.currentPageSize} pageSize = ${newMessagesLoadedSoFar}`
+                messagesLoadedSoFar: s.messagesLoadedSoFar
               });
             });
             
-            await state.goToPage(nextPageToken);
-            
-            // POST-UPDATE LOGGING: Confirm state after goToPage completes
-            const finalState = get();
-            console.log('📄 [PAGINATION] Final state after nextPage complete:', {
-              messagesLoadedSoFar: finalState.messagesLoadedSoFar,
-              pageTokens: finalState.pageTokens.length,
-              totalMessages: finalState.totalMessages,
-              totalUnreadMessages: finalState.totalUnreadMessages,
-              currentMessages: finalState.getMessages().length,
-              nextPageToken: finalState.nextPageToken
-            });
+            await state.goToPage(state.nextPageToken);
           }
         },
         prevPage: async () => {
@@ -1433,38 +1434,21 @@ const useMailStore = create<EnhancedMailStore>()(
             messagesLoadedSoFar: state.messagesLoadedSoFar
           });
           
-          // ATOMIC UPDATE: Consolidate all pagination state changes into single set call
           const newTokens = [...state.pageTokens];
           newTokens.pop(); // Remove current page's token
           const prevToken = newTokens.length > 0 ? newTokens[newTokens.length - 1] : undefined;
           
           set(s => {
-            // Calculate messagesLoadedSoFar based on new token stack (after removing token)
-            const newMessagesLoadedSoFar = newTokens.length * s.currentPageSize;
-            
-            // Update both values atomically
             s.pageTokens = newTokens;
-            s.messagesLoadedSoFar = newMessagesLoadedSoFar;
+            s.messagesLoadedSoFar = newTokens.length * s.currentPageSize;
             
-            console.log('🔄 [PAGINATION] Atomic state update complete:', {
+            console.log('🔄 [PAGINATION] State after prevPage update:', {
               tokens: s.pageTokens.length,
-              messagesLoadedSoFar: s.messagesLoadedSoFar,
-              calculation: `${newTokens.length} tokens * ${s.currentPageSize} pageSize = ${newMessagesLoadedSoFar}`
+              messagesLoadedSoFar: s.messagesLoadedSoFar
             });
           });
 
           await state.goToPage(prevToken);
-          
-          // POST-UPDATE LOGGING: Confirm state after goToPage completes
-          const finalState = get();
-          console.log('📄 [PAGINATION] Final state after prevPage complete:', {
-            messagesLoadedSoFar: finalState.messagesLoadedSoFar,
-            pageTokens: finalState.pageTokens.length,
-            totalMessages: finalState.totalMessages,
-            totalUnreadMessages: finalState.totalUnreadMessages,
-            currentMessages: finalState.getMessages().length,
-            nextPageToken: finalState.nextPageToken
-          });
         },
         goToPage: async (pageToken?: string) => {
           const { currentLabel, searchQuery, fetchMessages, currentAccountId } = get();
@@ -1607,3 +1591,367 @@ setTimeout(() => {
 }, 100);
 
 export { useMailStore }; 
+
+================================================================
+FILE: src/features/mail/components/MailToolbar.tsx
+================================================================
+import React from 'react';
+import { 
+  Archive, 
+  Trash2, 
+  MailOpen, 
+  Mail, 
+  Star, 
+  Clock, 
+  MoreHorizontal,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw
+} from 'lucide-react';
+import { Button, Text } from '../../../components/ui';
+import { useMailStore } from '../stores/mailStore';
+
+export function MailToolbar() {
+  const { 
+    selectedMessages, 
+    getMessages,
+    selectAllMessages,
+    clearSelection,
+    archiveMessages,
+    deleteMessages,
+    markAsRead,
+    markAsUnread,
+    starMessages,
+    fetchMessages,
+    isLoadingMessages,
+    // Token-based pagination
+    totalMessages,
+    totalUnreadMessages,
+    messagesLoadedSoFar,
+    nextPageToken,
+    prevPage,
+    nextPage,
+    resetPagination
+  } = useMailStore();
+
+  const messages = getMessages();
+
+  const selectedCount = selectedMessages.length;
+  const isAllSelected = messages.length > 0 && selectedMessages.length === messages.length;
+  const isPartiallySelected = selectedMessages.length > 0 && selectedMessages.length < messages.length;
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      clearSelection();
+    } else {
+      selectAllMessages(true);
+    }
+  };
+
+  const handleArchive = () => {
+    if (selectedCount > 0) {
+      archiveMessages(selectedMessages);
+    }
+  };
+
+  const handleDelete = () => {
+    if (selectedCount > 0) {
+      deleteMessages(selectedMessages);
+    }
+  };
+
+  const handleMarkAsRead = () => {
+    if (selectedCount > 0) {
+      markAsRead(selectedMessages);
+    }
+  };
+
+  const handleMarkAsUnread = () => {
+    if (selectedCount > 0) {
+      markAsUnread(selectedMessages);
+    }
+  };
+
+  const handleStar = () => {
+    if (selectedCount > 0) {
+      starMessages(selectedMessages);
+    }
+  };
+
+  const handleRefresh = () => {
+    // Reset pagination state and fetch messages from beginning
+    resetPagination();
+    fetchMessages();
+  };
+
+  const handlePreviousPage = async () => {
+    if (messagesLoadedSoFar > 0 && !isLoadingMessages) {
+      await prevPage();
+    }
+  };
+
+  const handleNextPage = async () => {
+    if (nextPageToken && !isLoadingMessages) {
+      await nextPage();
+    }
+  };
+
+  return (
+    <div 
+      className="flex items-center justify-between bg-[var(--bg-tertiary)]"
+      style={{ 
+        padding: 'var(--space-3) var(--space-4)',
+        gap: 'var(--space-2)'
+      }}
+    >
+      {/* Left Side - Selection and Actions */}
+      <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+        {/* Select All Checkbox */}
+        <div className="relative w-3 flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            ref={(input) => {
+              if (input) input.indeterminate = isPartiallySelected;
+            }}
+            onChange={handleSelectAll}
+            className="w-3 h-3 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded-none focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0 cursor-pointer"
+            style={{ transform: 'scale(0.5)' }}
+          />
+        </div>
+
+        {/* Refresh Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleRefresh}
+          disabled={isLoadingMessages}
+          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          title="Refresh"
+        >
+          <RefreshCw size={16} className={isLoadingMessages ? 'animate-spin' : ''} />
+        </Button>
+
+        {/* Action Buttons - Only show when messages are selected */}
+        {selectedCount > 0 && (
+          <>
+            <div className="w-px h-6 bg-[var(--border-default)] mx-1" />
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleArchive}
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Archive"
+            >
+              <Archive size={16} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Delete"
+            >
+              <Trash2 size={16} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleMarkAsRead}
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Mark as read"
+            >
+              <MailOpen size={16} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleMarkAsUnread}
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Mark as unread"
+            >
+              <Mail size={16} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleStar}
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Add star"
+            >
+              <Star size={16} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="Snooze"
+            >
+              <Clock size={16} />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              title="More"
+            >
+              <MoreHorizontal size={16} />
+            </Button>
+
+            <div className="w-px h-6 bg-[var(--border-default)] mx-1" />
+            
+            <Text size="sm" variant="secondary">
+              {selectedCount} selected
+            </Text>
+          </>
+        )}
+      </div>
+
+      {/* Right Side - Pagination */}
+      <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+        <Text size="sm" variant="secondary">
+          {(() => {
+            if (messages.length === 0) {
+              return `0-0 of ${totalMessages}`;
+            }
+            
+            const start = messagesLoadedSoFar + 1;
+            const end = messagesLoadedSoFar + messages.length;
+            
+            // Use unread count if available, otherwise fall back to total messages
+            const displayTotal = totalUnreadMessages > 0 ? totalUnreadMessages : totalMessages;
+            const safeTotal = typeof displayTotal === 'number' && !isNaN(displayTotal) && displayTotal > 0 
+              ? displayTotal 
+              : (nextPageToken ? `${end}+` : end);
+            
+            console.log(`📄 [TOOLBAR] PAGINATION DISPLAY - START: ${start}, END: ${end}, TOTAL: ${safeTotal}`, {
+              start,
+              end,
+              totalMessages,
+              totalUnreadMessages,
+              messagesLoadedSoFar,
+              currentPageMessages: messages.length,
+              displayTotal,
+              safeTotal
+            });
+            
+            return `${start}-${end} of ${safeTotal}`;
+          })()}
+        </Text>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handlePreviousPage}
+          disabled={messagesLoadedSoFar === 0 || isLoadingMessages}
+          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Previous page"
+        >
+          <ChevronLeft size={16} />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleNextPage}
+          disabled={!nextPageToken || isLoadingMessages}
+          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Next page"
+        >
+          <ChevronRight size={16} />
+        </Button>
+      </div>
+    </div>
+  );
+} 
+
+================================================================
+FILE: src/app/pages/Mail.tsx
+================================================================
+// ... existing code ...
+
+================================================================
+FILE: src/features/mail/components/MessageList.tsx
+================================================================
+// ... existing code ...
+
+================================================================
+FILE: src/features/mail/components/ThreadedMessageList.tsx
+================================================================
+// ... existing code ...
+
+================================================================
+FILE: src/features/mail/types/index.ts
+================================================================
+// ... existing code ...
+
+================================================================
+ANALYSIS SUMMARY
+================================================================
+
+## PAGINATION LOGIC FLOW
+1. MailToolbar displays: `${messagesLoadedSoFar + 1}-${messagesLoadedSoFar + messages.length} of ${total}`
+2. nextPage() sets: messagesLoadedSoFar = pageTokens.length * currentPageSize (50)
+3. fetchMessages() was previously overriding messagesLoadedSoFar (now disabled)
+
+## POTENTIAL ISSUES IDENTIFIED
+1. messagesLoadedSoFar may not be updating correctly during navigation
+2. Token stack (pageTokens) may have inconsistent state
+3. Total count calculation using wrong source (unread vs total)
+4. State persistence/hydration issues
+
+## DEBUGGING RECOMMENDATIONS
+1. Check console logs for pagination state changes
+2. Verify messagesLoadedSoFar value on page navigation
+3. Inspect pageTokens array length and contents
+4. Validate totalMessages and totalUnreadMessages values
+5. Test with resetPagination() on refresh
+
+## CONCLUSION
+The code structure appears correct but messagesLoadedSoFar is not properly updating on page 2.
+The issue likely lies in the state management between nextPage/prevPage and the store updates. 
+
+=== FINAL TECHNICAL ANALYSIS ===
+
+## ROOT CAUSE HYPOTHESIS
+
+Based on the code analysis, the most likely issues are:
+
+1. **State Update Race Condition**: The nextPage() method updates messagesLoadedSoFar BEFORE the actual API call, but if there's an async issue or state batching, the UI might not reflect the update.
+
+2. **Zustand State Batching**: Multiple setState calls in quick succession might be batched, causing intermediate values to be lost.
+
+3. **Store Subscription Issues**: The MailToolbar component may not be properly subscribed to messagesLoadedSoFar changes.
+
+4. **Token Stack Corruption**: The pageTokens array may not be properly maintained, causing incorrect messagesLoadedSoFar calculations.
+
+## DEBUGGING STEPS NEEDED
+
+1. Add explicit state logging in nextPage() AFTER state update
+2. Verify MailToolbar re-renders when messagesLoadedSoFar changes  
+3. Check if messagesLoadedSoFar value persists between page navigations
+4. Inspect the actual pageTokens array contents in console
+5. Test if the issue occurs in both threaded and non-threaded views
+
+## RECOMMENDED FIXES
+
+1. **Immediate logging**: Add console.log in MailToolbar render to show messagesLoadedSoFar value
+2. **State verification**: Add useEffect in MailToolbar to log when messagesLoadedSoFar changes
+3. **Atomic updates**: Ensure nextPage/prevPage state updates are atomic and don't conflict
+4. **Reset mechanism**: Use resetPagination() to clear corrupted state
+
+## FILES TO MONITOR
+
+- MailToolbar.tsx (pagination display)
+- mailStore.ts (nextPage/prevPage methods)
+- Browser console logs (state updates)
+
+The issue is definitely in the state management between navigation and display, not in duplicate components or calculation logic.
