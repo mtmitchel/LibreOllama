@@ -1,27 +1,26 @@
-export interface Block {
-  id: string;
-  type: 'text' | 'heading1' | 'heading2' | 'heading3' | 'list' | 'quote' | 'code' | 'divider';
-  content: string;
-  metadata?: Record<string, any>;
+export interface NoteMetadata {
+  createdAt: string;
+  updatedAt: string;
+  status: 'draft' | 'active' | 'archived' | 'published';
 }
 
 export interface Note {
   id: string;
   title: string;
-  folderId: string;
-  blocks: Block[];
-  metadata?: {
-    status?: 'draft' | 'active' | 'archived' | 'published';
-    tags?: string[];
-    createdAt?: string;
-    updatedAt?: string;
-  };
+  folderId: string | null;
+  content: string; // HTML from Tiptap
+  metadata: NoteMetadata;
+}
+
+export interface FolderMetadata {
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Folder {
   id: string;
   name: string;
-  parentId?: string;
-  notes: Note[];
-  children?: Folder[];
+  parentId: string | null;
+  children: Folder[];
+  metadata: FolderMetadata;
 } 

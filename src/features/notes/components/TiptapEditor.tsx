@@ -7,6 +7,9 @@ import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
 import Typography from '@tiptap/extension-typography';
 import Placeholder from '@tiptap/extension-placeholder';
+import Image from '@tiptap/extension-image';
+import ImageResize from 'tiptap-extension-resize-image';
+import { Image as ImageIcon } from 'lucide-react';
 import { TiptapFixedToolbar } from './TiptapFixedToolbar';
 import { createSlashCommandExtension } from './TiptapSlashExtension';
 
@@ -17,6 +20,8 @@ interface TiptapEditorProps {
   placeholder?: string;
   readOnly?: boolean;
   className?: string;
+  selectedNote?: any;
+  onDeleteNote?: () => void;
 }
 
 // Default content with examples
@@ -45,11 +50,69 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
   onChange,
   placeholder = 'Start writing...',
   readOnly = false,
-  className = ''
+  className = '',
+  selectedNote,
+  onDeleteNote
 }) => {
   const [editorContent, setEditorContent] = useState<string>(
     value || initialValue || DEFAULT_CONTENT
   );
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Image upload function
+  const handleImageUpload = (file: File) => {
+    // Check file size (limit to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image size must be less than 10MB');
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      if (src && editor) {
+        editor.chain().focus().setImage({ src }).run();
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragOver) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set isDragOver to false if we're leaving the main container
+    if (e.currentTarget === e.target) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length > 0) {
+      imageFiles.forEach(file => handleImageUpload(file));
+    }
+  };
 
   const editor = useEditor({
     extensions: [
@@ -134,6 +197,35 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
         placeholder,
         emptyEditorClass: 'tiptap-empty',
       }),
+      Image.configure({
+        HTMLAttributes: {
+          class: 'tiptap-image',
+        },
+        inline: false,
+        allowBase64: true,
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            width: {
+              default: null,
+              parseHTML: element => element.getAttribute('width'),
+              renderHTML: attributes => {
+                if (!attributes.width) return {};
+                return { width: attributes.width };
+              },
+            },
+            style: {
+              default: null,
+              parseHTML: element => element.getAttribute('style'),
+              renderHTML: attributes => {
+                if (!attributes.style) return {};
+                return { style: attributes.style };
+              },
+            },
+          };
+        },
+      }),
+      ImageResize,
       createSlashCommandExtension(),
     ],
     content: editorContent,
@@ -153,19 +245,25 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
   // Update editor content when value prop changes
   useEffect(() => {
     if (value !== undefined && value !== editorContent && editor) {
+      console.log('Updating editor content from:', editorContent, 'to:', value);
       editor.commands.setContent(value);
       setEditorContent(value);
     }
-  }, [value, editor, editorContent]);
+  }, [value, editor]);
 
   if (!editor) {
     return <div className="p-6 text-gray-500">Loading editor...</div>;
   }
 
   return (
-    <div className={`h-full flex flex-col ${className}`}>
+    <div
+      className={`h-full flex flex-col ${className}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Fixed Toolbar */}
-      <TiptapFixedToolbar editor={editor} />
+      <TiptapFixedToolbar editor={editor} selectedNote={selectedNote} onDeleteNote={onDeleteNote} />
       
       {/* Editor Container */}
       <div className="flex-1 overflow-auto relative">
@@ -174,6 +272,17 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
             editor={editor}
             className="h-full focus:outline-none"
           />
+          
+          {/* Drag and Drop Overlay */}
+          {isDragOver && (
+            <div className="absolute inset-0 bg-blue-50 bg-opacity-90 border-2 border-dashed border-blue-300 rounded-lg flex items-center justify-center z-10">
+              <div className="text-center">
+                <ImageIcon className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+                <p className="text-lg font-medium text-blue-700">Drop images here to upload</p>
+                <p className="text-sm text-blue-600">Supports JPG, PNG, GIF, WebP (max 10MB)</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       
@@ -259,8 +368,128 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
           padding-left: 1.5rem;
         }
         
+        .tiptap-bullet-list {
+          list-style-type: disc;
+        }
+        
+        .tiptap-ordered-list {
+          list-style-type: decimal;
+        }
+        
         .tiptap-list-item {
           margin: 0.375rem 0;
+          display: list-item;
+        }
+        
+        /* Ensure lists show markers inside prose */
+        .prose .tiptap-bullet-list {
+          list-style-type: disc;
+          list-style-position: outside;
+        }
+        
+        .prose .tiptap-ordered-list {
+          list-style-type: decimal;
+          list-style-position: outside;
+        }
+        
+        .prose .tiptap-list-item {
+          display: list-item;
+          margin-top: 0.375rem;
+          margin-bottom: 0.375rem;
+        }
+        
+        /* Override any prose reset */
+        .prose ul[class*='tiptap-bullet-list'] {
+          list-style-type: disc !important;
+        }
+        
+        .prose ol[class*='tiptap-ordered-list'] {
+          list-style-type: decimal !important;
+        }
+        
+        .prose li[class*='tiptap-list-item'] {
+          display: list-item !important;
+        }
+        
+        .tiptap-image {
+          height: auto;
+          border-radius: 0.5rem;
+          margin: 1.5rem auto;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          cursor: pointer;
+          transition: all 0.2s ease-in-out;
+          display: block;
+        }
+        
+        .tiptap-image:hover {
+          transform: scale(1.01);
+          box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.15), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tiptap-image.ProseMirror-selectednode {
+          outline: 3px solid #3b82f6;
+          outline-offset: 2px;
+          box-shadow: 0 8px 12px -2px rgba(59, 130, 246, 0.25), 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Image size classes */
+        .tiptap-image-small {
+          width: 25%;
+          max-width: 200px;
+        }
+        
+        .tiptap-image-medium {
+          width: 50%;
+          max-width: 400px;
+        }
+        
+        .tiptap-image-large {
+          width: 75%;
+          max-width: 600px;
+        }
+        
+        .tiptap-image-full {
+          width: 100%;
+        }
+        
+        /* Resize handles for selected images */
+        .tiptap-image.ProseMirror-selectednode {
+          position: relative;
+        }
+        
+        .tiptap-image.ProseMirror-selectednode::after {
+          content: '';
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
+          width: 12px;
+          height: 12px;
+          background: #3b82f6;
+          border: 2px solid white;
+          border-radius: 50%;
+          cursor: nw-resize;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Image upload area styling */
+        .image-upload-area {
+          border: 2px dashed #cbd5e1;
+          border-radius: 0.5rem;
+          padding: 2rem;
+          text-align: center;
+          margin: 1rem 0;
+          transition: border-color 0.2s ease;
+          cursor: pointer;
+        }
+        
+        .image-upload-area:hover {
+          border-color: #3b82f6;
+          background-color: #f8fafc;
+        }
+        
+        .image-upload-area.dragover {
+          border-color: #3b82f6;
+          background-color: #dbeafe;
         }
         
         .tiptap-bold {

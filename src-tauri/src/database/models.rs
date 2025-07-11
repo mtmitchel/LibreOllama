@@ -164,7 +164,7 @@ impl ConversationContext {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Folder {
     pub id: i32,
-    pub folder_name: String,
+    pub name: String,  // Changed from folder_name to name
     pub parent_id: Option<i32>,
     pub user_id: String,
     pub color: Option<String>,
@@ -177,7 +177,7 @@ impl Folder {
         let now = Local::now().naive_local();
         Self {
             id: 0, // Placeholder
-            folder_name: name,
+            name,  // Changed from folder_name to name
             parent_id,
             user_id,
             color,
@@ -220,7 +220,7 @@ pub struct Note {
     pub title: String,
     pub content: String,
     pub user_id: String,
-    pub tags: Vec<String>,
+    pub folder_id: Option<i32>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }

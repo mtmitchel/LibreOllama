@@ -1,237 +1,379 @@
 # LibreOllama Implementation Guide
 
-**Purpose**: Practical development guide for working with LibreOllama systems
+## Overview
+This guide provides comprehensive implementation patterns, testing strategies, and architectural decisions for the LibreOllama project.
 
-## Canvas Development
+## Architecture Overview
 
-### Architecture Overview
-The canvas uses a unified store pattern with React Konva for rendering:
+### Frontend Architecture
+- **React + TypeScript**: Modern component-based UI
+- **Zustand**: State management with devtools integration
+- **Tauri**: Desktop application framework
+- **Vite**: Build tool and development server
 
-```typescript
-// Store usage pattern
-const elements = useUnifiedCanvasStore(state => state.elements);
-const selectedTool = useUnifiedCanvasStore(state => state.selectedTool);
-```
+### Backend Architecture
+- **Rust + Tauri**: Native desktop backend
+- **SQLite**: Local database with migrations
+- **Service Layer**: Command handlers for frontend integration
 
-### Key Components
-- **Store**: `src/features/canvas/stores/unifiedCanvasStore.ts`
-- **Event Handler**: `src/features/canvas/components/UnifiedEventHandler.tsx`
-- **Layer Manager**: `src/features/canvas/layers/CanvasLayerManager.tsx`
-- **Tools**: `src/features/canvas/tools/` (creation, drawing, selection)
+## Feature Implementation Patterns
 
-### Development Patterns
+### Notes Feature Implementation
 
-**Element Creation**:
-```typescript
-// Use discriminated unions with type guards
-const isTextElement = (element: CanvasElement): element is TextElement => 
-  element.type === 'text'
+#### Critical Database Integration Requirements
 
-// Use branded types for IDs
-type ElementId = string & { __brand: 'ElementId' }
-```
+**LESSON LEARNED**: Always validate database schema matches service expectations before writing tests.
 
-**Store Updates**:
-```typescript
-// Always use Immer patterns
-set(produce((state) => {
-  state.elements[id] = updatedElement
-}))
-```
+The Notes feature revealed critical gaps in database integration testing:
 
-**Testing**:
-- Use store-first testing approach
-- Avoid UI rendering tests for performance
-- Test with real store instances, not mocks
+1. **Database Schema Validation**:
+   - Frontend service expected `name` column, database had `folder_name`
+   - Frontend expected string IDs, database returns integer IDs
+   - Frontend expected array tags, database stores comma-separated strings
 
-### Performance Considerations
-- Viewport culling is implemented
-- Use granular selectors to minimize re-renders
-- Monitor memory usage with built-in tools
-- Use React.memo for heavy components
-
-## Gmail Integration
-
-### Architecture
-- Backend services handle all API interactions
-- Frontend uses Tauri commands for Gmail operations
-- OAuth handled securely in backend only
-- OS keyring for token storage
-
-### Key Files
-- **Backend Services**: `src-tauri/src/services/gmail/`
-- **Frontend Service**: `src/features/mail/services/gmailTauriService.ts`
-- **Store**: `src/features/mail/stores/mailStore.ts`
-- **Types**: `src/features/mail/types/index.ts`
-
-### Setup Requirements
-1. Create `src-tauri/.env` file with OAuth credentials:
-   ```
-   GMAIL_CLIENT_ID=your_client_id
-   GMAIL_CLIENT_SECRET=your_client_secret
+2. **Data Transformation Layer**:
+   ```typescript
+   // CORRECT: Transform database types to frontend types
+   function folderResponseToFolder(response: FolderResponse): Folder {
+     return {
+       id: response.id.toString(),        // Convert number to string
+       name: response.folder_name,        // Map database column name
+       parentId: response.parent_id?.toString(),
+       color: response.color || undefined,
+       // ... rest of transformation
+     };
+   }
    ```
 
-2. Google Cloud Console configuration:
-   - Enable Gmail API
-   - Create OAuth 2.0 credentials
-   - Configure OAuth consent screen
-   - Set redirect URI: `http://localhost:1423/auth/gmail/callback`
+3. **Service Interface Alignment**:
+   ```typescript
+   // CORRECT: Match exact database schema
+   export interface CreateFolderRequest {
+     folder_name: string;  // Use exact database column name
+     parent_id?: number;   // Use exact database type
+     user_id: string;
+     color?: string;
+   }
+   ```
 
-### Development Patterns
+#### Service Layer Architecture
 
-**Service Usage**:
+**Service Pattern**:
 ```typescript
-// Use Tauri commands for Gmail operations
-const result = await invoke('get_gmail_labels', { accountId });
-```
+// Individual service functions
+export async function createNote(
+  title: string,
+  content: string = '',
+  tags: string[] = [],
+  userId: string = 'default_user'
+): Promise<{
+  success: boolean;
+  note?: Note;
+  error?: string;
+}> {
+  try {
+    const response = await invoke<NoteResponse>('create_note', {
+      note: { title, content, user_id: userId, tags }
+    });
+    
+    const note = noteResponseToNote(response);
+    return { success: true, note };
+  } catch (error) {
+    return handleServiceError(error, 'createNote');
+  }
+}
 
-**Error Handling**:
-```typescript
-// Comprehensive error handling
-try {
-  await gmailTauriService.getMessages();
-} catch (error) {
-  const handledError = handleGmailError(error, { operation: 'fetch_messages' });
+// Singleton service class
+class NotesService {
+  private static instance: NotesService;
+  private userId: string = 'default_user';
+
+  static getInstance(): NotesService {
+    if (!NotesService.instance) {
+      NotesService.instance = new NotesService();
+    }
+    return NotesService.instance;
+  }
+
+  async createNote(title: string, content: string = '', tags: string[] = []): Promise<Note | null> {
+    const result = await createNote(title, content, tags, this.userId);
+    return result.success ? result.note || null : null;
+  }
 }
 ```
 
-### Testing
-- Backend: `cd src-tauri && cargo test --lib`
-- Integration tests cover full OAuth flow
-- UI tests focus on user interactions
+#### Store Implementation with Validation
 
-## Calendar & Tasks Integration
-
-### Architecture
-- Real Google API integration with mock fallbacks
-- Store-based state management with Zustand
-- Multi-account support built-in
-
-### Key Files
-- **Services**: `src/services/google/googleCalendarService.ts`, `src/services/google/googleTasksService.ts`
-- **Store**: `src/stores/googleStore.ts`
-- **Types**: `src/types/google.ts`
-- **Pages**: `src/app/pages/Calendar.tsx`, `src/app/pages/Tasks.tsx`
-
-### Development Patterns
-
-**Service Usage**:
+**Enhanced Store Pattern**:
 ```typescript
-// Calendar events
-const events = await googleCalendarService.getEvents(account);
+export const useNotesStore = create<NotesStore>()(
+  devtools(
+    (set, get) => ({
+      // State with proper error tracking
+      error: undefined,
+      lastError: undefined,
+      
+      createNote: async (title, folderId = 'default', content = '', tags = []) => {
+        try {
+          // Validate input data BEFORE service call
+          const validation = validateNoteData(title, content);
+          if (!validation.isValid) {
+            const error = validation.error || 'Invalid note data';
+            set({ 
+              error,
+              lastError: {
+                operation: 'createNote',
+                timestamp: Date.now(),
+                details: error
+              }
+            });
+            return null;
+          }
 
-// Tasks management
-const tasks = await googleTasksService.getTasks(account, taskListId);
+          set({ isSyncing: true, error: undefined });
+          
+          const note = await notesService.createNote(title, content, tags);
+          
+          if (note) {
+            set(state => ({
+              notes: [...state.notes, note],
+              selectedNote: note,
+              isSyncing: false
+            }));
+            return note;
+          } else {
+            throw new Error('Failed to create note');
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to create note';
+          set({ 
+            isSyncing: false, 
+            error: errorMessage,
+            lastError: {
+              operation: 'createNote',
+              timestamp: Date.now(),
+              details: errorMessage
+            }
+          });
+          return null;
+        }
+      }
+    })
+  )
+);
 ```
-
-**Store Integration**:
-```typescript
-// Use store actions for state updates
-const { fetchCalendarEvents, fetchTaskLists } = useGoogleStore();
-```
-
-### Setup Requirements
-1. Google Cloud Console setup similar to Gmail
-2. Enable Calendar API and Tasks API
-3. Configure OAuth scopes for calendar and tasks access
-
-## Backend Development
-
-### Architecture
-- Service-oriented architecture with domain separation
-- Rate limiting integrated with all API calls
-- Database integration with SQLite
-- Proper error handling and logging
-
-### Key Patterns
-
-**Service Creation**:
-```rust
-// Service with proper dependency injection
-pub struct GmailApiService {
-    auth_service: Arc<GmailAuthService>,
-    db_manager: Arc<DatabaseManager>,
-    rate_limiter: Arc<Mutex<RateLimiter>>,
-}
-```
-
-**Command Implementation**:
-```rust
-// Tauri command with proper error handling
-#[tauri::command]
-pub async fn get_gmail_labels(account_id: String) -> Result<Vec<Label>, String> {
-    // Implementation with rate limiting and error handling
-}
-```
-
-### Testing
-- Use `cargo test --lib` for backend tests
-- Integration tests cover full service chains
-- Mock external API calls appropriately
-
-## Common Development Tasks
-
-### Adding New Canvas Tool
-1. Create tool component in `src/features/canvas/tools/`
-2. Add tool state to unified store
-3. Implement tool selection logic
-4. Add to toolbar UI
-5. Add tests using store-first approach
-
-### Adding New Gmail Feature
-1. Implement backend service method
-2. Add Tauri command
-3. Update frontend service to use command
-4. Add to UI components
-5. Test OAuth flow integration
-
-### Adding New Calendar/Tasks Feature
-1. Extend Google service with new API calls
-2. Update TypeScript types
-3. Add store actions
-4. Implement UI components
-5. Test with real and mock services
-
-## Troubleshooting
-
-### Canvas Issues
-- Check unified store connections
-- Verify event handler setup
-- Review React Konva patterns
-- Use performance monitoring tools
-
-### Gmail Issues
-- Verify OAuth environment variables
-- Check OS keyring access
-- Review rate limiting configuration
-- Test with minimal scopes first
-
-### Calendar/Tasks Issues
-- Ensure Google API credentials are configured
-- Check scope permissions
-- Verify account authentication
-- Test with mock services first
 
 ## Testing Strategy
 
-### Canvas Testing
-- Store-first testing for performance
-- Integration tests for user workflows
-- Avoid UI rendering tests
-- Focus on business logic validation
+### Critical Testing Lessons Learned
 
-### Gmail Testing
-- Backend integration tests
-- OAuth flow testing
-- Error scenario coverage
-- Performance under load
+**MAJOR ISSUE**: Tests were mocking the wrong layer, creating false confidence while missing database integration failures.
 
-### Calendar/Tasks Testing
-- API integration tests
-- Multi-account scenarios
-- Real vs mock service testing
-- UI interaction testing
+#### Test Layer Strategy
+
+1. **Unit Tests** (Service Layer):
+   ```typescript
+   // Mock Tauri invoke calls
+   vi.mock('@tauri-apps/api/tauri', () => ({
+     invoke: vi.fn()
+   }));
+   
+   // Test service functions with mocked responses
+   it('should create note with valid data', async () => {
+     const mockResponse = {
+       id: 1,
+       title: 'Test Note',
+       content: 'Test content',
+       user_id: 'test_user',
+       tags: null,
+       created_at: '2024-01-01T00:00:00Z',
+       updated_at: '2024-01-01T00:00:00Z'
+     };
+     
+     vi.mocked(invoke).mockResolvedValueOnce(mockResponse);
+     
+     const result = await createNote('Test Note', 'Test content');
+     
+     expect(result.success).toBe(true);
+     expect(result.note?.title).toBe('Test Note');
+   });
+   ```
+
+2. **Integration Tests** (Database Schema):
+   ```typescript
+   // Test actual database integration
+   it('should handle real database schema', async () => {
+     // This test would fail if schema doesn't match
+     const result = await notesService.createNote('Test', 'Content');
+     expect(result).toBeTruthy();
+   });
+   ```
+
+3. **Component Tests** (Store Integration):
+   ```typescript
+   // Test store with real service calls
+   it('should create note through store', async () => {
+     const { result } = renderHook(() => useNotesStore());
+     
+     await act(async () => {
+       const note = await result.current.createNote('Test Note');
+       expect(note).toBeTruthy();
+     });
+   });
+   ```
+
+#### Test Patterns to Avoid
+
+**ANTI-PATTERN**: Mocking service calls in integration tests
+```typescript
+// BAD: This creates false confidence
+vi.mock('../services/notesService', () => ({
+  notesService: {
+    createNote: vi.fn().mockResolvedValue(mockNote)
+  }
+}));
+```
+
+**CORRECT PATTERN**: Test real service integration
+```typescript
+// GOOD: Test actual service behavior
+it('should handle service errors gracefully', async () => {
+  // Test with real service that might fail
+  const result = await notesService.createNote('', ''); // Invalid data
+  expect(result).toBeNull();
+});
+```
+
+### Testing Documentation Requirements
+
+1. **Database Schema Tests**: Verify frontend service matches backend schema
+2. **Data Transformation Tests**: Ensure proper type conversions
+3. **Error Handling Tests**: Validate graceful failure modes
+4. **Validation Tests**: Test input validation before service calls
+
+## Development Workflow
+
+### Pre-Implementation Checklist
+
+1. **Database Schema Review**:
+   - [ ] Verify column names match service expectations
+   - [ ] Confirm data types align (INTEGER vs STRING)
+   - [ ] Check nullable constraints
+   - [ ] Validate foreign key relationships
+
+2. **Service Layer Design**:
+   - [ ] Define clear interfaces for requests/responses
+   - [ ] Implement data transformation functions
+   - [ ] Add comprehensive error handling
+   - [ ] Include input validation
+
+3. **Store Implementation**:
+   - [ ] Add proper error state management
+   - [ ] Implement validation before service calls
+   - [ ] Handle loading states appropriately
+   - [ ] Include optimistic updates where appropriate
+
+4. **Testing Strategy**:
+   - [ ] Write unit tests for service functions
+   - [ ] Create integration tests for database schema
+   - [ ] Test error handling and edge cases
+   - [ ] Validate store state management
+
+### Code Quality Standards
+
+1. **Error Handling**:
+   ```typescript
+   // Always return structured error responses
+   return {
+     success: false,
+     error: error instanceof Error ? error.message : 'Unknown error'
+   };
+   ```
+
+2. **Input Validation**:
+   ```typescript
+   // Validate before service calls
+   const validation = validateNoteData(title, content);
+   if (!validation.isValid) {
+     return { success: false, error: validation.error };
+   }
+   ```
+
+3. **Type Safety**:
+   ```typescript
+   // Use exact database types
+   export interface NoteResponse {
+     id: number;         // Match database INTEGER
+     title: string;      // Match database TEXT
+     content: string;    // Match database TEXT
+     user_id: string;    // Match database TEXT
+     tags: string | null; // Match database TEXT (nullable)
+     created_at: string; // Match database DATETIME
+     updated_at: string; // Match database DATETIME
+   }
+   ```
+
+## Production Readiness Checklist
+
+### Database Integration
+- [ ] Schema matches service expectations exactly
+- [ ] Data transformations handle all type conversions
+- [ ] Error handling covers database constraint violations
+- [ ] Migrations are properly versioned
+
+### Service Layer
+- [ ] All service functions have comprehensive error handling
+- [ ] Input validation prevents invalid database operations
+- [ ] Response transformations match frontend expectations
+- [ ] Logging provides sufficient debugging information
+
+### Store Management
+- [ ] Error states are properly managed and displayed
+- [ ] Loading states provide user feedback
+- [ ] Optimistic updates have rollback mechanisms
+- [ ] State persistence works correctly
+
+### Testing Coverage
+- [ ] Unit tests cover all service functions
+- [ ] Integration tests verify database schema compatibility
+- [ ] Component tests validate store interactions
+- [ ] Error scenarios are thoroughly tested
+
+## Common Pitfalls and Solutions
+
+### Database Schema Mismatches
+**Problem**: Frontend service expects different column names/types than database
+**Solution**: Always verify schema before writing service code
+
+### False Test Confidence
+**Problem**: Tests mock the wrong layer, missing real integration issues
+**Solution**: Test actual service calls with real database constraints
+
+### Error Handling Gaps
+**Problem**: Services don't handle database errors gracefully
+**Solution**: Implement comprehensive error handling with user-friendly messages
+
+### Type Conversion Issues
+**Problem**: Frontend expects strings but database returns numbers
+**Solution**: Implement explicit data transformation functions
+
+## Performance Considerations
+
+### Database Queries
+- Use indexed columns for frequent queries
+- Implement pagination for large result sets
+- Cache frequently accessed data appropriately
+
+### State Management
+- Use selectors to prevent unnecessary re-renders
+- Implement optimistic updates for better UX
+- Debounce search operations
+
+### Error Recovery
+- Implement retry mechanisms for transient failures
+- Provide clear error messages to users
+- Log errors for debugging without exposing sensitive data
 
 ---
 
-This guide focuses on practical implementation patterns and common development tasks. Refer to PROJECT_STATUS.md for current implementation status and known issues. 
+This guide should be updated as new patterns emerge and lessons are learned from production usage. 

@@ -1,4 +1,4 @@
-**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
+**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT DELETE IT.**
 
 # Settings Roadmap
 
@@ -45,19 +45,19 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### High Priority / Known Issues
 
-- [x] **Critical Integration Gap:** Settings page exists but doesn't control app behavior - no global settings store or context. *(Resolved)*
-- [x] **Theme Toggle Disconnect:** TopBar theme toggle and Settings Appearance section are not connected. *(Resolved)*
-- [x] **Ollama Configuration Isolation:** Settings Ollama config doesn't connect to Chat system. *(Resolved)*
-- [x] **No Settings Persistence:** Settings reset on page refresh - no localStorage or backend persistence. *(Resolved)*
+- [ ] **Settings Integration:** Settings page exists but needs to control actual app behavior - requires global settings store or context.
+- [ ] **Theme Toggle Connection:** TopBar theme toggle and Settings Appearance section need to be connected.
+- [ ] **Ollama Configuration:** Settings Ollama config needs to connect to Chat system.
+- [ ] **Settings Persistence:** Settings reset on page refresh - need localStorage or backend persistence.
 
 ### MVP Must-Haves
 
 - [x] **Settings UI:** Complete settings interface with sidebar navigation. *(Existing)*
 - [x] **General Preferences:** Basic application startup and regional settings. *(Existing)*
 - [x] **Ollama Configuration:** Local AI model server configuration. *(Existing)*
-- [x] **Global Settings Store:** Create unified settings store that other components can access. *(Completed)*
-- [x] **Settings-App Integration:** Connect Settings to actual app behavior (theme, startup view, Ollama endpoint). *(Completed)*
-- [x] **Settings Persistence:** Save settings to localStorage with automatic restoration on app start. *(Completed)*
+- [ ] **Global Settings Store:** Create unified settings store that other components can access.
+- [ ] **Settings-App Integration:** Connect Settings to actual app behavior (theme, startup view, Ollama endpoint).
+- [ ] **Settings Persistence:** Save settings to localStorage with automatic restoration on app start.
 
 ### Post-MVP Enhancements
 

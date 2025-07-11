@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+import ReactDOM from 'react-dom';
+import { ChevronRight } from 'lucide-react';
 
 // 1. Create Context
 interface DropdownMenuContextProps {
@@ -170,23 +172,100 @@ interface DropdownMenuContentProps {
 }
 
 const DropdownMenuContent = ({ children, className = '' }: DropdownMenuContentProps) => {
-  const { isOpen, menuRef } = useDropdownMenu();
+  const { isOpen, menuRef, triggerRef } = useDropdownMenu();
+  const [style, setStyle] = useState<React.CSSProperties>({});
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setStyle({
+        position: 'fixed',
+        top: `${rect.bottom + 4}px`, // Add some space
+        left: `${rect.left}px`,
+        minWidth: `${rect.width}px`,
+      });
+    }
+  }, [isOpen, triggerRef]);
 
   if (!isOpen) return null;
 
-  return (
+  return ReactDOM.createPortal(
     <div
       ref={menuRef}
+      style={style}
       role="menu"
-      className={`absolute right-0 top-full mt-1 min-w-[160px] bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 ${className}`}
+      className={`bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}
-    </div>
+    </div>,
+    document.body
   );
 };
 
-// 5. Item Component
+// 6. Sub-menu Components
+const SubMenuContext = createContext<{
+  isSubMenuOpen: boolean;
+  setIsSubMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+} | null>(null);
+
+function DropdownMenuSub({ children }: { children: React.ReactNode }) {
+    const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    return (
+        <SubMenuContext.Provider value={{ isSubMenuOpen, setIsSubMenuOpen, triggerRef }}>
+            <div className="relative" onMouseLeave={() => setIsSubMenuOpen(false)}>
+                {children}
+            </div>
+        </SubMenuContext.Provider>
+    );
+}
+
+const DropdownMenuSubTrigger = ({ children, className, ...props }: DropdownMenuItemProps) => {
+    const { setIsSubMenuOpen, triggerRef } = useContext(SubMenuContext)!;
+    return (
+        <button
+            ref={triggerRef}
+            onMouseEnter={() => setIsSubMenuOpen(true)}
+            className={`w-full px-3 py-2 text-left text-sm transition-colors flex justify-between items-center text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] rounded-sm ${className}`}
+            {...props}
+        >
+            {children}
+            <ChevronRight size={16} />
+        </button>
+    );
+};
+
+const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProps) => {
+    const { isSubMenuOpen, triggerRef } = useContext(SubMenuContext)!;
+    const [style, setStyle] = useState<React.CSSProperties>({});
+
+    useEffect(() => {
+      if (isSubMenuOpen && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setStyle({
+            position: 'fixed',
+            top: `${rect.top}px`,
+            left: `${rect.right + 4}px`,
+        });
+      }
+    }, [isSubMenuOpen, triggerRef]);
+
+    if (!isSubMenuOpen) return null;
+    return ReactDOM.createPortal(
+        <div
+            style={style}
+            className={`min-w-[160px] bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 ${className}`}
+        >
+            {children}
+        </div>,
+        document.body
+    );
+};
+
+
+// 7. Item Component
 interface DropdownMenuItemProps {
   children: React.ReactNode;
   onSelect?: () => void;
@@ -258,25 +337,29 @@ const DropdownMenuItem = ({
 
 // 6. Separator Component
 const DropdownMenuSeparator = () => {
-  return <hr className="my-1 border-t border-[var(--border-default)]" role="separator" />;
+  return <div className="h-px my-1 bg-[var(--border-default)]" />;
 };
 
-// Reset item counter when menu unmounts
-const originalDropdownMenu = DropdownMenu;
+// 7. Compound Component
 const WrappedDropdownMenu = (props: { children: React.ReactNode }) => {
-  useEffect(() => {
-    return () => {
-      itemCounter = 0;
-    };
-  }, []);
-  
-  return originalDropdownMenu(props);
+  return <DropdownMenu {...props} />;
 };
 
-// Attach sub-components
 WrappedDropdownMenu.Trigger = DropdownMenuTrigger;
 WrappedDropdownMenu.Content = DropdownMenuContent;
 WrappedDropdownMenu.Item = DropdownMenuItem;
+WrappedDropdownMenu.Sub = DropdownMenuSub;
+WrappedDropdownMenu.SubTrigger = DropdownMenuSubTrigger;
+WrappedDropdownMenu.SubContent = DropdownMenuSubContent;
 WrappedDropdownMenu.Separator = DropdownMenuSeparator;
 
-export { WrappedDropdownMenu as DropdownMenu }; 
+export { 
+  WrappedDropdownMenu as DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSub, 
+  DropdownMenuSubTrigger, 
+  DropdownMenuSubContent, 
+  DropdownMenuSeparator 
+}; 

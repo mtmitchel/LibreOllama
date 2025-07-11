@@ -1,4 +1,4 @@
-**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
+**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT DELETE IT.**
 
 # Backend Services Roadmap
 
@@ -23,9 +23,10 @@ The backend follows a professional, service-oriented architecture with a clear s
 ### Key Implemented Features
 
 - **Gmail Integration:** A full suite of services for handling Gmail OAuth2 authentication, API interaction, and caching.
-- **Tauri Commands:** Dozens of Tauri commands are implemented in `commands/` to expose backend functionality to the frontend in a secure way.
-- **Database Operations:** A comprehensive set of database operations for managing application data.
-- **Testing:** The backend has a good testing foundation, with `40 passing tests` that cover services and integration points.
+- **Chat System:** Complete backend implementation with session management, message persistence, and database operations.
+- **Tauri Commands:** Extensive command interface with domain-grouped commands to expose backend functionality to the frontend.
+- **Database Operations:** A comprehensive set of database operations for managing application data across multiple domains.
+- **Testing:** The backend has a solid testing foundation, with **40 passing tests** that cover services, integration points, and database operations.
 
 ## Future Work & Todos
 
@@ -33,20 +34,22 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### High Priority / Known Issues
 
-- [ ] **Fix Failing Tests:** Resolve the `2 failing tests`. Based on previous reports, these are related to OAuth configuration and Gmail API scopes.
-- [ ] **Clean Up Warnings:** Eliminate the `49 compiler warnings`. These are mostly unused imports and dead code that should be easy to clean up but are important for code hygiene.
+- [ ] **Fix Failing Tests:** Resolve the **2 failing tests** related to OAuth environment configuration (`test_env_var_loading`) and Gmail scopes configuration (`test_gmail_scopes_configuration`).
+- [ ] **Clean Up Warnings:** Eliminate the **39 compiler warnings**. These are mostly unused imports and dead code that should be addressed for code hygiene.
 
 ### MVP Must-Haves
 
 - [x] **SQLite Persistence:** Use SQLite for all modules to persist user data. *(Existing)*
 - [x] **Tauri Command Interface:** A secure interface between frontend and backend. *(Existing)*
 - [x] **Secure Token Storage:** Use the OS keyring for OAuth tokens. *(Existing)*
+- [x] **Chat Backend Services:** Complete backend implementation for chat functionality. *(Existing)*
 
 ### Post-MVP Enhancements
 
 - [ ] **Background Sync:** A system for background data sync for email and calendar.
 - [ ] **WebSocket Support:** Add WebSocket support for future real-time features.
-- [ ] **Chat API:** Design and create backend services and APIs for the Chat system.
+- [ ] **Projects Backend:** Create backend services and APIs for the Projects system.
+- [ ] **Notes Backend:** Create backend services and APIs for the Notes system.
 
 ### Future Vision & "Wow" Delighters
 

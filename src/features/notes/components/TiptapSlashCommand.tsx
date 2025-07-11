@@ -128,6 +128,48 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
           editor.chain().focus().deleteRange(range).setHorizontalRule().run();
         },
       },
+      {
+        title: 'Image',
+        description: 'Upload an image',
+        icon: Image,
+        keywords: ['image', 'img', 'picture', 'photo', 'upload'],
+        command: (editor) => {
+          editor.chain().focus().deleteRange(range).run();
+          
+          // Trigger file upload
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          
+          input.onchange = (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+
+            // Check file size (limit to 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+              alert('Image size must be less than 10MB');
+              return;
+            }
+
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+              alert('Please select an image file');
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const src = e.target?.result as string;
+              if (src) {
+                editor.chain().focus().setImage({ src }).run();
+              }
+            };
+            reader.readAsDataURL(file);
+          };
+
+          input.click();
+        },
+      },
     ];
 
     // Filter items based on query

@@ -13,8 +13,7 @@ use chrono::TimeZone;
 #[derive(Debug, Deserialize)]
 pub struct CreateFolderRequest {
     pub name: String,
-    pub parent_id: Option<String>,
-    pub color: Option<String>,
+    pub parent_id: Option<i32>,
     pub user_id: String,
 }
 
@@ -42,7 +41,7 @@ impl From<Folder> for FolderResponse {
     fn from(folder: Folder) -> Self {
         Self {
             id: folder.id.to_string(),
-            name: folder.folder_name,
+            name: folder.name,  // Changed from folder.folder_name to folder.name
             parent_id: folder.parent_id.map(|id| id.to_string()),
             color: folder.color,
             user_id: folder.user_id,
@@ -55,42 +54,22 @@ impl From<Folder> for FolderResponse {
 /// Create a new folder
 #[command]
 pub async fn create_folder(
-    folder: CreateFolderRequest,
+    name: String,
+    parent_id: Option<i32>,
+    user_id: String,
     db_manager: State<'_, crate::database::DatabaseManager>,
 ) -> Result<FolderResponse, String> {
-    let parent_id = folder.parent_id.and_then(|id_str| id_str.parse::<i32>().ok());
-    
-    // Clone the values we need to use after the spawn_blocking
-    let name = folder.name.clone();
-    let user_id = folder.user_id.clone();
-    let color = folder.color.clone();
-
     let db_manager_clone = db_manager.inner().clone();
-    let created_folder_id = tokio::task::spawn_blocking(move || {
-        let conn = db_manager_clone.get_connection()?;
-        operations::folder_operations::create_folder(
-            &conn,
-            &folder.name,
-            parent_id,
-            &folder.user_id,
-            folder.color.as_deref(),
-        )
+    let created_folder = tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection().map_err(|e| e.to_string())?;
+        operations::folder_operations::create_folder(&conn, &name, parent_id, &user_id, None)
+            .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
-    .map_err(|e: anyhow::Error| e.to_string())?;
-    
-    let new_folder = Folder {
-        id: created_folder_id,
-        folder_name: name,
-        parent_id,
-        user_id,
-        color,
-        created_at: chrono::Local::now().naive_local(),
-        updated_at: chrono::Local::now().naive_local(),
-    };
+    .map_err(|e| e)?;
 
-    Ok(FolderResponse::from(new_folder))
+    Ok(FolderResponse::from(created_folder))
 }
 
 /// Get all folders for a user
@@ -101,12 +80,12 @@ pub async fn get_folders(
 ) -> Result<Vec<FolderResponse>, String> {
     let db_manager_clone = db_manager.inner().clone();
     let folders = tokio::task::spawn_blocking(move || {
-        let conn = db_manager_clone.get_connection()?;
-        operations::folder_operations::get_folders_by_user(&conn, &user_id)
+        let conn = db_manager_clone.get_connection().map_err(|e| e.to_string())?;
+        operations::folder_operations::get_folders_by_user(&conn, &user_id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
-    .map_err(|e: anyhow::Error| e.to_string())?;
+    .map_err(|e| e)?;
 
     Ok(folders.into_iter().map(FolderResponse::from).collect())
 }
@@ -121,35 +100,21 @@ pub async fn update_folder(
     let folder_id = id.parse().map_err(|_| "Invalid folder ID".to_string())?;
     let db_manager_clone = db_manager.inner().clone();
 
-    let mut existing_folder = tokio::task::spawn_blocking(move || {
-        let conn = db_manager_clone.get_connection()?;
-        operations::folder_operations::get_folder(&conn, folder_id)
+    let updated_folder = tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection().map_err(|e| e.to_string())?;
+        operations::folder_operations::update_folder(
+            &conn,
+            folder_id,
+            folder.name.as_deref(),
+            None, // parent_id update not implemented yet
+            folder.color.as_deref(),
+        ).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
-    .map_err(|e: anyhow::Error| e.to_string())?
-    .ok_or_else(|| "Folder not found".to_string())?;
-
-    if let Some(name) = folder.name { existing_folder.folder_name = name; }
-    if let Some(parent_id_str) = folder.parent_id { existing_folder.parent_id = parent_id_str.parse::<i32>().ok(); }
-    if let Some(color) = folder.color { existing_folder.color = Some(color); }
-    existing_folder.updated_at = chrono::Local::now().naive_local();
-
-    let folder_id = existing_folder.id;
-    let folder_name = existing_folder.folder_name.clone();
-    let parent_id = existing_folder.parent_id;
-    let folder_color = existing_folder.color.clone();
+    .map_err(|e| e)?;
     
-    let db_manager_clone_update = db_manager.inner().clone();
-    tokio::task::spawn_blocking(move || {
-        let conn = db_manager_clone_update.get_connection()?;
-        operations::folder_operations::update_folder(&conn, folder_id, &folder_name, parent_id, folder_color.as_deref())
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e: anyhow::Error| e.to_string())?;
-
-    Ok(FolderResponse::from(existing_folder))
+    Ok(FolderResponse::from(updated_folder))
 }
 
 /// Delete a folder
@@ -162,12 +127,12 @@ pub async fn delete_folder(
     let db_manager_clone = db_manager.inner().clone();
 
     tokio::task::spawn_blocking(move || {
-        let conn = db_manager_clone.get_connection()?;
-        operations::folder_operations::delete_folder(&conn, folder_id)
+        let conn = db_manager_clone.get_connection().map_err(|e| e.to_string())?;
+        operations::folder_operations::delete_folder(&conn, folder_id).map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())?
-    .map_err(|e: anyhow::Error| e.to_string())?;
+    .map_err(|e| e)?;
 
     Ok(())
 } 

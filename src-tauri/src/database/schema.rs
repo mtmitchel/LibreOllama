@@ -61,6 +61,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         record_migration(conn, 7)?;
     }
 
+    if current_version < 8 {
+        run_migration_v8(conn)?;
+        record_migration(conn, 8)?;
+    }
+
     Ok(())
 }
 
@@ -383,6 +388,67 @@ fn run_migration_v7(conn: &Connection) -> Result<()> {
         [],
     ).context("Failed to recreate index on chat_messages")?;
 
+    // Re-enable foreign keys
+    conn.execute("PRAGMA foreign_keys = ON", []).context("Failed to re-enable foreign keys")?;
+
+    Ok(())
+}
+
+/// Run migration v8 - Fix folders table column name and recreate notes table
+fn run_migration_v8(conn: &Connection) -> Result<()> {
+    // Temporarily disable foreign keys
+    conn.execute("PRAGMA foreign_keys = OFF", []).context("Failed to disable foreign keys")?;
+    
+    // Drop existing tables to ensure clean recreation
+    conn.execute("DROP TABLE IF EXISTS folders", []).context("Failed to drop folders table")?;
+    conn.execute("DROP TABLE IF EXISTS notes", []).context("Failed to drop notes table")?;
+    
+    // Create folders table with correct schema
+    conn.execute(
+        "CREATE TABLE folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            parent_id INTEGER,
+            user_id TEXT NOT NULL,
+            color TEXT,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            FOREIGN KEY (parent_id) REFERENCES folders(id)
+        )",
+        [],
+    ).context("Failed to create folders table")?;
+    
+    // Create notes table with proper structure
+    conn.execute(
+        "CREATE TABLE notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            folder_id INTEGER,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            FOREIGN KEY (folder_id) REFERENCES folders(id)
+        )",
+        [],
+    ).context("Failed to create notes table")?;
+    
+    // Create indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders(user_id)",
+        [],
+    ).context("Failed to create folders index")?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_folders_parent_id ON folders(parent_id)",
+        [],
+    ).context("Failed to create folders parent index")?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id)",
+        [],
+    ).context("Failed to create notes index")?;
+    
     // Re-enable foreign keys
     conn.execute("PRAGMA foreign_keys = ON", []).context("Failed to re-enable foreign keys")?;
 

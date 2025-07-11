@@ -1,4 +1,4 @@
-**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
+**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT DELETE IT.**
 
 # Calendar & Tasks Integration Roadmap
 
@@ -11,31 +11,27 @@ This document provides a comprehensive overview of the Calendar & Tasks Integrat
 
 ## Current Implementation
 
-The Calendar page is a fully functional calendar with integrated task management capabilities.
+The Calendar page provides calendar functionality with basic task management integration.
 
 ### Frontend Architecture
 
 - **Calendar View:** The `Calendar.tsx` page uses the `FullCalendar` library to display events with Day, Week, and Month view switching.
-- **Event Management:** Full CRUD operations for calendar events (create, read, update, delete) with a comprehensive event modal.
+- **Event Management:** Basic CRUD operations for calendar events (create, read, update, delete).
 - **Task Integration:** A sidebar that displays tasks from the `useKanbanStore` with column filtering and task creation capabilities.
-- **Drag-and-Drop Scheduling:** Tasks can be dragged from the sidebar onto the calendar to create scheduled events.
-- **State Management:** Uses `useGoogleCalendarStore` for calendar events and `useKanbanStore` for tasks, providing seamless integration.
+- **State Management:** Uses `useGoogleCalendarStore` for calendar events and `useKanbanStore` for tasks.
 
 ### Backend Architecture
 
-- **Mock Calendar Service:** Currently uses mock data for calendar events with full CRUD operations.
+- **Mock Calendar Service:** Currently uses mock data for calendar events with basic CRUD operations.
 - **Task Persistence:** Tasks are persisted via the `useKanbanStore` to localStorage.
-- **Event Scheduling:** Task-to-event conversion with time selection modal.
 
 ### Implemented Features
 
-- Day, Week, and Month calendar views with navigation.
-- Create, edit, and delete calendar events.
-- Task sidebar with column selector dropdown.
-- "New Task" button with full task creation modal.
-- Drag-and-drop task scheduling with time selection.
-- Event rescheduling via drag-and-drop.
-- Task completion marking from scheduled events.
+- Day, Week, and Month calendar views with navigation
+- Create, edit, and delete calendar events
+- Task sidebar with column selector dropdown
+- "New Task" button with full task creation modal
+- Basic event management interface
 
 ## Future Work & Todos
 
@@ -45,12 +41,12 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - [x] **Calendar View:** Standard Day/Week/Month views. *(Existing)*
 - [x] **Create/Edit Events:** Basic functionality to add and modify calendar events. *(Existing)*
-- [x] **Task Sidebar:** A read-only view of the task list next to the calendar. *(Existing)*
+- [x] **Task Sidebar:** A view of the task list next to the calendar. *(Existing)*
 
 ### Post-MVP Enhancements
 
-- [x] **Drag-and-Drop Scheduling:** Drag tasks from the sidebar onto the calendar to schedule them. *(Existing)*
-- [x] **Task-to-Event Modal:** A modal to confirm time/details when scheduling a task. *(Existing)*
+- [ ] **Drag-and-Drop Scheduling:** Implement drag tasks from the sidebar onto the calendar to schedule them.
+- [ ] **Task-to-Event Modal:** A modal to confirm time/details when scheduling a task.
 - [ ] **Complete from Calendar:** Mark tasks as complete directly from the calendar view.
 - [ ] **Enhanced Event Modal:** Replace the basic event creation prompt with a full-featured modal.
 - [ ] **Event Resizing:** Allow users to resize events directly on the calendar to change their duration.
@@ -71,5 +67,6 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 ### Technical Debt & Refactoring
 
 - [ ] **Google Calendar Integration:** Connect to real Google Calendar API instead of mock data.
-- [ ] **Improve Test Coverage:** Write integration tests that specifically cover the new drag-and-drop scheduling workflow.
+- [ ] **Drag-and-Drop Implementation:** Implement the core drag-and-drop scheduling workflow.
+- [ ] **Improve Test Coverage:** Write integration tests that cover the scheduling workflow.
 - [ ] **Recurring Tasks:** Add the ability to see and manage recurring tasks on the calendar. 
