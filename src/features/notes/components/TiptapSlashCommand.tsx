@@ -129,6 +129,15 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
         },
       },
       {
+        title: 'Table',
+        description: 'Create a simple table',
+        icon: Table,
+        keywords: ['table', 'grid', 'data'],
+        command: (editor) => {
+          editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        },
+      },
+      {
         title: 'Image',
         description: 'Upload an image',
         icon: Image,
@@ -216,8 +225,8 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
 
     if (filteredItems.length === 0) {
       return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[280px]">
-          <div className="text-gray-500 text-sm">
+        <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-lg p-[var(--space-4)] min-w-[280px]">
+          <div className="text-[var(--text-muted)] text-sm">
             No results for "{query}"
           </div>
         </div>
@@ -225,8 +234,8 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
     }
 
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-[280px] max-h-[300px] overflow-y-auto">
-        <div className="text-xs text-gray-500 px-2 py-1 mb-1 border-b border-gray-100">
+      <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-lg p-[var(--space-2)] min-w-[280px] max-h-[300px] overflow-y-auto">
+        <div className="text-xs text-[var(--text-muted)] px-[var(--space-2)] py-[var(--space-1)] mb-[var(--space-1)] border-b border-[var(--border-subtle)]">
           Commands {query && `matching "${query}"`}
         </div>
         
@@ -238,18 +247,18 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
             <button
               key={item.title}
               className={`
-                w-full text-left px-3 py-2 rounded-md transition-colors flex items-start gap-3
+                w-full text-left px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] transition-colors flex items-start gap-[var(--space-3)]
                 ${isSelected 
-                  ? 'bg-blue-50 border border-blue-200' 
-                  : 'hover:bg-gray-50 border border-transparent'
+                  ? 'bg-[var(--accent-ghost)] border border-[var(--accent-primary)]' 
+                  : 'hover:bg-[var(--bg-tertiary)] border border-transparent'
                 }
               `}
               onClick={() => onSelect(item)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
               <div className={`
-                p-1 rounded-md mt-0.5 flex-shrink-0
-                ${isSelected ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}
+                p-[var(--space-1)] rounded-[var(--radius-md)] mt-0.5 flex-shrink-0
+                ${isSelected ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'}
               `}>
                 <Icon className="h-4 w-4" />
               </div>
@@ -257,13 +266,13 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
               <div className="flex-1 min-w-0">
                 <div className={`
                   text-sm font-medium
-                  ${isSelected ? 'text-blue-900' : 'text-gray-900'}
+                  ${isSelected ? 'text-[var(--accent-primary)]' : 'text-[var(--text-primary)]'}
                 `}>
                   {item.title}
                 </div>
                 <div className={`
                   text-xs mt-0.5
-                  ${isSelected ? 'text-blue-700' : 'text-gray-500'}
+                  ${isSelected ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'}
                 `}>
                   {item.description}
                 </div>
@@ -272,8 +281,8 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
           );
         })}
         
-        <div className="border-t border-gray-100 mt-2 pt-2 px-2">
-          <div className="text-xs text-gray-400 flex items-center gap-4">
+        <div className="border-t border-[var(--border-subtle)] mt-[var(--space-2)] pt-[var(--space-2)] px-[var(--space-2)]">
+          <div className="text-xs text-[var(--text-muted)] flex items-center gap-[var(--space-4)]">
             <span>↑↓ Navigate</span>
             <span>↵ Select</span>
             <span>Esc Cancel</span>

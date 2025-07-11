@@ -36,7 +36,6 @@ The Notes feature has comprehensive backend services and a rich frontend UI, but
 
 - Rich text editor with Tiptap (slash commands, toolbar, block-based editing)
 - Complete UI for notes and folder management
-- Status management system (draft, active, archived, published)
 - Complete backend API with database persistence
 - Search functionality (backend implemented)
 - Hierarchical folder structure (backend implemented)

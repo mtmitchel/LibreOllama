@@ -19,7 +19,7 @@ export const SlashCommandExtension = Extension.create({
         char: '/',
         startOfLine: false,
         command: ({ editor, range, props }: any) => {
-          props.command(editor, range);
+          props.command({ editor, range, props });
         },
       },
     };
@@ -40,8 +40,7 @@ let popup: TippyInstance | null = null;
 
 export const SlashCommandSuggestion = {
   items: ({ query }: { query: string }) => {
-    // The items are handled within the TiptapSlashCommand component
-    // This just returns a placeholder to keep the suggestion plugin happy
+    // This is just a placeholder, the actual filtering is done in TiptapSlashCommand
     return [{ query }];
   },
 
@@ -52,7 +51,6 @@ export const SlashCommandSuggestion = {
           props: {
             ...props,
             onSelect: (item: any) => {
-              item.command(props.editor);
               props.command({ editor: props.editor, range: props.range, props: item });
             },
           },
@@ -84,7 +82,6 @@ export const SlashCommandSuggestion = {
         component?.updateProps({
           ...props,
           onSelect: (item: any) => {
-            item.command(props.editor);
             props.command({ editor: props.editor, range: props.range, props: item });
           },
         });
@@ -115,13 +112,4 @@ export const SlashCommandSuggestion = {
       },
     };
   },
-};
-
-// Create the extension with the suggestion configuration
-export const createSlashCommandExtension = () => {
-  return SlashCommandExtension.configure({
-    suggestion: SlashCommandSuggestion,
-  });
-};
-
-export default createSlashCommandExtension; 
+}; 

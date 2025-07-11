@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import path from "path";
 import analyzer from 'rollup-plugin-analyzer';
 import detectPort from 'detect-port';
@@ -16,12 +17,19 @@ export default defineConfig(async () => {
   }
 
   return {
-  plugins: [react()],
+  define: {
+    'global': 'window',
+  },
+  plugins: [
+    react(),
+    nodePolyfills(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       // Use the new universal canvas mock for all canvas imports
       "canvas": path.resolve(__dirname, "./src/tests/__mocks__/canvas-universal.ts"),
+      'events': 'events',
     },
   },
   

@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "../core/design-system/globals.css";
+import { ThemeProvider } from '../components/ThemeProvider';
 
 // FullCalendar CSS - v6 doesn't require CSS imports as it's built-in
 

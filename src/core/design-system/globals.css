@@ -936,3 +936,368 @@ textarea {
   top: 6px;
 }
 
+/* Tiptap Editor Container - Prevent layout shifts */
+.tiptap-editor-container {
+  contain: layout style;
+  will-change: auto;
+}
+
+/* Prevent text reflow during sidebar transitions */
+.tiptap-editor-content {
+  transition: none !important;
+}
+
+.tiptap-editor-content * {
+  transition: none !important;
+}
+
+/* Tiptap Editor Content Styles */
+.tiptap-editor-content {
+  .ProseMirror {
+    width: 800px;
+    max-width: 800px;
+    margin: 0 auto;
+    background: transparent;
+    min-height: 600px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+
+    &:focus {
+      outline: none;
+    }
+
+    /* Responsive adjustments while maintaining fixed width for stability */
+    @media (max-width: 1200px) {
+      width: 700px;
+      max-width: 700px;
+    }
+    
+    @media (max-width: 1000px) {
+      width: 600px;
+      max-width: 600px;
+    }
+    
+    @media (max-width: 800px) {
+      width: 90%;
+      max-width: 90%;
+    }
+
+    /* Ensure consistent line height and prevent text jumping */
+    p, h1, h2, h3, h4, h5, h6, li, blockquote {
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    /* Add styles for headings, lists, blockquotes etc. */
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: bold;
+      margin-top: 1.25em;
+      margin-bottom: 0.5em;
+      line-height: 1.2;
+    }
+
+    h1:first-child,
+    h2:first-child,
+    h3:first-child,
+    h4:first-child,
+    h5:first-child,
+    h6:first-child {
+      margin-top: 0;
+    }
+
+    h1 { font-size: 2em; }
+    h2 { font-size: 1.5em; }
+    h3 { font-size: 1.17em; }
+
+    ul, ol {
+      padding-left: 1.5rem;
+      margin-top: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    ul {
+      list-style-type: disc;
+    }
+
+    ol {
+      list-style-type: decimal;
+    }
+
+    li > p {
+      margin: 0;
+    }
+
+    blockquote {
+      border-left: 3px solid var(--border-default);
+      margin-left: 1rem;
+      padding-left: 1rem;
+      font-style: italic;
+      color: var(--text-secondary);
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    /* Image Resizer styles */
+    .image-resizer {
+      position: relative;
+      display: inline-block;
+      line-height: 0;
+    }
+
+    .image-resizer.ProseMirror-selectednode {
+      outline: 2px solid var(--border-default);
+      border-radius: 4px;
+    }
+
+    .image-resizer-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: var(--accent-primary);
+      border: 1px solid white;
+      border-radius: 50%;
+      cursor: nwse-resize;
+      z-index: 1;
+    }
+
+    /* ProseMirror Table Styles */
+    .ProseMirror .tableWrapper {
+      overflow-x: auto;
+      margin: 1em 0;
+    }
+
+    .ProseMirror table {
+      border-collapse: collapse;
+      table-layout: fixed;
+      width: 100%;
+      margin: 0;
+      overflow: hidden;
+
+      td, th {
+        min-width: 1em;
+        border: 2px solid #ced4da;
+        padding: 3px 5px;
+        vertical-align: top;
+        box-sizing: border-box;
+        position: relative;
+      }
+
+      th {
+        font-weight: bold;
+        text-align: left;
+        background-color: #f1f3f4;
+      }
+
+      .selectedCell:after {
+        z-index: 2;
+        position: absolute;
+        content: "";
+        left: 0; right: 0; top: 0; bottom: 0;
+        background: rgba(200, 200, 255, 0.4);
+        pointer-events: none;
+      }
+
+      .column-resize-handle {
+        position: absolute;
+        right: -2px; top: 0; bottom: -2px;
+        width: 4px;
+        background-color: #adf;
+        pointer-events: none;
+      }
+    }
+
+    .ProseMirror.resize-cursor {
+      cursor: col-resize;
+    }
+
+    pre {
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+      font-family: monospace;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+    }
+
+    code {
+      background-color: var(--bg-subtle);
+      border-radius: 0.4rem;
+      padding: 0.2rem 0.4rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    hr {
+      border: none;
+      height: 2px;
+      background: linear-gradient(to right, transparent, var(--border-default), transparent);
+      margin: 2rem 0;
+      border-radius: 1px;
+    }
+
+    a {
+      color: var(--accent-primary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-thickness: 1px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      pointer-events: auto;
+    }
+
+    a:hover {
+      color: var(--accent-secondary);
+      text-decoration-thickness: 2px;
+    }
+
+    a:visited {
+      color: #6b46c1;
+    }
+  }
+}
+
+.folder-drop-target {
+  background-color: var(--accent-soft);
+  outline: 2px dashed var(--accent-primary);
+  outline-offset: 2px;
+  transform: scale(1.02);
+}
+
+.tiptap-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.tiptap-table-header, .tiptap-table-cell {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: 1px solid var(--bg-tertiary);
+  position: relative;
+}
+
+.tiptap-table-header {
+  font-weight: bold;
+  background-color: var(--bg-secondary);
+}
+
+.tiptap-table .resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background-color: var(--accent-primary);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tiptap-table:hover .resize-handle {
+  opacity: 1;
+}
+
+/* Tiptap table styles */
+/* Ensure tables in the Tiptap editor have visible borders and padding */
+.tiptap-editor-content table,
+.ProseMirror table {
+  border-collapse: collapse;
+}
+.tiptap-editor-content th,
+.tiptap-editor-content td,
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid var(--border-default);
+  padding: 0.5rem;
+}
+
+/* Column resize handle styles for Tiptap tables */
+.column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background-color: var(--accent-primary);
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+/* Show handle on table hover */
+.tiptap-table:hover .column-resize-handle {
+  opacity: 0.6;
+}
+
+/* When actively dragging, darker */
+.column-resize-dragging {
+  background-color: var(--accent-secondary);
+}
+
+/* Center align tables inside the editor */
+.tiptap-editor-content table,
+.ProseMirror table,
+.tiptap-table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Remove default header background */
+.tiptap-table-header {
+  background-color: transparent;
+}
+
+/* Darker, more visible borders */
+.tiptap-editor-content th,
+.tiptap-editor-content td,
+.ProseMirror th,
+.ProseMirror td,
+.tiptap-editor-content table,
+.ProseMirror table,
+.tiptap-table {
+  border-color: rgba(139, 148, 158, 0.35);
+  border-width: 1.25px;
+}
+
+/* =============================================================================
+   TEXT ALIGNMENT STABILITY - PREVENT REFLOW ON SIDEBAR TOGGLE
+   ============================================================================= */
+
+/* Fixed width container to prevent text reflow when sidebars toggle */
+.tiptap-editor-content-container {
+  width: 800px !important;
+  max-width: 800px !important;
+  min-width: 600px !important;
+  contain: layout style !important;
+  transition: none !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.6 !important;
+}
+
+/* Responsive design for smaller screens while maintaining stability */
+@media (max-width: 1200px) {
+  .tiptap-editor-content-container {
+    width: 700px !important;
+    max-width: 700px !important;
+  }
+}
+
+@media (max-width: 1000px) {
+  .tiptap-editor-content-container {
+    width: 600px !important;
+    max-width: 600px !important;
+  }
+}
+
+@media (max-width: 800px) {
+  .tiptap-editor-content-container {
+    width: 90% !important;
+    max-width: 90% !important;
+    min-width: 300px !important;
+  }
+}
+

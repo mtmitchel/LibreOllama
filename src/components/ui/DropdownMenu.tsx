@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+import React, { useState, useRef, useEffect, createContext, useContext, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { ChevronRight } from 'lucide-react';
 
@@ -208,14 +208,33 @@ const SubMenuContext = createContext<{
   isSubMenuOpen: boolean;
   setIsSubMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
+  handleOpen: () => void;
+  handleClose: () => void;
 } | null>(null);
 
 function DropdownMenuSub({ children }: { children: React.ReactNode }) {
     const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
+    const timerRef = useRef<number | undefined>();
+
+    const handleOpen = () => {
+        window.clearTimeout(timerRef.current);
+        if (!isSubMenuOpen) {
+            setIsSubMenuOpen(true);
+        }
+    };
+    
+    const handleClose = () => {
+        timerRef.current = window.setTimeout(() => {
+            setIsSubMenuOpen(false);
+        }, 100);
+    };
+
+    const value = { isSubMenuOpen, setIsSubMenuOpen, triggerRef, handleOpen, handleClose };
+
     return (
-        <SubMenuContext.Provider value={{ isSubMenuOpen, setIsSubMenuOpen, triggerRef }}>
-            <div className="relative" onMouseLeave={() => setIsSubMenuOpen(false)}>
+        <SubMenuContext.Provider value={value}>
+            <div className="relative">
                 {children}
             </div>
         </SubMenuContext.Provider>
@@ -223,11 +242,12 @@ function DropdownMenuSub({ children }: { children: React.ReactNode }) {
 }
 
 const DropdownMenuSubTrigger = ({ children, className, ...props }: DropdownMenuItemProps) => {
-    const { setIsSubMenuOpen, triggerRef } = useContext(SubMenuContext)!;
+    const { triggerRef, handleOpen, handleClose } = useContext(SubMenuContext)!;
     return (
         <button
             ref={triggerRef}
-            onMouseEnter={() => setIsSubMenuOpen(true)}
+            onMouseEnter={handleOpen}
+            onMouseLeave={handleClose}
             className={`w-full px-3 py-2 text-left text-sm transition-colors flex justify-between items-center text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] rounded-sm ${className}`}
             {...props}
         >
@@ -238,25 +258,53 @@ const DropdownMenuSubTrigger = ({ children, className, ...props }: DropdownMenuI
 };
 
 const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProps) => {
-    const { isSubMenuOpen, triggerRef } = useContext(SubMenuContext)!;
-    const [style, setStyle] = useState<React.CSSProperties>({});
+    const { isSubMenuOpen, triggerRef, handleOpen, handleClose } = useContext(SubMenuContext)!;
+    const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, position: 'fixed' });
+    const menuRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-      if (isSubMenuOpen && triggerRef.current) {
+    useLayoutEffect(() => {
+      if (isSubMenuOpen && triggerRef.current && menuRef.current) {
         const rect = triggerRef.current.getBoundingClientRect();
+        const menuRect = menuRef.current.getBoundingClientRect();
+
+        // Horizontal positioning
+        const spaceOnRight = window.innerWidth - rect.right;
+        let left = rect.right + 4;
+        if (spaceOnRight < menuRect.width && rect.left > menuRect.width) {
+          left = rect.left - menuRect.width - 4;
+        }
+
+        // Vertical positioning
+        const spaceBelow = window.innerHeight - rect.top;
+        let top = rect.top;
+        if (spaceBelow < menuRect.height) {
+          top = rect.bottom - menuRect.height;
+        }
+        
+        if (top < 0) {
+            top = 4; // Add a small margin from the top
+        }
+
         setStyle({
             position: 'fixed',
-            top: `${rect.top}px`,
-            left: `${rect.right + 4}px`,
+            top: `${top}px`,
+            left: `${left}px`,
+            opacity: 1,
         });
+      } else {
+        setStyle({ opacity: 0, position: 'fixed' });
       }
-    }, [isSubMenuOpen, triggerRef]);
+    }, [isSubMenuOpen]);
 
     if (!isSubMenuOpen) return null;
+
     return ReactDOM.createPortal(
-        <div
+        <div 
+            ref={menuRef}
             style={style}
-            className={`min-w-[160px] bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 ${className}`}
+            onMouseEnter={handleOpen}
+            onMouseLeave={handleClose}
+            className={`bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 ${className}`}
         >
             {children}
         </div>,
