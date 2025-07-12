@@ -242,7 +242,7 @@ export class GmailParsingService {
     accountId: string,
     query?: string,
     labelIds?: string[],
-    maxResults: number = 50
+    maxResults: number = 25
   ): Promise<ProcessedGmailMessage[]> {
     try {
       const searchQuery: EmailSearchQuery = {
@@ -265,7 +265,7 @@ export class GmailParsingService {
    */
   static async getInboxMessages(
     accountId: string,
-    maxResults: number = 50
+    maxResults: number = 25
   ): Promise<ProcessedGmailMessage[]> {
     return this.searchEmails(accountId, undefined, ['INBOX'], maxResults);
   }
@@ -275,7 +275,7 @@ export class GmailParsingService {
    */
   static async getSentMessages(
     accountId: string,
-    maxResults: number = 50
+    maxResults: number = 25
   ): Promise<ProcessedGmailMessage[]> {
     return this.searchEmails(accountId, undefined, ['SENT'], maxResults);
   }
@@ -285,7 +285,7 @@ export class GmailParsingService {
    */
   static async getUnreadMessages(
     accountId: string,
-    maxResults: number = 50
+    maxResults: number = 25
   ): Promise<ProcessedGmailMessage[]> {
     return this.searchEmails(accountId, 'is:unread', undefined, maxResults);
   }
@@ -295,7 +295,7 @@ export class GmailParsingService {
    */
   static async getStarredMessages(
     accountId: string,
-    maxResults: number = 50
+    maxResults: number = 25
   ): Promise<ProcessedGmailMessage[]> {
     return this.searchEmails(accountId, 'is:starred', undefined, maxResults);
   }

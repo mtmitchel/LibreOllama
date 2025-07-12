@@ -160,7 +160,7 @@ pub async fn revoke_gmail_token(
         .map_err(|e| e.to_string())
 }
 
-/// Get user information using access token
+/// Get user information using access token (for initial auth flow)
 #[tauri::command]
 pub async fn get_gmail_user_info(
     access_token: String,
@@ -222,97 +222,169 @@ pub async fn remove_gmail_tokens_secure(
         .map_err(|e| e.to_string())
 }
 
-/// Clear Gmail tokens for a specific account (for token corruption recovery)
+/// Debug command to check secure table existence and contents
 #[tauri::command]
-pub async fn clear_gmail_tokens(
-    account_id: String,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<(), String> {
-    auth_service
-        .remove_account(&account_id)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-/// Update Gmail sync timestamp
-#[tauri::command]
-pub async fn update_gmail_sync_timestamp_secure(
-    account_id: String,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<(), String> {
-    auth_service
-        .update_sync_timestamp(&account_id)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-/// Check if Gmail token is valid
-#[tauri::command]
-pub async fn check_token_validity_secure(
-    account_id: String,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<bool, String> {
-    auth_service
-        .is_token_valid(&account_id)
-        .await
-        .map_err(|e| e.to_string())
-}
-
-/// Validate and refresh tokens if needed
-#[tauri::command]
-pub async fn validate_and_refresh_gmail_tokens(
-    account_id: String,
+pub async fn debug_gmail_secure_table(
     auth_service: State<'_, Arc<GmailAuthService>>,
     db_manager: State<'_, DatabaseManager>,
-) -> Result<GmailTokens, String> {
-    auth_service
-        .validate_and_refresh_tokens(&Arc::new(db_manager.inner().clone()), &account_id)
-        .await
-        .map_err(|e| e.to_string())
+) -> Result<String, String> {
+    let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
+    
+    // Check if table exists
+    let table_exists = conn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='gmail_accounts_secure'")
+        .map_err(|e| e.to_string())?
+        .exists([])
+        .map_err(|e| e.to_string())?;
+    
+    if !table_exists {
+        return Ok("gmail_accounts_secure table does not exist".to_string());
+    }
+    
+    // Get table info
+    let mut stmt = conn.prepare("PRAGMA table_info(gmail_accounts_secure)").map_err(|e| e.to_string())?;
+    let column_info: Vec<String> = stmt.query_map([], |row| {
+        let name: String = row.get(1)?;
+        let data_type: String = row.get(2)?;
+        Ok(format!("{}: {}", name, data_type))
+    }).map_err(|e| e.to_string())?
+    .collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())?;
+    
+    // Count rows
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM gmail_accounts_secure", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    
+    Ok(format!(
+        "Table exists: true\nColumns: {}\nRows: {}",
+        column_info.join(", "),
+        count
+    ))
 }
 
-// =============================================================================
-// Legacy Command Stubs (for migration compatibility)
-// =============================================================================
-
-/// Legacy OAuth callback server (deprecated, kept for compatibility)
+/// Debug Gmail token expiration times
 #[tauri::command]
-pub async fn start_oauth_callback_server_and_wait(
-    _port: u16,
-    _expected_state: String,
-    _timeout_ms: u64,
-) -> Result<CallbackResult, String> {
-    Err("This command is deprecated. Use the new OAuth flow with proper redirect URIs.".to_string())
+pub async fn debug_gmail_token_expiration(
+    db_manager: State<'_, DatabaseManager>,
+) -> Result<String, String> {
+    let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
+    
+    // Get all accounts and their expiration times
+    let mut stmt = conn.prepare(
+        "SELECT id, email_address, token_expires_at FROM gmail_accounts_secure WHERE is_active = 1"
+    ).map_err(|e| e.to_string())?;
+    
+    let mut results = Vec::new();
+    let rows = stmt.query_map([], |row| {
+        let id: String = row.get(0)?;
+        let email: String = row.get(1)?;
+        let expires_at: Option<String> = row.get(2)?;
+        Ok((id, email, expires_at))
+    }).map_err(|e| e.to_string())?;
+    
+    for row in rows {
+        let (id, email, expires_at) = row.map_err(|e| e.to_string())?;
+        
+        let status = match expires_at {
+            Some(ref expires_str) => {
+                // Try to parse as RFC3339
+                match chrono::DateTime::parse_from_rfc3339(expires_str) {
+                    Ok(expires_time) => {
+                        let now = chrono::Utc::now().timestamp();
+                        let expires_timestamp = expires_time.timestamp();
+                        if expires_timestamp > now {
+                            format!("VALID (expires in {} seconds)", expires_timestamp - now)
+                        } else {
+                            format!("EXPIRED ({} seconds ago)", now - expires_timestamp)
+                        }
+                    }
+                    Err(e) => {
+                        // Check if it's a unix timestamp
+                        if expires_str.chars().all(|c| c.is_ascii_digit()) {
+                            if let Ok(timestamp) = expires_str.parse::<i64>() {
+                                let now = chrono::Utc::now().timestamp();
+                                if timestamp > now {
+                                    format!("VALID (unix timestamp, expires in {} seconds)", timestamp - now)
+                                } else {
+                                    format!("EXPIRED (unix timestamp, {} seconds ago)", now - timestamp)
+                                }
+                            } else {
+                                format!("CORRUPTED (failed to parse as timestamp): '{}'", expires_str)
+                            }
+                        } else {
+                            format!("CORRUPTED (not RFC3339 or timestamp): '{}' - {}", expires_str, e)
+                        }
+                    }
+                }
+            }
+            None => "NO_EXPIRATION".to_string(),
+        };
+        
+        results.push(format!("Account: {} ({})\n  Expires At: {:?}\n  Status: {}", 
+                           id, email, expires_at, status));
+    }
+    
+    if results.is_empty() {
+        Ok("No active Gmail accounts found".to_string())
+    } else {
+        Ok(format!("Gmail Token Expiration Debug:\n\n{}", results.join("\n\n")))
+    }
 }
 
-/// Legacy token migration (deprecated)
-#[tauri::command] 
-pub async fn migrate_tokens_to_secure_storage(
-    _db_manager: State<'_, DatabaseManager>,
-) -> Result<u32, String> {
-    Ok(0) // No migration needed with new architecture
-}
-
-/// Legacy table creation (deprecated)
+/// Clean up corrupted Gmail token expiration times
 #[tauri::command]
-pub async fn create_secure_accounts_table(
-    _db_manager: State<'_, DatabaseManager>,
-) -> Result<(), String> {
-    Ok(()) // Table creation is handled by database initialization
-}
-
-/// Legacy account check (deprecated)
-#[tauri::command]
-pub async fn check_legacy_gmail_accounts(
-    _db_manager: State<'_, DatabaseManager>,
-) -> Result<bool, String> {
-    Ok(false) // No legacy accounts with new architecture
-}
-
-/// Legacy table check (deprecated)
-#[tauri::command]
-pub async fn check_secure_accounts_table(
-    _db_manager: State<'_, DatabaseManager>,
-) -> Result<bool, String> {
-    Ok(true) // Table always exists with new architecture
+pub async fn cleanup_corrupted_gmail_tokens(
+    db_manager: State<'_, DatabaseManager>,
+) -> Result<String, String> {
+    let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
+    
+    // Find corrupted expiration times
+    let mut stmt = conn.prepare(
+        "SELECT id, email_address, token_expires_at FROM gmail_accounts_secure WHERE is_active = 1 AND token_expires_at IS NOT NULL"
+    ).map_err(|e| e.to_string())?;
+    
+    let mut corrupted_accounts = Vec::new();
+    let rows = stmt.query_map([], |row| {
+        let id: String = row.get(0)?;
+        let email: String = row.get(1)?;
+        let expires_at: String = row.get(2)?;
+        Ok((id, email, expires_at))
+    }).map_err(|e| e.to_string())?;
+    
+    for row in rows {
+        let (id, email, expires_at) = row.map_err(|e| e.to_string())?;
+        
+        // Check if the expiration time is corrupted
+        if chrono::DateTime::parse_from_rfc3339(&expires_at).is_err() {
+            // Also check if it's not a valid unix timestamp
+            if !expires_at.chars().all(|c| c.is_ascii_digit()) || expires_at.parse::<i64>().is_err() {
+                corrupted_accounts.push((id, email, expires_at));
+            }
+        }
+    }
+    
+    if corrupted_accounts.is_empty() {
+        return Ok("No corrupted token expiration times found".to_string());
+    }
+    
+    // Clean up corrupted entries
+    let mut cleaned_count = 0;
+    for (id, email, corrupted_value) in &corrupted_accounts {
+        match conn.execute(
+            "UPDATE gmail_accounts_secure SET token_expires_at = NULL WHERE id = ?1",
+            [id],
+        ) {
+            Ok(_) => {
+                cleaned_count += 1;
+                println!("✅ Cleaned up corrupted expiration for account {} ({}): '{}'", id, email, corrupted_value);
+            }
+            Err(e) => {
+                eprintln!("❌ Failed to clean up account {} ({}): {}", id, email, e);
+            }
+        }
+    }
+    
+    Ok(format!(
+        "Cleanup completed:\n- Found {} corrupted expiration times\n- Successfully cleaned up {} accounts\n- These accounts will need to re-authenticate",
+        corrupted_accounts.len(),
+        cleaned_count
+    ))
 } 

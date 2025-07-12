@@ -24,7 +24,7 @@ use crate::utils::crypto::{encrypt_data, decrypt_data};
 use crate::errors::{LibreOllamaError, Result};
 
 /// Gmail OAuth2 scopes
-const GMAIL_SCOPES: &[&str] = &[
+pub const GMAIL_SCOPES: &[&str] = &[
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/gmail.compose",
@@ -36,10 +36,10 @@ const GMAIL_SCOPES: &[&str] = &[
 ];
 
 /// Gmail OAuth2 endpoints
-const GMAIL_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
-const GMAIL_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
-const GMAIL_REVOKE_URL: &str = "https://oauth2.googleapis.com/revoke";
-const GMAIL_USERINFO_URL: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
+pub const GMAIL_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
+pub const GMAIL_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
+pub const GMAIL_REVOKE_URL: &str = "https://oauth2.googleapis.com/revoke";
+pub const GMAIL_USERINFO_URL: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
 
 /// Configuration for Gmail OAuth2 authentication
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -563,19 +563,58 @@ impl GmailAuthService {
     pub async fn is_token_valid(&self, account_id: &str) -> Result<bool> {
         if let Some(tokens) = self.get_account_tokens(account_id).await? {
             if let Some(expires_at) = tokens.expires_at {
-                let expires_time = chrono::DateTime::parse_from_rfc3339(&expires_at)
-                    .map_err(|e| LibreOllamaError::Serialization {
-                        message: format!("Failed to parse expiration time: {}", e),
-                        data_type: "DateTime".to_string(),
-                    })?;
-                
-                Ok(expires_time.timestamp() > chrono::Utc::now().timestamp())
+                // Attempt RFC3339 parsing first
+                if let Ok(expires_time) = chrono::DateTime::parse_from_rfc3339(&expires_at) {
+                    return Ok(expires_time.timestamp() > chrono::Utc::now().timestamp());
+                }
+
+                // If parsing failed, check if it is a numeric Unix timestamp (seconds or milliseconds)
+                if expires_at.chars().all(|c| c.is_ascii_digit()) {
+                    if let Ok(mut timestamp) = expires_at.parse::<i64>() {
+                        // Detect millisecond precision (13-digit or greater)
+                        if timestamp > 999_999_9999 { // > Sat Nov 20 2286 17:46:39 GMT
+                            // Convert milliseconds to seconds
+                            timestamp /= 1000;
+                        }
+
+                        return Ok(timestamp > chrono::Utc::now().timestamp());
+                    }
+                }
+
+                // Log corrupted data only once per call path
+                eprintln!("⚠️  [AUTH-WARNING] Corrupted expiration time for account {}: '{}' (unrecognized format)", account_id, expires_at);
+
+                // Cleanup invalid expiration value so we don't spam logs in future checks
+                if let Err(cleanup_error) = self.cleanup_corrupted_expiration(account_id).await {
+                    eprintln!("⚠️  [AUTH-WARNING] Failed to cleanup corrupted expiration: {}", cleanup_error);
+                }
+
+                Ok(false)
             } else {
                 Ok(true) // If no expiration time, assume valid
             }
         } else {
             Ok(false)
         }
+    }
+    
+    /// Clean up corrupted expiration time data
+    async fn cleanup_corrupted_expiration(&self, account_id: &str) -> Result<()> {
+        let conn = self.db_manager.get_connection()
+            .map_err(|e| LibreOllamaError::DatabaseQuery {
+                message: format!("Failed to get database connection: {}", e),
+                query_type: "connection".to_string(),
+            })?;
+
+        conn.execute(
+            "UPDATE gmail_accounts_secure SET token_expires_at = NULL WHERE id = ?1",
+            [account_id],
+        ).map_err(|e| LibreOllamaError::DatabaseQuery {
+            message: format!("Failed to cleanup corrupted expiration: {}", e),
+            query_type: "update".to_string(),
+        })?;
+
+        Ok(())
     }
 
     /// Validate tokens and refresh if necessary, returning valid tokens
@@ -723,7 +762,11 @@ mod tests {
 
     #[test]
     fn test_gmail_scopes_configuration() {
-        assert_eq!(GMAIL_SCOPES.len(), 5);
+        assert_eq!(GMAIL_SCOPES.len(), 8);
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.readonly"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.modify"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.compose"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/userinfo.email"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/userinfo.profile"));
     }
 } 

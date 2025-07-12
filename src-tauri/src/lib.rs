@@ -22,12 +22,13 @@ use commands::system::*;       // System and advanced commands
 
 // Legacy command imports (maintained for compatibility)
 use commands::ollama::*;
+// Note: These imports have been removed as the commands are not currently used
 use commands::folders::*;
 use commands::notes::*;
-use commands::mcp::*;
-use commands::n8n::*;
-use commands::links::*;
-use commands::canvas::*;
+// use commands::mcp::*;
+// use commands::n8n::*;
+// use commands::links::*;
+// use commands::canvas::*;
 use commands::rate_limiter::*;
 
 // CONSOLIDATED: All Gmail auth functionality now in commands::gmail::auth
@@ -180,17 +181,17 @@ pub fn run() {
 
             // Initialize Gmail authentication service
             let db_manager = app.state::<database::connection::DatabaseManager>();
-            let encryption_key = crate::utils::crypto::generate_encryption_key();
+            let encryption_key = crate::utils::crypto::get_persistent_encryption_key();
             let gmail_auth_service = match crate::services::gmail::auth_service::GmailAuthService::new(Arc::new(db_manager.inner().clone()), encryption_key) {
                 Ok(service) => {
                     println!("✅ [BACKEND-SUCCESS] Gmail authentication service initialized");
-                    Arc::new(service)
+                    Some(Arc::new(service))
                 },
                 Err(e) => {
                     eprintln!("⚠️  [BACKEND-WARNING] Failed to initialize Gmail auth service: {}", e);
-                    eprintln!("⚠️  [BACKEND-WARNING] Gmail authentication will use legacy methods");
-                    // Continue without the new service
-                    return Ok(());
+                    eprintln!("⚠️  [BACKEND-WARNING] Gmail authentication disabled - configure OAuth credentials in .env file");
+                    eprintln!("💡 [BACKEND-INFO] Create 'src-tauri/.env' file with GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET");
+                    None
                 }
             };
 
@@ -201,31 +202,40 @@ pub fn run() {
             ));
             println!("✅ [BACKEND-SUCCESS] Rate limiter initialized");
 
-            // Initialize Gmail compose service
-            let gmail_compose_service = Arc::new(
-                crate::services::gmail::compose_service::GmailComposeService::new(
-                    gmail_auth_service.clone(),
-                    Arc::new(db_manager.inner().clone()),
-                    rate_limiter.clone(),
-                )
-            );
-            println!("✅ [BACKEND-SUCCESS] Gmail compose service initialized");
+            // Initialize Gmail services only if auth service is available
+            if let Some(auth_service) = gmail_auth_service {
+                // Initialize Gmail compose service
+                let gmail_compose_service = Arc::new(
+                    crate::services::gmail::compose_service::GmailComposeService::new(
+                        auth_service.clone(),
+                        Arc::new(db_manager.inner().clone()),
+                        rate_limiter.clone(),
+                    )
+                );
+                println!("✅ [BACKEND-SUCCESS] Gmail compose service initialized");
 
-            // Initialize Gmail API service
-            let gmail_api_service = Arc::new(
-                crate::services::gmail::api_service::GmailApiService::new(
-                    gmail_auth_service.clone(),
-                    Arc::new(db_manager.inner().clone()),
-                    rate_limiter.clone(),
-                )
-            );
-            println!("✅ [BACKEND-SUCCESS] Gmail API service initialized");
+                // Initialize Gmail API service
+                let gmail_api_service = Arc::new(
+                    crate::services::gmail::api_service::GmailApiService::new(
+                        auth_service.clone(),
+                        Arc::new(db_manager.inner().clone()),
+                        rate_limiter.clone(),
+                    )
+                );
+                println!("✅ [BACKEND-SUCCESS] Gmail API service initialized");
 
-            // Store new services in app state
-            app.manage(gmail_auth_service);
-            app.manage(rate_limiter);
-            app.manage(gmail_compose_service);
-            app.manage(gmail_api_service);
+                // Store new services in app state
+                app.manage(auth_service);
+                app.manage(rate_limiter);
+                app.manage(gmail_compose_service);
+                app.manage(gmail_api_service);
+                
+                println!("✅ [BACKEND-SUCCESS] All Gmail services initialized and managed");
+            } else {
+                // Still manage the rate limiter for other services
+                app.manage(rate_limiter);
+                println!("⚠️  [BACKEND-WARNING] Gmail services disabled - OAuth credentials not configured");
+            }
 
             println!("✅ [BACKEND-SUCCESS] All Tauri commands registered successfully");
             println!("🔒 [BACKEND-SUCCESS] Gmail OAuth state management initialized");
@@ -235,6 +245,41 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             database_health_check,
+            // Gmail commands
+            start_gmail_oauth_with_callback,
+            get_gmail_accounts_secure,
+            get_gmail_labels,
+            search_gmail_messages,
+            get_gmail_message,
+            get_parsed_gmail_message,
+            get_gmail_thread,
+            get_gmail_user_info,
+            store_gmail_tokens_secure,
+            get_gmail_tokens_secure,
+            debug_gmail_secure_table,
+            debug_gmail_token_expiration,
+            cleanup_corrupted_gmail_tokens,
+            get_gmail_attachment,
+            send_gmail_message,
+            save_gmail_draft,
+            get_gmail_drafts,
+            delete_gmail_draft,
+            create_gmail_reply,
+            get_gmail_templates,
+            create_gmail_template,
+            // Tasks commands
+            get_task_lists,
+            get_tasks,
+            create_task,
+            update_task,
+            delete_task,
+            toggle_task_complete,
+            // Calendar commands
+            get_calendars,
+            get_calendar_events,
+            create_calendar_event,
+            update_calendar_event,
+            delete_calendar_event,
             // Chat commands
             create_session,
             get_sessions,
@@ -283,10 +328,10 @@ pub fn run() {
             export_chat_session_markdown,
             get_system_health,
             // Folder commands
-            create_folder,
-            get_folders,
-            update_folder,
-            delete_folder,
+            // create_folder,
+            // get_folders,
+            // update_folder,
+            // delete_folder,
             // Notes commands
             get_notes,
             create_note,

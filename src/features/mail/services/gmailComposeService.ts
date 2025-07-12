@@ -133,7 +133,7 @@ export class GmailComposeService {
         }
 
         return await invoke<SendResponse>('send_gmail_message', {
-          composeRequest
+          composeRequest: this.toBackendComposeRequest(composeRequest),
         });
       },
       context,
@@ -159,7 +159,11 @@ export class GmailComposeService {
         }
 
         return await invoke<DraftResponse>('save_gmail_draft', {
-          draftRequest
+          draftRequest: {
+            accountId: draftRequest.accountId,
+            draftId: draftRequest.draftId,
+            composeData: this.toBackendComposeRequest(draftRequest.composeData),
+          },
         });
       },
       context
@@ -240,8 +244,8 @@ export class GmailComposeService {
         }
 
         return await invoke<SendResponse>('schedule_gmail_message', {
-          composeRequest,
-          scheduleTime
+          composeRequest: this.toBackendComposeRequest(composeRequest),
+          scheduleTime,
         });
       },
       context,
@@ -260,8 +264,9 @@ export class GmailComposeService {
 
     return retryGmailOperation(
       async () => {
-        return await invoke<MessageTemplate[]>('get_message_templates', {
-          accountId
+        // backend command is `get_gmail_templates` and expects snake_case param
+        return await invoke<MessageTemplate[]>('get_gmail_templates', {
+          accountId,
         });
       },
       context
@@ -283,13 +288,18 @@ export class GmailComposeService {
       messageId: originalMessageId
     };
 
+    const replyRequest = {
+      account_id: accountId,
+      original_message_id: originalMessageId,
+      reply_type: replyType === 'reply_all' ? 'ReplyAll' : replyType.charAt(0).toUpperCase() + replyType.slice(1),
+      additional_recipients: additionalRecipients,
+      include_original: true,
+    };
+
     return retryGmailOperation(
       async () => {
-        return await invoke<ComposeRequest>('format_reply_message', {
-          accountId,
-          originalMessageId,
-          replyType,
-          additionalRecipients
+        return await invoke<ComposeRequest>('create_gmail_reply', {
+          replyRequest: replyRequest,
         });
       },
       context
@@ -484,6 +494,36 @@ export class GmailComposeService {
     return this.estimateMessageSize(compose) > maxSize;
   }
 
+  /**
+   * Convert camelCase ComposeRequest (frontend) to snake_case (backend)
+   */
+  private static toBackendComposeRequest(compose: ComposeRequest): any {
+    const mapAttachment = (att: ComposeAttachment) => ({
+      filename: att.filename,
+      content_type: att.contentType,
+      content_id: att.contentId,
+      data: att.data,
+      size: att.size,
+      is_inline: att.isInline,
+    });
+
+    return {
+      account_id: compose.accountId,
+      to: compose.to,
+      cc: compose.cc,
+      bcc: compose.bcc,
+      subject: compose.subject,
+      body_text: compose.bodyText,
+      body_html: compose.bodyHtml,
+      attachments: compose.attachments?.map(mapAttachment),
+      reply_to_message_id: compose.replyToMessageId,
+      thread_id: compose.threadId,
+      importance: compose.importance,
+      delivery_receipt: compose.deliveryReceipt,
+      read_receipt: compose.readReceipt,
+      schedule_send: compose.scheduleSend,
+    };
+  }
 
 }
 

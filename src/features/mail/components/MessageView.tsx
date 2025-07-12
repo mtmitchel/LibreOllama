@@ -16,6 +16,8 @@ import {
 import { Button, Text, Card } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { ParsedEmail, EmailAddress } from '../types';
+import { EnhancedMessageRenderer } from './EnhancedMessageRenderer';
+import { EnhancedMessageActions } from './EnhancedMessageActions';
 
 interface MessageHeaderProps {
   message: ParsedEmail;
@@ -24,7 +26,8 @@ interface MessageHeaderProps {
 }
 
 function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderProps) {
-  const { starMessages, unstarMessages, clearCurrentMessage } = useMailStore();
+  const { starMessages, unstarMessages } = useMailStore();
+  const clearCurrentMessage = useMailStore(state => state.clearCurrentMessage);
 
   const handleStarClick = () => {
     if (message.isStarred) {
@@ -338,211 +341,30 @@ export function MessageView() {
       {/* Attachments */}
       <AttachmentList attachments={currentMessage.attachments} />
 
-      {/* Message Content */}
+      {/* Enhanced Message Content */}
       <div className="flex-1 overflow-y-auto bg-[var(--bg-tertiary)]">
         <div style={{ padding: 'var(--space-4)' }}>
-          {/* Email Content with Better Formatting */}
-          <div className="email-content">
-            {currentMessage.body ? (
-              <div 
-                className="email-html-content"
-                dangerouslySetInnerHTML={{ __html: currentMessage.body }}
-                style={{
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  color: 'var(--text-primary)',
-                  maxWidth: '100%',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word'
-                }}
-              />
-            ) : currentMessage.snippet ? (
-              <div className="email-text-content">
-                <pre 
-                  className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-[var(--text-primary)] bg-transparent border-0 p-0 m-0"
-                  style={{
-                    fontFamily: 'system-ui, -apple-system, sans-serif',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    maxWidth: '100%',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word'
-                  }}
-                >
-                  {currentMessage.snippet}
-                </pre>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Text size="sm" variant="secondary">
-                  No content available
-                </Text>
-              </div>
-            )}
-          </div>
+          <EnhancedMessageRenderer 
+            message={currentMessage}
+            enableImageLoading={false} // Security: images blocked by default
+            enableLinkPreview={false}
+            showRawSource={false}
+          />
         </div>
       </div>
 
-      <style jsx>{`
-        .email-content {
-          max-width: 100%;
-        }
-        
-        .email-html-content * {
-          max-width: 100% !important;
-          word-wrap: break-word !important;
-          overflow-wrap: break-word !important;
-        }
-        
-        .email-html-content img {
-          max-width: 100% !important;
-          height: auto !important;
-          border-radius: 6px;
-          margin: 8px 0;
-        }
-        
-        .email-html-content table {
-          max-width: 100% !important;
-          border-collapse: collapse;
-          margin: 8px 0;
-        }
-        
-        .email-html-content blockquote {
-          border-left: 3px solid var(--border-default);
-          padding-left: 12px;
-          margin: 16px 0;
-          font-style: italic;
-          color: var(--text-secondary);
-        }
-        
-        .email-html-content a {
-          color: var(--accent-primary);
-          text-decoration: underline;
-        }
-        
-        .email-html-content a:hover {
-          color: var(--accent-primary-hover);
-        }
-        
-        .email-html-content p {
-          margin: 8px 0;
-          line-height: 1.6;
-        }
-        
-        .email-html-content ul, .email-html-content ol {
-          margin: 8px 0;
-          padding-left: 20px;
-        }
-        
-        .email-html-content li {
-          margin: 4px 0;
-          line-height: 1.5;
-        }
-        
-        .email-html-content h1, .email-html-content h2, .email-html-content h3, 
-        .email-html-content h4, .email-html-content h5, .email-html-content h6 {
-          margin: 16px 0 8px 0;
-          font-weight: 600;
-          line-height: 1.4;
-          color: var(--text-primary);
-        }
-        
-        .email-html-content code {
-          background: var(--bg-secondary);
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-          font-size: 13px;
-        }
-        
-        .email-html-content pre {
-          background: var(--bg-secondary);
-          padding: 12px;
-          border-radius: 6px;
-          overflow-x: auto;
-          margin: 12px 0;
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-          font-size: 13px;
-          line-height: 1.4;
-        }
-      `}</style>
-
-      {/* Action Buttons */}
+      {/* Enhanced Action Buttons */}
       <div 
         className="border-t border-[var(--border-default)] bg-[var(--bg-secondary)] rounded-b-[var(--radius-lg)]"
-        style={{ padding: 'var(--space-2) var(--space-3)' }}
+        style={{ padding: 'var(--space-3)' }}
       >
-        <div className="flex items-center justify-between">
-          {/* Primary actions - more compact */}
-          <div 
-            className="flex items-center"
-            style={{ gap: 'var(--space-1)' }}
-          >
-            <Button 
-              onClick={handleReply}
-              variant="primary"
-              size="sm"
-              className="h-8 rounded-[var(--radius-md)]"
-            >
-              <Reply size={14} />
-              Reply
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              onClick={handleReplyAll}
-              size="sm"
-              className="h-8 rounded-[var(--radius-md)]"
-            >
-              <ReplyAll size={14} />
-              Reply all
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              onClick={handleForward}
-              size="sm"
-              className="h-8 rounded-[var(--radius-md)]"
-            >
-              <Forward size={14} />
-              Forward
-            </Button>
-          </div>
-
-          {/* Secondary actions - compact icons */}
-          <div 
-            className="flex items-center"
-            style={{ gap: 'var(--space-1)' }}
-          >
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)]"
-              title="Archive"
-            >
-              <Archive size={14} />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)]"
-              title="Delete"
-            >
-              <Trash2 size={14} />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-md)]"
-              title="Print"
-            >
-              <Printer size={14} />
-            </Button>
-          </div>
-        </div>
+        <EnhancedMessageActions 
+          message={currentMessage}
+          showAllActions={true}
+          onReply={handleReply}
+          onReplyAll={handleReplyAll}
+          onForward={handleForward}
+        />
       </div>
     </div>
   );

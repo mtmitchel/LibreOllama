@@ -117,26 +117,36 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   // Fetch labels and refresh quota when component mounts or account changes
   React.useEffect(() => {
     if (isAuthenticated && currentAccountId) {
-      console.log('🏷️ [SIDEBAR] Fetching labels for account:', currentAccountId);
-      fetchLabels(currentAccountId).catch(error => {
-        console.error('🏷️ [SIDEBAR] Failed to fetch labels:', error);
-      });
+      const currentAccount = getCurrentAccount();
+      const hasAuthError = currentAccount?.syncStatus === 'error' && currentAccount?.errorMessage?.includes('Authentication');
       
-      // Also refresh account quota to get latest values
-      console.log('💾 [SIDEBAR] Refreshing quota for account:', currentAccountId);
-      refreshAccount(currentAccountId).catch(error => {
-        console.error('💾 [SIDEBAR] Failed to refresh quota:', error);
-      });
+      // Don't auto-refresh if account has authentication errors
+      if (!hasAuthError) {
+        console.log('🏷️ [SIDEBAR] Fetching labels for account:', currentAccountId);
+        fetchLabels(currentAccountId).catch(error => {
+          console.error('🏷️ [SIDEBAR] Failed to fetch labels:', error);
+        });
+        
+        // Also refresh account quota to get latest values
+        console.log('💾 [SIDEBAR] Refreshing quota for account:', currentAccountId);
+        refreshAccount(currentAccountId).catch(error => {
+          console.error('💾 [SIDEBAR] Failed to refresh quota:', error);
+        });
+      } else {
+        console.log('⚠️ [SIDEBAR] Skipping auto-refresh due to authentication error for account:', currentAccountId);
+      }
     }
-  }, [isAuthenticated, currentAccountId, fetchLabels, refreshAccount]);
+  }, [isAuthenticated, currentAccountId, fetchLabels, refreshAccount, getCurrentAccount]);
 
-  // Auto-refresh quota if it's missing
+  // Auto-refresh quota if it's missing - but only once per account
   React.useEffect(() => {
     const currentAccount = getCurrentAccount();
     if (currentAccount && currentAccountId && !isRefreshingQuota) {
       const hasQuotaData = typeof currentAccount.quotaUsed !== 'undefined' || typeof currentAccount.quotaTotal !== 'undefined';
+      const hasAuthError = currentAccount.syncStatus === 'error' && currentAccount.errorMessage?.includes('Authentication');
       
-      if (!hasQuotaData) {
+      // Don't auto-refresh if account has authentication errors
+      if (!hasQuotaData && !hasAuthError) {
         console.log('🔄 [SIDEBAR] Auto-refreshing missing quota data');
         setIsRefreshingQuota(true);
         refreshAccount(currentAccountId).finally(() => {
@@ -153,12 +163,12 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     console.log('🏷️ [SIDEBAR] User labels:', labels.filter(l => l.type === 'user').length);
     console.log('🏷️ [SIDEBAR] System labels:', labels.filter(l => l.type === 'system').length);
     console.log('🏷️ [SIDEBAR] All user label IDs:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
-    console.log('🏷️ [SIDEBAR] labelShow labels:', labels.filter(l => l.labelListVisibility === 'labelShow').length);
-    console.log('🏷️ [SIDEBAR] labelHide labels:', labels.filter(l => l.labelListVisibility === 'labelHide').length);
+    console.log('🏷️ [SIDEBAR] show labels:', labels.filter(l => l.labelListVisibility === 'show').length);
+    console.log('🏷️ [SIDEBAR] hide labels:', labels.filter(l => l.labelListVisibility === 'hide').length);
     console.log('🏷️ [SIDEBAR] All visibilities:', [...new Set(labels.map(l => l.labelListVisibility))]);
     console.log('🏷️ [SIDEBAR] User labels with labelShow:', labels.filter(l => 
       l.type === 'user' && 
-      l.labelListVisibility === 'labelShow'
+      l.labelListVisibility === 'show'
     ).map(l => ({ id: l.id, name: l.name })));
     console.log('🏷️ [SIDEBAR] All user labels regardless of visibility:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
   }, [labels]);
@@ -166,7 +176,21 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   // Get real counts from labels (use threadsUnread for conversations count)
   const getLabelCount = (labelId: string) => {
     const label = labels.find(l => l.id === labelId);
-    return label?.threadsUnread || 0;
+    const count = label?.threadsUnread || 0;
+    
+    // Debug logging for problematic labels
+    if (labelId === 'INBOX' || labelId === 'STARRED') {
+      console.log(`📊 [SIDEBAR] Label ${labelId}:`, {
+        found: !!label,
+        threadsUnread: label?.threadsUnread,
+        messagesUnread: label?.messagesUnread,
+        messagesTotal: label?.messagesTotal,
+        returnedCount: count,
+        fullLabel: label
+      });
+    }
+    
+    return count;
   };
 
   // Check if SNOOZED label exists before including it

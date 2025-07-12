@@ -11,11 +11,24 @@ import {
   ComposeEmail,
   GmailAccount,
   AccountData,
-  GMAIL_LABELS 
+  GMAIL_LABELS,
+  LabelCreationRequest,
+  LabelUpdateRequest,
+  LabelOperation,
+  LabelSettings,
 } from '../types';
-import { gmailService } from '../services/gmailService';
 import { handleGmailError } from '../services/gmailErrorHandler';
-import { getGmailApiService } from '../services/gmailApiService';
+import { createGmailTauriService } from '../services/gmailTauriService';
+import { searchService } from '../services/searchService';
+import { 
+  SearchResult, 
+  SearchFilter, 
+  AdvancedSearchFilters,
+  SearchQuery,
+  SearchOperator,
+  SearchSuggestion
+} from '../types/search';
+import { convertProcessedGmailMessages, convertProcessedGmailMessage } from '../utils/messageConverter';
 
 
 
@@ -48,6 +61,31 @@ const initialState: MailState = {
   currentView: 'INBOX',
   searchQuery: '',
   currentLabel: null,
+  
+  // Phase 2.3 - Label Management State
+  selectedLabels: [],
+  labelSettings: {
+    visibility: {
+      showSystemLabels: true,
+      showUserLabels: true,
+      showEmptyLabels: false,
+      showUnreadCountsOnly: false,
+      compactView: false
+    },
+    sorting: {
+      sortBy: 'name',
+      sortOrder: 'asc',
+      groupByType: true,
+      prioritizeUnread: false
+    },
+    behavior: {
+      autoApplyLabels: false,
+      removeFromInboxWhenLabeled: false,
+      showLabelColors: true,
+      enableLabelShortcuts: true,
+      maxLabelsPerMessage: 20
+    }
+  },
   
   // Compose
   isComposing: false,
@@ -93,7 +131,7 @@ const initialState: MailState = {
   totalMessages: 0,
   totalUnreadMessages: 0, // Track total unread messages for current view
   messagesLoadedSoFar: 0, // Track cumulative messages loaded
-  currentPageSize: 50,
+  currentPageSize: 25,
   isNavigatingBackwards: false, // Flag to prevent pageTokens modification during backwards navigation
 };
 
@@ -295,6 +333,18 @@ const useMailStore = create<EnhancedMailStore>()(
             return;
           }
 
+          // Check if account is already in error state with authentication issues
+          if (account.syncStatus === 'error' && account.errorMessage?.includes('Authentication')) {
+            console.log('⚠️ [STORE] Skipping refresh for account with authentication error:', account.email);
+            return;
+          }
+
+          // Check if account is already syncing
+          if (account.syncStatus === 'syncing') {
+            console.log('⚠️ [STORE] Account already syncing, skipping refresh:', account.email);
+            return;
+          }
+
           set((state) => {
             if (state.accounts[accountId]) {
               state.accounts[accountId].syncStatus = 'syncing';
@@ -305,7 +355,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log('🔄 [STORE] Refreshing account quota:', account.email);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(accountId);
+            const gmailApi = createGmailTauriService(accountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -556,7 +606,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`📨 [STORE] Fetching real messages for account: ${targetAccountId}`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -578,43 +628,27 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             }
             
-            // Fetch labels first if we don't have them (needed for total count)
-            const accountData = get().accountData[targetAccountId];
-            if (!accountData || !accountData.labels || accountData.labels.length === 0) {
-              console.log(`🏷️ [STORE] Fetching labels first to get total count`);
-              try {
-                const labels = await gmailApi.getLabels();
-                set((state) => {
-                  if (!state.accountData[targetAccountId]) {
-                    state.accountData[targetAccountId] = {
-                      messages: [],
-                      threads: [],
-                      labels: [],
-                      drafts: [],
-                      totalMessages: 0,
-                      unreadMessages: 0,
-                      lastSyncAt: new Date(),
-                      syncInProgress: false,
-                    };
-                  }
-                  state.accountData[targetAccountId].labels = labels;
-                });
-              } catch (labelError) {
-                console.warn('⚠️ [STORE] Failed to fetch labels for total count:', labelError);
-              }
-            }
-
             // Fetch real messages from Gmail API
-            const result = await gmailApi.getMessages(labelIds, 50, pageToken, query);
+            console.log(`🔍 [STORE] Requesting messages:`, { query, labelIds, maxResults: 25, pageToken });
+            const result = await gmailApi.searchMessages(query, labelIds, 25, pageToken);
             
             console.log(`✅ [STORE] Fetched ${result.messages.length} real messages`);
             console.log(`🔗 [STORE] API result:`, { 
               messageCount: result.messages.length, 
-              nextPageToken: result.nextPageToken,
-              hasNextPageToken: !!result.nextPageToken,
-              resultSizeEstimate: result.resultSizeEstimate
+              nextPageToken: result.next_page_token,
+              hasNextPageToken: !!result.next_page_token,
+              resultSizeEstimate: result.result_size_estimate
             });
             console.log(`🔗 [STORE] Full API result:`, result);
+            
+            // Debug: Log first few message subjects to verify data
+            if (result.messages.length > 0) {
+              console.log(`📧 [STORE] First few messages:`, result.messages.slice(0, 3).map(msg => ({
+                id: msg.id,
+                subject: msg.parsed_content?.subject || 'No subject',
+                from: msg.parsed_content?.from?.email || 'No sender'
+              })));
+            }
 
             set((state) => {
               // Initialize account data if it doesn't exist
@@ -632,8 +666,10 @@ const useMailStore = create<EnhancedMailStore>()(
               }
               
               // Update messages with real data
-              state.accountData[targetAccountId].messages = result.messages;
-              state.accountData[targetAccountId].unreadMessages = result.messages.filter(msg => !msg.isRead).length;
+              // Convert ProcessedGmailMessage to ParsedEmail
+              const convertedMessages = convertProcessedGmailMessages(result.messages, targetAccountId);
+              state.accountData[targetAccountId].messages = convertedMessages;
+              state.accountData[targetAccountId].unreadMessages = convertedMessages.filter(msg => !msg.isRead).length;
               state.accountData[targetAccountId].lastSyncAt = new Date();
 
               // Use labels first as they're more reliable than resultSizeEstimate
@@ -654,18 +690,18 @@ const useMailStore = create<EnhancedMailStore>()(
                 // Use threadsUnread instead of messagesUnread for conversation count
                 totalUnreadMessages = targetLabel.threadsUnread || 0;
                 console.log(`📄 [STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread conversations: ${totalUnreadMessages}`);
-              } else if (result.resultSizeEstimate && result.resultSizeEstimate > 0) {
-                // Secondary: Use API's resultSizeEstimate (often inaccurate)
-                totalMessages = result.resultSizeEstimate;
+              } else if (result.result_size_estimate && result.result_size_estimate > 0) {
+                // Secondary: Use API's result_size_estimate (often inaccurate)
+                totalMessages = result.result_size_estimate;
                 // For unread count when we don't have label data, count unread in current results
-                totalUnreadMessages = result.messages.filter(msg => !msg.isRead).length;
+                totalUnreadMessages = convertProcessedGmailMessages(result.messages, targetAccountId).filter(msg => !msg.isRead).length;
                 console.log(`📄 [STORE] Set totalMessages from API resultSizeEstimate: ${totalMessages}`);
               } else {
                 // Last resort: estimate based on current data (likely wrong)
                 totalMessages = pageToken ? 
                   Math.max(result.messages.length, state.messagesLoadedSoFar + result.messages.length) :
                   result.messages.length;
-                totalUnreadMessages = result.messages.filter(msg => !msg.isRead).length;
+                totalUnreadMessages = convertProcessedGmailMessages(result.messages, targetAccountId).filter(msg => !msg.isRead).length;
                 console.log(`📄 [STORE] Set totalMessages from estimation fallback: ${totalMessages}`);
               }
               
@@ -673,31 +709,32 @@ const useMailStore = create<EnhancedMailStore>()(
               state.isLoadingMessages = false;
               
               // Update pagination state for token-based pagination
-              state.nextPageToken = result.nextPageToken;
+              state.nextPageToken = result.next_page_token;
               
-              // Handle token-based navigation
-              if (pageToken) {
-                  if (state.isNavigatingBackwards) {
-                      // We've just navigated back, so remove the token that led to the *previous* (now current) page.
-                      // The current state of pageTokens is for the page we are on.
-                      state.pageTokens.pop();
-                  } else {
-                      // We are moving forward. Store the token for the page we are now on.
-                      if (!state.pageTokens.includes(pageToken)) {
-                          state.pageTokens.push(pageToken);
-                      }
-                  }
+                        // Handle token-based navigation
+          if (pageToken) {
+              if (state.isNavigatingBackwards) {
+                  // We've just navigated back, so remove the token that led to the *previous* (now current) page.
+                  // The current state of pageTokens is for the page we are on.
+                  state.pageTokens.pop();
               } else {
-                  // First page - reset everything
-                  state.pageTokens = [];
+                  // We are moving forward. Store the token for the page we are now on.
+                  if (!state.pageTokens.includes(pageToken)) {
+                      state.pageTokens.push(pageToken);
+                  }
               }
-              // Don't recalculate messagesLoadedSoFar here - it's managed by nextPage/prevPage methods
+          } else {
+              // First page - reset everything
+              state.pageTokens = [];
+              state.messagesLoadedSoFar = 0; // Reset to 0 for first page
+          }
+          // Don't recalculate messagesLoadedSoFar here - it's managed by nextPage/prevPage methods
 
-              // Set totalMessages from account data (which now gets it from API resultSizeEstimate)
+              // Set totalMessages from account data (which now gets it from API result_size_estimate)
               // Make sure we have a valid number
               state.totalMessages = totalMessages;
               state.totalUnreadMessages = totalUnreadMessages;
-              state.nextPageToken = result.nextPageToken;
+              state.nextPageToken = result.next_page_token;
               
               console.log(`📄 [STORE] *** FETCH COMPLETE ***`, {
                 messagesLoadedSoFar: state.messagesLoadedSoFar,
@@ -736,7 +773,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`📧 [STORE] Fetching real message: ${messageId}`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -748,7 +785,10 @@ const useMailStore = create<EnhancedMailStore>()(
             // If not found in store, fetch from API
             if (!message) {
               console.log(`🔍 [STORE] Message not in store, fetching from API...`);
-              message = (await gmailApi.getMessage(messageId)) || undefined;
+              const processedMessage = await gmailApi.getParsedMessage(messageId);
+              if (processedMessage) {
+                message = convertProcessedGmailMessage(processedMessage, targetAccountId);
+              }
             }
             
             if (!message) {
@@ -785,30 +825,36 @@ const useMailStore = create<EnhancedMailStore>()(
           });
           
           try {
-            await new Promise(resolve => setTimeout(resolve, 300));
+            console.log(`🧵 [STORE] Fetching real thread: ${threadId}`);
             
-            const accountData = get().accountData[targetAccountId];
-            const threadMessages = accountData?.messages.filter(msg => msg.threadId === threadId) || [];
-            
-            if (threadMessages.length === 0) {
-              throw new Error('Thread not found');
+            // Get Gmail API service for the account
+            const gmailApi = createGmailTauriService(targetAccountId);
+            if (!gmailApi) {
+              throw new Error('Failed to initialize Gmail API service');
             }
 
+            const messages = await gmailApi.getThread(threadId);
+
+            if (messages.length === 0) {
+              throw new Error('Thread not found or contains no messages.');
+            }
+
+            const convertedMessages = convertProcessedGmailMessages(messages, targetAccountId);
             const thread: EmailThread = {
               id: threadId,
-              subject: threadMessages[0].subject,
-              participants: Array.from(new Set([
-                ...threadMessages.flatMap(msg => [msg.from, ...msg.to, ...(msg.cc || []), ...(msg.bcc || [])])
-              ])),
-              messages: threadMessages,
-              lastMessageDate: threadMessages[threadMessages.length - 1].date,
-              isRead: threadMessages.every(msg => msg.isRead),
-              isStarred: threadMessages.some(msg => msg.isStarred),
-              labels: Array.from(new Set(threadMessages.flatMap(msg => msg.labels))),
-              messageCount: threadMessages.length,
               accountId: targetAccountId!,
-              hasAttachments: threadMessages.some(msg => msg.hasAttachments),
-              snippet: threadMessages[0]?.snippet || '',
+              subject: messages[0].parsed_content.subject || '',
+              participants: Array.from(new Set([
+                ...convertedMessages.flatMap(msg => [msg.from, ...msg.to, ...(msg.cc || []), ...(msg.bcc || [])])
+              ])),
+              messages: convertedMessages,
+              lastMessageDate: new Date(messages[messages.length - 1].internal_date || Date.now()),
+              isRead: messages.every(msg => !msg.labels.includes('UNREAD')),
+              isStarred: messages.some(msg => msg.labels.includes('STARRED')),
+              labels: Array.from(new Set(messages.flatMap(msg => msg.labels))),
+              messageCount: messages.length,
+              hasAttachments: messages.some(msg => msg.parsed_content.attachments.length > 0),
+              snippet: messages[0]?.snippet || '',
             };
 
             set((state) => {
@@ -837,7 +883,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`📖 [STORE] Marking ${messageIds.length} messages as read`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -882,7 +928,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`📩 [STORE] Marking ${messageIds.length} messages as unread`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -929,7 +975,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`🗑️ [STORE] Deleting ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -969,7 +1015,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`📦 [STORE] Archiving ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -1011,7 +1057,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`⭐ [STORE] Starring ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -1056,7 +1102,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`☆ [STORE] Unstarring ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               throw new Error('Failed to initialize Gmail API service');
             }
@@ -1103,7 +1149,7 @@ const useMailStore = create<EnhancedMailStore>()(
             console.log(`🏷️ [STORE] Fetching real labels for account: ${targetAccountId}`);
             
             // Get Gmail API service for the account
-            const gmailApi = getGmailApiService(targetAccountId);
+            const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
               console.error('🏷️ [STORE] Failed to get Gmail API service for account:', targetAccountId);
               throw new Error('Failed to initialize Gmail API service');
@@ -1167,9 +1213,9 @@ const useMailStore = create<EnhancedMailStore>()(
               
               // Set fallback system labels
               const fallbackLabels: GmailLabel[] = [
-                { id: 'INBOX', name: 'Inbox', messageListVisibility: 'show' as const, labelListVisibility: 'labelShow' as const, type: 'system' as const, messagesTotal: 0, messagesUnread: 0, threadsTotal: 0, threadsUnread: 0 },
-                { id: 'SENT', name: 'Sent', messageListVisibility: 'show' as const, labelListVisibility: 'labelShow' as const, type: 'system' as const, messagesTotal: 0, messagesUnread: 0, threadsTotal: 0, threadsUnread: 0 },
-                { id: 'DRAFT', name: 'Drafts', messageListVisibility: 'show' as const, labelListVisibility: 'labelShow' as const, type: 'system' as const, messagesTotal: 0, messagesUnread: 0, threadsTotal: 0, threadsUnread: 0 },
+                { id: 'INBOX', name: 'Inbox', messageListVisibility: 'show' as const, labelListVisibility: 'show' as const, type: 'system' as const, messagesTotal: 0, messagesUnread: 0, threadsTotal: 0, threadsUnread: 0, color: '#4285f4' },
+                { id: 'SENT', name: 'Sent', messageListVisibility: 'show' as const, labelListVisibility: 'show' as const, type: 'system' as const, messagesTotal: 0, messagesUnread: 0, threadsTotal: 0, threadsUnread: 0, color: '#34a853' },
+                { id: 'DRAFT', name: 'Drafts', messageListVisibility: 'show' as const, labelListVisibility: 'show' as const, type: 'system' as const, messagesTotal: 0, messagesUnread: 0, threadsTotal: 0, threadsUnread: 0, color: '#fbbc04' },
               ];
               
               console.log(`🏷️ [STORE] Setting fallback labels for account:`, targetAccountId);
@@ -1216,6 +1262,231 @@ const useMailStore = create<EnhancedMailStore>()(
                   message.labels = message.labels.filter(label => label !== labelId);
                 }
               });
+            }
+          });
+        },
+
+        // Enhanced Label Management (Phase 2.3)
+        createLabel: async (labelData: LabelCreationRequest, accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) throw new Error('No account selected');
+
+          const newLabel: GmailLabel = {
+            id: `user_${Date.now()}`,
+            name: labelData.name,
+            messageListVisibility: labelData.messageListVisibility,
+            labelListVisibility: labelData.labelListVisibility,
+            type: 'user',
+            messagesTotal: 0,
+            messagesUnread: 0,
+            threadsTotal: 0,
+            threadsUnread: 0,
+            color: labelData.color || '#4285f4',
+          };
+
+          set((state) => {
+            if (state.accountData[targetAccountId]) {
+              state.accountData[targetAccountId].labels.push(newLabel);
+            }
+          });
+
+          return newLabel;
+        },
+
+        updateLabel: async (labelData: LabelUpdateRequest, accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) throw new Error('No account selected');
+
+          set((state) => {
+            const accountData = state.accountData[targetAccountId];
+            if (accountData) {
+              const labelIndex = accountData.labels.findIndex(l => l.id === labelData.id);
+              if (labelIndex !== -1) {
+                const label = accountData.labels[labelIndex];
+                if (labelData.name !== undefined) label.name = labelData.name;
+                if (labelData.color !== undefined) label.color = labelData.color;
+                if (labelData.messageListVisibility !== undefined) label.messageListVisibility = labelData.messageListVisibility;
+                if (labelData.labelListVisibility !== undefined) label.labelListVisibility = labelData.labelListVisibility;
+              }
+            }
+          });
+
+          const updatedLabel = get().accountData[targetAccountId]?.labels.find(l => l.id === labelData.id);
+          if (!updatedLabel) throw new Error('Label not found');
+          return updatedLabel;
+        },
+
+        deleteLabel: async (labelId: string, accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+
+          set((state) => {
+            const accountData = state.accountData[targetAccountId];
+            if (accountData) {
+              accountData.labels = accountData.labels.filter(l => l.id !== labelId);
+              // Remove label from all messages
+              accountData.messages.forEach(message => {
+                message.labels = message.labels.filter(l => l !== labelId);
+              });
+            }
+          });
+        },
+
+        addLabelsToMessages: async (messageIds: string[], labelIds: string[], accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+
+          set((state) => {
+            const accountData = state.accountData[targetAccountId];
+            if (accountData) {
+              messageIds.forEach(messageId => {
+                const message = accountData.messages.find(msg => msg.id === messageId);
+                if (message) {
+                  labelIds.forEach(labelId => {
+                    if (!message.labels.includes(labelId)) {
+                      message.labels.push(labelId);
+                    }
+                  });
+                }
+              });
+            }
+          });
+        },
+
+        removeLabelsFromMessages: async (messageIds: string[], labelIds: string[], accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+
+          set((state) => {
+            const accountData = state.accountData[targetAccountId];
+            if (accountData) {
+              messageIds.forEach(messageId => {
+                const message = accountData.messages.find(msg => msg.id === messageId);
+                if (message) {
+                  message.labels = message.labels.filter(label => !labelIds.includes(label));
+                }
+              });
+            }
+          });
+        },
+
+        applyLabelOperation: async (operation: LabelOperation, accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+
+          switch (operation.type) {
+            case 'add':
+              await get().addLabelsToMessages(operation.messageIds, operation.labelIds, targetAccountId);
+              break;
+            case 'remove':
+              await get().removeLabelsFromMessages(operation.messageIds, operation.labelIds, targetAccountId);
+              break;
+            case 'replace':
+              set((state) => {
+                const accountData = state.accountData[targetAccountId];
+                if (accountData) {
+                  operation.messageIds.forEach(messageId => {
+                    const message = accountData.messages.find(msg => msg.id === messageId);
+                    if (message) {
+                      message.labels = [...operation.labelIds];
+                    }
+                  });
+                }
+              });
+              break;
+          }
+        },
+
+        // Label Settings
+        updateLabelSettings: (settings: Partial<LabelSettings>) => {
+          set((state) => {
+            state.labelSettings = {
+              ...state.labelSettings,
+              ...settings,
+            };
+          });
+        },
+
+        resetLabelSettings: () => {
+          set((state) => {
+            state.labelSettings = {
+              visibility: {
+                showSystemLabels: true,
+                showUserLabels: true,
+                showEmptyLabels: false,
+                showUnreadCountsOnly: false,
+                compactView: false
+              },
+              sorting: {
+                sortBy: 'name',
+                sortOrder: 'asc',
+                groupByType: true,
+                prioritizeUnread: false
+              },
+              behavior: {
+                autoApplyLabels: false,
+                removeFromInboxWhenLabeled: false,
+                showLabelColors: true,
+                enableLabelShortcuts: true,
+                maxLabelsPerMessage: 20
+              }
+            };
+          });
+        },
+
+        // Label Filtering
+        setSelectedLabels: (labelIds: string[]) => {
+          set((state) => {
+            state.selectedLabels = labelIds;
+          });
+        },
+
+        addLabelToFilter: (labelId: string) => {
+          set((state) => {
+            if (!state.selectedLabels.includes(labelId)) {
+              state.selectedLabels.push(labelId);
+            }
+          });
+        },
+
+        removeLabelFromFilter: (labelId: string) => {
+          set((state) => {
+            state.selectedLabels = state.selectedLabels.filter(id => id !== labelId);
+          });
+        },
+
+        clearLabelFilter: () => {
+          set((state) => {
+            state.selectedLabels = [];
+          });
+        },
+
+        // Authentication
+        signOut: async (accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          
+          set((state) => {
+            if (targetAccountId) {
+              // Remove specific account
+              delete state.accounts[targetAccountId];
+              delete state.accountData[targetAccountId];
+              
+              // Switch to another account or sign out completely
+              if (state.currentAccountId === targetAccountId) {
+                const remainingAccountIds = Object.keys(state.accounts);
+                if (remainingAccountIds.length > 0) {
+                  state.currentAccountId = remainingAccountIds[0];
+                } else {
+                  state.currentAccountId = null;
+                  state.isAuthenticated = false;
+                }
+              }
+            } else {
+              // Sign out all accounts
+              state.accounts = {};
+              state.accountData = {};
+              state.currentAccountId = null;
+              state.isAuthenticated = false;
             }
           });
         },
@@ -1306,9 +1577,151 @@ const useMailStore = create<EnhancedMailStore>()(
           });
         },
 
-        // Search
+        // Enhanced Search (Phase 2.1)
         searchMessages: async (query: string, accountId?: string) => {
-          await get().fetchMessages(undefined, query, undefined, accountId);
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+          
+          set((state) => {
+            state.searchQuery = query;
+            state.isLoadingMessages = true;
+            state.error = null;
+          });
+          
+          try {
+            // Use the enhanced search service
+            const searchResult = await searchService.search(query, [], targetAccountId);
+            
+            // Update store with search results
+            set((state) => {
+              // The messages are already loaded through fetchMessages call in search service
+              state.isLoadingMessages = false;
+              state.searchQuery = query;
+            });
+            
+            console.log(`✅ [SEARCH] Search completed: ${searchResult.messages.length} results in ${searchResult.searchTime}ms`);
+          } catch (error) {
+            console.error('❌ [SEARCH] Search failed:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'search_messages',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+              state.isLoadingMessages = false;
+            });
+          }
+        },
+
+        // Advanced search with filters
+        searchWithFilters: async (filters: SearchFilter[], accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+          
+          set((state) => {
+            state.isLoadingMessages = true;
+            state.error = null;
+          });
+          
+          try {
+            const searchResult = await searchService.search('', filters, targetAccountId);
+            
+            set((state) => {
+              state.isLoadingMessages = false;
+              state.searchQuery = searchResult.query;
+            });
+            
+            console.log(`✅ [SEARCH] Filter search completed: ${searchResult.messages.length} results`);
+          } catch (error) {
+            console.error('❌ [SEARCH] Filter search failed:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'search_with_filters',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+              state.isLoadingMessages = false;
+            });
+          }
+        },
+
+        // Advanced search with complex filters
+        searchWithAdvancedFilters: async (filters: AdvancedSearchFilters, accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return;
+          
+          set((state) => {
+            state.isLoadingMessages = true;
+            state.error = null;
+          });
+          
+          try {
+            const searchResult = await searchService.searchWithAdvancedFilters(filters, targetAccountId);
+            
+            set((state) => {
+              state.isLoadingMessages = false;
+              state.searchQuery = searchResult.query;
+            });
+            
+            console.log(`✅ [SEARCH] Advanced search completed: ${searchResult.messages.length} results`);
+          } catch (error) {
+            console.error('❌ [SEARCH] Advanced search failed:', error);
+            const handledError = handleGmailError(error, {
+              operation: 'search_with_advanced_filters',
+              accountId: targetAccountId,
+            });
+            set((state) => {
+              state.error = handledError.message;
+              state.isLoadingMessages = false;
+            });
+          }
+        },
+
+        // Get search suggestions
+        getSearchSuggestions: async (query: string, accountId?: string) => {
+          const targetAccountId = accountId || get().currentAccountId;
+          if (!targetAccountId) return [];
+          
+          try {
+            return await searchService.getSuggestions(query, targetAccountId);
+          } catch (error) {
+            console.error('❌ [SEARCH] Failed to get suggestions:', error);
+            return [];
+          }
+        },
+
+        // Get search operators
+        getSearchOperators: () => {
+          return searchService.getOperators();
+        },
+
+        // Search history management
+        getSearchHistory: () => {
+          return searchService.getSearchHistory();
+        },
+
+        saveSearch: async (searchQuery: SearchQuery) => {
+          try {
+            await searchService.saveSearch(searchQuery);
+          } catch (error) {
+            console.error('❌ [SEARCH] Failed to save search:', error);
+          }
+        },
+
+        deleteSearch: async (searchId: string) => {
+          try {
+            await searchService.deleteSearch(searchId);
+          } catch (error) {
+            console.error('❌ [SEARCH] Failed to delete search:', error);
+          }
+        },
+
+        clearSearchHistory: async () => {
+          try {
+            await searchService.clearSearchHistory();
+          } catch (error) {
+            console.error('❌ [SEARCH] Failed to clear search history:', error);
+          }
         },
 
         clearSearch: () => {

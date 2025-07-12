@@ -253,6 +253,125 @@ it('should handle service errors gracefully', async () => {
 
 ## Development Workflow
 
+### Rust Tauri Backend Type Checking Equivalents
+
+Based on the LibreOllama project structure, here are the main commands and tools that serve as the Rust/Tauri equivalent of TypeScript type checking:
+
+#### Primary Type Checking Command
+
+**`cargo check`** is the direct equivalent of TypeScript's `tsc --noEmit` command. It performs **fast, type-only compilation** without generating final binaries, making it ideal for development workflows where you want quick feedback on type errors and syntax issues.
+
+```bash
+cargo check
+```
+
+This command:
+- Validates all type annotations and type safety
+- Checks syntax correctness and compilation errors
+- Runs significantly faster than `cargo build` (approximately 1.5-2x speedup)
+- Saves metadata files for incremental checking
+
+#### Enhanced Type Checking with Linting
+
+**`cargo clippy`** extends type checking with comprehensive linting and static analysis. It's equivalent to combining TypeScript type checking with ESLint:
+
+```bash
+cargo clippy
+```
+
+Clippy provides:
+- Over 750 linting rules for common mistakes and code improvements
+- Categories including correctness, style, complexity, and performance checks
+- Automatic fix suggestions with `cargo clippy --fix`
+
+#### Code Formatting
+
+**`cargo fmt`** handles code formatting (equivalent to Prettier for TypeScript):
+
+```bash
+cargo fmt
+```
+
+This automatically formats Rust code according to community style guidelines.
+
+#### Testing
+
+**`cargo test`** runs unit and integration tests:
+
+```bash
+cargo test
+```
+
+#### LibreOllama-Specific Implementation
+
+For your Gmail feature implementation in LibreOllama, here's the recommended development workflow:
+
+**1. Development Workflow Commands**
+```bash
+# Quick type checking (fastest feedback)
+cargo check
+
+# Comprehensive checking with linting
+cargo clippy
+
+# Format code
+cargo fmt
+
+# Run tests
+cargo test
+
+# Build for production
+cargo build --release
+```
+
+**2. Package.json Integration**
+Add these scripts to your `package.json` to mirror the existing TypeScript checking:
+
+```json
+{
+  "scripts": {
+    "tauri:check": "cargo check --manifest-path=src-tauri/Cargo.toml",
+    "tauri:lint": "cargo clippy --manifest-path=src-tauri/Cargo.toml",
+    "tauri:fmt": "cargo fmt --manifest-path=src-tauri/Cargo.toml",
+    "tauri:test": "cargo test --manifest-path=src-tauri/Cargo.toml"
+  }
+}
+```
+
+**3. Tauri-Specific Type Safety**
+
+For the Gmail feature implementation, you can leverage **Tauri Specta** for type-safe command generation:
+
+```rust
+use tauri_specta::ts;
+
+#[tauri::command]
+#[specta::specta]
+fn gmail_fetch_emails(query: String) -> Result<Vec<Email>, String> {
+    // Implementation
+}
+```
+
+This generates TypeScript types automatically, ensuring type safety between your Rust backend and TypeScript frontend.
+
+**4. CI/CD Integration**
+
+Based on LibreOllama's existing structure, add Rust checking to your CI pipeline:
+
+```yaml
+# Add to existing workflow
+- name: Check Rust code
+  run: cargo check --manifest-path=src-tauri/Cargo.toml
+
+- name: Lint Rust code
+  run: cargo clippy --manifest-path=src-tauri/Cargo.toml -- -D warnings
+
+- name: Test Rust code
+  run: cargo test --manifest-path=src-tauri/Cargo.toml
+```
+
+**Summary**: The **cargo check** command is your primary equivalent to TypeScript type checking, providing fast feedback on type errors and compilation issues. Combined with **cargo clippy** for comprehensive linting and **cargo fmt** for formatting, you get a complete development toolkit that mirrors the TypeScript development experience while leveraging Rust's powerful type system.
+
 ### Pre-Implementation Checklist
 
 1. **Database Schema Review**:

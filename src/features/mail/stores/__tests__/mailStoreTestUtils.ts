@@ -271,55 +271,60 @@ export const createMockTestLabels = (): GmailLabel[] => [
     id: 'INBOX', 
     name: 'Inbox', 
     messageListVisibility: 'show', 
-    labelListVisibility: 'labelShow', 
+    labelListVisibility: 'show', 
     type: 'system', 
     messagesTotal: 25, 
     messagesUnread: 3, 
     threadsTotal: 20, 
-    threadsUnread: 3 
+    threadsUnread: 3,
+    color: '#4285f4'
   },
   { 
     id: 'STARRED', 
     name: 'Starred', 
     messageListVisibility: 'show', 
-    labelListVisibility: 'labelShow', 
+    labelListVisibility: 'show', 
     type: 'system', 
     messagesTotal: 5, 
     messagesUnread: 0, 
     threadsTotal: 5, 
-    threadsUnread: 0 
+    threadsUnread: 0,
+    color: '#fbbc04'
   },
   { 
     id: 'SENT', 
     name: 'Sent', 
     messageListVisibility: 'show', 
-    labelListVisibility: 'labelShow', 
+    labelListVisibility: 'show', 
     type: 'system', 
     messagesTotal: 15, 
     messagesUnread: 0, 
     threadsTotal: 12, 
-    threadsUnread: 0 
+    threadsUnread: 0,
+    color: '#34a853'
   },
   { 
     id: 'DRAFTS', 
     name: 'Drafts', 
     messageListVisibility: 'show', 
-    labelListVisibility: 'labelShow', 
+    labelListVisibility: 'show', 
     type: 'system', 
     messagesTotal: 3, 
     messagesUnread: 0, 
     threadsTotal: 3, 
-    threadsUnread: 0 
+    threadsUnread: 0,
+    color: '#ea4335'
   },
   { 
     id: 'TEST_WORK', 
     name: 'Test Work', 
     messageListVisibility: 'show', 
-    labelListVisibility: 'labelShow', 
+    labelListVisibility: 'show', 
     type: 'user', 
     messagesTotal: 8, 
     messagesUnread: 2, 
     threadsTotal: 6, 
-    threadsUnread: 2 
+    threadsUnread: 2,
+    color: '#ff6d01'
   },
 ]; 

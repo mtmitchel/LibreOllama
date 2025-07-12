@@ -27,6 +27,11 @@ pub fn create_performance_metric(
         MetricType::ErrorRate => "error_rate",
         MetricType::MemoryUsage => "memory_usage",
         MetricType::Placeholder => "placeholder",
+        MetricType::DatabaseQuery => "database_query",
+        MetricType::ApiCall => "api_call",
+        MetricType::Memory => "memory",
+        MetricType::CPU => "cpu",
+        MetricType::Custom(ref s) => s,
     };
 
     conn.execute(
@@ -91,10 +96,12 @@ pub fn get_performance_metrics_by_type(
             .unwrap_or_else(|_| Local::now().naive_local());
         
         Ok(PerformanceMetric {
+            id: 0, // Default id
             metric_type: MetricType::from(metric_type_str),
             value: row.get(1)?,
             timestamp,
             metadata: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     }).context("Failed to execute get performance metrics query")?;
 
@@ -124,10 +131,12 @@ pub fn get_performance_metrics_by_name(conn: &Connection, metric_name: &str) -> 
         };
 
         Ok(PerformanceMetric {
+            id: 0, // Default id
             metric_type,
             value: row.get(2)?,
             timestamp: row.get(3)?,
             metadata: None,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -167,10 +176,12 @@ pub fn get_performance_metrics_in_range(
             .unwrap_or_else(|_| chrono::Local::now().naive_local());
 
         Ok(PerformanceMetric {
+            id: 0, // Default id
             metric_type,
             value: row.get(1)?,
             timestamp,
             metadata: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -203,10 +214,12 @@ pub fn get_latest_performance_metrics(conn: &Connection, limit: i32) -> Result<V
             .unwrap_or_else(|_| chrono::Local::now().naive_local());
 
         Ok(PerformanceMetric {
+            id: 0, // Default id
             metric_type,
             value: row.get(1)?,
             timestamp,
             metadata: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -227,6 +240,11 @@ pub fn get_average_metric_value(conn: &Connection, metric_type: MetricType) -> R
         MetricType::ErrorRate => "error_rate",
         MetricType::MemoryUsage => "memory_usage",
         MetricType::Placeholder => "placeholder",
+        MetricType::DatabaseQuery => "database_query",
+        MetricType::ApiCall => "api_call",
+        MetricType::Memory => "memory",
+        MetricType::CPU => "cpu",
+        MetricType::Custom(ref s) => s,
     };
 
     let mut stmt = conn.prepare(

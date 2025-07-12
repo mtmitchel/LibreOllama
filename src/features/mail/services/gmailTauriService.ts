@@ -450,6 +450,98 @@ export class GmailTauriService {
   }
 
   /**
+   * Get user profile information for the account
+   */
+  async getUserProfile(): Promise<{ id: string; email: string; name?: string; picture?: string }> {
+    try {
+      console.log(`🔄 [TauriService] Getting user profile for account: ${this.accountId}`);
+      
+      // First get the access token for this account
+      const tokens = await invoke<any>('get_gmail_tokens_secure', {
+        accountId: this.accountId
+      });
+      
+      if (!tokens || !tokens.access_token) {
+        throw new Error('No access token found for account');
+      }
+      
+      const userInfo = await invoke<{ id: string; email: string; name?: string; picture?: string }>('get_gmail_user_info', {
+        accessToken: tokens.access_token
+      });
+      
+      console.log(`✅ [TauriService] Successfully retrieved user profile for: ${userInfo.email}`);
+      return userInfo;
+    } catch (error) {
+      console.error(`❌ [TauriService] Failed to get user profile for account ${this.accountId}:`, error);
+      throw new Error(`Failed to get Gmail user profile: ${error}`);
+    }
+  }
+
+  /**
+   * Modify labels for a batch of messages
+   */
+  private async modifyMessages(
+    messageIds: string[],
+    addLabelIds: string[],
+    removeLabelIds: string[]
+  ): Promise<void> {
+    try {
+      console.log(`🔄 [TauriService] Modifying messages for account: ${this.accountId}`);
+      
+      await invoke('modify_gmail_messages', {
+        accountId: this.accountId,
+        messageIds,
+        addLabelIds,
+        removeLabelIds
+      });
+      
+      console.log(`✅ [TauriService] Successfully modified ${messageIds.length} messages`);
+    } catch (error) {
+      console.error('❌ [TauriService] Failed to modify messages:', error);
+      throw new Error(`Failed to modify Gmail messages: ${error}`);
+    }
+  }
+
+  async markAsRead(messageIds: string[]): Promise<void> {
+    await this.modifyMessages(messageIds, [], ['UNREAD']);
+  }
+
+  async markAsUnread(messageIds: string[]): Promise<void> {
+    await this.modifyMessages(messageIds, ['UNREAD'], []);
+  }
+
+  async starMessages(messageIds: string[]): Promise<void> {
+    await this.modifyMessages(messageIds, ['STARRED'], []);
+  }
+
+  async unstarMessages(messageIds: string[]): Promise<void> {
+    await this.modifyMessages(messageIds, [], ['STARRED']);
+  }
+
+  async archiveMessages(messageIds: string[]): Promise<void> {
+    await this.modifyMessages(messageIds, [], ['INBOX']);
+  }
+
+  /**
+   * Move a batch of messages to trash
+   */
+  async deleteMessages(messageIds: string[]): Promise<void> {
+    try {
+      console.log(`🗑️ [TauriService] Trashing messages for account: ${this.accountId}`);
+      
+      await invoke('trash_gmail_messages', {
+        accountId: this.accountId,
+        messageIds
+      });
+      
+      console.log(`✅ [TauriService] Successfully trashed ${messageIds.length} messages`);
+    } catch (error) {
+      console.error('❌ [TauriService] Failed to trash messages:', error);
+      throw new Error(`Failed to trash Gmail messages: ${error}`);
+    }
+  }
+
+  /**
    * Download attachment data
    */
   async getAttachment(messageId: string, attachmentId: string): Promise<Uint8Array> {

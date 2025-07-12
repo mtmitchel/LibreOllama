@@ -829,10 +829,13 @@ const Calendar: React.FC = () => {
 
   // Get filtered tasks based on selected task list
   const getFilteredTasks = () => {
-    if (selectedColumnId === 'all') {
-      return Object.values(googleTasks).flat();
-    }
-    return googleTasks[selectedColumnId] || [];
+    const tasks = selectedColumnId === 'all'
+      ? Object.values(googleTasks).flat()
+      : googleTasks[selectedColumnId] || [];
+    
+    // Deduplicate tasks by ID to prevent key errors
+    const uniqueTasks = Array.from(new Map(tasks.map(task => [task.id, task])).values());
+    return uniqueTasks;
   };
 
   const filteredTasks = getFilteredTasks();

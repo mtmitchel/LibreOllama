@@ -1,207 +1,234 @@
-// src-tauri/src/database/models.rs
+//! Database Models
+//!
+//! This module contains the database models for the LibreOllama application.
+//! Some unused constructors have been removed to clean up warnings.
 
-use serde::{Serialize, Deserialize};
-use chrono::{NaiveDateTime, Local};
+use chrono::NaiveDateTime;
+use rusqlite::{Row, Result as SqliteResult};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ChatSession {
-    pub id: i32,
-    pub user_id: String,
-    pub session_name: String,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+// Re-export for easier access
+pub use crate::database::schema::*;
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PreferenceType {
+    String,
+    Integer,
+    Float,
+    Boolean,
+    Json,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum MessageRole {
-    User,
-    Assistant,
-    System,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ChatMessage {
-    pub id: i32,
-    pub session_id: i32,
-    pub role: String, // Storing MessageRole as a string
-    pub content: String,
-    pub created_at: chrono::NaiveDateTime,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct UserPreference {
-    pub id: i32,
-    pub preference_key: String,
-    pub preference_value: String,
-    pub preference_type_name: String,
-}
-
-impl UserPreference {
-    pub fn new(key: String, value: String, ptype: PreferenceType) -> Self {
-        Self {
-            id: 0, // Placeholder
-            preference_key: key,
-            preference_value: value,
-            preference_type_name: ptype.as_str().to_string(),
+impl PreferenceType {
+    pub fn from_string(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "string" => PreferenceType::String,
+            "integer" => PreferenceType::Integer,
+            "float" => PreferenceType::Float,
+            "boolean" => PreferenceType::Boolean,
+            "json" => PreferenceType::Json,
+            _ => PreferenceType::String, // Default
+        }
+    }
+    
+    pub fn as_str(&self) -> &str {
+        match self {
+            PreferenceType::String => "string",
+            PreferenceType::Integer => "integer",
+            PreferenceType::Float => "float",
+            PreferenceType::Boolean => "boolean",
+            PreferenceType::Json => "json",
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+impl std::fmt::Display for PreferenceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl From<String> for PreferenceType {
+    fn from(s: String) -> Self {
+        Self::from_string(&s)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogLevel {
-    Info,
-    Warn,
     Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl LogLevel {
+    pub fn from_string(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "error" => LogLevel::Error,
+            "warn" => LogLevel::Warn,
+            "info" => LogLevel::Info,
+            "debug" => LogLevel::Debug,
+            "trace" => LogLevel::Trace,
+            _ => LogLevel::Info, // Default
+        }
+    }
+    
+    pub fn as_str(&self) -> &str {
+        match self {
+            LogLevel::Error => "error",
+            LogLevel::Warn => "warn",
+            LogLevel::Info => "info",
+            LogLevel::Debug => "debug",
+            LogLevel::Trace => "trace",
+        }
+    }
 }
 
 impl std::fmt::Display for LogLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LogLevel::Info => write!(f, "Info"),
-            LogLevel::Warn => write!(f, "Warn"),
-            LogLevel::Error => write!(f, "Error"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }
 
 impl From<String> for LogLevel {
     fn from(s: String) -> Self {
-        match s.to_lowercase().as_str() {
-            "info" => LogLevel::Info,
-            "warn" => LogLevel::Warn,
-            "error" => LogLevel::Error,
-            _ => LogLevel::Info, // Default
+        Self::from_string(&s)
+    }
+}
+
+impl rusqlite::types::FromSql for LogLevel {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        let s = String::column_result(value)?;
+        Ok(LogLevel::from_string(&s))
+    }
+}
+
+impl rusqlite::types::ToSql for LogLevel {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(rusqlite::types::ToSqlOutput::from(self.as_str()))
+    }
+}
+
+// =============================================================================
+// Core Models
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserPreference {
+    pub id: i32,
+    pub preference_key: String,
+    pub preference_value: String,
+    pub preference_type_name: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl UserPreference {
+    // Note: Removed unused new() constructor to clean up warnings
+}
+
+impl From<&Row<'_>> for UserPreference {
+    fn from(row: &Row) -> Self {
+        UserPreference {
+            id: row.get(0).unwrap_or(0),
+            preference_key: row.get(1).unwrap_or_default(),
+            preference_value: row.get(2).unwrap_or_default(),
+            preference_type_name: row.get(3).unwrap_or_default(),
+            created_at: row.get(4).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            updated_at: row.get(5).unwrap_or_else(|_| chrono::Local::now().naive_local()),
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApplicationLog {
     pub id: i32,
-    pub log_level: String, // Storing LogLevel as a string
+    pub log_level: LogLevel,
     pub message: String,
     pub module_name: String,
     pub function_name: String,
+    pub line_number: Option<i32>,
+    pub user_id: Option<String>,
+    pub session_id: Option<String>,
+    pub request_id: Option<String>,
     pub timestamp: NaiveDateTime,
+    pub created_at: NaiveDateTime,
 }
 
 impl ApplicationLog {
-    pub fn new(log_level_enum: LogLevel, message: String, module_name: String, function_name: String) -> Self {
-        Self {
-            id: 0, // Placeholder
-            log_level: log_level_enum.to_string(),
-            message,
-            module_name,
-            function_name,
-            timestamp: Local::now().naive_local(),
+    // Note: Removed unused new() constructor to clean up warnings
+}
+
+impl From<&Row<'_>> for ApplicationLog {
+    fn from(row: &Row) -> Self {
+        ApplicationLog {
+            id: row.get(0).unwrap_or(0),
+            log_level: LogLevel::from_string(&row.get::<_, String>(1).unwrap_or_default()),
+            message: row.get(2).unwrap_or_default(),
+            module_name: row.get(3).unwrap_or_default(),
+            function_name: row.get(4).unwrap_or_default(),
+            line_number: row.get(5).ok(),
+            user_id: row.get(6).ok(),
+            session_id: row.get(7).ok(),
+            request_id: row.get(8).ok(),
+            timestamp: row.get(9).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            created_at: row.get(10).unwrap_or_else(|_| chrono::Local::now().naive_local()),
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RequestCache {
     pub id: i32,
     pub request_hash: String,
     pub response_body: String,
-    pub expires_at: NaiveDateTime,
+    pub expires_at: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
 }
 
 impl RequestCache {
-    pub fn new(request_hash: String, response_body: String) -> Self {
-        Self {
-            id: 0, // Placeholder
-            request_hash,
-            response_body,
-            expires_at: Local::now().naive_local(),
-            created_at: Local::now().naive_local(),
+    // Note: Removed unused new() constructor to clean up warnings
+}
+
+impl From<&Row<'_>> for RequestCache {
+    fn from(row: &Row) -> Self {
+        RequestCache {
+            id: row.get(0).unwrap_or(0),
+            request_hash: row.get(1).unwrap_or_default(),
+            response_body: row.get(2).unwrap_or_default(),
+            expires_at: row.get(3).ok(),
+            created_at: row.get(4).unwrap_or_else(|_| chrono::Local::now().naive_local()),
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ChatTemplate {
-    pub id: i32,
-    pub template_name: String,
-    pub template_content: String,
-}
+// =============================================================================
+// Agent Models
+// =============================================================================
 
-impl ChatTemplate {
-    pub fn new(name: String, description: String, system_message: String) -> Self {
-        // Combining description and system_message into template_content, perhaps as JSON or a formatted string.
-        // For simplicity, let's use a formatted string.
-        let content = format!(r#"{{"description": "{}", "system_message": "{}"}}"#, description, system_message);
-        Self {
-            id: 0, // Placeholder
-            template_name: name,
-            template_content: content,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ConversationContext {
-    pub id: i32,
-    pub context_name: String,
-    pub context_data: String, // JSON blob
-    pub context_window_size: i32,
-    pub context_summary: Option<String>,
-}
-
-impl ConversationContext {
-    // Assuming session_id from the call maps to context_name
-    pub fn new(context_name: String, context_window_size: i32) -> Self {
-        Self {
-            id: 0, // Placeholder
-            context_name,
-            context_data: "{}".to_string(), // Default empty JSON
-            context_window_size,
-            context_summary: None,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Folder {
-    pub id: i32,
-    pub name: String,  // Changed from folder_name to name
-    pub parent_id: Option<i32>,
-    pub user_id: String,
-    pub color: Option<String>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-impl Folder {
-    pub fn new(name: String, parent_id: Option<i32>, user_id: String, color: Option<String>) -> Self {
-        let now = Local::now().naive_local();
-        Self {
-            id: 0, // Placeholder
-            name,  // Changed from folder_name to name
-            parent_id,
-            user_id,
-            color,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-}
-
-// Agent-related models
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {
     pub id: i32,
     pub name: String,
     pub description: String,
+    pub model_name: String,
     pub system_prompt: String,
+    pub temperature: f64,
+    pub max_tokens: i32,
+    pub is_active: bool,
     pub capabilities: Vec<String>,
     pub parameters: serde_json::Value,
-    pub is_active: bool,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentExecution {
     pub id: i32,
     pub agent_id: i32,
@@ -213,20 +240,287 @@ pub struct AgentExecution {
     pub executed_at: NaiveDateTime,
 }
 
-// Notes model
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Note {
+impl From<&Row<'_>> for AgentExecution {
+    fn from(row: &Row) -> Self {
+        AgentExecution {
+            id: row.get(0).unwrap_or(0),
+            agent_id: row.get(1).unwrap_or(0),
+            session_id: row.get(2).ok(),
+            input: row.get(3).unwrap_or_default(),
+            output: row.get(4).unwrap_or_default(),
+            status: row.get(5).unwrap_or_default(),
+            error_message: row.get(6).ok(),
+            executed_at: row.get(7).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+        }
+    }
+}
+
+impl From<&Row<'_>> for Agent {
+    fn from(row: &Row) -> Self {
+        Agent {
+            id: row.get(0).unwrap_or(0),
+            name: row.get(1).unwrap_or_default(),
+            description: row.get(2).unwrap_or_default(),
+            model_name: row.get(3).unwrap_or_default(),
+            system_prompt: row.get(4).unwrap_or_default(),
+            temperature: row.get(5).unwrap_or(0.7),
+            max_tokens: row.get(6).unwrap_or(2048),
+            is_active: row.get(7).unwrap_or(true),
+            capabilities: serde_json::from_str(&row.get::<_, String>(8).unwrap_or_default()).unwrap_or_default(),
+            parameters: serde_json::from_str(&row.get::<_, String>(9).unwrap_or_default()).unwrap_or(serde_json::json!({})),
+            created_at: row.get(10).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            updated_at: row.get(11).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+        }
+    }
+}
+
+// =============================================================================
+// Chat Models
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatSession {
     pub id: i32,
     pub title: String,
-    pub content: String,
+    pub session_name: String,
     pub user_id: String,
-    pub folder_id: Option<i32>,
+    pub agent_id: i32,
+    pub context_length: i32,
+    pub is_active: bool,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
 
-// MCP Server model
-#[derive(Serialize, Deserialize, Debug, Clone)]
+impl From<&Row<'_>> for ChatSession {
+    fn from(row: &Row) -> Self {
+        ChatSession {
+            id: row.get(0).unwrap_or(0),
+            title: row.get(1).unwrap_or_default(),
+            session_name: row.get(2).unwrap_or_default(),
+            user_id: row.get(3).unwrap_or_default(),
+            agent_id: row.get(4).unwrap_or(0),
+            context_length: row.get(5).unwrap_or(4096),
+            is_active: row.get(6).unwrap_or(true),
+            created_at: row.get(7).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            updated_at: row.get(8).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub id: i32,
+    pub session_id: i32,
+    pub role: String,
+    pub content: String,
+    pub token_count: i32,
+    pub created_at: NaiveDateTime,
+}
+
+impl From<&Row<'_>> for ChatMessage {
+    fn from(row: &Row) -> Self {
+        ChatMessage {
+            id: row.get(0).unwrap_or(0),
+            session_id: row.get(1).unwrap_or(0),
+            role: row.get(2).unwrap_or_default(),
+            content: row.get(3).unwrap_or_default(),
+            token_count: row.get(4).unwrap_or(0),
+            created_at: row.get(5).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+        }
+    }
+}
+
+// =============================================================================
+// Additional Models
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Note {
+    pub id: i32,
+    pub title: String,
+    pub content: String,
+    pub folder_id: Option<i32>,
+    pub user_id: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl From<&Row<'_>> for Note {
+    fn from(row: &Row) -> Self {
+        Note {
+            id: row.get(0).unwrap_or(0),
+            title: row.get(1).unwrap_or_default(),
+            content: row.get(2).unwrap_or_default(),
+            folder_id: row.get(3).ok(),
+            user_id: row.get(4).unwrap_or_default(),
+            created_at: row.get(5).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            updated_at: row.get(6).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Folder {
+    pub id: i32,
+    pub name: String,
+    pub parent_id: Option<i32>,
+    pub user_id: String,
+    pub color: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl Folder {
+    // Note: Removed unused new() constructor to clean up warnings
+}
+
+impl From<&Row<'_>> for Folder {
+    fn from(row: &Row) -> Self {
+        Folder {
+            id: row.get(0).unwrap_or(0),
+            name: row.get(1).unwrap_or_default(),
+            parent_id: row.get(2).ok(),
+            user_id: row.get(3).unwrap_or_default(),
+            color: row.get(4).ok(),
+            created_at: row.get(5).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+            updated_at: row.get(6).unwrap_or_else(|_| chrono::Local::now().naive_local()),
+        }
+    }
+}
+
+// =============================================================================
+// Additional structures (kept for compatibility)
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MetricType {
+    ResponseTime,
+    DatabaseQuery,
+    ApiCall,
+    Memory,
+    CPU,
+    TokenCount,
+    CpuUsage,
+    Throughput,
+    ErrorRate,
+    MemoryUsage,
+    Placeholder,
+    Custom(String),
+}
+
+impl From<String> for MetricType {
+    fn from(s: String) -> Self {
+        match s.to_lowercase().as_str() {
+            "response_time" => MetricType::ResponseTime,
+            "database_query" => MetricType::DatabaseQuery,
+            "api_call" => MetricType::ApiCall,
+            "memory" => MetricType::Memory,
+            "cpu" => MetricType::CPU,
+            "token_count" => MetricType::TokenCount,
+            "cpu_usage" => MetricType::CpuUsage,
+            "throughput" => MetricType::Throughput,
+            "error_rate" => MetricType::ErrorRate,
+            "memory_usage" => MetricType::MemoryUsage,
+            "placeholder" => MetricType::Placeholder,
+            _ => MetricType::Custom(s),
+        }
+    }
+}
+
+impl std::fmt::Display for MetricType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            MetricType::ResponseTime => "response_time",
+            MetricType::DatabaseQuery => "database_query",
+            MetricType::ApiCall => "api_call",
+            MetricType::Memory => "memory",
+            MetricType::CPU => "cpu",
+            MetricType::TokenCount => "token_count",
+            MetricType::CpuUsage => "cpu_usage",
+            MetricType::Throughput => "throughput",
+            MetricType::ErrorRate => "error_rate",
+            MetricType::MemoryUsage => "memory_usage",
+            MetricType::Placeholder => "placeholder",
+            MetricType::Custom(s) => s,
+        };
+        write!(f, "{}", s)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetric {
+    pub id: i32,
+    pub metric_type: MetricType,
+    pub value: f64,
+    pub timestamp: NaiveDateTime,
+    pub metadata: Option<String>,
+    pub created_at: NaiveDateTime,
+}
+
+impl PerformanceMetric {
+    pub fn new(metric_type: MetricType, value: f64, timestamp: NaiveDateTime, metadata: Option<String>) -> Self {
+        PerformanceMetric {
+            id: 0,
+            metric_type,
+            value,
+            timestamp,
+            metadata,
+            created_at: chrono::Local::now().naive_local(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationContext {
+    pub id: i32,
+    pub context_name: String,
+    pub description: String,
+    pub context_data: serde_json::Value,
+    pub context_window_size: i32,
+    pub context_summary: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl ConversationContext {
+    pub fn new(context_name: String, context_window_size: i32) -> Self {
+        ConversationContext {
+            id: 0,
+            context_name,
+            description: String::new(),
+            context_data: serde_json::json!({}),
+            context_window_size,
+            context_summary: None,
+            created_at: chrono::Local::now().naive_local(),
+            updated_at: chrono::Local::now().naive_local(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatTemplate {
+    pub id: i32,
+    pub name: String,
+    pub template_name: String,
+    pub template_content: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl ChatTemplate {
+    pub fn new(name: String, description: String, template_content: String) -> Self {
+        ChatTemplate {
+            id: 0,
+            name: name.clone(),
+            template_name: name,
+            template_content,
+            created_at: chrono::Local::now().naive_local(),
+            updated_at: chrono::Local::now().naive_local(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct McpServer {
     pub id: i32,
     pub name: String,
@@ -239,8 +533,7 @@ pub struct McpServer {
     pub updated_at: NaiveDateTime,
 }
 
-// N8N Connection model
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct N8nConnection {
     pub id: i32,
     pub name: String,
@@ -249,227 +542,6 @@ pub struct N8nConnection {
     pub workflow_id: String,
     pub is_active: bool,
     pub user_id: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-// Performance and metrics models
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PerformanceMetric {
-    pub metric_type: MetricType,
-    pub value: f64,
-    pub timestamp: NaiveDateTime,
-    pub metadata: Option<String>,
-}
-
-impl PerformanceMetric {
-    pub fn new(metric_type: MetricType, value: f64, timestamp: NaiveDateTime, metadata: Option<String>) -> Self {
-        Self {
-            metric_type,
-            value,
-            timestamp,
-            metadata,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum MetricType {
-    ResponseTime,
-    TokenCount,
-    CpuUsage,
-    Throughput,
-    ErrorRate,
-    MemoryUsage,
-    Placeholder,
-}
-
-impl std::fmt::Display for MetricType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MetricType::ResponseTime => write!(f, "response_time"),
-            MetricType::TokenCount => write!(f, "token_count"),
-            MetricType::CpuUsage => write!(f, "cpu_usage"),
-            MetricType::Throughput => write!(f, "throughput"),
-            MetricType::ErrorRate => write!(f, "error_rate"),
-            MetricType::MemoryUsage => write!(f, "memory_usage"),
-            MetricType::Placeholder => write!(f, "placeholder"),
-        }
-    }
-}
-
-impl From<String> for MetricType {
-    fn from(s: String) -> Self {
-        match s.to_lowercase().as_str() {
-            "responsetime" | "response_time" => MetricType::ResponseTime,
-            "tokencount" | "token_count" => MetricType::TokenCount,
-            "cpuusage" | "cpu_usage" => MetricType::CpuUsage,
-            "throughput" => MetricType::Throughput,
-            "errorrate" | "error_rate" => MetricType::ErrorRate,
-            "memoryusage" | "memory_usage" => MetricType::MemoryUsage,
-            _ => MetricType::Placeholder,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum PreferenceType {
-    String,
-    Boolean,
-    Number,
-}
-
-impl PreferenceType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            PreferenceType::String => "String",
-            PreferenceType::Boolean => "Boolean",
-            PreferenceType::Number => "Number",
-        }
-    }
-}
-
-impl From<String> for PreferenceType {
-    fn from(s: String) -> Self {
-        match s.to_lowercase().as_str() {
-            "string" => PreferenceType::String,
-            "boolean" => PreferenceType::Boolean,
-            "number" => PreferenceType::Number,
-            _ => PreferenceType::String, // Default
-        }
-    }
-}
-
-// Gmail-related models for Gmail integration
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GmailAccount {
-    pub id: String,
-    pub email_address: String,
-    pub display_name: Option<String>,
-    pub profile_picture_url: Option<String>,
-    pub access_token_encrypted: String,
-    pub refresh_token_encrypted: Option<String>,
-    pub token_expires_at: Option<String>,
-    pub scopes: Vec<String>,
-    pub is_active: bool,
-    pub last_sync_at: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
-    pub user_id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GmailLabel {
-    pub id: String,
-    pub account_id: String,
-    pub name: String,
-    pub message_list_visibility: String,
-    pub label_list_visibility: String,
-    pub label_type: String,
-    pub messages_total: Option<i32>,
-    pub messages_unread: Option<i32>,
-    pub threads_total: Option<i32>,
-    pub threads_unread: Option<i32>,
-    pub color_text: Option<String>,
-    pub color_background: Option<String>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GmailThread {
-    pub id: String,
-    pub account_id: String,
-    pub history_id: Option<String>,
-    pub snippet: Option<String>,
-    pub message_count: i32,
-    pub is_read: bool,
-    pub is_starred: bool,
-    pub has_attachments: bool,
-    pub participants: Vec<String>,
-    pub subject: Option<String>,
-    pub last_message_date: Option<NaiveDateTime>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GmailMessage {
-    pub id: String,
-    pub thread_id: String,
-    pub account_id: String,
-    pub history_id: Option<String>,
-    pub internal_date: Option<NaiveDateTime>,
-    pub size_estimate: Option<i32>,
-    pub snippet: Option<String>,
-    pub is_read: bool,
-    pub is_starred: bool,
-    pub is_important: bool,
-    pub from_email: String,
-    pub from_name: Option<String>,
-    pub to_emails: Vec<String>,
-    pub cc_emails: Vec<String>,
-    pub bcc_emails: Vec<String>,
-    pub subject: Option<String>,
-    pub date_header: Option<NaiveDateTime>,
-    pub message_id_header: Option<String>,
-    pub reply_to: Option<String>,
-    pub body_text: Option<String>,
-    pub body_html: Option<String>,
-    pub raw_headers: serde_json::Value,
-    pub has_attachments: bool,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GmailAttachment {
-    pub id: String,
-    pub message_id: String,
-    pub account_id: String,
-    pub attachment_id: String,
-    pub filename: String,
-    pub mime_type: String,
-    pub size_bytes: i64,
-    pub is_downloaded: bool,
-    pub local_path: Option<String>,
-    pub download_date: Option<NaiveDateTime>,
-    pub created_at: NaiveDateTime,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GmailSyncState {
-    pub id: String,
-    pub account_id: String,
-    pub sync_type: String,
-    pub last_sync_at: NaiveDateTime,
-    pub last_history_id: Option<String>,
-    pub next_page_token: Option<String>,
-    pub sync_status: String,
-    pub error_message: Option<String>,
-    pub messages_synced: Option<i32>,
-    pub total_messages: Option<i32>,
-    pub started_at: Option<NaiveDateTime>,
-    pub completed_at: Option<NaiveDateTime>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GmailDraft {
-    pub id: String,
-    pub message_id: Option<String>,
-    pub account_id: String,
-    pub to_emails: Vec<String>,
-    pub cc_emails: Vec<String>,
-    pub bcc_emails: Vec<String>,
-    pub subject: Option<String>,
-    pub body_text: Option<String>,
-    pub body_html: Option<String>,
-    pub attachments: serde_json::Value,
-    pub is_reply: bool,
-    pub reply_to_message_id: Option<String>,
-    pub thread_id: Option<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }

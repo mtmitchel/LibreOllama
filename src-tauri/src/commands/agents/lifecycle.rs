@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc, TimeZone};
 use tauri::State;
 
 // Import database modules
-use crate::database::{Agent as DbAgent, AgentExecution as DbAgentExecution};
+use crate::database::models::{Agent as DbAgent, AgentExecution as DbAgentExecution};
 use crate::database::operations;
 
 // Data structures for agent functionality (compatible with frontend)
@@ -106,7 +106,10 @@ pub async fn create_agent(
         id: 0, // Will be set by database
         name: request.name.clone(),
         description: request.description.clone(),
+        model_name: request.model.clone(),
         system_prompt: request.system_prompt.clone(),
+        temperature: 0.7, // default
+        max_tokens: 2048, // default
         capabilities: request.tools.clone(),
         parameters,
         is_active: true,
@@ -120,9 +123,20 @@ pub async fn create_agent(
     let system_prompt = db_agent.system_prompt.clone();
     let capabilities = db_agent.capabilities.clone();
     let parameters = db_agent.parameters.clone();
+    let model_name = db_agent.model_name.clone();
     let created_agent_id = tokio::task::spawn_blocking(move || {
         let conn = db_manager_clone.get_connection()?;
-        operations::agent_operations::create_agent(&conn, &name, &description, &system_prompt, capabilities, parameters)
+        operations::agent_operations::create_agent(
+            &conn, 
+            &name, 
+            &description, 
+            &system_prompt, 
+            &model_name, 
+            0.7, // default temperature 
+            2048, // default max_tokens
+            capabilities, 
+            parameters
+        )
     })
     .await
     .map_err(|e| e.to_string())?
@@ -199,9 +213,36 @@ pub async fn update_agent(
 
     let result_agent: Agent = db_agent.clone().into();
     let db_manager_clone_update = db_manager.inner().clone();
+    
+    // Extract model name before other operations to avoid borrow checker issues
+    let model_name = if let Some(model_value) = db_agent.parameters.get("model") {
+        model_value.as_str().unwrap_or("llama3:latest").to_string()
+    } else {
+        "llama3:latest".to_string()
+    };
+    
+    let capabilities_clone = db_agent.capabilities.clone();
+    let parameters_clone = db_agent.parameters.clone();
+    let agent_id = db_agent.id;
+    let name = db_agent.name.clone();
+    let description = db_agent.description.clone();
+    let system_prompt = db_agent.system_prompt.clone();
+    
     tokio::task::spawn_blocking(move || {
         let conn = db_manager_clone_update.get_connection()?;
-        operations::agent_operations::update_agent(&conn, db_agent.id, &db_agent.name, &db_agent.description, &db_agent.system_prompt, db_agent.capabilities, db_agent.parameters)
+        
+        operations::agent_operations::update_agent(
+            &conn, 
+            agent_id, 
+            &name, 
+            &description, 
+            &system_prompt, 
+            capabilities_clone,
+            parameters_clone,
+            Some(&model_name),
+            None, // Use default temperature
+            None  // Use default max_tokens
+        )
     })
     .await
     .map_err(|e| e.to_string())?

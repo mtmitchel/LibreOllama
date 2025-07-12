@@ -236,7 +236,7 @@ export function MailToolbar() {
             
             // Fallback logic if totalMessages is not available
             if (!displayTotal || displayTotal <= 0) {
-              displayTotal = nextPageToken ? `${end}+` : end;
+              displayTotal = nextPageToken ? `${end}+` : end.toString();
             }
             
             console.log(`📄 [TOOLBAR] PAGINATION DISPLAY - START: ${start}, END: ${end}, TOTAL: ${displayTotal}`, {

@@ -76,19 +76,52 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId 
 
 // New component to handle image fetching with fallback
 const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
-  const [imgSrc, setImgSrc] = useState(src);
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setImgSrc(src);
+    if (!src) {
+      setImgSrc(null);
+      setError(false);
+      return;
+    }
+
+    // Reset state when src changes
     setError(false);
+    setLoading(true);
+    
+    // Use a proxy approach to avoid direct calls to Google's servers
+    // This prevents HTTP 429 errors from rate limiting
+    const img = new Image();
+    img.onload = () => {
+      setImgSrc(src);
+      setLoading(false);
+    };
+    img.onerror = () => {
+      setError(true);
+      setLoading(false);
+    };
+    
+    // Add a small delay to prevent rapid requests
+    const timeoutId = setTimeout(() => {
+      img.src = src;
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [src]);
 
-  const handleError = () => {
-    if (!error) {
-      setError(true);
-    }
-  };
+  if (loading) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center animate-pulse">
+        <User size={20} className="text-accent-primary opacity-50" />
+      </div>
+    );
+  }
 
   if (error || !imgSrc) {
     return (
@@ -102,9 +135,9 @@ const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
     <img 
       src={imgSrc} 
       alt={alt}
-      onError={handleError}
       className="w-10 h-10 rounded-full"
-      crossOrigin="anonymous" // Attempt to fix cross-origin issues
+      loading="lazy"
+      referrerPolicy="no-referrer"
     />
   );
 };
@@ -462,6 +495,7 @@ const Settings: React.FC = () => {
                               Set Active
                             </Button>
                           )}
+
                           <Button 
                             variant="ghost" 
                             size="icon"
@@ -516,18 +550,19 @@ const Settings: React.FC = () => {
                             {apiKey.description}
                           </Text>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <form className="flex items-center gap-2" onSubmit={(e) => e.preventDefault()}>
                           <Input
                             id={apiKey.id}
                             type="password"
                             className="w-auto max-w-xs focus:ring-2 focus:ring-primary focus:ring-offset-2"
                             placeholder={apiKey.placeholder}
                             defaultValue={apiKey.defaultValue}
+                            autoComplete="current-password"
                           />
-                          <Button variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                          <Button type="submit" variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
                             Save
                           </Button>
-                        </div>
+                        </form>
                       </div>
                     </React.Fragment>
                   ))}

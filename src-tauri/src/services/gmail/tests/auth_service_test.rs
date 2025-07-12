@@ -1,34 +1,66 @@
 #[cfg(test)]
 mod tests {
-    use super::super::*;
-    use crate::database::connection::DatabaseManager;
+    use crate::services::gmail::auth_service::*;
+    use crate::errors::{Result, LibreOllamaError};
+    use crate::utils::crypto::{encrypt_data, decrypt_data};
     use std::sync::Arc;
     use tokio;
+    use uuid;
 
     // Test helpers
     async fn setup_test_auth_service() -> Result<GmailAuthService> {
+        // Use a unique database path for each test to avoid conflicts
+        let test_db_path = format!("{}/test_gmail_auth_{}.db", 
+            std::env::temp_dir().to_string_lossy(), 
+            uuid::Uuid::new_v4().to_string()
+        );
+        std::env::set_var("DATABASE_PATH", &test_db_path);
+        
         std::env::set_var("GMAIL_CLIENT_ID", "test_client_id");
-        std::env::set_var("GMAIL_CLIENT_SECRET", "test_client_secret_for_testing");
-        std::env::set_var("DATABASE_ENCRYPTION_KEY", "test_encryption_key_32_chars_long");
+        std::env::set_var("GMAIL_CLIENT_SECRET", "test_client_secret_for_testing_that_is_long_enough");
+        std::env::set_var("DATABASE_ENCRYPTION_KEY", "test_encryption_key_32chars_long_12345678901234567890");
         
         let db_manager = Arc::new(crate::database::init_database().await?);
+        
+        // Ensure migrations are run for the test database
+        db_manager.run_migrations().await?;
+        
         let encryption_key = [42u8; 32];
         
         GmailAuthService::new(db_manager, encryption_key)
     }
 
-    const TEST_USER_INFO: UserInfo = UserInfo {
-        email: "test@gmail.com".to_string(),
-        name: Some("Test User".to_string()),
-        picture: Some("https://example.com/picture.jpg".to_string()),
-    };
+    async fn setup_test_auth_service_with_account() -> Result<(GmailAuthService, String)> {
+        let service = setup_test_auth_service().await?;
+        let account_id = "test@gmail.com".to_string();
+        
+        // Store test account
+        service.store_account_tokens(
+            account_id.clone(),
+            test_tokens(),
+            test_user_info(),
+        ).await?;
+        
+        Ok((service, account_id))
+    }
 
-    const TEST_TOKENS: GmailTokens = GmailTokens {
-        access_token: "ya29.test_access_token".to_string(),
-        refresh_token: Some("1//test_refresh_token".to_string()),
-        expires_at: Some("2024-12-31T23:59:59Z".to_string()),
-        token_type: "Bearer".to_string(),
-    };
+    fn test_user_info() -> UserInfo {
+        UserInfo {
+            id: "test_user_id".to_string(),
+            email: "test@gmail.com".to_string(),
+            name: Some("Test User".to_string()),
+            picture: Some("https://example.com/picture.jpg".to_string()),
+        }
+    }
+
+    fn test_tokens() -> GmailTokens {
+        GmailTokens {
+            access_token: "ya29.test_access_token".to_string(),
+            refresh_token: Some("1//test_refresh_token".to_string()),
+            expires_at: Some("2024-12-31T23:59:59Z".to_string()),
+            token_type: "Bearer".to_string(),
+        }
+    }
 
     #[tokio::test]
     async fn test_auth_service_creation() {
@@ -71,7 +103,7 @@ mod tests {
         assert!(auth_request.is_ok());
         
         let auth_request = auth_request.unwrap();
-        assert!(auth_request.auth_url.contains(&urlencoding::encode(&custom_redirect)));
+        assert!(auth_request.auth_url.contains(&*urlencoding::encode(&custom_redirect)));
     }
 
     #[tokio::test]
@@ -114,8 +146,8 @@ mod tests {
         // Store tokens
         let store_result = service.store_account_tokens(
             account_id.clone(),
-            TEST_TOKENS.clone(),
-            TEST_USER_INFO.clone(),
+            test_tokens(),
+            test_user_info(),
         ).await;
         assert!(store_result.is_ok(), "Failed to store tokens: {:?}", store_result.err());
         
@@ -127,10 +159,10 @@ mod tests {
         assert!(retrieved_tokens.is_some(), "No tokens found for account");
         
         let tokens = retrieved_tokens.unwrap();
-        assert_eq!(tokens.access_token, TEST_TOKENS.access_token);
-        assert_eq!(tokens.refresh_token, TEST_TOKENS.refresh_token);
-        assert_eq!(tokens.expires_at, TEST_TOKENS.expires_at);
-        assert_eq!(tokens.token_type, TEST_TOKENS.token_type);
+        assert_eq!(tokens.access_token, test_tokens().access_token);
+        assert_eq!(tokens.refresh_token, test_tokens().refresh_token);
+        assert_eq!(tokens.expires_at, test_tokens().expires_at);
+        assert_eq!(tokens.token_type, test_tokens().token_type);
     }
 
     #[tokio::test]
@@ -138,6 +170,7 @@ mod tests {
         let service = setup_test_auth_service().await.unwrap();
         
         let invalid_user_info = UserInfo {
+            id: "invalid_user_id".to_string(),
             email: "invalid_email".to_string(), // Missing @ symbol
             name: Some("Test User".to_string()),
             picture: None,
@@ -145,7 +178,7 @@ mod tests {
         
         let result = service.store_account_tokens(
             "test_account".to_string(),
-            TEST_TOKENS.clone(),
+            test_tokens(),
             invalid_user_info,
         ).await;
         
@@ -161,85 +194,111 @@ mod tests {
     #[tokio::test]
     async fn test_get_user_accounts() {
         let service = setup_test_auth_service().await.unwrap();
-        let user_id = "test_user@gmail.com";
+        let user_email = "test@gmail.com";
         
-        // Store a test account
+        // Store a test account using email as account_id
         service.store_account_tokens(
-            "account_1".to_string(),
-            TEST_TOKENS.clone(),
-            TEST_USER_INFO.clone(),
+            user_email.to_string(),
+            test_tokens(),
+            test_user_info(),
         ).await.unwrap();
         
-        let accounts = service.get_user_accounts(user_id).await;
+        let accounts = service.get_user_accounts(user_email).await;
         assert!(accounts.is_ok(), "Failed to get user accounts: {:?}", accounts.err());
         
         let accounts = accounts.unwrap();
         assert_eq!(accounts.len(), 1);
-        assert_eq!(accounts[0].email, TEST_USER_INFO.email);
-        assert_eq!(accounts[0].name, TEST_USER_INFO.name);
+        assert_eq!(accounts[0].email, test_user_info().email);
+        assert_eq!(accounts[0].name, test_user_info().name);
         assert!(accounts[0].is_active);
     }
 
     #[tokio::test]
     async fn test_token_validation() {
         let service = setup_test_auth_service().await.unwrap();
-        let account_id = "test_account_validation".to_string();
+        let account_id = "test_token_validation@gmail.com".to_string();
         
         // Store tokens with future expiration
+        let future_expiration = chrono::Utc::now().checked_add_signed(chrono::Duration::hours(1)).unwrap().to_rfc3339();
         let future_tokens = GmailTokens {
-            expires_at: Some(chrono::Utc::now().checked_add_signed(chrono::Duration::hours(1)).unwrap().to_rfc3339()),
-            ..TEST_TOKENS.clone()
+            expires_at: Some(future_expiration.clone()),
+            ..test_tokens()
         };
+        
+        println!("🔍 Storing tokens with future expiration: {}", future_expiration);
         
         service.store_account_tokens(
             account_id.clone(),
-            future_tokens,
-            TEST_USER_INFO.clone(),
+            future_tokens.clone(),
+            test_user_info(),
         ).await.unwrap();
+        
+        // Verify tokens were stored
+        let stored_tokens = service.get_account_tokens(&account_id).await.unwrap();
+        assert!(stored_tokens.is_some(), "Tokens should be stored");
+        
+        let stored = stored_tokens.unwrap();
+        println!("🔍 Retrieved stored tokens - expires_at: {:?}", stored.expires_at);
         
         // Should be valid
         let is_valid = service.is_token_valid(&account_id).await;
+        println!("🔍 Token validation result: {:?}", is_valid);
         assert!(is_valid.is_ok() && is_valid.unwrap(), "Token should be valid");
         
         // Store tokens with past expiration
+        let past_expiration = chrono::Utc::now().checked_sub_signed(chrono::Duration::hours(1)).unwrap().to_rfc3339();
         let expired_tokens = GmailTokens {
-            expires_at: Some(chrono::Utc::now().checked_sub_signed(chrono::Duration::hours(1)).unwrap().to_rfc3339()),
-            ..TEST_TOKENS.clone()
+            expires_at: Some(past_expiration.clone()),
+            ..test_tokens()
         };
+        
+        println!("🔍 Storing tokens with past expiration: {}", past_expiration);
         
         service.store_account_tokens(
             account_id.clone(),
             expired_tokens,
-            TEST_USER_INFO.clone(),
+            test_user_info(),
         ).await.unwrap();
         
         // Should be invalid
         let is_valid = service.is_token_valid(&account_id).await;
+        println!("🔍 Expired token validation result: {:?}", is_valid);
         assert!(is_valid.is_ok() && !is_valid.unwrap(), "Token should be expired");
     }
 
     #[tokio::test]
     async fn test_remove_account() {
         let service = setup_test_auth_service().await.unwrap();
-        let account_id = "test_account_removal".to_string();
+        let account_id = "test_remove_account@gmail.com".to_string();
+        
+        println!("🔍 Creating account: {}", account_id);
         
         // Store account
-        service.store_account_tokens(
+        let store_result = service.store_account_tokens(
             account_id.clone(),
-            TEST_TOKENS.clone(),
-            TEST_USER_INFO.clone(),
-        ).await.unwrap();
+            test_tokens(),
+            test_user_info(),
+        ).await;
+        
+        assert!(store_result.is_ok(), "Failed to store account: {:?}", store_result.err());
+        println!("🔍 Account stored successfully");
         
         // Verify it exists
         let tokens = service.get_account_tokens(&account_id).await.unwrap();
+        println!("🔍 Retrieved tokens: {:?}", tokens.is_some());
         assert!(tokens.is_some(), "Account should exist before removal");
+        
+        println!("🔍 Removing account...");
         
         // Remove account
         let remove_result = service.remove_account(&account_id).await;
         assert!(remove_result.is_ok(), "Failed to remove account: {:?}", remove_result.err());
         
+        println!("🔍 Account removed, verifying deletion...");
+        
         // Verify it's gone
         let tokens = service.get_account_tokens(&account_id).await.unwrap();
+        println!("🔍 Tokens after removal: {:?}", tokens.is_some());
         assert!(tokens.is_none(), "Account should not exist after removal");
     }
 
@@ -251,8 +310,8 @@ mod tests {
         // Store account
         service.store_account_tokens(
             account_id.clone(),
-            TEST_TOKENS.clone(),
-            TEST_USER_INFO.clone(),
+            test_tokens(),
+            test_user_info(),
         ).await.unwrap();
         
         // Update sync timestamp
@@ -272,7 +331,7 @@ mod tests {
         let auth2 = service.start_authorization(None);
         let auth3 = service.start_authorization(None);
         
-        let (result1, result2, result3) = tokio::join!(auth1, auth2, auth3);
+        let (result1, result2, result3): (Result<AuthorizationRequest>, Result<AuthorizationRequest>, Result<AuthorizationRequest>) = tokio::join!(auth1, auth2, auth3);
         
         assert!(result1.is_ok(), "First auth should succeed");
         assert!(result2.is_ok(), "Second auth should succeed");
@@ -308,12 +367,15 @@ mod tests {
     #[tokio::test] 
     async fn test_gmail_scopes_configuration() {
         // Verify all required Gmail scopes are present
-        assert_eq!(GMAIL_SCOPES.len(), 5);
+        assert_eq!(GMAIL_SCOPES.len(), 8);
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.readonly"));
-        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.send"));
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.modify"));
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/gmail.compose"));
         assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/userinfo.email"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/userinfo.profile"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/drive.metadata.readonly"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/calendar"));
+        assert!(GMAIL_SCOPES.contains(&"https://www.googleapis.com/auth/tasks"));
     }
 
     #[tokio::test]

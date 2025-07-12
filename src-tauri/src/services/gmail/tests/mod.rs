@@ -2,12 +2,8 @@
 // Comprehensive unit and integration tests for all Gmail services
 
 pub mod auth_service_test;
-pub mod api_service_test; 
-pub mod sync_service_test;
-pub mod compose_service_test;
-pub mod cache_service_test;
-pub mod attachment_service_test;
-pub mod test_helpers;
+pub mod api_serialization_test;
+pub mod api_integration_test;
 
 // Common test utilities and mocks
 use crate::database::connection::DatabaseManager;

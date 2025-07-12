@@ -24,6 +24,27 @@ pub fn generate_encryption_key() -> [u8; 32] {
     key
 }
 
+/// Get a consistent encryption key for token storage
+/// Uses environment variable or deterministic default to ensure persistence
+pub fn get_persistent_encryption_key() -> [u8; 32] {
+    // Try to get key from environment variable first
+    if let Ok(env_key) = std::env::var("DATABASE_ENCRYPTION_KEY") {
+        if env_key.len() >= 32 {
+            let mut key = [0u8; 32];
+            let env_bytes = env_key.as_bytes();
+            key.copy_from_slice(&env_bytes[..32]);
+            return key;
+        }
+    }
+    
+    // Fallback to deterministic key for development/testing
+    // In production, should always use environment variable
+    let deterministic_seed = b"LibreOllama_Gmail_Token_Key_v1__";
+    let mut key = [0u8; 32];
+    key.copy_from_slice(deterministic_seed);
+    key
+}
+
 /// Encrypt data using AES-256-GCM with random nonce
 pub fn encrypt_data(data: &str, key: &[u8; 32]) -> Result<String> {
     let cipher = Aes256Gcm::new_from_slice(key)

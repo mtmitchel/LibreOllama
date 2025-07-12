@@ -371,4 +371,37 @@ pub async fn delete_task_list(
     // In a real implementation, this would make an API call to delete the task list
     println!("✅ [TASKS-API] Task list deleted successfully: {}", task_list_id);
     Ok(())
+}
+
+/// Toggle task completion status
+#[tauri::command]
+pub async fn toggle_task_complete(
+    account_id: String,
+    task_list_id: String,
+    task_id: String,
+) -> Result<GoogleTask, String> {
+    println!("📋 [TASKS-API] Toggling completion status for task {} in list: {} (account: {})", 
+             task_id, task_list_id, account_id);
+
+    // Create a mock toggled task
+    let toggled_task = GoogleTask {
+        id: task_id.clone(),
+        title: "Toggled Task".to_string(),
+        notes: None,
+        status: "completed".to_string(),
+        due: None,
+        completed: Some(chrono::Utc::now().to_rfc3339()),
+        updated: Some(chrono::Utc::now().to_rfc3339()),
+        parent: None,
+        position: None,
+        kind: Some("tasks#task".to_string()),
+        etag: None,
+        self_link: None,
+        links: None,
+        hidden: Some(false),
+        deleted: Some(false),
+    };
+
+    println!("✅ [TASKS-API] Task completion toggled successfully: {}", task_id);
+    Ok(toggled_task)
 } 

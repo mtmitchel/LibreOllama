@@ -94,6 +94,9 @@ mod test_helpers {
             &request.name,
             &request.description,
             &request.system_prompt,
+            "llama3:latest", // model_name
+            0.7, // temperature
+            2048, // max_tokens
             request.tools.clone(),
             parameters
         )?;
@@ -151,7 +154,10 @@ mod test_helpers {
             &db_agent.description,
             &db_agent.system_prompt,
             db_agent.capabilities.clone(),
-            db_agent.parameters.clone()
+            db_agent.parameters.clone(),
+            Some("llama3:latest"), // model_name
+            Some(0.7), // temperature
+            Some(2048)  // max_tokens
         )?;
         
         // Update active status separately if it was changed

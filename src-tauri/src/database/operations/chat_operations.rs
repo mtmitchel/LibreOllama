@@ -30,8 +30,12 @@ pub fn get_chat_sessions_by_user(conn: &Connection, user_id: &str) -> Result<Vec
     let sessions = stmt.query_map(params![user_id], |row| {
         Ok(ChatSession {
             id: row.get(0)?,
-            user_id: row.get(1)?,
+            title: row.get(2)?, // Use session_name as title for now
             session_name: row.get(2)?,
+            user_id: row.get(1)?,
+            agent_id: 0, // Default agent_id
+            context_length: 4096, // Default context_length
+            is_active: true, // Default is_active
             created_at: row.get(3)?,
             updated_at: row.get(4)?,
         })
@@ -54,8 +58,12 @@ pub fn get_chat_session(conn: &Connection, session_id: i32) -> Result<Option<Cha
     let session = stmt.query_row(params![session_id], |row| {
         Ok(ChatSession {
             id: row.get(0)?,
-            user_id: row.get(1)?,
+            title: row.get(2)?, // Use session_name as title for now
             session_name: row.get(2)?,
+            user_id: row.get(1)?,
+            agent_id: 0, // Default agent_id
+            context_length: 4096, // Default context_length
+            is_active: true, // Default is_active
             created_at: row.get(3)?,
             updated_at: row.get(4)?,
         })
@@ -129,6 +137,7 @@ pub fn get_chat_messages_by_session(conn: &Connection, session_id: i32) -> Resul
             session_id: row.get(1)?,
             role: row.get(2)?,
             content: row.get(3)?,
+            token_count: 0, // Default token_count
             created_at: row.get(4)?,
         })
     }).context("Failed to execute get chat messages by session query")?;
@@ -155,6 +164,7 @@ pub fn get_chat_message(conn: &Connection, message_id: i32) -> Result<Option<Cha
             session_id: row.get(1)?,
             role: row.get(2)?,
             content: row.get(3)?,
+            token_count: 0, // Default token_count
             created_at: row.get(4)?,
         })
     }).optional().context("Failed to get chat message")?;
@@ -194,6 +204,7 @@ pub fn get_recent_chat_messages(conn: &Connection, session_id: i32, limit: i32) 
             session_id: row.get(1)?,
             role: row.get(2)?,
             content: row.get(3)?,
+            token_count: 0, // Default token_count
             created_at: row.get(4)?,
         })
     }).context("Failed to execute get recent chat messages query")?;

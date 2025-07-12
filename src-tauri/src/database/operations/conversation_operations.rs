@@ -39,12 +39,18 @@ pub fn get_conversation_context(conn: &Connection, context_id: i32) -> Result<Op
     )?;
 
     let context = stmt.query_row(params![context_id], |row| {
+        let context_data_str: String = row.get(2)?;
+        let context_data = serde_json::from_str(&context_data_str).unwrap_or(serde_json::json!({}));
+        
         Ok(ConversationContext {
             id: row.get(0)?,
             context_name: row.get(1)?,
-            context_data: row.get(2)?,
+            description: String::new(), // Default description
+            context_data,
             context_window_size: row.get(3)?,
             context_summary: row.get(4)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).optional()?;
 
@@ -58,12 +64,18 @@ pub fn get_conversation_context_by_name(conn: &Connection, context_name: &str) -
     )?;
 
     let context = stmt.query_row(params![context_name], |row| {
+        let context_data_str: String = row.get(2)?;
+        let context_data = serde_json::from_str(&context_data_str).unwrap_or(serde_json::json!({}));
+        
         Ok(ConversationContext {
             id: row.get(0)?,
             context_name: row.get(1)?,
-            context_data: row.get(2)?,
+            description: String::new(), // Default description
+            context_data,
             context_window_size: row.get(3)?,
             context_summary: row.get(4)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).optional()?;
 
@@ -77,12 +89,18 @@ pub fn get_all_conversation_contexts(conn: &Connection) -> Result<Vec<Conversati
     )?;
 
     let contexts = stmt.query_map([], |row| {
+        let context_data_str: String = row.get(2)?;
+        let context_data = serde_json::from_str(&context_data_str).unwrap_or(serde_json::json!({}));
+        
         Ok(ConversationContext {
             id: row.get(0)?,
             context_name: row.get(1)?,
-            context_data: row.get(2)?,
+            description: String::new(), // Default description
+            context_data,
             context_window_size: row.get(3)?,
             context_summary: row.get(4)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     })?;
 
@@ -152,12 +170,18 @@ pub fn get_conversation_contexts_by_window_size(conn: &Connection, min_size: i32
     )?;
 
     let contexts = stmt.query_map(params![min_size, max_size], |row| {
+        let context_data_str: String = row.get(2)?;
+        let context_data = serde_json::from_str(&context_data_str).unwrap_or(serde_json::json!({}));
+        
         Ok(ConversationContext {
             id: row.get(0)?,
             context_name: row.get(1)?,
-            context_data: row.get(2)?,
+            description: String::new(), // Default description
+            context_data,
             context_window_size: row.get(3)?,
             context_summary: row.get(4)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     })?;
 
@@ -177,12 +201,18 @@ pub fn search_conversation_contexts(conn: &Connection, query: &str) -> Result<Ve
 
     let search_pattern = format!("%{}%", query);
     let contexts = stmt.query_map(params![search_pattern], |row| {
+        let context_data_str: String = row.get(2)?;
+        let context_data = serde_json::from_str(&context_data_str).unwrap_or(serde_json::json!({}));
+        
         Ok(ConversationContext {
             id: row.get(0)?,
             context_name: row.get(1)?,
-            context_data: row.get(2)?,
+            description: String::new(), // Default description
+            context_data,
             context_window_size: row.get(3)?,
             context_summary: row.get(4)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     })?;
 

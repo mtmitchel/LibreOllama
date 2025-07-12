@@ -1,12 +1,9 @@
+//! Canvas Commands
+//!
+//! This module provides commands for canvas data management.
+//! Currently unused but kept for future development.
+
 use tauri::command;
-use std::fs;
 
-#[command]
-pub async fn save_canvas_data(data: String, filename: String) -> Result<(), String> {
-    fs::write(filename, data).map_err(|e| e.to_string())
-}
-
-#[command]
-pub async fn load_canvas_data(filename: String) -> Result<String, String> {
-    fs::read_to_string(filename).map_err(|e| e.to_string())
-}
+// Note: All command functions have been removed as they are unused.
+// This module is kept for potential future canvas management features.

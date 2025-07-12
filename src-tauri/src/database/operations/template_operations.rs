@@ -17,8 +17,11 @@ pub fn get_all_chat_templates(conn: &Connection) -> Result<Vec<ChatTemplate>> {
     let templates = stmt.query_map([], |row| {
         Ok(ChatTemplate {
             id: row.get(0)?,
+            name: row.get(1)?, // Use template_name as name
             template_name: row.get(1)?,
             template_content: row.get(2)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     })?;
 
@@ -39,8 +42,11 @@ pub fn get_chat_template(conn: &Connection, template_id: i32) -> Result<Option<C
     let template = stmt.query_row(params![template_id], |row| {
         Ok(ChatTemplate {
             id: row.get(0)?,
+            name: row.get(1)?, // Use template_name as name
             template_name: row.get(1)?,
             template_content: row.get(2)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).optional()?;
 
@@ -56,8 +62,11 @@ pub fn get_chat_template_by_name(conn: &Connection, template_name: &str) -> Resu
     let template = stmt.query_row(params![template_name], |row| {
         Ok(ChatTemplate {
             id: row.get(0)?,
+            name: row.get(1)?, // Use template_name as name
             template_name: row.get(1)?,
             template_content: row.get(2)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).optional()?;
 
@@ -133,8 +142,11 @@ pub fn search_chat_templates(conn: &Connection, query: &str) -> Result<Vec<ChatT
     let templates = stmt.query_map(params![search_pattern], |row| {
         Ok(ChatTemplate {
             id: row.get(0)?,
+            name: row.get(1)?, // Use template_name as name
             template_name: row.get(1)?,
             template_content: row.get(2)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     })?;
 

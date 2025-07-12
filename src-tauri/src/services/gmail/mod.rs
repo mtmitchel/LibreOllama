@@ -11,6 +11,10 @@ pub mod attachment_service;
 pub mod cache_service;
 pub mod sync_service;
 
+// Test modules
+#[cfg(test)]
+pub mod tests;
+
 // Re-export only the actively used services and types
 pub use auth_service::GmailTokens;
 pub use api_service::{ProcessedGmailMessage, EmailAddress};

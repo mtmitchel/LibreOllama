@@ -59,10 +59,9 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
 
   return (
     <div
-      className={`cursor-pointer transition-colors duration-150 border-b border-[var(--border-default)] ${
+      className={`transition-colors duration-150 border-b border-[var(--border-default)] ${
         !message.isRead ? 'bg-[var(--bg-tertiary)] font-medium' : 'bg-[var(--bg-tertiary)]'
       } ${isSelected ? 'bg-[var(--accent-soft)]' : ''} hover:bg-[var(--bg-secondary)]`}
-      onClick={() => onMessageClick(message)}
     >
       <div 
         className="flex items-center overflow-hidden w-full"
@@ -100,7 +99,10 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
         </div>
 
         {/* Sender */}
-        <div className="flex-shrink-0 w-28 min-w-0">
+        <div 
+          className="flex-shrink-0 w-28 min-w-0 cursor-pointer"
+          onClick={() => onMessageClick(message)}
+        >
           <Text 
             size="sm" 
             weight={!message.isRead ? 'semibold' : 'normal'}
@@ -112,7 +114,10 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
         </div>
 
         {/* Subject and Snippet */}
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div 
+          className="flex-1 min-w-0 overflow-hidden cursor-pointer"
+          onClick={() => onMessageClick(message)}
+        >
           <div className="flex items-baseline min-w-0" style={{ gap: 'var(--space-1)' }}>
             <Text 
               size="sm" 

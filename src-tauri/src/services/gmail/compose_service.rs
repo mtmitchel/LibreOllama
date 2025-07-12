@@ -19,9 +19,9 @@ use crate::commands::rate_limiter::{RateLimiter, BatchRequest, RequestPriority};
 
 /// Gmail compose API endpoints
 #[allow(unused)]
-const GMAIL_SEND_ENDPOINT: &str = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
+const GMAIL_SEND_ENDPOINT: &str = "https://www.googleapis.com/gmail/v1/users/me/messages/send";
 #[allow(unused)]
-const GMAIL_DRAFTS_ENDPOINT: &str = "https://gmail.googleapis.com/gmail/v1/users/me/drafts";
+const GMAIL_DRAFTS_ENDPOINT: &str = "https://www.googleapis.com/gmail/v1/users/me/drafts";
 
 /// Email composition request
 #[derive(Debug, Clone, Serialize, Deserialize)]

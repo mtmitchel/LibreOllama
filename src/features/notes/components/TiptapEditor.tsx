@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -46,8 +46,29 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 }) => {
   const [editorContent, setEditorContent] = useState(content);
   const [isDragOver, setIsDragOver] = useState(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const defaultContent = '<p></p>';
+
+  // Debounced onChange function to prevent excessive saves
+  const debouncedOnChange = useCallback((newContent: string) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      onChange?.(newContent);
+    }, 500); // Wait 500ms after user stops typing
+  }, [onChange]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -55,7 +76,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         heading: { levels: [1, 2, 3, 4, 5, 6] },
         bold: {},
         italic: {},
-        strike: {},
         code: {},
         bulletList: {},
         orderedList: {},
@@ -101,7 +121,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     onUpdate: ({ editor }) => {
       const newContent = editor.getHTML();
       setEditorContent(newContent);
-      onChange?.(newContent);
+      debouncedOnChange(newContent);
     },
     editable: !readOnly,
   });
@@ -233,24 +253,20 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         selectedNote={selectedNote}
         onDeleteNote={onDeleteNote}
       />
-      <TiptapContextMenu editor={editor} exportAs={exportAs}>
-        <div 
-          className="flex-1 overflow-y-auto bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-b-[var(--radius-lg)] focus-within:border-[var(--accent-primary)] focus-within:ring-1 focus-within:ring-[var(--accent-primary)]"
-          style={{ 
-            minHeight: '650px',
-            padding: 'var(--space-4) var(--space-6)',
+      <TiptapContextMenu editor={editor} className="flex-1 relative">
+        <div
+          className="absolute inset-0 overflow-y-auto bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-b-[var(--radius-lg)] focus-within:border-[var(--accent-primary)] focus-within:ring-1 focus-within:ring-[var(--accent-primary)]"
+          style={{
+            padding: 'var(--space-4) var(--space-6) 10rem',
             overflowX: 'auto',
-            display: 'flex',
-            justifyContent: 'flex-start'
+            maxHeight: '100%'
           }}
           onClick={handleEditorClick}
         >
           <div
             className="tiptap-editor-content-container"
             style={{
-              width: '800px',
-              maxWidth: '800px',
-              minWidth: '600px',
+              width: '100%',
               contain: 'layout style',
               transition: 'none !important',
               wordWrap: 'break-word',

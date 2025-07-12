@@ -61,25 +61,16 @@ vi.mock('../../features/mail/services/gmailSyncService', () => {
 });
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import { HeaderProvider } from '../../app/contexts/HeaderContext';
-
-// Components under test
-import Mail from '../../app/pages/Mail';
-import { GmailAuthModal } from '../../features/mail/components/GmailAuthModal';
-import { ComposeModal } from '../../features/mail/components/ComposeModal';
-import { MessageList } from '../../features/mail/components/MessageList';
-import { AccountSwitcher } from '../../features/mail/components/AccountSwitcher';
-import { SyncStatusIndicator } from '../../features/mail/components/SyncStatusIndicator';
-
-// Services and stores
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useMailStore } from '../../features/mail/stores/mailStore';
-import { createTestMailStore } from '../../features/mail/stores/__tests__/mailStoreTestUtils';
-import * as gmailTauriService from '../../features/mail/services/gmailTauriService';
-import * as gmailApiService from '../../features/mail/services/gmailApiService';
+import { MessageList } from '../../features/mail/components/MessageList';
+import { MessageView } from '../../features/mail/components/MessageView';
+import { ComposeModal } from '../../features/mail/components/ComposeModal';
+import { MailSidebar } from '../../features/mail/components/MailSidebar';
+import { MailLayout } from '../../features/mail/components/MailLayout';
+import { MailErrorBoundary } from '../../features/mail/components/MailErrorBoundary';
+import { createUnifiedTestStore } from '../helpers/createUnifiedTestStore';
 
 // Mock data
 import { createMockGmailMessage, createMockParsedEmail, convertMockMessageToParsedEmail, createMockGmailAccount, MockGmailApiServer } from '../helpers/gmailMockData';

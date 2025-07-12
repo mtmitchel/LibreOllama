@@ -16,6 +16,9 @@ pub fn create_agent(
     name: &str,
     description: &str,
     system_prompt: &str,
+    model_name: &str,
+    temperature: f64,
+    max_tokens: i32,
     capabilities: Vec<String>,
     parameters: serde_json::Value,
 ) -> Result<i32> {
@@ -24,12 +27,15 @@ pub fn create_agent(
     let parameters_json = serde_json::to_string(&parameters)?;
 
     conn.execute(
-        "INSERT INTO agents (name, description, system_prompt, capabilities, parameters, is_active, created_at, updated_at) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO agents (name, description, model_name, system_prompt, temperature, max_tokens, capabilities, parameters, is_active, created_at, updated_at) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         params![
             name,
             description,
+            model_name,
             system_prompt,
+            temperature,
+            max_tokens,
             capabilities_json,
             parameters_json,
             true,
@@ -44,13 +50,13 @@ pub fn create_agent(
 
 pub fn get_all_agents(conn: &Connection) -> Result<Vec<Agent>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, description, system_prompt, capabilities, parameters, is_active, created_at, updated_at 
+        "SELECT id, name, description, model_name, system_prompt, temperature, max_tokens, is_active, capabilities, parameters, created_at, updated_at 
          FROM agents ORDER BY name ASC"
     )?;
 
     let agents = stmt.query_map([], |row| {
-        let capabilities_json: String = row.get(4)?;
-        let parameters_json: String = row.get(5)?;
+        let capabilities_json: String = row.get(8)?;
+        let parameters_json: String = row.get(9)?;
         
         let capabilities: Vec<String> = serde_json::from_str(&capabilities_json).unwrap_or_default();
         let parameters: serde_json::Value = serde_json::from_str(&parameters_json).unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
@@ -59,12 +65,15 @@ pub fn get_all_agents(conn: &Connection) -> Result<Vec<Agent>> {
             id: row.get(0)?,
             name: row.get(1)?,
             description: row.get(2)?,
-            system_prompt: row.get(3)?,
+            model_name: row.get(3)?,
+            system_prompt: row.get(4)?,
+            temperature: row.get(5)?,
+            max_tokens: row.get(6)?,
+            is_active: row.get(7)?,
             capabilities,
             parameters,
-            is_active: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            created_at: row.get(10)?,
+            updated_at: row.get(11)?,
         })
     })?;
 
@@ -78,13 +87,13 @@ pub fn get_all_agents(conn: &Connection) -> Result<Vec<Agent>> {
 
 pub fn get_active_agents(conn: &Connection) -> Result<Vec<Agent>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, description, system_prompt, capabilities, parameters, is_active, created_at, updated_at 
+        "SELECT id, name, description, model_name, system_prompt, temperature, max_tokens, is_active, capabilities, parameters, created_at, updated_at 
          FROM agents WHERE is_active = ?1 ORDER BY name ASC"
     )?;
 
     let agents = stmt.query_map(params![true], |row| {
-        let capabilities_json: String = row.get(4)?;
-        let parameters_json: String = row.get(5)?;
+        let capabilities_json: String = row.get(8)?;
+        let parameters_json: String = row.get(9)?;
         
         let capabilities: Vec<String> = serde_json::from_str(&capabilities_json).unwrap_or_default();
         let parameters: serde_json::Value = serde_json::from_str(&parameters_json).unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
@@ -93,12 +102,15 @@ pub fn get_active_agents(conn: &Connection) -> Result<Vec<Agent>> {
             id: row.get(0)?,
             name: row.get(1)?,
             description: row.get(2)?,
-            system_prompt: row.get(3)?,
+            model_name: row.get(3)?,
+            system_prompt: row.get(4)?,
+            temperature: row.get(5)?,
+            max_tokens: row.get(6)?,
+            is_active: row.get(7)?,
             capabilities,
             parameters,
-            is_active: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            created_at: row.get(10)?,
+            updated_at: row.get(11)?,
         })
     })?;
 
@@ -124,13 +136,13 @@ pub fn set_agent_active_status(conn: &Connection, agent_id: i32, is_active: bool
 /// Get a specific agent by name
 pub fn get_agent(conn: &Connection, agent_id: i32) -> Result<Option<Agent>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, description, system_prompt, capabilities, parameters, is_active, created_at, updated_at 
+        "SELECT id, name, description, model_name, system_prompt, temperature, max_tokens, is_active, capabilities, parameters, created_at, updated_at 
          FROM agents WHERE id = ?1"
     )?;
 
     let agent = stmt.query_row(params![agent_id], |row| {
-        let capabilities_json: String = row.get(4)?;
-        let parameters_json: String = row.get(5)?;
+        let capabilities_json: String = row.get(8)?;
+        let parameters_json: String = row.get(9)?;
         
         let capabilities: Vec<String> = serde_json::from_str(&capabilities_json).unwrap_or_default();
         let parameters: serde_json::Value = serde_json::from_str(&parameters_json).unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
@@ -139,12 +151,15 @@ pub fn get_agent(conn: &Connection, agent_id: i32) -> Result<Option<Agent>> {
             id: row.get(0)?,
             name: row.get(1)?,
             description: row.get(2)?,
-            system_prompt: row.get(3)?,
+            model_name: row.get(3)?,
+            system_prompt: row.get(4)?,
+            temperature: row.get(5)?,
+            max_tokens: row.get(6)?,
+            is_active: row.get(7)?,
             capabilities,
             parameters,
-            is_active: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
+            created_at: row.get(10)?,
+            updated_at: row.get(11)?,
         })
     }).optional()?;
 
@@ -160,20 +175,32 @@ pub fn update_agent(
     system_prompt: &str,
     capabilities: Vec<String>,
     parameters: serde_json::Value,
+    model_name: Option<&str>,
+    temperature: Option<f64>,
+    max_tokens: Option<i32>,
 ) -> Result<()> {
     let now = Local::now().naive_local();
     let capabilities_json = serde_json::to_string(&capabilities)?;
     let parameters_json = serde_json::to_string(&parameters)?;
+    
+    // Use defaults if not provided
+    let model_name = model_name.unwrap_or("llama3:latest");
+    let temperature = temperature.unwrap_or(0.7);
+    let max_tokens = max_tokens.unwrap_or(2048);
 
     conn.execute(
-        "UPDATE agents SET name = ?1, description = ?2, system_prompt = ?3, capabilities = ?4, parameters = ?5, updated_at = ?6 
-         WHERE id = ?7",
+        "UPDATE agents SET name = ?1, description = ?2, system_prompt = ?3, 
+        capabilities = ?4, parameters = ?5, model_name = ?6, temperature = ?7, 
+        max_tokens = ?8, updated_at = ?9 WHERE id = ?10",
         params![
             name,
             description,
             system_prompt,
             capabilities_json,
             parameters_json,
+            model_name,
+            temperature,
+            max_tokens,
             now,
             agent_id
         ],

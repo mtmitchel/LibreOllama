@@ -66,6 +66,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         record_migration(conn, 8)?;
     }
 
+    if current_version < 9 {
+        run_migration_v9(conn)?;
+        record_migration(conn, 9)?;
+    }
+
     Ok(())
 }
 
@@ -388,6 +393,120 @@ fn run_migration_v7(conn: &Connection) -> Result<()> {
         [],
     ).context("Failed to recreate index on chat_messages")?;
 
+    // Re-enable foreign keys
+    conn.execute("PRAGMA foreign_keys = ON", []).context("Failed to re-enable foreign keys")?;
+
+    Ok(())
+}
+
+/// Run migration v9 - Update agents table to match model structure
+fn run_migration_v9(conn: &Connection) -> Result<()> {
+    // Temporarily disable foreign keys
+    conn.execute("PRAGMA foreign_keys = OFF", []).context("Failed to disable foreign keys")?;
+    
+    // Drop existing tables to ensure clean recreation
+    conn.execute("DROP TABLE IF EXISTS agents", []).context("Failed to drop agents table")?;
+    conn.execute("DROP TABLE IF EXISTS messages", []).context("Failed to drop messages table")?;
+    conn.execute("DROP TABLE IF EXISTS chat_sessions", []).context("Failed to drop chat_sessions table")?;
+    conn.execute("DROP TABLE IF EXISTS chat_messages", []).context("Failed to drop chat_messages table")?;
+    
+    // Create agents table with correct model structure
+    conn.execute(
+        "CREATE TABLE agents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            model_name TEXT NOT NULL DEFAULT 'llama3.2:latest',
+            system_prompt TEXT,
+            temperature REAL DEFAULT 0.7,
+            max_tokens INTEGER DEFAULT 2048,
+            is_active BOOLEAN DEFAULT true,
+            capabilities TEXT, -- JSON array
+            parameters TEXT, -- JSON object
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    ).context("Failed to create agents table")?;
+    
+    // Create agent_executions table
+    conn.execute(
+        "CREATE TABLE agent_executions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent_id INTEGER NOT NULL,
+            session_id INTEGER,
+            input TEXT NOT NULL,
+            output TEXT,
+            status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+            error_message TEXT,
+            executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (agent_id) REFERENCES agents (id),
+            FOREIGN KEY (session_id) REFERENCES chat_sessions (id)
+        )",
+        [],
+    ).context("Failed to create agent_executions table")?;
+    
+    // Create chat_sessions table with correct model structure
+    conn.execute(
+        "CREATE TABLE chat_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            session_name TEXT,
+            user_id TEXT,
+            agent_id INTEGER,
+            context_length INTEGER DEFAULT 4096,
+            is_active BOOLEAN DEFAULT true,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (agent_id) REFERENCES agents (id)
+        )",
+        [],
+    ).context("Failed to create chat_sessions table")?;
+    
+    // Create messages table with correct model structure
+    conn.execute(
+        "CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+            content TEXT NOT NULL,
+            token_count INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES chat_sessions (id)
+        )",
+        [],
+    ).context("Failed to create messages table")?;
+    
+    // Create chat_messages table (for backwards compatibility)
+    conn.execute(
+        "CREATE TABLE chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            token_count INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES chat_sessions (id)
+        )",
+        [],
+    ).context("Failed to create chat_messages table")?;
+    
+    // Create indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_messages_session_timestamp ON messages (session_id, created_at)",
+        [],
+    ).context("Failed to create messages index")?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_chat_sessions_agent ON chat_sessions (agent_id)",
+        [],
+    ).context("Failed to create chat_sessions index")?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages (session_id)",
+        [],
+    ).context("Failed to create chat_messages index")?;
+    
     // Re-enable foreign keys
     conn.execute("PRAGMA foreign_keys = ON", []).context("Failed to re-enable foreign keys")?;
 

@@ -17,25 +17,32 @@ use crate::services::gmail::auth_service::GmailAuthService;
 use crate::commands::rate_limiter::{RateLimiter, BatchRequest, RequestPriority};
 
 /// Gmail API endpoints
-const GMAIL_API_BASE: &str = "https://gmail.googleapis.com/gmail/v1";
+const GMAIL_API_BASE: &str = "https://www.googleapis.com/gmail/v1";
 
 /// Gmail API message structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GmailMessage {
     pub id: String,
+    #[serde(rename = "threadId")]
     pub thread_id: String,
+    #[serde(rename = "labelIds")]
     pub label_ids: Option<Vec<String>>,
     pub snippet: Option<String>,
+    #[serde(rename = "historyId")]
     pub history_id: Option<String>,
+    #[serde(rename = "internalDate")]
     pub internal_date: Option<String>,
     pub payload: GmailPayload,
+    #[serde(rename = "sizeEstimate")]
     pub size_estimate: Option<i32>,
     pub raw: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GmailPayload {
+    #[serde(rename = "partId")]
     pub part_id: Option<String>,
+    #[serde(rename = "mimeType")]
     pub mime_type: String,
     pub filename: Option<String>,
     pub headers: Vec<GmailHeader>,
@@ -51,6 +58,7 @@ pub struct GmailHeader {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GmailBody {
+    #[serde(rename = "attachmentId")]
     pub attachment_id: Option<String>,
     pub size: Option<i32>,
     pub data: Option<String>, // Base64 encoded
@@ -60,33 +68,43 @@ pub struct GmailBody {
 pub struct GmailLabel {
     pub id: String,
     pub name: String,
+    #[serde(rename = "messageListVisibility")]
     pub message_list_visibility: Option<String>,
+    #[serde(rename = "labelListVisibility")]
     pub label_list_visibility: Option<String>,
     #[serde(rename = "type")]
     pub label_type: Option<String>,
-    pub messages_total: Option<i32>,
-    pub messages_unread: Option<i32>,
-    pub threads_total: Option<i32>,
-    pub threads_unread: Option<i32>,
+    #[serde(rename = "messagesTotal")]
+    pub messages_total: Option<i64>,
+    #[serde(rename = "messagesUnread")]
+    pub messages_unread: Option<i64>,
+    #[serde(rename = "threadsTotal")]
+    pub threads_total: Option<i64>,
+    #[serde(rename = "threadsUnread")]
+    pub threads_unread: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GmailThread {
     pub id: String,
     pub messages: Vec<GmailMessage>,
+    #[serde(rename = "historyId")]
     pub history_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageListResponse {
     pub messages: Option<Vec<MessageRef>>,
+    #[serde(rename = "nextPageToken")]
     pub next_page_token: Option<String>,
+    #[serde(rename = "resultSizeEstimate")]
     pub result_size_estimate: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageRef {
     pub id: String,
+    #[serde(rename = "threadId")]
     pub thread_id: String,
 }
 
@@ -241,13 +259,143 @@ impl GmailApiService {
             })
     }
 
+    /// Make a POST API request to Gmail for modifying data
+    async fn make_api_post_request<T>(
+        &self,
+        account_id: &str,
+        endpoint: &str,
+        body: serde_json::Value,
+    ) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+    {
+        // Get valid tokens for the account
+        let tokens = self.auth_service
+            .validate_and_refresh_tokens(&self.db_manager, account_id)
+            .await?;
+
+        let url = format!("{}/{}", GMAIL_API_BASE, endpoint.trim_start_matches('/'));
+
+        let batch_request = BatchRequest {
+            id: format!("gmail_api_post_{}", Uuid::new_v4()),
+            method: "POST".to_string(),
+            url: url.clone(),
+            headers: {
+                let mut headers = std::collections::HashMap::new();
+                headers.insert("Authorization".to_string(), format!("Bearer {}", tokens.access_token));
+                headers.insert("Content-Type".to_string(), "application/json".to_string());
+                headers
+            },
+            body: Some(body.to_string()),
+            priority: RequestPriority::High, // Modifications are high priority
+            created_at: chrono::Utc::now().to_rfc3339(),
+            max_retries: 2,
+            current_retry: 0,
+        };
+
+        let response = {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.execute_request(batch_request).await
+                .map_err(|e| LibreOllamaError::Network {
+                    message: format!("Rate limited Gmail POST request failed: {}", e),
+                    url: Some(url.clone()),
+                })?
+        };
+
+        if response.status_code < 200 || response.status_code >= 300 {
+             return Err(LibreOllamaError::GmailApi {
+                message: format!("Gmail API POST error: {} - {}", response.status_code, response.body),
+                status_code: Some(response.status_code as u16),
+            });
+        }
+
+        // Handle cases with no response body (e.g., 204 No Content)
+        if response.body.is_empty() {
+            // Create a default value for T, assuming it implements Deserialize and Default
+            return Ok(serde_json::from_value(serde_json::Value::Null).unwrap_or_else(|_| serde_json::from_str("{}").unwrap()));
+        }
+
+        serde_json::from_str(&response.body)
+            .map_err(|e| LibreOllamaError::Serialization {
+                message: format!("Failed to parse Gmail POST response: {}", e),
+                data_type: "Gmail API Response".to_string(),
+            })
+    }
+
     /// Get all labels for an account
     pub async fn get_labels(&self, account_id: &str) -> Result<Vec<GmailLabel>> {
-        let response: LabelListResponse = self
-            .make_api_request(account_id, "users/me/labels")
-            .await?;
+        println!("🏷️  [GMAIL-API] Getting labels for account: {}", account_id);
         
-        Ok(response.labels)
+        let tokens = self.auth_service.get_account_tokens(account_id).await?
+            .ok_or_else(|| LibreOllamaError::GmailAuth { message: "No tokens found for account".to_string(), code: None })?;
+
+        let list_response = self
+            .make_api_request::<serde_json::Value>(account_id, "users/me/labels").await?;
+
+        let mut labels = vec![];
+        if let Some(items) = list_response.get("labels").and_then(|v| v.as_array()) {
+            for item in items {
+                if let Ok(label) = serde_json::from_value::<GmailLabel>(item.clone()) {
+                    labels.push(label);
+                }
+            }
+        } else {
+            return Ok(labels); // Return empty vec if no labels found
+        }
+
+        // Fetch details for each label to get message counts (sequentially for now)
+        let mut detailed_labels = Vec::new();
+        for mut label in labels {
+            let endpoint = format!("users/me/labels/{}", label.id);
+            if let Ok(detail_response) = self.make_api_request::<serde_json::Value>(account_id, &endpoint).await {
+                label.messages_total = detail_response.get("messagesTotal").and_then(|v| v.as_i64());
+                label.messages_unread = detail_response.get("messagesUnread").and_then(|v| v.as_i64());
+                label.threads_total = detail_response.get("threadsTotal").and_then(|v| v.as_i64());
+                label.threads_unread = detail_response.get("threadsUnread").and_then(|v| v.as_i64());
+            }
+            detailed_labels.push(label);
+        }
+
+        println!("✅ [GMAIL-API] Successfully parsed {} labels with details", detailed_labels.len());
+        Ok(detailed_labels)
+    }
+    
+    /// Modify labels for a batch of messages
+    pub async fn modify_messages(
+        &self,
+        account_id: &str,
+        message_ids: Vec<String>,
+        add_label_ids: Vec<String>,
+        remove_label_ids: Vec<String>,
+    ) -> Result<()> {
+        let body = serde_json::json!({
+            "ids": message_ids,
+            "addLabelIds": add_label_ids,
+            "removeLabelIds": remove_label_ids,
+        });
+
+        self.make_api_post_request::<serde_json::Value>(
+            account_id,
+            "users/me/messages/batchModify",
+            body,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// Move a batch of messages to the trash
+    pub async fn trash_messages(&self, account_id: &str, message_ids: Vec<String>) -> Result<()> {
+        let body = serde_json::json!({ "ids": message_ids });
+
+        self.make_api_post_request::<serde_json::Value>(
+            account_id,
+            "users/me/messages/batchTrash",
+            body,
+        )
+        .await?;
+
+        Ok(())
     }
 
     /// Get messages with optional filtering
@@ -303,12 +451,15 @@ impl GmailApiService {
         let gmail_message = self.get_message(account_id, message_id).await?;
         let parsed_content = self.parse_gmail_message(&gmail_message)?;
 
+        // Generate snippet from parsed content if Gmail API snippet is empty or contains error text
+        let snippet = self.generate_snippet(&gmail_message.snippet, &parsed_content);
+
         Ok(ProcessedGmailMessage {
             id: gmail_message.id,
             thread_id: gmail_message.thread_id,
             parsed_content,
             labels: gmail_message.label_ids.unwrap_or_default(),
-            snippet: gmail_message.snippet,
+            snippet: Some(snippet),
             internal_date: gmail_message.internal_date,
             size_estimate: gmail_message.size_estimate,
         })
@@ -323,12 +474,15 @@ impl GmailApiService {
         for gmail_message in gmail_thread.messages {
             match self.parse_gmail_message(&gmail_message) {
                 Ok(parsed_content) => {
+                    // Generate snippet from parsed content if Gmail API snippet is empty or contains error text
+                    let snippet = self.generate_snippet(&gmail_message.snippet, &parsed_content);
+                    
                     processed_messages.push(ProcessedGmailMessage {
                         id: gmail_message.id,
                         thread_id: gmail_message.thread_id,
                         parsed_content,
                         labels: gmail_message.label_ids.unwrap_or_default(),
-                        snippet: gmail_message.snippet,
+                        snippet: Some(snippet),
                         internal_date: gmail_message.internal_date,
                         size_estimate: gmail_message.size_estimate,
                     });
@@ -391,25 +545,15 @@ impl GmailApiService {
 
         let response: AttachmentResponse = self.make_api_request(account_id, &endpoint).await?;
 
-        // Decode base64 data
-        general_purpose::URL_SAFE_NO_PAD
-            .decode(&response.data)
-            .map_err(|e| LibreOllamaError::Serialization {
-                message: format!("Failed to decode attachment data: {}", e),
-                data_type: "base64".to_string(),
-            })
+        // Decode base64 data using robust method
+        self.decode_base64_with_padding(&response.data)
     }
 
     /// Parse Gmail message content
     fn parse_gmail_message(&self, gmail_message: &GmailMessage) -> Result<ParsedEmail> {
         // If we have raw content, use that for better parsing
         if let Some(raw) = &gmail_message.raw {
-            let decoded = general_purpose::STANDARD
-                .decode(raw)
-                .map_err(|e| LibreOllamaError::Serialization {
-                    message: format!("Failed to decode base64 raw message: {}", e),
-                    data_type: "base64".to_string(),
-                })?;
+            let decoded = self.decode_base64_with_padding(raw)?;
             
             let raw_str = String::from_utf8(decoded)
                 .map_err(|e| LibreOllamaError::Serialization {
@@ -576,13 +720,8 @@ impl GmailApiService {
         // Check if this part has content
         if let Some(body) = &part.body {
             if let Some(data) = &body.data {
-                // Decode base64 content
-                let decoded = general_purpose::URL_SAFE_NO_PAD
-                    .decode(data)
-                    .map_err(|e| LibreOllamaError::Serialization {
-                        message: format!("Failed to decode part data: {}", e),
-                        data_type: "base64".to_string(),
-                    })?;
+                // Decode base64 content with robust padding handling
+                let decoded = self.decode_base64_with_padding(data)?;
 
                 let content = String::from_utf8_lossy(&decoded);
 
@@ -742,5 +881,172 @@ impl GmailApiService {
             .filter(|line| !line.is_empty())
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    /// Generate a snippet from parsed content as fallback
+    fn generate_snippet(&self, api_snippet: &Option<String>, parsed_content: &ParsedEmail) -> String {
+        // Check if Gmail API snippet is usable
+        if let Some(snippet) = api_snippet {
+            let cleaned_snippet = snippet.trim();
+            
+            // Skip if snippet is empty or contains error indicators
+            if !cleaned_snippet.is_empty() 
+                && !cleaned_snippet.to_lowercase().contains("invalid")
+                && !cleaned_snippet.to_lowercase().contains("error")
+                && !cleaned_snippet.to_lowercase().contains("failed")
+                && cleaned_snippet.len() > 5  // Reasonable minimum length
+            {
+                return cleaned_snippet.to_string();
+            }
+        }
+
+        // Generate snippet from parsed content
+        let text_content = if let Some(text) = &parsed_content.body_text {
+            text.clone()
+        } else if let Some(html) = &parsed_content.body_html {
+            self.html_to_text(html)
+        } else {
+            // No body content, use subject as fallback
+            parsed_content.subject.clone().unwrap_or_else(|| "No content".to_string())
+        };
+
+        // Clean and truncate the snippet
+        let cleaned_text = text_content
+            .lines()
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let snippet = if cleaned_text.len() > 120 {
+            format!("{}...", &cleaned_text[..120])
+        } else {
+            cleaned_text
+        };
+
+        if snippet.trim().is_empty() {
+            "(No content preview)".to_string()
+        } else {
+            snippet
+        }
+    }
+
+    /// Decode Base64 data with robust padding handling
+    fn decode_base64_with_padding(&self, data: &str) -> Result<Vec<u8>> {
+        // Clean the input data
+        let cleaned_data = data.trim().replace('\n', "").replace('\r', "").replace(' ', "");
+        
+        // Try URL_SAFE_NO_PAD first (Gmail API standard)
+        if let Ok(decoded) = general_purpose::URL_SAFE_NO_PAD.decode(&cleaned_data) {
+            return Ok(decoded);
+        }
+
+        // Try with standard Base64 encoding
+        if let Ok(decoded) = general_purpose::STANDARD.decode(&cleaned_data) {
+            return Ok(decoded);
+        }
+
+        // Try adding padding
+        let mut padded_data = cleaned_data.clone();
+        while padded_data.len() % 4 != 0 {
+            padded_data.push('=');
+        }
+        
+        if let Ok(decoded) = general_purpose::URL_SAFE_NO_PAD.decode(&padded_data) {
+            return Ok(decoded);
+        }
+
+        // Try standard with padding
+        if let Ok(decoded) = general_purpose::STANDARD.decode(&padded_data) {
+            return Ok(decoded);
+        }
+
+        // Try URL_SAFE with padding
+        if let Ok(decoded) = general_purpose::URL_SAFE.decode(&padded_data) {
+            return Ok(decoded);
+        }
+
+        // Try replacing URL-safe characters and decode as standard
+        let standard_data = cleaned_data.replace('-', "+").replace('_', "/");
+        if let Ok(decoded) = general_purpose::STANDARD.decode(&standard_data) {
+            return Ok(decoded);
+        }
+
+        // Try standard with proper padding
+        let mut standard_padded = standard_data;
+        while standard_padded.len() % 4 != 0 {
+            standard_padded.push('=');
+        }
+        if let Ok(decoded) = general_purpose::STANDARD.decode(&standard_padded) {
+            return Ok(decoded);
+        }
+
+        // If it's empty or very short, return empty
+        if cleaned_data.is_empty() || cleaned_data.len() < 4 {
+            return Ok(Vec::new());
+        }
+
+        // All attempts failed, return a more detailed error
+        Err(LibreOllamaError::Serialization {
+            message: format!("Failed to decode base64 data after all attempts. Data length: {}, sample: '{}'", 
+                cleaned_data.len(), 
+                if cleaned_data.len() > 20 { &cleaned_data[..20] } else { &cleaned_data }
+            ),
+            data_type: "base64".to_string(),
+        })
+    }
+
+    /// Make API request with detailed logging for debugging
+    async fn make_api_request_with_logging(&self, account_id: &str, endpoint: &str) -> Result<String> {
+        println!("🔍 [GMAIL-API] Making request to endpoint: {}", endpoint);
+        
+        // Get valid tokens for the account
+        let tokens = self.auth_service
+            .validate_and_refresh_tokens(&self.db_manager, account_id)
+            .await?;
+
+        let url = format!("{}/{}", GMAIL_API_BASE, endpoint.trim_start_matches('/'));
+        println!("🔍 [GMAIL-API] Full URL: {}", url);
+        
+        // Create rate-limited request
+        let batch_request = BatchRequest {
+            id: format!("gmail_api_{}", Uuid::new_v4()),
+            method: "GET".to_string(),
+            url: url.clone(),
+            headers: {
+                let mut headers = std::collections::HashMap::new();
+                headers.insert("Authorization".to_string(), format!("Bearer {}", tokens.access_token));
+                headers.insert("Accept".to_string(), "application/json".to_string());
+                headers
+            },
+            body: None,
+            priority: RequestPriority::Medium,
+            created_at: chrono::Utc::now().to_rfc3339(),
+            max_retries: 3,
+            current_retry: 0,
+        };
+
+        // Execute request through rate limiter
+        let response = {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.execute_request(batch_request).await
+                .map_err(|e| LibreOllamaError::Network {
+                    message: format!("Rate limited Gmail API request failed: {}", e),
+                    url: Some(url.clone()),
+                })?
+        };
+
+        println!("🔍 [GMAIL-API] Response status: {}", response.status_code);
+        println!("🔍 [GMAIL-API] Response body preview: {}", response.body.chars().take(300).collect::<String>());
+
+        // Parse response
+        if response.status_code != 200 {
+            return Err(LibreOllamaError::GmailApi {
+                message: format!("Gmail API error: {} - {}", response.status_code, response.body),
+                status_code: Some(response.status_code as u16),
+            });
+        }
+
+        Ok(response.body)
     }
 } 

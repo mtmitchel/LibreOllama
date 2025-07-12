@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/react';
 import {
   FileText,
@@ -43,25 +44,26 @@ const ContextMenuSeparator = () => {
 interface TiptapContextMenuProps {
   editor: Editor;
   children: React.ReactNode;
-  exportAs: (format: 'pdf' | 'docx' | 'txt') => void;
+  className?: string;
 }
 
 export const TiptapContextMenu: React.FC<TiptapContextMenuProps> = ({
   editor,
   children,
-  exportAs,
+  className,
 }) => {
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isTableContext, setIsTableContext] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleContextMenu = (event: React.MouseEvent) => {
-    event.preventDefault();
-    const isTable = editor.isActive('table');
-    setIsTableContext(isTable);
-    setPosition({ x: event.clientX, y: event.clientY });
-    setVisible(true);
+    // Only show custom menu if a table is active
+    if (editor.isActive('table')) {
+      event.preventDefault();
+      setPosition({ x: event.clientX, y: event.clientY });
+      setVisible(true);
+    }
+    // Otherwise, do nothing and allow the default browser context menu
   };
 
   useEffect(() => {
@@ -140,38 +142,23 @@ export const TiptapContextMenu: React.FC<TiptapContextMenuProps> = ({
     </>
   );
 
-  const generalMenuItems = (
-    <>
-      <ContextMenuItem onClick={() => handleItemClick(() => exportAs('pdf'))}>
-        <FileType2 className="mr-2" size={16} />
-        <span>Export as PDF</span>
-      </ContextMenuItem>
-      <ContextMenuItem onClick={() => handleItemClick(() => exportAs('docx'))}>
-        <FileText className="mr-2" size={16} />
-        <span>Export as DOCX</span>
-      </ContextMenuItem>
-      <ContextMenuItem onClick={() => handleItemClick(() => exportAs('txt'))}>
-        <FileUp className="mr-2" size={16} />
-        <span>Export as TXT</span>
-      </ContextMenuItem>
-    </>
-  );
-
   return (
-    <div onContextMenu={handleContextMenu}>
+    <div onContextMenu={handleContextMenu} className={className}>
       {children}
-      {visible && (
-        <div
-          ref={menuRef}
-          style={{ top: position.y, left: position.x }}
-          className="fixed bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-[var(--space-1)] animate-in fade-in-0 zoom-in-95 w-56"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex flex-col gap-[var(--space-1)] p-[var(--space-1)]">
-            {isTableContext ? tableMenuItems : generalMenuItems}
-          </div>
-        </div>
-      )}
+      {visible &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: position.y, left: position.x }}
+            className="fixed bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-[var(--space-1)] animate-in fade-in-0 zoom-in-95 w-56"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-[var(--space-1)] p-[var(--space-1)]">
+              {tableMenuItems}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }; 

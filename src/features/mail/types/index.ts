@@ -40,20 +40,72 @@ export interface GmailThread {
   messages: GmailMessage[];
 }
 
+// Enhanced Label Types for Phase 2.3 - Label Management
 export interface GmailLabel {
   id: string;
   name: string;
-  messageListVisibility: 'show' | 'hide';
-  labelListVisibility: 'labelShow' | 'labelHide';
+  messageListVisibility: 'show' | 'hide' | 'showIfUnread';
+  labelListVisibility: 'show' | 'hide' | 'showIfUnread';
   type: 'system' | 'user';
-  messagesTotal?: number;
-  messagesUnread?: number;
-  threadsTotal?: number;
-  threadsUnread?: number;
-  color?: {
-    textColor: string;
-    backgroundColor: string;
-  };
+  messagesTotal: number;
+  messagesUnread: number;
+  threadsTotal: number;
+  threadsUnread: number;
+  color: string;
+  textColor?: string;
+  backgroundColor?: string;
+}
+
+// Label Settings Types
+export interface LabelVisibilitySettings {
+  showSystemLabels: boolean;
+  showUserLabels: boolean;
+  showEmptyLabels: boolean;
+  showUnreadCountsOnly: boolean;
+  compactView: boolean;
+}
+
+export interface LabelSortingSettings {
+  sortBy: 'name' | 'messageCount' | 'unreadCount' | 'dateCreated' | 'custom';
+  sortOrder: 'asc' | 'desc';
+  groupByType: boolean;
+  prioritizeUnread: boolean;
+}
+
+export interface LabelBehaviorSettings {
+  autoApplyLabels: boolean;
+  removeFromInboxWhenLabeled: boolean;
+  showLabelColors: boolean;
+  enableLabelShortcuts: boolean;
+  maxLabelsPerMessage: number;
+}
+
+export interface LabelSettings {
+  visibility: LabelVisibilitySettings;
+  sorting: LabelSortingSettings;
+  behavior: LabelBehaviorSettings;
+}
+
+// Label Operation Types
+export interface LabelOperation {
+  type: 'add' | 'remove' | 'replace';
+  labelIds: string[];
+  messageIds: string[];
+}
+
+export interface LabelCreationRequest {
+  name: string;
+  color: string;
+  messageListVisibility: 'show' | 'hide' | 'showIfUnread';
+  labelListVisibility: 'show' | 'hide' | 'showIfUnread';
+}
+
+export interface LabelUpdateRequest {
+  id: string;
+  name?: string;
+  color?: string;
+  messageListVisibility?: 'show' | 'hide' | 'showIfUnread';
+  labelListVisibility?: 'show' | 'hide' | 'showIfUnread';
 }
 
 // Backend Service Types (for Tauri integration)
@@ -237,6 +289,10 @@ export interface MailState {
   searchQuery: string;
   currentLabel: string | null;
   
+  // Phase 2.3 - Label Management State
+  selectedLabels: string[];
+  labelSettings: LabelSettings;
+  
   // Compose
   isComposing: boolean;
   composeData: {
@@ -312,10 +368,28 @@ export interface MailActions {
   starMessages: (messageIds: string[], accountId?: string) => Promise<void>;
   unstarMessages: (messageIds: string[], accountId?: string) => Promise<void>;
   
-  // Labels
+  // Enhanced Label Management (Phase 2.3)
   fetchLabels: (accountId?: string) => Promise<void>;
+  createLabel: (labelData: LabelCreationRequest, accountId?: string) => Promise<GmailLabel>;
+  updateLabel: (labelData: LabelUpdateRequest, accountId?: string) => Promise<GmailLabel>;
+  deleteLabel: (labelId: string, accountId?: string) => Promise<void>;
+  addLabelsToMessages: (messageIds: string[], labelIds: string[], accountId?: string) => Promise<void>;
+  removeLabelsFromMessages: (messageIds: string[], labelIds: string[], accountId?: string) => Promise<void>;
+  applyLabelOperation: (operation: LabelOperation, accountId?: string) => Promise<void>;
+  
+  // Legacy label methods (maintained for backward compatibility)
   addLabel: (messageIds: string[], labelId: string, accountId?: string) => Promise<void>;
   removeLabel: (messageIds: string[], labelId: string, accountId?: string) => Promise<void>;
+  
+  // Label Settings
+  updateLabelSettings: (settings: Partial<LabelSettings>) => void;
+  resetLabelSettings: () => void;
+  
+  // Label Filtering
+  setSelectedLabels: (labelIds: string[]) => void;
+  addLabelToFilter: (labelId: string) => void;
+  removeLabelFromFilter: (labelId: string) => void;
+  clearLabelFilter: () => void;
   
   // Compose
   startCompose: (draft?: Partial<ComposeEmail>) => void;
@@ -324,8 +398,16 @@ export interface MailActions {
   saveDraft: (email: ComposeEmail) => Promise<void>;
   cancelCompose: () => void;
   
-  // Search
+  // Enhanced Search (Phase 2.1)
   searchMessages: (query: string, accountId?: string) => Promise<void>;
+  searchWithFilters: (filters: import('./search').SearchFilter[], accountId?: string) => Promise<void>;
+  searchWithAdvancedFilters: (filters: import('./search').AdvancedSearchFilters, accountId?: string) => Promise<void>;
+  getSearchSuggestions: (query: string, accountId?: string) => Promise<import('./search').SearchSuggestion[]>;
+  getSearchOperators: () => import('./search').SearchOperator[];
+  getSearchHistory: () => import('./search').SearchHistory;
+  saveSearch: (searchQuery: import('./search').SearchQuery) => Promise<void>;
+  deleteSearch: (searchId: string) => Promise<void>;
+  clearSearchHistory: () => Promise<void>;
   clearSearch: () => void;
   
   // UI Actions
@@ -454,4 +536,31 @@ export const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/drive.metadata.readonly',
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/tasks',
-] as const; 
+] as const;
+
+// Default Label Settings
+export const DEFAULT_LABEL_SETTINGS: LabelSettings = {
+  visibility: {
+    showSystemLabels: true,
+    showUserLabels: true,
+    showEmptyLabels: false,
+    showUnreadCountsOnly: false,
+    compactView: false
+  },
+  sorting: {
+    sortBy: 'name',
+    sortOrder: 'asc',
+    groupByType: true,
+    prioritizeUnread: false
+  },
+  behavior: {
+    autoApplyLabels: false,
+    removeFromInboxWhenLabeled: false,
+    showLabelColors: true,
+    enableLabelShortcuts: true,
+    maxLabelsPerMessage: 20
+  }
+};
+
+// Re-export search types
+export * from './search'; 

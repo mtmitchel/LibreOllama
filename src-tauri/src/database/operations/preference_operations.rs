@@ -47,6 +47,8 @@ pub fn get_user_preference(conn: &Connection, preference_id: i32) -> Result<Opti
             preference_key: row.get(1)?,
             preference_value: row.get(2)?,
             preference_type_name: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).optional().context("Failed to get user preference")?;
 
@@ -69,6 +71,8 @@ pub fn get_user_preference_by_key(
             preference_key: row.get(1)?,
             preference_value: row.get(2)?,
             preference_type_name: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).optional().context("Failed to get user preference by key")?;
 
@@ -91,6 +95,8 @@ pub fn get_user_preferences_by_type(
             preference_key: row.get(1)?,
             preference_value: row.get(2)?,
             preference_type_name: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).context("Failed to execute get user preferences by type query")?;
 
@@ -115,6 +121,8 @@ pub fn get_all_user_preferences(conn: &Connection) -> Result<Vec<UserPreference>
             preference_key: row.get(1)?,
             preference_value: row.get(2)?,
             preference_type_name: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).context("Failed to execute get all user preferences query")?;
 
@@ -239,6 +247,8 @@ pub fn search_user_preferences(conn: &Connection, query: &str) -> Result<Vec<Use
             preference_key: row.get(1)?,
             preference_value: row.get(2)?,
             preference_type_name: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).context("Failed to execute search user preferences query")?;
 
@@ -268,6 +278,8 @@ pub fn get_user_preferences_by_type_pattern(
             preference_key: row.get(1)?,
             preference_value: row.get(2)?,
             preference_type_name: row.get(3)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
+            updated_at: chrono::Local::now().naive_local(), // Default updated_at
         })
     }).context("Failed to execute get user preferences by type pattern query")?;
 

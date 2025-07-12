@@ -42,23 +42,51 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### High Priority / Known Issues
 
-- [ ] **Bugfix:** Resolve the 2 failing backend tests related to minor OAuth configuration issues.
-- [ ] **Bugfix:** Fix frontend test failures that appear to be caused by race conditions between data fetching and test assertions.
-- [ ] **Setup:** Finalize and document the required environment variable configuration for OAuth (`.env` file).
+- [ ] **Bugfix:** Resolve 5 failing backend tests:
+  - OAuth configuration test (missing `oauth.client_id` environment variable)
+  - Gmail scopes configuration test (expected 5 scopes but found 8)
+  - Database schema tests (missing `agent_executions` table - affects 3 tests)
+- [ ] **Code Quality:** Address 136 compiler warnings in backend Rust code (unused functions and dead code)
+- [ ] **Setup:** Finalize and document the required environment variable configuration for OAuth (`.env` file)
 
 ### MVP Must-Haves
 
 - [x] **Single-Account Auth:** Secure OAuth2 login for a single user. *(Existing)*
-- [ ] **Inbox Threading:** A threaded view for conversations.
+- [x] **Inbox Threading:** A threaded view for conversations. *(Completed - ThreadedMessageList.tsx)*
 - [x] **Core Email Actions:** Compose, reply, forward, delete. *(Existing)*
-- [ ] **Attachments:** Ability to download and upload attachments.
-- [ ] **Basic Search:** Search emails by sender or subject.
+- [x] **Attachments:** Ability to download and upload attachments. *(Completed - EnhancedAttachmentHandler.tsx, AttachmentPreviewModal.tsx)*
+- [x] **Basic Search:** Search emails by sender or subject. *(Completed - Advanced search system implemented)*
+
+### Additional Completed Features
+
+- [x] **Label Management:** Complete CRUD operations for Gmail labels *(Phase 2.3)*
+- [x] **Advanced Search:** Gmail-style search operators, filters, and saved searches *(Phase 2.4)*
+- [x] **Rich Text Editing:** Full-featured email composition with formatting
+- [x] **Attachment Preview:** Comprehensive preview system for images, videos, PDFs
+- [x] **Message Threading:** Full conversation threading with expand/collapse functionality
 
 ### Post-MVP Enhancements
 
 - [ ] **Canned Responses:** Save and reuse common email replies.
 - [ ] **Scheduled Send:** Schedule an email to be sent at a future time.
 - [ ] **Email Categorization:** Automatic sorting into tabs like "Primary" or "Promotions."
+
+### Phase 4 - Future Iteration (Advanced Features & AI)
+
+**Phase 4.1: AI-Powered Features**
+- [ ] **Smart Replies:** AI-generated contextual reply suggestions based on email content
+- [ ] **Email Summarization:** Automatic summarization of long emails and conversation threads
+- [ ] **Intelligent Triage:** AI-powered email prioritization and sender importance scoring
+
+**Phase 4.2: Advanced Features**
+- [ ] **Enhanced Scheduled Send:** Advanced scheduling with timezone support and send conditions
+- [ ] **Advanced Canned Responses:** Template management with variables and conditional logic
+- [ ] **Smart Email Categorization:** Machine learning-based email sorting and filtering
+
+**Phase 4.3: Calendar Integration**
+- [ ] **Email-to-Event Creation:** One-click calendar event creation from email content
+- [ ] **Meeting Scheduling:** Integrated scheduling assistant with availability checking
+- [ ] **Smart Meeting Detection:** Automatic detection of meeting requests and calendar conflicts
 
 ### Future Vision & "Wow" Delighters
 

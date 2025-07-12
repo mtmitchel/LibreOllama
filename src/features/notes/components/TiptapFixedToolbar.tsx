@@ -94,7 +94,7 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
 
   return (
     <>
-      <div className="flex items-center gap-[var(--space-1)] p-[var(--space-2)] bg-[var(--bg-secondary)] border-b border-[var(--border-default)] flex-wrap">
+      <div className="flex items-center gap-[var(--space-1)] p-[var(--space-2)] bg-[var(--bg-secondary)] border-b border-[var(--border-default)] flex-wrap" onMouseDown={(e) => e.preventDefault()}>
         {/* History Group */}
         <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}>
           <Undo size={18} />

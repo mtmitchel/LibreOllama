@@ -14,3 +14,6 @@
 
 # OAuth credential files from Google
 client_secret_*.json
+
+# Auto-generated canvas save files
+canvas-save.json

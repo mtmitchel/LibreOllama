@@ -49,7 +49,12 @@ pub fn get_application_log(conn: &Connection, log_id: i32) -> Result<Option<Appl
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     }).optional()?;
 
@@ -69,7 +74,12 @@ pub fn get_application_logs_by_level(conn: &Connection, log_level: &str) -> Resu
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -94,7 +104,12 @@ pub fn get_application_logs_by_module(conn: &Connection, module_name: &str) -> R
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -123,7 +138,12 @@ pub fn get_application_logs_in_range(
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -148,7 +168,12 @@ pub fn get_recent_application_logs(conn: &Connection, limit: i32) -> Result<Vec<
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -174,7 +199,12 @@ pub fn search_application_logs(conn: &Connection, query: &str) -> Result<Vec<App
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -203,7 +233,12 @@ pub fn get_application_logs_by_level_and_module(
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 
@@ -257,13 +292,42 @@ pub fn get_application_log_count_by_level(conn: &Connection, log_level: &str) ->
     Ok(count)
 }
 
+/// Clear all application logs (helper function)
 pub fn clear_all_application_logs(conn: &Connection) -> Result<usize> {
-    let rows_affected = conn.execute(
-        "DELETE FROM application_logs",
-        [],
+    let rows_affected = conn.execute("DELETE FROM application_logs", [])?;
+    Ok(rows_affected)
+}
+
+/// Get all application logs
+pub fn get_all_application_logs(conn: &Connection) -> Result<Vec<crate::database::models::ApplicationLog>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, log_level, message, module_name, function_name, line_number, user_id, session_id, request_id, timestamp, created_at 
+         FROM application_logs ORDER BY created_at DESC"
     )?;
 
-    Ok(rows_affected)
+    let logs = stmt.query_map([], |row| {
+        let log_level_str: String = row.get(1)?;
+        Ok(crate::database::models::ApplicationLog {
+            id: row.get(0)?,
+            log_level: crate::database::models::LogLevel::from_string(&log_level_str),
+            message: row.get(2)?,
+            module_name: row.get(3)?,
+            function_name: row.get(4)?,
+            line_number: row.get(5).ok(),
+            user_id: row.get(6).ok(),
+            session_id: row.get(7).ok(),
+            request_id: row.get(8).ok(),
+            timestamp: row.get(9)?,
+            created_at: row.get(10)?,
+        })
+    })?;
+
+    let mut result = Vec::new();
+    for log in logs {
+        result.push(log?);
+    }
+
+    Ok(result)
 }
 
 /// Get application logs with dynamic filtering
@@ -318,7 +382,12 @@ pub fn get_application_logs_filtered(
             message: row.get(2)?,
             module_name: row.get(3)?,
             function_name: row.get(4)?,
+            line_number: None, // Default line_number
+            user_id: None, // Default user_id
+            session_id: None, // Default session_id
+            request_id: None, // Default request_id
             timestamp: row.get(5)?,
+            created_at: chrono::Local::now().naive_local(), // Default created_at
         })
     })?;
 

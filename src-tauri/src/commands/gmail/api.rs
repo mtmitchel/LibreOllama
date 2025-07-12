@@ -90,6 +90,34 @@ pub async fn get_gmail_thread(
         .map_err(|e| e.to_string())
 }
 
+/// Modify labels for a batch of messages
+#[tauri::command]
+pub async fn modify_gmail_messages(
+    account_id: String,
+    message_ids: Vec<String>,
+    add_label_ids: Vec<String>,
+    remove_label_ids: Vec<String>,
+    api_service: State<'_, Arc<GmailApiService>>,
+) -> Result<(), String> {
+    api_service
+        .modify_messages(&account_id, message_ids, add_label_ids, remove_label_ids)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Move a batch of messages to the trash
+#[tauri::command]
+pub async fn trash_gmail_messages(
+    account_id: String,
+    message_ids: Vec<String>,
+    api_service: State<'_, Arc<GmailApiService>>,
+) -> Result<(), String> {
+    api_service
+        .trash_messages(&account_id, message_ids)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// Download Gmail attachment data
 #[tauri::command]
 pub async fn get_gmail_attachment(

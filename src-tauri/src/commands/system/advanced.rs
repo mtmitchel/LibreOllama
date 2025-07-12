@@ -42,11 +42,12 @@ pub async fn update_conversation_context(
     let db_manager_clone = db_manager.inner().clone();
     let update_task = tokio::task::spawn_blocking(move || {
         let conn = db_manager_clone.get_connection()?;
+        let context_data_str = serde_json::to_string(&context_clone.context_data).unwrap_or_default();
         if context_clone.id > 0 {
              crate::database::operations::conversation_operations::update_conversation_context(
                 &conn,
                 context_clone.id,
-                &context_clone.context_data,
+                &context_data_str,
                 context_clone.context_window_size,
                 context_clone.context_summary.as_deref(),
             )
@@ -54,7 +55,7 @@ pub async fn update_conversation_context(
             crate::database::operations::conversation_operations::create_conversation_context(
                 &conn,
                 &context_clone.context_name,
-                &context_clone.context_data,
+                &context_data_str,
                 context_clone.context_window_size,
                 context_clone.context_summary.as_deref(),
             ).map(|_| ())
@@ -70,12 +71,9 @@ pub async fn update_conversation_context(
 
 #[tauri::command]
 pub async fn get_chat_templates(active_only: Option<bool>) -> Result<Vec<ChatTemplate>, String> {
-    tokio::task::spawn_blocking(move || {
-        crate::database::get_chat_templates(active_only.unwrap_or(true))
-    })
-    .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| format!("Failed to get chat templates: {}", e))
+    crate::database::get_chat_templates(active_only.unwrap_or(true))
+        .await
+        .map_err(|e| format!("Failed to get chat templates: {}", e))
 }
 
 #[tauri::command]
@@ -258,7 +256,7 @@ pub async fn cache_request(
         id: 0,
         request_hash: key,
         response_body: value,
-        expires_at,
+        expires_at: Some(expires_at),
         created_at: chrono::Local::now().naive_local(),
     };
 
@@ -269,7 +267,7 @@ pub async fn cache_request(
             &conn,
             &cache.request_hash,
             &cache.response_body,
-            cache.expires_at,
+            cache.expires_at.unwrap_or_else(|| chrono::Local::now().naive_local()),
         )
     })
     .await
@@ -319,7 +317,7 @@ pub async fn set_user_preference(
     _is_system_preference: Option<bool>, // Not a field in UserPreference
     db_manager: State<'_, crate::database::DatabaseManager>,
 ) -> Result<(), String> {
-    let pref_type = preference_type.map(PreferenceType::from).unwrap_or(PreferenceType::String);
+    let pref_type = preference_type.map(|pt| PreferenceType::from_string(&pt)).unwrap_or(PreferenceType::String);
     
     let db_manager_clone = db_manager.inner().clone();
     tokio::task::spawn_blocking(move || {
@@ -369,7 +367,7 @@ pub async fn log_application_event(
     context: Option<String>, // Renamed to details in ApplicationLog::new
     db_manager: State<'_, crate::database::DatabaseManager>,
 ) -> Result<(), String> {
-    let log_level = LogLevel::from(level);
+    let log_level = LogLevel::from_string(&level);
     let module_name = component.unwrap_or_else(|| "frontend".to_string());
     // 'context' can be mapped to 'function_name' or part of the message
     let function_name = context.unwrap_or_else(|| "unknown".to_string());
@@ -400,7 +398,7 @@ pub async fn get_application_logs(
     end_time: Option<String>,   // ISO 8601
     limit: Option<i32>,
 ) -> Result<Vec<ApplicationLog>, String> {
-    let log_level = level.map(LogLevel::from);
+    let log_level = level.map(|l| LogLevel::from_string(&l));
     crate::database::get_application_logs(
         log_level,
         component,

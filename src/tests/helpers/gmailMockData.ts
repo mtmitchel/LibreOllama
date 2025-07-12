@@ -198,7 +198,7 @@ export class MockGmailApiServer {
   }
 
   // Simulate API responses
-  async getMessages(labelIds?: string[], maxResults = 50, query?: string): Promise<MockGmailMessage[]> {
+  async getMessages(labelIds?: string[], maxResults = 25, query?: string): Promise<MockGmailMessage[]> {
     if (!this.isRunning) throw new Error('Mock server not running');
     
     let filteredMessages = this.mockData.messages;
@@ -299,7 +299,7 @@ export const mockGmailTauriService = {
   removeAccount: vi.fn(),
 };
 
-export const mockGmailApiService = {
+export const mockGmailTauriService = {
   getMessages: vi.fn(),
   getMessage: vi.fn(),
   getLabels: vi.fn(),
