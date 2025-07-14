@@ -7,27 +7,27 @@
 export const canvasTheme = {
   colors: {
     // Corresponds to CSS variable --accent-primary
-    primary: '#3B82F6',
+    primary: '#6366f1',
     // Corresponds to CSS variable --accent-secondary
-    primaryDark: '#1D4ED8',
+    primaryDark: '#4f46e5',
     // Corresponds to a lighter shade of primary for effects like shadows
-    primaryLight: '#93C5FD',
+    primaryLight: '#a5b4fc',
     // Corresponds to CSS variable --error
-    error: '#EF4444',
+    error: '#ef4444',
     // Corresponds to CSS variable --text-primary (in light theme) or --bg-secondary (in dark)
-    dark: '#1E293B',
+    dark: '#18181b',
     // Corresponds to various shades of secondary/gray
     secondary: {
-      '50': '#F8FAFC',
-      '100': '#F1F5F9',
-      '300': '#CBD5E1',
-      '400': '#94A3B8',
-      '500': '#64748B',
-      '600': '#475569',
-      '800': '#1E293B'
+      '50': '#fafafa',
+      '100': '#f4f4f5',
+      '300': '#d4d4d8',
+      '400': '#a1a1aa',
+      '500': '#71717a',
+      '600': '#52525b',
+      '800': '#27272a'
     },
-    success: '#22C55E',
-    warning: '#F59E0B',
+    success: '#10b981',
+    warning: '#f59e0b',
     stickyNote: {
       yellow: '#FFE299',
       yellowBorder: '#E6C975',
@@ -44,11 +44,14 @@ export const canvasTheme = {
     }
   },
   canvasStyles: {
-    background: '#FFFFFF',
-    border: '#E5E7EB',
-    gridColor: '#F3F4F6',
-    selectionColor: '#3B82F6',
-    selectionBorder: '#1D4ED8'
+    background: '#f8f9fa', // Theme-independent light neutral - matches --bg-canvas
+    backgroundDark: '#f8f9fa', // Theme-independent - same in both themes
+    border: '#e4e4e7',
+    borderDark: '#d1d5db', // Slightly darker for visibility on light canvas
+    gridColor: '#f4f4f5',
+    gridColorDark: '#e5e7eb', // Visible on light canvas background
+    selectionColor: '#6366f1',
+    selectionBorder: '#4f46e5'
   },
   typography: {
     fontFamily: {

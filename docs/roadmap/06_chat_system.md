@@ -1,4 +1,6 @@
-**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT DELETE IT.**
+**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
+
+**CRITICAL UI CONVENTION: This project uses sentence case (not title case) for ALL user-facing text including page titles, headings, section titles, list titles, button copy, navigation copy, form labels, menu items, and any other UI text. Example: "Create new project" NOT "Create New Project".**
 
 # Chat System Roadmap
 
@@ -11,7 +13,7 @@ This document provides a comprehensive overview of the Chat System feature, incl
 
 ## Current Implementation
 
-The chat system has both functional frontend UI and backend services implemented, with database persistence.
+The chat system has a functional frontend UI with backend services implemented, but **lacks integration between frontend and backend**. The frontend currently uses mock data and has no AI integration.
 
 ### Frontend Architecture
 
@@ -20,8 +22,9 @@ The chat system has both functional frontend UI and backend services implemented
     - `ConversationList.tsx`: A sidebar for managing different conversations.
     - `ChatMessageBubble.tsx`: A component for displaying individual messages, styled with the "ghost" low-fatigue design.
     - `ChatInput.tsx`: A flexible input component for typing messages.
-- **Mock Data:** Frontend development uses mock data from `src/core/lib/chatMockData.ts` for rapid prototyping.
-- **State Management:** State is currently managed locally within React components. No centralized frontend store yet.
+- **Mock Data:** Frontend uses mock data from `src/core/lib/chatMockData.ts` and is **not connected to backend services**.
+- **State Management:** State is managed locally within React components using mock data arrays. No integration with backend chat services.
+- **No AI Integration:** Currently has no connection to Ollama or any AI service for generating responses.
 
 ### Backend Architecture
 
@@ -37,14 +40,21 @@ The chat system has both functional frontend UI and backend services implemented
     - `delete_session`: Delete chat sessions
     - `get_database_stats`: Database statistics
 
+### Critical Implementation Gaps
+
+- **Frontend-Backend Disconnection:** The existing frontend UI components use mock data and do not call any backend Tauri commands.
+- **No Ollama Integration:** No connection to local Ollama instance for AI responses.
+- **No AI Response Generation:** Messages are displayed but no AI responses are generated or processed.
+- **No Persistent Storage Integration:** Frontend state is not persisted to the database backend.
+
 ### Implemented Features
 
 - Complete chat UI with conversation list, message bubbles, and input
-- Conversation management UI (create, select, pin, delete)
-- Backend database persistence for sessions and messages
-- Chat session CRUD operations
-- Message history storage and retrieval
-- Database statistics and health monitoring
+- Mock conversation management UI (create, select, pin, delete)
+- Backend database schema and persistence layer for sessions and messages
+- Chat session CRUD operations (backend only)
+- Message history storage and retrieval (backend only)
+- Database statistics and health monitoring (backend only)
 - Responsive layout with collapsible sidebars
 - Ghost-style message bubbles for clean, low-fatigue design
 
@@ -55,9 +65,11 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 ### MVP Must-Haves
 
 - [x] **Chat UI:** Complete chat UI with conversation list, message bubbles, and input. *(Existing)*
-- [x] **Persistent Local History:** Backend database storage for chat history. *(Existing)*
-- [ ] **Ollama Integration:** Connect to local Ollama instance for AI responses, including model management, streaming responses, and error handling.
-- [ ] **Frontend-Backend Integration:** Connect the existing frontend UI to the existing backend services.
+- [x] **Backend Database Services:** Backend database storage for chat history. *(Existing)*
+- [ ] **Frontend-Backend Integration:** Connect the existing frontend UI to the existing backend services. *(Critical Gap)*
+- [ ] **Ollama Integration:** Connect to local Ollama instance for AI responses, including model management, streaming responses, and error handling. *(Missing)*
+- [ ] **Message Persistence:** Integrate frontend message state with backend database operations. *(Missing)*
+- [ ] **AI Response Generation:** Implement AI response pipeline from user messages to Ollama and back to UI. *(Missing)*
 
 ### Post-MVP Enhancements
 

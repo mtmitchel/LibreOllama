@@ -17,11 +17,15 @@ import {
   PanelLeft,
   RefreshCw,
   LogOut,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  Settings
 } from 'lucide-react';
 import { useMailStore } from '../stores/mailStore';
 import { GmailAccount } from '../types';
 import { useState } from 'react';
+import LabelManager from './LabelManager';
+import LabelSettings from './LabelSettings';
 
 interface MailSidebarProps {
   isOpen?: boolean;
@@ -47,7 +51,7 @@ function StorageInfo({
   
   if (typeof quotaUsed !== 'number' || typeof quotaTotal !== 'number' || quotaTotal <= 0) {
     return (
-      <div className="text-center py-2">
+      <div className="py-2 text-center">
         <Text size="xs" variant="tertiary">
           {isRefreshing ? 'Loading storage info...' : 'Storage info unavailable'}
         </Text>
@@ -61,20 +65,20 @@ function StorageInfo({
 
   return (
     <>
-      <div className="flex justify-between items-center mb-1">
+      <div className="mb-1 flex items-center justify-between">
         <Text size="xs" weight="semibold" variant="secondary">Storage</Text>
         <div className="flex items-center">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-6 w-6"
+            className="size-6"
             onClick={handleRefresh}
             disabled={isRefreshing}
             title="Refresh storage quota"
           >
             <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" title="Manage storage">
+          <Button variant="ghost" size="icon" className="size-6" title="Manage storage">
             <ExternalLink size={12} />
           </Button>
         </div>
@@ -82,9 +86,9 @@ function StorageInfo({
       <Text size="xs" variant="tertiary" className="mb-2">
         {usedGiB} GiB of {totalGiB} GiB used
       </Text>
-      <div className="w-full bg-[var(--bg-tertiary)] rounded-full h-1">
+      <div className="h-1 w-full rounded-full bg-tertiary">
         <div 
-          className="bg-[var(--accent-primary)] h-1 rounded-full" 
+          className="h-1 rounded-full bg-accent-primary" 
           style={{ width: `${percentage}%` }}
         ></div>
       </div>
@@ -113,6 +117,8 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
 
   const [labelsExpanded, setLabelsExpanded] = React.useState(true);
   const [isRefreshingQuota, setIsRefreshingQuota] = React.useState(false);
+  const [isLabelManagerOpen, setIsLabelManagerOpen] = React.useState(false);
+  const [isLabelSettingsOpen, setIsLabelSettingsOpen] = React.useState(false);
 
   // Fetch labels and refresh quota when component mounts or account changes
   React.useEffect(() => {
@@ -244,18 +250,16 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   // If closed, show only the toggle button
   if (!isOpen) {
     return (
-      <Card className="w-16 h-full flex flex-col bg-[var(--bg-secondary)]/30" padding="none">
+      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
         <div 
-          className="border-b border-[var(--border-default)] flex flex-col items-center"
-          style={{ padding: 'var(--space-3)' }}
+          className="border-border-default flex flex-col items-center border-b p-3"
         >
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggle}
             title="Show mail folders"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
-            style={{ marginBottom: 'var(--space-2)' }}
+            className="mb-2 text-secondary hover:bg-tertiary hover:text-primary"
           >
             <Mail size={20} />
           </Button>
@@ -264,14 +268,14 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
             size="icon"
             onClick={() => startCompose()}
             title="Compose new email"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-ghost)]"
+            className="text-secondary hover:bg-accent-ghost hover:text-primary"
           >
             <Edit size={18} />
           </Button>
         </div>
         
         <div 
-          className="flex-1 flex flex-col items-center"
+          className="flex flex-1 flex-col items-center"
           style={{ 
             paddingTop: 'var(--space-4)',
             gap: 'var(--space-2)'
@@ -301,10 +305,10 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                 key={folder.id}
                 onClick={() => handleFolderClick(folder.id)}
                 title={folder.name}
-                className={`w-8 h-8 rounded-[var(--radius-md)] flex items-center justify-center transition-all hover:scale-105 ${
+                className={`flex size-8 items-center justify-center rounded-md transition-all motion-safe:hover:scale-105 ${
                   isActive 
-                    ? 'bg-[var(--accent-primary)] text-white shadow-sm' 
-                    : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)]'
+                    ? 'bg-selected text-selected shadow-sm' 
+                    : 'bg-tertiary text-secondary hover:bg-hover'
                 }`}
               >
                 <Icon size={14} />
@@ -314,13 +318,13 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
           
           {/* Folder count indicator */}
           <div 
-            className="flex flex-col items-center mt-2"
+            className="mt-2 flex flex-col items-center"
             style={{ 
               gap: 'var(--space-1)',
               marginTop: 'var(--space-2)'
             }}
           >
-            <div className="w-6 h-6 bg-[var(--accent-primary)] rounded-full flex items-center justify-center">
+            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
               <Text size="xs" weight="bold" className="text-white">
                 {mainFolders.length}
               </Text>
@@ -336,19 +340,15 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
 
   return (
     <Card 
-      className="w-[340px] flex-shrink-0 flex flex-col h-full"
+      className="flex h-full w-[340px] shrink-0 flex-col"
       padding="default"
     >
       {/* Header */}
       <div 
-        className="flex items-center justify-between border-b border-[var(--border-default)]"
-        style={{ 
-          padding: 'var(--space-4)',
-          marginBottom: 'var(--space-4)'
-        }}
+        className="border-border-default mb-4 flex items-center justify-between border-b p-4"
       >
-        <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
-          <Mail className="w-5 h-5 text-[var(--text-secondary)]" />
+        <div className="flex items-center gap-2">
+          <Mail className="size-5 text-secondary" />
           <Text size="lg" weight="semibold">Mail</Text>
         </div>
         {onToggle && (
@@ -357,7 +357,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
             size="icon"
             onClick={onToggle}
             title="Hide mail folders"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="text-secondary hover:text-primary"
           >
             <PanelLeft size={18} />
           </Button>
@@ -365,7 +365,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       </div>
 
       {/* Compose Button */}
-      <div className="mb-[var(--space-4)]">
+      <div className="mb-4">
         <Button
           onClick={() => startCompose()}
           variant="primary"
@@ -378,9 +378,9 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto pr-[var(--space-1)]">
+      <div className="flex-1 overflow-y-auto pr-1">
         {/* Main Folders */}
-        <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+        <div className="flex flex-col gap-1">
           {mainFolders.map((folder) => {
             const Icon = folder.icon;
             
@@ -403,21 +403,18 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
               <Card
                 key={folder.id}
                 padding="none"
-                className={`cursor-pointer group relative ${
+                className={`group relative cursor-pointer ${
                   isActive 
-                    ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]' 
-                    : 'hover:bg-[var(--bg-surface)] border-transparent'
+                    ? 'border-selected bg-selected' 
+                    : 'border-transparent hover:bg-hover'
                 }`}
                 onClick={() => handleFolderClick(folder.id)}
               >
-                <div style={{ padding: 'var(--space-3)' }}>
-                  <div 
-                    className="flex items-center"
-                    style={{ gap: 'var(--space-3)' }}
-                  >
+                <div className="p-3">
+                  <div className="flex items-center gap-3">
                     <Icon 
                       size={18} 
-                      className={`flex-shrink-0 ${isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'}`} 
+                      className={`shrink-0 ${isActive ? 'text-selected' : 'text-secondary'}`} 
                     />
                     <Text 
                       size="sm" 
@@ -440,34 +437,62 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
         </div>
 
         {/* Labels Section */}
-        <div style={{ marginTop: 'var(--space-6)' }}>
+        <div className="mt-6">
           <Card
             padding="none"
-            className="cursor-pointer"
-            onClick={() => setLabelsExpanded(!labelsExpanded)}
           >
-            <div style={{ padding: 'var(--space-3)' }}>
-              <div 
-                className="flex items-center"
-                style={{ gap: 'var(--space-2)' }}
-              >
-                {labelsExpanded ? (
-                  <ChevronDown size={16} className="text-[var(--text-secondary)]" />
-                ) : (
-                  <ChevronRight size={16} className="text-[var(--text-secondary)]" />
-                )}
-                <Caption 
-                  className="uppercase tracking-wider font-semibold"
+            <div className="p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div 
+                  className="flex flex-1 cursor-pointer items-center gap-2"
+                  onClick={() => setLabelsExpanded(!labelsExpanded)}
                 >
-                  Labels
-                </Caption>
+                  {labelsExpanded ? (
+                    <ChevronDown size={16} className="text-secondary" />
+                  ) : (
+                    <ChevronRight size={16} className="text-secondary" />
+                  )}
+                  <Caption 
+                    className="font-semibold uppercase tracking-wider"
+                  >
+                    Labels
+                  </Caption>
+                </div>
+                
+                {/* Label Action Buttons */}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-primary hover:text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLabelManagerOpen(true);
+                    }}
+                    title="Create new label"
+                  >
+                    <Plus size={18} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-primary hover:text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLabelSettingsOpen(true);
+                    }}
+                    title="Label settings"
+                  >
+                    <Settings size={18} />
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>
 
           {labelsExpanded && (
-            <div style={{ marginTop: 'var(--space-2)' }}>
-              <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+            <div className="mt-2">
+              <div className="flex flex-col" className="gap-1">
                 {labels.length > 0 ? (
                   labels.filter(label => 
                     label.type === 'user'
@@ -479,21 +504,21 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                       <Card
                         key={label.id}
                         padding="none"
-                        className={`cursor-pointer group relative ${
+                        className={`group relative cursor-pointer ${
                           isActive 
-                            ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]' 
-                            : 'hover:bg-[var(--bg-surface)] border-transparent'
+                            ? 'border-selected bg-selected' 
+                            : 'border-transparent hover:bg-hover'
                         }`}
                         onClick={() => handleLabelClick(label.id)}
                       >
-                        <div style={{ padding: 'var(--space-3)' }}>
+                        <div className="p-3">
                           <div 
                             className="flex items-center"
-                            style={{ gap: 'var(--space-3)' }}
+                            className="gap-3"
                           >
                             <Tag 
                               size={16} 
-                              className={`flex-shrink-0 ${isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'}`} 
+                              className={`shrink-0 ${isActive ? 'text-selected' : 'text-secondary'}`} 
                             />
                             <Text 
                               size="sm" 
@@ -514,7 +539,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     );
                   })
                 ) : (
-                  <div style={{ padding: 'var(--space-3)' }}>
+                  <div className="p-3">
                     <Text size="sm" variant="secondary">
                       {isAuthenticated ? 'Loading labels...' : 'No labels yet'}
                     </Text>
@@ -527,18 +552,54 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       </div>
 
       {/* Storage Info */}
-      <div className="mt-auto p-4 border-t border-[var(--border-default)]">
+      <div className="border-border-subtle mt-auto border-t p-4">
         {activeAccount ? (
           <StorageInfo 
             account={activeAccount} 
             onRefresh={() => refreshAccount(activeAccount.id)} 
           />
         ) : (
-          <div className="text-center py-2">
+          <div className="py-2 text-center">
             <Text size="xs" variant="tertiary">Sign in to view storage</Text>
           </div>
         )}
       </div>
+
+      {/* Label Management Modals */}
+      <LabelManager
+        isOpen={isLabelManagerOpen}
+        onClose={() => setIsLabelManagerOpen(false)}
+        onLabelCreated={(label) => {
+          console.log('Label created:', label);
+          // Refresh labels after creation
+          if (currentAccountId) {
+            fetchLabels(currentAccountId);
+          }
+        }}
+        onLabelUpdated={(label) => {
+          console.log('Label updated:', label);
+          // Refresh labels after update
+          if (currentAccountId) {
+            fetchLabels(currentAccountId);
+          }
+        }}
+        onLabelDeleted={(labelId) => {
+          console.log('Label deleted:', labelId);
+          // Refresh labels after deletion
+          if (currentAccountId) {
+            fetchLabels(currentAccountId);
+          }
+        }}
+      />
+
+      <LabelSettings
+        isOpen={isLabelSettingsOpen}
+        onClose={() => setIsLabelSettingsOpen(false)}
+        onSettingsChange={(settings) => {
+          console.log('Label settings changed:', settings);
+          // Handle label settings change
+        }}
+      />
     </Card>
   );
 }

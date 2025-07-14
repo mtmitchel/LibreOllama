@@ -31,7 +31,6 @@ export function EnhancedMessageList({
     getMessages, 
     selectedMessages, 
     selectMessage, 
-    selectAllMessages,
     clearSelection,
     fetchMessage,
     isLoadingMessages,
@@ -72,17 +71,20 @@ export function EnhancedMessageList({
       let comparison = 0;
       
       switch (sortBy) {
-        case 'date':
+        case 'date': {
           comparison = a.date.getTime() - b.date.getTime();
           break;
-        case 'sender':
+        }
+        case 'sender': {
           const senderA = a.from.name || a.from.email;
           const senderB = b.from.name || b.from.email;
           comparison = senderA.localeCompare(senderB);
           break;
-        case 'subject':
+        }
+        case 'subject': {
           comparison = a.subject.localeCompare(b.subject);
           break;
+        }
       }
       
       return sortOrder === 'desc' ? -comparison : comparison;
@@ -95,11 +97,6 @@ export function EnhancedMessageList({
   const handleMessageSelect = useCallback((messageId: string, isSelected: boolean) => {
     selectMessage(messageId, isSelected);
   }, [selectMessage]);
-
-  // Handle select all
-  const handleSelectAll = useCallback((isSelected: boolean) => {
-    selectAllMessages(isSelected);
-  }, [selectAllMessages]);
 
   // Handle message click
   const handleMessageClick = useCallback(async (message: ParsedEmail) => {
@@ -178,8 +175,8 @@ export function EnhancedMessageList({
   // Loading state
   if (isLoadingMessages && messages.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center h-64 ${className}`}>
-        <RefreshCw size={32} className="animate-spin text-[var(--accent-primary)] mb-4" />
+      <div className={`flex h-64 flex-col items-center justify-center ${className}`}>
+        <RefreshCw size={32} className="mb-4 animate-spin text-accent-primary" />
         <Text size="sm" variant="secondary">Loading messages...</Text>
       </div>
     );
@@ -188,13 +185,13 @@ export function EnhancedMessageList({
   // Error state
   if (error && messages.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center h-64 ${className}`}>
-        <AlertCircle size={32} className="text-red-500 mb-4" />
+      <div className={`flex h-64 flex-col items-center justify-center ${className}`}>
+        <AlertCircle size={32} className="mb-4 text-error" />
         <Text size="sm" variant="secondary" className="mb-4">
           {error}
         </Text>
         <Button variant="outline" onClick={handleRefresh}>
-          Try Again
+          Try again
         </Button>
       </div>
     );
@@ -203,8 +200,8 @@ export function EnhancedMessageList({
   // Empty state
   if (processedMessages.length === 0) {
     return (
-      <div className={`flex flex-col items-center justify-center h-64 ${className}`}>
-        <Inbox size={48} className="text-[var(--text-tertiary)] mb-4" />
+      <div className={`flex h-64 flex-col items-center justify-center ${className}`}>
+        <Inbox size={48} className="mb-4 text-muted" />
         <Text size="lg" weight="medium" className="mb-2">
           {filterUnread ? 'No unread messages' : 'No messages'}
         </Text>
@@ -224,7 +221,7 @@ export function EnhancedMessageList({
   }
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex h-full flex-col ${className}`}>
       {/* Action Bar */}
       {showActionBar && (
         <EmailActionBar
@@ -235,7 +232,7 @@ export function EnhancedMessageList({
       )}
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-tertiary)] border-b border-[var(--border-default)]">
+      <div className="border-border-default flex items-center justify-between border-b bg-tertiary px-4 py-2">
         {/* Sort and Filter Controls */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
@@ -243,7 +240,7 @@ export function EnhancedMessageList({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'date' | 'sender' | 'subject')}
-              className="px-2 py-1 text-xs bg-[var(--bg-primary)] border border-[var(--border-default)] rounded"
+              className="border-border-default rounded border bg-primary px-2 py-1 text-xs"
             >
               <option value="date">Date</option>
               <option value="sender">Sender</option>
@@ -252,7 +249,7 @@ export function EnhancedMessageList({
             
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="px-2 py-1 text-xs bg-[var(--bg-primary)] border border-[var(--border-default)] rounded hover:bg-[var(--bg-secondary)]"
+              className="border-border-default rounded border bg-primary px-2 py-1 text-xs hover:bg-secondary"
             >
               {sortOrder === 'asc' ? '↑' : '↓'}
             </button>
@@ -263,7 +260,7 @@ export function EnhancedMessageList({
               type="checkbox"
               checked={filterUnread}
               onChange={(e) => setFilterUnread(e.target.checked)}
-              className="w-4 h-4"
+              className="size-4"
             />
             <Text size="xs" variant="secondary">Unread only</Text>
           </label>
@@ -288,7 +285,7 @@ export function EnhancedMessageList({
       </div>
 
       {/* Message List */}
-      <div className="flex-1 overflow-y-auto bg-[var(--bg-primary)]">
+              <div className="flex-1 overflow-y-auto bg-content">
         {processedMessages.map((message) => (
           <EnhancedMessageItem
             key={message.id}
@@ -303,7 +300,7 @@ export function EnhancedMessageList({
         {/* Loading More Indicator */}
         {isLoadingMessages && messages.length > 0 && (
           <div className="flex items-center justify-center py-4">
-            <RefreshCw size={20} className="animate-spin text-[var(--accent-primary)] mr-2" />
+            <RefreshCw size={20} className="mr-2 animate-spin text-accent-primary" />
             <Text size="sm" variant="secondary">Loading more messages...</Text>
           </div>
         )}
@@ -311,7 +308,7 @@ export function EnhancedMessageList({
 
       {/* Pagination */}
       {(currentPage > 1 || nextPageToken) && (
-        <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-tertiary)] border-t border-[var(--border-default)]">
+        <div className="border-border-default flex items-center justify-between border-t bg-tertiary px-4 py-3">
           <Button
             variant="outline"
             size="sm"
@@ -339,4 +336,4 @@ export function EnhancedMessageList({
   );
 }
 
-export default EnhancedMessageList; 
+export default EnhancedMessageList;

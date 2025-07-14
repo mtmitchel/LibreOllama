@@ -1,26 +1,40 @@
 **A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
 
+**CRITICAL UI CONVENTION: This project uses sentence case (not title case) for ALL user-facing text including page titles, headings, section titles, list titles, button copy, navigation copy, form labels, menu items, and any other UI text. Example: "Create new project" NOT "Create New Project".**
+
 # Agents Roadmap
 
 This document provides a comprehensive overview of the Agents feature, including its current (placeholder) implementation details and future development plans.
 
-## Current Implementation (Placeholder)
+## Current Implementation
 
-The Agents page is currently a placeholder with a minimal UI and a skeletal backend implementation. The core concept of what an "Agent" is needs to be fully defined.
+The Agents page is currently a minimal placeholder implementation with no functional agent system. The core concept and functionality remain undefined and unimplemented.
 
 ### Frontend Architecture
 
-- **UI Components:** A basic `Agents.tsx` page component exists. There do not appear to be any other specific components for agent configuration or display.
-- **State Management:** There is no dedicated store for agents.
+- **UI Components:** A basic `Agents.tsx` page component exists with minimal placeholder content.
+- **State Management:** No dedicated store for agents or agent management.
+- **No Functional UI:** The page displays placeholder content without actual agent configuration or management capabilities.
 
 ### Backend Architecture
 
-- **Placeholder Services:** The backend has a directory for agent services (`src-tauri/src/services/agents/`) and commands (`src-tauri/src/commands/agents/`), but these are likely placeholders without significant logic. `lifecycle.rs` suggests a concept of running and stopping agents.
+- **Placeholder Services:** The backend has directories for agent services (`src-tauri/src/services/agents/`) and commands (`src-tauri/src/commands/agents/`), but these contain minimal or no functional implementation.
+- **Database Schema:** No established database schema for agent storage or management.
+- **No API Endpoints:** No functional Tauri commands for agent operations.
 
-### Implemented Features
+### Current Implementation Status
 
-- A basic UI shell for the Agents page.
-- Placeholder backend files.
+- **Concept Undefined:** The fundamental concept of what an "Agent" represents in this system is not defined.
+- **No Functionality:** No agent creation, management, execution, or monitoring capabilities exist.
+- **Placeholder Only:** Both frontend and backend contain only placeholder structures without implementation.
+
+### Implementation Gaps
+
+- **Agent Definition:** No clear specification of what agents are or how they function.
+- **UI Framework:** No interface for agent configuration, monitoring, or interaction.
+- **Backend Services:** No backend logic for agent lifecycle management or execution.
+- **Data Persistence:** No database schema or storage mechanisms for agent data.
+- **Integration Points:** No connections to other system components or external services.
 
 ## Future Work & Todos
 

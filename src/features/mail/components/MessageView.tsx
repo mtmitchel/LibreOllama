@@ -57,15 +57,14 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
   };
 
   return (
-    <div className="border-b border-[var(--border-default)] bg-[var(--bg-tertiary)]">
+    <div className="border-border-default border-b bg-tertiary">
       {/* Main Header - Optimized for compact space */}
       <div 
-        className="flex flex-col"
-        style={{ padding: 'var(--space-3)' }}
+        className="flex flex-col p-3"
       >
         {/* Subject Line */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 min-w-0 pr-2">
+        <div className="mb-2 flex items-start justify-between">
+          <div className="min-w-0 flex-1 pr-2">
             <Text size="lg" weight="semibold" variant="body" className="leading-tight">
               {message.subject || '(no subject)'}
             </Text>
@@ -73,14 +72,13 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
           
           {/* Action buttons - more compact */}
           <div 
-            className="flex items-center flex-shrink-0"
-            style={{ gap: 'var(--space-1)' }}
+            className="flex shrink-0 items-center gap-1"
           >
             <Button
               variant="ghost"
               size="icon"
               onClick={handleCloseEmail}
-              className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+              className="size-6 rounded-sm text-secondary hover:text-primary"
               title="Close email"
             >
               <X size={12} />
@@ -90,14 +88,14 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
               variant="ghost"
               size="icon"
               onClick={handleStarClick}
-              className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+              className="size-6 rounded-sm text-secondary hover:text-primary"
             >
               <Star
                 size={12}
                 className={`${
                   message.isStarred 
-                    ? 'text-yellow-500 fill-yellow-500' 
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    ? 'fill-warning text-warning' 
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               />
             </Button>
@@ -106,7 +104,7 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
               variant="ghost"
               size="icon"
               onClick={onToggleExpanded}
-              className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+              className="size-6 rounded-sm text-secondary hover:text-primary"
             >
               {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </Button>
@@ -114,7 +112,7 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+              className="size-6 rounded-sm text-secondary hover:text-primary"
             >
               <MoreHorizontal size={12} />
             </Button>
@@ -124,7 +122,7 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
         {/* Sender and Date Info - Stacked for better space usage */}
         <div className="flex flex-col gap-1">
           {/* Sender Info */}
-          <div className="flex items-center min-w-0">
+          <div className="flex min-w-0 items-center">
             <Text size="sm" weight="medium" variant="body" className="truncate">
               {message.from.name || message.from.email}
             </Text>
@@ -134,11 +132,11 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
           </div>
           
           {/* Recipient and Date */}
-          <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
-            <Text size="xs" variant="secondary" className="truncate flex-1 min-w-0">
+          <div className="flex items-center justify-between text-xs text-secondary">
+            <Text size="xs" variant="secondary" className="min-w-0 flex-1 truncate">
               to {formatEmailAddresses(message.to)}
             </Text>
-            <Text size="xs" variant="secondary" className="ml-2 flex-shrink-0">
+            <Text size="xs" variant="secondary" className="ml-2 shrink-0">
               {formatDate(message.date)}
             </Text>
           </div>
@@ -148,14 +146,11 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
       {/* Expanded Header Details */}
       {isExpanded && (
         <div 
-          className="text-sm border-t border-[var(--border-default)] bg-[var(--bg-secondary)] rounded-[var(--radius-sm)] mx-[var(--space-2)] mb-[var(--space-2)]"
-          style={{ 
-            padding: 'var(--space-3)'
-          }}
+          className="border-border-default mx-2 mb-2 rounded-sm border-t bg-secondary p-3 text-sm"
         >
           <div className="space-y-1">
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
+              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
                 from:
               </Text>
               <Text size="sm" variant="secondary" className="truncate">
@@ -163,7 +158,7 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
               </Text>
             </div>
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
+              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
                 to:
               </Text>
               <Text size="sm" variant="secondary" className="truncate">
@@ -172,7 +167,7 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
             </div>
             {message.cc && message.cc.length > 0 && (
               <div className="flex">
-                <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
+                <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
                   cc:
                 </Text>
                 <Text size="sm" variant="secondary" className="truncate">
@@ -181,7 +176,7 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
               </div>
             )}
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
+              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
                 date:
               </Text>
               <Text size="sm" variant="secondary" className="truncate">
@@ -189,7 +184,7 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
               </Text>
             </div>
             <div className="flex">
-              <Text size="sm" variant="secondary" className="w-12 text-right mr-2 flex-shrink-0">
+              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
                 subject:
               </Text>
               <Text size="sm" variant="secondary" className="truncate">
@@ -220,36 +215,29 @@ function AttachmentList({ attachments }: AttachmentListProps) {
 
   return (
     <div 
-      className="border-b border-[var(--border-default)] bg-[var(--bg-secondary)] rounded-[var(--radius-sm)] mx-[var(--space-2)] mb-[var(--space-2)]"
-      style={{ padding: 'var(--space-3)' }}
-    >
-      <div 
-        className="flex items-center"
-        style={{ 
-          marginBottom: 'var(--space-2)',
-          gap: 'var(--space-2)'
-        }}
+              className="border-border-default mx-2 mb-2 rounded-sm border-b bg-secondary p-3"
       >
-        <Paperclip size={16} className="text-[var(--text-secondary)]" />
+      <div 
+        className="mb-2 flex items-center gap-2"
+      >
+        <Paperclip size={16} className="text-secondary" />
         <Text size="sm" variant="secondary">
           {attachments.length} attachment{attachments.length > 1 ? 's' : ''}
         </Text>
       </div>
       <div 
-        className="grid grid-cols-1"
-        style={{ gap: 'var(--space-2)' }}
+        className="grid grid-cols-1 gap-2"
       >
         {attachments.map((attachment, index) => (
           <Card
             key={index}
             padding="sm"
-            className="flex items-center justify-between bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-[var(--radius-md)] hover:bg-[var(--bg-surface)] transition-colors"
+            className="border-border-default flex items-center justify-between rounded-md border bg-tertiary transition-colors hover:bg-surface"
           >
             <div 
-              className="flex items-center"
-              style={{ gap: 'var(--space-2)' }}
+              className="flex items-center gap-2"
             >
-              <Paperclip size={14} className="text-[var(--text-secondary)]" />
+              <Paperclip size={14} className="text-secondary" />
               <div>
                 <Text size="sm" variant="body">
                   {attachment.filename}
@@ -262,7 +250,7 @@ function AttachmentList({ attachments }: AttachmentListProps) {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-[var(--radius-sm)]"
+              className="rounded-sm text-secondary hover:text-primary"
             >
               Download
             </Button>
@@ -279,7 +267,7 @@ export function MessageView() {
 
   if (!currentMessage) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] m-[var(--space-2)]">
+      <div className="m-2 flex flex-1 items-center justify-center rounded-lg bg-tertiary">
         <div className="text-center">
           <Text size="lg" variant="secondary">
             Select a message to view
@@ -328,9 +316,9 @@ export function MessageView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] m-[var(--space-2)] overflow-hidden shadow-sm border border-[var(--border-default)]">
+    <div className="border-border-default m-2 flex flex-1 flex-col overflow-hidden rounded-lg border bg-tertiary shadow-sm">
       {/* Message Header */}
-      <div className="bg-[var(--bg-tertiary)] rounded-t-[var(--radius-lg)]">
+      <div className="rounded-t-lg bg-tertiary">
         <MessageHeader
           message={currentMessage}
           isExpanded={isHeaderExpanded}
@@ -342,8 +330,8 @@ export function MessageView() {
       <AttachmentList attachments={currentMessage.attachments} />
 
       {/* Enhanced Message Content */}
-      <div className="flex-1 overflow-y-auto bg-[var(--bg-tertiary)]">
-        <div style={{ padding: 'var(--space-4)' }}>
+      <div className="flex-1 overflow-y-auto bg-tertiary">
+        <div className="p-4">
           <EnhancedMessageRenderer 
             message={currentMessage}
             enableImageLoading={false} // Security: images blocked by default
@@ -355,8 +343,7 @@ export function MessageView() {
 
       {/* Enhanced Action Buttons */}
       <div 
-        className="border-t border-[var(--border-default)] bg-[var(--bg-secondary)] rounded-b-[var(--radius-lg)]"
-        style={{ padding: 'var(--space-3)' }}
+        className="border-border-default rounded-b-lg border-t bg-secondary p-3"
       >
         <EnhancedMessageActions 
           message={currentMessage}

@@ -1,0 +1,306 @@
+# FullCalendar Text Visibility and Overflow Debugging Solution
+
+## Root Cause Analysis
+
+Based on the research, your issues stem from several key factors:
+
+1. **CSS Specificity**: FullCalendar v6 uses highly specific CSS selectors that override your custom styles
+2. **CSS Variable Inheritance**: FullCalendar v6 changed how CSS variables are handled compared to earlier versions
+3. **DOM Structure Changes**: v6 introduced a flatter DOM structure but still has complex nesting for events
+4. **Event Rendering Pipeline**: The `eventContent` and `eventDidMount` approaches have different timing and scope
+
+## Comprehensive Solution
+
+### 1. **Fix Text Visibility with Higher CSS Specificity**
+
+Replace your current CSS with this more specific selector structure:
+
+```css
+/* Higher specificity selectors that will override FullCalendar's internal styles */
+.fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: var(--text-primary) !important;
+  font-weight: var(--font-medium) !important;
+}
+
+.fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-time {
+  color: var(--text-primary) !important;
+}
+
+/* Task-specific styling with higher specificity */
+.fc .fc-event-task .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: var(--status-warning) !important;
+}
+
+.fc .fc-event-task-completed .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: var(--status-success) !important;
+  text-decoration: line-through;
+}
+
+/* Dark mode specific overrides */
+.dark .fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: var(--text-primary) !important;
+}
+```
+
+### 2. **Fix Overflow Issues with Container Constraints**
+
+```css
+/* Prevent overflow in month view events */
+.fc-daygrid-event {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+.fc-daygrid-event .fc-event-main {
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+
+.fc-daygrid-event .fc-event-main .fc-event-main-frame {
+  overflow: hidden !important;
+  max-width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.fc-daygrid-event .fc-event-title-container {
+  overflow: hidden !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.fc-daygrid-event .fc-event-title {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+```
+
+### 3. **Enhanced Event Rendering with `eventDidMount`**
+
+Replace your current `eventDidMount` with this enhanced version:
+
+```typescript
+eventDidMount={(info) => {
+  // Ensure text visibility by directly setting styles
+  const titleElement = info.el.querySelector('.fc-event-title');
+  const timeElement = info.el.querySelector('.fc-event-time');
+  
+  if (titleElement) {
+    titleElement.style.color = 'var(--text-primary)';
+    titleElement.style.overflow = 'hidden';
+    titleElement.style.whiteSpace = 'nowrap';
+    titleElement.style.textOverflow = 'ellipsis';
+    titleElement.style.maxWidth = '100%';
+  }
+  
+  if (timeElement) {
+    timeElement.style.color = 'var(--text-primary)';
+  }
+  
+  // Task-specific styling
+  const isTask = info.event.extendedProps.type === 'task';
+  if (isTask) {
+    const isCompleted = info.event.extendedProps.taskData?.status === 'completed';
+    
+    if (titleElement) {
+      titleElement.style.color = isCompleted ? 'var(--status-success)' : 'var(--status-warning)';
+      if (isCompleted) {
+        titleElement.style.textDecoration = 'line-through';
+      }
+    }
+    
+    // Set background with better contrast
+    info.el.style.backgroundColor = isCompleted 
+      ? 'var(--status-success-bg)' 
+      : 'var(--status-warning-bg)';
+    info.el.style.borderLeft = `3px solid ${isCompleted ? 'var(--status-success)' : 'var(--status-warning)'}`;
+  }
+  
+  // Ensure container doesn't overflow
+  info.el.style.overflow = 'hidden';
+  info.el.style.maxWidth = '100%';
+  
+  // Add tooltip for full text on hover
+  if (info.el.scrollWidth > info.el.clientWidth) {
+    info.el.title = info.event.title;
+  }
+}}
+```
+
+### 4. **Improved Custom Event Rendering**
+
+Update your `renderEventContent` function:
+
+```typescript
+function renderEventContent(eventInfo: any) {
+  const { event, timeText, view } = eventInfo;
+  const isTask = event.extendedProps.type === 'task';
+  const isCompleted = isTask && event.extendedProps.taskData?.status === 'completed';
+  const isTimeGridView = view.type === 'timeGridWeek' || view.type === 'timeGridDay';
+
+  if (isTimeGridView) {
+    return (
+      
+        {timeText && (
+          
+            {timeText}
+          
+        )}
+        
+          {event.title}
+        
+      
+    );
+  }
+
+  // Month view with strict overflow control
+  const indicator = isTask ? (
+    
+  ) : (
+    
+  );
+
+  return (
+    
+      {indicator}
+      
+        
+          {event.title}
+        
+      
+      {timeText && (
+        
+          {timeText}
+        
+      )}
+    
+  );
+}
+```
+
+### 5. **CSS Variables Fix for v6**
+
+Since FullCalendar v6 handles CSS variables differently, ensure your CSS variables are properly defined:
+
+```css
+/* Ensure CSS variables are available in both light and dark modes */
+:root {
+  --fc-event-text-color: var(--text-primary);
+  --fc-event-bg-color: var(--accent-primary);
+  --fc-event-border-color: var(--accent-primary);
+}
+
+.dark {
+  --fc-event-text-color: var(--text-primary);
+  --fc-event-bg-color: var(--accent-primary);
+  --fc-event-border-color: var(--accent-primary);
+}
+```
+
+## Key Insights from Research
+
+1. **CSS Specificity is Critical**: FullCalendar v6 uses very specific selectors like `.fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-title`[1][2]
+2. **V6 Changes**: The DOM structure was flattened but still requires high specificity[2][3]
+3. **eventDidMount is Preferred**: For v6, `eventDidMount` is more reliable than `eventRender`[4][5]
+4. **Overflow Handling**: Multiple developers have reported similar overflow issues[6][7][8]
+
+## Testing Strategy
+
+1. **Use Browser DevTools**: Inspect the actual DOM structure and CSS specificity
+2. **Test Both Themes**: Ensure visibility in both light and dark modes
+3. **Check Multiple Views**: Test month, week, and day views
+4. **Verify Responsiveness**: Test on different screen sizes
+
+This comprehensive solution addresses both your text visibility and overflow issues by combining higher CSS specificity, direct DOM manipulation through `eventDidMount`, and improved event rendering logic.
+
+[1] https://fullcalendar.io/docs/css-customization
+[2] https://fullcalendar.io/docs/v5/upgrading-from-v4
+[3] https://fullcalendar.io/docs/upgrading-from-v5
+[4] https://stackoverflow.com/questions/77639329/modify-container-of-event-add-html-after-fc-event-title
+[5] https://stackoverflow.com/questions/77563453/is-there-a-way-to-modify-the-event-output-rather-than-re-building-it-completely
+[6] https://stackoverflow.com/questions/26047725/how-to-display-the-calendar-events-subject-without-cutting-it-using-fullcalen/26152742
+[7] https://github.com/fullcalendar/fullcalendar/issues/6754
+[8] https://github.com/fullcalendar/fullcalendar/issues/5815
+[9] https://pplx-res.cloudinary.com/image/private/user_uploads/21494092/4861a3dd-b58a-4b0d-a175-87d13ae639d9/image.jpg
+[10] https://pplx-res.cloudinary.com/image/private/user_uploads/21494092/441cad5a-466b-4485-8adf-b35d1955386a/image.jpg
+[11] https://stackoverflow.com/questions/41232150/overriding-html-and-css-to-modify-day-cell-on-a-month-calendar-with-jquery-fullc
+[12] https://www.youtube.com/watch?v=CF3zKuNR-88
+[13] https://cbi-analytics.nl/django-react-fullcalendar-tutorial-4-change-event-colours-based-on-status/
+[14] https://www.youtube.com/watch?v=JBmOvUtGKxY
+[15] https://stackoverflow.com/questions/22243758/fullcalendar-event-title-is-not-displaying
+[16] https://stackoverflow.com/questions/7918301/fullcalendar-doesnt-render-color-when-using-eventrender/43881155
+[17] https://fullcalendar.io/docs/eventTextColor
+[18] https://stackoverflow.com/questions/38201092/events-title-is-not-displayed-in-fullcalendar
+[19] https://stackoverflow.com/questions/79113372/react-full-calendar-selected-date-colour-isnt-changing
+[20] https://github.com/fullcalendar/fullcalendar/issues/5528
+[21] https://stackoverflow.com/questions/13537310/fullcalendar-event-text-colour-change
+[22] https://www.outsystems.com/forums/discussion/90240/change-the-text-color-of-each-event-inside-fullcalendar/
+[23] https://mdbootstrap.com/support/jquery/full-calendar-event-not-showing-properly-how-to-fix/
+[24] https://github.com/fullcalendar/fullcalendar/issues/7694
+[25] https://fullcalendar.io/docs/v5/css-customization
+[26] https://stackoverflow.com/questions/61002739/events-not-displayed-in-full-calendar/61009350
+[27] https://stackoverflow.com/questions/47268234/fullcalendar-date-text-color-not-changing-not-event-text/47277242
+[28] https://stackoverflow.com/questions/29451995/overriding-fullcalendar-css-to-create-custom-look-of-event-in-fullcalendar
+[29] https://fullcalendar.io/docs/eventColor
+[30] https://stackoverflow.com/questions/33100954/fullcalendar-hide-events-only-in-month-view
+[31] https://stackoverflow.com/questions/3745314/event-items-with-different-css
+[32] https://www.bennadel.com/blog/687-ask-ben-truncating-the-event-titles-in-a-calendar-display.htm
+[33] https://blog.csdn.net/u011001084/article/details/54707267
+[34] https://fullcalendar.io/docs/event-object
+[35] https://stackoverflow.com/questions/46861811/fullcalendar-truncate-text-in-title-issue
+[36] https://www.sitepoint.com/community/t/fullcalendar-hide-content-of-previous-next-months/24772
+[37] https://gist.github.com/bennadel/9752579
+[38] https://github.com/fullcalendar/fullcalendar/issues/2919
+[39] http://modulesunraveled.com/fullcalendar/configuring-calendar-display-settings-and-navigation-options
+[40] https://stackoverflow.com/questions/25272132/multiline-titles-in-fullcalendar-2-1-0-beta1-2-in-day-grid
+[41] https://stackoverflow.com/questions/28918643/full-calendar-event-height-in-month-view
+[42] https://stackoverflow.com/questions/33406697/fullcalendar-v2-event-title-cut-off-in-month-view
+[43] https://fullcalendar.io/docs/content-injection
+[44] https://stackoverflow.com/questions/21683879/fullcalendar-change-event-color-based-on-value/21684352
+[45] https://stackoverflow.com/questions/78496751/using-eventcontent-option-causes-rerendering-of-my-event-content-its-not-happe
+[46] https://stackoverflow.com/questions/77639329/modify-container-of-event-add-html-after-fc-event-title/77646608
+[47] https://stackoverflow.com/questions/78601514/cannot-change-textcolor-of-background-events-in-fullcalendar
+[48] https://fullcalendar.io/docs/v4/eventRender
+[49] https://stackoverflow.com/questions/74883172/how-to-display-custom-event-info-using-fullcalander-v6-with-react
+[50] https://github.com/fullcalendar/fullcalendar/issues/7110
+[51] https://fullcalendar.io/docs/event-render-hooks
+[52] https://www.youtube.com/watch?v=PQOqphNvqpc
+[53] https://github.com/fullcalendar/fullcalendar/issues/7165
+[54] https://stackoverflow.com/questions/69251491/fullcalendar-custom-view-js-eventdidmount
+[55] https://fullcalendar.io/docs/event-display
+[56] https://fullcalendar.io/docs/list-view
+[57] https://stackoverflow.com/questions/52926469/how-to-know-if-an-event-belongs-to-a-date-in-html-dom-of-month-timeline-view
+[58] https://stackoverflow.com/questions/58692709/fullcalendar-js-styling-issue-on-timegrid
+[59] https://stackoverflow.com/questions/26163164/fullcalendar-get-event-details-on-event-click
+[60] https://gist.github.com/Jason-Cooke/3f22d12e2f1d027c457b62f00550af4e
+[61] https://docs.jmix.io/jmix/calendar/full-calendar-component.html
+[62] https://stackoverflow.com/questions/7823112/fullcalendar-highlighting-a-day-based-on-event-selection
+[63] https://stackoverflow.com/questions/36706423/fullcalendar-change-entire-background-color-for-calendar/36707267
+[64] https://laracasts.com/discuss/channels/javascript/never-ending-repeating-background-color-in-fullcalendar-v6
+[65] https://fullcalendar.io/docs/v4/upgrading-from-v3
+[66] https://blog.devops.dev/a-beginners-guide-to-integrating-fullcalendar-library-in-react-js-a9097c4c3033?gi=9e735de0136c
+[67] https://stackoverflow.com/questions/56111232/how-to-append-an-element-to-display-more-text-in-full-calendar-event-with-react
+[68] https://stackoverflow.com/questions/59177150/is-it-possible-customise-fullcalendar-with-css-in-react/62274271
+[69] https://fullcalendar.io/reduced-test-cases
+[70] https://stackoverflow.com/questions/78402710/full-calendar-react-how-can-we-customize-override-the-css-class-in-a-react-ve
+[71] https://dev.to/ayako_yk/learning-fullcalendar-part-1-must-knows-to-get-started-392f
+[72] https://github.com/fullcalendar/fullcalendar/issues/6966
+[73] https://fullcalendar.io/docs/visibleRange
+[74] https://www.youtube.com/watch?v=hM9uoao_7Uo
+[75] https://github.com/fullcalendar/fullcalendar/issues/7220
+[76] https://raw.githubusercontent.com/fullcalendar/fullcalendar/master/CHANGELOG.md
+[77] https://stackoverflow.com/questions/7918301/fullcalendar-doesnt-render-color-when-using-eventrender
+[78] https://stackoverflow.com/questions/51680237/inherit-css-fullcalendar
+[79] https://stackoverflow.com/questions/2699212/fullcalendar-change-color-of-some-events/2699229
+[80] https://fullcalendar.io/docs/v1/event-colors-pre-1-5
+[81] https://www.youtube.com/watch?v=lAJ0eejz28I
+[82] https://devs.keenthemes.com/question/fullcalendar-custom-colors
+[83] https://stackoverflow.com/questions/21683879/fullcalendar-change-event-color-based-on-value
+[84] https://github.com/fullcalendar/fullcalendar/issues/5868
+[85] https://unpkg.com/browse/vue-full-calendar@2.7.0/components/FullCalendar.vue
+[86] https://www.phpclasses.org/browse/file/116015.html
+[87] https://github.com/fullcalendar/fullcalendar/issues/5552 

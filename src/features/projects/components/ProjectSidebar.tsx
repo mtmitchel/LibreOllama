@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Button } from '../../../components/ui';
-import { PanelLeftOpen, PanelLeftClose, MoreVertical, Plus, Search } from 'lucide-react';
+import { PanelLeftOpen, PanelLeftClose, MoreVertical } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -34,9 +34,9 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-success';
-      case 'in-progress': return 'bg-primary';
-      case 'upcoming': return 'bg-text-tertiary';
-      default: return 'bg-text-tertiary';
+      case 'in-progress': return 'bg-accent-primary';
+      case 'upcoming': return 'bg-tertiary';
+      default: return 'bg-tertiary';
     }
   };
 
@@ -45,17 +45,17 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
       case 'high': return 'border-error text-error';
       case 'medium': return 'border-warning text-warning';
       case 'low': return 'border-success text-success';
-      default: return 'border-text-tertiary text-text-tertiary';
+      default: return 'border-tertiary text-tertiary';
     }
   };
 
   return (
-    <div className={`flex-shrink-0 ${sidebarCompact ? 'w-20' : 'w-80'} transition-all duration-300 ease-in-out`}>
-      <Card className="h-full flex flex-col" padding="none">
-        <div className="flex items-center justify-between p-4 border-b border-border-subtle">
-          {!sidebarCompact && <h3 className="font-semibold text-text-primary text-lg">All Projects</h3>}
+    <div className={`shrink-0 ${sidebarCompact ? 'w-20' : 'w-80'} transition-all duration-300 ease-in-out`}>
+      <Card className="flex h-full flex-col" padding="none">
+        <div className="border-border-subtle flex items-center justify-between border-b p-4">
+          {!sidebarCompact && <h3 className="text-text-primary text-lg font-semibold">All projects</h3>}
           <button
-            className="p-2 hover:bg-bg-tertiary rounded-md transition-colors text-text-secondary hover:text-text-primary"
+            className="hover:bg-bg-tertiary text-text-secondary hover:text-text-primary rounded-md p-2 transition-colors"
             onClick={onToggleSidebar}
             aria-label={sidebarCompact ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -63,42 +63,42 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 space-y-2 overflow-y-auto p-4">
           {projects.map(project => (
             <div
               key={project.id}
-              className={`group relative p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md ${
+              className={`group relative cursor-pointer rounded-lg border p-3 transition-all duration-200 hover:shadow-md ${
                 selectedProject?.id === project.id
-                  ? 'border-accent-primary bg-accent-primary/5 shadow-sm'
+                  ? 'bg-accent-primary/5 border-accent-primary shadow-sm'
                   : 'border-border-default bg-bg-primary hover:border-border-hover hover:bg-bg-secondary'
               }`}
               onClick={() => onProjectSelect(project)}
             >
               {!sidebarCompact ? (
                 <>
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="mb-2 flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        className="size-3 shrink-0 rounded-full" 
                         style={{ backgroundColor: project.color }}
                       />
-                      <h4 className="font-medium text-text-primary text-sm truncate">{project.name}</h4>
+                      <h4 className="text-text-primary truncate text-sm font-medium">{project.name}</h4>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)}`} />
+                    <div className={`size-2 rounded-full ${getStatusColor(project.status)}`} />
                   </div>
-                  <p className="text-xs text-text-secondary mb-3 line-clamp-2">{project.description}</p>
+                  <p className="text-text-secondary mb-3 line-clamp-2 text-xs">{project.description}</p>
                   <div className="flex items-center justify-between text-xs">
-                    <span className={`px-2 py-1 rounded border ${getPriorityColor(project.priority)}`}>
+                    <span className={`rounded border px-2 py-1 ${getPriorityColor(project.priority)}`}>
                       {project.priority}
                     </span>
                     <span className="text-text-secondary">{project.progress}%</span>
                   </div>
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                  <div className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                     <div className="relative inline-block text-left">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="w-7 h-7" 
+                        className="size-7" 
                         onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                            e.stopPropagation(); 
                            alert('Project actions: Settings, Archive, Delete for ' + project.name); 
@@ -112,11 +112,11 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
               ) : (
                 <div className="flex flex-col items-center gap-1">
                   <div 
-                    className="w-6 h-6 rounded-full" 
+                    className="size-6 rounded-full" 
                     style={{ backgroundColor: project.color }}
                     title={project.name}
                   />
-                  <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)}`} />
+                  <div className={`size-2 rounded-full ${getStatusColor(project.status)}`} />
                 </div>
               )}
             </div>

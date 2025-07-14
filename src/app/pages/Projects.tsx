@@ -1,41 +1,12 @@
 // src/pages/Projects.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useHeader, HeaderProps } from '../contexts/HeaderContext';
-import { Button, Card, Text, Heading, Caption, StatusBadge, Progress, Tag, FlexibleGrid } from '../../components/ui';
-import {
-  Plus,
-  Settings,
-  MoreVertical,
-  Star,
-  CheckCircle2,
-  NotebookPen, 
-  Presentation, 
-  FolderOpen, 
-  ListChecks, 
-  Brain, 
-  Circle,
-  X,
-  Sparkles,
-  MessageSquare,
-  Bot,
-  FileText,
-  CheckSquare,
-  Calendar,
-  Clock,
-  User,
-  PlayCircle,
-  PauseCircle,
-  Trash2,
-  Edit3,
-  Archive,
-  Share2,
-  Copy,
-  Download,
-  UserPlus,
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useHeader } from '../contexts/HeaderContext';
+import { ProjectsSidebar } from '../../features/projects/components/ProjectsSidebar';
+import { NoProjectSelected } from '../../features/projects/components/NoProjectSelected';
 import NewProjectModal from '../../features/projects/components/NewProjectModal';
-import { ProjectDetails, NoProjectSelected, ProjectsSidebar } from '../../features/projects/components';
+import { Card, Button, Text, Heading, Caption, Tag, FlexibleGrid } from '../../components/ui';
+import { MoreHorizontal, Edit3, Share2, UserPlus, Copy, Download, Archive, Trash2, CheckCircle2, Circle } from 'lucide-react';
 
 interface FileItem {
   id: string;
@@ -60,21 +31,23 @@ interface Project {
 }
 
 interface ProjectAsset {
-  type: 'notes' | 'tasks' | 'canvas' | 'files' | 'chat' | 'agent';
+  id: string;
+  type: 'file' | 'image' | 'document' | 'link';
+  name: string;
+  url: string;
+  size?: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+interface ProjectStats {
+  totalTasks: number;
+  completedTasks: number;
+  totalFiles: number;
+  totalNotes: number;
   count: number;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-}
-
-interface ProgressTask {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  progress: number;
-  status: 'not-started' | 'in-progress' | 'completed' | 'on-hold';
-  assignee?: string;
-  dependencies?: string[];
 }
 
 interface ProjectForm {
@@ -85,21 +58,13 @@ interface ProjectForm {
 
 const mockProjects: Project[] = [];
 
-const mockAssets: ProjectAsset[] = [];
-
-const mockProgressTasks: ProgressTask[] = [];
+const mockAssets: any[] = [];
 
 export function Projects() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [selectedProject, setSelectedProject] = useState<Project | null>(mockProjects[0] || null);
   const [newProjectModalOpen, setNewProjectModalOpen] = useState(false);
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([
-    'Create project documentation',
-    'Set up automated testing',
-    'Schedule stakeholder review'
-  ]);
-  const [customSuggestion, setCustomSuggestion] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [projectForm, setProjectForm] = useState<ProjectForm>({
     name: '',
@@ -108,7 +73,7 @@ export function Projects() {
   });
   const [newProjectStep, setNewProjectStep] = useState(1);
   const [aiAssist, setAiAssist] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -198,45 +163,6 @@ export function Projects() {
     }
   };
 
-  const addCustomSuggestion = () => {
-    if (customSuggestion.trim()) {
-      setSuggestions([...suggestions, customSuggestion.trim()]);
-      setCustomSuggestion('');
-    }
-  };
-
-  const removeSuggestion = (suggestionToRemove: string) => {
-    setSuggestions(suggestions.filter(s => s !== suggestionToRemove));
-  };
-
-  // Group projects by status for better organization
-  const groupedProjects = mockProjects.reduce((acc, project) => {
-    const status = project.statusTag || 'Other';
-    if (!acc[status]) {
-      acc[status] = [];
-    }
-    acc[status].push(project);
-    return acc;
-  }, {} as Record<string, Project[]>);
-
-  const getStatusVariant = (status: string): 'success' | 'warning' | 'error' | 'info' | 'pending' => {
-    switch (status.toLowerCase()) {
-      case 'active':
-      case 'completed':
-        return 'success';
-      case 'in progress':
-        return 'info'; // Blue indicates active progress, not warning
-      case 'planning':
-        return 'pending'; // Gray indicates planning phase
-      case 'on hold':
-        return 'warning'; // Yellow indicates caution/attention needed
-      case 'cancelled':
-        return 'error';
-      default:
-        return 'info';
-    }
-  };
-
   const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'primary' | 'muted' => {
     switch (status.toLowerCase()) {
       case 'active':
@@ -256,7 +182,14 @@ export function Projects() {
   };
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
+    <div 
+      className="flex h-full"
+      style={{ 
+        background: 'var(--bg-content)',
+        padding: 'var(--space-6)',
+        gap: 'var(--space-6)'
+      }}
+    >
       {/* Projects Sidebar */}
       <ProjectsSidebar
         projects={mockProjects}
@@ -268,13 +201,22 @@ export function Projects() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
+      <div 
+        className="flex flex-1 flex-col"
+        style={{ 
+          background: 'var(--bg-tertiary)',
+          borderRadius: 'var(--radius-lg)'
+        }}
+      >
         {selectedProject && (
-          <Card className="h-full flex flex-col" padding="none">
+          <Card className="flex h-full flex-col" padding="none">
             {/* Project Header */}
             <div 
-              className="flex-shrink-0 border-b border-[var(--border-subtle)]"
-              style={{ padding: 'var(--space-6)' }}
+              className="shrink-0"
+              style={{ 
+                padding: 'var(--space-6)',
+                borderBottom: '1px solid var(--border-primary)'
+              }}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -282,7 +224,7 @@ export function Projects() {
                   <Text 
                     variant="secondary" 
                     size="lg"
-                    style={{ marginTop: 'var(--space-1)' }}
+                    className="mt-1"
                   >
                     {selectedProject.description}
                   </Text>
@@ -293,14 +235,21 @@ export function Projects() {
                     size="icon"
                     onClick={() => setIsProjectMenuOpen(!isProjectMenuOpen)}
                   >
-                    <MoreVertical className="text-[var(--text-secondary)]" size={20} />
+                    <MoreHorizontal 
+                      size={20}
+                      className="text-secondary" 
+                    />
                   </Button>
                   
                   {/* Dropdown Menu */}
                   {isProjectMenuOpen && (
                     <div 
-                      className="absolute right-0 top-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-10"
+                      className="absolute right-0 top-full z-10"
                       style={{
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-lg)',
+                        boxShadow: 'var(--shadow-lg)',
                         marginTop: 'var(--space-2)',
                         width: '12rem',
                         padding: 'var(--space-1)'
@@ -313,8 +262,11 @@ export function Projects() {
                           console.log('Edit project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        style={{ gap: 'var(--space-2)' }}
+                        className="w-full justify-start transition-colors"
+                        style={{ 
+                          gap: 'var(--space-2)',
+                          color: 'var(--text-primary)'
+                        }}
                       >
                         <Edit3 size={16} />
                         <Text size="sm">Edit project</Text>
@@ -326,8 +278,11 @@ export function Projects() {
                           console.log('Share project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        style={{ gap: 'var(--space-2)' }}
+                        className="w-full justify-start transition-colors"
+                        style={{ 
+                          gap: 'var(--space-2)',
+                          color: 'var(--text-primary)'
+                        }}
                       >
                         <Share2 size={16} />
                         <Text size="sm">Share project</Text>
@@ -339,8 +294,11 @@ export function Projects() {
                           console.log('Add collaborators');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        style={{ gap: 'var(--space-2)' }}
+                        className="w-full justify-start transition-colors"
+                        style={{ 
+                          gap: 'var(--space-2)',
+                          color: 'var(--text-primary)'
+                        }}
                       >
                         <UserPlus size={16} />
                         <Text size="sm">Add collaborators</Text>
@@ -352,8 +310,11 @@ export function Projects() {
                           console.log('Duplicate project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        style={{ gap: 'var(--space-2)' }}
+                        className="w-full justify-start transition-colors"
+                        style={{ 
+                          gap: 'var(--space-2)',
+                          color: 'var(--text-primary)'
+                        }}
                       >
                         <Copy size={16} />
                         <Text size="sm">Duplicate project</Text>
@@ -365,15 +326,20 @@ export function Projects() {
                           console.log('Export project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        style={{ gap: 'var(--space-2)' }}
+                        className="w-full justify-start transition-colors"
+                        style={{ 
+                          gap: 'var(--space-2)',
+                          color: 'var(--text-primary)'
+                        }}
                       >
                         <Download size={16} />
                         <Text size="sm">Export project</Text>
                       </Button>
                       <div 
-                        className="border-t border-[var(--border-subtle)]"
-                        style={{ margin: 'var(--space-1) 0' }}
+                        style={{ 
+                          borderTop: '1px solid var(--border-primary)',
+                          margin: 'var(--space-1) 0'
+                        }}
                       />
                       <Button
                         variant="ghost"
@@ -382,8 +348,11 @@ export function Projects() {
                           console.log('Archive project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        style={{ gap: 'var(--space-2)' }}
+                        className="w-full justify-start transition-colors"
+                        style={{ 
+                          gap: 'var(--space-2)',
+                          color: 'var(--text-primary)'
+                        }}
                       >
                         <Archive size={16} />
                         <Text size="sm">Archive project</Text>
@@ -395,8 +364,11 @@ export function Projects() {
                           console.log('Delete project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start text-[var(--error)] hover:bg-[var(--bg-secondary)]"
-                        style={{ gap: 'var(--space-2)' }}
+                        className="w-full justify-start transition-colors"
+                        style={{ 
+                          gap: 'var(--space-2)',
+                          color: 'var(--red-500)'
+                        }}
                       >
                         <Trash2 size={16} />
                         <Text size="sm">Delete project</Text>
@@ -408,8 +380,10 @@ export function Projects() {
               
               {/* Key Metrics Bar */}
               <div 
-                className="grid grid-cols-3 bg-[var(--bg-secondary)] rounded-[var(--radius-lg)]"
+                className="grid grid-cols-3"
                 style={{ 
+                  background: 'var(--bg-card)',
+                  borderRadius: 'var(--radius-lg)',
                   gap: 'var(--space-6)',
                   marginTop: 'var(--space-6)',
                   padding: 'var(--space-4)'
@@ -444,20 +418,20 @@ export function Projects() {
                 gap: 'var(--space-8)'
               }}
             >
-              <div className="flex flex-col" style={{ gap: 'var(--space-8)' }}>
+              <div className="flex flex-col gap-8">
                 {/* Active Goals Section */}
                 <Card>
-                  <Heading level={3} className="flex items-center" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                  <Heading level={3} className="mb-4 flex items-center gap-2">
                     <CheckCircle2 className="text-primary" size={20} />
                     Active goals
                   </Heading>
-                  <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+                  <div className="flex flex-col gap-2">
                     {selectedProject?.keyGoals?.map(goal => (
                       <Button
                         key={goal.id}
                         variant="ghost"
                         onClick={() => handleToggleGoal(goal.id)}
-                        className="justify-start text-left hover:bg-[var(--bg-secondary)] transition-colors"
+                        className="justify-start text-left transition-colors hover:bg-hover"
                         style={{ 
                           gap: 'var(--space-3)',
                           padding: 'var(--space-2)',
@@ -466,9 +440,9 @@ export function Projects() {
                         }}
                       >
                         {goal.completed ? (
-                          <CheckCircle2 className="text-[var(--success)]" size={16} />
+                          <CheckCircle2 className="text-success" size={16} />
                         ) : (
-                                                      <Circle className="text-[var(--text-secondary)]" size={16} />
+                          <Circle className="text-secondary" size={16} />
                         )}
                         <Text 
                           variant={goal.completed ? "secondary" : "body"}
@@ -483,7 +457,7 @@ export function Projects() {
 
                 {/* Project Assets Section */}
                 <Card>
-                  <Heading level={3} style={{ marginBottom: 'var(--space-4)' }}>
+                  <Heading level={3} className="mb-4">
                     Project assets
                   </Heading>
                   <FlexibleGrid minItemWidth={180} gap={4}>
@@ -494,7 +468,7 @@ export function Projects() {
                           key={asset.type}
                           variant="ghost"
                           onClick={() => handleCreateAsset(asset.type)}
-                          className="flex flex-col items-center justify-center hover:bg-[var(--bg-secondary)] transition-colors h-auto"
+                          className="flex h-auto flex-col items-center justify-center transition-colors hover:bg-hover"
                           style={{
                             padding: 'var(--space-4)',
                             borderRadius: 'var(--radius-lg)',
@@ -502,13 +476,13 @@ export function Projects() {
                           }}
                         >
                           <div 
-                            className="rounded-[var(--radius-lg)] bg-[var(--accent-soft)] flex items-center justify-center"
+                            className="flex items-center justify-center rounded-lg bg-accent-soft"
                             style={{
                               width: 'calc(var(--space-8) + var(--space-4))',
                               height: 'calc(var(--space-8) + var(--space-4))'
                             }}
                           >
-                            <Icon className="text-primary w-6 h-6" />
+                            <Icon className="size-6 text-primary" />
                           </div>
                           <div className="text-center">
                             <Text size="lg" weight="bold" variant="body">
@@ -525,7 +499,7 @@ export function Projects() {
                 {/* Project Status */}
                 {selectedProject.statusTag && (
                   <Card>
-                    <Heading level={3} style={{ marginBottom: 'var(--space-4)' }}>
+                    <Heading level={3} className="mb-4">
                       Project Status
                     </Heading>
                     <Tag 

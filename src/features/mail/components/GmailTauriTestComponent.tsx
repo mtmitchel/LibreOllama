@@ -109,33 +109,33 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
   }, []);
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+    <div className="mx-auto max-w-4xl rounded-lg bg-white p-6 shadow-md">
+      <h2 className="mb-4 text-2xl font-bold text-primary">
         Gmail Tauri Service Test
       </h2>
       
       <div className="mb-6">
-        <div className="flex items-center space-x-4 mb-4">
+        <div className="mb-4 flex items-center space-x-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-primary">
               Account ID
             </label>
             <input
               type="text"
               value={accountId}
               disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+              className="border-border-default w-full rounded-md border bg-surface px-3 py-2 text-secondary"
             />
           </div>
           
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-primary">
               Test Type
             </label>
             <select
               value={selectedTest}
               onChange={(e) => setSelectedTest(e.target.value as 'labels' | 'messages' | 'full')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="border-border-default w-full rounded-md border px-3 py-2"
               disabled={isLoading}
             >
               <option value="full">Full End-to-End Test</option>
@@ -149,10 +149,10 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
           <button
             onClick={runTest}
             disabled={isLoading}
-            className={`px-4 py-2 rounded-md font-medium ${
+            className={`rounded-md px-4 py-2 font-medium ${
               isLoading 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                ? 'cursor-not-allowed bg-tertiary text-secondary'
+                : 'bg-accent-primary text-white hover:bg-accent-secondary'
             }`}
           >
             {isLoading ? 'Running Test...' : 'Run Test'}
@@ -161,7 +161,7 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
           <button
             onClick={resetTest}
             disabled={isLoading}
-            className="px-4 py-2 rounded-md font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          className="rounded-md bg-surface px-4 py-2 font-medium text-primary hover:bg-tertiary"
           >
             Reset
           </button>
@@ -170,57 +170,57 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
 
       {testResult && (
         <div className="border-t pt-6">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">
+          <h3 className="mb-4 text-lg font-semibold text-primary">
             Test Results
           </h3>
           
-          <div className={`p-4 rounded-md mb-4 ${
+          <div className={`mb-4 rounded-md p-4 ${
             testResult.success 
-              ? 'bg-green-50 border border-green-200' 
-              : 'bg-red-50 border border-red-200'
+              ? 'border border-green-200 bg-green-50' 
+              : 'border border-error bg-error-ghost'
           }`}>
             <div className="flex items-center space-x-2">
               <span className={`text-lg ${
-                testResult.success ? 'text-green-600' : 'text-red-600'
+                testResult.success ? 'text-green-600' : 'text-error'
               }`}>
                 {testResult.success ? '✅' : '❌'}
               </span>
               <span className={`font-medium ${
-                testResult.success ? 'text-green-800' : 'text-red-800'
+                testResult.success ? 'text-green-800' : 'text-error'
               }`}>
                 {testResult.success ? 'Test Passed' : 'Test Failed'}
               </span>
               {testResult.executionTime && (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-secondary">
                   ({testResult.executionTime}ms)
                 </span>
               )}
             </div>
             
             {testResult.error && (
-              <div className="mt-2 text-sm text-red-700">
+              <div className="mt-2 text-sm text-error">
                 <strong>Error:</strong> {testResult.error}
               </div>
             )}
           </div>
 
           {testResult.success && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* Labels Results */}
               {testResult.labels.length > 0 && (
                 <div>
-                  <h4 className="text-md font-medium mb-2 text-gray-700">
+                  <h4 className="text-md mb-2 font-medium text-primary">
                     Labels ({testResult.labels.length})
                   </h4>
-                  <div className="bg-gray-50 p-3 rounded-md max-h-48 overflow-y-auto">
+                  <div className="max-h-48 overflow-y-auto rounded-md bg-surface p-3">
                     {testResult.labels.slice(0, 10).map((label) => (
-                      <div key={label.id} className="flex justify-between items-center py-1 border-b border-gray-200 last:border-b-0">
-                        <span className="text-sm text-gray-800">{label.name}</span>
-                        <span className="text-xs text-gray-500">{label.id}</span>
+                      <div key={label.id} className="border-border-default flex items-center justify-between border-b py-1 last:border-b-0">
+                        <span className="text-sm text-primary">{label.name}</span>
+                        <span className="text-xs text-secondary">{label.id}</span>
                       </div>
                     ))}
                     {testResult.labels.length > 10 && (
-                      <div className="text-xs text-gray-500 mt-2">
+                      <div className="mt-2 text-xs text-secondary">
                         ... and {testResult.labels.length - 10} more
                       </div>
                     )}
@@ -231,19 +231,19 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
               {/* Messages Results */}
               {testResult.messages.messages.length > 0 && (
                 <div>
-                  <h4 className="text-md font-medium mb-2 text-gray-700">
+                  <h4 className="text-md mb-2 font-medium text-primary">
                     Messages ({testResult.messages.messages.length})
                   </h4>
-                  <div className="bg-gray-50 p-3 rounded-md max-h-48 overflow-y-auto">
+                  <div className="max-h-48 overflow-y-auto rounded-md bg-surface p-3">
                     {testResult.messages.messages.map((message) => (
-                      <div key={message.id} className="py-2 border-b border-gray-200 last:border-b-0">
-                        <div className="text-sm font-medium text-gray-800 truncate">
+                      <div key={message.id} className="border-border-default border-b py-2 last:border-b-0">
+                        <div className="truncate text-sm font-medium text-primary">
                           {message.parsed_content.subject || 'No Subject'}
                         </div>
-                        <div className="text-xs text-gray-500 truncate">
+                        <div className="truncate text-xs text-secondary">
                           From: {message.parsed_content.from.email}
                         </div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-muted">
                           {message.id}
                         </div>
                       </div>
@@ -256,8 +256,8 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
         </div>
       )}
       
-      <div className="mt-6 p-4 bg-blue-50 rounded-md">
-        <h4 className="text-sm font-medium text-blue-800 mb-2">
+      <div className="mt-6 rounded-md bg-blue-50 p-4">
+        <h4 className="mb-2 text-sm font-medium text-blue-800">
           Test Information
         </h4>
         <p className="text-sm text-blue-700">

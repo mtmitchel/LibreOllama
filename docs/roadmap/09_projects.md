@@ -1,4 +1,6 @@
-**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT DELETE IT.**
+**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
+
+**CRITICAL UI CONVENTION: This project uses sentence case (not title case) for ALL user-facing text including page titles, headings, section titles, list titles, button copy, navigation copy, form labels, menu items, and any other UI text. Example: "Create new project" NOT "Create New Project".**
 
 # Projects Roadmap
 
@@ -6,39 +8,56 @@ This document provides a comprehensive overview of the Projects feature, includi
 
 ## Current Implementation
 
-The Projects page has a comprehensive frontend implementation with multiple components and full UI functionality.
+The Projects page has a well-structured UI framework with multiple components, but operates entirely on empty mock data with no functional backend integration.
 
 ### Frontend Architecture
 
 - **UI Components:** The UI is located in `src/features/projects/components/` and includes:
-    - `Projects.tsx`: The main page component with full project management interface.
-    - `NewProjectModal.tsx`: A functional modal for creating new projects.
-    - `ProjectDetails.tsx`: Detailed project view with metrics and management.
-    - `ProjectsSidebar.tsx`: Project navigation and selection sidebar.
-    - `ProjectSidebar.tsx`: Additional project navigation component.
+    - `Projects.tsx`: The main page component with project management interface structure.
+    - `NewProjectModal.tsx`: A modal component for creating new projects (UI only).
+    - `ProjectDetails.tsx`: Detailed project view component structure with metrics display.
+    - `ProjectsSidebar.tsx`: Project navigation and selection sidebar component.
+    - `ProjectSidebar.tsx`: Additional project navigation component structure.
     - `NoProjectSelected.tsx`: Placeholder screen for when no project is selected.
-- **State Management:** Local state management within components with mock data for development.
-- **Features:** Comprehensive project management UI including:
-    - Project creation with multi-step form
-    - Project selection and navigation
-    - Project details with progress tracking
-    - Goal management and tracking
-    - Asset management interface
-    - Search and filtering capabilities
+- **Mock Data:** Uses empty mock data arrays (`mockProjects: Project[] = []`) resulting in non-functional UI that displays empty states.
+- **State Management:** Local state management within components but with no real data to manage.
+- **UI Features:** Complete project management interface design including:
+    - Project creation modal structure (no actual creation)
+    - Project selection and navigation framework
+    - Project details view layout with progress tracking display
+    - Goal management UI structure
+    - Asset management interface layout
+    - Search and filtering UI components (no data to filter)
 
 ### Backend Architecture
 
-- **No Backend Implementation:** There are currently **no backend services, Tauri commands, or database tables** for managing projects. The frontend operates with mock data.
+- **No Backend Implementation:** There are currently **no backend services, Tauri commands, or database tables** for managing projects.
+- **No Data Persistence:** No actual project data storage or retrieval capabilities.
+- **No API Integration:** No connection to any backend services or external APIs.
 
-### Implemented Features
+### Current Implementation Status
 
-- Complete project management UI with sidebar navigation
-- Functional project creation modal with form validation
-- Project details view with progress tracking and metrics
-- Goal management system with completion tracking
-- Asset management interface for different project types
-- Search and filtering capabilities
+- **UI Shell Complete:** Professional UI components and layouts are implemented
+- **No Functional Data:** All data arrays are empty, rendering the interface non-functional
+- **No Backend Services:** No actual project management capabilities exist
+- **Display Only:** Components render empty states and placeholder content
+
+### Implemented UI Components
+
+- Complete project management interface layout with sidebar navigation
+- Non-functional project creation modal with form validation UI
+- Project details view structure with progress tracking and metrics layout
+- Goal management system UI with completion tracking display
+- Asset management interface structure for different project types
+- Search and filtering UI components (no underlying functionality)
 - Responsive design with professional UI components
+
+### Critical Implementation Gaps
+
+- **No Data Management:** All mock data arrays are empty, making the UI non-functional
+- **No Backend Integration:** No services for project persistence, CRUD operations, or data management
+- **No Task Association:** No ability to link tasks from the Tasks module to projects
+- **No Real Functionality:** UI components exist but perform no actual operations
 
 ## Future Work & Todos
 

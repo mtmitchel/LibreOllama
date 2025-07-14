@@ -1,0 +1,488 @@
+/* FullCalendar CSS Custom Properties Override */
+:root {
+  --fc-neutral-bg-color: var(--bg-card);
+  --fc-border-color: var(--border-secondary);
+  --fc-button-text-color: var(--text-primary);
+  --fc-button-bg-color: var(--bg-secondary);
+  --fc-button-border-color: var(--border-primary);
+  --fc-button-hover-bg-color: var(--state-hover);
+  --fc-button-hover-border-color: var(--border-focus);
+  --fc-button-active-bg-color: var(--state-active);
+  --fc-button-active-border-color: var(--border-focus);
+  --fc-event-bg-color: var(--accent-primary);
+  --fc-event-border-color: var(--accent-primary);
+  --fc-event-text-color: var(--text-primary); /* Use design system text color */
+  --fc-event-selected-overlay-color: var(--state-selected);
+  --fc-more-link-bg-color: var(--bg-tertiary);
+  --fc-more-link-text-color: var(--text-primary);
+  --fc-event-resizer-thickness: 8px;
+  --fc-event-resizer-dot-total-width: 8px;
+  --fc-event-resizer-dot-border-width: 1px;
+  --fc-non-business-color: var(--bg-tertiary);
+  --fc-bg-event-color: var(--accent-bg);
+  --fc-bg-event-opacity: 0.3;
+  --fc-highlight-color: var(--state-selected);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-now-indicator-color: var(--accent-primary);
+  
+  /* Text Colors - Critical for visibility */
+  --fc-page-bg-color: var(--bg-primary);
+  --fc-list-event-hover-bg-color: var(--state-hover);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-daygrid-event-dot-width: 8px;
+  
+  /* Time grid specific */
+  --fc-timegrid-axis-chunk-color: var(--text-primary);
+  --fc-timegrid-slot-label-color: var(--text-primary);
+  
+  /* Day grid specific */
+  --fc-daygrid-day-number-color: var(--text-primary);
+  --fc-col-header-cell-color: var(--text-primary);
+}
+
+/* Dark mode specific overrides */
+.dark {
+  --fc-neutral-bg-color: var(--bg-card);
+  --fc-border-color: var(--border-secondary);
+  --fc-button-text-color: var(--text-primary);
+  --fc-button-bg-color: var(--bg-secondary);
+  --fc-button-border-color: var(--border-primary);
+  --fc-button-hover-bg-color: var(--state-hover);
+  --fc-button-hover-border-color: var(--border-focus);
+  --fc-button-active-bg-color: var(--state-active);
+  --fc-button-active-border-color: var(--border-focus);
+  --fc-event-bg-color: var(--accent-primary);
+  --fc-event-border-color: var(--accent-primary);
+  --fc-event-text-color: var(--text-primary); /* Use design system text color */
+  --fc-event-selected-overlay-color: var(--state-selected);
+  --fc-more-link-bg-color: var(--bg-tertiary);
+  --fc-more-link-text-color: var(--text-primary);
+  --fc-non-business-color: var(--bg-tertiary);
+  --fc-bg-event-color: var(--accent-bg);
+  --fc-bg-event-opacity: 0.3;
+  --fc-highlight-color: var(--state-selected);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-now-indicator-color: var(--accent-primary);
+  
+  /* Text Colors - Critical for visibility in dark mode */
+  --fc-page-bg-color: var(--bg-primary);
+  --fc-list-event-hover-bg-color: var(--state-hover);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-daygrid-event-dot-width: 8px;
+  
+  /* Time grid specific */
+  --fc-timegrid-axis-chunk-color: var(--text-primary);
+  --fc-timegrid-slot-label-color: var(--text-primary);
+  
+  /* Day grid specific */
+  --fc-daygrid-day-number-color: var(--text-primary);
+  --fc-col-header-cell-color: var(--text-primary);
+}
+
+/* HIGH SPECIFICITY TEXT VISIBILITY FIXES */
+/* Higher specificity selectors that will override FullCalendar's internal styles */
+.fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: #ffffff !important; /* High contrast white text */
+  font-weight: var(--font-medium) !important;
+}
+
+.fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-time {
+  color: #ffffff !important; /* High contrast white text */
+  font-weight: var(--font-medium) !important;
+}
+
+/* Task-specific styling with higher specificity */
+.fc .fc-event-task .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: #18181b !important; /* Dark text for task backgrounds */
+  font-weight: var(--font-medium) !important;
+}
+
+.fc .fc-event-task-completed .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: #18181b !important; /* Dark text for task backgrounds */
+  text-decoration: line-through;
+  font-weight: var(--font-medium) !important;
+}
+
+.fc .fc-event-task .fc-event-main .fc-event-main-frame .fc-event-time {
+  color: #18181b !important; /* Dark text for task backgrounds */
+  font-weight: var(--font-medium) !important;
+}
+
+.fc .fc-event-task-completed .fc-event-main .fc-event-main-frame .fc-event-time {
+  color: #18181b !important; /* Dark text for task backgrounds */
+  font-weight: var(--font-medium) !important;
+}
+
+/* Dark mode specific overrides */
+.dark .fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: #ffffff !important; /* High contrast white text in dark mode */
+}
+
+.dark .fc .fc-event .fc-event-main .fc-event-main-frame .fc-event-time {
+  color: #ffffff !important; /* High contrast white text in dark mode */
+}
+
+.dark .fc .fc-event-task .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: #18181b !important; /* Dark text for task backgrounds in dark mode */
+}
+
+.dark .fc .fc-event-task-completed .fc-event-main .fc-event-main-frame .fc-event-title-container .fc-event-title {
+  color: #18181b !important; /* Dark text for task backgrounds in dark mode */
+}
+
+.dark .fc .fc-event-task .fc-event-main .fc-event-main-frame .fc-event-time {
+  color: #18181b !important; /* Dark text for task backgrounds in dark mode */
+}
+
+.dark .fc .fc-event-task-completed .fc-event-main .fc-event-main-frame .fc-event-time {
+  color: #18181b !important; /* Dark text for task backgrounds in dark mode */
+}
+
+/* OVERFLOW PREVENTION FIXES */
+/* Prevent overflow in month view events */
+.fc-daygrid-event {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+.fc-daygrid-event .fc-event-main {
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+
+.fc-daygrid-event .fc-event-main .fc-event-main-frame {
+  overflow: hidden !important;
+  max-width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.fc-daygrid-event .fc-event-title-container {
+  overflow: hidden !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.fc-daygrid-event .fc-event-title {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+/* Calendar Container */
+.calendar-wrapper {
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Ensure solid borders everywhere */
+.fc,
+.fc *,
+.fc table,
+.fc td,
+.fc th {
+  border-style: solid !important;
+}
+
+/* Month view grid borders */
+.fc-daygrid-table {
+  border-collapse: collapse !important;
+}
+
+.fc .fc-col-header-cell {
+  border-right: 1px solid var(--border-secondary) !important;
+  border-bottom: 1px solid var(--border-secondary) !important;
+  background: var(--bg-secondary);
+  color: var(--text-primary) !important;
+  font-weight: var(--font-medium);
+  padding: var(--space-3) var(--space-2);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.fc .fc-col-header-cell:last-child {
+  border-right: none !important;
+}
+
+.fc .fc-daygrid-day {
+  border-right: 1px solid var(--border-secondary) !important;
+  border-bottom: 1px solid var(--border-secondary) !important;
+  min-height: 100px;
+  background: var(--bg-card);
+  transition: background-color var(--transition-fast);
+}
+
+.fc .fc-daygrid-day:hover {
+  background: var(--state-hover);
+}
+
+.fc .fc-daygrid-day:nth-child(7n) {
+  border-right: none !important;
+}
+
+.fc .fc-daygrid-body tr:last-child .fc-daygrid-day {
+  border-bottom: none !important;
+}
+
+/* Day numbers */
+.fc .fc-daygrid-day-number {
+  color: var(--text-primary) !important;
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+/* Today styling */
+.fc .fc-day-today {
+  background-color: var(--accent-bg) !important;
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--accent-primary) !important;
+  font-weight: var(--font-bold);
+  background: var(--accent-bg);
+  border-radius: var(--radius-sm);
+  margin: 2px;
+  padding: var(--space-1) var(--space-2);
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Events */
+.fc .fc-event {
+  border: none !important;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+  margin: 1px 2px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-all);
+  color: #ffffff !important;
+}
+
+/* Specific styling for single-day events in month view */
+.fc .fc-daygrid-event {
+  background-color: var(--fc-event-bg-color) !important;
+  color: #ffffff !important;
+  padding: 2px 4px !important;
+  border-radius: var(--radius-sm) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.fc .fc-daygrid-dot-event {
+  background-color: var(--fc-event-bg-color) !important;
+  color: #ffffff !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.fc .fc-daygrid-event .fc-event-title {
+  color: #ffffff !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+  flex: 1 !important;
+}
+
+.fc .fc-daygrid-event:hover {
+  background-color: var(--fc-event-bg-color) !important;
+  opacity: 0.9;
+}
+
+/* Specific overflow prevention for dot events */
+.fc .fc-daygrid-dot-event .fc-event-title {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  flex: 1 !important;
+}
+
+.fc .fc-daygrid-dot-event .fc-event-main {
+  overflow: hidden !important;
+  flex: 1 !important;
+}
+
+.fc .fc-event:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-0.5px);
+}
+
+/* Event title text */
+.fc .fc-event-title {
+  color: #ffffff !important;
+  font-weight: var(--font-medium);
+}
+
+.fc .fc-event-time {
+  color: #ffffff !important;
+  font-weight: var(--font-normal);
+}
+
+/* Event task styling */
+.fc-event-task {
+  background: var(--status-warning-bg) !important;
+  color: var(--status-warning) !important; /* amber for contrast */
+  border-left: 3px solid var(--status-warning) !important;
+}
+
+.fc-event-task * {
+  color: var(--status-warning) !important;
+}
+
+.fc-event-task-completed {
+  background: var(--status-success-bg) !important;
+  color: var(--status-success) !important; /* green for contrast */
+  border-left: 3px solid var(--status-success) !important;
+  opacity: 0.9;
+}
+
+.fc-event-task-completed * {
+  color: var(--status-success) !important;
+}
+
+.fc-event-task-completed .fc-event-title {
+  text-decoration: line-through;
+}
+
+/* Week and Day view borders */
+.fc .fc-timegrid-axis {
+  border-right: 1px solid var(--border-secondary) !important;
+  background: var(--bg-tertiary);
+}
+
+.fc .fc-timegrid-axis-cushion {
+  color: var(--text-primary) !important;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  padding: var(--space-1) var(--space-2);
+}
+
+.fc .fc-timegrid-slot {
+  border-bottom: 1px solid var(--border-secondary) !important;
+}
+
+.fc .fc-timegrid-slot-lane {
+  border-right: 1px solid var(--border-secondary) !important;
+  transition: background-color var(--transition-fast);
+}
+
+.fc .fc-timegrid-slot-lane:hover {
+  background: var(--state-hover);
+}
+
+.fc .fc-timegrid-slot-lane:last-child {
+  border-right: none !important;
+}
+
+/* More link styling */
+.fc .fc-more-link {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-primary) !important;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  transition: var(--transition-fast);
+}
+
+.fc .fc-more-link:hover {
+  background: var(--state-hover);
+  color: var(--text-primary);
+}
+
+/* Clean scrollbars */
+.fc-scroller::-webkit-scrollbar {
+  width: var(--space-1-5);
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: var(--radius-full);
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
+}
+
+/* All-day label styling */
+.fc .fc-timegrid-slot-label {
+  color: var(--text-primary) !important;
+  font-weight: var(--font-medium);
+}
+
+/* Week/day view column headers */
+.fc .fc-col-header {
+  color: var(--text-primary) !important;
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: var(--text-primary) !important;
+  font-weight: var(--font-medium);
+}
+
+/* All-day header text */
+.fc .fc-scrollgrid-section-header .fc-col-header-cell {
+  color: var(--text-primary) !important;
+  font-weight: var(--font-medium);
+}
+
+/* All-day event area */
+.fc .fc-timegrid-col-events {
+  color: var(--text-primary) !important;
+}
+
+/* Ensure all text has proper contrast */
+.fc .fc-daygrid-day-events,
+.fc .fc-timegrid-event-harness,
+.fc .fc-timegrid-event {
+  color: var(--text-primary) !important;
+}
+
+/* TARGETED TEXT OVERRIDE - Only non-event text */
+.fc .fc-toolbar-title,
+.fc .fc-toolbar-chunk,
+.fc .fc-button,
+.fc .fc-button-primary,
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-daygrid-day-number,
+.fc .fc-col-header-cell-cushion,
+.fc .fc-col-header-cell,
+.fc .fc-scrollgrid-section-header .fc-col-header-cell-cushion,
+.fc .fc-more-link {
+  color: #27272a !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
+}
+
+/* Dark mode text override - Only non-event text */
+.dark .fc .fc-toolbar-title,
+.dark .fc .fc-toolbar-chunk,
+.dark .fc .fc-button,
+.dark .fc .fc-button-primary,
+.dark .fc .fc-timegrid-axis-cushion,
+.dark .fc .fc-timegrid-slot-label-cushion,
+.dark .fc .fc-daygrid-day-number,
+.dark .fc .fc-col-header-cell-cushion,
+.dark .fc .fc-col-header-cell,
+.dark .fc .fc-scrollgrid-section-header .fc-col-header-cell-cushion,
+.dark .fc .fc-more-link {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}

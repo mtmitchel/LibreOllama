@@ -1,31 +1,20 @@
 // src/pages/Chat.tsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ChatInput } from '../../features/chat/components/ChatInput';
+import { ChatMessageBubble } from '../../features/chat/components/ChatMessageBubble';
+import { ChatHeader } from '../../features/chat/components/ChatHeader';
 import { useHeader } from '../contexts/HeaderContext';
-import { Plus } from 'lucide-react';
+import { ContextSidebar } from '../../features/chat/components/ContextSidebar';
+import { ConversationList } from '../../features/chat/components/ConversationList';
+import { EmptyState } from '../../features/chat/components/EmptyState';
+import { createNewMessage, ChatMessage, ChatConversation } from '../../core/lib/chatMockData';
 
-// Import chat components and data
-import { 
-  ConversationList, 
-  ChatMessageBubble, 
-  ChatInput, 
-  ChatHeader, 
-  EmptyState,
-  ContextSidebar
-} from "../../features/chat/components";
-import {
-  ChatMessage,
-  mockConversations,
-  mockMessages,
-  createNewConversation,
-  createNewMessage
-} from "../../core/lib/chatMockData";
-
-export function Chat() {
+function Chat() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   
   // --- STATE MANAGEMENT ---
-  const [conversations, setConversations] = useState([]);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -117,7 +106,14 @@ export function Chat() {
   const selectedChat = conversations.find(c => c.id === selectedChatId);
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
+    <div 
+      className="flex h-full"
+      style={{ 
+        background: 'var(--bg-content)',
+        padding: 'var(--space-6)',
+        gap: 'var(--space-6)'
+      }}
+    >
       {/* SIDEBAR: CONVERSATION LIST */}
       <ConversationList
         conversations={conversations}
@@ -135,7 +131,7 @@ export function Chat() {
       />
 
       {/* MAIN CHAT AREA */}
-      <div className="flex-1 flex flex-col h-full bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
+      <div className="bg-bg-tertiary flex h-full flex-1 flex-col rounded-lg">
         {selectedChat ? (
           <>
             {/* Header */}
@@ -144,11 +140,9 @@ export function Chat() {
             />
 
             {/* Messages Area with Fixed Maximum Width - Flexible Growth */}
-            <div 
-              className="flex-1 overflow-y-auto bg-[var(--bg-tertiary)] min-h-0"
-            >
-              <div className="max-w-[1000px] mx-auto p-[var(--space-6)] flex flex-col gap-[var(--space-4)] h-full">
-                <div className="flex-1 flex flex-col gap-[var(--space-4)]">
+            <div className="bg-bg-tertiary min-h-0 flex-1 overflow-y-auto">
+              <div className="mx-auto flex h-full max-w-[1000px] flex-col gap-4 p-6">
+                <div className="flex flex-1 flex-col gap-4">
                   {messages.map(message => (
                     <ChatMessageBubble 
                       key={message.id} 
@@ -163,8 +157,8 @@ export function Chat() {
             </div>
 
             {/* Input Area with Fixed Maximum Width - Anchored to Bottom */}
-            <div className="flex-shrink-0">
-              <div className="max-w-[1000px] mx-auto px-[var(--space-6)]">
+            <div className="shrink-0">
+              <div className="mx-auto max-w-[1000px] px-6">
                 <ChatInput
                   newMessage={newMessage}
                   selectedChatId={selectedChatId}

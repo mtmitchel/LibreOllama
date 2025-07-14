@@ -8,31 +8,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Search, 
-  Settings, 
   X, 
-  Clock, 
-  Star, 
-  Filter, 
-  ChevronDown, 
-  Sparkles, 
-  BookOpen,
-  Save,
-  Zap
+  Star
 } from 'lucide-react';
-import { Button, Text, Card } from '../../../components/ui';
+import { Button, Text } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { searchService } from '../services/searchService';
 import { 
   SearchSuggestion, 
-  SearchOperator, 
-  SearchQuery, 
-  GMAIL_SEARCH_OPERATORS,
-  AdvancedSearchFilters as AdvancedSearchFiltersType
+  SearchQuery
 } from '../types/search';
-import SearchOperators from './SearchOperators';
 import SearchSuggestions from './SearchSuggestions';
 import SavedSearches from './SavedSearches';
-import AdvancedSearchFilters from './AdvancedSearchFilters';
+import SimpleAdvancedSearch from './SimpleAdvancedSearch';
 
 interface EnhancedSearchBarProps {
   onSearch?: (query: string) => void;
@@ -44,7 +32,7 @@ interface EnhancedSearchBarProps {
 export function EnhancedSearchBar({ 
   onSearch, 
   onAdvancedSearch, 
-  placeholder = "Search mail with operators (from:, to:, subject:, etc.)",
+  placeholder = "Search mail",
   className 
 }: EnhancedSearchBarProps) {
   const { 
@@ -63,13 +51,11 @@ export function EnhancedSearchBar({
   const [savedSearches, setSavedSearches] = useState<SearchQuery[]>([]);
   
   // Modal states for Phase 2.4 components
-  const [showOperators, setShowOperators] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showSavedSearches, setShowSavedSearches] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const operatorsButtonRef = useRef<HTMLButtonElement>(null);
   const suggestionsRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -155,27 +141,11 @@ export function EnhancedSearchBar({
     }
   }, [handleSearch]);
 
-  // Handle operator selection
-  const handleOperatorSelect = useCallback((operator: SearchOperator, value?: string) => {
-    const operatorText = value ? `${operator.key}:${value}` : `${operator.key}:`;
-    const newQuery = inputValue ? `${inputValue} ${operatorText}` : operatorText;
-    setInputValue(newQuery);
-    setShowOperators(false);
-    
-    // Focus input for further editing
-    setTimeout(() => {
-      inputRef.current?.focus();
-      // Position cursor at end
-      if (inputRef.current) {
-        inputRef.current.setSelectionRange(newQuery.length, newQuery.length);
-      }
-    }, 100);
-  }, [inputValue]);
 
-  // Handle query insertion (from operators or suggestions)
+
+  // Handle query insertion from suggestions
   const handleQueryInsert = useCallback((query: string) => {
     setInputValue(query);
-    setShowOperators(false);
     setShowSuggestions(false);
     
     // Execute search if it's a complete query
@@ -191,7 +161,6 @@ export function EnhancedSearchBar({
       handleSearch();
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
-      setShowOperators(false);
     }
   }, [handleSearch]);
 
@@ -213,11 +182,9 @@ export function EnhancedSearchBar({
     // Delay hiding suggestions to allow for clicks
     setTimeout(() => {
       setIsFocused(false);
-      if (!showOperators) {
-        setShowSuggestions(false);
-      }
+      setShowSuggestions(false);
     }, 200);
-  }, [showOperators]);
+  }, []);
 
   // Handle saved search execution
   const handleExecuteSearch = useCallback((search: SearchQuery) => {
@@ -244,27 +211,22 @@ export function EnhancedSearchBar({
     }
   }, []);
 
-  // Handle advanced filters
-  const handleApplyFilters = useCallback(async (filters: AdvancedSearchFiltersType) => {
-    // Convert filters to query string and execute search
-    // This would use the generateQueryFromFilters logic from AdvancedSearchFilters
-    console.log('Apply filters:', filters);
-  }, []);
+
 
   return (
     <>
-      <div className={`relative max-w-2xl mx-auto ${className}`}>
+      <div className={`relative mx-auto max-w-2xl ${className}`}>
         <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="relative">
           <div 
-            className={`flex items-center bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-full px-4 py-3 transition-all duration-200 ${
-              isFocused ? 'shadow-md border-[var(--accent-primary)]/30' : 'hover:shadow-sm'
+            className={`bg-bg-secondary border-border-primary flex items-center rounded-full border px-4 py-3 transition-all duration-200 ${
+              isFocused ? 'border-accent-primary/30 shadow-md' : 'hover:shadow-sm'
             }`}
           >
             {/* Search Icon */}
             <Search 
               size={20} 
-              className={`mr-3 flex-shrink-0 transition-colors ${
-                isLoading ? 'animate-spin text-[var(--accent-primary)]' : 'text-[var(--text-secondary)]'
+              className={`mr-3 shrink-0 transition-colors ${
+                isLoading ? 'animate-spin text-accent-primary' : 'text-text-secondary'
               }`} 
             />
             
@@ -278,7 +240,7 @@ export function EnhancedSearchBar({
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="flex-1 bg-transparent border-none outline-none text-[var(--text-primary)] placeholder-[var(--text-secondary)] text-sm"
+              className="flex-1 border-none bg-transparent text-sm text-primary outline-none placeholder:text-secondary"
               disabled={isLoading}
             />
             
@@ -289,7 +251,7 @@ export function EnhancedSearchBar({
                 variant="ghost"
                 size="icon"
                 onClick={handleClear}
-                className="ml-2 h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                className="ml-2 size-6 text-secondary hover:text-primary"
                 title="Clear search"
               >
                 <X size={16} />
@@ -302,24 +264,13 @@ export function EnhancedSearchBar({
               variant="ghost"
               size="icon"
               onClick={() => setShowSavedSearches(true)}
-              className="ml-2 h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="ml-2 size-8 text-primary hover:text-primary"
               title="Saved searches"
             >
-              <Star size={16} />
+              <Star size={20} />
             </Button>
             
-            {/* Operators Button */}
-            <Button
-              ref={operatorsButtonRef}
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowOperators(true)}
-              className="ml-2 h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              title="Search operators"
-            >
-              <BookOpen size={16} />
-            </Button>
+
             
             {/* Advanced Search Button */}
             <Button
@@ -327,10 +278,10 @@ export function EnhancedSearchBar({
               variant="ghost"
               size="icon"
               onClick={() => setShowAdvancedFilters(true)}
-              className="ml-2 h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="ml-2 size-8 text-primary hover:text-primary"
               title="Advanced search"
             >
-              <Settings size={16} />
+              <Filter size={20} />
             </Button>
           </div>
         </form>
@@ -355,15 +306,7 @@ export function EnhancedSearchBar({
         triggerRef={inputRef}
       />
 
-      {/* Search Operators */}
-      <SearchOperators
-        isOpen={showOperators}
-        onClose={() => setShowOperators(false)}
-        onOperatorSelect={handleOperatorSelect}
-        onInsertQuery={handleQueryInsert}
-        currentQuery={inputValue}
-        triggerRef={operatorsButtonRef}
-      />
+
 
       {/* Saved Searches */}
       <SavedSearches
@@ -387,15 +330,14 @@ export function EnhancedSearchBar({
       />
 
       {/* Advanced Search Filters */}
-      <AdvancedSearchFilters
+      <SimpleAdvancedSearch
         isOpen={showAdvancedFilters}
         onClose={() => setShowAdvancedFilters(false)}
-        onApplyFilters={handleApplyFilters}
-        onGenerateQuery={handleQueryInsert}
-        availableLabels={[]} // TODO: Get from store
+        onSearch={handleSearch}
+        initialQuery={inputValue}
       />
     </>
   );
 }
 
-export default EnhancedSearchBar; 
+export default EnhancedSearchBar;

@@ -2,9 +2,6 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Editor } from '@tiptap/react';
 import {
-  FileText,
-  FileType2,
-  FileUp,
   Trash2,
   ArrowUp,
   ArrowDown,
@@ -24,13 +21,13 @@ const ContextMenuItem = ({
   variant?: 'default' | 'destructive';
 }) => {
   const variantClasses = {
-    default: 'text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
-    destructive: 'text-[var(--error)] hover:bg-[var(--error)]/10',
+    default: 'text-primary hover:bg-tertiary',
+    destructive: 'text-error hover:bg-error/10',
   };
   return (
     <button
       onClick={onClick}
-      className={`w-full px-[var(--space-3)] py-[var(--space-2)] text-left text-sm transition-colors flex items-center focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] rounded-sm ${variantClasses[variant]} ${className}`}
+      className={`focus:ring-accent-primary focus:ring-offset-elevated flex w-full items-center rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${variantClasses[variant]} ${className}`}
     >
       {children}
     </button>
@@ -38,7 +35,7 @@ const ContextMenuItem = ({
 };
 
 const ContextMenuSeparator = () => {
-  return <div className="h-px my-[var(--space-1)] bg-[var(--border-default)]" />;
+  return <div className="bg-border-default my-1 h-px" />;
 };
 
 interface TiptapContextMenuProps {
@@ -57,13 +54,13 @@ export const TiptapContextMenu: React.FC<TiptapContextMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const handleContextMenu = (event: React.MouseEvent) => {
-    // Only show custom menu if a table is active
-    if (editor.isActive('table')) {
-      event.preventDefault();
-      setPosition({ x: event.clientX, y: event.clientY });
-      setVisible(true);
+    // Show menu only if selection is within a table
+    if (!editor.isActive('table')) {
+      return;
     }
-    // Otherwise, do nothing and allow the default browser context menu
+    event.preventDefault();
+    setPosition({ x: event.clientX, y: event.clientY });
+    setVisible(true);
   };
 
   useEffect(() => {
@@ -150,10 +147,10 @@ export const TiptapContextMenu: React.FC<TiptapContextMenuProps> = ({
           <div
             ref={menuRef}
             style={{ top: position.y, left: position.x }}
-            className="fixed bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-[var(--space-1)] animate-in fade-in-0 zoom-in-95 w-56"
+            className="border-border-default animate-in fade-in-0 zoom-in-95 fixed z-50 w-56 rounded-md border bg-elevated py-1 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-col gap-[var(--space-1)] p-[var(--space-1)]">
+            <div className="flex flex-col gap-1 p-1">
               {tableMenuItems}
             </div>
           </div>,

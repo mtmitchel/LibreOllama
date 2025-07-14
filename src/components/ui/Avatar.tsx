@@ -38,24 +38,20 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
     // Generate a consistent color based on name
     const getAvatarColor = (name: string) => {
       const colors = [
-        'bg-blue-500',
-        'bg-green-500',
-        'bg-purple-500',
-        'bg-pink-500',
-        'bg-indigo-500',
-        'bg-yellow-500',
-        'bg-red-500',
-        'bg-teal-500',
-        'bg-orange-500',
-        'bg-cyan-500',
+        'bg-accent-primary',
+        'bg-success',
+        'bg-warning',
+        'bg-error',
+        'bg-accent-secondary',
+        'bg-accent-primary',
+        'bg-success',
+        'bg-warning',
+        'bg-error',
+        'bg-accent-secondary',
       ];
       
-      let hash = 0;
-      for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      
-      return colors[Math.abs(hash) % colors.length];
+      const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return colors[hash % colors.length];
     };
 
     const initials = name ? getInitials(name) : '';
@@ -65,7 +61,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
       <div
         ref={ref}
         className={cn(
-          'flex items-center justify-center flex-shrink-0 font-bold text-white transition-colors',
+          'flex shrink-0 items-center justify-center font-bold text-white transition-colors',
           sizeClasses[size],
           variantClasses[variant],
           src ? 'bg-muted' : backgroundColor,
@@ -78,7 +74,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
             src={src}
             alt={name || 'Avatar'}
             className={cn(
-              'w-full h-full object-cover',
+              'size-full object-cover',
               variantClasses[variant]
             )}
           />
@@ -88,7 +84,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
           fallbackIcon
         ) : (
           <svg
-            className="w-1/2 h-1/2 text-white"
+            className="size-1/2 text-white"
             fill="currentColor"
             viewBox="0 0 24 24"
           >

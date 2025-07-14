@@ -7,17 +7,16 @@ import {
   Copy,
   Search,
   PanelLeftClose,
-  PanelRightClose,
   Shapes,
   FileImage,
   FileText,
   Download,
-  Share2
 } from "lucide-react";
 import { Button, Input, Spinner, Text, Heading, Caption } from "../../../components/ui";
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
 import { exportCanvasAsJPEG, exportCanvasAsPDF, getSuggestedFilename } from '../utils/exportUtils';
 import Konva from 'konva';
+import { CanvasElement, SectionElement } from '../types';
 
 interface CanvasItem {
   id: string;
@@ -44,38 +43,88 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
   const [isExporting, setIsExporting] = useState(false);
 
   const elements = useUnifiedCanvasStore(state => state.elements);
-  // TODO: Implement clearCanvas in unified store
-  const clearCanvas = () => {}; // Stub function
   const addElement = useUnifiedCanvasStore((state) => state.addElement);
   const createSection = useUnifiedCanvasStore((state) => state.createSection);
 
-  useEffect(() => {
-    loadCanvasesFromStorage();
+  const clearCanvas = useCallback(() => {
+    // This would call a store action in a real implementation.
   }, []);
 
-  const clearAllCanvasData = () => {
-    const confirmed = window.confirm(
-      "This will permanently delete ALL canvas data. Are you sure?"
+  const saveCanvasesToStorage = (updatedCanvases: CanvasItem[]) => {
+    localStorage.setItem(
+      "libreollama_canvases",
+      JSON.stringify(updatedCanvases)
     );
-    if (!confirmed) return;
-
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith("libreollama_canvas")) {
-        localStorage.removeItem(key);
-      }
-    });
-
-    setCanvases([]);
-    setSelectedCanvasId(null);
-    clearCanvas();
-
-    const initialCanvas = createNewCanvas();
-    setCanvases([initialCanvas]);
-    setSelectedCanvasId(initialCanvas.id);
-    loadCanvas(initialCanvas.id);
-
-    alert("All canvas data cleared! You now have a fresh canvas.");
   };
+
+  const createNewCanvas = useCallback((length: number): CanvasItem => {
+    const canvasNumber = length + 1;
+    return {
+      id: `canvas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: `Canvas ${canvasNumber}`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      elementCount: 0,
+    };
+  }, []);
+
+  const saveCurrentCanvas = useCallback(() => {
+    if (!selectedCanvasId) return;
+
+    const canvasData = {
+      elements: elements,
+    };
+
+    localStorage.setItem(
+      `libreollama_canvas_${selectedCanvasId}`,
+      JSON.stringify(canvasData)
+    );
+
+    setCanvases((prevCanvases) => {
+      const updatedCanvases = prevCanvases.map((canvas) => {
+        if (canvas.id === selectedCanvasId) {
+          return {
+            ...canvas,
+            updatedAt: Date.now(),
+            elementCount: Object.keys(elements).length,
+          };
+        }
+        return canvas;
+      });
+      saveCanvasesToStorage(updatedCanvases);
+      return updatedCanvases;
+    });
+  }, [selectedCanvasId, elements]);
+
+  const loadCanvas = useCallback((canvasId: string) => {
+    if (selectedCanvasId === canvasId) {
+      return;
+    }
+
+    if (selectedCanvasId) {
+      saveCurrentCanvas();
+    }
+
+    const canvasData = localStorage.getItem(`libreollama_canvas_${canvasId}`);
+    if (canvasData) {
+      const parsed = JSON.parse(canvasData);
+      clearCanvas();
+      if (parsed.elements) {
+        Object.values(parsed.elements).forEach((element: CanvasElement) => {
+          addElement(element);
+        });
+      }
+      if (parsed.sections && createSection) {
+        Object.values(parsed.sections).forEach((section: SectionElement) => {
+          createSection(section.x, section.y, section.width, section.height);
+        });
+      }
+    } else {
+      clearCanvas();
+    }
+
+    setSelectedCanvasId(canvasId);
+  }, [selectedCanvasId, saveCurrentCanvas, clearCanvas, addElement, createSection]);
 
   const loadCanvasesFromStorage = useCallback(() => {
     const storedCanvases = localStorage.getItem("libreollama_canvases");
@@ -93,90 +142,19 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
         }
       }
     } else {
-      const initialCanvas = createNewCanvas();
+      const initialCanvas = createNewCanvas(0);
       setCanvases([initialCanvas]);
       setSelectedCanvasId(initialCanvas.id);
     }
-  }, [selectedCanvasId]);
+  }, [selectedCanvasId, loadCanvas, createNewCanvas]);
 
-  const saveCanvasesToStorage = (updatedCanvases: CanvasItem[]) => {
-    localStorage.setItem(
-      "libreollama_canvases",
-      JSON.stringify(updatedCanvases)
-    );
-  };
-
-  const createNewCanvas = (): CanvasItem => {
-    const canvasNumber = canvases.length + 1;
-    return {
-      id: `canvas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: `Canvas ${canvasNumber}`,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      elementCount: 0,
-    };
-  };
-
-  const saveCurrentCanvas = useCallback(() => {
-    if (!selectedCanvasId) return;
-
-    const canvasData = {
-      elements: elements,
-    };
-
-    localStorage.setItem(
-      `libreollama_canvas_${selectedCanvasId}`,
-      JSON.stringify(canvasData)
-    );
-
-    const updatedCanvases = canvases.map((canvas) => {
-      if (canvas.id === selectedCanvasId) {
-        return {
-          ...canvas,
-          updatedAt: Date.now(),
-          elementCount: Object.keys(elements).length,
-        };
-      }
-      return canvas;
-    });
-
-    setCanvases(updatedCanvases);
-    saveCanvasesToStorage(updatedCanvases);
-  }, [selectedCanvasId, elements, canvases]);
-
-  const loadCanvas = useCallback((canvasId: string) => {
-    if (selectedCanvasId === canvasId) {
-      return;
-    }
-
-    if (selectedCanvasId) {
-      saveCurrentCanvas();
-    }
-
-    const canvasData = localStorage.getItem(`libreollama_canvas_${canvasId}`);
-    if (canvasData) {
-      const parsed = JSON.parse(canvasData);
-      clearCanvas();
-      if (parsed.elements) {
-        Object.values(parsed.elements).forEach((element: any) => {
-          addElement(element);
-        });
-      }
-      if (parsed.sections && createSection) {
-        Object.values(parsed.sections).forEach((section: any) => {
-          createSection(section.x, section.y, section.width, section.height);
-        });
-      }
-    } else {
-      clearCanvas();
-    }
-
-    setSelectedCanvasId(canvasId);
-  }, [selectedCanvasId, saveCurrentCanvas, clearCanvas, addElement, createSection]);
+  useEffect(() => {
+    loadCanvasesFromStorage();
+  }, [loadCanvasesFromStorage]);
 
   const handleCreateCanvas = () => {
     saveCurrentCanvas();
-    const newCanvas = createNewCanvas();
+    const newCanvas = createNewCanvas(canvases.length);
     const updatedCanvases = [...canvases, newCanvas];
     setCanvases(updatedCanvases);
     saveCanvasesToStorage(updatedCanvases);
@@ -318,7 +296,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
   return (
     <aside
-      className={`transition-all duration-300 ease-in-out flex flex-col overflow-hidden bg-[var(--bg-secondary)] border border-border-subtle rounded-lg shadow-lg`}
+      className={`border-border-subtle flex flex-col overflow-hidden rounded-lg border bg-surface shadow-lg transition-all duration-300 ease-in-out`}
       style={{
         width: isOpen ? '20rem' : '0',
         backdropFilter: 'blur(20px) saturate(180%)',
@@ -329,20 +307,20 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
     >
       {/* Header */}
       <div 
-        className={`flex items-center justify-between border-b border-border-subtle flex-shrink-0 transition-opacity duration-200 bg-[var(--bg-primary)] ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
+        className={`border-border-subtle flex shrink-0 items-center justify-between border-b bg-surface transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
       >
         <Heading 
           level={3} 
-          className="text-primary select-none text-lg font-semibold"
+          className="select-none text-lg font-semibold text-primary"
         >
           Canvases
         </Heading>
-        <div className="flex items-center shrink-0 gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button 
             variant="secondary" 
             size="sm" 
             onClick={handleCreateCanvas}
-            className="focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            className="focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-primary"
             aria-label="Create new canvas"
           >
             <Plus size={16} className="mr-2" />
@@ -352,7 +330,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
             variant="ghost" 
             size="icon" 
             onClick={onToggle} 
-            className="text-secondary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
+            className="text-secondary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-primary"
             aria-label="Close canvas sidebar"
           >
             <PanelLeftClose size={18} />
@@ -362,19 +340,19 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
 
       {/* Search */}
       <div 
-        className={`flex-shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
+        className={`shrink-0 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'} p-3`}
       >
         <div className="relative">
           <Search 
             size={18} 
-            className="absolute top-1/2 -translate-y-1/2 text-muted pointer-events-none left-3"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
           />
           <Input
             type="text"
             placeholder="Search canvases..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full focus:ring-2 focus:ring-primary focus:ring-offset-0 focus:border-primary pl-10 text-sm"
+            className="w-full pl-10 text-sm focus:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
             aria-label="Search canvases"
           />
         </div>
@@ -390,11 +368,11 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
           {filteredCanvases.map((canvas) => (
             <div
               key={canvas.id}
-              className={`group flex items-center cursor-pointer transition-all duration-200 rounded-md border border-transparent
-                focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-bg-surface p-3
+              className={`focus-within:ring-offset-bg-surface group flex cursor-pointer items-center rounded-md border border-transparent p-3
+                transition-all duration-200 focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2
                 ${selectedCanvasId === canvas.id 
-                  ? "bg-accent-ghost text-accent-primary border-accent-primary shadow-sm" 
-                  : "hover:bg-[var(--bg-tertiary)] hover:border-border-default hover:shadow-sm active:bg-tertiary"
+                  ? "border-accent-primary bg-accent-ghost text-accent-primary shadow-sm" 
+                  : "hover:border-border-default hover:bg-tertiary hover:shadow-sm active:bg-tertiary"
                 }`}
               onClick={() => loadCanvas(canvas.id)}
               role="listitem"
@@ -410,10 +388,10 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
             >
               {/* Thumbnail */}
               <div 
-                className={`flex-shrink-0 rounded-md flex items-center justify-center transition-all duration-200 border w-10 h-10 mr-3
+                className={`mr-3 flex size-10 shrink-0 items-center justify-center rounded-md border transition-all duration-200
                   ${selectedCanvasId === canvas.id 
-                    ? "bg-accent-primary border-accent-primary" 
-                    : "bg-[var(--bg-tertiary)] border-border-subtle group-hover:border-border-default"
+                    ? "border-accent-primary bg-accent-primary" 
+                    : "border-border-subtle group-hover:border-border-default bg-tertiary"
                   }`}
               >
                 <Shapes 
@@ -423,7 +401,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
               </div>
               
               {/* Content */}
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 {editingId === canvas.id ? (
                   <Input
                     type="text"
@@ -436,7 +414,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                     }}
                     autoFocus
                     onClick={(e) => e.stopPropagation()}
-                    className="h-8 focus:ring-2 focus:ring-primary focus:ring-offset-0 focus:border-primary text-sm"
+                    className="h-8 text-sm focus:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-0"
                     aria-label="Edit canvas name"
                   />
                 ) : (
@@ -450,7 +428,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                   </Text>
                 )}
                 <Caption 
-                  className={`truncate transition-all duration-200 text-xs ${
+                  className={`truncate text-xs transition-all duration-200 ${
                     selectedCanvasId === canvas.id ? 'text-accent-primary' : 'text-muted'
                   }`}
                 >
@@ -463,7 +441,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-secondary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-bg-surface w-7 h-7"
+                  className="focus:ring-offset-bg-surface size-7 text-secondary opacity-0 transition-opacity focus:ring-2 focus:ring-primary focus:ring-offset-2 group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpenId(menuOpenId === canvas.id ? null : canvas.id);
@@ -478,15 +456,15 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                 {/* Context Menu */}
                 {menuOpenId === canvas.id && (
                   <div 
-                    className="absolute right-0 top-full bg-bg-elevated border border-border-default rounded-xl shadow-xl z-50 backdrop-blur-sm mt-2 w-56 p-2"
+                    className="bg-bg-elevated border-border-default absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border p-2 shadow-xl backdrop-blur-sm"
                     role="menu"
                     aria-label={`Actions for ${canvas.name}`}
                   >
                     {/* Edit Section */}
                     <div className="p-1">
-                      <div className="flex items-center gap-2 mb-2 px-1">
+                      <div className="mb-2 flex items-center gap-2 px-1">
                         <Edit2 size={12} className="text-accent-primary" />
-                        <Caption className="text-muted uppercase tracking-wider text-xs font-bold">
+                        <Caption className="text-xs font-bold uppercase tracking-wider text-muted">
                           Edit
                         </Caption>
                       </div>
@@ -495,7 +473,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRenameCanvas(canvas.id)}
-                          className="justify-start text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] gap-3"
+                          className="justify-start gap-3 text-primary hover:bg-tertiary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface"
                           role="menuitem"
                         >
                           <Edit2 size={16} className="text-muted" />
@@ -505,7 +483,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDuplicateCanvas(canvas.id)}
-                          className="justify-start text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] gap-3"
+                          className="justify-start gap-3 text-primary hover:bg-tertiary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface"
                           role="menuitem"
                         >
                           <Copy size={16} className="text-muted" />
@@ -515,13 +493,13 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                     </div>
                     
                     {/* Divider */}
-                    <div className="bg-border-subtle h-px my-2" />
+                    <div className="bg-border-subtle my-2 h-px" />
                     
                     {/* Export Section */}
                     <div className="p-1">
-                      <div className="flex items-center gap-2 mb-2 px-1">
+                      <div className="mb-2 flex items-center gap-2 px-1">
                         <Download size={12} className="text-success" />
-                        <Caption className="text-muted uppercase tracking-wider text-xs font-bold">
+                        <Caption className="text-xs font-bold uppercase tracking-wider text-muted">
                           Export
                         </Caption>
                       </div>
@@ -531,10 +509,10 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                           size="sm"
                           onClick={() => handleExportAsJPEG(canvas.id)}
                           disabled={isExporting || !stageRef?.current}
-                          className={`justify-start transition-all duration-200 gap-3 ${
+                          className={`justify-start gap-3 transition-all duration-200 ${
                             isExporting || !stageRef?.current
-                              ? 'text-muted cursor-not-allowed opacity-60' 
-                              : 'text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)]'
+                              ? 'cursor-not-allowed text-muted opacity-60' 
+                              : 'focus:ring-offset-bg-surface text-primary hover:bg-tertiary focus:ring-2 focus:ring-primary focus:ring-offset-2'
                           }`}
                           role="menuitem"
                         >
@@ -553,10 +531,10 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                           size="sm"
                           onClick={() => handleExportAsPDF(canvas.id)}
                           disabled={isExporting || !stageRef?.current}
-                          className={`justify-start transition-all duration-200 gap-3 ${
+                          className={`justify-start gap-3 transition-all duration-200 ${
                             isExporting || !stageRef?.current
-                              ? 'text-muted cursor-not-allowed opacity-60' 
-                              : 'text-primary hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)]'
+                              ? 'cursor-not-allowed text-muted opacity-60' 
+                              : 'focus:ring-offset-bg-surface text-primary hover:bg-tertiary focus:ring-2 focus:ring-primary focus:ring-offset-2'
                           }`}
                           role="menuitem"
                         >
@@ -574,7 +552,7 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                     </div>
                     
                     {/* Divider */}
-                    <div className="bg-border-subtle h-px my-2" />
+                    <div className="bg-border-subtle my-2 h-px" />
                     
                     {/* Delete Section */}
                     <div className="p-1">
@@ -582,11 +560,11 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteCanvas(canvas.id)}
-                        className="justify-start text-error hover:bg-[var(--bg-tertiary)] focus:ring-2 focus:ring-error focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] w-full gap-3"
+                        className="w-full justify-start gap-3 text-error hover:bg-tertiary focus:ring-2 focus:ring-error focus:ring-offset-2 focus:ring-offset-surface"
                         role="menuitem"
                       >
                         <Trash2 size={16} className="text-error" />
-                        <Text size="sm" weight="medium">Delete Canvas</Text>
+                        <Text size="sm" weight="medium">Delete canvas</Text>
                       </Button>
                     </div>
                   </div>

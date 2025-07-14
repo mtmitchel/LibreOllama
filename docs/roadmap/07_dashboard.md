@@ -1,32 +1,63 @@
 **A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
 
+**CRITICAL UI CONVENTION: This project uses sentence case (not title case) for ALL user-facing text including page titles, headings, section titles, list titles, button copy, navigation copy, form labels, menu items, and any other UI text. Example: "Create new project" NOT "Create New Project".**
+
 # Dashboard Roadmap
 
 This document provides a comprehensive overview of the Dashboard feature, including its current implementation details and future development plans.
 
 ## Current Implementation
 
-The Dashboard serves as a home page, providing an at-a-glance view of various parts of the application through a system of widgets.
+The Dashboard serves as a home page, providing an at-a-glance view of various parts of the application through a system of widgets. While the widget framework exists, it has limited data integration and testing coverage.
 
 ### Frontend Architecture
 
 - **Widget System:** The core of the dashboard is a widget system. The components are located in `src/features/dashboard/components/`.
 - **Existing Widgets:**
     - `WelcomeWidget.tsx`: A simple welcome message.
-    - `AgentStatusWidget.tsx`: Displays the status of different agents.
-    - `ProjectProgressWidget.tsx`: Shows the progress of various projects.
-- **Layout:** The dashboard uses a simple grid layout to arrange the widgets.
-- **State Management:** Currently, state is likely managed within individual widgets, fetching data as needed. There does not appear to be a dedicated store for the dashboard itself.
+    - `AgentStatusWidget.tsx`: Displays the status of different agents (limited integration).
+    - `ProjectProgressWidget.tsx`: Shows the progress of various projects (uses mock data).
+    - `QuickActionsWidget.tsx`: Quick action buttons for common tasks.
+    - `TodaysFocusWidget.tsx`: Focus items and priorities for today (mock data).
+    - `UpcomingEventsWidget.tsx`: Upcoming calendar events (limited integration).
+    - `PendingTasksWidget.tsx`: Pending tasks from the Kanban system (basic integration).
+- **Layout:** The dashboard uses a flexible grid layout to arrange the widgets.
+- **State Management:** Currently, state is managed within individual widgets, with varying levels of real data integration.
+
+### Widget Integration Status
+
+**Implemented Widgets (Not Listed in Original Roadmap):**
+- `QuickActionsWidget.tsx` - Quick action buttons for common tasks (functional)
+- `TodaysFocusWidget.tsx` - Focus items and priorities for today (mock data)
+- `UpcomingEventsWidget.tsx` - Upcoming calendar events (limited calendar integration)
+- `PendingTasksWidget.tsx` - Pending tasks from Kanban (basic store integration)
+- `WidgetSkeleton.tsx` - Loading skeleton states for widgets
+- `WidgetErrorBoundary.tsx` - Error boundaries for widget error handling
+
+**UI Infrastructure Components:**
+- `FlexibleGrid.tsx` - Responsive grid system for widget layout
+- `EmptyState.tsx` - Empty state component for widgets with no data
+- `AddNewCard.tsx` - Add new item cards with consistent styling
 
 ### Backend Architecture
 
-- **No Direct Backend:** The dashboard itself doesn't have dedicated backend services. Instead, each widget is responsible for fetching its own data from other backend services (e.g., the `AgentStatusWidget` would fetch data from the agent services).
+- **No Direct Backend:** The dashboard itself doesn't have dedicated backend services. Each widget is responsible for fetching its own data from other backend services with varying success.
+- **Widget Data Sources:** Widgets attempt to integrate with various stores and services but with limited real data connectivity.
+
+### Current Limitations
+
+- **Testing Coverage:** Limited test coverage with testing audit score of 35/100, indicating significant reliability issues.
+- **Data Integration Gaps:** Many widgets use mock data or have limited integration with actual data sources.
+- **Widget Reliability:** Inconsistent error handling and data loading across different widgets.
+- **Performance Issues:** Potential performance problems with widget data fetching and updates.
 
 ### Implemented Features
 
-- A functional widget system.
-- Three initial widgets providing basic information.
-- A clean, responsive layout.
+- A functional widget system framework.
+- Six operational widgets providing basic information.
+- A clean, responsive layout with grid system.
+- Loading states and error boundaries for widgets.
+- Basic integration with some data stores (Kanban, limited Calendar/Tasks).
 
 ## Future Work & Todos
 

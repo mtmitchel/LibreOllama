@@ -17,6 +17,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { SearchQuery } from '../types/search';
+import { Button } from '@/components/ui';
 
 interface SavedSearchesProps {
   isOpen: boolean;
@@ -112,20 +113,20 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b">
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b p-4">
           <h3 className="text-lg font-semibold">
             {initialData ? 'Edit Saved Search' : 'Save Search'}
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="h-5 w-5" />
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="size-5" />
+          </Button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-primary">
               Name *
             </label>
             <input
@@ -133,12 +134,12 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Enter search name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-border-default w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-primary">
               Description
             </label>
             <textarea
@@ -146,12 +147,12 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Optional description"
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-border-default w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-primary">
               Search Query *
             </label>
             <textarea
@@ -159,27 +160,27 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
               onChange={(e) => setFormData(prev => ({ ...prev, query: e.target.value }))}
               placeholder="Enter search query"
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+              className="border-border-default w-full rounded-lg border px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-primary">
               Tags
             </label>
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="mb-2 flex flex-wrap gap-2">
               {formData.tags.map(tag => (
                 <span
                   key={tag}
-                  className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  className="flex items-center space-x-1 rounded-full bg-accent-soft px-2 py-1 text-sm text-accent-primary"
                 >
-                  <Hash className="h-3 w-3" />
+                  <Hash className="size-3" />
                   <span>{tag}</span>
                   <button
                     onClick={() => removeTag(tag)}
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-accent-primary hover:text-accent-secondary"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="size-3" />
                   </button>
                 </span>
               ))}
@@ -191,31 +192,31 @@ const SaveSearchModal: React.FC<SaveSearchModalProps> = ({
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                 placeholder="Add tag"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="border-border-default flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={addTag}
-                className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="rounded-lg bg-gray-600 px-3 py-2 text-white transition-colors hover:bg-gray-700"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2 p-4 border-t">
+        <div className="flex justify-end space-x-2 border-t p-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="px-4 py-2 text-secondary transition-colors hover:text-primary"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!formData.name.trim() || !formData.query.trim()}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="flex items-center space-x-2 rounded-lg bg-accent-primary px-4 py-2 text-white transition-colors hover:bg-accent-secondary disabled:opacity-50"
           >
-            <Save className="h-4 w-4" />
+            <Save className="size-4" />
             <span>Save</span>
           </button>
         </div>
@@ -328,43 +329,43 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+      <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center">
+        <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
+          <div className="flex items-center justify-between border-b p-6">
             <div className="flex items-center space-x-2">
-              <Star className="h-5 w-5 text-yellow-600" />
-              <h2 className="text-xl font-semibold">Saved Searches</h2>
+              <Star className="size-5 text-warning" />
+              <h2 className="text-xl font-semibold">Saved searches</h2>
             </div>
             <div className="flex items-center space-x-2">
               {currentQuery && (
                 <button
                   onClick={handleSaveCurrentQuery}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center space-x-2 rounded-lg bg-accent-primary px-4 py-2 text-white transition-colors hover:bg-accent-secondary"
                 >
-                  <Plus className="h-4 w-4" />
-                  <span>Save Current</span>
+                  <Plus className="size-4" />
+                  <span>Save current</span>
                 </button>
               )}
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                <X className="h-5 w-5" />
-              </button>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="size-5" />
+              </Button>
             </div>
           </div>
 
           {/* Filters and Controls */}
-          <div className="p-4 border-b bg-gray-50">
+          <div className="border-b bg-surface p-4">
             <div className="flex flex-wrap items-center gap-4">
               {/* Search */}
-              <div className="flex-1 min-w-64">
+              <div className="min-w-64 flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search saved searches..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border-border-default w-full rounded-lg border py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -374,19 +375,19 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="border-border-default rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="lastUsed">Last Used</option>
-                  <option value="name">Name</option>
-                  <option value="usageCount">Usage Count</option>
-                  <option value="createdAt">Created Date</option>
+                              <option value="lastUsed">Last used</option>
+            <option value="name">Name</option>
+            <option value="usageCount">Usage count</option>
+            <option value="createdAt">Created date</option>
                 </select>
                 
                 <button
                   onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="border-border-default rounded-lg border p-2 transition-colors hover:bg-surface"
                 >
-                  {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                  {sortOrder === 'asc' ? <SortAsc className="size-4" /> : <SortDesc className="size-4" />}
                 </button>
               </div>
 
@@ -395,9 +396,9 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
                 <select
                   value={filterTag}
                   onChange={(e) => setFilterTag(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="border-border-default rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Tags</option>
+                  <option value="">All tags</option>
                   {allTags.map(tag => (
                     <option key={tag} value={tag}>#{tag}</option>
                   ))}
@@ -407,12 +408,12 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
           </div>
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          <div className="max-h-[calc(90vh-200px)] overflow-y-auto p-6">
             {filteredAndSortedSearches.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <Star className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium mb-2">No Saved Searches</h3>
-                <p className="text-sm mb-4">
+              <div className="py-12 text-center text-secondary">
+                <Star className="mx-auto mb-4 size-12 text-muted" />
+                <h3 className="mb-2 text-lg font-medium">No saved searches</h3>
+                <p className="mb-4 text-sm">
                   {searchTerm || filterTag 
                     ? 'No searches match your current filters.' 
                     : 'Save your frequently used searches for quick access.'
@@ -421,80 +422,80 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
                 {currentQuery && (
                   <button
                     onClick={handleSaveCurrentQuery}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+                    className="mx-auto flex items-center space-x-2 rounded-lg bg-accent-primary px-4 py-2 text-white transition-colors hover:bg-accent-secondary"
                   >
-                    <Plus className="h-4 w-4" />
-                    <span>Save Current Search</span>
+                    <Plus className="size-4" />
+                    <span>Save current search</span>
                   </button>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {filteredAndSortedSearches.map(search => (
                   <div
                     key={search.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    className="border-border-default rounded-lg border p-4 transition-shadow hover:shadow-md"
                   >
                     {/* Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 truncate">
+                    <div className="mb-3 flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate font-medium text-primary">
                           {search.name || 'Untitled Search'}
                         </h3>
                         {search.description && (
-                          <p className="text-sm text-gray-600 mt-1">{search.description}</p>
+                          <p className="mt-1 text-sm text-secondary">{search.description}</p>
                         )}
                       </div>
                       
-                      <div className="flex items-center space-x-1 ml-2">
+                      <div className="ml-2 flex items-center space-x-1">
                         <button
                           onClick={() => handleExecuteSearch(search)}
-                          className="p-1 text-green-600 hover:text-green-800 transition-colors"
+                          className="p-1 text-success transition-colors hover:text-success-fg"
                           title="Execute search"
                         >
-                          <Play className="h-4 w-4" />
+                          <Play className="size-4" />
                         </button>
                         <button
                           onClick={() => handleCopyQuery(search.query)}
-                          className="p-1 text-gray-600 hover:text-gray-800 transition-colors"
+                          className="p-1 text-secondary transition-colors hover:text-primary"
                           title="Copy query"
                         >
-                          <Copy className="h-4 w-4" />
+                          <Copy className="size-4" />
                         </button>
                         <button
                           onClick={() => handleEditSearch(search)}
-                          className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                          className="p-1 text-blue-600 transition-colors hover:text-blue-800"
                           title="Edit search"
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Edit2 className="size-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteSearch(search.id)}
-                          className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                          className="p-1 text-error transition-colors hover:text-error"
                           title="Delete search"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="size-4" />
                         </button>
                       </div>
                     </div>
 
                     {/* Query Preview */}
                     <div className="mb-3">
-                      <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono block overflow-hidden text-ellipsis whitespace-nowrap">
+                      <code className="block truncate rounded bg-surface px-2 py-1 font-mono text-sm">
                         {search.query}
                       </code>
                     </div>
 
                     {/* Metadata */}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-secondary">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
+                          <Clock className="size-3" />
                           <span>Used {search.usageCount || 0} times</span>
                         </div>
                         {search.lastUsed && (
                           <div className="flex items-center space-x-1">
-                            <Calendar className="h-3 w-3" />
+                            <Calendar className="size-3" />
                             <span>Last: {formatDate(search.lastUsed)}</span>
                           </div>
                         )}
@@ -507,13 +508,13 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-between items-center p-6 border-t bg-gray-50">
-            <div className="text-sm text-gray-600">
+          <div className="flex items-center justify-between border-t bg-surface p-6">
+            <div className="text-sm text-secondary">
               {filteredAndSortedSearches.length} of {savedSearches.length} saved searches
             </div>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="rounded-lg bg-gray-600 px-4 py-2 text-white transition-colors hover:bg-gray-700"
             >
               Close
             </button>

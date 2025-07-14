@@ -1,4 +1,4 @@
-import { Search, Bell, Sun, Moon, HelpCircle, Command } from 'lucide-react';
+import { Search, Bell, Sun, Moon, HelpCircle } from 'lucide-react';
 import { useTheme } from '../ThemeProvider';
 import { Button, Avatar } from '../ui';
 import { useHeader } from '../../app/contexts/HeaderContext';
@@ -15,52 +15,33 @@ export const TopBar = () => {
 
   return (
     <header 
-      className="flex items-center justify-between border-b bg-[var(--bg-surface)] flex-shrink-0 h-20"
-      style={{ 
-        padding: `0 var(--space-6)`,
-        borderColor: 'var(--border-subtle)'
-      }}
+      className="flex items-center justify-between border-b border-primary bg-header px-6 py-3 backdrop-blur-sm"
     >
       {/* Left section - Search or Page Title */}
-      <div className="flex items-center flex-1 min-w-0">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
         {headerProps.title ? (
           <div className="flex flex-col gap-1">
-            <h1 className="text-lg font-semibold text-[var(--text-primary)] m-0 leading-tight">
+            <h1 className="m-0 text-lg font-semibold leading-tight text-primary">
               {headerProps.title}
             </h1>
           </div>
         ) : (
-          <div className="relative w-full max-w-sm">
-            <Search 
-              size={18} 
-              className="absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)]" 
-              style={{ left: 'var(--space-4)' }}
-            />
-            <input 
-              type="search" 
-              placeholder="Search workspace... (Ctrl+K for commands)" 
-              className="w-full bg-[var(--bg-secondary)] border border-transparent rounded-[var(--radius-md)] focus:border-[var(--accent-primary)] focus:ring-1 focus:ring-[var(--accent-primary)] focus:outline-none transition-all text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
-              style={{
-                paddingLeft: 'calc(var(--space-10) + var(--space-2))',
-                paddingRight: 'var(--space-4)',
-                paddingTop: 'var(--space-2)',
-                paddingBottom: 'var(--space-2)',
-                fontSize: 'var(--font-size-sm)',
-                fontFamily: 'var(--font-sans)'
-              }}
-              onFocus={handleSearchFocus}
-            />
-            <div 
-              className="absolute top-1/2 -translate-y-1/2 flex items-center text-[var(--text-muted)]"
-              style={{ 
-                right: 'var(--space-3)',
-                gap: 'var(--space-1)',
-                fontSize: 'var(--font-size-xs)'
-              }}
-            >
-              <Command size={12} />
-              <span>K</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-accent-primary shadow-sm"
+              >
+                <span className="text-sm font-semibold text-white">L</span>
+              </div>
+              <h1 className="text-lg font-semibold text-primary">LibreOllama</h1>
             </div>
+            <button 
+              onClick={handleSearchFocus}
+              className="flex items-center gap-2 rounded-xl border border-default bg-surface px-3 py-1.5 transition-all duration-200 hover:border-primary"
+            >
+              <Search size={14} className="text-tertiary opacity-60" />
+              <span className="text-xs text-secondary">Search</span>
+              <kbd className="ml-8 rounded bg-tertiary px-2 py-0.5 font-mono text-xs text-tertiary">⌘K</kbd>
+            </button>
           </div>
         )}
       </div>
@@ -74,6 +55,7 @@ export const TopBar = () => {
               variant={action.variant || 'ghost'}
               onClick={action.onClick}
               size="sm"
+              className="btn-ghost"
             >
               {action.icon}
               {action.label}
@@ -83,55 +65,53 @@ export const TopBar = () => {
       )}
       
       {/* Right section - Primary Action + Global Actions */}
-      <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+      <div className="flex items-center gap-3">
         {/* Primary Action */}
         {headerProps.primaryAction && (
           <Button
             variant="primary"
             onClick={headerProps.primaryAction.onClick}
             size="sm"
-            style={{ gap: 'var(--space-2)' }}
+            className="btn-primary gap-2"
           >
             {headerProps.primaryAction.icon}
             {headerProps.primaryAction.label}
           </Button>
         )}
         
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={toggleTheme}
+          className="btn-icon rounded-xl p-2 transition-all duration-200 hover:bg-hover"
           aria-label="Toggle theme"
           title={`Switch to ${actualTheme === 'dark' ? 'light' : 'dark'} mode`}
         >
-          {actualTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </Button>
+          {actualTheme === 'dark' ? 
+            <Sun size={18} className="text-muted" /> : 
+            <Moon size={18} className="text-muted" />
+          }
+        </button>
         
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          className="btn-icon relative rounded-xl p-2 transition-all duration-200 hover:bg-hover"
           title="Notifications"
-          className="relative"
         >
-          <Bell size={18} />
-          <div 
-            className="absolute rounded-full bg-[var(--error)]"
-            style={{
-              top: 'var(--space-1)',
-              right: 'var(--space-1)',
-              width: 'var(--space-2)',
-              height: 'var(--space-2)'
-            }}
-          />
-        </Button>
+          <Bell size={18} className="text-muted" />
+        </button>
         
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          className="btn-icon rounded-xl p-2 transition-all duration-200 hover:bg-hover"
           title="Help & Documentation"
         >
-          <HelpCircle size={18} />
-        </Button>
+          <HelpCircle size={18} className="text-muted" />
+        </button>
+        
+        <Avatar
+          size="sm"
+          className="cursor-pointer"
+          onClick={() => {
+            // TODO: Open user menu
+          }}
+        />
       </div>
     </header>
   );

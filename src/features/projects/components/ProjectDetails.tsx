@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Badge, Progress, Checkbox, StatusBadge, Heading, Text, Caption, Avatar } from "../../../components/ui";
+import { Card, Button, Badge, Progress, Checkbox, StatusBadge, Heading, Text, Avatar } from "../../../components/ui";
 import { MoreVertical, Upload, ImageIcon, File, Link, Plus, Users, Calendar, Target } from 'lucide-react';
 
 interface Project {
@@ -19,7 +19,7 @@ interface Project {
 interface ProjectDetailsProps {
   project: Project;
   activeTab: string;
-  onTabChange: (tab: string) => void;
+  onTabChange: (tabId: string) => void;
   onGoalToggle: (goalId: string) => void;
 }
 
@@ -46,19 +46,19 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   };
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col">
-      <Card className="flex-1 flex flex-col" padding="none">
+    <div className="flex min-w-0 flex-1 flex-col">
+      <Card className="flex flex-1 flex-col" padding="none">
         {/* Tabs */}
-        <div className="border-b border-[var(--border-subtle)] sticky top-0 bg-[var(--bg-primary)] z-10">
-          <div className="flex gap-[var(--space-1)] px-[var(--space-4)] pt-[var(--space-4)]">
+        <div className="border-border-subtle sticky top-0 z-10 border-b bg-primary">
+          <div className="flex gap-1 px-4 pt-4">
             {projectTabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-2)] text-[var(--font-size-sm)] font-[var(--font-weight-medium)] transition-colors rounded-t-[var(--radius-lg)] ${
+                className={`flex items-center gap-2 rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border-b-2 border-[var(--accent-primary)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+                    ? 'border-b-2 border-accent-primary bg-secondary text-primary'
+                    : 'text-secondary hover:bg-tertiary hover:text-primary'
                 }`}
               >
                 <tab.icon size={16} />
@@ -69,24 +69,20 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: 'var(--space-6)' }}>
+        <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <div className="flex flex-col gap-6">
               {/* Project Header */}
               <div className="flex items-start justify-between">
-                <div className="flex items-start" style={{ gap: 'var(--space-4)' }}>
+                <div className="flex items-start gap-4">
                   <div
-                    className="rounded-[var(--radius-lg)] flex-shrink-0"
-                    style={{ 
-                      backgroundColor: project.color,
-                      width: 'calc(var(--space-12))',
-                      height: 'calc(var(--space-12))'
-                    }}
+                    className="size-12 shrink-0 rounded-lg"
+                    style={{ backgroundColor: project.color }}
                   />
                   <div>
                     <Heading level={1}>{project.name}</Heading>
-                    <Text variant="secondary" style={{ marginTop: 'var(--space-1)' }}>{project.description}</Text>
-                    <div className="flex items-center" style={{ gap: 'var(--space-4)', marginTop: 'var(--space-3)' }}>
+                    <Text variant="secondary" className="mt-1">{project.description}</Text>
+                    <div className="mt-3 flex items-center gap-4">
                       <Badge 
                         variant={project.status === 'in-progress' ? 'default' : project.status === 'completed' ? 'success' : 'secondary'}
                       >
@@ -96,7 +92,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
                   <MoreVertical size={16} />
                   Actions
                 </Button>
@@ -104,19 +100,19 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
 
               {/* Progress Overview */}
               <Card>
-                <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-4)' }}>
-                  <Heading level={3}>Progress Overview</Heading>
-                  <Text size="lg" weight="semibold" className="text-[var(--accent-primary)]">{project.progress}%</Text>
+                <div className="mb-4 flex items-center justify-between">
+                  <Heading level={3}>Progress overview</Heading>
+                  <Text size="lg" weight="semibold" className="text-accent-primary">{project.progress}%</Text>
                 </div>
-                <Progress value={project.progress} style={{ marginBottom: 'var(--space-4)' }} />
-                <div className="grid grid-cols-1 md:grid-cols-3 text-center" style={{ gap: 'var(--space-4)' }}>
+                <Progress value={project.progress} className="mb-4" />
+                <div className="grid grid-cols-1 gap-4 text-center md:grid-cols-3">
                   <div>
                     <Text size="lg" weight="semibold">{project.goals.filter(g => g.completed).length}</Text>
-                    <Text variant="secondary" size="sm">Completed Goals</Text>
+                    <Text variant="secondary" size="sm">Completed goals</Text>
                   </div>
                   <div>
                     <Text size="lg" weight="semibold">{project.goals.length - project.goals.filter(g => g.completed).length}</Text>
-                    <Text variant="secondary" size="sm">Remaining Goals</Text>
+                    <Text variant="secondary" size="sm">Remaining goals</Text>
                   </div>
                   <div>
                     <Text size="lg" weight="semibold">{project.assets?.length || 0}</Text>
@@ -127,13 +123,10 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
 
               {/* Key Goals */}
               <Card>
-                <Heading level={3} style={{ marginBottom: 'var(--space-4)' }}>Key Goals</Heading>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                <Heading level={3} className="mb-4">Key goals</Heading>
+                <div className="flex flex-col gap-3">
                   {project.goals.map(goal => (
-                    <div key={goal.id} className="flex items-center bg-[var(--bg-secondary)] rounded-[var(--radius-lg)]" style={{ 
-                      gap: 'var(--space-3)', 
-                      padding: 'var(--space-3)' 
-                    }}>
+                    <div key={goal.id} className="flex items-center gap-3 rounded-lg bg-secondary p-3">
                       <Checkbox 
                         checked={goal.completed}
                         onCheckedChange={() => onGoalToggle(goal.id)}
@@ -141,7 +134,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                       <div className="flex-1">
                         <Text 
                           weight="medium" 
-                          className={goal.completed ? 'line-through text-[var(--text-secondary)]' : 'text-[var(--text-primary)]'}
+                          className={goal.completed ? 'text-secondary line-through' : 'text-primary'}
                         >
                           {goal.title}
                         </Text>
@@ -160,30 +153,30 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
           )}
 
           {activeTab === 'assets' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between">
-                <Heading level={3}>Project Assets</Heading>
-                <Button variant="default" className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                <Heading level={3}>Project assets</Heading>
+                <Button variant="default" className="flex items-center gap-2">
                   <Upload size={16} />
                   Upload Asset
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 'var(--space-4)' }}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {project.assets?.map(asset => (
-                  <Card key={asset.id} padding="sm" className="hover:shadow-[var(--shadow-md)] transition-shadow cursor-pointer">
-                    <div className="flex items-start" style={{ gap: 'var(--space-3)' }}>
-                      <div className="bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]" style={{ padding: 'var(--space-2)' }}>
-                        {asset.type === 'image' && <ImageIcon size={20} className="text-[var(--text-secondary)]" />}
-                        {asset.type === 'document' && <File size={20} className="text-[var(--text-secondary)]" />}
-                        {asset.type === 'link' && <Link size={20} className="text-[var(--text-secondary)]" />}
+                  <Card key={asset.id} padding="sm" className="cursor-pointer transition-shadow hover:shadow-md">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-lg bg-tertiary p-2">
+                        {asset.type === 'image' && <ImageIcon size={20} className="text-secondary" />}
+                        {asset.type === 'document' && <File size={20} className="text-secondary" />}
+                        {asset.type === 'link' && <Link size={20} className="text-secondary" />}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <Text size="sm" weight="medium" className="truncate">{asset.name}</Text>
-                        <Text size="xs" variant="secondary" style={{ marginTop: 'var(--space-1)' }}>
+                        <Text size="xs" variant="secondary" className="mt-1">
                           Uploaded {new Date(asset.uploadDate).toLocaleDateString()}
                         </Text>
-                        <Badge variant="outline" style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-2)' }}>
+                        <Badge variant="outline" className="mt-2 text-xs">
                           {asset.type}
                         </Badge>
                       </div>
@@ -193,57 +186,47 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 
                 {/* Add Asset Card */}
                 <div 
-                  className="border-2 border-dashed border-[var(--border-default)] rounded-[var(--radius-lg)] flex flex-col items-center justify-center text-center hover:border-[var(--accent-primary)] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer group"
-                  style={{ padding: 'var(--space-6)' }}
+                  className="border-border-default group flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:border-accent-primary hover:bg-accent-soft"
                   onClick={() => console.log('Add asset clicked')}
                 >
-                  <Plus size={24} className="text-[var(--text-secondary)] group-hover:text-[var(--accent-primary)]" style={{ marginBottom: 'var(--space-2)' }} />
-                  <Text size="sm" weight="medium" className="text-[var(--text-secondary)] group-hover:text-[var(--accent-primary)]">Add Asset</Text>
+                  <Plus size={24} className="mb-2 text-secondary group-hover:text-accent-primary" />
+                  <Text size="sm" weight="medium" className="text-secondary group-hover:text-accent-primary">Add asset</Text>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'roadmap' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-              <Heading level={3}>Project Roadmap</Heading>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div className="flex flex-col gap-6">
+              <Heading level={3}>Project roadmap</Heading>
+              <div className="flex flex-col gap-4">
                 <Card padding="sm">
-                  <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
-                    <div className="bg-[var(--success)] rounded-full" style={{ 
-                      width: 'var(--space-3)', 
-                      height: 'var(--space-3)' 
-                    }} />
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="size-3 rounded-full bg-success" />
                     <Text weight="medium">Phase 1: Planning</Text>
                     <Badge variant="success">Completed</Badge>
                   </div>
-                  <Text size="sm" variant="secondary" style={{ marginLeft: 'var(--space-6)' }}>
+                  <Text size="sm" variant="secondary" className="ml-6">
                     Initial project setup and requirements gathering
                   </Text>
                 </Card>
                 <Card padding="sm">
-                  <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
-                    <div className="bg-[var(--accent-primary)] rounded-full" style={{ 
-                      width: 'var(--space-3)', 
-                      height: 'var(--space-3)' 
-                    }} />
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="size-3 rounded-full bg-accent-primary" />
                     <Text weight="medium">Phase 2: Development</Text>
                     <Badge variant="default">In Progress</Badge>
                   </div>
-                  <Text size="sm" variant="secondary" style={{ marginLeft: 'var(--space-6)' }}>
+                  <Text size="sm" variant="secondary" className="ml-6">
                     Core feature development and implementation
                   </Text>
                 </Card>
                 <Card padding="sm">
-                  <div className="flex items-center" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
-                    <div className="bg-[var(--text-tertiary)] rounded-full" style={{ 
-                      width: 'var(--space-3)', 
-                      height: 'var(--space-3)' 
-                    }} />
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="size-3 rounded-full bg-tertiary" />
                     <Text weight="medium">Phase 3: Testing</Text>
                     <Badge variant="secondary">Upcoming</Badge>
                   </div>
-                  <Text size="sm" variant="secondary" style={{ marginLeft: 'var(--space-6)' }}>
+                  <Text size="sm" variant="secondary" className="ml-6">
                     Quality assurance and user testing
                   </Text>
                 </Card>
@@ -252,23 +235,23 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
           )}
 
           {activeTab === 'team' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            <div className="flex flex-col gap-6">
               <div className="flex items-center justify-between">
-                <Heading level={3}>Team Members</Heading>
-                <Button variant="default" className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+                <Heading level={3}>Team members</Heading>
+                <Button variant="default" className="flex items-center gap-2">
                   <Plus size={16} />
-                  Invite Team Member
+                  Invite team member
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: 'var(--space-4)' }}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {project.team.map(member => (
                   <Card key={member.id} padding="sm">
-                    <div className="flex items-center" style={{ gap: 'var(--space-3)' }}>
+                    <div className="flex items-center gap-3">
                       <Avatar name={member.name} size="sm" />
                       <div>
                         <Text weight="medium">{member.name}</Text>
-                        <Text size="sm" variant="secondary">Team Member</Text>
+                        <Text size="sm" variant="secondary">Team member</Text>
                       </div>
                     </div>
                   </Card>

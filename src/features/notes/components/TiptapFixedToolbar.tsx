@@ -8,28 +8,19 @@ import {
 import { Image as ImageIcon } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
-import { TextSelection } from 'prosemirror-state';
 import { LinkDialog } from './LinkDialog';
 
 interface TiptapFixedToolbarProps {
   editor: Editor;
-  onImageUpload: (file: File) => void;
-  onExport: (format: 'pdf' | 'docx' | 'txt') => void;
-  selectedNote: any;
-  onDeleteNote?: () => void;
 }
 
 export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({ 
-  editor,
-  onImageUpload,
-  onExport,
-  selectedNote,
-  onDeleteNote 
+  editor
 }) => {
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [currentLinkUrl, setCurrentLinkUrl] = useState('');
 
-  const isActive = (name: string, attributes?: {}) => editor.isActive(name, attributes) ? 'primary' : 'ghost';
+  const isActive = (name: string, attributes?: Record<string, any>) => editor.isActive(name, attributes) ? 'primary' : 'ghost';
 
   const getCurrentHeadingLevel = () => {
     if (editor.isActive('heading', { level: 1 })) return 1;
@@ -44,7 +35,7 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
       case 1: return { icon: Heading1, label: 'Heading 1' };
       case 2: return { icon: Heading2, label: 'Heading 2' };
       case 3: return { icon: Heading3, label: 'Heading 3' };
-      default: return { icon: Type, label: 'Normal Text' };
+      default: return { icon: Type, label: 'Normal text' };
     }
   };
 
@@ -94,32 +85,64 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
 
   return (
     <>
-      <div className="flex items-center gap-[var(--space-1)] p-[var(--space-2)] bg-[var(--bg-secondary)] border-b border-[var(--border-default)] flex-wrap" onMouseDown={(e) => e.preventDefault()}>
+      <div className="border-border-default flex flex-wrap items-center gap-1 border-b bg-surface p-2" onMouseDown={(e) => e.preventDefault()}>
         {/* History Group */}
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => editor.chain().focus().undo().run()} 
+          disabled={!editor.can().undo()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Undo size={18} />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()}>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => editor.chain().focus().redo().run()} 
+          disabled={!editor.can().redo()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Redo size={18} />
         </Button>
 
-        <div className="w-px h-6 bg-[var(--border-default)] mx-[var(--space-1)]" />
+        <div className="bg-border-default mx-1 h-6 w-px" />
 
         {/* Formatting Group */}
-        <Button variant={isActive('bold')} size="icon" onClick={() => editor.chain().focus().toggleBold().run()}>
+        <Button 
+          variant={isActive('bold')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Bold size={18} />
         </Button>
-        <Button variant={isActive('italic')} size="icon" onClick={() => editor.chain().focus().toggleItalic().run()}>
+        <Button 
+          variant={isActive('italic')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Italic size={18} />
         </Button>
-        <Button variant={isActive('underline')} size="icon" onClick={() => editor.chain().focus().toggleUnderline().run()}>
+        <Button 
+          variant={isActive('underline')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Underline size={18} />
         </Button>
-        <Button variant={isActive('strike')} size="icon" onClick={() => editor.chain().focus().toggleStrike().run()}>
+        <Button 
+          variant={isActive('strike')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Strikethrough size={18} />
         </Button>
         
-        <div className="w-px h-6 bg-[var(--border-default)] mx-[var(--space-1)]" />
+        <div className="bg-border-default mx-1 h-6 w-px" />
 
         {/* Headings Group */}
         <DropdownMenu>
@@ -128,7 +151,7 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
               variant={getCurrentHeadingLevel() > 0 ? 'primary' : 'ghost'} 
               size="icon" 
               title={getHeadingDisplay().label}
-              className="relative"
+              className="relative motion-safe:transition-colors motion-safe:duration-150"
             >
               {(() => {
                 const IconComponent = getHeadingDisplay().icon;
@@ -139,44 +162,69 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onSelect={() => handleHeadingChange(0)}>
-              <Type size={16} className="mr-[var(--space-2)]" />
-              Normal Text
+              <Type size={16} className="mr-2" />
+              Normal text
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => handleHeadingChange(1)}>
-              <Heading1 size={16} className="mr-[var(--space-2)]" />
+              <Heading1 size={16} className="mr-2" />
               Heading 1
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => handleHeadingChange(2)}>
-              <Heading2 size={16} className="mr-[var(--space-2)]" />
+              <Heading2 size={16} className="mr-2" />
               Heading 2
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => handleHeadingChange(3)}>
-              <Heading3 size={16} className="mr-[var(--space-2)]" />
+              <Heading3 size={16} className="mr-2" />
               Heading 3
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="w-px h-6 bg-[var(--border-default)] mx-[var(--space-1)]" />
+        <div className="bg-border-default mx-1 h-6 w-px" />
 
         {/* Block Elements Group */}
-        <Button variant={isActive('bulletList')} size="icon" onClick={() => editor.chain().focus().toggleBulletList().run()}>
+        <Button 
+          variant={isActive('bulletList')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <List size={18} />
         </Button>
-        <Button variant={isActive('orderedList')} size="icon" onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+        <Button 
+          variant={isActive('orderedList')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <ListOrdered size={18} />
         </Button>
-        <Button variant={isActive('blockquote')} size="icon" onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+        <Button 
+          variant={isActive('blockquote')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Quote size={18} />
         </Button>
         
-        <div className="w-px h-6 bg-[var(--border-default)] mx-[var(--space-1)]" />
+        <div className="bg-border-default mx-1 h-6 w-px" />
 
         {/* Insertables Group */}
-        <Button size="icon" onClick={handleLink} variant={isActive('link')}>
+        <Button 
+          size="icon" 
+          onClick={handleLink} 
+          variant={isActive('link')}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <LinkIcon size={18} />
         </Button>
-        <Button size="icon" onClick={handleImageUpload} variant="ghost">
+        <Button 
+          size="icon" 
+          onClick={handleImageUpload} 
+          variant="ghost"
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <ImageIcon size={18} />
         </Button>
         <Button
@@ -184,6 +232,7 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
           variant="ghost"
           title="Insert divider line"
+          className="motion-safe:transition-colors motion-safe:duration-150"
         >
           <Minus size={18} />
         </Button>
@@ -197,10 +246,16 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
               .run();
           }}
           variant="ghost"
+          className="motion-safe:transition-colors motion-safe:duration-150"
         >
           <Table size={18} />
         </Button>
-        <Button variant={isActive('code')} size="icon" onClick={() => editor.chain().focus().toggleCode().run()}>
+        <Button 
+          variant={isActive('code')} 
+          size="icon" 
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className="motion-safe:transition-colors motion-safe:duration-150"
+        >
           <Code size={18} />
         </Button>
       </div>

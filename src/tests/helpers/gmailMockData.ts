@@ -289,6 +289,7 @@ export class MockGmailApiServer {
 
 // Mock service functions for testing
 export const mockGmailTauriService = {
+  // Auth functions
   startGmailAuth: vi.fn(),
   completeGmailAuth: vi.fn(),
   sendGmailMessage: vi.fn(),
@@ -297,9 +298,8 @@ export const mockGmailTauriService = {
   refreshToken: vi.fn(),
   getAccounts: vi.fn(),
   removeAccount: vi.fn(),
-};
-
-export const mockGmailTauriService = {
+  
+  // Message functions
   getMessages: vi.fn(),
   getMessage: vi.fn(),
   getLabels: vi.fn(),

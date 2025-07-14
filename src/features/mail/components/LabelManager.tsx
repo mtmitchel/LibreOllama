@@ -1,24 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Tag, X, Check, AlertCircle } from 'lucide-react';
-
-interface Label {
-  id: string;
-  name: string;
-  color: string;
-  type: 'system' | 'user';
-  messageListVisibility: 'hide' | 'show' | 'showIfUnread';
-  labelListVisibility: 'hide' | 'show' | 'showIfUnread';
-  messagesTotal: number;
-  messagesUnread: number;
-  threadsTotal: number;
-  threadsUnread: number;
-}
+import { useMailStore } from '../stores/mailStore';
+import { GmailLabel, LabelCreationRequest, LabelUpdateRequest } from '../types';
 
 interface LabelManagerProps {
   isOpen: boolean;
   onClose: () => void;
-  onLabelCreated?: (label: Label) => void;
-  onLabelUpdated?: (label: Label) => void;
+  onLabelCreated?: (label: GmailLabel) => void;
+  onLabelUpdated?: (label: GmailLabel) => void;
   onLabelDeleted?: (labelId: string) => void;
 }
 
@@ -36,10 +25,20 @@ const LabelManager: React.FC<LabelManagerProps> = ({
   onLabelUpdated,
   onLabelDeleted
 }) => {
-  const [labels, setLabels] = useState<Label[]>([]);
+  const { 
+    getLabels, 
+    createLabel, 
+    updateLabel, 
+    deleteLabel, 
+    fetchLabels,
+    currentAccountId,
+    isLoading: storeLoading 
+  } = useMailStore();
+  
+  const [labels, setLabels] = useState<GmailLabel[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingLabel, setEditingLabel] = useState<Label | null>(null);
+  const [editingLabel, setEditingLabel] = useState<GmailLabel | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -60,15 +59,16 @@ const LabelManager: React.FC<LabelManagerProps> = ({
       setLoading(true);
       setError(null);
       
-      // TODO: Replace with actual Gmail API call
-      const response = await fetch('/api/gmail/labels');
-      const data = await response.json();
-      
-      if (response.ok) {
-        setLabels(data.labels || []);
-      } else {
-        throw new Error(data.error || 'Failed to load labels');
+      if (!currentAccountId) {
+        throw new Error('No account selected');
       }
+      
+      // Fetch labels from the store
+      await fetchLabels(currentAccountId);
+      
+      // Get the updated labels from the store
+      const storeLabels = getLabels();
+      setLabels(storeLabels);
     } catch (err) {
       console.error('Error loading labels:', err);
       setError(err instanceof Error ? err.message : 'Failed to load labels');
@@ -82,36 +82,30 @@ const LabelManager: React.FC<LabelManagerProps> = ({
       setLoading(true);
       setError(null);
 
-      const newLabel = {
+      if (!currentAccountId) {
+        throw new Error('No account selected');
+      }
+
+      const newLabelData: LabelCreationRequest = {
         name: formData.name,
         color: formData.color,
         messageListVisibility: formData.messageListVisibility,
         labelListVisibility: formData.labelListVisibility
       };
 
-      // TODO: Replace with actual Gmail API call
-      const response = await fetch('/api/gmail/labels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newLabel)
+      // Create label using the store
+      const createdLabel = await createLabel(newLabelData, currentAccountId);
+      
+      // Update local state
+      setLabels(prev => [...prev, createdLabel]);
+      setShowCreateForm(false);
+      setFormData({
+        name: '',
+        color: LABEL_COLORS[0],
+        messageListVisibility: 'show',
+        labelListVisibility: 'show'
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        const createdLabel = data.label;
-        setLabels(prev => [...prev, createdLabel]);
-        setShowCreateForm(false);
-        setFormData({
-          name: '',
-          color: LABEL_COLORS[0],
-          messageListVisibility: 'show',
-          labelListVisibility: 'show'
-        });
-        onLabelCreated?.(createdLabel);
-      } else {
-        throw new Error(data.error || 'Failed to create label');
-      }
+      onLabelCreated?.(createdLabel);
     } catch (err) {
       console.error('Error creating label:', err);
       setError(err instanceof Error ? err.message : 'Failed to create label');
@@ -120,30 +114,29 @@ const LabelManager: React.FC<LabelManagerProps> = ({
     }
   };
 
-  const handleUpdateLabel = async (labelId: string, updates: Partial<Label>) => {
+  const handleUpdateLabel = async (labelId: string, updates: Partial<GmailLabel>) => {
     try {
       setLoading(true);
       setError(null);
 
-      // TODO: Replace with actual Gmail API call
-      const response = await fetch(`/api/gmail/labels/${labelId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        const updatedLabel = data.label;
-        setLabels(prev => prev.map(label => 
-          label.id === labelId ? updatedLabel : label
-        ));
-        setEditingLabel(null);
-        onLabelUpdated?.(updatedLabel);
-      } else {
-        throw new Error(data.error || 'Failed to update label');
+      if (!currentAccountId) {
+        throw new Error('No account selected');
       }
+
+      const updateData: LabelUpdateRequest = {
+        id: labelId,
+        ...updates
+      };
+
+      // Update label using the store
+      const updatedLabel = await updateLabel(updateData, currentAccountId);
+      
+      // Update local state
+      setLabels(prev => prev.map(label => 
+        label.id === labelId ? updatedLabel : label
+      ));
+      setEditingLabel(null);
+      onLabelUpdated?.(updatedLabel);
     } catch (err) {
       console.error('Error updating label:', err);
       setError(err instanceof Error ? err.message : 'Failed to update label');
@@ -161,18 +154,16 @@ const LabelManager: React.FC<LabelManagerProps> = ({
       setLoading(true);
       setError(null);
 
-      // TODO: Replace with actual Gmail API call
-      const response = await fetch(`/api/gmail/labels/${labelId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        setLabels(prev => prev.filter(label => label.id !== labelId));
-        onLabelDeleted?.(labelId);
-      } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete label');
+      if (!currentAccountId) {
+        throw new Error('No account selected');
       }
+
+      // Delete label using the store
+      await deleteLabel(labelId, currentAccountId);
+      
+      // Update local state
+      setLabels(prev => prev.filter(label => label.id !== labelId));
+      onLabelDeleted?.(labelId);
     } catch (err) {
       console.error('Error deleting label:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete label');
@@ -181,13 +172,13 @@ const LabelManager: React.FC<LabelManagerProps> = ({
     }
   };
 
-  const startEditing = (label: Label) => {
+  const startEditing = (label: GmailLabel) => {
     setEditingLabel(label);
     setFormData({
       name: label.name,
       color: label.color,
-      messageListVisibility: 'show' as const,
-      labelListVisibility: 'show' as const
+      messageListVisibility: label.messageListVisibility,
+      labelListVisibility: label.labelListVisibility
     });
   };
 
@@ -215,29 +206,37 @@ const LabelManager: React.FC<LabelManagerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between border-b p-6">
           <div className="flex items-center space-x-2">
-            <Tag className="h-5 w-5 text-gray-600" />
+            <Tag className="size-5 text-secondary" />
             <h2 className="text-xl font-semibold">Manage Labels</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="rounded-lg p-2 transition-colors hover:bg-surface"
           >
-            <X className="h-5 w-5" />
+            <X className="size-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="max-h-[calc(90vh-140px)] overflow-y-auto p-6">
+          {/* No Account Warning */}
+          {!currentAccountId && (
+            <div className="bg-warning-bg mb-4 flex items-center space-x-2 rounded-lg border border-warning p-3">
+              <AlertCircle className="size-4 text-warning" />
+              <span className="text-warning-fg">Please select a Gmail account to manage labels.</span>
+            </div>
+          )}
+
           {/* Error Display */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <span className="text-red-700">{error}</span>
+            <div className="mb-4 flex items-center space-x-2 rounded-lg border border-error bg-error-ghost p-3">
+              <AlertCircle className="size-4 text-error" />
+              <span className="text-error">{error}</span>
             </div>
           )}
 
@@ -245,33 +244,33 @@ const LabelManager: React.FC<LabelManagerProps> = ({
           <div className="mb-6">
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              disabled={loading}
+              className="flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              disabled={loading || !currentAccountId}
             >
-              <Plus className="h-4 w-4" />
-              <span>Create New Label</span>
+              <Plus className="size-4" />
+              <span>Create new label</span>
             </button>
           </div>
 
           {/* Create Form */}
           {showCreateForm && (
-            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-              <h3 className="font-medium mb-4">Create New Label</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mb-6 rounded-lg border bg-surface p-4">
+              <h3 className="mb-4 font-medium">Create new label</h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-primary">
                     Label Name
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter label name"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-primary">
                     Color
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -279,8 +278,8 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                       <button
                         key={color}
                         onClick={() => setFormData(prev => ({ ...prev, color }))}
-                        className={`w-8 h-8 rounded-full border-2 ${
-                          formData.color === color ? 'border-gray-600' : 'border-gray-300'
+                        className={`size-8 rounded-full border-2 ${
+                          formData.color === color ? 'border-gray-600' : 'border-border-default'
                         }`}
                         style={{ backgroundColor: color }}
                       />
@@ -288,7 +287,7 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-primary">
                     Message List Visibility
                   </label>
                   <select
@@ -297,7 +296,7 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                       ...prev, 
                       messageListVisibility: e.target.value as any 
                     }))}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="show">Show</option>
                     <option value="hide">Hide</option>
@@ -305,7 +304,7 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-primary">
                     Label List Visibility
                   </label>
                   <select
@@ -314,7 +313,7 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                       ...prev, 
                       labelListVisibility: e.target.value as any 
                     }))}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="show">Show</option>
                     <option value="hide">Hide</option>
@@ -322,17 +321,17 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                   </select>
                 </div>
               </div>
-              <div className="flex justify-end space-x-2 mt-4">
+              <div className="mt-4 flex justify-end space-x-2">
                 <button
                   onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-2 text-secondary transition-colors hover:text-primary"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateLabel}
-                  disabled={!formData.name.trim() || loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  disabled={!formData.name.trim() || loading || !currentAccountId}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                 >
                   Create Label
                 </button>
@@ -343,37 +342,37 @@ const LabelManager: React.FC<LabelManagerProps> = ({
           {/* Labels List */}
           <div className="space-y-3">
             {loading && labels.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="py-8 text-center text-secondary">
                 Loading labels...
               </div>
             ) : labels.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="py-8 text-center text-secondary">
                 No labels found. Create your first label to get started.
               </div>
             ) : (
               labels.map(label => (
                 <div
                   key={label.id}
-                  className={`p-4 border rounded-lg ${
-                    editingLabel?.id === label.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                  className={`rounded-lg border p-4 ${
+                    editingLabel?.id === label.id ? 'border-blue-500 bg-blue-50' : 'border-border-default'
                   }`}
                 >
                   {editingLabel?.id === label.id ? (
                     /* Edit Form */
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="mb-1 block text-sm font-medium text-primary">
                           Label Name
                         </label>
                         <input
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="mb-1 block text-sm font-medium text-primary">
                           Color
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -381,27 +380,27 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                             <button
                               key={color}
                               onClick={() => setFormData(prev => ({ ...prev, color }))}
-                              className={`w-6 h-6 rounded-full border-2 ${
-                                formData.color === color ? 'border-gray-600' : 'border-gray-300'
+                              className={`size-6 rounded-full border-2 ${
+                                formData.color === color ? 'border-primary' : 'border-default'
                               }`}
                               style={{ backgroundColor: color }}
                             />
                           ))}
                         </div>
                       </div>
-                      <div className="md:col-span-2 flex justify-end space-x-2">
+                      <div className="flex justify-end space-x-2 md:col-span-2">
                         <button
                           onClick={cancelEditing}
-                          className="px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors"
+                          className="px-3 py-1 text-secondary transition-colors hover:text-primary"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={saveEdit}
-                          disabled={!formData.name.trim() || loading}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+                          disabled={!formData.name.trim() || loading || !currentAccountId}
+                          className="hover:bg-success-fg rounded bg-success px-3 py-1 text-white transition-colors disabled:opacity-50"
                         >
-                          <Check className="h-4 w-4" />
+                          <Check className="size-4" />
                         </button>
                       </div>
                     </div>
@@ -410,20 +409,20 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div
-                          className="w-4 h-4 rounded-full"
+                          className="size-4 rounded-full"
                           style={{ backgroundColor: label.color }}
                         />
                         <div>
                           <div className="font-medium">{label.name}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-secondary">
                             {label.messagesTotal} messages ({label.messagesUnread} unread)
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
+                        <span className={`rounded-full px-2 py-1 text-xs ${
                           label.type === 'system' 
-                            ? 'bg-gray-100 text-gray-600' 
+                            ? 'bg-surface text-secondary' 
                             : 'bg-blue-100 text-blue-600'
                         }`}>
                           {label.type === 'system' ? 'System' : 'User'}
@@ -432,15 +431,17 @@ const LabelManager: React.FC<LabelManagerProps> = ({
                           <>
                             <button
                               onClick={() => startEditing(label)}
-                              className="p-1 hover:bg-gray-100 rounded transition-colors"
+                              className="rounded p-1 transition-colors hover:bg-surface disabled:opacity-50"
+                              disabled={!currentAccountId}
                             >
-                              <Edit2 className="h-4 w-4 text-gray-600" />
+                              <Edit2 className="size-4 text-secondary" />
                             </button>
                             <button
                               onClick={() => handleDeleteLabel(label.id)}
-                              className="p-1 hover:bg-gray-100 rounded transition-colors"
+                              className="rounded p-1 transition-colors hover:bg-surface disabled:opacity-50"
+                              disabled={!currentAccountId}
                             >
-                              <Trash2 className="h-4 w-4 text-red-600" />
+                              <Trash2 className="size-4 text-error" />
                             </button>
                           </>
                         )}
@@ -454,10 +455,10 @@ const LabelManager: React.FC<LabelManagerProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-6 border-t">
+        <div className="flex justify-end border-t p-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="rounded-lg bg-gray-600 px-4 py-2 text-white transition-colors hover:bg-gray-700"
           >
             Close
           </button>

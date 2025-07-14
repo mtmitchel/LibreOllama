@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Card, Text, Caption, Progress, Input } from '../../../components/ui';
-import { Plus, Search, Star, NotebookPen, Settings } from 'lucide-react';
+import { Plus, Search, PanelLeft, Folder, FileText, Calendar, CheckSquare } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -55,13 +55,11 @@ export function ProjectsSidebar({
 
   return (
     <Card 
-      className="w-[340px] flex-shrink-0 flex flex-col"
+      className="flex w-[340px] shrink-0 flex-col"
       padding="default"
     >
       {/* Header */}
-      <div 
-        className="flex justify-between items-center mb-[var(--space-4)]"
-      >
+      <div className="mb-4 flex items-center justify-between">
         <Text size="lg" weight="semibold">All projects</Text>
         <Button 
           onClick={onNewProject}
@@ -73,12 +71,12 @@ export function ProjectsSidebar({
       </div>
 
       {/* Search */}
-      <div className="relative mb-[var(--space-4)] flex-shrink-0">
-        <Search size={16} className="absolute left-[var(--space-3)] top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+      <div className="relative mb-4 shrink-0">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <Input 
           type="search" 
           placeholder="Search projects..." 
-          className="pl-[var(--space-10)]"
+          className="pl-14"
           hasIcon={true}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -86,46 +84,32 @@ export function ProjectsSidebar({
       </div>
 
       {/* Project List */}
-      <div 
-        className="flex-1 overflow-y-auto pr-[var(--space-1)]"
-        style={{ gap: 'var(--space-2)' }}
-      >
-        <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+      <div className="flex-1 overflow-y-auto pr-1">
+        <div className="flex flex-col gap-2">
           {Object.entries(filteredGroupedProjects).map(([status, projectList]) => (
             <div key={status}>
               <Caption 
-                className="uppercase tracking-wider text-[var(--text-secondary)]"
-                style={{ 
-                  padding: `var(--space-2) var(--space-1) var(--space-1)`,
-                  fontWeight: 'var(--font-weight-semibold)'
-                }}
+                className="p-2 pb-1 font-semibold uppercase tracking-wider text-secondary"
               >
                 {status}
               </Caption>
-              <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+              <div className="flex flex-col gap-1">
                 {projectList.map(project => (
                   <Card
                     key={project.id}
                     padding="none"
-                    className={`cursor-pointer group relative ${
+                    className={`group relative cursor-pointer p-3 ${
                       selectedProjectId === project.id 
-                        ? 'bg-accent-soft border-primary' 
-                        : 'hover:bg-[var(--bg-surface)]'
+                        ? 'border-primary bg-accent-soft' 
+                        : 'hover:bg-surface'
                     }`}
                     onClick={() => onSelectProject(project.id)}
                   >
-                    <div style={{ padding: 'var(--space-3)' }}>
-                      <div 
-                        className="flex items-center"
-                        style={{ gap: 'var(--space-3)' }}
-                      >
+                    <div>
+                      <div className="flex items-center gap-3">
                         <span 
-                          className="flex-shrink-0 rounded-full"
-                          style={{ 
-                            backgroundColor: project.color,
-                            width: 'calc(var(--space-2) + var(--space-1))',
-                            height: 'calc(var(--space-2) + var(--space-1))'
-                          }}
+                          className="size-3 shrink-0 rounded-full"
+                          style={{ backgroundColor: project.color }}
                         />
                         <Text weight="semibold" variant="body" className="truncate">
                           {project.name}
@@ -134,23 +118,13 @@ export function ProjectsSidebar({
                       <Text 
                         size="sm" 
                         variant="secondary" 
-                        className="truncate"
-                        style={{ 
-                          marginTop: 'var(--space-1)',
-                          marginLeft: 'calc(var(--space-5) + var(--space-1))'
-                        }}
+                        className="ml-6 mt-1 truncate"
                       >
                         {project.description}
                       </Text>
                       {project.progress !== undefined && (
-                        <div style={{ 
-                          marginTop: 'var(--space-2)',
-                          marginLeft: 'calc(var(--space-5) + var(--space-1))'
-                        }}>
-                          <div 
-                            className="flex justify-between"
-                            style={{ marginBottom: 'var(--space-1)' }}
-                          >
+                        <div className="ml-6 mt-2">
+                          <div className="mb-1 flex justify-between">
                             <Caption>Progress</Caption>
                             <Caption>{project.progress}%</Caption>
                           </div>

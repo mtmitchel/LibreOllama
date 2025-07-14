@@ -14,7 +14,7 @@ export const WidgetSkeleton: React.FC<WidgetSkeletonProps> = ({
     <Card className={`p-6 ${className}`}>
       <div className="animate-pulse">
         {/* Header skeleton */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <Skeleton variant="text" width="8rem" height="1.5rem" />
           <Skeleton variant="rectangular" width="5rem" height="2rem" />
         </div>
@@ -28,12 +28,12 @@ export const WidgetSkeleton: React.FC<WidgetSkeletonProps> = ({
         <div className="space-y-3">
           {Array.from({ length: rows }).map((_, index) => (
             <div key={index} className="flex items-center gap-3">
-              <Skeleton variant="circular" width="1rem" height="1rem" className="flex-shrink-0" />
+              <Skeleton variant="circular" width="1rem" height="1rem" className="shrink-0" />
               <div className="flex-1">
                 <Skeleton variant="text" width="75%" height="1rem" className="mb-1" />
                 <Skeleton variant="text" width="50%" height="0.75rem" />
               </div>
-              <Skeleton variant="text" width="3rem" height="0.75rem" className="flex-shrink-0" />
+              <Skeleton variant="text" width="3rem" height="0.75rem" className="shrink-0" />
             </div>
           ))}
         </div>

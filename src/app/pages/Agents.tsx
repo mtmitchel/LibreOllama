@@ -1,17 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, AddNewCard, Button, Input, Badge, Tag, Heading, Text, FlexibleGrid } from '../../components/ui';
+import React, { useEffect } from 'react';
+import { Card, AddNewCard, Button, Tag, Heading, Text, FlexibleGrid } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
-import { Settings2, Trash2, BrainCog, CodeXml, Library, PlusCircle } from 'lucide-react';
+import { Settings2, Trash2, PlusCircle } from 'lucide-react';
 
-interface Agent {
-  id: string;
-  name: string;
-  model: string;
-  description: string;
-  capabilities: string[];
-  status: 'online' | 'offline';
-  icon: string;
-}
+
 
 export function Agents() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
@@ -20,7 +12,7 @@ export function Agents() {
   const agents = [
     {
       id: '1',
-      name: 'Code Assistant',
+      name: 'Code assistant',
       description: 'Helps with coding tasks and debugging',
       status: 'active',
       lastActive: '2 minutes ago',
@@ -28,7 +20,7 @@ export function Agents() {
     },
     {
       id: '2', 
-      name: 'Research Agent',
+      name: 'Research agent',
       description: 'Performs research and data analysis',
       status: 'idle',
       lastActive: '1 hour ago',
@@ -36,7 +28,7 @@ export function Agents() {
     },
     {
       id: '3',
-      name: 'Content Writer',
+      name: 'Content writer',
       description: 'Creates and edits written content',
       status: 'busy',
       lastActive: 'Active now',
@@ -52,7 +44,7 @@ export function Agents() {
   }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="w-full h-full p-6 lg:p-8">
+    <div className="size-full p-6 lg:p-8">
       <FlexibleGrid minItemWidth={320} gap={6} className="w-full">
         {agents.map((agent) => (
           <Card 
@@ -61,7 +53,7 @@ export function Agents() {
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-[var(--accent-ghost)] text-[var(--accent-primary)]">
+                <div className="flex size-11 items-center justify-center rounded-lg bg-accent-ghost text-accent-primary">
                   {/* Assuming getAgentIcon is removed or not needed here */}
                   {/* <BrainCog /> */}
                 </div>
@@ -106,7 +98,7 @@ export function Agents() {
               </div>
             </div>
             
-            <div className="flex items-center gap-2 pt-4 mt-auto border-t border-[var(--border-default)]">
+            <div className="border-border-default mt-auto flex items-center gap-2 border-t pt-4">
               <Button
                 variant="secondary"
                 size="sm"
@@ -120,7 +112,7 @@ export function Agents() {
                 variant="ghost"
                 size="icon"
                 // onClick={() => handleDeleteAgent(agent.id)}
-                className="ml-auto text-[var(--text-muted)] hover:bg-[var(--error-ghost)] hover:text-[var(--error)]"
+                className="ml-auto text-muted hover:bg-error-ghost hover:text-error"
                 aria-label="Delete agent"
                 title="Delete agent"
               >

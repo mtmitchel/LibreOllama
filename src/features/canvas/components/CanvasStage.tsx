@@ -6,10 +6,9 @@ import UnifiedEventHandler from './UnifiedEventHandler';
 import { CanvasLayerManager } from '../layers/CanvasLayerManager';
 import { ToolLayer } from '../layers/ToolLayer';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { CanvasElement, ElementId, SectionId, ElementOrSectionId } from '../types/enhanced.types';
+import { CanvasElement, ElementId, SectionId } from '../types';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
-import { useCursorManager } from '../utils/performance/cursorManager';
-import { useCanvasSetup } from '../hooks/useCanvasSetup';
+import { useCursorManager, CanvasTool } from '../utils/performance/cursorManager';
 import { canvasLog } from '../utils/canvasLogger';
 
 interface CanvasStageProps {
@@ -35,48 +34,25 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
     selectedElementIds,
     selectedTool,
     elements,
-    sections,
     updateElement,
-    updateSection,
     selectElement,
     setTextEditingElement,
-    handleElementDrop,
-    zoomViewport,
     setViewport
   } = useUnifiedCanvasStore(useShallow((state) => ({
     viewport: state.viewport,
     selectedElementIds: state.selectedElementIds,
     selectedTool: state.selectedTool,
     elements: state.elements,
-    sections: state.sections,
     updateElement: state.updateElement,
-    updateSection: state.updateSection,
     selectElement: state.selectElement,
     setTextEditingElement: state.setTextEditingElement,
-    handleElementDrop: state.handleElementDrop,
-    zoomViewport: state.zoomViewport,
     setViewport: state.setViewport
   })));
-
-  const { width, height } = viewport;
-  const panZoomState = { scale: viewport.scale, position: { x: viewport.x, y: viewport.y } };
 
   // Elements from store - memoized conversion with size-based optimization
   const allElements = useMemo(() => {
     return elements as Map<ElementId | SectionId, CanvasElement>;
   }, [elements]);
-
-  // Memoized elements array for performance-critical operations
-  const elementsArray = useMemo(() => {
-    return Array.from(allElements.values());
-  }, [allElements]);
-
-  // Memoized selected elements for performance
-  const selectedElements = useMemo(() => {
-    return elementsArray.filter(element => 
-      selectedElementIds.has(element.id as ElementId)
-    );
-  }, [elementsArray, selectedElementIds]);
 
   // Static stage configuration (viewport handled separately)
   const stageConfig = useMemo(() => {
@@ -100,24 +76,22 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
     selectElement(element.id as ElementId, e.evt.ctrlKey || e.evt.metaKey);
   }, [selectElement]);
 
-
-
   // Add centralized cursor management
   const cursorManager = useCursorManager();
   
   // Update cursor when tool changes (centralized cursor management)
   useEffect(() => {
     if (stageRef.current) {
-      cursorManager.updateForTool(selectedTool as any);
+      cursorManager.updateForTool(selectedTool as CanvasTool);
     }
-  }, [selectedTool, cursorManager]);
+  }, [selectedTool, cursorManager, stageRef]);
 
   // Initialize cursor manager with stage
   useEffect(() => {
     if (stageRef.current) {
       cursorManager.setStage(stageRef.current);
     }
-  }, [cursorManager]);
+  }, [cursorManager, stageRef]);
 
   // Store-first wheel zoom (following React-Konva best practices)
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -149,7 +123,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
       x: pointer.x - mousePointTo.x * newScale,
       y: pointer.y - mousePointTo.y * newScale
     });
-  }, [viewport, setViewport])
+  }, [viewport, setViewport, stageRef])
 
   // Sync stage with viewport store (store-first architecture)
   useEffect(() => {
@@ -159,7 +133,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
       stage.position({ x: viewport.x, y: viewport.y });
       stage.batchDraw();
     }
-  }, [viewport.scale, viewport.x, viewport.y]);
+  }, [viewport.scale, viewport.x, viewport.y, stageRef]);
 
   return (
     <CanvasErrorBoundary
@@ -173,11 +147,7 @@ const CanvasStage: React.FC<CanvasStageProps> = ({ stageRef: externalStageRef })
       <Stage
         ref={stageRef}
         {...stageConfig}
-        style={{ 
-          backgroundColor: 'var(--canvas-bg, var(--bg-surface))',
-          fontFamily: 'var(--font-sans)',
-          color: 'var(--text-primary)'
-        }}
+        className="text-text-primary bg-canvas font-sans"
         onWheel={handleWheel}
       >
         <UnifiedEventHandler stageRef={stageRef} />

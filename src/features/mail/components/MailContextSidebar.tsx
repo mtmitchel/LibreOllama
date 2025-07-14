@@ -5,11 +5,14 @@ import {
   CheckSquare, 
   Pin, 
   Calendar, 
+  CalendarDays,
   User, 
   ExternalLink,
   Plus,
   PanelRight,
   Mail,
+  MessageSquare,
+  Inbox,
   Paperclip,
   Tag
 } from 'lucide-react';
@@ -17,7 +20,7 @@ import {
 interface ContextItem {
   id: string;
   title: string;
-  type: 'note' | 'task' | 'project' | 'message' | 'attachment' | 'label';
+  type: 'note' | 'task' | 'project' | 'message' | 'attachment' | 'label' | 'event' | 'chat' | 'mail';
   status?: 'pending' | 'in-progress' | 'completed';
   date?: string;
   priority?: 'low' | 'medium' | 'high';
@@ -43,6 +46,9 @@ const getItemIcon = (type: ContextItem['type']) => {
     case 'task': return <CheckSquare size={14} />;
     case 'project': return <Calendar size={14} />;
     case 'message': return <Mail size={14} />;
+    case 'event': return <CalendarDays size={14} />;
+    case 'chat': return <MessageSquare size={14} />;
+    case 'mail': return <Inbox size={14} />;
     case 'attachment': return <Paperclip size={14} />;
     case 'label': return <Tag size={14} />;
     default: return <FileText size={14} />;
@@ -80,38 +86,32 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
   // If closed, show only the toggle button
   if (!isOpen) {
     return (
-      <Card className="w-16 h-full flex flex-col bg-[var(--bg-secondary)]/30" padding="none">
+      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
         <div 
-          className="border-b border-[var(--border-default)] flex flex-col items-center"
-          style={{ padding: 'var(--space-3)' }}
+          className="border-border-default flex flex-col items-center border-b p-3"
         >
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggle}
             title="Show context panel"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
+            className="text-secondary hover:bg-tertiary hover:text-primary"
           >
             <PanelRight size={20} />
           </Button>
         </div>
         
         <div 
-          className="flex-1 flex flex-col items-center"
-          style={{ 
-            paddingTop: 'var(--space-4)',
-            gap: 'var(--space-3)'
-          }}
+          className="flex flex-1 flex-col items-center gap-3 pt-4"
         >
           {/* Context indicators */}
-          <div 
-            className="flex flex-col items-center"
-            style={{ gap: 'var(--space-2)' }}
-          >
+                      <div 
+              className="flex flex-col items-center gap-2"
+            >
             {/* Attachments indicator */}
             <div 
               title="Attachments"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <Paperclip size={14} />
             </div>
@@ -119,7 +119,7 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
             {/* Tasks indicator */}
             <div 
               title="Related Tasks"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <CheckSquare size={14} />
             </div>
@@ -127,7 +127,7 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
             {/* Notes indicator */}
             <div 
               title="Linked Notes"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <FileText size={14} />
             </div>
@@ -135,15 +135,15 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
             {/* Related messages indicator */}
             <div 
               title="Related Messages"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <Mail size={14} />
             </div>
             
-            {/* Labels indicator */}
+            {/* Tags indicator */}
             <div 
-              title="Labels"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              title="Tags"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <Tag size={14} />
             </div>
@@ -151,13 +151,9 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
           
           {/* Context count indicator */}
           <div 
-            className="flex flex-col items-center mt-2"
-            style={{ 
-              gap: 'var(--space-1)',
-              marginTop: 'var(--space-2)'
-            }}
+            className="mt-2 flex flex-col items-center gap-1"
           >
-            <div className="w-6 h-6 bg-[var(--accent-primary)] rounded-full flex items-center justify-center">
+            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
               <Text size="xs" weight="bold" className="text-white">
                 {contextData.length}
               </Text>
@@ -175,7 +171,10 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
   const relatedTasks = contextData.filter(item => item.type === 'task');
   const linkedNotes = contextData.filter(item => item.type === 'note');
   const relatedMessages = contextData.filter(item => item.type === 'message');
-  const labels = contextData.filter(item => item.type === 'label');
+  const relatedEvents = contextData.filter(item => item.type === 'event');
+  const relatedChats = contextData.filter(item => item.type === 'chat');
+  const relatedMails = contextData.filter(item => item.type === 'mail');
+  const tags = contextData.filter(item => item.type === 'label');
   const relatedProjects = contextData.filter(item => item.type === 'project');
 
   const ContextSection = ({ title, items, icon }: { title: string; items: ContextItem[]; icon: React.ReactNode }) => {
@@ -184,13 +183,13 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
     return (
       <div>
         <div 
-          className="flex items-center mb-3"
+          className="mb-3 flex items-center"
           style={{ 
             marginBottom: 'var(--space-3)',
             gap: 'var(--space-2)'
           }}
         >
-          <div className="text-[var(--text-secondary)]">{icon}</div>
+          <div className="text-secondary">{icon}</div>
           <Text size="sm" weight="semibold" variant="body">
             {title}
           </Text>
@@ -201,27 +200,27 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
         
         <div 
           className="space-y-2"
-          style={{ gap: 'var(--space-2)' }}
+          className="gap-2"
         >
           {items.map(item => (
             <Card
               key={item.id}
               padding="sm"
-              className="cursor-pointer hover:bg-[var(--bg-surface)] transition-colors border border-[var(--border-default)]"
+              className="border-border-default cursor-pointer border transition-colors hover:bg-surface"
             >
               <div 
                 className="flex items-start"
-                style={{ gap: 'var(--space-2)' }}
+                className="gap-2"
               >
-                <div className="text-[var(--text-secondary)] mt-1">
+                <div className="mt-1 text-secondary">
                   {getItemIcon(item.type)}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <Text size="sm" weight="medium" className="truncate">
                     {item.title}
                   </Text>
                   <div 
-                    className="flex items-center mt-1"
+                    className="mt-1 flex items-center"
                     style={{ 
                       gap: 'var(--space-2)',
                       marginTop: 'var(--space-1)'
@@ -241,7 +240,7 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="size-6 text-secondary opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
                 >
                   <ExternalLink size={12} />
                 </Button>
@@ -254,14 +253,13 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
   };
 
   return (
-    <Card className="w-80 flex-shrink-0 flex flex-col h-full" padding="none">
+    <Card className="flex h-full w-80 shrink-0 flex-col" padding="none">
       {/* Header */}
       <div 
-        className="border-b border-[var(--border-default)] flex items-center justify-between"
-        style={{ padding: 'var(--space-4)' }}
+        className="border-border-default flex items-center justify-between border-b p-4"
       >
         <div>
-          <Heading level={4} style={{ marginBottom: 'var(--space-1)' }}>
+          <Heading level={4} className="mb-1">
             Context
           </Heading>
           <Text variant="secondary" size="sm">
@@ -274,7 +272,7 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
             size="icon"
             onClick={onToggle}
             title="Hide context panel"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="text-secondary hover:text-primary"
           >
             <PanelRight size={18} />
           </Button>
@@ -283,29 +281,26 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
 
       {/* Content */}
       <div 
-        className="flex-1 overflow-y-auto"
-        style={{ padding: 'var(--space-4)' }}
+        className="flex-1 overflow-y-auto p-4"
       >
         <div 
-          className="space-y-6"
-          style={{ gap: 'var(--space-6)' }}
+          className="gap-6 space-y-6"
         >
           {/* Quick Actions */}
           <div>
-            <Text size="sm" weight="semibold" variant="body" style={{ marginBottom: 'var(--space-3)' }}>
-              Quick Actions
+            <Text size="sm" weight="semibold" variant="body" className="mb-3">
+              Quick actions
             </Text>
             <div 
-              className="grid grid-cols-2"
-              style={{ gap: 'var(--space-2)' }}
+              className="grid grid-cols-2 gap-2"
             >
               <Button variant="outline" size="sm" className="justify-start">
                 <CheckSquare size={14} />
-                Create Task
+                Create task
               </Button>
               <Button variant="outline" size="sm" className="justify-start">
                 <FileText size={14} />
-                Take Note
+                Take note
               </Button>
               <Button variant="outline" size="sm" className="justify-start">
                 <Calendar size={14} />
@@ -313,15 +308,18 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
               </Button>
               <Button variant="outline" size="sm" className="justify-start">
                 <Tag size={14} />
-                Add Label
+                Add tag
               </Button>
             </div>
           </div>
 
+          {/* Separator */}
+          <div className="border-border-subtle border-t" />
+
           {/* Show empty state if no context data */}
           {contextData.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-[var(--text-tertiary)] mb-2">
+            <div className="py-8 text-center">
+              <div className="mb-2 text-muted">
                 <FileText size={24} className="mx-auto" />
               </div>
               <Text size="sm" variant="secondary" className="mb-1">
@@ -359,14 +357,32 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
               />
               
               <ContextSection 
+                title="Related Events" 
+                items={relatedEvents} 
+                icon={<CalendarDays size={16} />} 
+              />
+              
+              <ContextSection 
+                title="Related Chats" 
+                items={relatedChats} 
+                icon={<MessageSquare size={16} />} 
+              />
+              
+              <ContextSection 
+                title="Related Mails" 
+                items={relatedMails} 
+                icon={<Inbox size={16} />} 
+              />
+              
+              <ContextSection 
                 title="Projects" 
                 items={relatedProjects} 
                 icon={<Calendar size={16} />} 
               />
               
               <ContextSection 
-                title="Labels" 
-                items={labels} 
+                title="Tags" 
+                items={tags} 
                 icon={<Tag size={16} />} 
               />
             </>

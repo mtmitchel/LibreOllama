@@ -21,38 +21,38 @@ const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
 
     const variantClasses = {
       solid: {
-        primary: 'bg-[var(--accent-primary)] text-white',
-        success: 'bg-[var(--success-ghost)] text-[var(--success)]',
-        warning: 'bg-[var(--warning-ghost)] text-[var(--warning)]',
-        error: 'bg-[var(--error-ghost)] text-[var(--error)]',
-        muted: 'bg-[var(--bg-secondary)] text-[var(--text-secondary)]',
-        info: 'bg-[var(--info-ghost)] text-[var(--info)]',
+        primary: 'bg-accent-primary text-white',
+        success: 'bg-success text-white',
+        warning: 'bg-warning text-white',
+        error: 'bg-error text-white',
+        muted: 'bg-secondary text-secondary',
+        info: 'bg-accent-soft text-accent-primary',
       },
       ghost: {
-        primary: 'border border-[var(--accent-primary)] text-[var(--accent-primary)] bg-transparent',
-        success: 'border border-[var(--success)] text-[var(--success)] bg-transparent',
-        warning: 'border border-[var(--warning)] text-[var(--warning)] bg-transparent',
-        error: 'border border-[var(--error)] text-[var(--error)] bg-transparent',
-        muted: 'border border-[var(--border-default)] text-[var(--text-secondary)] bg-transparent',
-        info: 'border border-[var(--info)] text-[var(--info)] bg-transparent',
+        primary: 'border border-accent-primary text-accent-primary bg-transparent',
+        success: 'border border-success text-success bg-transparent',
+        warning: 'border border-warning text-warning bg-transparent',
+        error: 'border border-error text-error bg-transparent',
+        muted: 'border border-primary text-secondary bg-transparent',
+        info: 'border border-accent-primary text-accent-primary bg-transparent',
       },
       dot: {
-        primary: 'text-[var(--text-primary)]',
-        success: 'text-[var(--text-primary)]',
-        warning: 'text-[var(--text-primary)]',
-        error: 'text-[var(--text-primary)]',
-        muted: 'text-[var(--text-secondary)]',
-        info: 'text-[var(--text-primary)]',
+        primary: 'text-primary',
+        success: 'text-primary',
+        warning: 'text-primary',
+        error: 'text-primary',
+        muted: 'text-secondary',
+        info: 'text-primary',
       },
     };
 
     const dotClasses = {
-      primary: 'bg-[var(--accent-primary)]',
-      success: 'bg-[var(--success)]',
-      warning: 'bg-[var(--warning)]',
-      error: 'bg-[var(--error)]',
-      muted: 'bg-[var(--text-secondary)]',
-      info: 'bg-[var(--info)]',
+      primary: 'bg-accent-primary',
+      success: 'bg-success',
+      warning: 'bg-warning',
+      error: 'bg-error',
+      muted: 'bg-secondary',
+      info: 'bg-accent-primary',
     };
 
     return (
@@ -69,7 +69,7 @@ const Tag = React.forwardRef<HTMLSpanElement, TagProps>(
         {variant === 'dot' && (
           <span
             className={cn(
-              'w-2 h-2 rounded-full mr-2 flex-shrink-0',
+              'mr-2 size-2 shrink-0 rounded-full',
               dotClasses[color]
             )}
           />

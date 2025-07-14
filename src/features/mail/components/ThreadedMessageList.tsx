@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Star, Paperclip, ChevronRight, ChevronDown, Users } from 'lucide-react';
-import { Text, Card } from '../../../components/ui';
+import { Text, Card, EmptyState } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail, EmailThread } from '../types';
@@ -86,70 +86,70 @@ function ThreadItem({
   };
 
   return (
-    <div className="border-b border-[var(--border-default)]">
+    <div className="border-border-default border-b">
       {/* Main thread row */}
       <div
         className={`cursor-pointer transition-colors duration-150 ${
-          hasUnreadMessages ? 'bg-[var(--bg-tertiary)] font-medium' : 'bg-[var(--bg-tertiary)]'
-        } ${isSelected ? 'bg-[var(--accent-soft)]' : ''} hover:bg-[var(--bg-secondary)]`}
+          hasUnreadMessages ? 'bg-tertiary font-medium' : 'bg-tertiary'
+        } ${isSelected ? 'bg-accent-soft' : ''} hover:bg-secondary`}
         onClick={() => onThreadClick(thread)}
       >
         <div 
-          className="flex items-center overflow-hidden w-full"
+          className="flex w-full items-center overflow-hidden"
           style={{ 
             padding: 'var(--space-2) var(--space-3)',
             gap: 'var(--space-2)'
           }}
         >
           {/* Checkbox */}
-          <div className="flex-shrink-0 w-3 flex items-center justify-center">
+          <div className="flex w-3 shrink-0 items-center justify-center">
             <input
               type="checkbox"
               checked={isSelected}
               onChange={handleCheckboxChange}
-              className="w-3 h-3 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded-none focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0 cursor-pointer"
+              className="border-border-default focus:ring-accent-primary size-3 cursor-pointer rounded-none bg-transparent text-accent-primary focus:ring-1 focus:ring-offset-0"
               style={{ transform: 'scale(0.5)' }}
             />
           </div>
 
           {/* Expand/Collapse toggle */}
           {thread.messageCount > 1 && (
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <button
                 onClick={handleToggleExpanded}
-                className="p-1 hover:bg-[var(--bg-tertiary)] rounded transition-colors duration-150"
+                className="rounded p-1 transition-colors duration-150 hover:bg-tertiary"
               >
                 {isExpanded ? (
-                  <ChevronDown size={14} className="text-[var(--text-secondary)]" />
+                  <ChevronDown size={14} className="text-secondary" />
                 ) : (
-                  <ChevronRight size={14} className="text-[var(--text-secondary)]" />
+                  <ChevronRight size={14} className="text-secondary" />
                 )}
               </button>
             </div>
           )}
 
           {/* Star */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <button
               onClick={handleStarClick}
-              className="p-1 hover:bg-[var(--bg-tertiary)] rounded transition-colors duration-150"
+              className="rounded p-1 transition-colors duration-150 hover:bg-tertiary"
             >
               <Star
                 size={16}
                 className={`${
                   hasStarredMessages 
-                    ? 'text-yellow-500 fill-yellow-500' 
-                    : 'text-[var(--border-default)] hover:text-[var(--text-secondary)]'
+                    ? 'fill-warning text-warning' 
+                    : 'text-border-primary hover:text-text-secondary'
                 } transition-colors duration-150`}
               />
             </button>
           </div>
 
           {/* Participants */}
-          <div className="flex-shrink-0 w-32 min-w-0">
+          <div className="w-32 min-w-0 shrink-0">
             <div className="flex items-center gap-1">
               {thread.messageCount > 1 && (
-                <Users size={12} className="text-[var(--text-tertiary)] flex-shrink-0" />
+                <Users size={12} className="shrink-0 text-muted" />
               )}
               <Text 
                 size="sm" 
@@ -163,13 +163,13 @@ function ThreadItem({
           </div>
 
           {/* Subject and Snippet */}
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="flex items-baseline min-w-0" style={{ gap: 'var(--space-1)' }}>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="flex min-w-0 items-baseline" className="gap-1">
               <Text 
                 size="sm" 
                 weight={hasUnreadMessages ? 'semibold' : 'normal'}
                 variant="body"
-                className="truncate flex-shrink-0"
+                className="shrink-0 truncate"
                 style={{ maxWidth: '180px' }}
               >
                 {truncateText(thread.subject || '(no subject)', 35)}
@@ -177,7 +177,7 @@ function ThreadItem({
               <Text 
                 size="sm" 
                 variant="secondary"
-                className="truncate flex-1 min-w-0"
+                className="min-w-0 flex-1 truncate"
               >
                 — {truncateText(latestMessage?.snippet || '', 60)}
               </Text>
@@ -186,8 +186,8 @@ function ThreadItem({
 
           {/* Message count */}
           {thread.messageCount > 1 && (
-            <div className="flex-shrink-0">
-              <span className="text-xs px-2 py-1 bg-[var(--bg-secondary)] text-[var(--text-secondary)] rounded-full">
+            <div className="shrink-0">
+              <span className="rounded-full bg-secondary px-2 py-1 text-xs text-secondary">
                 {thread.messageCount}
               </span>
             </div>
@@ -195,13 +195,13 @@ function ThreadItem({
 
           {/* Attachments */}
           {thread.hasAttachments && (
-            <div className="flex-shrink-0">
-              <Paperclip size={14} className="text-[var(--text-secondary)]" />
+            <div className="shrink-0">
+              <Paperclip size={14} className="text-secondary" />
             </div>
           )}
 
           {/* Date */}
-          <div className="flex-shrink-0 w-12 text-right min-w-0">
+          <div className="w-12 min-w-0 shrink-0 text-right">
             <Text 
               size="xs" 
               weight={hasUnreadMessages ? 'semibold' : 'normal'}
@@ -216,21 +216,21 @@ function ThreadItem({
 
       {/* Expanded messages */}
       {isExpanded && thread.messageCount > 1 && (
-        <div className="bg-[var(--bg-primary)] border-l-2 border-[var(--accent-primary)] ml-8">
+        <div className="ml-8 border-l-2 border-accent-primary bg-primary">
           {thread.messages.slice(0, -1).map((message, index) => (
             <div
               key={message.id}
-              className="cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors duration-150"
+              className="cursor-pointer transition-colors duration-150 hover:bg-secondary"
               onClick={() => onThreadClick(thread)}
             >
               <div 
-                className="flex items-center overflow-hidden w-full"
+                className="flex w-full items-center overflow-hidden"
                 style={{ 
                   padding: 'var(--space-1) var(--space-3)',
                   gap: 'var(--space-2)'
                 }}
               >
-                <div className="flex-shrink-0 w-20 min-w-0">
+                <div className="w-20 min-w-0 shrink-0">
                   <Text 
                     size="xs" 
                     weight={!message.isRead ? 'semibold' : 'normal'}
@@ -241,7 +241,7 @@ function ThreadItem({
                   </Text>
                 </div>
                 
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <Text 
                     size="xs" 
                     variant="secondary"
@@ -251,7 +251,7 @@ function ThreadItem({
                   </Text>
                 </div>
                 
-                <div className="flex-shrink-0 w-12 text-right">
+                <div className="w-12 shrink-0 text-right">
                   <Text 
                     size="xs" 
                     variant="secondary"
@@ -412,17 +412,17 @@ export function ThreadedMessageList() {
     };
 
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <Text size="lg" variant="body" style={{ marginBottom: 'var(--space-2)' }}>
+          <Text size="lg" variant="body" className="mb-2">
             Unable to load messages
           </Text>
-          <Text size="sm" variant="secondary" style={{ marginBottom: 'var(--space-3)' }}>
+          <Text size="sm" variant="secondary" className="mb-3">
             {error}
           </Text>
           <button
             onClick={handleRetry}
-            className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded hover:bg-[var(--accent-primary-hover)] transition-colors"
+            className="hover:bg-accent-primary-hover rounded bg-accent-primary px-4 py-2 text-white transition-colors"
           >
             Retry
           </button>
@@ -433,7 +433,7 @@ export function ThreadedMessageList() {
 
   if (isLoadingMessages) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
           <Text size="lg" variant="secondary">
             Loading conversations...
@@ -445,22 +445,20 @@ export function ThreadedMessageList() {
 
   if (threads.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Text size="lg" variant="body" style={{ marginBottom: 'var(--space-2)' }}>
-            No conversations found
-          </Text>
-          <Text size="sm" variant="secondary">
-            Your inbox is empty or try a different search.
-          </Text>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <EmptyState
+          title="No conversations found"
+          message="Your inbox is empty or try a different search."
+          icon="📧"
+          size="md"
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex-1 overflow-y-auto min-h-0">
+    <div className="flex flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="min-h-full">
           {threads.map((thread) => {
             const isSelected = thread.messages.some(msg => selectedMessages.includes(msg.id));

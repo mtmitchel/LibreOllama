@@ -101,17 +101,11 @@ export function MailToolbar() {
   };
 
   return (
-    <div 
-      className="flex items-center justify-between bg-[var(--bg-tertiary)]"
-      style={{ 
-        padding: 'var(--space-3) var(--space-4)',
-        gap: 'var(--space-2)'
-      }}
-    >
+    <div className="flex items-center justify-between gap-2 bg-tertiary px-4 py-3">
       {/* Left Side - Selection and Actions */}
-      <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+      <div className="flex items-center gap-2">
         {/* Select All Checkbox */}
-        <div className="relative w-3 flex items-center justify-center">
+        <div className="relative flex size-5 items-center justify-center">
           <input
             type="checkbox"
             checked={isAllSelected}
@@ -119,8 +113,7 @@ export function MailToolbar() {
               if (input) input.indeterminate = isPartiallySelected;
             }}
             onChange={handleSelectAll}
-            className="w-3 h-3 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded-none focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0 cursor-pointer"
-            style={{ transform: 'scale(0.5)' }}
+            className="border-border-default focus:ring-accent-primary size-4 cursor-pointer rounded bg-transparent text-accent-primary focus:ring-1 focus:ring-offset-0"
           />
         </div>
 
@@ -130,7 +123,7 @@ export function MailToolbar() {
           size="icon"
           onClick={handleRefresh}
           disabled={isLoadingMessages}
-          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          className="size-8 text-secondary hover:text-primary"
           title="Refresh"
         >
           <RefreshCw size={16} className={isLoadingMessages ? 'animate-spin' : ''} />
@@ -139,13 +132,13 @@ export function MailToolbar() {
         {/* Action Buttons - Only show when messages are selected */}
         {selectedCount > 0 && (
           <>
-            <div className="w-px h-6 bg-[var(--border-default)] mx-1" />
+            <div className="bg-border-default mx-1 h-6 w-px" />
             
             <Button
               variant="ghost"
               size="icon"
               onClick={handleArchive}
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="size-8 text-secondary hover:text-primary"
               title="Archive"
             >
               <Archive size={16} />
@@ -155,7 +148,7 @@ export function MailToolbar() {
               variant="ghost"
               size="icon"
               onClick={handleDelete}
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="size-8 text-secondary hover:text-primary"
               title="Delete"
             >
               <Trash2 size={16} />
@@ -165,7 +158,7 @@ export function MailToolbar() {
               variant="ghost"
               size="icon"
               onClick={handleMarkAsRead}
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="size-8 text-secondary hover:text-primary"
               title="Mark as read"
             >
               <MailOpen size={16} />
@@ -175,7 +168,7 @@ export function MailToolbar() {
               variant="ghost"
               size="icon"
               onClick={handleMarkAsUnread}
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="size-8 text-secondary hover:text-primary"
               title="Mark as unread"
             >
               <Mail size={16} />
@@ -185,7 +178,7 @@ export function MailToolbar() {
               variant="ghost"
               size="icon"
               onClick={handleStar}
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="size-8 text-secondary hover:text-primary"
               title="Add star"
             >
               <Star size={16} />
@@ -194,7 +187,7 @@ export function MailToolbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="size-8 text-secondary hover:text-primary"
               title="Snooze"
             >
               <Clock size={16} />
@@ -203,13 +196,13 @@ export function MailToolbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="size-8 text-secondary hover:text-primary"
               title="More"
             >
               <MoreHorizontal size={16} />
             </Button>
 
-            <div className="w-px h-6 bg-[var(--border-default)] mx-1" />
+            <div className="bg-border-default mx-1 h-6 w-px" />
             
             <Text size="sm" variant="secondary">
               {selectedCount} selected
@@ -219,7 +212,7 @@ export function MailToolbar() {
       </div>
 
       {/* Right Side - Pagination */}
-      <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
+      <div className="flex items-center gap-2">
         {/* Pagination Display */}
         <Text size="sm" variant="secondary">
           {(() => {
@@ -258,7 +251,7 @@ export function MailToolbar() {
           size="icon"
           onClick={handlePreviousPage}
           disabled={!isHydrated || messagesLoadedSoFar === 0 || isLoadingMessages}
-          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="size-8 text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
           title={!isHydrated ? "Loading..." : "Previous page"}
         >
           <ChevronLeft size={16} />
@@ -269,7 +262,7 @@ export function MailToolbar() {
           size="icon"
           onClick={handleNextPage}
           disabled={!isHydrated || !nextPageToken || isLoadingMessages}
-          className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="size-8 text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
           title={!isHydrated ? "Loading..." : "Next page"}
         >
           <ChevronRight size={16} />

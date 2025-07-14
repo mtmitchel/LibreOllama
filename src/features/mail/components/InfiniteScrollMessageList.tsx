@@ -70,40 +70,33 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick, style }: M
   return (
     <div
       style={style}
-      className={`transition-colors duration-150 border-b border-[var(--border-default)] ${
-        !message.isRead ? 'bg-[var(--bg-tertiary)] font-medium' : 'bg-[var(--bg-tertiary)]'
-      } ${isSelected ? 'bg-[var(--accent-soft)]' : ''} hover:bg-[var(--bg-secondary)]`}
+      className={`border-border-primary border-b transition-colors duration-150 ${
+        !message.isRead ? 'bg-bg-tertiary font-medium' : 'bg-bg-tertiary'
+      } ${isSelected ? 'bg-accent-bg' : ''} hover:bg-bg-secondary`}
     >
-      <div 
-        className="flex items-center overflow-hidden w-full"
-        style={{ 
-          padding: 'var(--space-2) var(--space-3)',
-          gap: 'var(--space-2)'
-        }}
-      >
+      <div className="flex w-full items-center gap-2 overflow-hidden p-2 px-3">
         {/* Checkbox */}
-        <div className="flex-shrink-0 w-3 flex items-center justify-center">
+        <div className="flex w-3 shrink-0 items-center justify-center">
           <input
             type="checkbox"
             checked={isSelected}
             onChange={handleCheckboxChange}
-            className="w-3 h-3 text-[var(--accent-primary)] bg-transparent border-[var(--border-default)] rounded-none focus:ring-[var(--accent-primary)] focus:ring-1 focus:ring-offset-0 cursor-pointer"
-            style={{ transform: 'scale(0.5)' }}
+            className="border-border-primary focus:ring-accent-primary size-3 scale-50 cursor-pointer rounded-none bg-transparent text-accent-primary focus:ring-1 focus:ring-offset-0"
           />
         </div>
 
         {/* Star */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <button
             onClick={handleStarClick}
-            className="p-1 hover:bg-[var(--bg-tertiary)] rounded transition-colors duration-150"
+            className="hover:bg-bg-tertiary rounded p-1 transition-colors duration-150"
           >
             <Star
               size={16}
               className={`${
                 message.isStarred 
-                  ? 'text-yellow-500 fill-yellow-500' 
-                  : 'text-[var(--border-default)] hover:text-[var(--text-secondary)]'
+                  ? 'fill-warning text-warning' 
+                  : 'text-border-primary hover:text-text-secondary'
               } transition-colors duration-150`}
             />
           </button>
@@ -111,7 +104,7 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick, style }: M
 
         {/* Sender */}
         <div 
-          className="flex-shrink-0 w-28 min-w-0 cursor-pointer"
+          className="w-28 min-w-0 shrink-0 cursor-pointer"
           onClick={() => onMessageClick(message)}
         >
           <Text 
@@ -126,15 +119,15 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick, style }: M
 
         {/* Subject and Snippet */}
         <div 
-          className="flex-1 min-w-0 overflow-hidden cursor-pointer"
+          className="min-w-0 flex-1 cursor-pointer overflow-hidden"
           onClick={() => onMessageClick(message)}
         >
-          <div className="flex items-baseline min-w-0" style={{ gap: 'var(--space-1)' }}>
+          <div className="flex min-w-0 items-baseline gap-1">
             <Text 
               size="sm" 
               weight={!message.isRead ? 'semibold' : 'normal'}
               variant="body"
-              className="truncate flex-shrink-0"
+              className="shrink-0 truncate"
               style={{ maxWidth: '180px' }}
             >
               {truncateText(message.subject || '(no subject)', 35)}
@@ -142,7 +135,7 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick, style }: M
             <Text 
               size="sm" 
               variant="secondary"
-              className="truncate flex-1 min-w-0"
+              className="min-w-0 flex-1 truncate"
             >
               — {truncateText(message.snippet, 60)}
             </Text>
@@ -151,13 +144,13 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick, style }: M
 
         {/* Attachments */}
         {message.attachments.length > 0 && (
-          <div className="flex-shrink-0">
-            <Paperclip size={14} className="text-[var(--text-secondary)]" />
+          <div className="shrink-0">
+            <Paperclip size={14} className="text-secondary" />
           </div>
         )}
 
         {/* Date */}
-        <div className="flex-shrink-0 w-12 text-right min-w-0">
+        <div className="w-12 min-w-0 shrink-0 text-right">
           <Text 
             size="xs" 
             weight={!message.isRead ? 'semibold' : 'normal'}
@@ -176,9 +169,9 @@ function LoadingItem({ style }: { style?: React.CSSProperties }) {
   return (
     <div 
       style={style}
-      className="flex items-center justify-center py-4 border-b border-[var(--border-default)]"
+      className="border-border-default flex items-center justify-center border-b py-4"
     >
-      <Loader2 size={20} className="animate-spin text-[var(--text-secondary)]" />
+      <Loader2 size={20} className="animate-spin text-secondary" />
     </div>
   );
 }
@@ -314,17 +307,17 @@ export function InfiniteScrollMessageList({
     };
 
     return (
-      <div className={`flex-1 flex items-center justify-center ${className}`}>
+      <div className={`flex flex-1 items-center justify-center ${className}`}>
         <div className="text-center">
-          <Text size="lg" variant="body" style={{ marginBottom: 'var(--space-2)' }}>
+          <Text size="lg" variant="body" className="mb-2">
             Unable to load messages
           </Text>
-          <Text size="sm" variant="secondary" style={{ marginBottom: 'var(--space-3)' }}>
+          <Text size="sm" variant="secondary" className="mb-3">
             {error}
           </Text>
           <button
             onClick={handleRetry}
-            className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded hover:bg-[var(--accent-primary-hover)] transition-colors"
+            className="hover:bg-accent-primary-hover rounded bg-accent-primary px-4 py-2 text-white transition-colors"
           >
             Retry
           </button>
@@ -335,9 +328,9 @@ export function InfiniteScrollMessageList({
 
   if (isLoadingMessages && allMessages.length === 0) {
     return (
-      <div className={`flex-1 flex items-center justify-center ${className}`}>
+      <div className={`flex flex-1 items-center justify-center ${className}`}>
         <div className="text-center">
-          <Loader2 size={24} className="animate-spin mb-2" />
+          <Loader2 size={24} className="mb-2 animate-spin" />
           <Text size="lg" variant="secondary">
             Loading messages...
           </Text>
@@ -348,9 +341,9 @@ export function InfiniteScrollMessageList({
 
   if (allMessages.length === 0) {
     return (
-      <div className={`flex-1 flex items-center justify-center ${className}`}>
+      <div className={`flex flex-1 items-center justify-center ${className}`}>
         <div className="text-center">
-          <Text size="lg" variant="body" style={{ marginBottom: 'var(--space-2)' }}>
+          <Text size="lg" variant="body" className="mb-2">
             No messages found
           </Text>
           <Text size="sm" variant="secondary">
@@ -362,12 +355,12 @@ export function InfiniteScrollMessageList({
   }
 
   return (
-    <div className={`flex-1 flex flex-col ${className}`}>
+    <div className={`flex flex-1 flex-col ${className}`}>
       {/* Status bar */}
-      <div className="px-4 py-2 bg-[var(--bg-secondary)] border-b border-[var(--border-default)]">
+      <div className="border-border-default border-b bg-secondary px-4 py-2">
         <Text size="sm" variant="secondary">
           {messagesLoadedSoFar} of {totalMessages} messages loaded
-          {nextPageToken && <span className="ml-2 text-[var(--accent-primary)]">• Loading more...</span>}
+          {nextPageToken && <span className="ml-2 text-accent-primary">• Loading more...</span>}
         </Text>
       </div>
 

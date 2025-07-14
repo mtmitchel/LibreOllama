@@ -70,12 +70,12 @@ export const withAuthGuard = <T extends object>(Component: React.ComponentType<T
 
     if (!authState.hasValidAuth) {
       return (
-        <div className="flex items-center justify-center h-32 bg-[var(--bg-secondary)] rounded-lg border-2 border-dashed border-[var(--border-default)]">
+        <div className="border-border-default flex h-32 items-center justify-center rounded-lg border-2 border-dashed bg-secondary">
           <div className="text-center">
-            <p className="text-[var(--text-secondary)] text-sm mb-2">
+            <p className="mb-2 text-sm text-secondary">
               Gmail authentication required
             </p>
-            <p className="text-xs text-[var(--text-tertiary)]">
+            <p className="text-xs text-muted">
               Please sign in to access mail features
             </p>
           </div>

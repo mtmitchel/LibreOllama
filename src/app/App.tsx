@@ -6,6 +6,7 @@ import Sidebar from '../components/navigation/Sidebar';
 import { TopBar } from '../components/layout/TopBar';
 import { CommandPalette } from '../components/CommandPalette';
 import { useCommandPalette } from '../core/hooks/useCommandPalette';
+import { StagewiseToolbar } from '@stagewise/toolbar-react';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -25,13 +26,13 @@ import Settings from './pages/Settings';
  */
 const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => {
   return (
-    <div className="h-full flex-1 flex flex-col overflow-hidden">
+    <div className="flex h-full flex-1 flex-col overflow-hidden">
       <header role="banner">
         <TopBar />
       </header>
       <main 
         role="main" 
-        className="flex-1 overflow-y-auto bg-[var(--bg-primary)]"
+        className="flex-1 overflow-y-auto bg-page"
         aria-label="Main content"
       >
         <Routes>
@@ -60,11 +61,11 @@ export default function App() {
     <ThemeProvider>
       <Router>
         <HeaderProvider>
-          <div className="flex h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
+          <div className="flex h-screen bg-page font-sans text-primary">
             {/* Skip to main content link for keyboard users */}
             <a 
               href="#main-content"
-              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[var(--accent-primary)] focus:text-white focus:rounded focus:outline-none"
+              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-accent-primary focus:px-4 focus:py-2 focus:text-white focus:outline-none"
             >
               Skip to main content
             </a>
@@ -73,11 +74,17 @@ export default function App() {
               <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
             </nav>
             
-            <div id="main-content" className="flex-1 min-w-0">
+            <div id="main-content" className="min-w-0 flex-1">
               <AppContent isSidebarOpen={isSidebarOpen} />
             </div>
             
             <CommandPalette isOpen={isOpen} onClose={close} />
+            
+            <StagewiseToolbar
+              config={{
+                plugins: [],
+              }}
+            />
           </div>
         </HeaderProvider>
       </Router>

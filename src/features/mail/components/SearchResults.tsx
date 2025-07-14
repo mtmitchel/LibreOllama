@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
-  Zap
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 import { SearchResult, SearchFacet, ParsedEmail } from '../types';
 
@@ -111,10 +112,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
   if (isSearching) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex flex-1 items-center justify-center p-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Searching...</p>
+          <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-b-2 border-accent-primary"></div>
+          <p className="text-secondary">Searching...</p>
         </div>
       </div>
     );
@@ -122,11 +123,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
   if (!searchResult) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex flex-1 items-center justify-center p-8">
         <div className="text-center">
-          <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Start searching</h3>
-          <p className="text-gray-600">Enter a search query to find your emails</p>
+          <Search className="mx-auto mb-4 size-12 text-muted" />
+          <h3 className="mb-2 text-lg font-medium text-primary">Start searching</h3>
+          <p className="text-secondary">Enter a search query to find your emails</p>
         </div>
       </div>
     );
@@ -136,26 +137,26 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   const hasResults = searchResult.totalCount > 0;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
       {/* Search Header */}
-      <div className="flex-shrink-0 p-4 border-b bg-gray-50">
-        <div className="flex items-center justify-between mb-3">
+      <div className="shrink-0 border-b bg-surface p-4">
+        <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-gray-600" />
-            <span className="font-medium text-gray-900">
+            <Search className="size-4 text-secondary" />
+            <span className="font-medium text-primary">
               Search Results
             </span>
             {hasResults && (
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-secondary">
                 ({searchResult.totalCount.toLocaleString()} results in {formatTimeElapsed(searchResult.searchTime)})
               </span>
             )}
           </div>
           <button
             onClick={onClearSearch}
-            className="flex items-center space-x-1 px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center space-x-1 px-3 py-1 text-secondary transition-colors hover:text-primary"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
             <span className="text-sm">Clear</span>
           </button>
         </div>
@@ -168,15 +169,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({
               return (
                 <div
                   key={`${facet.type}-${facet.value}`}
-                  className="flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  className="flex items-center space-x-2 rounded-full bg-accent-soft px-3 py-1 text-sm text-accent-primary"
                 >
-                  <Icon className="h-3 w-3" />
+                  <Icon className="size-3" />
                   <span>{facet.label}</span>
                   <button
                     onClick={() => onRemoveFacet(facet)}
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-accent-primary hover:text-accent-secondary"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="size-3" />
                   </button>
                 </div>
               );
@@ -186,35 +187,35 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       </div>
 
       {!hasResults ? (
-        <div className="flex-1 flex items-center justify-center p-8">
+        <div className="flex flex-1 items-center justify-center p-8">
           <div className="text-center">
-            <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
-            <p className="text-gray-600 mb-4">
+            <Mail className="mx-auto mb-4 size-12 text-muted" />
+            <h3 className="mb-2 text-lg font-medium text-primary">No results found</h3>
+            <p className="mb-4 text-secondary">
               Try adjusting your search terms or removing filters
             </p>
             <button
               onClick={onClearSearch}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+              className="mx-auto flex items-center space-x-2 rounded-lg bg-accent-primary px-4 py-2 text-white transition-colors hover:bg-accent-secondary"
             >
-              <RotateCcw className="h-4 w-4" />
+              <RotateCcw className="size-4" />
               <span>Start over</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex flex-1 overflow-hidden">
           {/* Facets Sidebar */}
           {showFacets && searchResult.facets.length > 0 && (
-            <div className="w-64 flex-shrink-0 border-r bg-white overflow-y-auto">
+            <div className="w-64 shrink-0 overflow-y-auto border-r bg-white">
               <div className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-gray-900">Refine Results</h3>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="font-medium text-primary">Refine results</h3>
                   <button
                     onClick={() => setShowFacets(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-muted hover:text-secondary"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="size-4" />
                   </button>
                 </div>
 
@@ -225,37 +226,37 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                     const displayFacets = isExpanded ? facets : facets.slice(0, 5);
 
                     return (
-                      <div key={type} className="border border-gray-200 rounded-lg">
+                      <div key={type} className="border-border-default rounded-lg border">
                         <button
                           onClick={() => toggleFacetType(type)}
-                          className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                          className="flex w-full items-center justify-between p-3 transition-colors hover:bg-surface"
                         >
                           <div className="flex items-center space-x-2">
-                            <Icon className="h-4 w-4 text-gray-600" />
-                            <span className="font-medium text-gray-900 capitalize">{type}</span>
+                            <Icon className="size-4 text-secondary" />
+                            <span className="font-medium capitalize text-primary">{type}</span>
                           </div>
                           {isExpanded ? 
-                            <ChevronUp className="h-4 w-4 text-gray-400" /> : 
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                            <ChevronUp className="size-4 text-muted" /> : 
+                            <ChevronDown className="size-4 text-muted" />
                           }
                         </button>
 
                         {isExpanded && (
-                          <div className="border-t border-gray-200">
+                          <div className="border-border-default border-t">
                             {displayFacets.map(facet => (
                               <button
                                 key={`${facet.type}-${facet.value}`}
                                 onClick={() => onApplyFacet(facet)}
-                                className="w-full flex items-center justify-between p-2 px-3 hover:bg-gray-50 transition-colors text-left"
+                                className="flex w-full items-center justify-between p-2 px-3 text-left transition-colors hover:bg-surface"
                               >
-                                <span className="text-sm text-gray-700 truncate">{facet.label}</span>
-                                <span className="text-xs text-gray-500 ml-2">{facet.count}</span>
+                                <span className="truncate text-sm text-primary">{facet.label}</span>
+                                <span className="ml-2 text-xs text-secondary">{facet.count}</span>
                               </button>
                             ))}
                             {facets.length > 5 && !isExpanded && (
                               <button
                                 onClick={() => toggleFacetType(type)}
-                                className="w-full p-2 px-3 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                                className="w-full p-2 px-3 text-sm text-accent-primary transition-colors hover:text-accent-secondary"
                               >
                                 Show {facets.length - 5} more...
                               </button>
@@ -271,22 +272,22 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           )}
 
           {/* Results Area */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-hidden">
             {/* Results Toolbar */}
-            <div className="flex-shrink-0 p-4 border-b bg-white">
+            <div className="shrink-0 border-b bg-white p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   {!showFacets && searchResult.facets.length > 0 && (
                     <button
                       onClick={() => setShowFacets(true)}
-                      className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="border-border-default flex items-center space-x-2 rounded-lg border px-3 py-2 transition-colors hover:bg-surface"
                     >
-                      <Filter className="h-4 w-4" />
-                      <span className="text-sm">Show Filters</span>
+                      <Filter className="size-4" />
+                      <span className="text-sm">Show filters</span>
                     </button>
                   )}
                   
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-secondary">
                     Showing {messages.length} of {searchResult.totalCount} results
                   </span>
                 </div>
@@ -296,7 +297,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                   <select
                     value={sortBy}
                     onChange={(e) => onSortChange(e.target.value, sortOrder)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="border-border-default rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="relevance">Relevance</option>
                     <option value="date">Date</option>
@@ -306,9 +307,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                   
                   <button
                     onClick={() => onSortChange(sortBy, sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="border-border-default rounded-lg border p-2 transition-colors hover:bg-surface"
                   >
-                    {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                    {sortOrder === 'asc' ? <SortAsc className="size-4" /> : <SortDesc className="size-4" />}
                   </button>
                 </div>
               </div>
@@ -321,57 +322,57 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                   <div
                     key={message.id}
                     onClick={() => onSelectMessage(message.id)}
-                    className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      selectedMessage === message.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                    className={`cursor-pointer p-4 transition-colors hover:bg-surface ${
+                      selectedMessage === message.id ? 'border-l-4 border-l-accent-primary bg-accent-soft' : ''
                     }`}
                   >
                     <div className="flex items-start space-x-3">
                       {/* Avatar/Icon */}
-                      <div className="flex-shrink-0 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-gray-600" />
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface">
+                        <User className="size-4 text-secondary" />
                       </div>
 
                       {/* Message Content */}
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium text-gray-900">
+                            <span className="font-medium text-primary">
                               {highlightText(message.from.name || message.from.email, searchResult.query)}
                             </span>
-                            {message.isStarred && <Star className="h-4 w-4 text-yellow-500" />}
-                            {message.hasAttachments && <Paperclip className="h-4 w-4 text-gray-400" />}
+                            {message.isStarred && <Star className="size-4 text-warning" />}
+                            {message.hasAttachments && <Paperclip className="size-4 text-muted" />}
                           </div>
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-secondary">
                               {message.date.toLocaleDateString()}
                             </span>
                             {!message.isRead && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                              <div className="size-2 rounded-full bg-accent-primary"></div>
                             )}
                           </div>
                         </div>
 
-                        <h3 className="text-sm font-medium text-gray-900 mt-1 truncate">
+                        <h3 className="mt-1 truncate text-sm font-medium text-primary">
                           {highlightText(message.subject, searchResult.query)}
                         </h3>
                         
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        <p className="mt-1 line-clamp-2 text-sm text-secondary">
                           {highlightText(message.snippet, searchResult.query)}
                         </p>
 
                         {/* Labels */}
                         {message.labels.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
+                          <div className="mt-2 flex flex-wrap gap-1">
                             {message.labels.slice(0, 3).map(labelId => (
                               <span
                                 key={labelId}
-                                className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
+                                className="rounded-full bg-surface px-2 py-1 text-xs text-primary"
                               >
                                 {labelId}
                               </span>
                             ))}
                             {message.labels.length > 3 && (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                              <span className="rounded-full bg-surface px-2 py-1 text-xs text-primary">
                                 +{message.labels.length - 3} more
                               </span>
                             )}
@@ -379,7 +380,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                         )}
                       </div>
 
-                      <ArrowRight className="h-4 w-4 text-gray-400" />
+                      <ArrowRight className="size-4 text-muted" />
                     </div>
                   </div>
                 ))}
@@ -387,13 +388,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
               {/* Load More */}
               {onLoadMore && searchResult.nextPageToken && (
-                <div className="p-4 text-center border-t">
+                <div className="border-t p-4 text-center">
                   <button
                     onClick={onLoadMore}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+                    className="mx-auto flex items-center space-x-2 rounded-lg bg-accent-primary px-4 py-2 text-white transition-colors hover:bg-accent-secondary"
                   >
-                    <Zap className="h-4 w-4" />
-                    <span>Load More Results</span>
+                    <Zap className="size-4" />
+                    <span>Load more results</span>
                   </button>
                 </div>
               )}

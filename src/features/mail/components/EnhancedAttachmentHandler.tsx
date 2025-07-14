@@ -10,7 +10,6 @@ import {
   Music,
   Archive,
   AlertTriangle,
-  Download,
   Eye,
   Loader2
 } from 'lucide-react';
@@ -78,32 +77,32 @@ function AttachmentItem({ attachment, onRemove, onPreview }: AttachmentItemProps
   const canPreview = isImage || attachment.type === 'application/pdf';
 
   const categoryColors = {
-    image: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
-    document: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
-    archive: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800',
-    media: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800',
-    other: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
+    image: 'bg-accent-soft text-accent-primary border-accent-primary',
+    document: 'bg-success-ghost text-success border-success',
+    archive: 'bg-warning-ghost text-warning border-warning',
+    media: 'bg-error-ghost text-error border-error',
+    other: 'bg-surface text-primary border-border-default'
   };
 
   const statusColors = {
-    pending: 'border-l-gray-400',
-    uploading: 'border-l-blue-500',
-    completed: 'border-l-green-500',
-    error: 'border-l-red-500'
+    pending: 'border-l-tertiary',
+    uploading: 'border-l-accent-primary',
+    completed: 'border-l-success',
+    error: 'border-l-error'
   };
 
   return (
     <div className={`
-      relative flex items-center gap-3 p-3 rounded-lg border border-l-4 transition-all
+      relative flex items-center gap-3 rounded-lg border border-l-4 p-3 transition-all
       ${categoryColors[category]} ${statusColors[attachment.uploadStatus]}
     `}>
       {/* File Icon/Thumbnail */}
-      <div className="flex-shrink-0 w-10 h-10 rounded-md bg-white/50 flex items-center justify-center">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-white/50">
         {isImage && attachment.url ? (
           <img 
             src={attachment.url} 
             alt={attachment.name}
-            className="w-full h-full object-cover rounded-md"
+            className="size-full rounded-md object-cover"
           />
         ) : (
           getFileIcon(attachment.type, 20)
@@ -111,7 +110,7 @@ function AttachmentItem({ attachment, onRemove, onPreview }: AttachmentItemProps
       </div>
 
       {/* File Info */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Text size="sm" weight="medium" className="truncate">
             {attachment.name}
@@ -124,16 +123,16 @@ function AttachmentItem({ attachment, onRemove, onPreview }: AttachmentItemProps
           )}
         </div>
         
-        <div className="flex items-center gap-2 mt-1">
+        <div className="mt-1 flex items-center gap-2">
           <Text size="xs" className="opacity-75">
             {formatFileSize(attachment.size)}
           </Text>
           
           {attachment.uploadStatus === 'uploading' && attachment.uploadProgress !== undefined && (
-            <div className="flex-1 max-w-20">
-              <div className="w-full bg-white/30 rounded-full h-1">
+            <div className="max-w-20 flex-1">
+              <div className="h-1 w-full rounded-full bg-white/30">
                 <div 
-                  className="bg-current h-1 rounded-full transition-all duration-300"
+                  className="h-1 rounded-full bg-current transition-all duration-300"
                   style={{ width: `${attachment.uploadProgress}%` }}
                 />
               </div>
@@ -142,7 +141,7 @@ function AttachmentItem({ attachment, onRemove, onPreview }: AttachmentItemProps
         </div>
 
         {attachment.uploadStatus === 'error' && attachment.errorMessage && (
-          <Text size="xs" className="text-red-600 dark:text-red-400 mt-1">
+          <Text size="xs" className="mt-1 text-error dark:text-red-400">
             {attachment.errorMessage}
           </Text>
         )}
@@ -155,7 +154,7 @@ function AttachmentItem({ attachment, onRemove, onPreview }: AttachmentItemProps
             variant="ghost"
             size="sm"
             onClick={onPreview}
-            className="h-7 w-7 p-0 hover:bg-white/30"
+            className="size-7 p-0 hover:bg-white/30"
             title="Preview"
           >
             <Eye size={14} />
@@ -166,7 +165,7 @@ function AttachmentItem({ attachment, onRemove, onPreview }: AttachmentItemProps
           variant="ghost"
           size="sm"
           onClick={onRemove}
-          className="h-7 w-7 p-0 hover:bg-white/30"
+          className="size-7 p-0 hover:bg-white/30"
           title="Remove"
         >
           <X size={14} />
@@ -204,15 +203,15 @@ function DropZone({ onFilesSelected, disabled, isDragOver, maxFileSize, allowedT
     <div
       onClick={handleClick}
       className={`
-        relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all
+        relative cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-all
         ${isDragOver 
-          ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]' 
-          : 'border-[var(--border-default)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-tertiary)]'
+          ? 'border-accent-primary bg-accent-soft' 
+          : 'border-border-default hover:border-accent-primary hover:bg-tertiary'
         }
-        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+        ${disabled ? 'cursor-not-allowed opacity-50' : ''}
       `}
     >
-      <Upload className="mx-auto mb-3 text-[var(--text-secondary)]" size={24} />
+      <Upload className="mx-auto mb-3 text-secondary" size={24} />
       <Text size="sm" weight="medium" className="mb-1">
         Click to upload or drag and drop
       </Text>
@@ -248,7 +247,6 @@ export function EnhancedAttachmentHandler({
   className = ""
 }: EnhancedAttachmentHandlerProps) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
 
   const totalSize = attachments.reduce((sum, attachment) => sum + attachment.size, 0);
   const isAtMaxCapacity = totalSize >= maxTotalSize;
@@ -277,7 +275,7 @@ export function EnhancedAttachmentHandler({
 
   // Simulate file upload (in real app, this would upload to server)
   const uploadFile = useCallback(async (file: File, attachmentId: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       // Simulate upload progress
       let progress = 0;
       const interval = setInterval(() => {
@@ -344,7 +342,7 @@ export function EnhancedAttachmentHandler({
       for (const attachment of newAttachments) {
         try {
           await uploadFile(attachment.file!, attachment.id);
-        } catch (error) {
+        } catch {
           // Update attachment as error
           onAttachmentsChange(prev => prev.map(att => 
             att.id === attachment.id 
@@ -371,7 +369,6 @@ export function EnhancedAttachmentHandler({
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragCounter(prev => prev + 1);
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setIsDragOver(true);
     }
@@ -380,13 +377,7 @@ export function EnhancedAttachmentHandler({
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragCounter(prev => {
-      const newCounter = prev - 1;
-      if (newCounter === 0) {
-        setIsDragOver(false);
-      }
-      return newCounter;
-    });
+    setIsDragOver(false);
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -398,7 +389,6 @@ export function EnhancedAttachmentHandler({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    setDragCounter(0);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFilesSelected(Array.from(e.dataTransfer.files));
@@ -416,16 +406,16 @@ export function EnhancedAttachmentHandler({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Paperclip size={16} className="text-[var(--text-secondary)]" />
+          <Paperclip size={16} className="text-secondary" />
           <Text size="sm" weight="medium">
             Attachments ({attachments.length})
           </Text>
         </div>
         
-        <div className="text-xs text-[var(--text-secondary)]">
+        <div className="text-xs text-secondary">
           {formatFileSize(totalSize)} / {formatFileSize(maxTotalSize)}
           {isAtMaxCapacity && (
-            <span className="text-orange-600 dark:text-orange-400 ml-2">
+            <span className="ml-2 text-warning">
               Limit reached
             </span>
           )}

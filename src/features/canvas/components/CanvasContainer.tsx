@@ -46,20 +46,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({ onStageReady }
   };
 
   return (
-    <div 
-      className="flex h-full w-full"
-      style={{ 
-        backgroundColor: 'var(--bg-primary)',
-        color: 'var(--text-primary)'
-      }}
-    >
-      <div 
-        className="relative flex-1 h-full w-full overflow-hidden"
-        style={{
-          backgroundColor: 'var(--canvas-bg, var(--bg-surface))',
-          backgroundImage: 'var(--canvas-pattern, none)'
-        }}
-      >
+    <div className="text-text-primary flex size-full bg-canvas">
+      <div className="relative size-full flex-1 overflow-hidden bg-canvas">
         <ModernKonvaToolbar 
           onUndo={undo} 
           onRedo={redo} 

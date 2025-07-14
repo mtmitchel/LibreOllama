@@ -4,16 +4,14 @@ import Konva from 'konva';
 import { Layer } from 'react-konva';
 import { BackgroundLayer } from './BackgroundLayer';
 import { MainLayer } from './MainLayer';
-// import { SelectionLayer } from './SelectionLayer'; // TODO: Implement SelectionLayer
-// import { LayersPanel } from './LayersPanel'; // TODO: Implement LayersPanel
-import { ConnectorLayer } from './ConnectorLayer';
+
 import { UILayer } from './UILayer';
 // import { ElementRenderer } from '../renderers/ElementRenderer';
 import { TransformerManager } from '../utils/TransformerManager';
-import { useFeatureFlag } from '../hooks/useFeatureFlags';
+
 import { enhancedFeatureFlagManager } from '../utils/state/EnhancedFeatureFlagManager';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { Line } from 'react-konva';
+
 // import { Layer as LayerData } from '../stores/slices/layerStore'; // Legacy import
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -21,9 +19,7 @@ import {
   ElementId,
   SectionId,
   ElementOrSectionId,
-  SectionElement,
-  isConnectorElement,
-  isSectionElement
+  SectionElement
 } from '../types/enhanced.types';
 // import { canvasSelectors } from '../stores/selectors'; // TODO: Replace with combinedSelectors when needed
 import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
@@ -55,12 +51,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   onElementClick,
   onStartTextEdit
 }) => {
-  if (!stageRef) {
-    canvasLog.error('[CanvasLayerManager] stageRef is null, cannot render.');
-    return null;
-  }
-
-  // OPTIMIZED: Consolidated store subscriptions using useShallow
+  // OPTIMIZED: Consolidated store subscriptions using useShallow - MUST be called before any returns
   const { selectedTool, viewport } = useUnifiedCanvasStore(useShallow((state) => ({
     selectedTool: state.selectedTool,
     viewport: state.viewport
@@ -77,13 +68,13 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   const currentPath: number[] = [];
 
   // Drawing functions - using stubs until proper implementation
-  const startDrawing = () => {};
-  const updateDrawing = () => {};
-  const finishDrawing = () => {};
+  // const startDrawing = () => {};
+  // const updateDrawing = () => {};
+  // const finishDrawing = () => {};
   
   // Feature flags
-  const useGroupedSections = enhancedFeatureFlagManager.getFlag('grouped-section-rendering');
-  const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
+  // const useGroupedSections = enhancedFeatureFlagManager.getFlag('grouped-section-rendering');
+  // const useCentralizedTransformer = enhancedFeatureFlagManager.getFlag('centralized-transformer');
   
 
   
@@ -124,7 +115,7 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   });
   
   const visibleElements = cullingResult.visibleElements;
-  const cullingStats = cullingResult.cullingStats;
+  // const cullingStats = cullingResult.cullingStats;
 
   // OPTIMIZED: Element categorization using culled visible elements  
   const {
@@ -159,15 +150,15 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   }, [visibleElements, elementsArray.length]);
 
   // Hide layers panel toggle - not implemented yet
-  const showLayersPanel = false;
-  const toggleLayersPanel = () => {
-    canvasLog.debug('Layers panel toggle not implemented yet');
-  };
+  // const showLayersPanel = false;
+  // const toggleLayersPanel = () => {
+  //   canvasLog.debug('Layers panel toggle not implemented yet');
+  // };
 
   // SIMPLIFIED: Prevent memoization issues that cause infinite loops
   const sortedMainElements = mainElements;
   const sectionElementsMap = new Map(sectionElements.map(s => [s.id, s]));
-  const sortedSectionElements = sectionElements;
+  // const sortedSectionElements = sectionElements;
   const sortedElementsBySection = elementsBySection;
 
   // SIMPLIFIED: Remove complex memoization
@@ -177,9 +168,9 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   }) as ElementId[]);
 
   // Simplified event handlers (temporarily disabled)
-  const handleMouseDown = useCallback(() => {}, []);
-  const handleMouseMove = useCallback(() => {}, []);
-  const handleMouseUp = useCallback(() => {}, []);
+  // const handleMouseDown = useCallback(() => {}, []);
+  // const handleMouseMove = useCallback(() => {}, []);
+  // const handleMouseUp = useCallback(() => {}, []);
 
   // Define missing variables with default values
   const layers = [
@@ -190,18 +181,24 @@ export const CanvasLayerManager: React.FC<CanvasLayerManagerProps> = React.memo(
   ];
 
   // Temporary stubs for missing state - these should be properly implemented
-  const isDrawingConnector = false;
-  const connectorStart = null;
-  const connectorEnd = null;
+  // const isDrawingConnector = false;
+  // const connectorStart = null;
+  // const connectorEnd = null;
   const isDrawingSection = false;
   const previewSection = null;
   const hoveredSnapPoint = null;
   const addHistoryEntry = () => {}; // Stub
-  const onElementDragStart = undefined;
-  const onElementDragMove = undefined;
+  // const onElementDragStart = undefined;
+  // const onElementDragMove = undefined;
 
   // Simple DrawingContainment component stub
   const DrawingContainment: React.FC<{ isDrawing: boolean; currentTool: string; stageRef: React.RefObject<Konva.Stage | null> }> = () => null;
+
+  // Early return check AFTER all hooks have been called
+  if (!stageRef) {
+    canvasLog.error('[CanvasLayerManager] stageRef is null, cannot render.');
+    return null;
+  }
 
   const renderLayerContent = () => {
     const contentLayerComponents: React.ReactNode[] = [];

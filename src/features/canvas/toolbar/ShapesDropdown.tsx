@@ -57,7 +57,7 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
         variant={isActive ? "primary" : "ghost"}
         size="icon"
         onClick={toggleDropdown}
-        className="h-9 w-9 relative"
+        className="relative size-9"
         title={`Shapes (${currentShapeTool.name} selected)`}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -67,12 +67,12 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
       </Button>
       
       {isOpen && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-bg-elevated border border-border-default rounded-xl shadow-xl backdrop-blur-sm p-2 z-[1200] min-w-max">
+        <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 z-[1200] mb-2 min-w-max -translate-x-1/2 rounded-xl border p-2 shadow-xl backdrop-blur-sm">
           <div className="flex flex-col gap-1">
-            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide text-center px-2 py-1">
+            <div className="text-text-muted px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide">
               Shapes
             </div>
-            <div className="flex gap-1 justify-center items-center">
+            <div className="flex items-center justify-center gap-1">
               {basicShapes.map(tool => {
                 const IconComponent = tool.icon;
                 const isToolActive = selectedTool === tool.id;
@@ -82,7 +82,7 @@ const ShapesDropdown: React.FC<ShapesDropdownProps> = ({ onToolSelect }) => {
                     variant={isToolActive ? "primary" : "ghost"}
                     size="icon"
                     onClick={() => handleShapeSelect(tool.id)}
-                    className="h-9 w-9 flex items-center justify-center"
+                    className="flex size-9 items-center justify-center"
                     title={tool.name}
                   >
                     <IconComponent size={16} />

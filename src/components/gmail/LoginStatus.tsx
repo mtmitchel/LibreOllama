@@ -72,8 +72,8 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
     if (isLoading) {
       return (
         <div className={`flex items-center gap-2 ${className}`}>
-          <Loader2 size={14} className="animate-spin text-blue-500" />
-          <span className="text-xs text-gray-600">Checking...</span>
+          <Loader2 size={14} className="animate-spin text-accent-primary" />
+          <span className="text-xs text-secondary">Checking...</span>
         </div>
       );
     }
@@ -82,7 +82,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
       return (
         <div className={`flex items-center gap-2 ${className}`}>
           <AlertCircle size={14} className="text-red-500" />
-          <span className="text-xs text-red-600">Error</span>
+          <span className="text-xs text-error">Error</span>
         </div>
       );
     }
@@ -90,7 +90,7 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
     if (isAuthenticated) {
       const qualityColors = {
         excellent: 'text-green-500',
-        good: 'text-yellow-500',
+        good: 'text-warning',
         poor: 'text-orange-500',
         offline: 'text-red-500'
       };
@@ -98,25 +98,25 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
       return (
         <div className={`flex items-center gap-2 ${className}`}>
           <CheckCircle size={14} className={qualityColors[connectionQuality]} />
-          <span className="text-xs text-gray-600">Connected</span>
+          <span className="text-xs text-secondary">Connected</span>
         </div>
       );
     }
 
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <WifiOff size={14} className="text-gray-400" />
-        <span className="text-xs text-gray-500">Disconnected</span>
+        <WifiOff size={14} className="text-muted" />
+        <span className="text-xs text-secondary">Disconnected</span>
       </div>
     );
   }
 
   // Full view
   return (
-    <div className={`p-4 bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+    <div className={`border-border-default rounded-lg border bg-white p-4 shadow-sm ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-900">Gmail Connection</h3>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-primary">Gmail Connection</h3>
         
         {/* Connection indicator */}
         <div className="flex items-center gap-2">
@@ -126,14 +126,14 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
             connectionQuality === 'excellent' ? (
               <Wifi size={16} className="text-green-500" />
             ) : connectionQuality === 'good' ? (
-              <Wifi size={16} className="text-yellow-500" />
+              <Wifi size={16} className="text-warning" />
             ) : connectionQuality === 'poor' ? (
               <Wifi size={16} className="text-orange-500" />
             ) : (
               <WifiOff size={16} className="text-red-500" />
             )
           ) : (
-            <WifiOff size={16} className="text-gray-400" />
+            <WifiOff size={16} className="text-muted" />
           )}
         </div>
       </div>
@@ -142,18 +142,18 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
       {isLoading ? (
         <div className="flex items-center gap-3">
           <div className="flex-1">
-            <p className="text-sm text-gray-600">Verifying authentication...</p>
-            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-              <div className="bg-blue-500 h-1.5 rounded-full animate-pulse w-1/2"></div>
+            <p className="text-sm text-secondary">Verifying authentication...</p>
+            <div className="mt-2 h-1.5 w-full rounded-full bg-surface">
+              <div className="h-1.5 w-1/2 animate-pulse rounded-full bg-blue-500"></div>
             </div>
           </div>
         </div>
       ) : error ? (
         <div className="flex items-start gap-3">
-          <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-500" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-900">Authentication Error</p>
-            <p className="text-xs text-red-600 mt-1">{error}</p>
+            <p className="text-sm font-medium text-error">Authentication Error</p>
+            <p className="mt-1 text-xs text-error">{error}</p>
           </div>
         </div>
       ) : isAuthenticated && user ? (
@@ -164,38 +164,38 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
               <img
                 src={user.picture}
                 alt={user.name || 'User'}
-                className="w-10 h-10 rounded-full border border-gray-200"
+                className="border-border-default size-10 rounded-full border"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <User size={20} className="text-gray-500" />
+              <div className="flex size-10 items-center justify-center rounded-full bg-surface">
+                <User size={20} className="text-secondary" />
               </div>
             )}
             
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-primary">
                 {user.name || 'Unknown User'}
               </p>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="truncate text-xs text-secondary">
                 {user.email}
               </p>
             </div>
 
             <div className="flex items-center gap-1">
               <CheckCircle size={16} className="text-green-500" />
-              <span className="text-xs text-green-600 font-medium">Connected</span>
+              <span className="text-xs font-medium text-green-600">Connected</span>
             </div>
           </div>
 
           {/* Details */}
           {showDetails && tokens && (
-            <div className="space-y-2 pt-2 border-t border-gray-100">
+            <div className="space-y-2 border-t border-gray-100 pt-2">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <Shield size={12} className="text-blue-500" />
-                  <span className="text-gray-600">Token Status</span>
+                  <span className="text-secondary">Token Status</span>
                 </div>
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-primary">
                   {connectionQuality === 'excellent' ? 'Excellent' :
                    connectionQuality === 'good' ? 'Good' :
                    connectionQuality === 'poor' ? 'Expires Soon' : 'Expired'}
@@ -204,13 +204,13 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
 
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
-                  <Clock size={12} className="text-gray-400" />
-                  <span className="text-gray-600">Expires In</span>
+                  <Clock size={12} className="text-muted" />
+                  <span className="text-secondary">Expires In</span>
                 </div>
                 <span className={`font-medium ${
                   connectionQuality === 'excellent' ? 'text-green-600' :
-                  connectionQuality === 'good' ? 'text-yellow-600' :
-                  connectionQuality === 'poor' ? 'text-orange-600' : 'text-red-600'
+                  connectionQuality === 'good' ? 'text-warning' :
+                  connectionQuality === 'poor' ? 'text-orange-600' : 'text-error'
                 }`}>
                   {formatExpiryTime(tokens.expiresAt)}
                 </span>
@@ -218,9 +218,9 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
 
               {tokens.scope && (
                 <div className="flex items-start justify-between text-xs">
-                  <span className="text-gray-600">Permissions</span>
-                  <div className="text-right max-w-32">
-                    <span className="font-medium text-gray-900">
+                  <span className="text-secondary">Permissions</span>
+                  <div className="max-w-32 text-right">
+                    <span className="font-medium text-primary">
                       {tokens.scope.split(' ').length} scopes
                     </span>
                   </div>
@@ -231,11 +231,11 @@ export const LoginStatus: React.FC<LoginStatusProps> = ({
         </div>
       ) : (
         <div className="flex items-center gap-3">
-          <WifiOff size={20} className="text-gray-400" />
+          <WifiOff size={20} className="text-muted" />
           <div className="flex-1">
-            <p className="text-sm text-gray-600">Not connected to Gmail</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Click "Connect Gmail" to sign in
+            <p className="text-sm text-secondary">Not connected to Gmail</p>
+            <p className="mt-1 text-xs text-secondary">
+              Click &quot;Connect Gmail&quot; to sign in
             </p>
           </div>
         </div>

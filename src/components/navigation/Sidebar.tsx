@@ -1,155 +1,180 @@
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, MessagesSquare, FolderKanban, NotebookPen, Presentation,
-  CalendarDays, CheckCircle2, Cpu, Settings, PanelLeftClose, PanelRightClose, Mail
+  LayoutDashboard, 
+  MessageSquare, 
+  Mail, 
+  FolderOpen, 
+  FileText, 
+  Image, 
+  Calendar,
+  CheckSquare,
+  Users,
+  Settings
 } from 'lucide-react';
-import { Text, Badge, Button } from '../ui';
 
 interface SidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
 }
 
-export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
+export default function Sidebar({ isOpen }: SidebarProps) {
   const location = useLocation();
 
   const workspaceItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Chat', path: '/chat', icon: MessagesSquare },
+    { name: 'Chat', path: '/chat', icon: MessageSquare, count: 3 },
     { name: 'Mail', path: '/mail', icon: Mail },
-    { name: 'Projects', path: '/projects', icon: FolderKanban },
-    { name: 'Notes', path: '/notes', icon: NotebookPen },
-    { name: 'Canvas', path: '/canvas', icon: Presentation },
-    { name: 'Calendar', path: '/calendar', icon: CalendarDays },
-    { name: 'Tasks', path: '/tasks', icon: CheckCircle2 },
-    { name: 'Agents', path: '/agents', icon: Cpu },
+    { name: 'Projects', path: '/projects', icon: FolderOpen },
+    { name: 'Notes', path: '/notes', icon: FileText },
+    { name: 'Canvas', path: '/canvas', icon: Image },
+    { name: 'Calendar', path: '/calendar', icon: Calendar },
+    { name: 'Tasks', path: '/tasks', icon: CheckSquare },
+    { name: 'Agents', path: '/agents', icon: Users },
   ];
 
-  const linkBaseClasses = 'group flex items-center rounded-md font-sans transition-all duration-200 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
-  const linkActiveClasses = 'bg-accent-ghost text-accent-primary font-semibold shadow-sm';
-  const linkInactiveClasses = 'text-secondary hover:bg-[var(--bg-tertiary)] hover:text-primary hover:shadow-sm active:bg-tertiary';
+  const NavItem = ({ icon: Icon, label, count, path }: { icon: React.ElementType; label: string; count?: number; path: string }) => {
+    const isActive = location.pathname === path;
+    return (
+      <Link
+        to={path}
+        className={`nav-item rounded-xl transition-all duration-200 ${isActive ? 'active' : ''} ${
+          isActive 
+            ? 'bg-selected text-selected' 
+            : 'text-primary hover:bg-hover'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <Icon 
+            size={18} 
+            className={`${isActive ? 'text-selected' : 'text-secondary'}`} 
+          />
+          {isOpen && (
+            <span className="text-sm font-medium">
+              {label}
+            </span>
+          )}
+        </div>
+        {isOpen && count && (
+          <span 
+            className={`rounded-full px-2 py-1 text-xs font-medium ${
+              isActive 
+                ? 'bg-accent-primary text-white' 
+                : 'bg-tertiary text-tertiary'
+            }`}
+          >
+            {count}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
   return (
     <aside 
-      className={`h-full flex flex-col bg-[var(--bg-secondary)] border-r border-border-subtle transition-all duration-300 ease-in-out shadow-lg`}
-      style={{ width: isOpen ? '16rem' : '4rem' }}
+      className="sidebar"
+      style={{ 
+        width: isOpen ? '224px' : '64px',
+        height: '100vh',
+        background: 'var(--sidebar-bg)',
+        borderRight: '1px solid var(--border-primary)',
+        transition: 'var(--transition-all)',
+        backdropFilter: 'blur(10px)'
+      }}
     >
       {/* Header */}
       <div 
-        className={`flex items-center justify-between border-b border-border-subtle bg-[var(--bg-primary)] h-20 ${isOpen ? 'px-6' : 'px-4'}`}
+        className={`flex h-16 items-center border-b ${isOpen ? 'px-6' : 'px-4'}`}
+        style={{ 
+          borderBottom: '1px solid var(--border-primary)',
+          background: 'var(--header-bg)',
+          justifyContent: isOpen ? 'flex-start' : 'center'
+        }}
       >
-        {isOpen && (
-          <Text 
-            weight="bold" 
-            size="lg" 
-            variant="body"
-            className="text-primary select-none"
+        {isOpen ? (
+          <div className="flex items-center gap-3">
+            <div 
+              className="flex size-8 items-center justify-center"
+              style={{ 
+                background: 'var(--accent-primary)',
+                borderRadius: 'var(--radius-xl)',
+                boxShadow: 'var(--shadow-sm)'
+              }}
+            >
+              <span 
+                className="font-semibold text-white"
+                style={{ 
+                  fontSize: 'var(--text-sm)', 
+                  fontWeight: 'var(--font-semibold)' 
+                }}
+              >
+                L
+              </span>
+            </div>
+            <h1 
+              className="font-semibold"
+              style={{ 
+                fontSize: 'var(--text-lg)', 
+                fontWeight: 'var(--font-semibold)',
+                color: 'var(--text-primary)' 
+              }}
+            >
+              LibreOllama
+            </h1>
+          </div>
+        ) : (
+          <div 
+            className="flex size-8 items-center justify-center"
+            style={{ 
+              background: 'var(--accent-primary)',
+              borderRadius: 'var(--radius-xl)',
+              boxShadow: 'var(--shadow-sm)'
+            }}
           >
-            LibreOllama
-          </Text>
+            <span 
+              className="font-semibold text-white"
+              style={{ 
+                fontSize: 'var(--text-sm)', 
+                fontWeight: 'var(--font-semibold)' 
+              }}
+            >
+              L
+            </span>
+          </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          className="shrink-0 focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
-          aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-        >
-          {isOpen ? <PanelLeftClose size={18} /> : <PanelRightClose size={18} />}
-        </Button>
       </div>
 
       {/* Navigation */}
       <nav 
-        className={`flex-1 overflow-y-auto ${isOpen ? 'p-4' : 'p-3'}`}
+        className={`flex-1 overflow-y-auto ${isOpen ? 'p-3' : 'p-2'}`}
         role="navigation"
         aria-label="Main navigation"
       >
-        <ul className="flex flex-col gap-2">
-          {workspaceItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <li key={item.name}>
-                <Link
-                  to={item.path}
-                  title={!isOpen ? item.name : ''}
-                  className={`${linkBaseClasses} ${isActive ? linkActiveClasses : linkInactiveClasses} ${isOpen ? 'p-3 gap-3' : 'p-2.5 gap-2.5'} text-sm font-medium`}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  {/* Active indicator */}
-                  {isActive && (
-                    <div className="absolute left-0 top-0 bottom-0 bg-accent-primary w-0.5" />
-                  )}
-                  
-                  {/* Icon */}
-                  <div className="flex items-center justify-center shrink-0 w-5 h-5">
-                    <Icon 
-                      size={18} 
-                      className={`transition-all duration-200 ${isActive ? 'text-accent-primary' : 'text-current'}`}
-                    />
-                  </div>
-                  
-                  {/* Label */}
-                  {isOpen && (
-                    <Text 
-                      as="span" 
-                      className="flex-1 truncate transition-all duration-200"
-                      size="sm"
-                      weight={isActive ? "semibold" : "medium"}
-                    >
-                      {item.name}
-                    </Text>
-                  )}
-                  
-                  {/* Badge */}
-                  {isOpen && item.badge && (
-                    <Badge 
-                      variant="secondary" 
-                      className="shrink-0 transition-all duration-200 group-hover:bg-accent-ghost group-hover:text-accent-primary min-w-[20px] h-[20px] text-xs font-bold"
-                    >
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="flex-1 space-y-2">
+          {workspaceItems.map((item) => (
+            <NavItem 
+              key={item.name}
+              icon={item.icon}
+              label={item.name}
+              count={item.count}
+              path={item.path}
+            />
+          ))}
+        </div>
       </nav>
 
       {/* Settings Section */}
-      <div className={`border-t border-border-subtle bg-[var(--bg-primary)] ${isOpen ? 'p-4' : 'p-3'}`}>
-        <Link 
-          to="/settings" 
-          className={`${linkBaseClasses} ${location.pathname === '/settings' ? linkActiveClasses : linkInactiveClasses} ${isOpen ? 'p-3 gap-3' : 'p-2.5 gap-2.5'} text-sm font-medium`}
-          aria-current={location.pathname === '/settings' ? 'page' : undefined}
-        >
-          {/* Active indicator */}
-          {location.pathname === '/settings' && (
-            <div className="absolute left-0 top-0 bottom-0 bg-accent-primary w-0.5" />
-          )}
-          
-          {/* Icon */}
-          <div className="flex items-center justify-center shrink-0 w-5 h-5">
-            <Settings 
-              size={18} 
-              className={`transition-all duration-200 ${location.pathname === '/settings' ? 'text-accent-primary' : 'text-current'}`}
-            />
-          </div>
-          
-          {/* Label */}
-          {isOpen && (
-            <Text 
-              as="span"
-              size="sm"
-              weight={location.pathname === '/settings' ? "semibold" : "medium"}
-              className="transition-all duration-200"
-            >
-              Settings
-            </Text>
-          )}
-        </Link>
+      <div 
+        className={`border-border-subtle border-t ${isOpen ? 'p-3' : 'p-2'}`}
+        style={{ 
+          background: 'var(--header-bg)'
+        }}
+      >
+        <NavItem 
+          icon={Settings}
+          label="Settings"
+          path="/settings"
+        />
       </div>
     </aside>
   );

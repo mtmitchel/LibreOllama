@@ -1,67 +1,73 @@
-import React from 'react';
-import Konva from 'konva';
+import React, { useEffect, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 
+declare global {
+  interface Window {
+    resetZoom?: () => void;
+    resetTo100?: () => void;
+    zoomIn?: () => void;
+    zoomOut?: () => void;
+  }
+}
+
 interface ZoomControlsProps {
   className?: string;
-  stageRef?: React.RefObject<Konva.Stage | null>;
   style?: React.CSSProperties;
 }
 
-export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, stageRef, style }) => {
-  const { viewport, setViewport, elements } = useUnifiedCanvasStore(useShallow((state) => ({
+export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, style }) => {
+  const { viewport, setViewport } = useUnifiedCanvasStore(useShallow((state) => ({
     viewport: state.viewport,
-    setViewport: state.setViewport,
-    elements: state.elements
+    setViewport: state.setViewport
   })));
 
   const currentZoom = Math.round(viewport.scale * 100);
 
-  const zoomIn = () => {
+  const zoomIn = useCallback(() => {
     const newScale = Math.min(10, viewport.scale * 1.2);
     setViewport({ scale: newScale });
-  };
+  }, [viewport.scale, setViewport]);
 
-  const zoomOut = () => {
+  const zoomOut = useCallback(() => {
     const newScale = Math.max(0.1, viewport.scale / 1.2);
     setViewport({ scale: newScale });
-  };
+  }, [viewport.scale, setViewport]);
 
-  const resetZoom = () => {
-    setViewport({ x: 0, y: 0, scale: 1 });
-  };
-
-  const resetTo100 = () => {
+  const resetZoom = useCallback(() => {
     setViewport({ scale: 1 });
-  };
+  }, [setViewport]);
+
+  const resetTo100 = useCallback(() => {
+    setViewport({ scale: 1 });
+  }, [setViewport]);
 
   // Expose zoom functions for keyboard shortcuts (React-Konva pattern)
-  React.useEffect(() => {
-    (window as any).resetZoom = resetZoom;
-    (window as any).resetTo100 = resetTo100;
-    (window as any).zoomIn = zoomIn;
-    (window as any).zoomOut = zoomOut;
+  useEffect(() => {
+    window.resetZoom = resetZoom;
+    window.resetTo100 = resetTo100;
+    window.zoomIn = zoomIn;
+    window.zoomOut = zoomOut;
     
     return () => {
-      delete (window as any).resetZoom;
-      delete (window as any).resetTo100;
-      delete (window as any).zoomIn;
-      delete (window as any).zoomOut;
+      delete window.resetZoom;
+      delete window.resetTo100;
+      delete window.zoomIn;
+      delete window.zoomOut;
     };
   }, [resetZoom, resetTo100, zoomIn, zoomOut]);
 
   return (
     <div 
-      className={`flex items-center gap-1 bg-white border border-gray-300 rounded-lg p-1 shadow-md ${className}`}
+      className={`border-border-default flex items-center gap-1 rounded-lg border bg-white p-1 shadow-md ${className}`}
       style={style}
     >
       {/* Zoom Out */}
       <button
         onClick={zoomOut}
         disabled={currentZoom <= 10}
-        className="flex items-center justify-center w-8 h-8 rounded bg-transparent hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900 transition-colors"
+        className="flex size-8 items-center justify-center rounded bg-transparent text-secondary transition-colors hover:bg-surface hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
         title="Zoom Out (Ctrl + -)"
       >
         <ZoomOut size={16} />
@@ -70,8 +76,8 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, stageRef,
       {/* Zoom Level Display - Click to Reset to 100% */}
       <button
         onClick={resetTo100}
-        className="px-2 py-1 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors min-w-[50px]"
-        title="Reset to 100% (Ctrl + 0)"
+        className="min-w-[3rem] px-2 py-1 text-xs font-medium text-secondary transition-colors hover:bg-surface hover:text-primary"
+        title="Reset to 100%"
       >
         {currentZoom}%
       </button>
@@ -80,7 +86,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({ className, stageRef,
       <button
         onClick={zoomIn}
         disabled={currentZoom >= 1000}
-        className="flex items-center justify-center w-8 h-8 rounded bg-transparent hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900 transition-colors"
+        className="flex size-8 items-center justify-center rounded bg-transparent text-secondary transition-colors hover:bg-surface hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
         title="Zoom In (Ctrl + +)"
       >
         <ZoomIn size={16} />

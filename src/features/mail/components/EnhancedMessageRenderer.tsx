@@ -35,14 +35,14 @@ function SecurityWarning({ warnings, onDismiss }: SecurityWarningProps) {
   if (warnings.length === 0) return null;
 
   return (
-    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+    <div className="bg-warning-bg mb-4 rounded-lg border border-warning p-4">
       <div className="flex items-start gap-3">
-        <Shield className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+        <Shield className="mt-0.5 size-5 shrink-0 text-warning" />
         <div className="flex-1">
-          <Text size="sm" weight="semibold" className="text-yellow-800 dark:text-yellow-200 mb-1">
+          <Text size="sm" weight="semibold" className="mb-1 text-warning-fg">
             Security Notice
           </Text>
-          <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+          <ul className="space-y-1 text-sm text-warning-fg">
             {warnings.map((warning, index) => (
               <li key={index}>• {warning}</li>
             ))}
@@ -52,7 +52,7 @@ function SecurityWarning({ warnings, onDismiss }: SecurityWarningProps) {
           variant="ghost"
           size="sm"
           onClick={onDismiss}
-          className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200"
+          className="text-warning hover:text-warning-fg"
         >
           Dismiss
         </Button>
@@ -67,14 +67,14 @@ function QuotedText({ content, isExpanded, onToggle }: QuotedTextProps) {
   const preview = content.length > previewLength ? content.substring(0, previewLength) + '...' : content;
 
   return (
-    <div className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 bg-gray-50 dark:bg-gray-800/50 rounded-r-lg">
+    <div className="border-border-default dark:bg-surface/50 my-4 rounded-r-lg border-l-4 bg-surface pl-4 dark:border-gray-600">
       <div className="py-3">
         {isExpanded ? (
-          <div className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+          <div className="whitespace-pre-wrap text-sm text-primary dark:text-muted">
             {content}
           </div>
         ) : (
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-secondary dark:text-muted">
             {preview}
           </div>
         )}
@@ -82,7 +82,7 @@ function QuotedText({ content, isExpanded, onToggle }: QuotedTextProps) {
           variant="ghost"
           size="sm"
           onClick={onToggle}
-          className="mt-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="mt-2 text-xs text-secondary hover:text-primary dark:text-muted dark:hover:text-gray-200"
         >
           {isExpanded ? (
             <>
@@ -157,21 +157,12 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
       
       <div 
         ref={contentRef}
-        className={`message-content ${contentType === 'html' ? 'html-content' : 'text-content'}`}
-        style={{
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          fontSize: '14px',
-          lineHeight: '1.6',
-          color: 'var(--text-primary)',
-          maxWidth: '100%',
-          wordWrap: 'break-word',
-          overflowWrap: 'break-word'
-        }}
+        className={`message-content ${contentType === 'html' ? 'html-content' : 'text-content'} text-text-primary max-w-full break-words font-sans text-sm leading-relaxed`}
       >
         {contentType === 'html' ? (
           <div
             dangerouslySetInnerHTML={{ __html: processedContent }}
-            className="prose prose-sm max-w-none dark:prose-invert"
+            className="prose prose-sm dark:prose-invert max-w-none"
           />
         ) : (
           <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
@@ -307,7 +298,7 @@ export function EnhancedMessageRenderer({
   return (
     <div className={`enhanced-message-renderer ${className}`}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4 p-2 bg-[var(--bg-secondary)] rounded-lg">
+      <div className="mb-4 flex items-center justify-between rounded-lg bg-secondary p-2">
         <div className="flex items-center gap-2">
           <Text size="xs" variant="secondary">
             Content: {contentType.toUpperCase()} • {Math.ceil(content.length / 1000)}KB
@@ -375,9 +366,9 @@ export function EnhancedMessageRenderer({
         .enhanced-message-renderer .html-content img {
           max-width: 100% !important;
           height: auto !important;
-          border-radius: 6px;
+          border-radius: var(--radius-md);
           margin: 8px 0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          box-shadow: var(--shadow-md);
         }
         
         .enhanced-message-renderer .html-content table {
@@ -385,7 +376,7 @@ export function EnhancedMessageRenderer({
           border-collapse: collapse;
           margin: 12px 0;
           border: 1px solid var(--border-default);
-          border-radius: 6px;
+          border-radius: var(--radius-md);
           overflow: hidden;
         }
         
@@ -406,7 +397,7 @@ export function EnhancedMessageRenderer({
           padding: 12px 16px;
           margin: 16px 0;
           background: var(--bg-secondary);
-          border-radius: 0 6px 6px 0;
+          border-radius: 0 var(--radius-md) var(--radius-md) 0;
           font-style: italic;
         }
         
@@ -431,7 +422,7 @@ export function EnhancedMessageRenderer({
         .enhanced-message-renderer .html-content pre {
           background: var(--bg-secondary);
           padding: 16px;
-          border-radius: 8px;
+          border-radius: var(--radius-lg);
           overflow-x: auto;
           margin: 16px 0;
           border: 1px solid var(--border-default);
@@ -443,7 +434,7 @@ export function EnhancedMessageRenderer({
         .enhanced-message-renderer .html-content code {
           background: var(--bg-secondary);
           padding: 2px 6px;
-          border-radius: 4px;
+          border-radius: var(--radius-sm);
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
           font-size: 13px;
           border: 1px solid var(--border-default);
@@ -491,7 +482,7 @@ export function EnhancedMessageRenderer({
           text-align: center !important;
           color: var(--text-secondary) !important;
           font-size: 12px !important;
-          border-radius: 6px !important;
+          border-radius: var(--radius-md) !important;
           margin: 8px 0 !important;
         }
       `}</style>

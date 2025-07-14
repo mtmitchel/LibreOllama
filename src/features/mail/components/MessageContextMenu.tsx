@@ -349,7 +349,7 @@ export function MessageContextMenu({
     <>
       <div
         ref={menuRef}
-        className="fixed bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 min-w-[200px]"
+        className="border-border-default fixed z-50 min-w-[200px] rounded-md border bg-primary py-1 shadow-lg"
         style={{
           left: menuPosition.x,
           top: menuPosition.y
@@ -360,7 +360,7 @@ export function MessageContextMenu({
             return (
               <div
                 key={item.id}
-                className="h-px bg-[var(--border-default)] my-1 mx-2"
+                className="bg-border-default mx-2 my-1 h-px"
               />
             );
           }
@@ -370,12 +370,12 @@ export function MessageContextMenu({
               key={item.id}
               onClick={item.action}
               disabled={item.disabled}
-              className={`w-full flex items-center justify-between px-4 py-2 text-sm text-left transition-colors ${
+              className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition-colors ${
                 item.disabled
-                  ? 'text-[var(--text-tertiary)] cursor-not-allowed'
+                  ? 'cursor-not-allowed text-muted'
                   : item.destructive
-                  ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
-                  : 'text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+                  ? 'text-error hover:bg-error-ghost hover:text-error'
+                  : 'text-primary hover:bg-secondary'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -383,7 +383,7 @@ export function MessageContextMenu({
                 <span>{item.label}</span>
               </div>
               {item.shortcut && (
-                <span className="text-xs text-[var(--text-tertiary)]">
+                <span className="text-xs text-muted">
                   {item.shortcut}
                 </span>
               )}
@@ -394,32 +394,32 @@ export function MessageContextMenu({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-60">
-          <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-start gap-4 mb-4">
-              <AlertTriangle size={24} className="text-yellow-500 flex-shrink-0 mt-1" />
+        <div className="bg-bg-overlay z-60 fixed inset-0 flex items-center justify-center backdrop-blur-sm">
+          <div className="border-border-default mx-4 w-full max-w-md rounded-lg border bg-primary p-6 shadow-xl">
+            <div className="mb-4 flex items-start gap-4">
+              <AlertTriangle size={24} className="mt-1 shrink-0 text-warning" />
               <div>
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+                <h3 className="mb-2 text-lg font-semibold text-primary">
                   Confirm Delete
                 </h3>
-                <p className="text-[var(--text-secondary)]">
+                <p className="text-secondary">
                   Are you sure you want to delete this message? This action cannot be undone.
                 </p>
-                <div className="mt-2 p-3 bg-[var(--bg-tertiary)] rounded-md">
-                  <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                <div className="mt-2 rounded-md bg-tertiary p-3">
+                  <p className="truncate text-sm font-medium text-primary">
                     {message.subject}
                   </p>
-                  <p className="text-xs text-[var(--text-secondary)] truncate">
+                  <p className="truncate text-xs text-secondary">
                     From: {message.from.name || message.from.email}
                   </p>
                 </div>
               </div>
             </div>
             
-            <div className="flex gap-3 justify-end">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                className="px-4 py-2 text-sm text-secondary transition-colors hover:text-primary"
               >
                 Cancel
               </button>
@@ -428,7 +428,7 @@ export function MessageContextMenu({
                   handleDelete();
                   setShowDeleteConfirm(false);
                 }}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                className="hover:bg-error-fg rounded-md bg-error px-4 py-2 text-sm text-white transition-colors"
               >
                 Delete
               </button>

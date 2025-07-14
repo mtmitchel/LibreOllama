@@ -5,6 +5,7 @@ export { NotesSidebar } from './NotesSidebar';
 export { NotesEditor } from './NotesEditor';
 export { NotesEmptyState } from './NotesEmptyState';
 export { BlockEditor } from './BlockEditor';
+export { ContextualToolbar } from './ContextualToolbar';
 export * from './TiptapEditor';
 export * from './TiptapFixedToolbar';
 export * from './TiptapSlashCommand';

@@ -1,10 +1,10 @@
 // src/app/pages/Canvas.tsx - Phase 1.3: Component Hierarchy Restoration (FINAL)
-import React, { useState, useRef, useEffect } from 'react';
-import CanvasContainer from '../../features/canvas/components/CanvasContainer';
-import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
-import { PanelRightClose, Plus, Save } from 'lucide-react';
-import { Button } from '../../components/ui';
+import React, { useEffect, useState } from 'react';
+import { CanvasContainer } from '../../features/canvas/components/CanvasContainer';
 import { useHeader } from '../contexts/HeaderContext';
+import { Button } from '../../components/ui';
+import { PanelRightClose } from 'lucide-react';
+import CanvasSidebar from '../../features/canvas/components/CanvasSidebar';
 import Konva from 'konva';
 
 /**
@@ -12,7 +12,7 @@ import Konva from 'konva';
  * following the same pattern as the Notes and Projects pages.
  * The Canvas Sidebar is on the left, and the main canvas content is on the right.
  */
-export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
+  export function CanvasPage() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const [isCanvasSidebarOpen, setCanvasSidebarOpen] = useState(true);
   const [canvasStageRef, setCanvasStageRef] = useState<React.RefObject<Konva.Stage | null> | undefined>(undefined);
@@ -28,13 +28,8 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
     return () => clearHeaderProps();
   }, [setHeaderProps, clearHeaderProps]);
 
-
-
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] relative" style={{ 
-      padding: 'var(--space-layout-gutter)',
-      gap: 'var(--space-4)'
-    }}>
+    <div className="relative flex h-full gap-4 bg-canvas p-6">
       {isCanvasSidebarOpen && (
         <CanvasSidebar
           isOpen={isCanvasSidebarOpen}
@@ -48,22 +43,23 @@ export function CanvasPage({ appSidebarOpen }: { appSidebarOpen: boolean }) {
           variant="ghost"
           size="icon"
           onClick={() => setCanvasSidebarOpen(true)}
-          className="absolute z-10 text-[var(--text-secondary)] bg-[var(--bg-surface)]/80 hover:bg-[var(--bg-surface)] rounded-full"
+          className="absolute z-10 rounded-full"
           style={{
             top: 'var(--space-4)',
             left: 'var(--space-3)',
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            color: 'var(--text-secondary)',
+            background: 'var(--bg-glass)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid var(--border-primary)'
           }}
         >
           <PanelRightClose size={20} />
         </Button>
       )}
 
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex min-w-0 flex-1 flex-col">
         <CanvasContainer onStageReady={handleStageReady} />
       </main>
-
     </div>
   );
 }

@@ -1,5 +1,7 @@
 **A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
 
+**CRITICAL UI CONVENTION: This project uses sentence case (not title case) for ALL user-facing text including page titles, headings, section titles, list titles, button copy, navigation copy, form labels, menu items, and any other UI text. Example: "Create new project" NOT "Create New Project".**
+
 # Canvas Development Roadmap
 
 This document provides a comprehensive overview of the Canvas feature, including its current implementation details and future development plans.

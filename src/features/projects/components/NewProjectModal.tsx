@@ -1,5 +1,6 @@
-import React from 'react';
-import { Card, Button, Input, Textarea, Checkbox, Heading, Text, Caption } from "../../../components/ui";
+import React, { useState } from 'react';
+import { Button, Card, Text, Heading, Input, Select, Checkbox, Badge } from '../../../components/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/Dialog';
 import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 interface ProjectForm {
@@ -33,27 +34,37 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  // Semantic color options using design tokens
+  const colorOptions = [
+    { name: 'Primary', value: '#3b82f6' },
+    { name: 'Success', value: '#10b981' },
+    { name: 'Warning', value: '#f59e0b' },
+    { name: 'Error', value: '#ef4444' },
+    { name: 'Purple', value: '#8b5cf6' },
+    { name: 'Cyan', value: '#06b6d4' }
+  ];
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300 animate-in fade-in">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[var(--shadow-xl)] animate-in zoom-in-95 duration-300">
-        <div className="flex items-center justify-between mb-6">
-          <Heading level={2}>Create New Project</Heading>
+    <div className="bg-bg-overlay animate-in fade-in fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
+      <Card className="animate-in zoom-in-95 max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-xl duration-300">
+        <div className="mb-6 flex items-center justify-between">
+          <Heading level={2}>Create new project</Heading>
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={onClose}
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+            className="text-secondary hover:bg-secondary hover:text-primary"
           >
             <X size={20} />
           </Button>
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center mb-8">
+        <div className="mb-8 flex items-center justify-center">
           <div className="flex items-center gap-4">
             {[1, 2, 3].map(step => (
               <div key={step} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-200 ${
+                <div className={`flex size-8 items-center justify-center rounded-full text-sm font-medium transition-all duration-200 ${
                   step <= newProjectStep 
                     ? 'bg-accent-primary text-white shadow-sm' 
                     : 'bg-tertiary text-secondary'
@@ -61,7 +72,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                   {step}
                 </div>
                 {step < 3 && (
-                  <div className={`w-12 h-0.5 mx-2 transition-all duration-200 ${
+                  <div className={`mx-2 h-0.5 w-12 transition-all duration-200 ${
                     step < newProjectStep ? 'bg-accent-primary' : 'bg-tertiary'
                   }`} />
                 )}
@@ -72,40 +83,42 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
         {/* Step Content */}
         {newProjectStep === 1 && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <Heading level={3} className="mb-4">Project Details</Heading>
+              <Heading level={3} className="mb-4">Project basics</Heading>
               <div className="space-y-4">
                 <div>
-                  <Text as="label" variant="body" size="sm" weight="medium" className="block mb-2">Project Name</Text>
-                  <Input 
+                  <Text as="label" variant="body" size="sm" weight="medium" className="mb-2 block">Project name</Text>
+                  <Input
+                    type="text"
+                    placeholder="Enter project name..."
                     value={projectForm.name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter project name"
-                    className="w-full"
+                    onChange={(e) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
                   />
                 </div>
+
                 <div>
-                  <Text as="label" variant="body" size="sm" weight="medium" className="block mb-2">Description</Text>
-                  <Textarea 
+                  <Text as="label" variant="body" size="sm" weight="medium" className="mb-2 block">Description</Text>
+                  <Input
+                    type="text"
+                    placeholder="Describe your project..."
                     value={projectForm.description}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe your project"
-                    rows={3}
-                    className="w-full"
+                    onChange={(e) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
                   />
                 </div>
+
                 <div>
-                  <Text as="label" variant="body" size="sm" weight="medium" className="block mb-2">Project Color</Text>
+                  <Text as="label" variant="body" size="sm" weight="medium" className="mb-2 block">Project color</Text>
                   <div className="flex gap-3">
-                    {['var(--accent-primary)', 'var(--accent-secondary)', 'var(--success)', 'var(--warning)', 'var(--error)', 'var(--accent-violet)'].map(color => (
+                    {colorOptions.map(option => (
                       <button
-                        key={color}
-                        className={`w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-105 ${
-                          projectForm.color === color ? 'border-text-primary scale-110 shadow-md' : 'border-border-default hover:border-border-subtle'
+                        key={option.value}
+                        className={`size-8 rounded-full border-2 transition-all duration-200 motion-safe:hover:scale-105 ${
+                          projectForm.color === option.value ? 'border-primary shadow-md motion-safe:scale-110' : 'border-border-default hover:border-border-subtle'
                         }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setProjectForm(prev => ({ ...prev, color }))}
+                        style={{ backgroundColor: option.value }}
+                        onClick={() => setProjectForm(prev => ({ ...prev, color: option.value }))}
+                        title={option.name}
                       />
                     ))}
                   </div>
@@ -116,43 +129,30 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
         )}
 
         {newProjectStep === 2 && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <Heading level={3} className="mb-4">AI Assistant</Heading>
-              <div className="bg-secondary rounded-lg p-4 mb-4 border border-border-subtle">
+              <Heading level={3} className="mb-4">AI assistant</Heading>
+              <div className="border-border-subtle rounded-lg border bg-secondary p-4">
                 <div className="flex items-start gap-3">
-                  <Sparkles size={20} className="text-accent-primary mt-0.5" />
+                  <Checkbox 
+                    checked={aiAssist}
+                    onCheckedChange={setAiAssist}
+                    className="mt-1"
+                  />
                   <div>
-                    <Heading level={4} className="mb-1">AI-Powered Project Setup</Heading>
-                    <Text variant="tertiary" size="sm">
-                      Let our AI assistant help you create a comprehensive project plan, including goals, timeline, and recommendations.
+                    <Text weight="medium" className="mb-2">Enable AI project assistant</Text>
+                    <Text size="sm" variant="secondary" className="mb-3">
+                      Get AI-powered suggestions for project planning, task breakdown, and progress insights.
                     </Text>
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} className="text-accent-primary" />
+                      <Text size="sm" variant="tertiary">
+                        Powered by advanced AI models
+                      </Text>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Checkbox 
-                  checked={aiAssist}
-                  onCheckedChange={setAiAssist}
-                  id="ai-assist"
-                />
-                <label htmlFor="ai-assist" className="text-sm font-medium">
-                  Enable AI Assistant for this project
-                </label>
-              </div>
-              {aiAssist && (
-              <div className="mt-4 p-4 bg-accent-ghost rounded-lg border border-accent-soft">
-                  <Text size="sm" variant="tertiary">
-                    The AI assistant will analyze your project details and suggest:
-                  </Text>
-                  <ul className="mt-2 space-y-1">
-                    <li><Text size="sm" variant="tertiary">• Key milestones and goals</Text></li>
-                    <li><Text size="sm" variant="tertiary">• Recommended timeline</Text></li>
-                    <li><Text size="sm" variant="tertiary">• Resource requirements</Text></li>
-                    <li><Text size="sm" variant="tertiary">• Risk assessment</Text></li>
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -161,10 +161,10 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
           <div className="space-y-4">
             <div>
               <Heading level={3} className="mb-4">Review & Create</Heading>
-              <div className="bg-secondary rounded-lg p-4 space-y-3 border border-border-subtle">
+              <div className="border-border-subtle space-y-3 rounded-lg border bg-secondary p-4">
                 <div className="flex items-center gap-3">
                   <div 
-                    className="w-4 h-4 rounded-full shadow-sm" 
+                    className="size-4 rounded-full shadow-sm" 
                     style={{ backgroundColor: projectForm.color }}
                   />
                   <Text weight="medium">{projectForm.name}</Text>
@@ -173,7 +173,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 <div className="flex items-center gap-2">
                   <Sparkles size={16} className="text-accent-primary" />
                   <Text size="sm" variant="tertiary">
-                    AI Assistant: {aiAssist ? 'Enabled' : 'Disabled'}
+                    AI assistant: {aiAssist ? 'Enabled' : 'Disabled'}
                   </Text>
                 </div>
               </div>
@@ -182,7 +182,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between mt-8 gap-3">
+        <div className="mt-8 flex items-center justify-between gap-3">
           <Button 
             variant="outline" 
             onClick={() => setNewProjectStep(prev => Math.max(1, prev - 1))}
@@ -201,7 +201,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
               <ChevronRight size={16} className="ml-2" />
             </Button>
           ) : (
-            <Button onClick={onCreateProject}>
+            <Button variant="primary" onClick={onCreateProject}>
               Create Project
             </Button>
           )}

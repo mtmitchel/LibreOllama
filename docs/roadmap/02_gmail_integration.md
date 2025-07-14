@@ -1,5 +1,7 @@
 **A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
 
+**CRITICAL UI CONVENTION: This project uses sentence case (not title case) for ALL user-facing text including page titles, headings, section titles, list titles, button copy, navigation copy, form labels, menu items, and any other UI text. Example: "Create new project" NOT "Create New Project".**
+
 # Gmail Integration Roadmap
 
 This document provides a comprehensive overview of the Gmail Integration feature, including its current implementation details and future development plans.
@@ -106,3 +108,28 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 - [ ] **Backend Warnings:** Address the 49 compiler warnings in the backend Rust code (mostly unused imports and dead code).
 - [ ] **Offline Support:** Refactor the frontend store (`mailStore.ts`) to handle offline access more gracefully, perhaps with more aggressive caching or a local-first approach.
 - [ ] **API Error Feedback:** Improve the error handling on the frontend to provide more specific and helpful feedback to the user when an API call fails. 
+
+### Missing Components Documentation
+
+**Authentication & Google Integration:**
+- `GoogleAuthModal.tsx` - Google OAuth authentication modal with scopes for Gmail, Calendar, and Tasks
+- `GoogleAuthProvider.tsx` - Authentication context provider
+- `LoginStatus.tsx` - Authentication status indicator
+
+**Advanced Search Components:**
+- `SimpleAdvancedSearch.tsx` - Advanced search interface replacing complex filters
+- `UnifiedLabelManager.tsx` - Unified label management system
+- `SearchSuggestions.tsx` - Search suggestions and autocomplete
+- `SavedSearches.tsx` - Saved search management
+
+**UI Enhancement Components:**
+- `ErrorDisplay.tsx` - Error display for Gmail operations
+- `SuccessMessage.tsx` - Success feedback component
+- `LoadingMessage.tsx` - Loading state indicators
+- `MessageContextMenu.tsx` - Context menu for message actions
+- `AttachmentSecurityWarning.tsx` - Security warnings for attachments
+
+**Compose & Messaging:**
+- `ComposeModal.tsx` - Full-featured email composition modal
+- `EnhancedAttachmentHandler.tsx` - Comprehensive attachment handling
+- `AttachmentPreviewModal.tsx` - Attachment preview functionality 

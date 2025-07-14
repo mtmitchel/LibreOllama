@@ -9,15 +9,13 @@ import {
   Info,
   SlidersHorizontal,
   Link as LinkIcon,
-  Gem,
   Download,
   RefreshCw,
   Trash2,
   Check,
   X,
-  AlertCircle,
 } from 'lucide-react';
-import { Card, Button, Input, Checkbox, Heading, Text } from '../../components/ui';
+import { Card, Button, Input, Heading, Text } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModal';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
@@ -52,7 +50,7 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId 
       aria-pressed={enabled}
       aria-labelledby={labelId}
       onClick={() => onChange(!enabled)}
-      className="relative inline-flex flex-shrink-0 border-2 border-transparent rounded-full cursor-pointer transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2"
+      className="focus:ring-accent-primary relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2"
       style={{
         height: 'var(--space-6)',
         width: 'calc(var(--space-8) + var(--space-3))',
@@ -62,7 +60,7 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, labelId 
       <span className="sr-only">Toggle setting</span>
       <span
         aria-hidden="true"
-        className="inline-block rounded-full shadow transform ring-0 transition ease-in-out duration-200"
+        className="inline-block rounded-full shadow ring-0 transition duration-200 ease-in-out"
         style={{
           width: 'var(--space-5)',
           height: 'var(--space-5)',
@@ -117,7 +115,7 @@ const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
 
   if (loading) {
     return (
-      <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center animate-pulse">
+      <div className="flex size-10 animate-pulse items-center justify-center rounded-full bg-accent-ghost">
         <User size={20} className="text-accent-primary opacity-50" />
       </div>
     );
@@ -125,7 +123,7 @@ const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
 
   if (error || !imgSrc) {
     return (
-      <div className="w-10 h-10 rounded-full bg-accent-ghost flex items-center justify-center">
+      <div className="flex size-10 items-center justify-center rounded-full bg-accent-ghost">
         <User size={20} className="text-accent-primary" />
       </div>
     );
@@ -135,7 +133,7 @@ const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
     <img 
       src={imgSrc} 
       alt={alt}
-      className="w-10 h-10 rounded-full"
+      className="size-10 rounded-full"
       loading="lazy"
       referrerPolicy="no-referrer"
     />
@@ -165,7 +163,7 @@ const Settings: React.FC = () => {
   const refreshGoogleAccount = useRefreshGoogleAccount();
   
   // Google service stores for authentication
-  const { authenticate: authenticateCalendar, fetchCalendars, fetchEvents } = useGoogleCalendarStore();
+  const { authenticate: authenticateCalendar } = useGoogleCalendarStore();
   const { authenticate: authenticateTasks } = useGoogleTasksStore();
   const { addAccount: addGmailAccount } = useMailStore();
   
@@ -173,7 +171,7 @@ const Settings: React.FC = () => {
   const accounts = integrationSettings.googleAccounts;
   const activeAccount = accounts.find(acc => acc.isActive) || null;
 
-  const handleGoogleAuth = async (account: any) => {
+  const handleGoogleAuth = async (account: { id: string; email: string; name: string; picture: string }) => {
     // Add account to settings store with comprehensive information
     addGoogleAccount({
       id: account.id,
@@ -243,24 +241,24 @@ const Settings: React.FC = () => {
           <div className="h-full p-6">
             <Card className="p-6">
             <div className="mb-6">
-              <Heading level={1} className="text-2xl font-bold mb-1">General</Heading>
+              <Heading level={1}>General</Heading>
               <Text variant="muted">Configure general application preferences and behavior.</Text>
             </div>
             
             <div className="flex flex-col gap-8">
               <Card className="p-6">
-                <Heading level={2} className="text-lg font-semibold mb-4">Application Startup</Heading>
+                <Heading level={2}>Application Startup</Heading>
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-default">
+                  <div className="border-border-default flex items-center justify-between border-b py-3">
                     <div className="flex-1">
-                      <label htmlFor="startup-view" className="block mb-1 text-sm font-medium">Startup view</label>
+                      <label htmlFor="startup-view" className="mb-1 block text-sm font-medium">Startup view</label>
                       <Text variant="muted" size="sm">Choose which module to open when you start the application.</Text>
                     </div>
                     {/* Select component removed */}
                   </div>
                   <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <Text as="label" id="check-updates-label" weight="medium" className="block mb-1">
+                      <Text as="label" id="check-updates-label" weight="medium" className="mb-1 block">
                         Check for updates on startup
                       </Text>
                       <Text variant="muted" size="sm">
@@ -277,11 +275,11 @@ const Settings: React.FC = () => {
               </Card>
               
               <Card className="p-6">
-                <Heading level={2} className="text-lg font-semibold mb-4">Regional Settings</Heading>
+                <Heading level={2}>Regional Settings</Heading>
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-default">
+                  <div className="border-border-default flex items-center justify-between border-b py-3">
                     <div className="flex-1">
-                      <label htmlFor="language-select" className="block mb-1 text-sm font-medium">
+                      <label htmlFor="language-select" className="mb-1 block text-sm font-medium">
                         Language
                       </label>
                       <Text variant="muted" size="sm">
@@ -292,7 +290,7 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <label htmlFor="first-day-select" className="block mb-1 text-sm font-medium">
+                      <label htmlFor="first-day-select" className="mb-1 block text-sm font-medium">
                         First day of the week
                       </label>
                       <Text variant="muted" size="sm">
@@ -312,21 +310,21 @@ const Settings: React.FC = () => {
           <div className="h-full p-6">
             <Card className="p-6">
             <div className="mb-6">
-              <Heading level={1} className="text-2xl font-bold mb-1">Agents and Models</Heading>
+              <Heading level={1}>Agents and models</Heading>
               <Text variant="muted">Manage your local AI models and agent configurations.</Text>
             </div>
             <div className="flex flex-col gap-8">
               <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <Heading level={2} className="text-lg font-semibold">Ollama Server</Heading>
+                <div className="mb-6 flex items-center justify-between">
+                  <Heading level={2}>Ollama Server</Heading>
                   <div className="flex items-center gap-2 text-sm text-success">
-                    <span className="w-2.5 h-2.5 rounded-full bg-success" />
+                    <span className="size-2.5 rounded-full bg-success" />
                     Connected
                   </div>
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <label htmlFor="ollama-endpoint" className="block text-sm font-medium">
                         Server endpoint
@@ -352,8 +350,8 @@ const Settings: React.FC = () => {
               </Card>
 
               <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Heading level={2} className="text-lg font-semibold">Local Models</Heading>
+                <div className="mb-4 flex items-center justify-between">
+                  <Heading level={2}>Local Models</Heading>
                   <Button variant="outline" size="sm" className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2">
                     <Download size={16} /> Pull a new model
                   </Button>
@@ -362,10 +360,10 @@ const Settings: React.FC = () => {
                   <table className="w-full text-sm">
                     <thead className="text-left text-muted">
                       <tr>
-                        <th className="p-2 font-medium border-b border-border-default">Model Name</th>
-                        <th className="p-2 font-medium border-b border-border-default">Size</th>
-                        <th className="p-2 font-medium border-b border-border-default">Last Modified</th>
-                        <th className="p-2 font-medium border-b border-border-default text-right">Actions</th>
+                        <th className="border-border-default border-b p-2 font-medium">Model Name</th>
+                        <th className="border-border-default border-b p-2 font-medium">Size</th>
+                        <th className="border-border-default border-b p-2 font-medium">Last Modified</th>
+                        <th className="border-border-default border-b p-2 text-right font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -374,16 +372,16 @@ const Settings: React.FC = () => {
                         { name: 'codellama:7b', size: '3.8 GB', modified: '1 month ago' },
                         { name: 'mixtral:latest', size: '26 GB', modified: '3 days ago' },
                       ].map(model => (
-                        <tr key={model.name} className="border-b border-border-subtle">
-                          <td className="p-2 whitespace-nowrap text-primary font-medium">{model.name}</td>
-                          <td className="p-2 whitespace-nowrap text-muted">{model.size}</td>
-                          <td className="p-2 whitespace-nowrap text-muted">{model.modified}</td>
-                          <td className="p-2 whitespace-nowrap text-right">
+                        <tr key={model.name} className="border-border-subtle border-b">
+                          <td className="whitespace-nowrap p-2 font-medium text-primary">{model.name}</td>
+                          <td className="whitespace-nowrap p-2 text-muted">{model.size}</td>
+                          <td className="whitespace-nowrap p-2 text-muted">{model.modified}</td>
+                          <td className="whitespace-nowrap p-2 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="text-muted focus:ring-2 focus:ring-primary focus:ring-offset-2 w-8 h-8"
+                                className="size-8 text-muted focus:ring-2 focus:ring-primary focus:ring-offset-2"
                                 title="Update model"
                               >
                                 <RefreshCw size={16} />
@@ -391,7 +389,7 @@ const Settings: React.FC = () => {
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="text-muted hover:bg-error-ghost hover:text-error focus:ring-2 focus:ring-error focus:ring-offset-2 w-8 h-8"
+                                className="size-8 text-muted hover:bg-error-ghost hover:text-error focus:ring-2 focus:ring-error focus:ring-offset-2"
                                 title="Remove model"
                               >
                                 <Trash2 size={16} />
@@ -413,13 +411,13 @@ const Settings: React.FC = () => {
           <div className="h-full p-6">
             <Card className="p-6">
             <div className="mb-6">
-              <Heading level={1} className="text-2xl font-bold mb-1">Integrations</Heading>
+              <Heading level={1}>Integrations</Heading>
               <Text variant="muted">Connect to external services and manage API keys.</Text>
             </div>
             <div className="flex flex-col gap-8">
               <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Heading level={2} className="text-lg font-semibold">Google Accounts</Heading>
+                <div className="mb-4 flex items-center justify-between">
+                  <Heading level={2}>Google Accounts</Heading>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -443,14 +441,14 @@ const Settings: React.FC = () => {
                 ) : (
                   <div className="space-y-3">
                     {accounts.map((account) => (
-                      <div key={account.id} className="flex items-center justify-between p-4 border border-border-default rounded-lg">
+                      <div key={account.id} className="border-border-default flex items-center justify-between rounded-lg border p-4">
                         <div className="flex items-center gap-3">
                           <UserAvatar src={account.picture} alt={account.name} />
                           <div>
                             <Text weight="medium">{account.name || account.email}</Text>
                             <Text variant="muted" size="sm">{account.email}</Text>
                             {account.services && (
-                              <div className="flex gap-1 mt-1">
+                              <div className="mt-1 flex gap-1">
                                 {Object.entries(account.services).map(([service, enabled]) => {
                                   if (!enabled) return null;
                                   let serviceName = service.charAt(0).toUpperCase() + service.slice(1);
@@ -466,10 +464,10 @@ const Settings: React.FC = () => {
                                       styles = 'bg-purple-100 text-purple-700';
                                       break;
                                     default:
-                                      styles = 'bg-gray-100 text-gray-700';
+                                      styles = 'bg-surface text-primary';
                                   }
                                   return (
-                                    <span key={service} className={`px-1.5 py-0.5 text-xs rounded ${styles}`}>
+                                    <span key={service} className={`rounded px-1.5 py-0.5 text-xs ${styles}`}>
                                       {serviceName}
                                     </span>
                                   );
@@ -478,7 +476,7 @@ const Settings: React.FC = () => {
                             )}
                           </div>
                           {activeAccount?.id === account.id && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-success-ghost text-success rounded-full">
+                            <div className="flex items-center gap-1 rounded-full bg-success-ghost px-2 py-1 text-success">
                               <Check size={12} />
                               <Text size="xs">Active</Text>
                             </div>
@@ -509,7 +507,7 @@ const Settings: React.FC = () => {
                             variant="ghost" 
                             size="icon"
                             onClick={() => removeGoogleAccount(account.id)}
-                            className="text-error hover:bg-error-ghost focus:ring-2 focus:ring-error focus:ring-offset-2 w-8 h-8"
+                            className="size-8 text-error hover:bg-error-ghost focus:ring-2 focus:ring-error focus:ring-offset-2"
                             title="Remove Account"
                           >
                             <X size={16} />
@@ -522,7 +520,7 @@ const Settings: React.FC = () => {
               </Card>
               
               <Card className="p-6">
-                <Heading level={2} className="text-lg font-semibold mb-4">Cloud Model API Keys</Heading>
+                <Heading level={2}>Cloud Model API Keys</Heading>
                 <div className="flex flex-col gap-4">
                   {[
                     {
@@ -541,9 +539,9 @@ const Settings: React.FC = () => {
                     },
                   ].map((apiKey) => (
                     <React.Fragment key={apiKey.id}>
-                      <div className="flex items-center justify-between py-3 border-b border-border-default">
+                      <div className="border-border-default flex items-center justify-between border-b py-3">
                         <div className="flex-1">
-                          <label htmlFor={apiKey.id} className="block mb-1 text-sm font-medium">
+                          <label htmlFor={apiKey.id} className="mb-1 block text-sm font-medium">
                             {apiKey.label}
                           </label>
                           <Text variant="muted" size="sm">
@@ -577,17 +575,17 @@ const Settings: React.FC = () => {
           <div className="h-full p-6">
             <Card className="p-6">
             <div className="mb-6">
-              <Heading level={1} className="text-2xl font-bold mb-1">Appearance</Heading>
+              <Heading level={1}>Appearance</Heading>
               <Text variant="muted">Customize the visual appearance and theme of the application.</Text>
             </div>
             
             <div className="flex flex-col gap-8">
               <Card className="p-6">
-                <Heading level={2} className="text-lg font-semibold mb-4">Theme</Heading>
+                <Heading level={2}>Theme</Heading>
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border-default">
+                  <div className="border-border-default flex items-center justify-between border-b py-3">
                     <div className="flex-1">
-                      <label htmlFor="theme-select" className="block mb-1 text-sm font-medium">
+                      <label htmlFor="theme-select" className="mb-1 block text-sm font-medium">
                         Color theme
                       </label>
                       <Text variant="muted" size="sm">
@@ -608,9 +606,9 @@ const Settings: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between py-3 border-b border-border-default">
+                  <div className="border-border-default flex items-center justify-between border-b py-3">
                     <div className="flex-1">
-                      <label htmlFor="font-size-select" className="block mb-1 text-sm font-medium">
+                      <label htmlFor="font-size-select" className="mb-1 block text-sm font-medium">
                         Font size
                       </label>
                       <Text variant="muted" size="sm">
@@ -633,7 +631,7 @@ const Settings: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <label htmlFor="density-select" className="block mb-1 text-sm font-medium">
+                      <label htmlFor="density-select" className="mb-1 block text-sm font-medium">
                         Interface density
                       </label>
                       <Text variant="muted" size="sm">
@@ -664,9 +662,9 @@ const Settings: React.FC = () => {
         return (
           <div className="h-full p-6">
             <Card className="p-6">
-              <div className="flex flex-col items-center justify-center h-full text-muted">
-                <Cog size={48} className="opacity-50 mb-4" />
-                <Heading level={2} className="text-xl font-semibold mb-2 text-primary">
+              <div className="flex h-full flex-col items-center justify-center text-muted">
+                <Cog size={48} className="mb-4 opacity-50" />
+                <Heading level={2} className="mb-2 text-xl font-semibold text-primary">
                   {navItems.find(item => item.id === activeSection)?.label}
                 </Heading>
                 <Text>
@@ -688,11 +686,11 @@ const Settings: React.FC = () => {
   }, [setHeaderProps, clearHeaderProps]);
 
   return (
-    <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
+    <div className="flex h-full gap-6 bg-content p-6 lg:gap-8 lg:p-8">
       {/* Left Navigation */}
-      <div className="w-64 flex-shrink-0">
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] p-4 h-full">
-          <h3 className="text-base font-semibold text-primary mb-3 px-3 pt-1">
+      <div className="w-64 shrink-0">
+        <div className="border-border-default shadow-card h-full rounded-lg border bg-card p-4">
+          <h3 className="mb-3 px-3 pt-1 text-base font-semibold text-primary">
             Categories
           </h3>
           <nav className="flex flex-col gap-1">
@@ -707,14 +705,14 @@ const Settings: React.FC = () => {
                     e.preventDefault();
                     setActiveSection(item.id);
                   }}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-bg-tertiary
+                  className={`focus:ring-offset-bg-tertiary flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
                     ${isActive 
-                      ? 'bg-accent-ghost text-accent-primary font-semibold' 
-                      : 'text-muted hover:bg-bg-tertiary hover:text-primary'
+                      ? 'bg-accent-ghost font-semibold text-accent-primary' 
+                      : 'hover:bg-bg-tertiary text-muted hover:text-primary'
                     }`
                   }
                 >
-                  <IconComponent size={16} className="flex-shrink-0" />
+                  <IconComponent size={16} className="shrink-0" />
                   <span className="truncate">{item.label}</span>
                 </a>
               );
@@ -724,14 +722,14 @@ const Settings: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-w-0 bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] relative">
+      <div className="relative min-w-0 flex-1 rounded-lg bg-tertiary">
         <div className="h-full">
           {renderSection()} 
         </div>
 
         {/* Google Authentication Modal - positioned relative to main content area */}
         {showGoogleAuthModal && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6 rounded-[var(--radius-lg)]">
+          <div className="bg-bg-overlay absolute inset-0 z-50 flex items-center justify-center rounded-lg p-6">
             <div className="w-full max-w-md">
               <GoogleAuthModal
                 isOpen={showGoogleAuthModal}
@@ -739,7 +737,7 @@ const Settings: React.FC = () => {
                 onSuccess={handleGoogleAuth}
                 title="Connect Google Account" 
                 description="Sign in to sync your Gmail, Calendar, and Tasks with Google"
-                icon={<LinkIcon size={24} className="text-[var(--accent-primary)]" />}
+                icon={<LinkIcon size={24} className="text-accent-primary" />}
                 scopes={[
           // Calendar permissions
           'https://www.googleapis.com/auth/calendar',

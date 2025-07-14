@@ -1,6 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
-import { useHeader } from '../contexts/HeaderContext';
-import { PlusCircle, MoreHorizontal } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import {
   TodaysFocusWidget,
   ProjectProgressWidget,
@@ -11,7 +9,7 @@ import {
 } from "../../features/dashboard/components";
 import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetErrorBoundary";
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
-import { LoadingState, Heading, Text, FlexibleGrid } from "../../components/ui";
+import { LoadingState, FlexibleGrid } from "../../components/ui";
 import {
   migrationSprintTasks,
   todaysFocusItems,
@@ -19,7 +17,6 @@ import {
 } from "../../core/lib/mockData";
 
 export function Dashboard() {
-  const { setHeaderProps, clearHeaderProps } = useHeader();
   const [isLoading, setIsLoading] = useState(true);
 
   // Simulate loading data
@@ -31,22 +28,19 @@ export function Dashboard() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    setHeaderProps({
-      title: "Dashboard"
-    });
-    return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
-
   if (isLoading) {
     return (
-      <div className="w-full h-full p-6 lg:p-8">
+      <div className="size-full bg-primary p-6">
         <LoadingState 
           size="lg" 
           text="Loading your dashboard..." 
           className="mb-8" 
         />
-        <FlexibleGrid minItemWidth={350} gap={6} className="w-full">
+        <FlexibleGrid 
+          minItemWidth={350} 
+          gap={6} 
+          className="w-full gap-6"
+        >
           <WidgetSkeleton rows={3} />
           <WidgetSkeleton rows={2} />
           <WidgetSkeleton rows={2} />
@@ -59,9 +53,12 @@ export function Dashboard() {
   }
 
   return (
-    <div className="w-full h-full p-6 lg:p-8">
-      <FlexibleGrid minItemWidth={350} gap={6} className="w-full">
-        <WidgetErrorBoundary widgetName="Project Progress">
+          <div className="size-full bg-primary p-6">
+      <FlexibleGrid 
+        minItemWidth={350} 
+        className="w-full gap-6"
+      >
+        <WidgetErrorBoundary widgetName="Project progress">
           <ProjectProgressWidget 
             title="UI migration sprint"
             percentage={67}
@@ -69,7 +66,7 @@ export function Dashboard() {
           />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Today's Focus">
+        <WidgetErrorBoundary widgetName="Today's focus">
           <TodaysFocusWidget 
             items={todaysFocusItems}
             onToggle={(item) => {
@@ -83,21 +80,21 @@ export function Dashboard() {
           />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Agent Status">
+        <WidgetErrorBoundary widgetName="Agent status">
           <AgentStatusWidget 
             agents={agentStatusItems}
           />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Quick Actions">
+        <WidgetErrorBoundary widgetName="Quick actions">
           <QuickActionsWidget />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Upcoming Events">
+        <WidgetErrorBoundary widgetName="Upcoming events">
           <UpcomingEventsWidget />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Pending Tasks">
+        <WidgetErrorBoundary widgetName="Pending tasks">
           <PendingTasksWidget />
         </WidgetErrorBoundary>
       </FlexibleGrid>

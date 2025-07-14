@@ -29,52 +29,52 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
     }
   };
 
-  const getUserMessageStyles = () => {
-    // User messages use ghost variant as preferred - subtle background tint with colored text
+  // Get proper variant styles using standard design system patterns
+  const getUserBubbleClasses = () => {
     switch (variant) {
       case 'muted':
-        return 'bg-[var(--accent-muted)] text-white border-none';
+        return 'bg-accent-primary text-white border-none';
       case 'ghost':
-        // Ghost style: subtle background tint with colored text (preferred)
-        return 'bg-[var(--accent-ghost)] text-[var(--accent-primary)] border border-[var(--accent-soft)]';
+        return 'bg-accent-soft text-accent-primary border border-accent-primary';
       case 'outlined':
-        return 'bg-[var(--bg-surface)] text-[var(--accent-primary)] border border-[var(--accent-primary)]';
+        return 'bg-secondary text-accent-primary border border-accent-primary';
       default:
-        return 'bg-[var(--accent-ghost)] text-[var(--accent-primary)] border border-[var(--accent-soft)]';
+        return 'bg-accent-soft text-accent-primary border border-accent-primary';
     }
   };
 
-  const getBubbleRadius = () => {
-    const baseRadius = 'rounded-[var(--radius-xl)]';
-    return isUser 
-      ? `${baseRadius} rounded-br-[var(--radius-md)]` 
-      : `${baseRadius} rounded-bl-[var(--radius-md)]`;
+  const getBubbleClasses = () => {
+    const baseRadius = 'rounded-xl';
+    const userSpecific = isUser 
+      ? `${baseRadius} rounded-br-md ${getUserBubbleClasses()}` 
+      : `${baseRadius} rounded-bl-md`;
+    return userSpecific;
   };
 
   return (
-    <div className={`flex max-w-4xl gap-[var(--space-3)] ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
+    <div className={`flex max-w-4xl gap-3 ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
       {/* Avatar */}
       <Avatar 
         name={isUser ? 'User' : 'LibreOllama'}
         size="sm"
         fallbackIcon={isUser ? <User size={14} /> : <Bot size={14} />}
-        className="shadow-sm flex-shrink-0 mt-[var(--space-1)]"
+        className="mt-1 shrink-0 shadow-sm"
       />
       
       {/* Message Content */}
-      <div className={`flex flex-col max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex max-w-[80%] flex-col ${isUser ? 'items-end' : 'items-start'}`}>
         {/* Message Header */}
-        <Caption className={`mb-[var(--space-2)] ${isUser ? 'mr-[var(--space-2)]' : 'ml-[var(--space-2)]'}`}>
+        <Caption className={`mb-2 ${isUser ? 'mr-2' : 'ml-2'}`}>
           <Text as="span" weight="medium" size="xs" variant="secondary">
             {isUser ? 'You' : 'LibreOllama'}
           </Text>
-          <span className="mx-[var(--space-1)] text-[var(--text-secondary)]">·</span>
-          <span className="text-[var(--text-secondary)]">{message.timestamp}</span>
+          <span className="text-text-secondary mx-1">·</span>
+          <span className="text-text-secondary">{message.timestamp}</span>
         </Caption>
         
         {/* Message Bubble using Card Component with proper elevation */}
         <Card 
-          className={`relative group ${getBubbleRadius()} ${!isUser ? '' : getUserMessageStyles()}`}
+          className={`group relative ${getBubbleClasses()}`}
           padding="default"
         >
           {/* Enhanced readability with proper line spacing and typography */}
@@ -86,7 +86,7 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
             variant={isUser ? undefined : "body"}
           >
             {message.content.split('\n\n').map((paragraph, index) => (
-              <p key={index} className={`whitespace-pre-wrap ${index > 0 ? 'mt-[var(--space-3)]' : ''}`}>
+              <p key={index} className={`whitespace-pre-wrap ${index > 0 ? 'mt-3' : ''}`}>
                 {paragraph.split('\n').map((line, lineIndex) => (
                   <React.Fragment key={lineIndex}>
                     {line}
@@ -98,16 +98,16 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
           </Text>
           
           {/* Message Actions - Positioned top-right of the bubble */}
-          <div className={`absolute opacity-0 group-hover:opacity-100 transition-all duration-200 top-[-0.5rem] flex gap-[var(--space-1)] ${isUser ? 'right-[-0.5rem]' : 'right-[-0.5rem]'}`}>
+          <div className="absolute -right-2 -top-2 flex gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
             {/* Copy Button - Always available */}
             <Button
               variant="ghost"
               size="icon"
               onClick={handleCopyMessage}
               title="Copy message"
-              className="shadow-[var(--shadow-button)] hover:scale-105 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-[var(--space-2)] w-auto h-auto"
+              className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
             >
-              <Copy className="text-[var(--text-muted)] w-[var(--space-3)] h-[var(--space-3)]" />
+              <Copy className="text-text-secondary size-3" />
             </Button>
 
             {/* Edit Button - Only for user messages */}
@@ -117,9 +117,9 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
                 size="icon"
                 onClick={handleEditMessage}
                 title="Edit message"
-                className="shadow-[var(--shadow-button)] hover:scale-105 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-[var(--space-2)] w-auto h-auto"
+                className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
               >
-                <Edit3 className="text-[var(--text-muted)] w-[var(--space-3)] h-[var(--space-3)]" />
+                <Edit3 className="text-text-secondary size-3" />
               </Button>
             )}
 
@@ -130,9 +130,9 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
                 size="icon"
                 onClick={handleCreateTask}
                 title="Create task from message"
-                className="shadow-[var(--shadow-button)] hover:scale-105 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] p-[var(--space-2)] w-auto h-auto"
+                className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
               >
-                <CheckSquare className="text-[var(--text-muted)] w-[var(--space-3)] h-[var(--space-3)]" />
+                <CheckSquare className="text-text-secondary size-3" />
               </Button>
             )}
           </div>

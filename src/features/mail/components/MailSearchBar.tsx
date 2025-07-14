@@ -27,15 +27,15 @@ export function MailSearchBar() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl">
       <form onSubmit={handleSearch} className="relative">
         <div 
-          className={`flex items-center bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-full px-4 py-3 transition-all duration-200 ${
-            isFocused ? 'shadow-md border-[var(--accent-primary)]/30' : 'hover:shadow-sm'
+          className={`flex items-center rounded-full border border-default bg-secondary px-4 py-3 transition-all duration-200 ${
+            isFocused ? 'border-accent-primary/30 shadow-md' : 'hover:shadow-sm'
           }`}
         >
           {/* Search Icon */}
-          <Search size={20} className="text-[var(--text-secondary)] mr-3 flex-shrink-0" />
+          <Search size={20} className="mr-3 shrink-0 text-secondary" />
           
           {/* Search Input */}
           <input
@@ -46,7 +46,7 @@ export function MailSearchBar() {
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             placeholder="Search mail"
-            className="flex-1 bg-transparent border-none outline-none text-[var(--text-primary)] placeholder-[var(--text-secondary)] text-sm"
+            className="flex-1 border-none bg-transparent text-sm text-primary outline-none placeholder:text-secondary"
           />
           
           {/* Clear Button */}
@@ -56,7 +56,7 @@ export function MailSearchBar() {
               variant="ghost"
               size="icon"
               onClick={handleClear}
-              className="ml-2 h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="ml-2 size-6 text-secondary hover:text-primary"
             >
               <X size={16} />
             </Button>
@@ -67,7 +67,7 @@ export function MailSearchBar() {
             type="button"
             variant="ghost"
             size="icon"
-            className="ml-2 h-6 w-6 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="ml-2 size-6 text-secondary hover:text-primary"
             title="Search options"
           >
             <Settings size={16} />
@@ -77,30 +77,30 @@ export function MailSearchBar() {
         {/* Search Suggestions (when focused) */}
         {isFocused && (
           <Card
-            className="absolute top-full left-0 right-0 mt-1 shadow-lg z-10"
+            className="absolute inset-x-0 top-full z-10 mt-1 shadow-lg"
             padding="default"
           >
-            <Text size="xs" variant="secondary" style={{ marginBottom: 'var(--space-2)' }}>
+            <Text size="xs" variant="secondary" className="mb-2">
               Search suggestions:
             </Text>
-            <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
+            <div className="flex flex-col gap-1">
               <button 
                 type="button"
-                className="w-full text-left px-2 py-1 rounded text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                className="w-full rounded px-2 py-1 text-left text-sm text-secondary hover:bg-tertiary hover:text-primary"
                 onClick={() => setInputValue('is:unread')}
               >
                 is:unread
               </button>
               <button 
                 type="button"
-                className="w-full text-left px-2 py-1 rounded text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                className="w-full rounded px-2 py-1 text-left text-sm text-secondary hover:bg-tertiary hover:text-primary"
                 onClick={() => setInputValue('is:starred')}
               >
                 is:starred
               </button>
               <button 
                 type="button"
-                className="w-full text-left px-2 py-1 rounded text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                className="w-full rounded px-2 py-1 text-left text-sm text-secondary hover:bg-tertiary hover:text-primary"
                 onClick={() => setInputValue('has:attachment')}
               >
                 has:attachment

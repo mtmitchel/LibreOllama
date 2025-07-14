@@ -4,7 +4,7 @@ import React, {
   forwardRef, 
   useImperativeHandle 
 } from 'react';
-import { Editor } from '@tiptap/react';
+import type { Editor } from '@tiptap/react';
 import { 
   Type,
   Heading1, 
@@ -15,12 +15,8 @@ import {
   ListOrdered,
   Code2,
   Minus,
-  Hash,
-  CheckSquare,
   Image,
-  Table,
-  Calendar,
-  FileText
+  Table
 } from 'lucide-react';
 
 interface SlashCommandItem {
@@ -43,7 +39,7 @@ interface SlashCommandRef {
 }
 
 export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommandProps>(
-  ({ editor, range, query, onSelect }, ref) => {
+  ({ range, query, onSelect }, ref) => {
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     const items: SlashCommandItem[] = [
@@ -84,7 +80,7 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
         },
       },
       {
-        title: 'Bullet List',
+        title: 'Bullet list',
         description: 'Create a simple bullet list',
         icon: List,
         keywords: ['list', 'bullet', 'ul', 'unordered'],
@@ -225,18 +221,18 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
 
     if (filteredItems.length === 0) {
       return (
-        <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-lg p-[var(--space-4)] min-w-[280px]">
-          <div className="text-[var(--text-muted)] text-sm">
-            No results for "{query}"
+        <div className="flex items-center justify-center p-4">
+          <div className="text-sm text-muted">
+            No results for &quot;{query}&quot;
           </div>
         </div>
       );
     }
 
     return (
-      <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-lg)] shadow-lg p-[var(--space-2)] min-w-[280px] max-h-[300px] overflow-y-auto">
-        <div className="text-xs text-[var(--text-muted)] px-[var(--space-2)] py-[var(--space-1)] mb-[var(--space-1)] border-b border-[var(--border-subtle)]">
-          Commands {query && `matching "${query}"`}
+      <div className="border-border-default max-h-[300px] min-w-[280px] overflow-y-auto rounded-lg border bg-elevated p-2 shadow-lg">
+        <div className="border-border-subtle mb-1 border-b px-2 py-1 text-xs text-muted">
+          Commands {query && `matching &quot;${query}&quot;`}
         </div>
         
         {filteredItems.map((item, index) => {
@@ -247,32 +243,32 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
             <button
               key={item.title}
               className={`
-                w-full text-left px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] transition-colors flex items-start gap-[var(--space-3)]
+                flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors
                 ${isSelected 
-                  ? 'bg-[var(--accent-ghost)] border border-[var(--accent-primary)]' 
-                  : 'hover:bg-[var(--bg-tertiary)] border border-transparent'
+                  ? 'border border-accent-primary bg-accent-soft' 
+                  : 'border border-transparent hover:bg-tertiary'
                 }
               `}
               onClick={() => onSelect(item)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
               <div className={`
-                p-[var(--space-1)] rounded-[var(--radius-md)] mt-0.5 flex-shrink-0
-                ${isSelected ? 'bg-[var(--accent-primary)] text-white' : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'}
+                mt-0.5 shrink-0 rounded-md p-1
+                ${isSelected ? 'bg-accent-primary text-white' : 'bg-tertiary text-secondary'}
               `}>
-                <Icon className="h-4 w-4" />
+                <Icon className="size-4" />
               </div>
               
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className={`
                   text-sm font-medium
-                  ${isSelected ? 'text-[var(--accent-primary)]' : 'text-[var(--text-primary)]'}
+                  ${isSelected ? 'text-accent-primary' : 'text-primary'}
                 `}>
                   {item.title}
                 </div>
                 <div className={`
-                  text-xs mt-0.5
-                  ${isSelected ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'}
+                  mt-0.5 text-xs
+                  ${isSelected ? 'text-accent-primary' : 'text-muted'}
                 `}>
                   {item.description}
                 </div>
@@ -281,8 +277,8 @@ export const TiptapSlashCommand = forwardRef<SlashCommandRef, TiptapSlashCommand
           );
         })}
         
-        <div className="border-t border-[var(--border-subtle)] mt-[var(--space-2)] pt-[var(--space-2)] px-[var(--space-2)]">
-          <div className="text-xs text-[var(--text-muted)] flex items-center gap-[var(--space-4)]">
+        <div className="border-border-subtle mt-2 border-t px-2 pt-2">
+          <div className="flex items-center gap-4 text-xs text-muted">
             <span>↑↓ Navigate</span>
             <span>↵ Select</span>
             <span>Esc Cancel</span>

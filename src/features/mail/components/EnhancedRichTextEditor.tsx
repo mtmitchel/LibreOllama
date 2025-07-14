@@ -17,11 +17,6 @@ import {
   Quote, 
   Link as LinkIcon,
   Image as ImageIcon,
-  Palette,
-  Type,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Code,
   Undo,
   Redo,
@@ -57,12 +52,12 @@ function ToolbarButton({ onClick, isActive, disabled, title, children }: Toolbar
       disabled={disabled}
       title={title}
       className={`
-        h-8 w-8 p-0 rounded-md transition-all duration-200
+        size-8 rounded-md p-0 transition-all duration-200
         ${isActive 
-          ? 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)]' 
-          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+          ? 'hover:bg-accent-primary-hover bg-accent-primary text-white' 
+          : 'text-secondary hover:bg-tertiary hover:text-primary'
         }
-        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+        ${disabled ? 'cursor-not-allowed opacity-50' : ''}
       `}
     >
       {children}
@@ -95,31 +90,31 @@ function LinkModal({ isOpen, onClose, onSubmit, initialUrl = '', initialText = '
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[var(--bg-primary)] rounded-lg p-6 w-full max-w-md shadow-xl border border-[var(--border-default)]">
-        <Text size="lg" weight="semibold" className="mb-4">Add Link</Text>
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center">
+                  <div className="border-border-default w-full max-w-md rounded-lg border bg-content p-6 shadow-xl">
+        <Text size="lg" weight="semibold" className="mb-4">Add link</Text>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Text size="sm" className="mb-2 text-[var(--text-secondary)]">URL</Text>
+            <Text size="sm" className="mb-2 text-secondary">URL</Text>
             <input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
-              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              className="border-border-default focus:ring-accent-primary w-full rounded-md border bg-transparent px-3 py-2 text-primary placeholder:text-muted focus:border-accent-primary focus:outline-none focus:ring-1"
               autoFocus
             />
           </div>
           
           <div>
-            <Text size="sm" className="mb-2 text-[var(--text-secondary)]">Link Text (optional)</Text>
+            <Text size="sm" className="mb-2 text-secondary">Link Text (optional)</Text>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Link description"
-              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-md bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+              className="border-border-default focus:ring-accent-primary w-full rounded-md border bg-transparent px-3 py-2 text-primary placeholder:text-muted focus:border-accent-primary focus:outline-none focus:ring-1"
             />
           </div>
           
@@ -136,7 +131,7 @@ function LinkModal({ isOpen, onClose, onSubmit, initialUrl = '', initialText = '
               variant="primary"
               disabled={!url.trim()}
             >
-              Add Link
+              Add link
             </Button>
           </div>
         </form>
@@ -155,7 +150,6 @@ export function EnhancedRichTextEditor({
   onSourceToggle
 }: EnhancedRichTextEditorProps) {
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -173,7 +167,7 @@ export function EnhancedRichTextEditor({
       }),
       Image.configure({
         HTMLAttributes: {
-          style: 'max-width: 100%; height: auto; border-radius: 6px;',
+          style: 'max-width: 100%; height: auto; border-radius: var(--radius-md);',
         },
       }),
       Underline,
@@ -189,12 +183,11 @@ export function EnhancedRichTextEditor({
       onUpdate(editor.getHTML());
     },
     editable: !disabled,
-    editorProps: {
-      attributes: {
-        class: `prose prose-sm max-w-none focus:outline-none p-4 min-h-[200px] text-[var(--text-primary)] ${className}`,
-        style: 'font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.6;'
+          editorProps: {
+        attributes: {
+          class: `prose prose-sm max-w-none focus:outline-none p-4 min-h-[200px] text-text-primary font-sans text-sm leading-relaxed ${className}`,
+        },
       },
-    },
   });
 
   const addImage = useCallback(() => {
@@ -240,7 +233,7 @@ export function EnhancedRichTextEditor({
 
   if (!editor) {
     return (
-      <div className="flex items-center justify-center h-48 bg-[var(--bg-secondary)] rounded-md">
+      <div className="flex h-48 items-center justify-center rounded-md bg-secondary">
         <Text size="sm" variant="secondary">Loading editor...</Text>
       </div>
     );
@@ -248,10 +241,10 @@ export function EnhancedRichTextEditor({
 
   if (showSource) {
     return (
-      <div className="border border-[var(--border-default)] rounded-md">
+      <div className="border-border-default rounded-md border">
         {/* Toolbar for source view */}
-        <div className="border-b border-[var(--border-default)] p-2 bg-[var(--bg-secondary)] flex items-center justify-between">
-          <Text size="sm" variant="secondary">HTML Source</Text>
+        <div className="border-border-default flex items-center justify-between border-b bg-secondary p-2">
+          <Text size="sm" variant="secondary">HTML source</Text>
           <ToolbarButton
             onClick={toggleSource}
             title="Switch to visual editor"
@@ -263,7 +256,7 @@ export function EnhancedRichTextEditor({
         <textarea
           value={content}
           onChange={(e) => onUpdate(e.target.value)}
-          className="w-full h-64 p-4 font-mono text-sm bg-transparent border-0 resize-none focus:outline-none text-[var(--text-primary)]"
+          className="h-64 w-full resize-none border-0 bg-transparent p-4 font-mono text-sm text-primary focus:outline-none"
           placeholder="HTML content..."
         />
       </div>
@@ -271,11 +264,11 @@ export function EnhancedRichTextEditor({
   }
 
   return (
-    <div className="border border-[var(--border-default)] rounded-md overflow-hidden">
+    <div className="border-border-default overflow-hidden rounded-md border">
       {/* Toolbar */}
-      <div className="border-b border-[var(--border-default)] p-2 bg-[var(--bg-secondary)] flex items-center gap-1 flex-wrap">
+      <div className="border-border-default flex flex-wrap items-center gap-1 border-b bg-secondary p-2">
         {/* Format tools */}
-        <div className="flex items-center gap-1 pr-2 border-r border-[var(--border-default)]">
+        <div className="border-border-default flex items-center gap-1 border-r pr-2">
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             isActive={editor.isActive('bold')}
@@ -302,11 +295,11 @@ export function EnhancedRichTextEditor({
         </div>
 
         {/* List tools */}
-        <div className="flex items-center gap-1 pr-2 border-r border-[var(--border-default)]">
+        <div className="border-border-default flex items-center gap-1 border-r pr-2">
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             isActive={editor.isActive('bulletList')}
-            title="Bullet List"
+            title="Bullet list"
           >
             <List size={16} />
           </ToolbarButton>
@@ -314,7 +307,7 @@ export function EnhancedRichTextEditor({
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             isActive={editor.isActive('orderedList')}
-            title="Numbered List"
+            title="Numbered list"
           >
             <ListOrdered size={16} />
           </ToolbarButton>
@@ -329,18 +322,18 @@ export function EnhancedRichTextEditor({
         </div>
 
         {/* Insert tools */}
-        <div className="flex items-center gap-1 pr-2 border-r border-[var(--border-default)]">
+        <div className="border-border-default flex items-center gap-1 border-r pr-2">
           <ToolbarButton
             onClick={addLink}
             isActive={editor.isActive('link')}
-            title="Add Link"
+            title="Add link"
           >
             <LinkIcon size={16} />
           </ToolbarButton>
           
           <ToolbarButton
             onClick={addImage}
-            title="Add Image"
+            title="Add image"
           >
             <ImageIcon size={16} />
           </ToolbarButton>
@@ -348,14 +341,14 @@ export function EnhancedRichTextEditor({
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleCode().run()}
             isActive={editor.isActive('code')}
-            title="Inline Code"
+            title="Inline code"
           >
             <Code size={16} />
           </ToolbarButton>
         </div>
 
         {/* Undo/Redo */}
-        <div className="flex items-center gap-1 pr-2 border-r border-[var(--border-default)]">
+        <div className="border-border-default flex items-center gap-1 border-r pr-2">
           <ToolbarButton
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
@@ -385,7 +378,7 @@ export function EnhancedRichTextEditor({
       </div>
 
       {/* Editor Content */}
-      <div className="min-h-[200px] bg-[var(--bg-primary)]">
+                      <div className="min-h-[200px] bg-content">
         <EditorContent 
           editor={editor} 
           className="rich-text-editor"
@@ -400,83 +393,25 @@ export function EnhancedRichTextEditor({
       />
 
       {/* Enhanced styling */}
-      <style jsx>{`
+      <style>{`
         .rich-text-editor .ProseMirror {
           outline: none;
+          padding: 0;
+          min-height: 200px;
         }
         
         .rich-text-editor .ProseMirror p {
-          margin: 8px 0;
+          margin-bottom: 0.5em;
         }
         
-        .rich-text-editor .ProseMirror h1,
-        .rich-text-editor .ProseMirror h2,
-        .rich-text-editor .ProseMirror h3 {
-          margin: 16px 0 8px 0;
-          font-weight: 600;
-          line-height: 1.3;
-        }
-        
-        .rich-text-editor .ProseMirror h1 { font-size: 1.5em; }
-        .rich-text-editor .ProseMirror h2 { font-size: 1.3em; }
-        .rich-text-editor .ProseMirror h3 { font-size: 1.2em; }
-        
-        .rich-text-editor .ProseMirror ul,
-        .rich-text-editor .ProseMirror ol {
-          margin: 12px 0;
-          padding-left: 24px;
-        }
-        
-        .rich-text-editor .ProseMirror li {
-          margin: 4px 0;
-        }
-        
-        .rich-text-editor .ProseMirror blockquote {
-          border-left: 4px solid var(--accent-primary);
-          padding: 12px 16px;
-          margin: 16px 0;
-          background: var(--bg-secondary);
-          border-radius: 0 6px 6px 0;
-          font-style: italic;
-        }
-        
-        .rich-text-editor .ProseMirror a {
-          color: var(--accent-primary);
-          text-decoration: underline;
-          text-decoration-color: var(--accent-primary);
-          text-underline-offset: 2px;
-        }
-        
-        .rich-text-editor .ProseMirror a:hover {
-          color: var(--accent-primary-hover);
-          text-decoration-color: var(--accent-primary-hover);
-        }
-        
-        .rich-text-editor .ProseMirror code {
-          background: var(--bg-secondary);
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-          font-size: 13px;
-          border: 1px solid var(--border-default);
-        }
-        
-        .rich-text-editor .ProseMirror img {
-          max-width: 100%;
-          height: auto;
-          border-radius: 6px;
-          margin: 8px 0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .rich-text-editor .ProseMirror .is-empty::before {
+        .rich-text-editor .ProseMirror p.is-editor-empty:first-child::before {
+          color: #adb5bd;
           content: attr(data-placeholder);
           float: left;
-          color: var(--text-muted);
-          pointer-events: none;
           height: 0;
+          pointer-events: none;
         }
       `}</style>
     </div>
   );
-} 
+}

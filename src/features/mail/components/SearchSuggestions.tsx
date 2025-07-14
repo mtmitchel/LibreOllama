@@ -12,7 +12,7 @@ import {
   User,
   Tag
 } from 'lucide-react';
-import { SearchSuggestion, SearchOperator, GMAIL_SEARCH_OPERATORS, PREDEFINED_SEARCHES } from '../types/search';
+import { SearchSuggestion, SearchOperator, GMAIL_SEARCH_OPERATORS } from '../types/search';
 
 interface SearchSuggestionsProps {
   query: string;
@@ -85,11 +85,11 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
   // Generate suggestions based on query
   useEffect(() => {
     if (!query.trim()) {
-      // Show recent searches and predefined when no query
+      // Only show recent searches when no query (removed quick actions)
       const suggestions: SearchSuggestion[] = [];
       
-      // Add recent searches
-      recentSearches.slice(0, 3).forEach((search, index) => {
+      // Add recent searches only
+      recentSearches.slice(0, 5).forEach((search, index) => {
         suggestions.push({
           id: `recent-${index}`,
           type: 'recent',
@@ -97,30 +97,6 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
           description: 'Recent search',
           query: search,
           priority: 90 - index
-        });
-      });
-
-      // Add saved searches
-      savedSearches.slice(0, 3).forEach((search, index) => {
-        suggestions.push({
-          id: `saved-${search.id}`,
-          type: 'saved',
-          text: search.name,
-          description: search.description || search.query,
-          query: search.query,
-          priority: 80 - index
-        });
-      });
-
-      // Add predefined searches
-      PREDEFINED_SEARCHES.slice(0, 4).forEach((search, index) => {
-        suggestions.push({
-          id: `predefined-${index}`,
-          type: 'operator',
-          text: search.name || '',
-          description: search.description || '',
-          query: search.query || '',
-          priority: 70 - index
         });
       });
 
@@ -328,7 +304,7 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
   return (
     <div
       ref={dropdownRef}
-      className="fixed bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden"
+      className="border-border-default fixed z-50 max-h-96 overflow-hidden rounded-lg border bg-white shadow-xl"
       style={{ 
         top: position.top, 
         left: position.left, 
@@ -336,15 +312,15 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
       }}
     >
       {/* Header */}
-      <div className="px-4 py-2 border-b border-gray-100 bg-gray-50">
+      <div className="border-b border-gray-100 bg-surface px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">
-              {query.trim() ? 'Suggestions' : 'Quick Actions'}
+            <Search className="size-4 text-secondary" />
+            <span className="text-sm font-medium text-primary">
+              Suggestions
             </span>
           </div>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-secondary">
             {suggestions.length} result{suggestions.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -361,39 +337,39 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
               key={suggestion.id}
               onClick={() => handleSelectSuggestion(suggestion)}
               onMouseEnter={() => handleMouseEnter(index)}
-              className={`flex items-center space-x-3 px-4 py-3 cursor-pointer transition-colors ${
-                isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'
+              className={`flex cursor-pointer items-center space-x-3 px-4 py-3 transition-colors ${
+                isSelected ? 'border-l-2 border-l-accent-primary bg-accent-soft' : 'hover:bg-surface'
               }`}
             >
               {/* Icon */}
-              <div className={`flex-shrink-0 p-1 rounded ${
-                suggestion.type === 'operator' ? 'bg-blue-100' :
-                suggestion.type === 'recent' ? 'bg-gray-100' :
-                suggestion.type === 'saved' ? 'bg-yellow-100' :
-                suggestion.type === 'smart' ? 'bg-green-100' :
-                'bg-purple-100'
+              <div className={`shrink-0 rounded p-1 ${
+                suggestion.type === 'operator' ? 'bg-accent-soft' :
+                suggestion.type === 'recent' ? 'bg-surface' :
+                suggestion.type === 'saved' ? 'bg-warning-ghost' :
+                suggestion.type === 'smart' ? 'bg-success-ghost' :
+                'bg-accent-soft'
               }`}>
-                <Icon className={`h-3 w-3 ${
-                  suggestion.type === 'operator' ? 'text-blue-600' :
-                  suggestion.type === 'recent' ? 'text-gray-600' :
-                  suggestion.type === 'saved' ? 'text-yellow-600' :
-                  suggestion.type === 'smart' ? 'text-green-600' :
-                  'text-purple-600'
+                <Icon className={`size-3 ${
+                  suggestion.type === 'operator' ? 'text-accent-primary' :
+                  suggestion.type === 'recent' ? 'text-secondary' :
+                  suggestion.type === 'saved' ? 'text-warning' :
+                  suggestion.type === 'smart' ? 'text-success' :
+                  'text-accent-primary'
                 }`} />
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center space-x-2">
-                  <span className="font-medium text-gray-900 truncate">
+                  <span className="truncate font-medium text-primary">
                     {suggestion.text}
                   </span>
-                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                  <span className="rounded-full bg-surface px-2 py-1 text-xs text-secondary">
                     {suggestionTypeLabels[suggestion.type]}
                   </span>
                 </div>
                 {suggestion.description && (
-                  <p className="text-sm text-gray-600 truncate mt-1">
+                  <p className="mt-1 truncate text-sm text-secondary">
                     {suggestion.description}
                   </p>
                 )}
@@ -404,13 +380,13 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
                 {(suggestion.type === 'recent' || suggestion.type === 'saved') && (
                   <button
                     onClick={(e) => removeSuggestion(suggestion, e)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="p-1 text-muted transition-colors hover:text-secondary"
                     title="Remove"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="size-3" />
                   </button>
                 )}
-                <ArrowRight className="h-3 w-3 text-gray-400" />
+                <ArrowRight className="size-3 text-muted" />
               </div>
             </div>
           );
@@ -418,8 +394,8 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-gray-100 bg-gray-50">
-        <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="border-t border-gray-100 bg-surface px-4 py-2">
+        <div className="flex items-center justify-between text-xs text-secondary">
           <span>Use ↑↓ to navigate, Enter to select</span>
           <div className="flex items-center space-x-4">
             <span>ESC to close</span>

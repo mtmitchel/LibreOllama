@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Button, Heading } from '../../../components/ui';
 import { DropdownMenu } from '../../../components/ui/DropdownMenu';
-import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate, MoreHorizontal } from 'lucide-react';
+import { Settings2, MessageSquare, FileText, FolderPlus, LayoutTemplate } from 'lucide-react';
 
 interface QuickAction {
   id: string;
@@ -17,25 +17,25 @@ interface QuickActionsWidgetProps {
 const defaultActions: QuickAction[] = [
   { 
     id: 'action1', 
-    icon: <MessageSquare className="w-6 h-6 text-primary" />, 
+    icon: <MessageSquare className="size-6 text-primary" />, 
     label: "New chat",
     onClick: () => console.log('New chat')
   },
   { 
     id: 'action2', 
-    icon: <FileText className="w-6 h-6 text-primary" />, 
+    icon: <FileText className="size-6 text-primary" />, 
     label: "Create task",
     onClick: () => console.log('Create task')
   },
   { 
     id: 'action3', 
-    icon: <FolderPlus className="w-6 h-6 text-primary" />, 
+    icon: <FolderPlus className="size-6 text-primary" />, 
     label: "Create project",
     onClick: () => console.log('Create project')
   },
   { 
     id: 'action4', 
-    icon: <LayoutTemplate className="w-6 h-6 text-primary" />, 
+    icon: <LayoutTemplate className="size-6 text-primary" />, 
     label: "Open canvas",
     onClick: () => console.log('Open canvas')
   }
@@ -58,7 +58,7 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
 
   return (
     <Card>
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <Heading level={3}>Quick actions</Heading>
         <DropdownMenu>
           <DropdownMenu.Trigger asChild>
@@ -67,7 +67,7 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
               size="icon"
               className="text-secondary hover:text-primary"
             >
-              <Settings2 className="w-4 h-4" />
+              <Settings2 className="size-4" />
             </Button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Content>
@@ -84,16 +84,16 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
           </DropdownMenu.Content>
         </DropdownMenu>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {actions.map((action) => (
           <Button
             key={action.id}
             variant="secondary"
             onClick={action.onClick}
-            className="h-24 p-2 flex flex-col items-center justify-center text-center whitespace-normal gap-2"
+            className="flex h-24 flex-col items-center justify-center gap-2 whitespace-normal p-2 text-center"
           >
             {action.icon}
-            <span className="font-semibold text-sm text-primary leading-tight">{action.label}</span>
+            <span className="text-sm font-semibold leading-tight text-primary">{action.label}</span>
           </Button>
         ))}
       </div>

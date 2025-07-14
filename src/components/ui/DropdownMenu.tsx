@@ -51,40 +51,38 @@ function DropdownMenu({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isOpen) return;
-
+      
+      const currentIndex = focusedIndex;
+      const itemCount = itemRefs.current.length;
+      
       switch (event.key) {
-        case 'Escape':
-          event.preventDefault();
-          setIsOpen(false);
-          setFocusedIndex(-1);
-          triggerRef.current?.focus();
-          break;
         case 'ArrowDown':
           event.preventDefault();
-          setFocusedIndex(prev => {
-            const nextIndex = prev < itemRefs.current.length - 1 ? prev + 1 : 0;
-            itemRefs.current[nextIndex]?.focus();
-            return nextIndex;
-          });
+          setFocusedIndex((currentIndex + 1) % itemCount);
+          itemRefs.current[(currentIndex + 1) % itemCount]?.focus();
           break;
         case 'ArrowUp':
           event.preventDefault();
-          setFocusedIndex(prev => {
-            const prevIndex = prev > 0 ? prev - 1 : itemRefs.current.length - 1;
-            itemRefs.current[prevIndex]?.focus();
-            return prevIndex;
-          });
+          setFocusedIndex((currentIndex - 1 + itemCount) % itemCount);
+          itemRefs.current[(currentIndex - 1 + itemCount) % itemCount]?.focus();
           break;
         case 'Home':
           event.preventDefault();
           setFocusedIndex(0);
           itemRefs.current[0]?.focus();
           break;
-        case 'End':
+        case 'End': {
           event.preventDefault();
           const lastIndex = itemRefs.current.length - 1;
           setFocusedIndex(lastIndex);
           itemRefs.current[lastIndex]?.focus();
+          break;
+        }
+        case 'Escape':
+          setIsOpen(false);
+          triggerRef.current?.focus();
+          break;
+        default:
           break;
       }
     };
@@ -144,7 +142,7 @@ const DropdownMenuTrigger = ({ children, asChild = false }: DropdownMenuTriggerP
 
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children, {
-      ref: triggerRef as any,
+      ref: triggerRef as React.RefObject<HTMLElement>,
       onClick: handleTriggerClick,
       onKeyDown: handleKeyDown,
       'aria-expanded': isOpen,
@@ -194,7 +192,7 @@ const DropdownMenuContent = ({ children, className = '' }: DropdownMenuContentPr
       ref={menuRef}
       style={style}
       role="menu"
-      className={`bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 ${className}`}
+      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-50 rounded-md border bg-surface py-1 shadow-lg ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}
@@ -248,7 +246,7 @@ const DropdownMenuSubTrigger = ({ children, className, ...props }: DropdownMenuI
             ref={triggerRef}
             onMouseEnter={handleOpen}
             onMouseLeave={handleClose}
-            className={`w-full px-3 py-2 text-left text-sm transition-colors flex justify-between items-center text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] rounded-sm ${className}`}
+            className={`focus:ring-accent-primary flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm text-primary transition-colors hover:bg-tertiary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${className}`}
             {...props}
         >
             {children}
@@ -275,18 +273,15 @@ const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProp
         }
 
         // Vertical positioning
-        const spaceBelow = window.innerHeight - rect.top;
+        const spaceBelow = window.innerHeight - rect.bottom;
         let top = rect.top;
-        if (spaceBelow < menuRect.height) {
+        if (spaceBelow < menuRect.height && rect.top > menuRect.height) {
           top = rect.bottom - menuRect.height;
-        }
-        
-        if (top < 0) {
-            top = 4; // Add a small margin from the top
         }
 
         setStyle({
             position: 'fixed',
+            zIndex: 1000,
             top: `${top}px`,
             left: `${left}px`,
             opacity: 1,
@@ -294,7 +289,7 @@ const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProp
       } else {
         setStyle({ opacity: 0, position: 'fixed' });
       }
-    }, [isSubMenuOpen]);
+    }, [isSubMenuOpen, triggerRef]);
 
     if (!isSubMenuOpen) return null;
 
@@ -304,7 +299,7 @@ const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProp
             style={style}
             onMouseEnter={handleOpen}
             onMouseLeave={handleClose}
-            className={`bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg z-50 py-1 animate-in fade-in-0 zoom-in-95 ${className}`}
+            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-50 rounded-md border bg-surface py-1 shadow-lg ${className}`}
         >
             {children}
         </div>,
@@ -333,8 +328,8 @@ const DropdownMenuItem = ({
   const [itemIndex] = useState(() => itemCounter++);
   
   const variantClasses = {
-    default: 'text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
-    destructive: 'text-[var(--error)] hover:bg-[var(--error)]/10'
+    default: 'text-primary hover:bg-tertiary',
+    destructive: 'text-error hover:bg-error/10'
   };
 
   const handleSelect = () => {
@@ -372,7 +367,7 @@ const DropdownMenuItem = ({
         }
       }}
       role="menuitem"
-      className={`w-full px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-elevated)] rounded-sm ${variantClasses[variant]} ${className}`}
+      className={`focus:ring-accent-primary w-full rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${variantClasses[variant]} ${className}`}
       onClick={handleSelect}
       onKeyDown={handleKeyDown}
       onMouseEnter={handleMouseEnter}
@@ -385,7 +380,7 @@ const DropdownMenuItem = ({
 
 // 6. Separator Component
 const DropdownMenuSeparator = () => {
-  return <div className="h-px my-1 bg-[var(--border-default)]" />;
+  return <div className="bg-border-default my-1 h-px" />;
 };
 
 // 7. Compound Component

@@ -1,29 +1,24 @@
 // Modern Bottom-Center Floating Toolbar (FigJam-style)
 import React, { useState } from 'react';
 import { useUnifiedCanvasStore } from '../stores/unifiedCanvasStore';
-import { useTauriCanvas } from '../hooks/useTauriCanvas';
+
 import { ElementId } from '../types/enhanced.types';
-import { SHAPE_CREATORS, ShapeType } from '../utils/shapeCreators';
+
 import { 
   MousePointer2, 
   Type, 
   StickyNote, 
-  Pen, 
   Trash2,
   Undo2,
   Redo2,
   Hand,
-  Layout,
   Table,
   Group,
   Ungroup,
-  Layers,
   Highlighter,
   Eraser,
   Edit3,
   Brush,
-  GitBranch,
-  Workflow,
   Image as ImageIcon,
   ZoomIn,
   ZoomOut
@@ -53,27 +48,19 @@ const drawingTools = [
   { id: 'eraser', name: 'Eraser Tool', icon: Eraser }
 ];
 
-const selectionTools = [
-  // Reserved for future advanced selection tools
-];
+
 
 interface ModernKonvaToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
-  appSidebarOpen?: boolean; // For app-level sidebar if present
 }
 
 const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   onUndo,
-  onRedo,
-  sidebarOpen,
-  onToggleSidebar,
-  appSidebarOpen = false
+  onRedo
 }) => {
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const colorButtonRef = React.useRef<HTMLButtonElement>(null);
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   // Direct store access without useShallow to test
@@ -116,23 +103,17 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     setViewport({ scale: 1 });
   };
 
-  const groupElements = (elementIds: string[]) => {
+  const groupElements = () => {
 // TODO: Implement in unified store
     return null;
   };
-  const ungroupElements = (elementId: string) => {
+  const ungroupElements = () => {
 // TODO: Implement in unified store
   };
-  const isElementInGroup = (elementId: string) => {
+  const isElementInGroup = () => {
     // TODO: Implement in unified store
     return false;
   };
-  // Note: Layer panel functionality needs to be implemented in store
-  const showLayersPanel = false; // useCanvasStore((state) => state.showLayersPanel);
-  const setShowLayersPanel = () => {}; // useCanvasStore((state) => state.setShowLayersPanel);
-
-  // Tauri canvas hooks
-  const { saveToFile, loadFromFile } = useTauriCanvas();
 
   const handleDeleteSelected = () => {
     if (selectedElementId) {
@@ -205,8 +186,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
     }
   };
   
-  const canShowColorPicker = selectedElement && 
-    ['rectangle', 'circle', 'triangle', 'mindmap', 'sticky-note'].includes(selectedElement.type);
+
   
   // Check if current selection can be grouped/ungrouped
   const canGroup = selectedElementIds.size >= 2;
@@ -259,7 +239,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
           // Select the new image after a brief delay
           setTimeout(() => {
             const selectElement = useUnifiedCanvasStore.getState().selectElement;
-            selectElement(imageElement.id as any, false);
+            selectElement(imageElement.id as string, false);
           }, 10);
 };
         img.src = event.target?.result as string;
@@ -272,8 +252,8 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   return (
-    <div className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-[1000]">
-      <div className="pointer-events-auto flex items-center justify-center gap-3 px-3 py-1.5 bg-bg-elevated border border-border-default rounded-lg shadow-xl backdrop-blur-sm max-w-[95vw] overflow-visible">
+    <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[1000] flex justify-center">
+      <div className="bg-bg-elevated border-border-default pointer-events-auto flex max-w-[95vw] items-center justify-center gap-3 overflow-visible rounded-lg border px-3 py-1.5 shadow-xl backdrop-blur-sm">
         {/* Basic Tools */}
         <div className="flex items-center gap-1">
           {basicTools.map(tool => {
@@ -285,7 +265,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 variant={isActive ? "primary" : "ghost"}
                 size="icon"
                 onClick={() => handleToolClick(tool.id)}
-                className="h-9 w-9"
+                className="size-9"
                 title={tool.name}
                 aria-label={tool.name}
               >
@@ -306,7 +286,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                   variant={isActive ? "primary" : "ghost"}
                   size="icon"
                   onClick={() => handleToolClick(tool.id)}
-                  className="h-9 w-9"
+                  className="size-9"
                   title={tool.name}
                   aria-label={tool.name}
                 >
@@ -315,14 +295,14 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 
                 {/* Color bar for sticky note tool when active */}
                 {tool.id === 'sticky-note' && isActive && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex gap-0.5 p-1.5 bg-bg-elevated border border-border-default rounded-md shadow-lg backdrop-blur-sm">
+                  <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 gap-0.5 rounded-md border p-1.5 shadow-lg backdrop-blur-sm">
                     {[
-                      { color: 'var(--stickynote-yellow)', label: 'Yellow' },
-                      { color: 'var(--stickynote-green)', label: 'Green' },
-                      { color: 'var(--stickynote-blue)', label: 'Blue' },
-                      { color: 'var(--stickynote-violet)', label: 'Violet' },
-                      { color: 'var(--stickynote-pink)', label: 'Pink' },
-                      { color: 'var(--stickynote-coral)', label: 'Coral' }
+                      { color: '#FFE299', label: 'Yellow' },
+                      { color: '#BAFFC9', label: 'Green' },
+                      { color: '#A8DAFF', label: 'Blue' },
+                      { color: '#E6BAFF', label: 'Violet' },
+                      { color: '#FFB3BA', label: 'Pink' },
+                      { color: '#FFDFBA', label: 'Coral' }
                     ].map((colorOption, index) => (
                       <button
                         key={index}
@@ -330,7 +310,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                           e.stopPropagation();
                           handleColorChange(colorOption.color);
                         }}
-                        className="w-2.5 h-2.5 rounded-full border hover:scale-125 transition-transform focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] focus:ring-offset-1 focus:ring-offset-[var(--bg-elevated)]"
+                        className="focus:ring-accent-primary focus:ring-offset-elevated size-2.5 rounded-full border transition-transform focus:outline-none focus:ring-1 focus:ring-offset-1 motion-safe:hover:scale-125"
                         style={{ 
                           backgroundColor: colorOption.color, 
                           border: '1px solid transparent'
@@ -361,7 +341,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 variant={isActive ? "primary" : "ghost"}
                 size="icon"
                 onClick={() => handleToolClick(tool.id)}
-                className="h-9 w-9"
+                className="size-9"
                 title={tool.name}
                 aria-label={tool.name}
               >
@@ -385,7 +365,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             disabled={!canUndo}
             title={canUndo ? "Undo" : "Nothing to undo"}
             aria-label="Undo"
-            className="h-9 w-9"
+            className="size-9"
           >
             <Undo2 size={16} />
           </Button>
@@ -397,7 +377,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             disabled={!canRedo}
             title={canRedo ? "Redo" : "Nothing to redo"}
             aria-label="Redo"
-            className="h-9 w-9"
+            className="size-9"
           >
             <Redo2 size={16} />
           </Button>
@@ -409,13 +389,13 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
               onClick={handleDeleteSelected}
               title="Delete Selected Element (Delete/Backspace)"
               aria-label="Delete Selected Element"
-              className="h-9 w-9"
+              className="size-9"
             >
               <Trash2 size={16} />
             </Button>
           )}
           
-          <div className="w-px h-5 bg-border-subtle mx-1" />
+          <div className="bg-border-subtle mx-1 h-5 w-px" />
           
           <Button
             variant="ghost"
@@ -424,7 +404,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             disabled={currentZoom <= 10}
             title="Zoom Out (Ctrl + -)"
             aria-label="Zoom Out"
-            className="h-9 w-9"
+            className="size-9"
           >
             <ZoomOut size={16} />
           </Button>
@@ -435,7 +415,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             onClick={resetZoom}
             title="Reset to 100% (Ctrl + 0)"
             aria-label="Reset Zoom"
-            className="h-9 w-9 min-w-[45px] text-xs font-medium"
+            className="size-9 min-w-[45px] text-xs font-medium"
           >
             {currentZoom}%
           </Button>
@@ -447,7 +427,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
             disabled={currentZoom >= 1000}
             title="Zoom In (Ctrl + +)"
             aria-label="Zoom In"
-            className="h-9 w-9"
+            className="size-9"
           >
             <ZoomIn size={16} />
           </Button>
@@ -456,7 +436,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
         {/* Group/Ungroup Tools - Only show when needed */}
         {(canGroup || canUngroup) && (
           <div className="flex items-center gap-1">
-            <div className="w-px h-5 bg-border-subtle mx-1" />
+            <div className="bg-border-subtle mx-1 h-5 w-px" />
             {canGroup && (
               <Button
                 variant="ghost"
@@ -464,7 +444,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 onClick={handleGroupElements}
                 title="Group Elements"
                 aria-label="Group Elements"
-                className="h-9 w-9"
+                className="size-9"
               >
                 <Group size={16} />
               </Button>
@@ -477,7 +457,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
                 onClick={handleUngroupElements}
                 title="Ungroup Elements"
                 aria-label="Ungroup Elements"
-                className="h-9 w-9"
+                className="size-9"
               >
                 <Ungroup size={16} />
               </Button>

@@ -21,7 +21,7 @@ export const mockConversations: ChatConversation[] = [];
 export const mockMessages: Record<string, ChatMessage[]> = {};
 
 // Export utility functions for chat data management
-export const createNewConversation = (title: string = "New Chat"): ChatConversation => ({
+export const createNewConversation = (title: string = "New chat"): ChatConversation => ({
   id: String(Date.now()),
   title,
   lastMessage: "",

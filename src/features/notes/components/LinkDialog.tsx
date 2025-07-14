@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../../components/ui';
-import { X, Link, ExternalLink } from 'lucide-react';
+import { Link, X, ExternalLink } from 'lucide-react';
 
 interface LinkDialogProps {
   isOpen: boolean;
@@ -39,25 +39,25 @@ export const LinkDialog: React.FC<LinkDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className="bg-[var(--bg-primary)] rounded-[var(--radius-lg)] shadow-xl border border-[var(--border-default)] w-full max-w-md mx-[var(--space-4)]">
-        <div className="flex items-center justify-between p-[var(--space-4)] border-b border-[var(--border-default)]">
-          <div className="flex items-center gap-[var(--space-2)]">
-            <Link size={20} className="text-[var(--accent-primary)]" />
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-              {initialUrl ? 'Edit Link' : 'Add Link'}
+    <div className="bg-bg-overlay motion-safe:animate-in motion-safe:fade-in-0 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm motion-safe:duration-300">
+              <div className="border-border-default motion-safe:animate-in motion-safe:zoom-in-95 mx-4 w-full max-w-md rounded-lg border bg-elevated shadow-xl motion-safe:duration-300">
+        <div className="border-border-default flex items-center justify-between border-b p-4">
+          <div className="flex items-center gap-2">
+            <Link size={20} className="text-accent-primary" />
+            <h3 className="text-lg font-semibold text-primary">
+              {initialUrl ? 'Edit link' : 'Add link'}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+            className="text-muted hover:text-secondary motion-safe:transition-colors motion-safe:duration-150"
           >
             <X size={20} />
           </button>
         </div>
         
-        <div className="p-[var(--space-4)]">
-          <label htmlFor="url-input" className="block text-sm font-medium text-[var(--text-secondary)] mb-[var(--space-2)]">
+        <div className="p-4">
+          <label htmlFor="url-input" className="mb-2 block text-sm font-medium text-secondary">
             URL
           </label>
           <div className="relative">
@@ -68,14 +68,14 @@ export const LinkDialog: React.FC<LinkDialogProps> = ({
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="https://example.com"
-              className="w-full px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+              className="border-border-default focus:ring-accent-primary w-full rounded-md border px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 motion-safe:transition-colors motion-safe:duration-150"
               autoFocus
             />
-            <ExternalLink size={16} className="absolute right-[var(--space-3)] top-1/2 transform -translate-y-1/2 text-[var(--text-muted)]" />
+            <ExternalLink size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
           </div>
         </div>
         
-        <div className="flex justify-end gap-[var(--space-2)] p-[var(--space-4)] border-t border-[var(--border-default)]">
+        <div className="border-border-default flex justify-end gap-2 border-t p-4">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>

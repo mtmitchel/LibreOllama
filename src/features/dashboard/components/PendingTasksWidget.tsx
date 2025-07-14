@@ -62,10 +62,10 @@ export const PendingTasksWidget: React.FC = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'text-red-500';
-      case 'medium': return 'text-yellow-500';
-      case 'low': return 'text-green-500';
-      default: return 'text-[var(--text-tertiary)]';
+      case 'high': return 'text-error';
+      case 'medium': return 'text-warning';
+      case 'low': return 'text-success';
+      default: return 'text-text-tertiary';
     }
   };
 
@@ -95,17 +95,17 @@ export const PendingTasksWidget: React.FC = () => {
 
   return (
     <Card>
-      <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-4)' }}>
+      <div className="mb-4 flex items-center justify-between">
         <Heading level={3}>Pending tasks</Heading>
         <DropdownMenu>
           <DropdownMenu.Trigger asChild>
-            <Button variant="ghost" size="icon" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-              <MoreHorizontal className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="text-secondary hover:text-primary">
+              <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Content>
             <DropdownMenu.Item onSelect={handleAddTask}>
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add new task
             </DropdownMenu.Item>
             <DropdownMenu.Item onSelect={handleViewTasks}>
@@ -116,8 +116,8 @@ export const PendingTasksWidget: React.FC = () => {
       </div>
       
       {pendingTasks.length === 0 ? (
-        <div className="text-center py-8">
-          <CheckSquare className="w-8 h-8 mx-auto mb-3 text-[var(--text-tertiary)]" />
+        <div className="py-8 text-center">
+          <CheckSquare className="mx-auto mb-3 size-8 text-tertiary" />
           <Text variant="secondary" size="sm">No pending tasks</Text>
           <Button 
             variant="ghost" 
@@ -129,26 +129,26 @@ export const PendingTasksWidget: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+        <ul className="flex flex-col gap-3">
           {pendingTasks.map((task) => {
             const dueDate = formatDueDate(task.due);
             const isOverdue = task.due && isPast(new Date(task.due));
             const priority = task.metadata?.priority;
             
             return (
-              <li key={task.id} className="flex items-start" style={{ gap: 'var(--space-3)' }}>
+              <li key={task.id} className="flex items-start gap-3">
                 <button
                   onClick={() => handleToggleTask(task.id, task.columnId)}
-                  className="mt-1 w-4 h-4 border border-[var(--border-primary)] rounded hover:bg-[var(--background-secondary)] transition-colors flex-shrink-0"
+                  className="border-border-primary mt-1 size-4 shrink-0 rounded border transition-colors hover:bg-secondary"
                   aria-label={`Mark ${task.title} as completed`}
                 />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between" style={{ marginBottom: 'var(--space-1)' }}>
-                    <Text size="sm" weight="medium" variant="body" className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-start justify-between">
+                    <Text size="sm" weight="medium" variant="body" className="min-w-0 flex-1">
                       {task.title}
                     </Text>
                     {priority && (
-                      <span className={`text-xs font-medium ml-2 ${getPriorityColor(priority)}`}>
+                      <span className={`ml-2 text-xs font-medium ${getPriorityColor(priority)}`}>
                         {priority}
                       </span>
                     )}
@@ -158,8 +158,8 @@ export const PendingTasksWidget: React.FC = () => {
                       {getColumnName(task.columnId)}
                     </Text>
                     {dueDate && (
-                      <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-[var(--text-secondary)]'}`}>
-                        <Calendar className="w-3 h-3" />
+                      <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-secondary'}`}>
+                        <Calendar className="size-3" />
                         <Text size="xs" className={isOverdue ? 'text-red-500' : ''}>
                           {dueDate}
                         </Text>

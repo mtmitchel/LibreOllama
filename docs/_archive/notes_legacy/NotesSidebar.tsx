@@ -155,7 +155,7 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
             placeholder="Search notes..."
             value={safeSearchQuery}
             onChange={handleSearchChange}
-            className="w-full pl-[var(--space-7)] pr-[var(--space-8)] py-[var(--space-2)] text-[var(--font-size-sm)] rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+            className="w-full pl-[var(--space-7)] pr-[var(--space-8)] py-[var(--space-2)] text-[var(--font-size-sm)] rounded-[var(--radius-md)] border border-[var(--border-primary)] bg-[var(--bg-secondary)] text-[var(--text-primary)] placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
           />
           {safeSearchQuery && (
             <button
@@ -204,7 +204,7 @@ export const NotesSidebar: React.FC<NotesSidebarProps> = ({
                   handleCancelCreateFolder();
                 }
               }}
-              className="w-full px-[var(--space-2)] py-[var(--space-1)] text-[var(--font-size-sm)] rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
+              className="w-full px-[var(--space-2)] py-[var(--space-1)] text-[var(--font-size-sm)] rounded-[var(--radius-sm)] border border-[var(--border-primary)] bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent"
               autoFocus
             />
             <div className="flex gap-[var(--space-1)] mt-[var(--space-2)]">

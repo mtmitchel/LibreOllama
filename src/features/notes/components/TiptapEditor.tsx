@@ -14,7 +14,6 @@ import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
-import { Image as ImageIcon } from 'lucide-react';
 import { TiptapFixedToolbar } from './TiptapFixedToolbar';
 import { SlashCommandExtension, SlashCommandSuggestion } from './TiptapSlashExtension';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -33,6 +32,7 @@ interface TiptapEditorProps {
   className?: string;
   selectedNote?: any;
   onDeleteNote?: () => void;
+  titleInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 const TiptapEditor: React.FC<TiptapEditorProps> = ({
@@ -43,10 +43,11 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   className = '',
   selectedNote,
   onDeleteNote,
+  titleInputRef,
 }) => {
   const [editorContent, setEditorContent] = useState(content);
   const [isDragOver, setIsDragOver] = useState(false);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<number | null>(null);
 
   const defaultContent = '<p></p>';
 
@@ -170,21 +171,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     if (files.length > 0) files.forEach((file) => handleImageUpload(file));
   };
 
-  const handleEditorClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'A' && target.getAttribute('href')) {
-      e.preventDefault();
-      e.stopPropagation();
-      const href = target.getAttribute('href');
-      if (href) {
-        // Use Tauri shell API to open in default browser; fallback to window.open in web
-        openExternal(href).catch(() => {
-          window.open(href, '_blank', 'noopener,noreferrer');
-        });
-      }
-    }
-  };
-
   const exportAs = useCallback(
     async (format: 'pdf' | 'docx' | 'txt') => {
       if (!editor) return;
@@ -229,6 +215,19 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     }
   }, [content, editor]);
 
+  useEffect(() => {
+    if (!editor) return;
+    const handleFocus = () => {
+      if (titleInputRef?.current) {
+        titleInputRef.current.blur();
+      }
+    };
+    editor.on('focus', handleFocus);
+    return () => {
+      editor.off('focus', handleFocus);
+    };
+  }, [editor, titleInputRef]);
+
   if (!editor) {
     return (
       <div className={`tiptap-editor-container tiptap-loading ${className}`}>
@@ -239,7 +238,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 
   return (
     <div
-      className={`tiptap-editor-container flex flex-col h-full rounded-[var(--radius-lg)] overflow-hidden ${
+      className={`tiptap-editor-container flex h-full flex-col overflow-hidden rounded-lg ${
         isDragOver ? 'drag-over' : ''
       } ${className}`}
       onDragOver={handleDragOver}
@@ -253,28 +252,16 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         selectedNote={selectedNote}
         onDeleteNote={onDeleteNote}
       />
-      <TiptapContextMenu editor={editor} className="flex-1 relative">
-        <div
-          className="absolute inset-0 overflow-y-auto bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-b-[var(--radius-lg)] focus-within:border-[var(--accent-primary)] focus-within:ring-1 focus-within:ring-[var(--accent-primary)]"
-          style={{
-            padding: 'var(--space-4) var(--space-6) 10rem',
-            overflowX: 'auto',
-            maxHeight: '100%'
-          }}
-          onClick={handleEditorClick}
-        >
+      <TiptapContextMenu editor={editor} className="relative flex-1">
+        <div className="absolute inset-0 max-h-full overflow-auto rounded-b-lg border border-transparent bg-notes p-4 px-6 pb-40">
           <div
-            className="tiptap-editor-content-container"
+            className="tiptap-editor-content-container w-full break-words leading-relaxed"
             style={{
-              width: '100%',
               contain: 'layout style',
-              transition: 'none !important',
-              wordWrap: 'break-word',
-              overflowWrap: 'break-word',
-              lineHeight: '1.6'
+              transition: 'none !important'
             }}
           >
-            <EditorContent editor={editor} className="tiptap-editor-content h-full w-full" />
+            <EditorContent editor={editor} className="tiptap-editor-content size-full" />
           </div>
         </div>
       </TiptapContextMenu>

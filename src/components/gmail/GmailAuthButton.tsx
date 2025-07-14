@@ -7,7 +7,7 @@ interface GmailAuthButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   showUserInfo?: boolean;
-  onAuthSuccess?: (user: any) => void;
+  onAuthSuccess?: (user: unknown) => void;
   onAuthError?: (error: string) => void;
   className?: string;
 }
@@ -90,13 +90,13 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
           variant="outline"
           size={size}
           onClick={handleSignIn}
-          className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+          className="flex items-center gap-2 border-error text-error hover:bg-error-ghost"
         >
           <AlertCircle size={16} />
           Retry Authentication
         </Button>
         {showUserInfo && (
-          <p className="text-sm text-red-600 text-center">
+          <p className="text-center text-sm text-error">
             {error}
           </p>
         )}
@@ -109,13 +109,13 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
     return (
       <div className={`flex flex-col gap-2 ${className}`}>
         {showUserInfo && (
-          <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <CheckCircle size={16} className="text-green-600 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-green-900 truncate">
+          <div className="flex items-center gap-3 rounded-lg border border-success bg-success-ghost p-3">
+            <CheckCircle size={16} className="shrink-0 text-success" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-success">
                 {user.name || user.email}
               </p>
-              <p className="text-xs text-green-700 truncate">
+              <p className="truncate text-xs text-success-fg">
                 {user.email}
               </p>
             </div>
@@ -123,7 +123,7 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
               <img
                 src={user.picture}
                 alt={user.name || 'User'}
-                className="w-8 h-8 rounded-full border border-green-200"
+                className="size-8 rounded-full border border-green-200"
               />
             )}
           </div>

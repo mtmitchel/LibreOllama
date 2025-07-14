@@ -16,7 +16,7 @@ interface SidebarProps {
 }
 
 const NoteDragPreview = ({ note }: { note: any }) => (
-    <div className="rounded-md p-[var(--space-2)] text-sm font-medium bg-[var(--accent-soft)] text-[var(--accent-primary)] flex items-center gap-[var(--space-2)] shadow-lg ring-2 ring-[var(--accent-primary)]">
+    <div className="ring-accent-primary flex items-center gap-2 rounded-md bg-accent-soft p-2 text-sm font-medium text-accent-primary shadow-lg ring-2">
         <NoteIcon size={16} />
         <span>{note.title}</span>
     </div>
@@ -253,10 +253,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
         return (
           <DroppableFolder key={item.id} folder={item}>
             <div
-              className={`group flex items-center justify-between rounded-md p-[var(--space-2)] text-sm font-medium cursor-pointer ${selectedFolderId === item.id ? 'bg-[var(--accent-soft)] text-[var(--accent-primary)]' : 'hover:bg-[var(--bg-tertiary)]'}`}
-              style={{ paddingLeft }}
+              className={`group flex cursor-pointer items-center justify-between rounded-md p-2 text-sm font-medium ${selectedFolderId === item.id ? 'bg-accent-soft text-accent-primary' : 'hover:bg-tertiary'}`}
+              className={`pl-${paddingLeft / 4}`}
             >
-              <div className="flex items-center gap-[var(--space-2)] flex-1" onClick={() => selectFolder(item.id)}>
+              <div className="flex flex-1 items-center gap-2" onClick={() => selectFolder(item.id)}>
                 <ChevronRight 
                   size={16} 
                   className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
@@ -267,22 +267,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 h-6 w-6">
+                  <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100">
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onSelect={() => { setRenamingFolderId(item.id); setRenameFolderName(item.name); }}>
-                    <Edit size={14} className="mr-[var(--space-2)]" /> Rename
+                    <Edit size={14} className="mr-2" /> Rename
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => deleteFolder(item.id)} className="text-[var(--error)]">
-                    <Trash2 size={14} className="mr-[var(--space-2)]" /> Delete
+                  <DropdownMenuItem onSelect={() => deleteFolder(item.id)} className="text-error">
+                    <Trash2 size={14} className="mr-2" /> Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
             {isExpanded && (
-              <div className="pl-[var(--space-4)]">
+              <div className="pl-4">
                 {renderTree([...item.children, ...item.notes], level + 1)}
               </div>
             )}
@@ -293,39 +293,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
           <DraggableNote key={item.id} note={item}>
             <Card 
               padding="sm"
-              className={`cursor-pointer group relative ${selectedNoteId === item.id ? 'bg-[var(--accent-soft)] border-[var(--accent-primary)]' : 'hover:bg-[var(--bg-surface)]'}`} 
+                              className={`group relative cursor-pointer ${selectedNoteId === item.id ? 'border-selected bg-selected text-selected' : 'hover:bg-hover'}`} 
               onClick={() => selectNote(item.id)}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-[var(--space-2)]">
+                <div className="flex items-center gap-2">
                     <NoteIcon size={16} />
                     <Text weight="medium" variant="body">{item.title}</Text>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 h-6 w-6">
+                    <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100">
                       <MoreHorizontal size={16} />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onSelect={() => { setRenamingNoteId(item.id); setRenameNoteTitle(item.title); }}>
-                      <Edit size={14} className="mr-[var(--space-2)]" /> Rename
+                      <Edit size={14} className="mr-2" /> Rename
                     </DropdownMenuItem>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
-                        <FolderIcon size={14} className="mr-[var(--space-2)]" /> Move to
+                        <FolderIcon size={14} className="mr-2" /> Move to
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
                         {folders.map(folder => (
                           <DropdownMenuItem key={folder.id} onSelect={() => updateNote({ ...item, folderId: folder.id })}>
-                            <FolderIcon size={14} className="mr-[var(--space-2)]" /> {folder.name}
+                            <FolderIcon size={14} className="mr-2" /> {folder.name}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
-                        <FileDown size={14} className="mr-[var(--space-2)]" /> Export
+                        <FileDown size={14} className="mr-2" /> Export
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
                         <DropdownMenuItem onSelect={() => exportNote(item.id, 'pdf')}>PDF</DropdownMenuItem>
@@ -333,8 +333,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
                         <DropdownMenuItem onSelect={() => exportNote(item.id, 'txt')}>TXT</DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
-                    <DropdownMenuItem onSelect={() => deleteNote(item.id)} className="text-[var(--error)]">
-                      <Trash2 size={14} className="mr-[var(--space-2)]" /> Delete
+                    <DropdownMenuItem onSelect={() => deleteNote(item.id)} className="text-error">
+                      <Trash2 size={14} className="mr-2" /> Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -349,18 +349,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
   // If closed, show only the toggle button
   if (!isOpen) {
     return (
-      <Card className="w-16 h-full flex flex-col bg-[var(--bg-secondary)]/30" padding="none">
-        <div 
-          className="border-b border-[var(--border-default)] flex flex-col items-center"
-          style={{ padding: 'var(--space-3)' }}
-        >
+      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
+        <div className="border-border-default flex flex-col items-center border-b p-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggle}
             title="Show notes sidebar"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
-            style={{ marginBottom: 'var(--space-2)' }}
+            className="mb-2 text-secondary hover:bg-tertiary hover:text-primary"
           >
             <NoteIcon size={20} />
           </Button>
@@ -369,48 +365,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
             size="icon"
             onClick={() => createNote({ title: 'Untitled Note', content: '<p></p>', folderId: selectedFolderId })}
             title="Create new note"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-ghost)]"
+            className="text-secondary hover:bg-accent-soft hover:text-primary"
           >
             <FilePlus size={18} />
           </Button>
         </div>
         
-        <div 
-          className="flex-1 flex flex-col items-center"
-          style={{ 
-            paddingTop: 'var(--space-4)',
-            gap: 'var(--space-2)'
-          }}
-        >
+        <div className="flex flex-1 flex-col items-center gap-2 pt-4">
           {/* Show indicators for folders and notes */}
-          <div 
-            className="flex flex-col items-center"
-            style={{ gap: 'var(--space-2)' }}
-          >
+          <div className="flex flex-col items-center gap-2">
             <div 
               title="Folders"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
             >
               <FolderIcon size={14} />
             </div>
             
             <div 
               title="Notes"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-soft"
             >
               <NoteIcon size={14} />
             </div>
           </div>
           
           {/* Notes count indicator */}
-          <div 
-            className="flex flex-col items-center mt-2"
-            style={{ 
-              gap: 'var(--space-1)',
-              marginTop: 'var(--space-2)'
-            }}
-          >
-            <div className="w-6 h-6 bg-[var(--accent-primary)] rounded-full flex items-center justify-center">
+          <div className="mt-2 flex flex-col items-center gap-1">
+            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
               <Text size="xs" weight="bold" className="text-white">
                 {notes.length}
               </Text>
@@ -426,24 +407,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
 
   return (
     <ForwardedCard 
-      className="w-[340px] flex-shrink-0 flex flex-col h-full"
+      className="flex h-full w-[340px] shrink-0 flex-col"
       padding="default"
       ref={sidebarRef}
     >
       {/* Header */}
-      <div 
-        className="flex items-center justify-between border-b border-[var(--border-default)]"
-        style={{ 
-          padding: 'var(--space-4)',
-          marginBottom: 'var(--space-4)'
-        }}
-      >
-        <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
-          <NoteIcon className="w-5 h-5 text-[var(--text-secondary)]" />
+      <div className="border-border-default mb-4 flex items-center justify-between border-b p-4">
+        <div className="flex items-center gap-2">
+          <NoteIcon className="text-text-secondary size-5" />
           <Text size="lg" weight="semibold">Notes</Text>
         </div>
-        <div className="flex items-center gap-[var(--space-1)]">
-          <Button onClick={() => setShowFolderInput(s => !s)} variant="ghost" size="icon" title="New Folder">
+        <div className="flex items-center gap-1">
+          <Button onClick={() => setShowFolderInput(s => !s)} variant="ghost" size="icon" title="New folder">
             <FolderPlus size={16} />
           </Button>
           {onToggle && (
@@ -452,7 +427,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
               size="icon"
               onClick={onToggle}
               title="Hide notes sidebar"
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              className="text-text-secondary hover:text-text-primary"
             >
               <PanelLeft size={18} />
             </Button>
@@ -461,7 +436,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
       </div>
 
       {/* Create Note Button */}
-      <div className="mb-[var(--space-4)]">
+      <div className="mb-4">
         <Button
           onClick={handleCreateNote}
           variant="primary"
@@ -469,25 +444,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
           size="default"
         >
           <FilePlus size={18} />
-          Create Note
+                      Create note
         </Button>
       </div>
 
       {/* Search */}
-      <div className="relative mb-[var(--space-4)] flex-shrink-0">
-        <Search size={16} className="absolute left-[var(--space-3)] top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+      <div className="relative mb-4 shrink-0">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
         <Input 
           type="search" 
           placeholder="Search notes..." 
-          className="pl-10"
+          className="pl-14"
+          hasIcon={true}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        {searchQuery && <X size={16} className="absolute right-[var(--space-3)] top-1/2 -translate-y-1/2 text-[var(--text-muted)] cursor-pointer" onClick={() => setSearchQuery('')} />}
+        {searchQuery && <X size={16} className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted" onClick={() => setSearchQuery('')} />}
       </div>
 
       {showFolderInput && (
-        <div className="flex items-center gap-[var(--space-2)] p-[var(--space-2)] bg-[var(--bg-tertiary)] rounded-md mb-[var(--space-4)]">
+        <div className="mb-4 flex items-center gap-2 rounded-md bg-tertiary p-2">
             <Input 
               placeholder="New folder name..." 
               className="flex-1"
@@ -504,11 +480,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
       )}
 
       {/* Note & Folder List */}
-      <div className="flex-1 overflow-y-auto pr-[var(--space-1)] space-y-[var(--space-1)]">
+      <div className="flex-1 space-y-1 overflow-y-auto pr-1">
         {isLoading && <Text>Loading...</Text>}
         {error && <Text color="error">{error}</Text>}
         {!isLoading && !error && dataTree.length === 0 && searchQuery && (
-            <Text variant="secondary" className="text-center p-[var(--space-4)]">No notes found.</Text>
+            <Text variant="secondary" className="p-4 text-center">No notes found.</Text>
         )}
         {!isLoading && !error && (
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToWindowEdges]}>

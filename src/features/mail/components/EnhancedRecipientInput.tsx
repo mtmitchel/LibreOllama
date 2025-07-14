@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, User, Users, Check, AlertCircle } from 'lucide-react';
+import { X, User, Check, AlertCircle } from 'lucide-react';
 import { Text, Button } from '../../../components/ui';
 
 interface EmailAddress {
@@ -28,13 +28,13 @@ interface RecipientChipProps {
 function RecipientChip({ recipient, onRemove, isValid }: RecipientChipProps) {
   return (
     <div className={`
-      inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs max-w-xs
+      inline-flex max-w-xs items-center gap-1 rounded-md px-2 py-1 text-xs
       ${isValid 
-        ? 'bg-[var(--accent-soft)] text-[var(--accent-primary)] border border-[var(--accent-primary)]/20' 
-        : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+        ? 'border-accent-primary/20 border bg-accent-soft text-accent-primary' 
+        : 'border border-error bg-error-ghost text-error dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'
       }
     `}>
-      <User size={12} className="flex-shrink-0" />
+      <User size={12} className="shrink-0" />
       <span className="truncate">
         {recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email}
       </span>
@@ -42,7 +42,7 @@ function RecipientChip({ recipient, onRemove, isValid }: RecipientChipProps) {
         variant="ghost"
         size="sm"
         onClick={onRemove}
-        className="h-4 w-4 p-0 hover:bg-current/20 rounded-full"
+        className="hover:bg-current/20 size-4 rounded-full p-0"
       >
         <X size={10} />
       </Button>
@@ -61,32 +61,32 @@ function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionItemProps
     <div
       onClick={onClick}
       className={`
-        flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors
+        flex cursor-pointer items-center gap-3 px-3 py-2 transition-colors
         ${isSelected 
-          ? 'bg-[var(--accent-primary)] text-white' 
-          : 'hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
+          ? 'bg-accent-primary text-white' 
+          : 'text-primary hover:bg-tertiary'
         }
       `}
     >
       <div className={`
-        h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium
+        flex size-8 items-center justify-center rounded-full text-xs font-medium
         ${isSelected 
           ? 'bg-white/20 text-white' 
-          : 'bg-[var(--accent-soft)] text-[var(--accent-primary)]'
+          : 'bg-accent-soft text-accent-primary'
         }
       `}>
         {suggestion.name ? suggestion.name.charAt(0).toUpperCase() : suggestion.email.charAt(0).toUpperCase()}
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           {suggestion.name && (
-            <Text size="sm" weight="medium" className={isSelected ? 'text-white' : 'text-[var(--text-primary)]'}>
+            <Text size="sm" weight="medium" className={isSelected ? 'text-white' : 'text-primary'}>
               {suggestion.name}
             </Text>
           )}
-          <Check size={12} className={`${isSelected ? 'text-white' : 'text-[var(--success)]'}`} />
+          <Check size={12} className={`${isSelected ? 'text-white' : 'text-success'}`} />
         </div>
-        <Text size="xs" className={isSelected ? 'text-white/80' : 'text-[var(--text-secondary)]'}>
+        <Text size="xs" className={isSelected ? 'text-white/80' : 'text-secondary'}>
           {suggestion.email}
         </Text>
       </div>
@@ -260,19 +260,19 @@ export function EnhancedRecipientInput({
   return (
     <div className={`relative ${className}`}>
       <div className="flex items-start gap-3">
-        <Text size="sm" className="text-[var(--text-secondary)] w-12 text-right pt-2 flex-shrink-0">
+        <Text size="sm" className="w-12 shrink-0 pt-2 text-right text-secondary">
           {label}:
         </Text>
         
-        <div className="flex-1 relative">
+        <div className="relative flex-1">
           {/* Input Container */}
           <div className={`
-            min-h-[40px] border rounded-md px-3 py-2 bg-transparent transition-colors
-            ${isFocused ? 'border-[var(--accent-primary)] ring-1 ring-[var(--accent-primary)]' : 'border-[var(--border-default)]'}
-            ${disabled ? 'bg-[var(--bg-secondary)] cursor-not-allowed' : 'hover:border-[var(--accent-primary)]'}
+            min-h-[40px] rounded-md border bg-transparent px-3 py-2 transition-colors
+            ${isFocused ? 'ring-accent-primary border-accent-primary ring-1' : 'border-border-default'}
+            ${disabled ? 'cursor-not-allowed bg-secondary' : 'hover:border-accent-primary'}
           `}>
             {/* Recipients */}
-            <div className="flex flex-wrap gap-1 mb-2">
+            <div className="mb-2 flex flex-wrap gap-1">
               {validatedRecipients.map((recipient, index) => (
                 <RecipientChip
                   key={`${recipient.email}-${index}`}
@@ -294,7 +294,7 @@ export function EnhancedRecipientInput({
               onBlur={handleInputBlur}
               placeholder={recipients.length === 0 ? placeholder : "Add more..."}
               disabled={disabled || isAtMaxCapacity}
-              className="w-full bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)]"
+              className="w-full bg-transparent text-sm text-primary outline-none placeholder:text-muted"
             />
           </div>
 
@@ -302,7 +302,7 @@ export function EnhancedRecipientInput({
           {showSuggestions && filteredSuggestions.length > 0 && (
             <div 
               ref={suggestionsRef}
-              className="absolute top-full left-0 right-0 z-50 mt-1 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-md shadow-lg max-h-64 overflow-y-auto"
+              className="border-border-default absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-md border bg-primary shadow-lg"
             >
               {filteredSuggestions.map((suggestion, index) => (
                 <SuggestionItem
@@ -316,27 +316,27 @@ export function EnhancedRecipientInput({
           )}
 
           {/* Status indicators */}
-          <div className="flex items-center justify-between mt-2 text-xs">
+          <div className="mt-2 flex items-center justify-between text-xs">
             <div className="flex items-center gap-4">
               {invalidCount > 0 && (
-                <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                <div className="flex items-center gap-1 text-error dark:text-red-400">
                   <AlertCircle size={12} />
                   <span>{invalidCount} invalid email{invalidCount > 1 ? 's' : ''}</span>
                 </div>
               )}
               
               {isLoading && (
-                <div className="flex items-center gap-1 text-[var(--text-secondary)]">
-                  <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                <div className="flex items-center gap-1 text-secondary">
+                  <div className="size-3 animate-spin rounded-full border border-current border-t-transparent" />
                   <span>Loading suggestions...</span>
                 </div>
               )}
             </div>
             
-            <div className="text-[var(--text-secondary)]">
+            <div className="text-secondary">
               {recipients.length}/{maxRecipients} recipients
               {isAtMaxCapacity && (
-                <span className="text-orange-600 dark:text-orange-400 ml-2">
+                <span className="ml-2 text-orange-600 dark:text-orange-400">
                   Maximum reached
                 </span>
               )}
@@ -347,9 +347,9 @@ export function EnhancedRecipientInput({
 
       {/* Help text */}
       {isFocused && (
-        <div className="mt-2 ml-16 text-xs text-[var(--text-secondary)]">
+        <div className="ml-16 mt-2 text-xs text-secondary">
           <div>• Type email addresses and press Enter or comma to add</div>
-          <div>• Supports "Name &lt;email@domain.com&gt;" format</div>
+          <div>• Supports &quot;Name &lt;email@domain.com&gt;&quot; format</div>
           <div>• Use arrow keys to navigate suggestions</div>
         </div>
       )}

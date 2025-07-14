@@ -28,7 +28,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'dashboard',
       title: 'Go to Dashboard',
       subtitle: 'View overview and recent activity',
-      icon: <Hash className="w-4 h-4" />,
+      icon: <Hash className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/'),
       keywords: ['home', 'overview']
@@ -37,7 +37,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'chat',
       title: 'Go to Chat',
       subtitle: 'Start or continue conversations with AI',
-      icon: <MessageSquare className="w-4 h-4" />,
+      icon: <MessageSquare className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/chat'),
       keywords: ['ai', 'conversation', 'llm', 'messages']
@@ -46,7 +46,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'projects',
       title: 'Go to Projects',
       subtitle: 'Manage and organize your projects',
-      icon: <FolderKanban className="w-4 h-4" />,
+      icon: <FolderKanban className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/projects'),
       keywords: ['project', 'manage', 'organize']
@@ -55,7 +55,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'notes',
       title: 'Go to Notes',
       subtitle: 'Create and edit notes with block editor',
-      icon: <FileText className="w-4 h-4" />,
+      icon: <FileText className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/notes'),
       keywords: ['document', 'write', 'markdown', 'editor']
@@ -64,7 +64,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'canvas',
       title: 'Go to Canvas',
       subtitle: 'Launch the whiteboard workspace',
-      icon: <PenTool className="w-4 h-4" />,
+      icon: <PenTool className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/canvas'),
       keywords: ['whiteboard', 'draw', 'design', 'sketch']
@@ -73,7 +73,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'calendar',
       title: 'Go to Calendar',
       subtitle: 'View and manage your schedule',
-      icon: <Calendar className="w-4 h-4" />,
+      icon: <Calendar className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/calendar'),
       keywords: ['schedule', 'events', 'meetings', 'dates']
@@ -82,7 +82,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'tasks',
       title: 'Go to Tasks',
       subtitle: 'ADHD-optimized task management',
-      icon: <CheckSquare className="w-4 h-4" />,
+      icon: <CheckSquare className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/tasks'),
       keywords: ['todo', 'kanban', 'productivity', 'adhd']
@@ -91,7 +91,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'agents',
       title: 'Go to Agents',
       subtitle: 'Configure AI agents and automations',
-      icon: <Bot className="w-4 h-4" />,
+      icon: <Bot className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/agents'),
       keywords: ['automation', 'ai', 'workflow', 'bots']
@@ -100,7 +100,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       id: 'settings',
       title: 'Go to Settings',
       subtitle: 'Configure app preferences',
-      icon: <Settings className="w-4 h-4" />,
+      icon: <Settings className="size-4" />,
       category: 'Navigation',
       action: () => navigate('/settings'),
       keywords: ['preferences', 'config', 'options', 'configuration']
@@ -175,7 +175,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     position: 'fixed' as const,
     inset: '0',
     zIndex: 50,
-    background: 'rgba(0, 0, 0, 0.5)',
+    background: 'var(--bg-overlay)',
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'center',
@@ -223,7 +223,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       <div style={paletteStyle}>
         {/* Search Input */}
         <div style={searchContainerStyle}>
-          <Search className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+          <Search className="size-5 text-muted" />
           <input
             id="command-input"
             type="text"
@@ -251,7 +251,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               color: 'var(--text-muted)',
               fontSize: 'var(--font-size-sm)'
             }}>
-              No commands found for "{query}"
+              No commands found for &quot;{query}&quot;
             </div>
           ) : (
             Object.entries(groupedCommands).map(([category, categoryCommands]) => (
@@ -268,7 +268,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 }}>
                   {category}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                <div className="flex flex-col gap-1">
                   {categoryCommands.map((command) => {
                     const globalIndex = filteredCommands.indexOf(command);
                     const isSelected = globalIndex === selectedIndex;

@@ -136,43 +136,43 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between border-b p-6">
           <div className="flex items-center space-x-2">
-            <Settings className="h-5 w-5 text-gray-600" />
-            <h2 className="text-xl font-semibold">Label Settings</h2>
+            <Settings className="size-5 text-secondary" />
+            <h2 className="text-xl font-semibold">Label settings</h2>
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-secondary transition-colors hover:text-primary"
           >
             ×
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="max-h-[calc(90vh-140px)] overflow-y-auto p-6">
           <div className="space-y-8">
             {/* Visibility Settings */}
             <div>
-              <h3 className="text-lg font-medium mb-4 flex items-center space-x-2">
-                <Eye className="h-5 w-5 text-blue-600" />
-                <span>Visibility Settings</span>
+              <h3 className="mb-4 flex items-center space-x-2 text-lg font-medium">
+                <Eye className="size-5 text-accent-primary" />
+                <span>Visibility settings</span>
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-4">
                   <label className="flex items-center space-x-3">
                     <input
                       type="checkbox"
                       checked={settings.visibility.showSystemLabels}
                       onChange={(e) => updateVisibilitySettings({ showSystemLabels: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
-                      <span className="font-medium">Show System Labels</span>
-                      <p className="text-sm text-gray-500">Display Gmail's built-in labels like Inbox, Sent, etc.</p>
+                      <span className="font-medium">Show system labels</span>
+                      <p className="text-sm text-secondary">Display Gmail's built-in labels like Inbox, Sent, etc.</p>
                     </div>
                   </label>
                   
@@ -181,11 +181,11 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.visibility.showUserLabels}
                       onChange={(e) => updateVisibilitySettings({ showUserLabels: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
-                      <span className="font-medium">Show User Labels</span>
-                      <p className="text-sm text-gray-500">Display custom labels you've created</p>
+                      <span className="font-medium">Show user labels</span>
+                      <p className="text-sm text-secondary">Display custom labels you've created</p>
                     </div>
                   </label>
                   
@@ -194,11 +194,11 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.visibility.showEmptyLabels}
                       onChange={(e) => updateVisibilitySettings({ showEmptyLabels: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
-                      <span className="font-medium">Show Empty Labels</span>
-                      <p className="text-sm text-gray-500">Display labels with no messages</p>
+                      <span className="font-medium">Show empty labels</span>
+                      <p className="text-sm text-secondary">Display labels with no messages</p>
                     </div>
                   </label>
                 </div>
@@ -209,11 +209,11 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.visibility.showUnreadCountsOnly}
                       onChange={(e) => updateVisibilitySettings({ showUnreadCountsOnly: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
-                      <span className="font-medium">Show Unread Counts Only</span>
-                      <p className="text-sm text-gray-500">Hide total message counts, show only unread</p>
+                      <span className="font-medium">Show unread counts only</span>
+                      <p className="text-sm text-secondary">Hide total message counts, show only unread</p>
                     </div>
                   </label>
                   
@@ -222,11 +222,11 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.visibility.compactView}
                       onChange={(e) => updateVisibilitySettings({ compactView: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
-                      <span className="font-medium">Compact View</span>
-                      <p className="text-sm text-gray-500">Use smaller labels and reduced spacing</p>
+                      <span className="font-medium">Compact view</span>
+                      <p className="text-sm text-secondary">Use smaller labels and reduced spacing</p>
                     </div>
                   </label>
                 </div>
@@ -235,53 +235,53 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
 
             {/* Sorting Settings */}
             <div>
-              <h3 className="text-lg font-medium mb-4 flex items-center space-x-2">
-                <SortAsc className="h-5 w-5 text-green-600" />
-                <span>Sorting Settings</span>
+              <h3 className="mb-4 flex items-center space-x-2 text-lg font-medium">
+                <SortAsc className="size-5 text-success" />
+                <span>Sorting settings</span>
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-primary">
                     Sort Labels By
                   </label>
                   <select
                     value={settings.sorting.sortBy}
                     onChange={(e) => updateSortingSettings({ sortBy: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border-border-default w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="name">Name</option>
-                    <option value="messageCount">Message Count</option>
-                    <option value="unreadCount">Unread Count</option>
-                    <option value="dateCreated">Date Created</option>
-                    <option value="custom">Custom Order</option>
+                    <option value="messageCount">Message count</option>
+                    <option value="unreadCount">Unread count</option>
+                    <option value="dateCreated">Date created</option>
+                    <option value="custom">Custom order</option>
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-primary">
                     Sort Order
                   </label>
                   <select
                     value={settings.sorting.sortOrder}
                     onChange={(e) => updateSortingSettings({ sortOrder: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="border-border-default w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="asc">Ascending</option>
                     <option value="desc">Descending</option>
                   </select>
                 </div>
                 
-                <div className="md:col-span-2 space-y-4">
+                <div className="space-y-4 md:col-span-2">
                   <label className="flex items-center space-x-3">
                     <input
                       type="checkbox"
                       checked={settings.sorting.groupByType}
                       onChange={(e) => updateSortingSettings({ groupByType: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
-                      <span className="font-medium">Group by Type</span>
-                      <p className="text-sm text-gray-500">Group system and user labels separately</p>
+                      <span className="font-medium">Group by type</span>
+                      <p className="text-sm text-secondary">Group system and user labels separately</p>
                     </div>
                   </label>
                   
@@ -290,11 +290,11 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.sorting.prioritizeUnread}
                       onChange={(e) => updateSortingSettings({ prioritizeUnread: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
-                      <span className="font-medium">Prioritize Unread</span>
-                      <p className="text-sm text-gray-500">Show labels with unread messages first</p>
+                      <span className="font-medium">Prioritize unread</span>
+                      <p className="text-sm text-secondary">Show labels with unread messages first</p>
                     </div>
                   </label>
                 </div>
@@ -303,22 +303,22 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
 
             {/* Behavior Settings */}
             <div>
-              <h3 className="text-lg font-medium mb-4 flex items-center space-x-2">
-                <Palette className="h-5 w-5 text-purple-600" />
-                <span>Behavior Settings</span>
+              <h3 className="mb-4 flex items-center space-x-2 text-lg font-medium">
+                <Palette className="size-5 text-accent-primary" />
+                                  <span>Behavior settings</span>
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-4">
                   <label className="flex items-center space-x-3">
                     <input
                       type="checkbox"
                       checked={settings.behavior.autoApplyLabels}
                       onChange={(e) => updateBehaviorSettings({ autoApplyLabels: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
                       <span className="font-medium">Auto-apply Labels</span>
-                      <p className="text-sm text-gray-500">Automatically apply labels based on filters</p>
+                      <p className="text-sm text-secondary">Automatically apply labels based on filters</p>
                     </div>
                   </label>
                   
@@ -327,11 +327,11 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.behavior.removeFromInboxWhenLabeled}
                       onChange={(e) => updateBehaviorSettings({ removeFromInboxWhenLabeled: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
                       <span className="font-medium">Remove from Inbox When Labeled</span>
-                      <p className="text-sm text-gray-500">Archive messages when a label is applied</p>
+                      <p className="text-sm text-secondary">Archive messages when a label is applied</p>
                     </div>
                   </label>
                   
@@ -340,11 +340,11 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.behavior.showLabelColors}
                       onChange={(e) => updateBehaviorSettings({ showLabelColors: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
                       <span className="font-medium">Show Label Colors</span>
-                      <p className="text-sm text-gray-500">Display colored indicators for labels</p>
+                      <p className="text-sm text-secondary">Display colored indicators for labels</p>
                     </div>
                   </label>
                 </div>
@@ -355,16 +355,16 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       type="checkbox"
                       checked={settings.behavior.enableLabelShortcuts}
                       onChange={(e) => updateBehaviorSettings({ enableLabelShortcuts: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="border-border-default focus:ring-accent-primary rounded text-accent-primary"
                     />
                     <div>
                       <span className="font-medium">Enable Label Shortcuts</span>
-                      <p className="text-sm text-gray-500">Use keyboard shortcuts for quick labeling</p>
+                      <p className="text-sm text-secondary">Use keyboard shortcuts for quick labeling</p>
                     </div>
                   </label>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="mb-1 block text-sm font-medium text-primary">
                       Max Labels per Message
                     </label>
                     <input
@@ -375,9 +375,9 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
                       onChange={(e) => updateBehaviorSettings({ 
                         maxLabelsPerMessage: parseInt(e.target.value) || 20 
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="border-border-default w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="mt-1 text-sm text-secondary">
                       Maximum number of labels that can be applied to a single message
                     </p>
                   </div>
@@ -388,31 +388,31 @@ const LabelSettings: React.FC<LabelSettingsProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t bg-gray-50">
+        <div className="flex items-center justify-between border-t bg-surface p-6">
           <div className="flex items-center space-x-2">
             <button
               onClick={handleReset}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              className="flex items-center space-x-2 px-4 py-2 text-secondary transition-colors hover:text-primary"
             >
-              <RotateCcw className="h-4 w-4" />
-              <span>Reset to Defaults</span>
+              <RotateCcw className="size-4" />
+                              <span>Reset to defaults</span>
             </button>
           </div>
           
           <div className="flex items-center space-x-2">
             <button
               onClick={handleClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              className="px-4 py-2 text-secondary transition-colors hover:text-primary"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={!isDirty || saving}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center space-x-2 rounded-lg bg-accent-primary px-4 py-2 text-white transition-colors hover:bg-accent-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Save className="h-4 w-4" />
-              <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+              <Save className="size-4" />
+              <span>{saving ? 'Saving...' : 'Save changes'}</span>
             </button>
           </div>
         </div>

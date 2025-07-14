@@ -23,6 +23,13 @@ interface AttachmentViewerProps {
   className?: string;
 }
 
+interface DownloadEvent {
+  attachmentId: string;
+  data?: {
+    download: AttachmentDownload;
+  };
+}
+
 export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
   attachments,
   accountId,
@@ -47,22 +54,22 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
 
   // Listen for download events
   useEffect(() => {
-    const handleDownloadEvent = (event: any) => {
+    const handleDownloadEvent = (event: DownloadEvent) => {
       if (event.data?.download) {
         setDownloads(prev => new Map(prev.set(event.attachmentId, event.data.download)));
       }
     };
 
-    attachmentService.addEventListener('download_started', handleDownloadEvent);
-    attachmentService.addEventListener('download_progress', handleDownloadEvent);
-    attachmentService.addEventListener('download_completed', handleDownloadEvent);
-    attachmentService.addEventListener('download_failed', handleDownloadEvent);
+    attachmentService.addEventListener('download_started', handleDownloadEvent as any);
+    attachmentService.addEventListener('download_progress', handleDownloadEvent as any);
+    attachmentService.addEventListener('download_completed', handleDownloadEvent as any);
+    attachmentService.addEventListener('download_failed', handleDownloadEvent as any);
 
     return () => {
-      attachmentService.removeEventListener('download_started', handleDownloadEvent);
-      attachmentService.removeEventListener('download_progress', handleDownloadEvent);
-      attachmentService.removeEventListener('download_completed', handleDownloadEvent);
-      attachmentService.removeEventListener('download_failed', handleDownloadEvent);
+      attachmentService.removeEventListener('download_started', handleDownloadEvent as any);
+      attachmentService.removeEventListener('download_progress', handleDownloadEvent as any);
+      attachmentService.removeEventListener('download_completed', handleDownloadEvent as any);
+      attachmentService.removeEventListener('download_failed', handleDownloadEvent as any);
     };
   }, []);
 
@@ -115,7 +122,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
     
     return (
       <div 
-        className="w-8 h-8 rounded flex items-center justify-center text-white text-sm font-medium"
+        className="flex size-8 items-center justify-center rounded text-sm font-medium text-white"
         style={{ backgroundColor: fileTypeInfo.color }}
         title={attachment.mimeType}
       >
@@ -126,16 +133,15 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
     );
   };
 
-  const renderAttachmentCard = (attachment: GmailAttachment, index: number) => {
+  const renderAttachmentCard = (attachment: GmailAttachment) => {
     const fileTypeInfo = getFileTypeInfo(attachment.mimeType);
     const download = downloads.get(attachment.id);
-    const preview = previews.get(attachment.id);
     const cached = attachmentService.getCachedAttachment(attachment.id);
 
     return (
       <div
         key={attachment.id}
-        className={`flex items-center space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+        className={`border-border-default flex items-center space-x-3 rounded-lg border p-3 transition-colors hover:bg-surface dark:border-gray-700 dark:hover:bg-surface ${
           compact ? 'p-2' : 'p-3'
         }`}
       >
@@ -143,43 +149,43 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
         {renderAttachmentIcon(attachment)}
 
         {/* File Info */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center space-x-2">
-            <h4 className={`font-medium text-gray-900 dark:text-gray-100 truncate ${
+            <h4 className={`truncate font-medium text-primary dark:text-gray-100 ${
               compact ? 'text-sm' : 'text-base'
             }`}>
               {attachment.filename}
             </h4>
             {attachment.isInline && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+              <span className="inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                 Inline
               </span>
             )}
             {cached && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+              <span className="inline-flex items-center rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
                 Cached
               </span>
             )}
             {!isSecureFileType(attachment.mimeType) && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+              <span className="inline-flex items-center rounded bg-error-ghost px-2 py-0.5 text-xs font-medium text-error dark:bg-red-900 dark:text-red-200">
                 ⚠️ Unsafe
               </span>
             )}
           </div>
-          <div className={`text-gray-500 dark:text-gray-400 ${compact ? 'text-xs' : 'text-sm'}`}>
+          <div className={`text-secondary dark:text-muted ${compact ? 'text-xs' : 'text-sm'}`}>
             {formatFileSize(attachment.size)} • {fileTypeInfo.extension.toUpperCase()}
           </div>
           
           {/* Download Progress */}
           {download && download.status === 'downloading' && (
             <div className="mt-2">
-              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+              <div className="mb-1 flex justify-between text-xs text-secondary dark:text-muted">
                 <span>Downloading...</span>
                 <span>{download.progress}%</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+              <div className="h-1.5 w-full rounded-full bg-surface dark:bg-gray-700">
                 <div
-                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                  className="h-1.5 rounded-full bg-blue-600 transition-all duration-300"
                   style={{ width: `${download.progress}%` }}
                 ></div>
               </div>
@@ -188,7 +194,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
 
           {/* Download Error */}
           {download && download.status === 'failed' && (
-            <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+            <div className="mt-2 text-xs text-error dark:text-red-400">
               Error: {download.error}
             </div>
           )}
@@ -200,7 +206,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
           {canPreviewFile(attachment.mimeType) && (
             <button
               onClick={() => handlePreview(attachment)}
-              className="p-2 text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400 transition-colors"
+              className="p-2 text-muted transition-colors hover:text-blue-600 dark:text-secondary dark:hover:text-blue-400"
               title="Preview"
               disabled={download?.status === 'downloading'}
             >
@@ -221,7 +227,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
           {/* More Actions Menu */}
           <div className="relative">
             <button
-              className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+              className="p-2 text-muted transition-colors hover:text-secondary dark:text-secondary dark:hover:text-muted"
               title="More actions"
             >
               <span className="material-icons-outlined text-base">
@@ -241,12 +247,12 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
   return (
     <div className={`attachment-viewer ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <span className="material-icons-outlined text-gray-500 dark:text-gray-400">
+          <span className="material-icons-outlined text-secondary dark:text-muted">
             attach_file
           </span>
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <h3 className="text-sm font-medium text-primary dark:text-gray-100">
             Attachments ({displayAttachments.length})
           </h3>
         </div>
@@ -254,7 +260,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
         {hasMoreAttachments && (
           <button
             onClick={() => setExpandedView(!expandedView)}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
           >
             {expandedView ? 'Show Less' : `Show All (${displayAttachments.length})`}
           </button>
@@ -263,25 +269,25 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
 
       {/* Attachment List */}
       <div className="space-y-2">
-        {visibleAttachments.map((attachment, index) => 
-          renderAttachmentCard(attachment, index)
+        {visibleAttachments.map((attachment) => 
+          renderAttachmentCard(attachment)
         )}
       </div>
 
       {/* Quick Actions */}
       {displayAttachments.length > 1 && (
-        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="border-border-default mt-3 border-t pt-3 dark:border-gray-700">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => {
                 displayAttachments.forEach(att => handleDownload(att));
               }}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium"
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
             >
               Download All
             </button>
             <button
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              className="text-sm text-secondary hover:text-primary dark:text-muted dark:hover:text-gray-200"
             >
               Save to Drive
             </button>

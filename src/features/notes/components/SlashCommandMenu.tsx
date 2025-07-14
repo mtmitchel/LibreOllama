@@ -32,28 +32,28 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({ onSelect, po
     
     return (
         <Card
-          className="absolute z-50 w-80 shadow-xl border border-[var(--border-default)] bg-[var(--bg-elevated)]"
+          className="border-border-default absolute z-50 w-80 border bg-elevated shadow-xl"
           style={{ top: position.y, left: position.x }}
           padding="sm"
         >
-            <div className="space-y-[var(--space-2)]">
-                <Text size="xs" weight="semibold" className="text-[var(--text-muted)] px-[var(--space-2)] pb-[var(--space-2)] uppercase tracking-wider">
+            <div className="space-y-2">
+                <Text size="xs" weight="semibold" className="px-2 pb-2 uppercase tracking-wider text-muted">
                     Block Types
                 </Text>
-                <ul className="space-y-[var(--space-1)]">
+                <ul className="space-y-1">
                     {blockTypes.map(cmd => (
                         <li key={cmd.id}>
                             <Button 
                                 variant="ghost"
                                 onClick={() => onSelect(cmd.id)} 
-                                className="w-full text-left flex items-start gap-[var(--space-3)] p-[var(--space-2)] rounded-[var(--radius-md)] hover:bg-[var(--bg-tertiary)] transition-colors"
+                                className="flex w-full items-start gap-3 rounded-md p-2 text-left transition-colors hover:bg-tertiary"
                             >
-                                <cmd.icon size={16} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" /> 
-                                <div className="flex-1 min-w-0">
-                                    <Text size="sm" weight="medium" className="text-[var(--text-primary)]">
+                                <cmd.icon size={16} className="mt-0.5 shrink-0 text-muted" /> 
+                                <div className="min-w-0 flex-1">
+                                    <Text size="sm" weight="medium" className="text-primary">
                                         {cmd.label}
                                     </Text>
-                                    <Text size="xs" className="text-[var(--text-muted)] mt-0.5">
+                                    <Text size="xs" className="mt-0.5 text-muted">
                                         {cmd.description}
                                     </Text>
                                 </div>

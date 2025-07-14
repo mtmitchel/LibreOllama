@@ -89,14 +89,14 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
   const getAccountColor = (accountId: string): string => {
     const index = accounts.findIndex(acc => acc.id === accountId);
     const colors = [
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-purple-500',
-      'bg-red-500',
-      'bg-yellow-500',
-      'bg-indigo-500',
-      'bg-pink-500',
-      'bg-teal-500',
+      'bg-accent-primary',
+      'bg-success',
+      'bg-warning',
+      'bg-error',
+      'bg-accent-secondary',
+      'bg-accent-primary',
+      'bg-warning',
+      'bg-success',
     ];
     return colors[index % colors.length];
   };
@@ -150,17 +150,17 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
 
   if (!settings.enableUnifiedInbox) {
     return (
-      <div className={`flex items-center justify-center h-64 ${className}`}>
+      <div className={`flex h-64 items-center justify-center ${className}`}>
         <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+          <h3 className="mb-2 text-lg font-medium text-primary">
             Unified Inbox Disabled
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <p className="mb-4 text-sm text-secondary dark:text-muted">
             Enable unified inbox in settings to view emails from all accounts in one place.
           </p>
           <button
             onClick={() => useMailStore.getState().updateSettings({ enableUnifiedInbox: true })}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors"
+            className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-secondary"
           >
             Enable Unified Inbox
           </button>
@@ -170,14 +170,14 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
   }
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex h-full flex-col ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="border-border-default flex items-center justify-between border-b p-4 dark:border-gray-700">
         <div className="flex items-center space-x-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-lg font-semibold text-primary">
             Unified Inbox
           </h2>
-          <span className="text-sm text-gray-500 dark:text-gray-400">
+          <span className="text-sm text-secondary dark:text-muted">
             {filteredAndSortedMessages.length} message{filteredAndSortedMessages.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -188,9 +188,9 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
           <select
             value={selectedAccountFilter || ''}
             onChange={(e) => setSelectedAccountFilter(e.target.value || null)}
-            className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border-border-default focus:ring-accent-primary rounded-lg border bg-white px-3 py-1 text-sm text-primary focus:outline-none focus:ring-2 dark:border-gray-600 dark:bg-surface dark:text-gray-100"
           >
-            <option value="">All Accounts</option>
+            <option value="">All accounts</option>
             {accounts.map(account => (
               <option key={account.id} value={account.id}>
                 {account.displayName} ({account.email})
@@ -199,12 +199,12 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
           </select>
 
           {/* Show Only Unread */}
-          <label className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center space-x-2 text-sm text-primary dark:text-muted">
             <input
               type="checkbox"
               checked={showOnlyUnread}
               onChange={(e) => setShowOnlyUnread(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-blue-600 focus:ring-blue-500"
+              className="border-border-default focus:ring-accent-primary rounded bg-white text-accent-primary dark:border-gray-600 dark:bg-surface"
             />
             <span>Unread only</span>
           </label>
@@ -214,18 +214,18 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'date' | 'sender' | 'subject')}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border-border-default focus:ring-accent-primary rounded-lg border bg-white px-3 py-1 text-sm text-primary focus:outline-none focus:ring-2 dark:border-gray-600 dark:bg-surface dark:text-gray-100"
             >
-              <option value="date">Sort by Date</option>
-              <option value="sender">Sort by Sender</option>
-              <option value="subject">Sort by Subject</option>
+                          <option value="date">Sort by date</option>
+            <option value="sender">Sort by sender</option>
+            <option value="subject">Sort by subject</option>
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+              className="p-1 text-muted transition-colors hover:text-secondary dark:text-secondary dark:hover:text-muted"
               title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
             >
-              <svg className={`w-4 h-4 transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`size-4${sortOrder === 'asc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -245,8 +245,8 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
       {isLoadingMessages && (
         <div className="flex items-center justify-center p-8">
           <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">Loading messages...</span>
+            <div className="size-6 animate-spin rounded-full border-2 border-accent-primary border-t-transparent"></div>
+            <span className="text-sm text-secondary dark:text-muted">Loading messages...</span>
           </div>
         </div>
       )}
@@ -254,15 +254,15 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
       {/* Messages List */}
       <div className="flex-1 overflow-y-auto">
         {filteredAndSortedMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex h-64 items-center justify-center">
             <div className="text-center">
-              <svg className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="mx-auto mb-4 size-12 text-muted dark:text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-8v.01M6 5v.01" />
               </svg>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className="mb-2 text-lg font-medium text-primary">
                 No messages found
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-secondary dark:text-muted">
                 {showOnlyUnread ? 'No unread messages' : 'Your unified inbox is empty'}
               </p>
             </div>
@@ -277,22 +277,22 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
                 <div
                   key={message.id}
                   onClick={() => handleMessageClick(message)}
-                  className={`flex items-center space-x-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                  } ${!message.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
+                  className={`flex cursor-pointer items-center space-x-4 p-4 transition-colors hover:bg-surface dark:hover:bg-gray-700 ${
+                    isSelected ? 'bg-accent-soft' : ''
+                  } ${!message.isRead ? 'bg-accent-soft' : ''}`}
                 >
                   {/* Checkbox */}
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={(e) => handleSelectMessage(message, e)}
-                    className="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-blue-600 focus:ring-blue-500"
+                    className="border-border-default focus:ring-accent-primary rounded bg-white text-accent-primary dark:border-gray-600 dark:bg-surface"
                   />
 
                   {/* Account Indicator */}
                   <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${getAccountColor(message.accountId)}`} title={account?.email}></div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+                    <div className={`size-3 rounded-full ${getAccountColor(message.accountId)}`} title={account?.email}></div>
+                    <span className="hidden text-xs text-secondary dark:text-muted sm:inline">
                       {account?.displayName?.substring(0, 10)}
                     </span>
                   </div>
@@ -302,50 +302,50 @@ export const UnifiedInbox: React.FC<UnifiedInboxProps> = ({ className = '' }) =>
                     onClick={(e) => handleStarToggle(message, e)}
                     className={`p-1 transition-colors ${
                       message.isStarred
-                        ? 'text-yellow-500 hover:text-yellow-600'
-                        : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+                        ? 'text-warning hover:text-warning-fg'
+                        : 'text-muted hover:text-secondary dark:text-secondary dark:hover:text-muted'
                     }`}
                   >
-                    <svg className="w-4 h-4" fill={message.isStarred ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="size-4" fill={message.isStarred ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                     </svg>
                   </button>
 
                   {/* Sender */}
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center space-x-2">
-                      <span className={`text-sm truncate ${!message.isRead ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                      <span className={`truncate text-sm ${!message.isRead ? 'font-semibold text-primary' : 'text-primary'}`}>
                         {message.from.name || message.from.email}
                       </span>
                       {!message.isRead && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="size-2 rounded-full bg-accent-primary"></div>
                       )}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                    <div className="truncate text-sm text-secondary dark:text-muted">
                       {message.subject}
                     </div>
                   </div>
 
                   {/* Snippet */}
-                  <div className="flex-1 min-w-0 hidden md:block">
-                    <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                  <div className="hidden min-w-0 flex-1 md:block">
+                    <div className="truncate text-sm text-secondary dark:text-muted">
                       {message.snippet}
                     </div>
                   </div>
 
                   {/* Date */}
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-secondary dark:text-muted">
                     {formatDate(message.date)}
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center space-x-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       onClick={(e) => handleReadToggle(message, e)}
-                      className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                      className="p-1 text-muted transition-colors hover:text-secondary dark:text-secondary dark:hover:text-muted"
                       title={message.isRead ? 'Mark as unread' : 'Mark as read'}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         {message.isRead ? (
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 7.89a1 1 0 001.42 0L21 7" />
                         ) : (

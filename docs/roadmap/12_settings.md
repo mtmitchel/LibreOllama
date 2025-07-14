@@ -1,4 +1,6 @@
-**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT DELETE IT.**
+**A REMINDER: IF A FEATURE IS ALREADY PRESENT BUT NOT LISTED IN THE MVP, DO NOT REMOVE IT.**
+
+**CRITICAL UI CONVENTION: This project uses sentence case (not title case) for ALL user-facing text including page titles, headings, section titles, list titles, button copy, navigation copy, form labels, menu items, and any other UI text. Example: "Create new project" NOT "Create New Project".**
 
 # Settings Roadmap
 
@@ -17,27 +19,52 @@ This document provides a comprehensive overview of the Settings feature, includi
 
 ## Current Implementation
 
-The Settings page is a comprehensive configuration interface with a sidebar navigation and multiple sections for different types of settings.
+The Settings page provides a comprehensive configuration interface with sidebar navigation and multiple sections. While the UI is complete and functional, there are integration gaps between settings and application behavior.
 
 ### Frontend Architecture
 
 - **Main Component:** The `Settings.tsx` page provides a full-featured settings interface with sidebar navigation and section-based content.
 - **Navigation Structure:** A clean sidebar with categorized settings sections including General, Appearance, Agents & Models, Integrations, etc.
 - **Design System Integration:** Uses the unified design system with proper design tokens, spacing, and component consistency.
-- **State Management:** Currently uses local React state for settings values. No dedicated settings store yet.
+- **Settings Store Integration:** Connected to `settingsStore.ts` (Zustand) with persistent localStorage storage for settings data.
 
 ### Backend Architecture
 
-- **No Backend Implementation:** Settings are currently stored in localStorage or component state. No backend persistence or Tauri commands for settings management.
+- **Settings Persistence:** Settings are persisted to localStorage via Zustand persistence middleware.
+- **Google Integration:** Functional Google OAuth integration for Gmail, Calendar, and Tasks services.
+- **No Dedicated Backend:** Settings management relies on frontend state and localStorage rather than database storage.
+
+### Current Integration Status
+
+**Functional Integrations:**
+- **Google Authentication:** Fully functional OAuth integration with Google services
+- **Theme Management:** Settings theme toggle connects to application theme system
+- **Settings Persistence:** All settings are saved to localStorage and restored on app restart
+- **Multi-Account Management:** Google account management with service connections
+
+**Integration Gaps:**
+- **Ollama Configuration:** Settings Ollama endpoint configuration may not fully integrate with Chat system
+- **Startup View Settings:** Settings startup view preference may not control actual app routing behavior
+- **Cross-Module Settings:** Some settings may not propagate properly to relevant application modules
 
 ### Implemented Features
 
-- Complete settings UI with sidebar navigation
+- Complete settings UI with sidebar navigation and all major sections
 - General settings section with startup preferences and regional settings
 - Agents & Models section with Ollama server configuration and model management
 - Integrations section with Google account management and API key configuration
-- Professional toggle switches and form controls
+- Appearance settings with theme toggle functionality
+- Professional toggle switches and form controls with proper validation
+- Settings persistence with automatic restoration on app start
 - Responsive design with proper focus management and accessibility
+- Real-time settings updates with immediate UI feedback
+
+### Current Limitations
+
+- **Backend Storage:** Settings are stored in localStorage rather than database, limiting cross-device synchronization
+- **Integration Testing:** Limited testing coverage for settings-to-application integration workflows
+- **Service Integration:** Some settings may not fully control the intended application behaviors
+- **Settings Validation:** Limited validation for complex settings like API endpoints and configurations
 
 ## Future Work & Todos
 

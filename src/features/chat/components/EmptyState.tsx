@@ -7,23 +7,23 @@ interface EmptyStateProps {
 
 export function EmptyState({ onNewChat }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-[var(--space-8)]">
-      <div className="w-20 h-20 rounded-[var(--radius-3xl)] bg-gradient-to-br from-[var(--accent-primary)]/20 to-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 flex items-center justify-center mb-[var(--space-6)]">
-        <MessagesSquare size={36} className="text-[var(--accent-primary)]" />
+    <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+      <div className="from-accent-primary/20 to-accent-primary/10 border-accent-primary/20 mb-6 flex size-20 items-center justify-center rounded-3xl border bg-gradient-to-br">
+        <MessagesSquare size={36} className="text-accent-primary" />
       </div>
-      <Heading level={3} className="text-[var(--text-primary)] mb-[var(--space-3)]">
+      <Heading level={3} className="mb-3 text-primary">
         Welcome to LibreOllama Chat
       </Heading>
-      <Text variant="secondary" className="max-w-md leading-relaxed mb-[var(--space-6)]">
+      <Text variant="secondary" className="mb-6 max-w-md leading-relaxed">
         Select a conversation from the list or start a new one to begin chatting with AI assistants.
       </Text>
       <Button 
         onClick={onNewChat} 
         variant="primary"
-        className="gap-[var(--space-2)] hover:scale-105 transition-transform"
+        className="gap-2 transition-transform motion-safe:hover:scale-105"
       >
         <Plus size={16} />
-        Start New Conversation
+        Start new conversation
       </Button>
     </div>
   );

@@ -129,7 +129,7 @@ export function UnifiedHeader({
           <Button
             variant="primary"
             onClick={primaryAction.onClick}
-            style={{ gap: 'var(--space-2)' }}
+            className="gap-2"
           >
             {primaryAction.icon}
             {primaryAction.label}

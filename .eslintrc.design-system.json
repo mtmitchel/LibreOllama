@@ -1,0 +1,100 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "react"
+  ],
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "Literal[value=/\\[var\\(--[^)]+\\)\\]/]",
+        "message": "🚫 CSS variable injection utilities are BANNED. Use semantic Tailwind utilities instead of [var(--...)] patterns."
+      },
+      {
+        "selector": "TemplateElement[value.raw=/\\[var\\(--[^)]+\\)\\]/]",
+        "message": "🚫 CSS variable injection utilities are BANNED. Use semantic Tailwind utilities instead of [var(--...)] patterns."
+      },
+      {
+        "selector": "JSXAttribute[name.name='className'] Literal[value=/text-(?:red|green|blue|yellow|purple|pink|indigo|gray|slate|zinc|neutral|stone|orange|amber|lime|emerald|teal|cyan|sky|violet|fuchsia|rose)-[0-9]+/]",
+        "message": "🚫 Hard-coded Tailwind colors are BANNED. Use semantic color tokens instead (text-primary, text-secondary, text-warning, etc.)."
+      },
+      {
+        "selector": "JSXAttribute[name.name='className'] Literal[value=/bg-(?:red|green|blue|yellow|purple|pink|indigo|gray|slate|zinc|neutral|stone|orange|amber|lime|emerald|teal|cyan|sky|violet|fuchsia|rose)-[0-9]+/]",
+        "message": "🚫 Hard-coded Tailwind colors are BANNED. Use semantic color tokens instead (bg-primary, bg-secondary, bg-surface, etc.)."
+      },
+      {
+        "selector": "JSXAttribute[name.name='className'] Literal[value=/border-(?:red|green|blue|yellow|purple|pink|indigo|gray|slate|zinc|neutral|stone|orange|amber|lime|emerald|teal|cyan|sky|violet|fuchsia|rose)-[0-9]+/]",
+        "message": "🚫 Hard-coded Tailwind colors are BANNED. Use semantic color tokens instead (border-border-default, border-accent-primary, etc.)."
+      },
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression Property[key.name='padding'][value.type='Literal'][value.value=/var\\(--[^)]+\\)/]",
+        "message": "🚫 Style props with CSS variables are BANNED. Use Tailwind utility classes instead (p-4, px-6, etc.)."
+      },
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression Property[key.name='margin'][value.type='Literal'][value.value=/var\\(--[^)]+\\)/]",
+        "message": "🚫 Style props with CSS variables are BANNED. Use Tailwind utility classes instead (m-4, mx-6, etc.)."
+      },
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression Property[key.name='color'][value.type='Literal'][value.value=/var\\(--[^)]+\\)/]",
+        "message": "🚫 Style props with CSS variables are BANNED. Use Tailwind utility classes instead (text-primary, text-secondary, etc.)."
+      },
+      {
+        "selector": "JSXAttribute[name.name='style'] ObjectExpression Property[key.name='backgroundColor'][value.type='Literal'][value.value=/var\\(--[^)]+\\)/]",
+        "message": "🚫 Style props with CSS variables are BANNED. Use Tailwind utility classes instead (bg-primary, bg-surface, etc.)."
+      },
+      {
+        "selector": "Literal[value='bg-black bg-opacity-50']",
+        "message": "🚫 Hard-coded overlay backgrounds are BANNED. Use semantic bg-bg-overlay token instead."
+      },
+      {
+        "selector": "TemplateElement[value.raw='bg-black bg-opacity-50']",
+        "message": "🚫 Hard-coded overlay backgrounds are BANNED. Use semantic bg-bg-overlay token instead."
+      }
+    ],
+    "no-restricted-patterns": [
+      "error",
+      {
+        "pattern": "text-yellow-500",
+        "message": "🚫 Hard-coded yellow text is BANNED. Use text-warning semantic token instead."
+      },
+      {
+        "pattern": "bg-red-500",
+        "message": "🚫 Hard-coded red background is BANNED. Use bg-error semantic token instead."
+      },
+      {
+        "pattern": "transition-all duration-[0-9]+",
+        "message": "⚠️ Use standardized animation timings: duration-150, duration-200, duration-300, or duration-500."
+      }
+    ]
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "ignorePatterns": [
+    "dist/",
+    "build/",
+    "node_modules/",
+    "src-tauri/target/",
+    ".ladle/",
+    "coverage/",
+    "*.stories.tsx"
+  ]
+} 

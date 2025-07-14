@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Button, Input } from '../../../components/ui';
 import { Paperclip, Send } from 'lucide-react';
 
@@ -19,51 +19,51 @@ export function ChatInput({
   onSendMessage,
   disabled = false
 }: ChatInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSendMessage(e as any);
+      onSendMessage(e as React.FormEvent);
     }
   };
 
   return (
-    <footer className="flex-shrink-0 bg-[var(--bg-surface)]/80 backdrop-blur-sm">
+    <footer className="bg-surface/80 shrink-0 backdrop-blur-sm">
       {/* Invisible Container - For Alignment Only */}
-      <div className="flex items-center gap-[var(--space-3)] p-[var(--space-4)]">
+      <div className="flex items-center gap-3 p-4">
         {/* Left: Attachment IconButton */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          type="button" 
-          title="Attach files"
-          className="flex-shrink-0"
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-secondary hover:text-primary"
+          title="Attach file"
         >
           <Paperclip size={16} />
         </Button>
-        
-        {/* Center: Standard TextField with Own Styling */}
-        <form onSubmit={onSendMessage} className="flex-1">
-          <Input 
-            ref={inputRef}
+
+        {/* Center: Input Field */}
+        <div className="flex-1">
+          <Input
+            type="text"
+            placeholder={selectedChatId ? `Message ${selectedChatTitle || 'conversation'}...` : 'Select a conversation to start chatting...'}
             value={newMessage}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onMessageChange(e.target.value)}
-            placeholder={`Message ${selectedChatTitle || 'AI'}...`}
+            onChange={(e) => onMessageChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={disabled || !selectedChatId}
+            disabled={!selectedChatId || disabled}
+            className="border-border-default bg-surface"
           />
-        </form>
-        
-        {/* Right: Send IconButton */}
+        </div>
+
+        {/* Right: Send Button */}
         <Button
           type="button"
-          onClick={(e) => onSendMessage(e as any)}
+          onClick={(e) => onSendMessage(e as React.FormEvent)}
           variant={newMessage.trim() && selectedChatId ? "primary" : "secondary"}
           size="icon"
           disabled={!newMessage.trim() || !selectedChatId || disabled}
           title="Send message (Enter)"
-          className="flex-shrink-0"
+          className="shrink-0"
         >
           <Send size={16} />
         </Button>

@@ -1,0 +1,491 @@
+# FULLCALENDAR TEXT VISIBILITY AND OVERFLOW DEBUGGING RESEARCH
+
+## PROBLEM STATEMENT
+
+This document contains all relevant code and context for debugging critical issues with FullCalendar implementation in a React/TypeScript application. The problems that need to be solved are:
+
+1. **TEXT VISIBILITY ISSUE**: Event titles and task titles are not visible or have extremely poor contrast in both light and dark modes
+2. **OVERFLOW ISSUE**: Event and task titles are spilling outside of their day cells/boxes in month view, creating visual clutter
+
+Multiple CSS approaches have been attempted but have failed to resolve these issues. The solution is not immediately obvious and requires deep research into FullCalendar's internal CSS structure and rendering behavior.
+
+## DESIGN SYSTEM COLOR SCHEME
+
+### Light Mode Colors
+```css
+:root {
+  /* Text Colors */
+  --text-primary: #18181b;        /* Dark gray - primary text */
+  --text-secondary: #52525b;      /* Medium gray - secondary text */
+  --text-muted: #71717a;          /* Light gray - muted text */
+  --text-inverse: #f4f4f5;        /* Light gray - inverse text */
+
+  /* Background Colors */
+  --bg-primary: #ffffff;          /* White - main backgrounds */
+  --bg-secondary: #f8fafc;        /* Light gray - secondary backgrounds */
+  --bg-tertiary: #f1f5f9;         /* Lighter gray - tertiary backgrounds */
+  --bg-card: #ffffff;             /* White - card backgrounds */
+  --bg-content: #ffffff;          /* White - content areas */
+
+  /* Accent Colors */
+  --accent-primary: #6366f1;      /* Blue - primary accent */
+  --accent-secondary: #4f46e5;    /* Darker blue - secondary accent */
+  --accent-bg: rgba(224, 231, 255, 0.5);  /* Light blue background */
+
+  /* Status Colors */
+  --status-success: #10b981;      /* Green - success */
+  --status-warning: #f59e0b;      /* Yellow - warning */
+  --status-error: #ef4444;        /* Red - error */
+  --status-success-bg: #f0fdf4;   /* Light green - success background */
+  --status-warning-bg: #fffbeb;   /* Light yellow - warning background */
+  --status-error-bg: #fef2f2;     /* Light red - error background */
+
+  /* Border Colors */
+  --border-primary: #e4e4e7;      /* Light gray - primary borders */
+  --border-secondary: #f4f4f5;    /* Lighter gray - secondary borders */
+}
+```
+
+### Dark Mode Colors
+```css
+.dark {
+  /* Text Colors */
+  --text-primary: #f4f4f5;        /* Light gray - primary text */
+  --text-secondary: #a1a1aa;      /* Medium gray - secondary text */
+  --text-muted: #71717a;          /* Gray - muted text */
+  --text-inverse: #18181b;        /* Dark gray - inverse text */
+
+  /* Background Colors */
+  --bg-primary: #18181b;          /* Dark gray - main backgrounds */
+  --bg-secondary: #27272a;        /* Medium gray - secondary backgrounds */
+  --bg-tertiary: #3f3f46;         /* Lighter gray - tertiary backgrounds */
+  --bg-card: #27272a;             /* Dark gray - card backgrounds */
+  --bg-content: #27272a;          /* Dark gray - content areas */
+
+  /* Accent Colors */
+  --accent-primary: #818cf8;      /* Light blue - primary accent */
+  --accent-secondary: #4f46e5;    /* Blue - secondary accent */
+  --accent-bg: rgba(99, 102, 241, 0.2);  /* Blue background */
+
+  /* Status Colors */
+  --status-success: #10b981;      /* Green - success */
+  --status-warning: #f59e0b;      /* Yellow - warning */
+  --status-error: #ef4444;        /* Red - error */
+  --status-success-bg: rgba(16, 185, 129, 0.1);   /* Dark green - success background */
+  --status-warning-bg: rgba(245, 158, 11, 0.1);   /* Dark yellow - warning background */
+  --status-error-bg: rgba(239, 68, 68, 0.1);      /* Dark red - error background */
+
+  /* Border Colors */
+  --border-primary: #3f3f46;      /* Gray - primary borders */
+  --border-secondary: #27272a;    /* Dark gray - secondary borders */
+}
+```
+
+## FULLCALENDAR CONFIGURATION
+
+### React Component Props
+```typescript
+<FullCalendar
+  ref={calendarRef}
+  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+  initialView={view}
+  headerToolbar={false}
+  height="100%"
+  slotMinTime="06:00:00"
+  slotMaxTime="22:00:00"
+  allDaySlot={true}
+  scrollTime="08:00:00"
+  slotDuration="00:30:00"
+  snapDuration="00:15:00"
+  nowIndicator={true}
+  eventTextColor="#ffffff"
+  businessHours={{
+    daysOfWeek: [1, 2, 3, 4, 5],
+    startTime: '09:00',
+    endTime: '17:00',
+  }}
+  events={fullCalendarEvents}
+  eventContent={renderEventContent}
+  eventDidMount={(info) => {
+    if (info.isMore) {
+      info.el.title = `${info.num} more events`;
+    } else if (info.el.scrollWidth > info.el.clientWidth) {
+      info.el.title = info.event.title;
+    }
+  }}
+  selectable={true}
+  editable={true}
+  droppable={true}
+  select={handleDateSelect}
+  eventClick={handleEventClick}
+  eventDrop={handleEventDrop}
+  drop={handleTaskDrop}
+  datesSet={(dateInfo) => {
+    setCurrentViewTitle(dateInfo.view.title);
+  }}
+  dayMaxEvents={compactMode ? 3 : 5}
+  dayMaxEventRows={compactMode ? 3 : 4}
+  moreLinkClick="popover"
+  eventMaxStack={3}
+  eventClassNames={(eventInfo) => {
+    const classes = ['fc-event-design-system'];
+    if (eventInfo.event.extendedProps.type === 'task') {
+      classes.push(eventInfo.event.extendedProps.taskData?.status === 'completed' 
+        ? 'fc-event-task-completed' 
+        : 'fc-event-task'
+      );
+    }
+    return classes;
+  }}
+/>
+```
+
+### Event Data Structure
+```typescript
+// Calendar events format
+const calendarEventsFormatted = (calendarEvents || []).map(event => ({
+  id: event.id,
+  title: event.summary,
+  start: event.start.dateTime || event.start.date,
+  end: event.end.dateTime || event.end.date,
+  allDay: !event.start.dateTime,
+  extendedProps: {
+    description: event.description,
+    location: event.location,
+    status: event.status,
+    type: 'event',
+  }
+}));
+
+// Task events format
+const taskEventsFormatted = showTasksInCalendar ? 
+  filteredTasks
+    .filter(task => task.due)
+    .map(task => ({
+      id: `task-${task.id}`,
+      title: task.title,
+      start: task.due!.split('T')[0],
+      allDay: true,
+      classNames: [
+        'fc-event-task',
+        task.status === 'completed' ? 'fc-event-task-completed' : ''
+      ],
+      extendedProps: {
+        type: 'task',
+        taskId: task.id,
+        taskData: task,
+      }
+    })) : [];
+```
+
+### Custom Event Rendering Function
+```typescript
+function renderEventContent(eventInfo: any) {
+  const { event, timeText, view } = eventInfo;
+  const isTask = event.extendedProps.type === 'task';
+  const isCompleted = isTask && event.extendedProps.taskData?.status === 'completed';
+  const isTimeGridView = view.type === 'timeGridWeek' || view.type === 'timeGridDay';
+
+  // For time grid views, use a more detailed layout
+  if (isTimeGridView) {
+    return (
+      <div className="fc-event-main">
+        {timeText && <div className="fc-event-time">{timeText}</div>}
+        <div className="fc-event-title">{event.title}</div>
+        {event.extendedProps.location && (
+          <div className="fc-event-location" style={{ fontSize: '11px', opacity: 0.8 }}>
+            {event.extendedProps.location}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // For month view, use compact layout with simple visual indicators
+  const indicator = isTask ? (
+    <div className="w-2 h-2 rounded-sm bg-current flex-shrink-0" style={{ marginRight: '4px' }} />
+  ) : (
+    <div className="w-2 h-2 rounded-full bg-current flex-shrink-0" style={{ marginRight: '4px' }} />
+  );
+
+  return (
+    <div className="fc-event-main-frame">
+      {indicator}
+      <div className="fc-event-title-container flex-grow overflow-hidden">
+        <div className="fc-event-title">{event.title}</div>
+      </div>
+      {timeText && <div className="fc-event-time">{timeText}</div>}
+    </div>
+  );
+}
+```
+
+## CURRENT CSS IMPLEMENTATION (FAILING)
+
+### FullCalendar CSS Custom Properties
+```css
+/* FullCalendar CSS Custom Properties Override */
+:root {
+  --fc-neutral-bg-color: var(--bg-card);
+  --fc-border-color: var(--border-secondary);
+  --fc-button-text-color: var(--text-primary);
+  --fc-button-bg-color: var(--bg-secondary);
+  --fc-button-border-color: var(--border-primary);
+  --fc-button-hover-bg-color: var(--state-hover);
+  --fc-button-hover-border-color: var(--border-focus);
+  --fc-button-active-bg-color: var(--state-active);
+  --fc-button-active-border-color: var(--border-focus);
+  --fc-event-bg-color: var(--accent-primary);
+  --fc-event-border-color: var(--accent-primary);
+  --fc-event-text-color: #ffffff; /* white text for events in light theme */
+  --fc-event-selected-overlay-color: var(--state-selected);
+  --fc-more-link-bg-color: var(--bg-tertiary);
+  --fc-more-link-text-color: var(--text-primary);
+  --fc-event-resizer-thickness: 8px;
+  --fc-event-resizer-dot-total-width: 8px;
+  --fc-event-resizer-dot-border-width: 1px;
+  --fc-non-business-color: var(--bg-tertiary);
+  --fc-bg-event-color: var(--accent-bg);
+  --fc-bg-event-opacity: 0.3;
+  --fc-highlight-color: var(--state-selected);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-now-indicator-color: var(--accent-primary);
+  
+  /* Text Colors - Critical for visibility */
+  --fc-page-bg-color: var(--bg-primary);
+  --fc-list-event-hover-bg-color: var(--state-hover);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-daygrid-event-dot-width: 8px;
+  
+  /* Time grid specific */
+  --fc-timegrid-axis-chunk-color: var(--text-primary);
+  --fc-timegrid-slot-label-color: var(--text-primary);
+  
+  /* Day grid specific */
+  --fc-daygrid-day-number-color: var(--text-primary);
+  --fc-col-header-cell-color: var(--text-primary);
+}
+
+/* Dark mode specific overrides */
+.dark {
+  --fc-neutral-bg-color: var(--bg-card);
+  --fc-border-color: var(--border-secondary);
+  --fc-button-text-color: var(--text-primary);
+  --fc-button-bg-color: var(--bg-secondary);
+  --fc-button-border-color: var(--border-primary);
+  --fc-button-hover-bg-color: var(--state-hover);
+  --fc-button-hover-border-color: var(--border-focus);
+  --fc-button-active-bg-color: var(--state-active);
+  --fc-button-active-border-color: var(--border-focus);
+  --fc-event-bg-color: var(--accent-primary);
+  --fc-event-border-color: var(--accent-primary);
+  --fc-event-text-color: #ffffff; /* white text for events in dark theme */
+  --fc-event-selected-overlay-color: var(--state-selected);
+  --fc-more-link-bg-color: var(--bg-tertiary);
+  --fc-more-link-text-color: var(--text-primary);
+  --fc-non-business-color: var(--bg-tertiary);
+  --fc-bg-event-color: var(--accent-bg);
+  --fc-bg-event-opacity: 0.3;
+  --fc-highlight-color: var(--state-selected);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-now-indicator-color: var(--accent-primary);
+  
+  /* Text Colors - Critical for visibility in dark mode */
+  --fc-page-bg-color: var(--bg-primary);
+  --fc-list-event-hover-bg-color: var(--state-hover);
+  --fc-today-bg-color: var(--accent-bg);
+  --fc-daygrid-event-dot-width: 8px;
+  
+  /* Time grid specific */
+  --fc-timegrid-axis-chunk-color: var(--text-primary);
+  --fc-timegrid-slot-label-color: var(--text-primary);
+  
+  /* Day grid specific */
+  --fc-daygrid-day-number-color: var(--text-primary);
+  --fc-col-header-cell-color: var(--text-primary);
+}
+```
+
+### Event Styling Attempts
+```css
+/* Accessible text colors for task events */
+.fc-event-task,
+.fc-event-task * {
+  color: var(--status-warning) !important; /* amber text on light yellow background */
+}
+
+.fc-event-task-completed,
+.fc-event-task-completed * {
+  color: var(--status-success) !important; /* green text on light green background */
+}
+
+/* Override for task events to ensure visible text */
+.fc .fc-event-task .fc-event-title,
+.fc .fc-event-task .fc-event-time {
+  color: var(--text-primary) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc .fc-event-task-completed .fc-event-title,
+.fc .fc-event-task-completed .fc-event-time {
+  color: var(--text-primary) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ensure no spilling for task titles */
+.fc .fc-event-task .fc-event-title-container,
+.fc .fc-event-task-completed .fc-event-title-container {
+  overflow: hidden !important;
+  flex-grow: 1;
+}
+
+/* Slightly darker background for better visibility */
+.fc-event-task {
+  background: color-mix(in srgb, var(--status-warning-bg) 70%, var(--status-warning) 30%) !important;
+}
+
+.fc-event-task-completed {
+  background: color-mix(in srgb, var(--status-success-bg) 70%, var(--status-success) 30%) !important;
+}
+
+/* Prevent overflow for all event titles */
+.fc .fc-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Events */
+.fc .fc-event {
+  border: none !important;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+  margin: 1px 2px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-all);
+  color: #ffffff !important;
+}
+
+/* Specific styling for single-day events in month view */
+.fc .fc-daygrid-event {
+  background-color: var(--fc-event-bg-color) !important;
+  color: #ffffff !important;
+  padding: 2px 4px !important;
+  border-radius: var(--radius-sm) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.fc .fc-daygrid-dot-event {
+  background-color: var(--fc-event-bg-color) !important;
+  color: #ffffff !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.fc .fc-daygrid-event .fc-event-title {
+  color: #ffffff !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+  flex: 1 !important;
+}
+
+/* Specific overflow prevention for dot events */
+.fc .fc-daygrid-dot-event .fc-event-title {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  flex: 1 !important;
+}
+
+.fc .fc-daygrid-dot-event .fc-event-main {
+  overflow: hidden !important;
+  flex: 1 !important;
+}
+
+/* Event title text */
+.fc .fc-event-title {
+  color: #ffffff !important;
+  font-weight: var(--font-medium);
+}
+
+.fc .fc-event-time {
+  color: #ffffff !important;
+  font-weight: var(--font-normal);
+}
+
+/* Event task styling */
+.fc-event-task {
+  background: var(--status-warning-bg) !important;
+  color: var(--status-warning) !important;
+  border-left: 3px solid var(--status-warning) !important;
+}
+
+.fc-event-task * {
+  color: var(--status-warning) !important;
+}
+
+.fc-event-task-completed {
+  background: var(--status-success-bg) !important;
+  color: var(--status-success) !important;
+  border-left: 3px solid var(--status-success) !important;
+  opacity: 0.9;
+}
+
+.fc-event-task-completed * {
+  color: var(--status-success) !important;
+}
+
+.fc-event-task-completed .fc-event-title {
+  text-decoration: line-through;
+}
+```
+
+## OBSERVED BEHAVIOR
+
+1. **Text Visibility**: Despite multiple attempts with different CSS selectors and !important flags, event titles remain barely visible or completely invisible in both light and dark modes
+2. **Overflow**: Event titles consistently spill outside their day cell boundaries in month view, regardless of overflow:hidden, text-overflow:ellipsis, and white-space:nowrap rules
+3. **Specificity Issues**: Higher specificity selectors like `.fc .fc-event-task .fc-event-title` don't seem to override FullCalendar's internal styles
+4. **CSS Variable Inheritance**: FullCalendar's CSS custom properties may not be properly inheriting design system values
+
+## RESEARCH QUESTIONS
+
+1. What is the exact DOM structure that FullCalendar generates for events in month view vs time grid view?
+2. Which CSS classes and selectors have the highest specificity in FullCalendar's internal stylesheet?
+3. How does FullCalendar handle text overflow in different view types, and what are the container elements responsible for clipping?
+4. Are there JavaScript-based solutions (eventDidMount, eventContent) that could override CSS limitations?
+5. What is the order of CSS rule application when using CSS custom properties vs direct class overrides?
+6. How does FullCalendar's rendering differ between all-day events and timed events in terms of text handling?
+
+## TECHNICAL CONSTRAINTS
+
+- React 19.1.0 with TypeScript 5.6.2
+- FullCalendar v6.1.18 with React adapter
+- Tauri v2.5.0 desktop application
+- Vite 6.0.3 build tool
+- Tailwind CSS 3.4.17 with custom design system
+- Must support both light and dark themes
+- Must maintain accessibility standards
+- Cannot modify FullCalendar source code directly
+
+## ATTEMPTED SOLUTIONS (ALL FAILED)
+
+1. CSS custom properties override
+2. High-specificity class selectors with !important
+3. Inline styles in renderEventContent function
+4. Multiple overflow handling approaches
+5. Background color mixing for better contrast
+6. Flexbox layout adjustments
+7. Event class name customization
+8. eventDidMount callback styling
+
+The solution requires deep understanding of FullCalendar's internal CSS architecture and rendering pipeline. Standard CSS override approaches have proven insufficient. 

@@ -1,19 +1,50 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ListChecks, Plus, X, Calendar as CalendarIcon, Clock, MapPin, FileText, Flag, Hash, Repeat, List as ListIcon, CheckCircle, CircleDashed, ChevronDown, RefreshCw, Search } from 'lucide-react';
-import { Card, Button, Tag, Input } from '../../components/ui';
 import FullCalendar from '@fullcalendar/react';
+import { 
+  EventContentArg, 
+  DateSelectArg, 
+  EventClickArg, 
+  EventDropArg,
+  DropArg,
+} from '@fullcalendar/core';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, Search, ListChecks, CheckCircle, ChevronDown } from 'lucide-react';
+
+import { Button, Card, Text, Heading, Input } from '../../components/ui';
+import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
+import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useHeader } from '../contexts/HeaderContext';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
-import { useHeader } from '../contexts/HeaderContext';
-import { useKanbanStore, KanbanTask, TaskMetadata } from '../../stores/useKanbanStore';
-import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
-import { GoogleCalendarEvent, GoogleTask, GoogleTaskList } from '../../types/google';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
+import { devLog } from '../../utils/devLog';
+import './calendar.css';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
+
+interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+  due?: string;
+}
+
+interface Recurring {
+  enabled: boolean;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  interval: number;
+  endDate?: string;
+}
+
+interface GoogleTask {
+  id: string;
+  title: string;
+  notes?: string;
+  due?: string;
+  status: 'needsAction' | 'completed';
+  [key: string]: unknown; // Allow other properties
+}
 
 // Google Calendar authentication now handled centrally in Settings
 
@@ -22,16 +53,21 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
   isOpen: boolean;
   task?: GoogleTask | null;
   onClose: () => void;
-  onSubmit: (data: { title: string; notes?: string; due?: string; metadata?: TaskMetadata }) => void;
+  onSubmit: (data: { title: string; notes?: string; due?: string; metadata?: {
+    priority: 'low' | 'normal' | 'high' | 'urgent';
+    labels: string[];
+    subtasks: Subtask[];
+    recurring?: Recurring;
+  } }) => void;
   onDelete?: () => void;
 }) => {
   const [formData, setFormData] = useState({
     title: '',
     notes: '',
     due: '',
-    priority: 'normal' as TaskMetadata['priority'],
+    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
     labels: [] as string[],
-    subtasks: [] as Array<{ id: string; title: string; completed: boolean; due?: string }>,
+    subtasks: [] as Subtask[],
     recurringEnabled: false,
     recurringFrequency: 'daily' as 'daily' | 'weekly' | 'monthly' | 'yearly',
     recurringInterval: 1,
@@ -142,54 +178,54 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto">
         <Card className="w-full">
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-primary">
-              {task ? 'Edit Task' : 'Create Task'}
-            </h2>
+          <div className="space-y-4 p-6">
+            <Heading level={2} className="text-lg font-semibold">
+              {task ? 'Edit task' : 'Create task'}
+            </Heading>
             
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">Title</label>
+              <Text as="label" size="sm" weight="medium" className="mb-1 block">Title</Text>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
                 placeholder="Task title..."
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">Notes</label>
+              <Text as="label" size="sm" weight="medium" className="mb-1 block">Notes</Text>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
                 placeholder="Task description..."
                 rows={3}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">Due Date</label>
+              <Text as="label" size="sm" weight="medium" className="mb-1 block">Due date</Text>
               <input
                 type="date"
                 value={formData.due}
                 onChange={(e) => setFormData(prev => ({ ...prev, due: e.target.value }))}
-                className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">Priority</label>
+              <Text as="label" size="sm" weight="medium" className="mb-1 block">Priority</Text>
               <select
                 value={formData.priority}
-                onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as TaskMetadata['priority'] }))}
-                className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent' }))}
+                className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
               >
                 <option value="low">Low</option>
                 <option value="normal">Normal</option>
@@ -200,7 +236,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
 
             {/* Labels Section */}
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">Labels</label>
+              <Text as="label" size="sm" weight="medium" className="mb-2 block">Labels</Text>
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <input
@@ -208,7 +244,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLabel())}
-                    className="flex-1 p-2 border border-border-default rounded-md bg-card text-primary text-sm"
+                    className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 flex-1 rounded-md border p-2 text-sm focus:border-accent-primary focus:ring-2"
                     placeholder="Add a label..."
                   />
                   <Button type="button" onClick={addLabel} variant="outline" size="sm">
@@ -220,13 +256,13 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                     {formData.labels.map(label => (
                       <span
                         key={label}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-secondary-ghost text-secondary rounded text-xs"
+                        className="text-text-secondary inline-flex items-center gap-1 rounded bg-tertiary px-2 py-1 text-xs"
                       >
                         {label}
                         <button
                           type="button"
                           onClick={() => removeLabel(label)}
-                          className="hover:text-error ml-1"
+                          className="ml-1 hover:text-error"
                         >
                           ×
                         </button>
@@ -239,7 +275,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
 
             {/* Subtasks Section */}
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">Subtasks</label>
+              <Text as="label" size="sm" weight="medium" className="mb-2 block">Subtasks</Text>
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <input
@@ -247,7 +283,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                     value={newSubtask}
                     onChange={(e) => setNewSubtask(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
-                    className="flex-1 p-2 border border-border-default rounded-md bg-card text-primary text-sm"
+                    className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 flex-1 rounded-md border p-2 text-sm focus:border-accent-primary focus:ring-2"
                     placeholder="Add a subtask..."
                   />
                   <Button type="button" onClick={addSubtask} variant="outline" size="sm">
@@ -255,30 +291,30 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                   </Button>
                 </div>
                 {formData.subtasks.length > 0 && (
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="max-h-32 space-y-2 overflow-y-auto">
                     {formData.subtasks.map(subtask => (
                       <div
                         key={subtask.id}
-                        className="flex items-center gap-2 p-2 border border-border-default rounded bg-secondary-ghost"
+                        className="border-border-primary flex items-center gap-2 rounded border bg-card p-2"
                       >
                         <button
                           type="button"
                           onClick={() => toggleSubtask(subtask.id)}
-                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          className={`flex size-4 items-center justify-center rounded border-2 ${
                             subtask.completed 
-                              ? 'bg-success border-success text-success-ghost' 
-                              : 'border-border-default hover:border-success'
+                              ? 'border-success bg-success text-white' 
+                              : 'border-border-primary hover:border-success'
                           }`}
                         >
                           {subtask.completed && '✓'}
                         </button>
-                        <span className={`flex-1 text-sm ${subtask.completed ? 'line-through text-muted' : 'text-primary'}`}>
+                        <span className={`flex-1 text-sm ${subtask.completed ? 'text-text-muted line-through' : 'text-text-primary'}`}>
                           {subtask.title}
                         </span>
                         <button
                           type="button"
                           onClick={() => removeSubtask(subtask.id)}
-                          className="text-error hover:text-error-hover p-1"
+                          className="hover:text-error-hover p-1 text-error"
                         >
                           ×
                         </button>
@@ -291,7 +327,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
 
             {/* Recurring Section */}
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">Recurring</label>
+              <Text as="label" size="sm" weight="medium" className="mb-2 block">Recurring</Text>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <input
@@ -299,22 +335,22 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                     id="recurring-enabled"
                     checked={formData.recurringEnabled}
                     onChange={(e) => setFormData(prev => ({ ...prev, recurringEnabled: e.target.checked }))}
-                    className="w-4 h-4 border border-border-default rounded"
+                    className="border-border-primary focus:ring-accent-primary/20 size-4 rounded border focus:border-accent-primary focus:ring-2"
                   />
-                  <label htmlFor="recurring-enabled" className="text-sm text-primary">
+                  <Text as="label" htmlFor="recurring-enabled" size="sm">
                     Make this task recurring
-                  </label>
+                  </Text>
                 </div>
                 
                 {formData.recurringEnabled && (
-                  <div className="pl-6 space-y-3 border-l-2 border-secondary-ghost">
+                  <div className="border-border-muted space-y-3 border-l-2 pl-6">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-muted mb-1">Frequency</label>
+                        <Text as="label" size="xs" weight="medium" variant="muted" className="mb-1 block">Frequency</Text>
                         <select
                           value={formData.recurringFrequency}
-                          onChange={(e) => setFormData(prev => ({ ...prev, recurringFrequency: e.target.value as any }))}
-                          className="w-full p-2 border border-border-default rounded-md bg-card text-primary text-sm"
+                          onChange={(e) => setFormData(prev => ({ ...prev, recurringFrequency: e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly' }))}
+                          className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 text-sm focus:border-accent-primary focus:ring-2"
                         >
                           <option value="daily">Daily</option>
                           <option value="weekly">Weekly</option>
@@ -323,41 +359,41 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-muted mb-1">Interval</label>
+                        <Text as="label" size="xs" weight="medium" variant="muted" className="mb-1 block">Interval</Text>
                         <input
                           type="number"
                           min="1"
                           max="365"
                           value={formData.recurringInterval}
                           onChange={(e) => setFormData(prev => ({ ...prev, recurringInterval: parseInt(e.target.value) || 1 }))}
-                          className="w-full p-2 border border-border-default rounded-md bg-card text-primary text-sm"
+                          className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 text-sm focus:border-accent-primary focus:ring-2"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-muted mb-1">End Date (Optional)</label>
+                      <Text as="label" size="xs" weight="medium" variant="muted" className="mb-1 block">End date (optional)</Text>
                       <input
                         type="date"
                         value={formData.recurringEndDate}
                         onChange={(e) => setFormData(prev => ({ ...prev, recurringEndDate: e.target.value }))}
-                        className="w-full p-2 border border-border-default rounded-md bg-card text-primary text-sm"
+                        className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 text-sm focus:border-accent-primary focus:ring-2"
                       />
                     </div>
-                    <p className="text-xs text-info">
+                    <Text size="xs" className="text-info">
                       Repeats every {formData.recurringInterval} {formData.recurringFrequency.replace('ly', '')}
                       {formData.recurringInterval > 1 ? 's' : ''}
                       {formData.recurringEndDate && ` until ${new Date(formData.recurringEndDate + 'T00:00:00').toLocaleDateString()}`}
-                    </p>
+                    </Text>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-6 border-t border-border-default">
+          <div className="border-border-primary flex items-center justify-between border-t p-6">
             <div>
               {task && onDelete && (
-                <Button type="button" variant="outline" onClick={onDelete} className="text-error border-error">
+                <Button type="button" variant="outline" onClick={onDelete} className="border-error text-error">
                   Delete
                 </Button>
               )}
@@ -427,31 +463,31 @@ const ScheduleTaskModal = ({
   if (!isOpen || !task || !selectedDate) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <Card className="w-full max-w-md">
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4">
+          <div className="space-y-4 p-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-primary">Schedule Task</h2>
+              <Heading level={2} className="text-lg font-semibold">Schedule task</Heading>
               <Button type="button" variant="ghost" size="sm" onClick={onClose}>
                 <X size={16} />
               </Button>
             </div>
             
-            <div className="p-3 bg-secondary-ghost rounded-lg">
-              <p className="text-sm text-muted">
+                          <div className="rounded-lg bg-card p-3">
+              <Text size="sm" variant="muted">
                 Scheduling for: <strong>{selectedDate.toLocaleDateString()}</strong>
-              </p>
-              <p className="text-sm font-medium text-primary mt-1">{task.title}</p>
+              </Text>
+              <Text size="sm" weight="medium" className="text-text-primary mt-1">{task.title}</Text>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">Event Title</label>
+              <Text as="label" size="sm" weight="medium" className="mb-1 block">Event title</Text>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
                 placeholder="Event title..."
                 required
               />
@@ -459,56 +495,56 @@ const ScheduleTaskModal = ({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">Start Time</label>
+                <Text as="label" size="sm" weight="medium" className="mb-1 block">Start time</Text>
                 <input
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-                  className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                  className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">End Time</label>
+                <Text as="label" size="sm" weight="medium" className="mb-1 block">End time</Text>
                 <input
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-                  className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                  className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">Description</label>
+              <Text as="label" size="sm" weight="medium" className="mb-1 block">Description</Text>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
                 placeholder="Event description..."
                 rows={3}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-primary mb-1">Location</label>
+              <Text as="label" size="sm" weight="medium" className="mb-1 block">Location</Text>
               <input
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2"
                 placeholder="Event location..."
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 p-6 border-t border-border-default">
+          <div className="border-border-primary flex items-center justify-end gap-2 border-t p-6">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" variant="primary">
-              Schedule Event
+              Schedule event
             </Button>
           </div>
         </form>
@@ -517,9 +553,96 @@ const ScheduleTaskModal = ({
   );
 };
 
-const Calendar: React.FC = () => {
+// Clean event rendering function using only design system elements
+function renderEventContent(eventInfo: EventContentArg) {
+  const { event, timeText, view } = eventInfo;
+  const isTask = event.extendedProps.type === 'task';
+  const isCompleted = isTask && event.extendedProps.taskData?.status === 'completed';
+  const isTimeGridView = view.type === 'timeGridWeek' || view.type === 'timeGridDay';
+
+  // For time grid views, use a more detailed layout
+  if (isTimeGridView) {
+    return (
+      <div className="fc-event-main" style={{ overflow: 'hidden', maxWidth: '100%' }}>
+        {timeText && (
+          <div className="fc-event-time" style={{ color: '#ffffff', fontSize: '11px', fontWeight: '500' }}>
+            {timeText}
+          </div>
+        )}
+        <div className="fc-event-title" style={{ 
+          color: '#ffffff', 
+          overflow: 'hidden', 
+          textOverflow: 'ellipsis', 
+          whiteSpace: 'nowrap',
+          fontWeight: '500'
+        }}>
+          {event.title}
+        </div>
+      </div>
+    );
+  }
+
+  // Month view with strict overflow control
+  const indicator = isTask ? (
+    <div 
+      className="size-2 shrink-0 rounded-sm" 
+      style={{ 
+        marginRight: '4px', 
+        backgroundColor: isCompleted ? 'var(--status-success)' : 'var(--status-warning)' 
+      }} 
+    />
+  ) : (
+    <div 
+      className="size-2 shrink-0 rounded-full" 
+      style={{ 
+        marginRight: '4px', 
+        backgroundColor: 'var(--accent-primary)' 
+      }} 
+    />
+  );
+
+  return (
+    <div className="fc-event-main-frame" style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      overflow: 'hidden', 
+      maxWidth: '100%' 
+    }}>
+      {indicator}
+      <div className="fc-event-title-container" style={{ 
+        flex: '1 1 auto', 
+        minWidth: '0', 
+        overflow: 'hidden' 
+      }}>
+        <div className="fc-event-title" style={{ 
+          color: isTask ? '#18181b' : '#ffffff', // Dark text for tasks, white for events
+          overflow: 'hidden', 
+          textOverflow: 'ellipsis', 
+          whiteSpace: 'nowrap',
+          textDecoration: isCompleted ? 'line-through' : 'none',
+          fontWeight: '500'
+        }}>
+          {event.title}
+        </div>
+      </div>
+      {timeText && (
+        <div className="fc-event-time" style={{ 
+          color: isTask ? '#18181b' : '#ffffff', // Dark text for tasks, white for events
+          fontSize: '11px',
+          marginLeft: '4px',
+          flexShrink: 0,
+          fontWeight: '500'
+        }}>
+          {timeText}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Calendar() {
   const navigate = useNavigate();
-  const { setHeaderProps, clearHeaderProps } = useHeader();
+      const { setHeaderProps, clearHeaderProps } = useHeader();
   const calendarRef = useRef<FullCalendar>(null);
   const taskPanelRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<CalendarView>('dayGridMonth');
@@ -527,12 +650,14 @@ const Calendar: React.FC = () => {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [selectedDateInfo, setSelectedDateInfo] = useState<any>(null);
+  const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
   const [selectedTaskForScheduling, setSelectedTaskForScheduling] = useState<GoogleTask | null>(null);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showTasksInCalendar, setShowTasksInCalendar] = useState(true);
+  const [compactMode, setCompactMode] = useState(false);
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
@@ -542,7 +667,8 @@ const Calendar: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [currentViewTitle, setCurrentViewTitle] = useState<string>('Calendar');
 
   const {
     taskLists,
@@ -550,10 +676,7 @@ const Calendar: React.FC = () => {
     isLoading: isTasksLoading,
     error: tasksError,
     fetchTaskLists,
-    fetchTasks,
     createTask: createGoogleTask,
-    updateTask: updateGoogleTask,
-    deleteTask: deleteGoogleTask,
     toggleTaskComplete,
     authenticate: authenticateTasks,
     isAuthenticated: isTasksAuthenticated,
@@ -594,7 +717,7 @@ const Calendar: React.FC = () => {
         eventData: function(eventEl) {
           const taskJson = eventEl.getAttribute('data-task');
           if (taskJson) {
-              const task = JSON.parse(taskJson);
+              const task: GoogleTask = JSON.parse(taskJson);
               return {
                   title: task.title,
                   duration: '01:00',
@@ -609,7 +732,7 @@ const Calendar: React.FC = () => {
         }
       });
     }
-  }, [taskPanelRef.current]);
+  }, []);
 
 
 
@@ -623,18 +746,58 @@ const Calendar: React.FC = () => {
     }
   }, [activeAccount, fetchCalendarEvents]);
 
-  const fullCalendarEvents = (calendarEvents || []).map(event => ({
-    id: event.id,
-    title: event.summary,
-    start: event.start.dateTime || event.start.date,
-    end: event.end.dateTime || event.end.date,
-    allDay: !event.start.dateTime,
-    extendedProps: {
-      description: event.description,
-      location: event.location,
-      status: event.status,
-    }
-  }));
+  // Get filtered tasks based on selected task list
+  const getFilteredTasks = () => {
+    const tasks = selectedColumnId === 'all'
+      ? Object.values(googleTasks).flat()
+      : googleTasks[selectedColumnId] || [];
+    
+    // Deduplicate tasks by ID to prevent key errors
+    const uniqueTasks = Array.from(new Map(tasks.map(task => [task.id, task])).values());
+    return uniqueTasks;
+  };
+
+  const filteredTasks = getFilteredTasks();
+
+  const fullCalendarEvents = useMemo(() => {
+    // Convert Google Calendar events to FullCalendar format
+    const calendarEventsFormatted = (calendarEvents || []).map(event => ({
+      id: event.id,
+      title: event.summary,
+      start: event.start.dateTime || event.start.date,
+      end: event.end.dateTime || event.end.date,
+      allDay: !event.start.dateTime,
+      extendedProps: {
+        description: event.description,
+        location: event.location,
+        status: event.status,
+        type: 'event',
+      }
+    }));
+  
+    // Convert tasks with due dates to calendar events
+    const taskEventsFormatted = showTasksInCalendar ? 
+      filteredTasks
+        .filter(task => task.due) // Show all tasks with due dates
+        .map(task => ({
+          id: `task-${task.id}`,
+          title: task.title,
+          start: task.due!.split('T')[0],
+          allDay: true,
+          classNames: [
+            'fc-event-task',
+            task.status === 'completed' ? 'fc-event-task-completed' : ''
+          ],
+          extendedProps: {
+            type: 'task',
+            taskId: task.id,
+            taskData: task,
+          }
+        })) : [];
+
+    return [...calendarEventsFormatted, ...taskEventsFormatted];
+  }, [calendarEvents, showTasksInCalendar, filteredTasks]);
+
 
   const goToToday = () => calendarRef.current?.getApi().today();
 
@@ -649,7 +812,7 @@ const Calendar: React.FC = () => {
     calendarRef.current?.getApi().changeView(newView);
   };
 
-  const handleDateSelect = (selectInfo: any) => {
+  const handleDateSelect = (selectInfo: DateSelectArg) => {
     setSelectedDateInfo(selectInfo);
     setEditingEvent(null);
     const startTime = selectInfo.start.toISOString().slice(11, 16);
@@ -658,9 +821,9 @@ const Calendar: React.FC = () => {
     setShowEventModal(true);
   };
 
-  const handleTaskDrop = (info: any) => {
+  const handleTaskDrop = (info: DropArg) => {
     if (info.draggedEl.getAttribute('data-task')) {
-      const task = JSON.parse(info.draggedEl.getAttribute('data-task') || '{}');
+      const task: GoogleTask = JSON.parse(info.draggedEl.getAttribute('data-task') || '{}');
       setSelectedTaskForScheduling(task);
       setSelectedScheduleDate(info.date);
       setShowScheduleModal(true);
@@ -722,11 +885,11 @@ const Calendar: React.FC = () => {
     setError(null);
 
     try {
-      const startDateTime = new Date(selectedDateInfo.start);
+      const startDateTime = new Date(selectedDateInfo!.start);
       const [startHours, startMinutes] = eventForm.startTime.split(':');
       startDateTime.setHours(parseInt(startHours), parseInt(startMinutes));
 
-      const endDateTime = new Date(selectedDateInfo.end);
+      const endDateTime = new Date(selectedDateInfo!.end);
       const [endHours, endMinutes] = eventForm.endTime.split(':');
       endDateTime.setHours(parseInt(endHours), parseInt(endMinutes));
 
@@ -739,7 +902,7 @@ const Calendar: React.FC = () => {
       };
       
       if (editingEvent) {
-          await updateCalendarEvent(editingEvent.id, eventData);
+          await updateCalendarEvent(editingEvent.id!, eventData);
       } else {
           await createCalendarEvent(eventData);
       }
@@ -756,7 +919,7 @@ const Calendar: React.FC = () => {
   const handleEventDelete = async () => {
       if (!editingEvent || !window.confirm('Are you sure you want to delete this event?')) return;
       try {
-          await deleteCalendarEvent(editingEvent.id);
+          await deleteCalendarEvent(editingEvent.id!);
           handleCloseModal();
       } catch (err) {
           console.error('Failed to delete event:', err);
@@ -771,11 +934,22 @@ const Calendar: React.FC = () => {
     calendarRef.current?.getApi().unselect();
   };
 
-  const handleEventClick = (clickInfo: any) => {
+  const handleEventClick = (clickInfo: EventClickArg) => {
     const { event } = clickInfo;
+    
+    // Handle task events differently
+    if (event.extendedProps.type === 'task') {
+      const taskData = event.extendedProps.taskData as GoogleTask;
+      setSelectedTaskForScheduling(taskData);
+      setSelectedScheduleDate(new Date(event.start!));
+      setShowScheduleModal(true);
+      return;
+    }
+    
+    // Handle regular events
     setEditingEvent(event);
-    const startTime = new Date(event.start).toISOString().slice(11, 16);
-    const endTime = event.end ? new Date(event.end).toISOString().slice(11, 16) : startTime;
+    const startTime = new Date(event.start!).toISOString().slice(11, 16);
+    const endTime = event.end ? new Date(event.end!).toISOString().slice(11, 16) : startTime;
     setEventForm({
       title: event.title || '',
       description: event.extendedProps.description || '',
@@ -786,17 +960,17 @@ const Calendar: React.FC = () => {
     setShowEventModal(true);
   };
 
-  const handleEventDrop = async (dropInfo: any) => {
+  const handleEventDrop = async (dropInfo: EventDropArg) => {
     const { event } = dropInfo;
     try {
       const eventData = {
         summary: event.title,
         description: event.extendedProps.description,
         location: event.extendedProps.location,
-        start: { dateTime: event.start.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-        end: { dateTime: event.end.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+        start: { dateTime: event.start!.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+        end: { dateTime: event.end!.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
       };
-      await updateCalendarEvent(event.id, eventData);
+      await updateCalendarEvent(event.id!, eventData);
     } catch (err) {
       console.error('Failed to update event position:', err);
       setError('Failed to update event. Please try again.');
@@ -808,37 +982,25 @@ const Calendar: React.FC = () => {
     setShowTaskModal(true);
   };
 
-  const handleTaskModalSubmit = async (data: { title: string; notes?: string; due?: string; metadata?: TaskMetadata }) => {
+  const handleTaskModalSubmit = async (data: { title: string; notes?: string; due?: string; metadata?: any }) => {
     try {
       const targetTaskListId = selectedColumnId === 'all' ? taskLists[0]?.id : selectedColumnId;
-      if (targetTaskListId) {
-        await createGoogleTask(targetTaskListId, {
-          title: data.title,
-          notes: data.notes,
-          due: data.due,
-        });
-        setShowTaskModal(false);
-      } else {
-        setError('No task list available. Please ensure you have Google Tasks set up.');
+      
+      if (!targetTaskListId) {
+        devLog('No task list available for creating task');
+        return;
       }
-    } catch (err) {
-      console.error('Failed to create task:', err);
-      setError('Failed to create task. Please try again.');
+
+      await createGoogleTask(targetTaskListId, {
+        title: data.title,
+        notes: data.notes,
+        due: data.due,
+      });
+      setShowTaskModal(false);
+    } catch (error) {
+      devLog('Error creating task:', error);
     }
   };
-
-  // Get filtered tasks based on selected task list
-  const getFilteredTasks = () => {
-    const tasks = selectedColumnId === 'all'
-      ? Object.values(googleTasks).flat()
-      : googleTasks[selectedColumnId] || [];
-    
-    // Deduplicate tasks by ID to prevent key errors
-    const uniqueTasks = Array.from(new Map(tasks.map(task => [task.id, task])).values());
-    return uniqueTasks;
-  };
-
-  const filteredTasks = getFilteredTasks();
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -865,8 +1027,8 @@ const Calendar: React.FC = () => {
     const query = searchQuery.toLowerCase();
     return fullCalendarEvents.filter(event => 
       event.title.toLowerCase().includes(query) ||
-      (event.extendedProps.description && event.extendedProps.description.toLowerCase().includes(query)) ||
-      (event.extendedProps.location && event.extendedProps.location.toLowerCase().includes(query))
+      (event.extendedProps.description && (event.extendedProps.description as string).toLowerCase().includes(query)) ||
+      (event.extendedProps.location && (event.extendedProps.location as string).toLowerCase().includes(query))
     );
   }, [fullCalendarEvents, searchQuery]);
 
@@ -878,10 +1040,14 @@ const Calendar: React.FC = () => {
 
   if (!activeAccount || (!isCalendarAuthenticated && !isTasksAuthenticated)) {
     return (
-      <div className="flex items-center justify-center h-full">
+              <div className="flex h-full items-center justify-center bg-content">
         <div className="text-center">
-          <h2 className="text-lg font-semibold text-primary mb-2">No Google Account Connected</h2>
-          <p className="text-muted mb-4">Please connect a Google account in Settings to view your calendar and tasks.</p>
+          <Heading level={2} className="mb-2 text-lg font-semibold">
+            No Google Account Connected
+          </Heading>
+          <Text className="mb-4" variant="secondary">
+            Please connect a Google account in Settings to view your calendar and tasks.
+          </Text>
           <Button variant="primary" onClick={() => navigate('/settings')}>
             Go to Settings
           </Button>
@@ -894,28 +1060,55 @@ const Calendar: React.FC = () => {
     <>
       {/* Google Calendar authentication now handled centrally in Settings */}
       
-      <div className="flex h-full bg-[var(--bg-primary)] p-6 lg:p-8 gap-6 lg:gap-8">
+      <div className="flex h-full gap-6 bg-content p-6">
         {/* Main Calendar Area */}
-        <div className="flex-1 flex flex-col bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)]">
-          <div className="flex-1 flex flex-col gap-6 p-6">
+        <div className="bg-bg-tertiary flex flex-1 flex-col rounded-lg">
+          <div className="flex flex-1 flex-col gap-6 p-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={goToToday}>Today</Button>
-                <div className="flex items-center">
-                  <Button variant="ghost" size="sm" onClick={() => navigateCalendar('prev')}><ChevronLeft size={20} /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => navigateCalendar('next')}><ChevronRight size={20} /></Button>
+            <div className="bg-bg-tertiary border-border-primary flex items-center justify-between rounded-lg border p-4">
+              <div className="flex items-center gap-4">
+                <Button 
+                  variant="outline" 
+                  onClick={goToToday}
+                  className="font-medium"
+                >
+                  Today
+                </Button>
+                <div className="bg-bg-card border-border-primary flex items-center rounded-md border">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigateCalendar('prev')}
+                    className="border-border-primary rounded-r-none border-r"
+                  >
+                    <ChevronLeft size={18} />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigateCalendar('next')}
+                    className="rounded-l-none"
+                  >
+                    <ChevronRight size={18} />
+                  </Button>
                 </div>
-                <h2 className="text-xl font-semibold text-primary ml-2">
-                  {calendarRef.current?.getApi().getCurrentData().viewTitle || 'Calendar'}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <CalendarIcon size={20} className="text-accent-primary" />
+                  <Heading level={2} className="text-text-primary text-xl font-semibold">
+                    {currentViewTitle}
+                  </Heading>
+                  {isRefreshing && (
+                    <div className="size-4 animate-spin rounded-full border-2 border-accent-primary border-t-transparent" />
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-[var(--bg-secondary)] rounded-[var(--radius-md)] p-1">
+              <div className="flex items-center gap-3">
+                <div className="border-border-primary flex items-center gap-1 rounded-lg border bg-card p-1 shadow-sm">
                     <Button
                         variant={view === 'dayGridMonth' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => changeView('dayGridMonth')}
+                        className="rounded-md font-medium"
                     >
                         Month
                     </Button>
@@ -923,6 +1116,7 @@ const Calendar: React.FC = () => {
                         variant={view === 'timeGridWeek' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => changeView('timeGridWeek')}
+                        className="rounded-md font-medium"
                     >
                         Week
                     </Button>
@@ -930,6 +1124,7 @@ const Calendar: React.FC = () => {
                         variant={view === 'timeGridDay' ? 'secondary' : 'ghost'}
                         size="sm"
                         onClick={() => changeView('timeGridDay')}
+                        className="rounded-md font-medium"
                     >
                         Day
                     </Button>
@@ -938,55 +1133,206 @@ const Calendar: React.FC = () => {
                   variant="outline" 
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 font-medium"
                 >
                   <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                  <span>Refresh</span>
                 </Button>
-                <Button variant="primary" onClick={() => { setEditingEvent(null); setShowEventModal(true); }}>
+                <Button 
+                  variant="primary" 
+                  onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
+                  className="font-medium shadow-sm"
+                >
                   <Plus size={16} className="mr-2" />
-                  New Event
+                  New event
                 </Button>
               </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 relative">
-                <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
-                <input
-                  type="text"
-                  placeholder="Search events..."
+            {/* Search Bar and Filters */}
+            <div className="bg-bg-card border-border-primary flex items-center gap-4 rounded-lg border p-3">
+              <div className="relative flex-1">
+                <Search size={16} className="text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  type="search"
+                  placeholder="Search events and tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-border-default rounded-md bg-card text-primary placeholder-muted"
+                  className="bg-bg-tertiary border-border-secondary pl-10 pr-4 transition-colors focus:border-accent-primary"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={showTasksInCalendar ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowTasksInCalendar(!showTasksInCalendar)}
+                  className="flex items-center gap-2 font-medium"
+                >
+                  <ListChecks size={16} />
+                  {showTasksInCalendar ? 'Hide tasks' : 'Show tasks'}
+                </Button>
+                
+                {(view === 'timeGridWeek' || view === 'timeGridDay') && (
+                  <Button
+                    variant={compactMode ? 'secondary' : 'outline'}
+                    size="sm"
+                    onClick={() => setCompactMode(!compactMode)}
+                    className="flex items-center gap-2 font-medium"
+                  >
+                    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    {compactMode ? 'Normal' : 'Compact'}
+                  </Button>
+                )}
+                
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchQuery('')}
+                    className="text-text-muted hover:text-text-primary"
+                  >
+                    <X size={16} />
+                  </Button>
+                )}
               </div>
             </div>
 
             {/* Error Display */}
             {error && (
-              <Card className="border-error bg-error-ghost">
+              <Card className="border-error-border bg-error-ghost">
                 <div className="flex items-center gap-3 p-4">
-                  <div className="flex-shrink-0 text-error">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                  <div className="shrink-0 text-error">
+                    <svg className="size-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-error">{error}</p>
+                    <Text size="sm" weight="semibold" className="text-error">
+                      {error}
+                    </Text>
                   </div>
                 </div>
               </Card>
             )}
 
             {/* Calendar */}
-            <div className="flex-1 -m-6 mt-0">
+            <div 
+              className={`calendar-wrapper relative flex-1 overflow-hidden ${compactMode ? 'calendar-compact' : ''}`}
+            >
               <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView={view}
                 headerToolbar={false}
                 height="100%"
-                events={filteredCalendarEvents}
+                slotMinTime="06:00:00"
+                slotMaxTime="22:00:00"
+                allDaySlot={true}
+                scrollTime="08:00:00"
+                slotDuration="00:30:00"
+                snapDuration="00:15:00"
+                nowIndicator={true}
+                eventTextColor="#ffffff"
+                businessHours={{
+                  daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
+                  startTime: '09:00',
+                  endTime: '17:00',
+                }}
+                slotLabelFormat={{
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  omitZeroMinute: false,
+                  meridiem: 'short'
+                }}
+                dayHeaderFormat={{
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric'
+                }}
+                events={fullCalendarEvents}
+                eventContent={renderEventContent}
+                eventDidMount={(info) => {
+                  // Direct DOM manipulation with CSS injection - research-based solution
+                  const titleElement = info.el.querySelector('.fc-event-title');
+                  const timeElement = info.el.querySelector('.fc-event-time');
+                  
+                  // Inject CSS directly into the element to override FullCalendar
+                  const style = document.createElement('style');
+                  style.textContent = `
+                    .fc-event-title { 
+                      color: #ffffff !important; 
+                      font-weight: 600 !important; 
+                      text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+                      overflow: hidden !important;
+                      text-overflow: ellipsis !important;
+                      white-space: nowrap !important;
+                    }
+                    .fc-event-time { 
+                      color: #ffffff !important; 
+                      font-weight: 600 !important; 
+                      text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+                    }
+                    .fc-event-task .fc-event-title { 
+                      color: #000000 !important; 
+                      text-shadow: none !important;
+                    }
+                    .fc-event-task .fc-event-time { 
+                      color: #000000 !important; 
+                      text-shadow: none !important;
+                    }
+                  `;
+                  document.head.appendChild(style);
+                  
+                  // Direct style application with maximum specificity
+                  if (titleElement) {
+                    titleElement.style.setProperty('color', '#ffffff', 'important');
+                    titleElement.style.setProperty('font-weight', '600', 'important');
+                    titleElement.style.setProperty('text-shadow', '0 1px 2px rgba(0,0,0,0.5)', 'important');
+                    titleElement.style.setProperty('overflow', 'hidden', 'important');
+                    titleElement.style.setProperty('text-overflow', 'ellipsis', 'important');
+                    titleElement.style.setProperty('white-space', 'nowrap', 'important');
+                  }
+                  
+                  if (timeElement) {
+                    timeElement.style.setProperty('color', '#ffffff', 'important');
+                    timeElement.style.setProperty('font-weight', '600', 'important');
+                    timeElement.style.setProperty('text-shadow', '0 1px 2px rgba(0,0,0,0.5)', 'important');
+                  }
+                  
+                  // Task-specific overrides
+                  const isTask = info.event.extendedProps.type === 'task';
+                  if (isTask) {
+                    const isCompleted = info.event.extendedProps.taskData?.status === 'completed';
+                    
+                    if (titleElement) {
+                      titleElement.style.setProperty('color', '#000000', 'important');
+                      titleElement.style.setProperty('text-shadow', 'none', 'important');
+                      if (isCompleted) {
+                        titleElement.style.setProperty('text-decoration', 'line-through', 'important');
+                      }
+                    }
+                    
+                    if (timeElement) {
+                      timeElement.style.setProperty('color', '#000000', 'important');
+                      timeElement.style.setProperty('text-shadow', 'none', 'important');
+                    }
+                    
+                    // High contrast task backgrounds
+                    info.el.style.setProperty('background-color', isCompleted ? '#dcfce7' : '#fef3c7', 'important');
+                    info.el.style.setProperty('border-left', `3px solid ${isCompleted ? '#10b981' : '#f59e0b'}`, 'important');
+                  }
+                  
+                  // Container overflow control
+                  info.el.style.setProperty('overflow', 'hidden', 'important');
+                  info.el.style.setProperty('max-width', '100%', 'important');
+                  
+                  // Tooltip for truncated text
+                  if (info.isMore) {
+                    info.el.title = `${info.num} more events`;
+                  } else if (info.el.scrollWidth > info.el.clientWidth) {
+                    info.el.title = info.event.title;
+                  }
+                }}
                 selectable={true}
                 editable={true}
                 droppable={true}
@@ -994,76 +1340,188 @@ const Calendar: React.FC = () => {
                 eventClick={handleEventClick}
                 eventDrop={handleEventDrop}
                 drop={handleTaskDrop}
-                dayMaxEvents={true}
+                datesSet={(dateInfo) => {
+                  setCurrentViewTitle(dateInfo.view.title);
+                }}
+                dayMaxEvents={compactMode ? 3 : 5}
+                dayMaxEventRows={compactMode ? 3 : 4}
+                moreLinkClick="popover"
+                eventMaxStack={3}
+                eventClassNames={(eventInfo) => {
+                  const classes = ['fc-event-design-system'];
+                  if (eventInfo.event.extendedProps.type === 'task') {
+                    classes.push(eventInfo.event.extendedProps.taskData?.status === 'completed' 
+                      ? 'fc-event-task-completed' 
+                      : 'fc-event-task'
+                    );
+                  }
+                  return classes;
+                }}
+                noEventsContent={
+                  <div className="px-4 py-12 text-center">
+                    <div className="bg-bg-tertiary mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
+                      <CalendarIcon size={32} className="text-text-muted" />
+                    </div>
+                    <Text weight="medium" className="text-text-primary mb-2">
+                      {view === 'dayGridMonth' ? 'No events this month' : 
+                       view === 'timeGridWeek' ? 'No events this week' : 
+                       'No events today'}
+                    </Text>
+                    <Text variant="muted" size="sm" className="mb-4">
+                      Click on any date to create an event, or drag tasks from the sidebar to schedule them
+                    </Text>
+                    <div className="text-text-muted flex items-center justify-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <Plus size={16} className="text-accent-primary" />
+                        <Text size="xs">Click to add</Text>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <ListChecks size={16} className="text-warning" />
+                        <Text size="xs">Drag tasks</Text>
+                      </div>
+                    </div>
+                  </div>
+                }
               />
+              
+              {/* Empty State Overlay for Week/Day Views */}
+              {(view === 'timeGridWeek' || view === 'timeGridDay') && filteredCalendarEvents.length === 0 && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="bg-bg-card border-border-primary rounded-lg border p-8 text-center shadow-sm">
+                    <div className="text-text-muted mb-4">
+                      <svg className="mx-auto mb-4 size-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <Text weight="medium" className="text-text-primary mb-2">
+                      {view === 'timeGridWeek' ? 'No events this week' : 'No events today'}
+                    </Text>
+                    <Text variant="muted" size="sm" className="mb-4">
+                      Click on a time slot to create an event
+                    </Text>
+                    <div className="text-text-muted flex items-center justify-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="size-3 rounded bg-accent-primary"></div>
+                        <Text size="xs">Drag tasks here</Text>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Plus size={12} />
+                        <Text size="xs">Click to add</Text>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Task Side Panel */}
         <div className={`transition-all duration-300 ${showTaskPanel ? 'w-80' : 'w-0'} overflow-hidden`}>
-          <Card className="h-full flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-border-default">
-              <h3 className="text-md font-semibold text-primary">Tasks</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowTaskPanel(false)}><X size={16} /></Button>
+          <Card className="border-border-primary flex h-full flex-col border bg-card shadow-lg">
+            <div className="border-border-primary bg-bg-tertiary flex items-center justify-between border-b p-4">
+              <div className="flex items-center gap-2">
+                <ListChecks size={18} className="text-accent-primary" />
+                <Heading level={3} className="text-md text-text-primary font-semibold">
+                  Tasks
+                </Heading>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowTaskPanel(false)}
+                className="text-text-muted hover:text-text-primary"
+              >
+                <X size={16} />
+              </Button>
             </div>
             
             {/* Task List Selector and New Task Button */}
-            <div className="p-4 border-b border-border-default space-y-3">
+            <div className="border-border-primary bg-bg-secondary/30 space-y-3 border-b p-4">
               <div className="relative">
                 <select
                   value={selectedColumnId}
                   onChange={(e) => setSelectedColumnId(e.target.value)}
-                  className="w-full p-2 border border-border-default rounded-md bg-card text-primary appearance-none pr-8"
+                  className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full appearance-none rounded-lg border p-3 pr-10 font-medium transition-colors focus:border-accent-primary focus:ring-2"
                 >
                   <option value="all">All Tasks</option>
                   {taskLists.map(taskList => (
                     <option key={taskList.id} value={taskList.id}>{taskList.title}</option>
                   ))}
                 </select>
-                <ChevronDown size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted pointer-events-none" />
+                <ChevronDown size={16} className="text-text-muted pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
               <Button 
                 variant="primary" 
                 size="sm" 
                 onClick={handleCreateTask}
-                className="w-full"
+                className="w-full font-medium shadow-sm"
               >
                 <Plus size={16} className="mr-2" />
-                New Task
+                New task
               </Button>
             </div>
             
-            <div ref={taskPanelRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div ref={taskPanelRef} className="flex-1 space-y-2 overflow-y-auto p-4">
               {isTasksLoading ? (
-                <div className="text-center text-muted py-8">
-                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                  <p className="text-sm">Loading tasks...</p>
+                <div className="py-8 text-center">
+                  <div className="mx-auto mb-2 size-6 animate-spin rounded-full border-2 border-accent-primary border-t-transparent"></div>
+                  <Text size="sm" variant="muted">Loading tasks...</Text>
                 </div>
               ) : tasksError ? (
-                <div className="text-center text-error py-8">
-                  <p className="text-sm">Failed to load tasks</p>
-                  <p className="text-xs mt-1">{tasksError}</p>
+                <div className="py-8 text-center">
+                  <Text size="sm" className="text-status-error">Failed to load tasks</Text>
+                  <Text size="xs" variant="muted" className="mt-1">{tasksError}</Text>
                 </div>
               ) : (
                 <>
-                  {filteredTasks.map(task => (
-                    <Card 
+                  {filteredTasks.map(task => {
+                    const isOverdue = task.due && new Date(task.due) < new Date() && task.status !== 'completed';
+                    
+                    return (
+                      <Card 
                         key={task.id} 
-                        className="p-3 cursor-grab draggable-task"
+                        className={`draggable-task bg-bg-card border-border-primary group cursor-grab rounded-lg border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-primary hover:shadow-md${
+                          isOverdue ? 'border-l-status-error border-l-4' : 'border-l-4 border-l-transparent'
+                        } ${task.status === 'completed' ? 'opacity-60' : ''}`}
                         data-task={JSON.stringify(task)}
-                    >
-                      <p className="text-sm font-medium text-primary">{task.title}</p>
-                      {task.due && <p className="text-xs text-muted">Due: {new Date(task.due).toLocaleDateString()}</p>}
-                      {task.status === 'completed' && <p className="text-xs text-success">✓ Completed</p>}
-                    </Card>
-                  ))}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <Text size="sm" weight="medium" className="text-text-primary">
+                              {task.title}
+                            </Text>
+                            {task.due && (
+                                <Text size="xs" className={`mt-1 ${
+                                  isOverdue ? 'text-status-error' : 'text-text-muted'
+                                }`}>
+                                  Due: {new Date(task.due).toLocaleDateString()}
+                                </Text>
+                              )}
+                              {task.status === 'completed' && (
+                                <Text size="xs" className="mt-1 flex items-center gap-1 text-status-success">
+                                  <CheckCircle size={12}/> Completed
+                                </Text>
+                              )}
+                          </div>
+                          <div className="text-text-muted ml-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <div className="size-1 rounded-full bg-current"></div>
+                            <div className="size-1 rounded-full bg-current"></div>
+                            <div className="size-1 rounded-full bg-current"></div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
                   {filteredTasks.length === 0 && (
-                    <div className="text-center text-muted py-8">
-                      <p className="text-sm">No tasks found</p>
-                      <p className="text-xs mt-1">
-                        {selectedColumnId === 'all' ? 'Create a task to get started' : `No tasks in ${taskLists.find(list => list.id === selectedColumnId)?.title}`}
-                      </p>
+                    <div className="px-4 py-8 text-center">
+                      <div className="bg-bg-tertiary mx-auto mb-3 flex size-12 items-center justify-center rounded-full">
+                        <ListChecks size={24} className="text-text-muted" />
+                      </div>
+                      <Text size="sm" weight="medium" className="text-text-primary">No tasks found</Text>
+                      <Text size="xs" variant="muted" className="mt-1">
+                        {selectedColumnId === 'all' ? 'Create a task to get started.' : `No tasks in this list.`}
+                      </Text>
                     </div>
                   )}
                 </>
@@ -1078,57 +1536,57 @@ const Calendar: React.FC = () => {
           className="fixed bottom-6 right-6 z-40"
           onClick={() => setShowTaskPanel(true)}
         >
-          <ListChecks className="mr-2" /> Show Tasks
+          <ListChecks className="mr-2" /> Show tasks
         </Button>
       )}
 
       {/* Event Creation/Editing Modal */}
       {showEventModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <div className="p-6 space-y-4">
+        <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-card">
+            <div className="space-y-4 p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-primary">{editingEvent ? 'Edit Event' : 'Create Event'}</h2>
-                <Button variant="ghost" size="sm" onClick={handleCloseModal}><X size={16} /></Button>
+                <Heading level={2} className="text-lg font-semibold">{editingEvent ? 'Edit event' : 'Create event'}</Heading>
+                <Button variant="ghost" size="icon" onClick={handleCloseModal}><X size={18} /></Button>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">Title</label>
-                <input type="text" value={eventForm.title} onChange={(e) => setEventForm(prev => ({ ...prev, title: e.target.value }))} className="w-full p-2 border border-border-default rounded-md bg-card text-primary" placeholder="Event title..." />
+                <Text as="label" size="sm" weight="medium" className="text-text-secondary mb-1.5 block">Title</Text>
+                <input type="text" value={eventForm.title} onChange={(e) => setEventForm(prev => ({ ...prev, title: e.target.value }))} className="border-border-primary bg-bg-tertiary text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2" placeholder="Event title..." />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-primary mb-1">Start</label>
-                  <input type="time" value={eventForm.startTime} onChange={(e) => setEventForm(prev => ({ ...prev, startTime: e.target.value }))} className="w-full p-2 border border-border-default rounded-md bg-card text-primary" />
+                  <Text as="label" size="sm" weight="medium" className="text-text-secondary mb-1.5 block">Start</Text>
+                  <input type="time" value={eventForm.startTime} onChange={(e) => setEventForm(prev => ({ ...prev, startTime: e.target.value }))} className="border-border-primary bg-bg-tertiary text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-primary mb-1">End</label>
-                  <input type="time" value={eventForm.endTime} onChange={(e) => setEventForm(prev => ({ ...prev, endTime: e.target.value }))} className="w-full p-2 border border-border-default rounded-md bg-card text-primary" />
+                  <Text as="label" size="sm" weight="medium" className="text-text-secondary mb-1.5 block">End</Text>
+                  <input type="time" value={eventForm.endTime} onChange={(e) => setEventForm(prev => ({ ...prev, endTime: e.target.value }))} className="border-border-primary bg-bg-tertiary text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">Description</label>
-                <textarea value={eventForm.description} onChange={(e) => setEventForm(prev => ({ ...prev, description: e.target.value }))} className="w-full p-2 border border-border-default rounded-md bg-card text-primary" placeholder="Event description..." rows={3} />
+                <Text as="label" size="sm" weight="medium" className="text-text-secondary mb-1.5 block">Description</Text>
+                <textarea value={eventForm.description} onChange={(e) => setEventForm(prev => ({ ...prev, description: e.target.value }))} className="border-border-primary bg-bg-tertiary text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2" placeholder="Event description..." rows={4} />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">Location</label>
-                <input type="text" value={eventForm.location} onChange={(e) => setEventForm(prev => ({ ...prev, location: e.target.value }))} className="w-full p-2 border border-border-default rounded-md bg-card text-primary" placeholder="Event location..." />
+                <Text as="label" size="sm" weight="medium" className="text-text-secondary mb-1.5 block">Location</Text>
+                <input type="text" value={eventForm.location} onChange={(e) => setEventForm(prev => ({ ...prev, location: e.target.value }))} className="border-border-primary bg-bg-tertiary text-text-primary focus:ring-accent-primary/20 w-full rounded-md border p-2 focus:border-accent-primary focus:ring-2" placeholder="Event location..." />
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 p-6 border-t border-border-default">
+            <div className="border-border-primary flex items-center justify-between gap-2 rounded-b-lg border-t bg-content p-4">
               <div>
                 {editingEvent && (
-                    <Button variant="danger" onClick={handleEventDelete}>Delete</Button>
+                    <Button variant="danger" onClick={handleEventDelete}>Delete event</Button>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={handleCloseModal}>Cancel</Button>
                 <Button variant="primary" onClick={handleEventFormSubmit} disabled={isCreatingEvent}>
-                  {isCreatingEvent ? 'Saving...' : (editingEvent ? 'Update Event' : 'Create Event')}
+                  {isCreatingEvent ? 'Saving...' : (editingEvent ? 'Update event' : 'Create event')}
                 </Button>
               </div>
             </div>
@@ -1156,5 +1614,3 @@ const Calendar: React.FC = () => {
     </>
   );
 };
-
-export default Calendar;

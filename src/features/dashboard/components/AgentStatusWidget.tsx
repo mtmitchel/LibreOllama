@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, StatusBadge, Heading, Text, Button } from '../../../components/ui';
 import { DropdownMenu } from '../../../components/ui/DropdownMenu';
-import { CheckCircle2, XCircle, Zap, Settings2, MoreHorizontal, Plus } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { AgentStatus } from '../../../core/lib/mockData';
 
 interface AgentStatusWidgetProps {
@@ -27,7 +27,7 @@ export const AgentStatusWidget: React.FC<AgentStatusWidgetProps> = ({ agents }) 
 
   return (
     <Card>
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <Heading level={3}>Agent status</Heading>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleConfigureAgents}>
@@ -35,8 +35,8 @@ export const AgentStatusWidget: React.FC<AgentStatusWidgetProps> = ({ agents }) 
           </Button>
           <DropdownMenu>
             <DropdownMenu.Trigger asChild>
-              <Button variant="ghost" size="icon" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-                <MoreHorizontal className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="text-secondary hover:text-primary">
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Content>
@@ -57,13 +57,13 @@ export const AgentStatusWidget: React.FC<AgentStatusWidgetProps> = ({ agents }) 
       <ul className="flex flex-col gap-3">
         {agents.map((agent) => (
           <li key={agent.id} className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
                 <Text size="sm" weight="medium" variant="body">{agent.name}</Text>
                 <StatusBadge 
                   status={agent.status === 'Active' ? 'success' : 'pending'}
                   size="sm"
-                  className="flex-shrink-0"
+                  className="shrink-0"
                 >
                   {agent.status}
                 </StatusBadge>

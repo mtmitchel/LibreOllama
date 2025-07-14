@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Toast, FlexibleGrid, Input } from '../../components/ui';
-import { Plus, LayoutGrid, List as ListIcon, Calendar, CheckSquare, RefreshCw, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
-import { useShallow } from 'zustand/shallow';
+import { Plus, List as ListIcon, CheckSquare, RefreshCw, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
+
 import { useHeader } from '../contexts/HeaderContext';
 
 // Import stores
@@ -35,27 +35,27 @@ const GoogleTaskCard = React.memo(({ task, onTaskClick, onToggleCompletion, onDe
   }, [onDeleteTask, task.id]);
 
   return (
-    <div className="bg-card rounded-lg border border-border-default hover:border-border-hover transition-all duration-200 hover:shadow-md">
-      <div className="p-4 cursor-pointer" onClick={handleCardClick}>
+    <div className="border-border-default hover:border-border-hover rounded-lg border bg-card transition-all duration-200 hover:shadow-md">
+      <div className="cursor-pointer p-4" onClick={handleCardClick}>
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-primary truncate">{task.title}</h4>
+          <div className="min-w-0 flex-1">
+            <h4 className="truncate font-medium text-primary">{task.title}</h4>
             {task.notes && (
-              <p className="text-sm text-muted mt-1 line-clamp-2">{task.notes}</p>
+              <p className="mt-1 line-clamp-2 text-sm text-muted">{task.notes}</p>
             )}
             {task.due && (
-              <p className="text-xs text-warning mt-1">Due: {new Date(task.due).toLocaleDateString()}</p>
+              <p className="mt-1 text-xs text-warning">Due: {new Date(task.due).toLocaleDateString()}</p>
             )}
             {task.status === 'completed' && task.completed && (
-              <p className="text-xs text-success mt-1">Completed: {new Date(task.completed).toLocaleDateString()}</p>
+              <p className="mt-1 text-xs text-success">Completed: {new Date(task.completed).toLocaleDateString()}</p>
             )}
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={handleToggleClick}
-              className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+              className={`flex size-4 items-center justify-center rounded border-2 ${
                 task.status === 'completed' 
-                  ? 'bg-success border-success text-success-ghost' 
+                  ? 'text-success-ghost border-success bg-success' 
                   : 'border-border-default hover:border-success'
               }`}
               title={task.status === 'completed' ? 'Mark as incomplete' : 'Mark as complete'}
@@ -64,7 +64,7 @@ const GoogleTaskCard = React.memo(({ task, onTaskClick, onToggleCompletion, onDe
             </button>
             <button
               onClick={handleDeleteClick}
-              className="text-error hover:text-error-hover p-1"
+              className="hover:text-error-hover p-1 text-error"
               title="Delete task"
             >
               ×
@@ -75,6 +75,7 @@ const GoogleTaskCard = React.memo(({ task, onTaskClick, onToggleCompletion, onDe
     </div>
   );
 });
+GoogleTaskCard.displayName = 'GoogleTaskCard';
 
 const TaskListColumn = React.memo(({ taskList, tasks, isLoading, onTaskClick, onToggleCompletion, onDeleteTask, onCreateTask }: {
   taskList: GoogleTaskList;
@@ -103,7 +104,7 @@ const TaskListColumn = React.memo(({ taskList, tasks, isLoading, onTaskClick, on
 
   return (
     <Card className="h-fit">
-      <div className="flex items-center justify-between p-4 border-b border-border-default">
+      <div className="border-border-default flex items-center justify-between border-b p-4">
         <h3 className="font-semibold text-primary">{taskList.title}</h3>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">{tasks.length}</span>
@@ -111,16 +112,16 @@ const TaskListColumn = React.memo(({ taskList, tasks, isLoading, onTaskClick, on
             variant="ghost" 
             size="sm" 
             onClick={handleCreateTask}
-            className="h-6 w-6 p-0"
+            className="size-6 p-0"
           >
             <Plus size={14} />
           </Button>
         </div>
       </div>
-      <div className="p-4 space-y-3 min-h-40">
+      <div className="min-h-40 space-y-3 p-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           </div>
         ) : (
           <>
@@ -135,7 +136,7 @@ const TaskListColumn = React.memo(({ taskList, tasks, isLoading, onTaskClick, on
             ))}
             {tasks.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-muted">
-                <div className="w-12 h-12 rounded-full bg-secondary-ghost flex items-center justify-center mb-3">
+                <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-tertiary">
                   <Plus size={24} className="text-secondary" />
                 </div>
                 <p className="text-sm font-medium">No tasks yet</p>
@@ -148,6 +149,7 @@ const TaskListColumn = React.memo(({ taskList, tasks, isLoading, onTaskClick, on
     </Card>
   );
 });
+TaskListColumn.displayName = 'TaskListColumn';
 
 const SimpleTaskModal = ({ isOpen, task, taskListId, onClose, onSubmit, onDelete }: {
   isOpen: boolean;
@@ -194,53 +196,53 @@ const SimpleTaskModal = ({ isOpen, task, taskListId, onClose, onSubmit, onDelete
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Card className="w-full">
           <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-4">
+            <div className="space-y-4 p-6">
               <h2 className="text-lg font-semibold text-primary">
                 {task ? 'Edit Task' : 'Create Task'}
               </h2>
               
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">Title</label>
+                <label className="mb-1 block text-sm font-medium text-primary">Title</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                  className="border-border-default w-full rounded-md border bg-card p-2 text-primary"
                   placeholder="Task title..."
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">Notes</label>
+                <label className="mb-1 block text-sm font-medium text-primary">Notes</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                  className="border-border-default w-full rounded-md border bg-card p-2 text-primary"
                   placeholder="Task description..."
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-primary mb-1">Due Date</label>
+                <label className="mb-1 block text-sm font-medium text-primary">Due date</label>
                 <input
                   type="date"
                   value={formData.due}
                   onChange={(e) => setFormData(prev => ({ ...prev, due: e.target.value }))}
-                  className="w-full p-2 border border-border-default rounded-md bg-card text-primary"
+                  className="border-border-default w-full rounded-md border bg-card p-2 text-primary"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-6 border-t border-border-default">
+            <div className="border-border-default flex items-center justify-between border-t p-6">
               <div>
                 {task && onDelete && (
-                  <Button type="button" variant="outline" onClick={onDelete} className="text-error border-error">
+                  <Button type="button" variant="outline" onClick={onDelete} className="border-error text-error">
                     Delete
                   </Button>
                 )}
@@ -291,7 +293,6 @@ export default function Tasks() {
     isLoadingTasks,
     error,
     fetchTaskLists,
-    fetchTasks,
     createTask,
     updateTask,
     deleteTask,
@@ -325,19 +326,21 @@ export default function Tasks() {
         case 'title':
           comparison = a.title.localeCompare(b.title);
           break;
-        case 'due':
+        case 'due': {
           const aDue = a.due ? new Date(a.due).getTime() : 0;
           const bDue = b.due ? new Date(b.due).getTime() : 0;
           comparison = aDue - bDue;
           break;
+        }
         case 'status':
           comparison = a.status.localeCompare(b.status);
           break;
-        case 'created':
+        case 'created': {
           const aCreated = a.updated ? new Date(a.updated).getTime() : 0;
           const bCreated = b.updated ? new Date(b.updated).getTime() : 0;
           comparison = aCreated - bCreated;
           break;
+        }
       }
 
       return sortOrder === 'asc' ? comparison : -comparison;
@@ -483,12 +486,12 @@ export default function Tasks() {
   // Check centralized Google authentication
   if (!activeGoogleAccount || !activeGoogleAccount.services?.tasks) {
     return (
-      <div className="flex h-full bg-[var(--bg-primary)] items-center justify-center p-6 lg:p-8">
+      <div className="flex h-full items-center justify-center bg-content p-6">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
+          <h2 className="mb-2 text-xl font-semibold text-primary">
             No Google Account Connected
           </h2>
-          <p className="text-[var(--text-secondary)] mb-4">
+          <p className="mb-4 text-secondary">
             Please connect a Google account in Settings to access your Google Tasks
           </p>
           <Button 
@@ -504,19 +507,26 @@ export default function Tasks() {
 
   if (!isAuthenticated || isLoading) {
     return (
-      <div className="w-full h-full p-6 lg:p-8">
+      <div className="size-full p-6">
         <Card className="mb-6">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-4">
-              <div className="h-8 bg-[var(--bg-secondary)] rounded animate-pulse w-32"></div>
+              <div className="h-8 w-32 animate-pulse rounded bg-tertiary"></div>
             </div>
-            <div className="h-8 bg-[var(--bg-secondary)] rounded animate-pulse w-24"></div>
+                          <div className="h-8 w-24 animate-pulse rounded bg-tertiary"></div>
           </div>
         </Card>
         
-        <FlexibleGrid minItemWidth={320} gap={6} className="w-full">
+        <FlexibleGrid 
+          minItemWidth={320} 
+          gap={6} 
+          className="w-full"
+        >
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-64 bg-[var(--bg-secondary)] rounded animate-pulse"></div>
+            <div 
+              key={i} 
+              className="h-64 animate-pulse rounded bg-tertiary"
+            ></div>
           ))}
         </FlexibleGrid>
       </div>
@@ -524,9 +534,9 @@ export default function Tasks() {
   }
 
   return (
-    <div className="w-full h-full p-6 lg:p-8">
+    <div className="size-full p-6">
       {/* Toast Container */}
-      <div className="fixed top-20 right-8 z-50 space-y-2">
+      <div className="fixed right-8 top-20 z-50 space-y-2">
         {toasts.map(toast => (
           <Toast 
             key={toast.id} 
@@ -548,7 +558,7 @@ export default function Tasks() {
             </div>
             {(isLoading || isRefreshing) && (
               <div className="flex items-center gap-2 text-sm text-muted">
-                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <div className="size-3 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                 <span>{isRefreshing ? 'Refreshing...' : 'Loading...'}</span>
               </div>
             )}
@@ -576,10 +586,10 @@ export default function Tasks() {
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="border-t border-border-default p-4 space-y-3">
+        <div className="border-border-default space-y-3 border-t p-4">
           <div className="flex items-center gap-3">
-            <div className="flex-1 relative">
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <Input
                 type="text"
                 placeholder="Search tasks..."
@@ -600,17 +610,17 @@ export default function Tasks() {
           </div>
 
           {showFilters && (
-            <div className="flex items-center gap-3 pt-3 border-t border-border-default">
+            <div className="border-border-default flex items-center gap-3 border-t pt-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted">Sort by:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as 'title' | 'due' | 'status' | 'created')}
-                  className="px-2 py-1 border border-border-default rounded bg-card text-primary text-sm"
+                  className="border-border-default rounded border bg-card px-2 py-1 text-sm text-primary"
                 >
-                  <option value="created">Date Created</option>
+                  <option value="created">Date created</option>
                   <option value="title">Title</option>
-                  <option value="due">Due Date</option>
+                  <option value="due">Due date</option>
                   <option value="status">Status</option>
                 </select>
               </div>
@@ -630,9 +640,13 @@ export default function Tasks() {
 
       {/* Main Content */}
       <div className="w-full">
-        <FlexibleGrid minItemWidth={320} gap={6} className="w-full">
+        <FlexibleGrid 
+          minItemWidth={320} 
+          gap={6}
+          className="w-full"
+        >
           {taskLists.map(taskList => (
-            <div key={taskList.id} className="flex-1 min-w-0">
+            <div key={taskList.id} className="min-w-0 flex-1">
               <TaskListColumn
                 taskList={taskList}
                 tasks={groupedFilteredTasks[taskList.id] || []}
@@ -660,11 +674,13 @@ export default function Tasks() {
       {taskLists.length === 0 && isAuthenticated && !isLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center mx-auto mb-4">
+            <div 
+              className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-card"
+            >
               <ListIcon size={24} className="text-muted" />
             </div>
-            <h3 className="text-lg font-medium text-primary mb-2">No task lists found</h3>
-            <p className="text-muted mb-6">Your Google Task lists will appear here</p>
+            <h3 className="mb-2 text-lg font-medium text-primary">No task lists found</h3>
+            <p className="mb-6 text-muted">Your Google Task lists will appear here</p>
           </div>
         </div>
       )}

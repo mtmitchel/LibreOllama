@@ -95,10 +95,10 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
   // Show authentication message if not authenticated
   if (!isAuthenticated || !currentAccountId) {
     return (
-      <div className={`bg-white border-r border-gray-200 ${className}`}>
+      <div className={`border-border-default border-r bg-white ${className}`}>
         <div className="p-4 text-center">
-          <Tag className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-          <p className="text-sm text-gray-500">
+          <Tag className="mx-auto mb-2 size-8 text-muted" />
+          <p className="text-sm text-secondary">
             Please sign in to Gmail to view labels
           </p>
         </div>
@@ -111,18 +111,18 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
       <div className={`flex items-center space-x-2 ${className}`}>
         <button
           onClick={onToggleCollapse}
-          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          className="flex items-center space-x-2 rounded-lg bg-surface px-3 py-2 transition-colors hover:bg-surface"
         >
-          <Filter className="h-4 w-4" />
+          <Filter className="size-4" />
           <span className="text-sm">
             {selectedLabels.length > 0 ? `${selectedLabels.length} filters` : 'Filter by labels'}
           </span>
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="size-4" />
         </button>
         {selectedLabels.length > 0 && (
           <button
             onClick={clearAllFilters}
-            className="px-2 py-1 text-xs text-red-600 hover:text-red-800 transition-colors"
+            className="px-2 py-1 text-xs text-error transition-colors hover:text-error"
           >
             Clear all
           </button>
@@ -132,31 +132,31 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
   }
 
   return (
-    <div className={`bg-white border-r border-gray-200 ${className}`}>
+    <div className={`border-border-default border-r bg-white ${className}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
+      <div className="border-border-default border-b p-4">
+        <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Filter className="h-5 w-5 text-gray-600" />
-            <h3 className="font-medium">Filter by Labels</h3>
+            <Filter className="size-5 text-secondary" />
+            <h3 className="font-medium">Filter by labels</h3>
           </div>
           <div className="flex items-center space-x-2">
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                className="rounded p-1 transition-colors hover:bg-surface"
                 title="Collapse"
               >
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="size-4" />
               </button>
             )}
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                className="rounded p-1 transition-colors hover:bg-surface"
                 title="Close"
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </button>
             )}
           </div>
@@ -164,64 +164,37 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
 
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <input
             type="text"
             placeholder="Search labels..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="border-border-default w-full rounded-lg border py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
 
       {/* Active Filters */}
       {selectedLabels.length > 0 && (
-        <div className="p-4 border-b border-gray-200 bg-blue-50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-blue-800">Active Filters</span>
-            <button
-              onClick={clearAllFilters}
-              className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              Clear all
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {selectedLabels.map(labelId => {
-              const label = labels.find(l => l.id === labelId);
-              if (!label) return null;
-              
-              return (
-                <div
-                  key={labelId}
-                  className="flex items-center space-x-2 px-3 py-1 bg-white rounded-full border border-blue-200"
-                >
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: label.color || '#999999' }}
-                  />
-                  <span className="text-sm">{label.name}</span>
-                  <button
-                    onClick={() => toggleLabel(labelId)}
-                    className="p-0.5 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+        <div className="border-border-default border-b bg-accent-soft p-4">
+          <span className="text-sm font-medium text-accent-primary">Active filters</span>
+          <button 
+            className="text-xs text-accent-primary transition-colors hover:text-accent-secondary"
+            onClick={clearAllFilters}
+          >
+            Clear All
+          </button>
         </div>
       )}
 
       {/* Error Display */}
       {error && (
-        <div className="p-4 bg-red-50 border-b border-red-200 text-red-700 text-sm">
+        <div className="border-b border-error bg-error-ghost p-4 text-sm text-error">
           {error}
           <button
             onClick={loadLabels}
-            className="ml-2 text-red-600 hover:text-red-800 underline"
+            className="ml-2 text-error underline hover:text-error"
           >
             Retry
           </button>
@@ -229,14 +202,14 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
       )}
 
       {/* Label Type Toggles */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="border-border-default border-b p-4">
         <div className="space-y-2">
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={showSystemLabels}
               onChange={(e) => setShowSystemLabels(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="border-border-default rounded text-blue-600 focus:ring-blue-500"
             />
             <span className="text-sm">Show system labels</span>
           </label>
@@ -245,7 +218,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
               type="checkbox"
               checked={showUserLabels}
               onChange={(e) => setShowUserLabels(e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="border-border-default rounded text-blue-600 focus:ring-blue-500"
             />
             <span className="text-sm">Show user labels</span>
           </label>
@@ -255,16 +228,16 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
       {/* Labels List */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="p-4 text-center text-gray-500">
-            <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+          <div className="p-4 text-center text-secondary">
+            <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
             Loading labels...
           </div>
         ) : (
-          <div className="p-4 space-y-6">
+          <div className="space-y-6 p-4">
             {/* System Labels */}
             {systemLabels.length > 0 && showSystemLabels && (
               <div>
-                <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-secondary">
                   System Labels
                 </h4>
                 <div className="space-y-1">
@@ -283,7 +256,7 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
             {/* User Labels */}
             {userLabels.length > 0 && showUserLabels && (
               <div>
-                <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                <h4 className="mb-3 text-xs font-medium uppercase tracking-wider text-secondary">
                   User Labels
                 </h4>
                 <div className="space-y-1">
@@ -301,8 +274,8 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
 
             {/* Empty State */}
             {filteredLabels.length === 0 && !loading && (
-              <div className="text-center py-8 text-gray-500">
-                <Tag className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <div className="py-8 text-center text-secondary">
+                <Tag className="mx-auto mb-2 size-8 text-muted" />
                 <p className="text-sm">
                   {searchTerm ? 'No labels found matching your search.' : 'No labels available.'}
                 </p>
@@ -325,30 +298,27 @@ const LabelItem: React.FC<LabelItemProps> = ({ label, isSelected, onToggle }) =>
   return (
     <button
       onClick={onToggle}
-      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left ${
-        isSelected ? 'bg-blue-50 border border-blue-200' : 'border border-transparent'
+      className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface ${
+        isSelected ? 'border border-accent-primary bg-accent-soft' : 'border border-transparent'
       }`}
     >
-      <div className="flex-shrink-0 w-4 h-4 border border-gray-300 rounded flex items-center justify-center">
+      <div className="border-border-default flex size-4 shrink-0 items-center justify-center rounded border">
         {isSelected && (
-          <div className="w-2 h-2 bg-blue-600 rounded" />
+          <div className="size-2 rounded bg-accent-primary" />
         )}
       </div>
       <div
-        className="w-3 h-3 rounded-full flex-shrink-0"
+        className="size-3 shrink-0 rounded-full"
         style={{ backgroundColor: label.color || '#999999' }}
       />
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium truncate">{label.name}</span>
-          <div className="flex items-center space-x-2 text-xs text-gray-500">
-            {(label.messagesUnread || 0) > 0 && (
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                {label.messagesUnread}
-              </span>
-            )}
-            <span>{label.messagesTotal || 0}</span>
-          </div>
+          <span className="flex-1 text-sm font-medium text-primary">
+            {label.name}
+          </span>
+          <span className="rounded-full bg-accent-soft px-2 py-0.5 text-accent-primary">
+            {label.messageCount}
+          </span>
         </div>
       </div>
     </button>

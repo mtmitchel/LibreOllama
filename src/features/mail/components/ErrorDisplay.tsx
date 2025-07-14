@@ -57,8 +57,8 @@ export function ErrorDisplay({
 
   if (compact) {
     return (
-      <div className={`flex items-center gap-2 p-2 rounded-lg ${errorColor.bg} ${className}`}>
-        <div className={`flex-shrink-0 ${errorColor.icon}`}>
+      <div className={`flex items-center gap-2 rounded-lg p-2 ${errorColor.bg} ${className}`}>
+        <div className={`shrink-0 ${errorColor.icon}`}>
           {errorIcon}
         </div>
         <Text size="sm" className={`flex-1 ${errorColor.text}`}>
@@ -70,9 +70,9 @@ export function ErrorDisplay({
             size="sm"
             onClick={handleRetry}
             disabled={isRetrying}
-            className="flex-shrink-0"
+            className="shrink-0"
           >
-            <RefreshCw className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`size-3 ${isRetrying ? 'animate-spin' : ''}`} />
           </Button>
         )}
         {showActions && onDismiss && (
@@ -80,9 +80,9 @@ export function ErrorDisplay({
             variant="ghost"
             size="sm"
             onClick={handleDismiss}
-            className="flex-shrink-0"
+            className="shrink-0"
           >
-            <X className="w-3 h-3" />
+            <X className="size-3" />
           </Button>
         )}
       </div>
@@ -92,11 +92,11 @@ export function ErrorDisplay({
   return (
     <div className={`rounded-lg border ${errorColor.border} ${errorColor.bg} p-4 ${className}`}>
       <div className="flex items-start gap-3">
-        <div className={`flex-shrink-0 mt-0.5 ${errorColor.icon}`}>
+        <div className={`mt-0.5 shrink-0 ${errorColor.icon}`}>
           {errorIcon}
         </div>
         
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <h4 className={`text-sm font-medium ${errorColor.text}`}>
@@ -112,9 +112,9 @@ export function ErrorDisplay({
                 variant="ghost"
                 size="sm"
                 onClick={handleDismiss}
-                className="flex-shrink-0 -mt-1 -mr-1"
+                className="-mr-1 -mt-1 shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="size-4" />
               </Button>
             )}
           </div>
@@ -122,7 +122,7 @@ export function ErrorDisplay({
           {/* Error Details */}
           {process.env.NODE_ENV === 'development' && error.details && (
             <details className="mt-2">
-              <summary className={`text-xs cursor-pointer ${errorColor.textSecondary}`}>
+              <summary className={`cursor-pointer text-xs ${errorColor.textSecondary}`}>
                 Technical Details
               </summary>
               <pre className={`mt-1 text-xs ${errorColor.textSecondary} whitespace-pre-wrap`}>
@@ -137,10 +137,10 @@ export function ErrorDisplay({
               <p className={`text-xs font-medium ${errorColor.text} mb-2`}>
                 Suggested actions:
               </p>
-              <ul className={`text-xs space-y-1 ${errorColor.textSecondary}`}>
+              <ul className={`space-y-1 text-xs ${errorColor.textSecondary}`}>
                 {errorMessage.actions.map((action, index) => (
                   <li key={index} className="flex items-start gap-1">
-                    <span className="text-xs mt-0.5">•</span>
+                    <span className="mt-0.5 text-xs">•</span>
                     <span>{action}</span>
                   </li>
                 ))}
@@ -150,7 +150,7 @@ export function ErrorDisplay({
 
           {/* Action Buttons */}
           {showActions && (
-            <div className="flex items-center gap-2 mt-4">
+            <div className="mt-4 flex items-center gap-2">
               {error.isRetryable && onRetry && (
                 <Button
                   variant="outline"
@@ -159,8 +159,8 @@ export function ErrorDisplay({
                   disabled={isRetrying}
                   className="flex items-center gap-1"
                 >
-                  <RefreshCw className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`} />
-                  {isRetrying ? 'Retrying...' : 'Try Again'}
+                  <RefreshCw className={`size-3 ${isRetrying ? 'animate-spin' : ''}`} />
+                  {isRetrying ? 'Retrying...' : 'Try again'}
                 </Button>
               )}
               
@@ -174,8 +174,8 @@ export function ErrorDisplay({
                   }}
                   className="flex items-center gap-1"
                 >
-                  <Shield className="w-3 h-3" />
-                  Sign In
+                  <Shield className="size-3" />
+                  Sign in
                 </Button>
               )}
               
@@ -188,7 +188,7 @@ export function ErrorDisplay({
                   }}
                   className="flex items-center gap-1"
                 >
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="size-3" />
                   Check Gmail Status
                 </Button>
               )}
@@ -198,7 +198,7 @@ export function ErrorDisplay({
           {/* Retry Timer */}
           {error.retryAfterSeconds && (
             <div className="mt-2 flex items-center gap-1">
-              <Clock className={`w-3 h-3 ${errorColor.icon}`} />
+              <Clock className={`size-3 ${errorColor.icon}`} />
               <Text size="xs" className={errorColor.textSecondary}>
                 Retry available in {error.retryAfterSeconds} seconds
               </Text>
@@ -215,26 +215,26 @@ function getErrorIcon(type: GmailErrorType) {
     case GmailErrorType.NETWORK_ERROR:
     case GmailErrorType.OFFLINE_ERROR:
     case GmailErrorType.TIMEOUT_ERROR:
-      return <Wifi className="w-4 h-4" />;
+      return <Wifi className="size-4" />;
     
     case GmailErrorType.AUTH_ERROR:
     case GmailErrorType.TOKEN_EXPIRED:
     case GmailErrorType.INVALID_TOKEN:
     case GmailErrorType.OAUTH_ERROR:
-      return <Shield className="w-4 h-4" />;
+      return <Shield className="size-4" />;
     
     case GmailErrorType.VALIDATION_ERROR:
     case GmailErrorType.INVALID_EMAIL:
     case GmailErrorType.MISSING_REQUIRED_FIELD:
     case GmailErrorType.MESSAGE_TOO_LARGE:
-      return <AlertCircle className="w-4 h-4" />;
+      return <AlertCircle className="size-4" />;
     
     case GmailErrorType.QUOTA_EXCEEDED:
     case GmailErrorType.RATE_LIMITED:
-      return <Clock className="w-4 h-4" />;
+      return <Clock className="size-4" />;
     
     default:
-      return <AlertTriangle className="w-4 h-4" />;
+      return <AlertTriangle className="size-4" />;
   }
 }
 
@@ -244,11 +244,11 @@ function getErrorColor(type: GmailErrorType) {
     case GmailErrorType.OFFLINE_ERROR:
     case GmailErrorType.TIMEOUT_ERROR:
       return {
-        bg: 'bg-blue-50 dark:bg-blue-950/20',
-        border: 'border-blue-200 dark:border-blue-800',
-        icon: 'text-blue-600 dark:text-blue-400',
-        text: 'text-blue-800 dark:text-blue-200',
-        textSecondary: 'text-blue-600 dark:text-blue-300'
+        bg: 'bg-accent-soft',
+        border: 'border-accent-primary',
+        icon: 'text-accent-primary',
+        text: 'text-primary',
+        textSecondary: 'text-secondary'
       };
     
     case GmailErrorType.AUTH_ERROR:
@@ -256,11 +256,11 @@ function getErrorColor(type: GmailErrorType) {
     case GmailErrorType.INVALID_TOKEN:
     case GmailErrorType.OAUTH_ERROR:
       return {
-        bg: 'bg-yellow-50 dark:bg-yellow-950/20',
-        border: 'border-yellow-200 dark:border-yellow-800',
-        icon: 'text-yellow-600 dark:text-yellow-400',
-        text: 'text-yellow-800 dark:text-yellow-200',
-        textSecondary: 'text-yellow-600 dark:text-yellow-300'
+        bg: 'bg-warning-ghost',
+        border: 'border-warning',
+        icon: 'text-warning',
+        text: 'text-warning-fg',
+        textSecondary: 'text-warning'
       };
     
     case GmailErrorType.VALIDATION_ERROR:
@@ -268,30 +268,30 @@ function getErrorColor(type: GmailErrorType) {
     case GmailErrorType.MISSING_REQUIRED_FIELD:
     case GmailErrorType.MESSAGE_TOO_LARGE:
       return {
-        bg: 'bg-orange-50 dark:bg-orange-950/20',
-        border: 'border-orange-200 dark:border-orange-800',
-        icon: 'text-orange-600 dark:text-orange-400',
-        text: 'text-orange-800 dark:text-orange-200',
-        textSecondary: 'text-orange-600 dark:text-orange-300'
+        bg: 'bg-warning-ghost',
+        border: 'border-warning',
+        icon: 'text-warning',
+        text: 'text-primary',
+        textSecondary: 'text-secondary'
       };
     
     case GmailErrorType.QUOTA_EXCEEDED:
     case GmailErrorType.RATE_LIMITED:
       return {
-        bg: 'bg-purple-50 dark:bg-purple-950/20',
-        border: 'border-purple-200 dark:border-purple-800',
-        icon: 'text-purple-600 dark:text-purple-400',
-        text: 'text-purple-800 dark:text-purple-200',
-        textSecondary: 'text-purple-600 dark:text-purple-300'
+        bg: 'bg-accent-soft',
+        border: 'border-accent-primary',
+        icon: 'text-accent-primary',
+        text: 'text-primary',
+        textSecondary: 'text-secondary'
       };
     
     default:
       return {
-        bg: 'bg-red-50 dark:bg-red-950/20',
-        border: 'border-red-200 dark:border-red-800',
-        icon: 'text-red-600 dark:text-red-400',
-        text: 'text-red-800 dark:text-red-200',
-        textSecondary: 'text-red-600 dark:text-red-300'
+        bg: 'bg-error-ghost',
+        border: 'border-error',
+        icon: 'text-error',
+        text: 'text-primary',
+        textSecondary: 'text-secondary'
       };
   }
 }
@@ -318,10 +318,10 @@ export function SuccessMessage({
   }, [autoHideAfter, onDismiss]);
 
   return (
-    <div className={`rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20 p-4 ${className}`}>
+    <div className={`rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/20 ${className}`}>
       <div className="flex items-center gap-3">
-        <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-        <Text className="text-green-800 dark:text-green-200 flex-1">
+        <CheckCircle className="size-4 shrink-0 text-green-600 dark:text-green-400" />
+        <Text className="flex-1 text-green-800 dark:text-green-200">
           {message}
         </Text>
         {onDismiss && (
@@ -329,9 +329,9 @@ export function SuccessMessage({
             variant="ghost"
             size="sm"
             onClick={onDismiss}
-            className="flex-shrink-0 -mr-1"
+            className="-mr-1 shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" />
           </Button>
         )}
       </div>
@@ -347,10 +347,10 @@ interface LoadingMessageProps {
 
 export function LoadingMessage({ message, className = '' }: LoadingMessageProps) {
   return (
-    <div className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20 p-4 ${className}`}>
+    <div className={`border-border-default dark:bg-primary/20 rounded-lg border bg-surface p-4 dark:border-gray-700 ${className}`}>
       <div className="flex items-center gap-3">
-        <RefreshCw className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0 animate-spin" />
-        <Text className="text-gray-800 dark:text-gray-200">
+        <RefreshCw className="size-4 shrink-0 animate-spin text-secondary dark:text-muted" />
+        <Text className="text-primary dark:text-gray-200">
           {message}
         </Text>
       </div>

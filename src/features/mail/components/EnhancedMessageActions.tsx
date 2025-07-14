@@ -6,19 +6,17 @@ import {
   Star, 
   Archive, 
   Trash2, 
-  MoreHorizontal,
   Mail,
   MailOpen,
   Copy,
   Flag,
   Download,
-  Tag,
-  Move
+  Tag
 } from 'lucide-react';
-import { Button, Text } from '../../../components/ui';
+import { Button } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
-import { ParsedEmail, EmailAddress } from '../types';
+import { ParsedEmail } from '../types';
 
 interface EnhancedMessageActionsProps {
   message: ParsedEmail;
@@ -53,12 +51,12 @@ function ActionButton({
   
   const variantClasses = {
     primary: isActive 
-      ? 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)]'
-      : 'bg-[var(--bg-secondary)] hover:bg-[var(--accent-primary)] hover:text-white text-[var(--text-primary)]',
+      ? 'bg-accent-primary text-white hover:bg-accent-secondary'
+      : 'bg-bg-secondary hover:bg-accent-primary hover:text-white text-text-primary',
     secondary: isActive
-      ? 'bg-[var(--accent-soft)] text-[var(--accent-primary)] border-[var(--accent-primary)]'
-      : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-    danger: 'bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400'
+      ? 'bg-accent-bg text-accent-primary border-accent-primary'
+      : 'bg-bg-secondary hover:bg-bg-tertiary text-text-secondary hover:text-text-primary',
+    danger: 'bg-error-ghost hover:bg-error-ghost text-error hover:text-error dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400'
   };
 
   return (
@@ -67,13 +65,13 @@ function ActionButton({
       size={size}
       onClick={onClick}
       disabled={isLoading}
-      className={`${baseClasses} ${sizeClasses} ${variantClasses[variant]} border border-[var(--border-default)] rounded-md`}
+      className={`${baseClasses} ${sizeClasses} ${variantClasses[variant]} border-border-primary rounded-md border`}
       title={label}
     >
       <Icon size={size === 'sm' ? 14 : 16} />
       <span className="hidden sm:inline">{label}</span>
       {isLoading && (
-        <div className="animate-spin w-3 h-3 border border-current border-t-transparent rounded-full ml-1" />
+        <div className="ml-1 size-3 animate-spin rounded-full border border-current border-t-transparent" />
       )}
     </Button>
   );
@@ -247,7 +245,7 @@ export function EnhancedMessageActions({
   return (
     <div className={`enhanced-message-actions ${className}`}>
       {/* Primary Actions */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="mb-3 flex items-center gap-2">
         <ActionButton
           icon={Reply}
           label="Reply"
@@ -257,7 +255,7 @@ export function EnhancedMessageActions({
         
         <ActionButton
           icon={ReplyAll}
-          label="Reply All"
+                      label="Reply all"
           onClick={handleReplyAll}
           variant="primary"
         />
@@ -269,11 +267,11 @@ export function EnhancedMessageActions({
           variant="primary"
         />
         
-        <div className="w-px h-6 bg-[var(--border-default)] mx-1" />
+        <div className="bg-border-default mx-1 h-6 w-px" />
         
         <ActionButton
           icon={message.isRead ? Mail : MailOpen}
-          label={message.isRead ? 'Mark Unread' : 'Mark Read'}
+                        label={message.isRead ? 'Mark unread' : 'Mark read'}
           onClick={handleReadToggle}
           isActive={!message.isRead}
           isLoading={isProcessing.read}
@@ -290,7 +288,7 @@ export function EnhancedMessageActions({
 
       {/* Secondary Actions */}
       {showAllActions && (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           <ActionButton
             icon={Archive}
             label="Archive"
@@ -308,7 +306,7 @@ export function EnhancedMessageActions({
           
           <ActionButton
             icon={Copy}
-            label="Copy Content"
+            label="Copy content"
             onClick={handleCopyContent}
           />
           
@@ -329,8 +327,8 @@ export function EnhancedMessageActions({
       )}
 
       {/* Message Metadata */}
-      <div className="mt-4 pt-3 border-t border-[var(--border-default)]">
-        <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+      <div className="border-border-default mt-4 border-t pt-3">
+        <div className="flex items-center justify-between text-xs text-secondary">
           <div className="flex items-center gap-4">
             <span>
               Labels: {message.labels.length > 0 
@@ -354,9 +352,9 @@ export function EnhancedMessageActions({
 
       {/* Importance indicator */}
       {message.importance && message.importance !== 'normal' && (
-        <div className={`mt-2 px-2 py-1 rounded text-xs inline-flex items-center gap-1 ${
+        <div className={`mt-2 inline-flex items-center gap-1 rounded px-2 py-1 text-xs ${
           message.importance === 'high' 
-            ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+            ? 'bg-error-ghost text-error dark:bg-red-900/20 dark:text-red-400'
             : 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
         }`}>
           <Flag size={12} />

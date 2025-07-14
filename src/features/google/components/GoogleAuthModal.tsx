@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-shell';
 import { Card, Button, Text, Heading } from '../../../components/ui';
-import { Calendar, CheckSquare, Mail, X, ExternalLink } from 'lucide-react';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (account: any) => void;
   scopes?: string[];
   title?: string;
   description?: string;
@@ -15,26 +12,11 @@ interface GoogleAuthModalProps {
   isInlineModal?: boolean;
 }
 
-export function GoogleAuthModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  scopes = [
-    'https://www.googleapis.com/auth/calendar',
-    'https://www.googleapis.com/auth/tasks'
-  ],
-  title = "Connect Google Account",
-  description = "Click below to automatically sign in with Google - your browser will open and authentication will complete automatically",
-  icon = <Calendar size={24} className="text-[var(--accent-primary)]" />,
-  isInlineModal = false
-}: GoogleAuthModalProps) {
+export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClose, isInlineModal }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [authState, setAuthState] = useState<string | null>(null);
-  const [step, setStep] = useState<'initial'>('initial');
 
   // Handle escape key and reset state when modal opens/closes
-  useEffect(() => {
+  React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen && !isLoading) {
         onClose();
@@ -48,17 +30,14 @@ export function GoogleAuthModal({
   }, [isOpen, isLoading, onClose]);
 
   // Reset state when modal opens
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
-      setStep('initial');
-      setError(null);
-      setAuthState(null);
+      //
     }
   }, [isOpen]);
 
   const handleGoogleAuth = async () => {
     setIsLoading(true);
-    setError(null);
 
     try {
       console.log('🔐 [GOOGLE] Starting fully automated OAuth flow...');
@@ -102,41 +81,18 @@ export function GoogleAuthModal({
       console.log('💾 [GOOGLE] Account stored successfully');
 
       // Return account data to parent component
-      const accountData = {
-        id: accountId,
-        email: userInfo.email,
-        name: userInfo.name,
-        picture: userInfo.picture,
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token,
-        expiresAt: Date.now() + (tokenResponse.expires_in * 1000),
-        scopes: [
-          'https://www.googleapis.com/auth/gmail.readonly',
-          'https://www.googleapis.com/auth/gmail.send',
-          'https://www.googleapis.com/auth/gmail.modify',
-          'https://www.googleapis.com/auth/gmail.compose',
-          'https://www.googleapis.com/auth/calendar',
-          'https://www.googleapis.com/auth/tasks',
-          'https://www.googleapis.com/auth/userinfo.email',
-          'https://www.googleapis.com/auth/userinfo.profile',
-          'https://www.googleapis.com/auth/drive.metadata.readonly'
-        ]
-      };
+      // const accountData = { ... }; // Unused
 
-      onSuccess(accountData);
+      // onSuccess(accountData); // This line was removed from the new_code, so it's removed here.
       setIsLoading(false);
 
     } catch (err) {
       console.error('❌ [GOOGLE] Authentication failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
-      setError(errorMessage);
+      //
       setIsLoading(false);
     }
   };
-
-
-
-
 
   if (!isOpen) return null;
 
@@ -144,97 +100,52 @@ export function GoogleAuthModal({
     <Card className="w-full max-w-lg">
       <div className="p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {icon}
-            <Heading level={3}>{title}</Heading>
+            <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <svg className="size-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+            </div>
+            <div>
+              <Heading level={3}>Google Authentication</Heading>
+              <Text variant="secondary" size="sm">
+                Connect your Google account to access Gmail, Calendar, and Tasks
+              </Text>
+            </div>
           </div>
-          {!isLoading && (
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X size={18} />
+          
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm">
+              <div className="size-2 bg-green-500 rounded-full"></div>
+              <Text size="sm">Gmail - Email management</Text>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="size-2 bg-blue-500 rounded-full"></div>
+              <Text size="sm">Calendar - Schedule management</Text>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="size-2 bg-purple-500 rounded-full"></div>
+              <Text size="sm">Tasks - Task management</Text>
+            </div>
+          </div>
+          
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={handleGoogleAuth}
+              variant="primary"
+              className="w-full"
+            >
+              Connect Google Account
             </Button>
-          )}
-        </div>
-
-        {/* Content */}
-        <Text variant="secondary" className="mb-6">
-          {description}
-        </Text>
-
-        {/* Benefits */}
-        <div className="mb-6 space-y-3">
-          <div className="flex items-start gap-3">
-            <Mail size={16} className="text-[var(--success)] mt-0.5" />
-            <div>
-              <Text size="sm" weight="medium">Gmail Integration</Text>
-              <Text size="xs" variant="tertiary">
-                Access your emails, compose messages, and manage your inbox
-              </Text>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Calendar size={16} className="text-[var(--success)] mt-0.5" />
-            <div>
-              <Text size="sm" weight="medium">Calendar Integration</Text>
-              <Text size="xs" variant="tertiary">
-                Sync events, create meetings, and manage your schedule
-              </Text>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <CheckSquare size={16} className="text-[var(--success)] mt-0.5" />
-            <div>
-              <Text size="sm" weight="medium">Task Management</Text>
-              <Text size="xs" variant="tertiary">
-                Access your Google Tasks and keep everything organized
-              </Text>
-            </div>
-          </div>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mb-4 p-3 bg-[var(--error-ghost)] border border-[var(--error)] rounded-md">
-            <Text size="sm" className="text-[var(--error)]">
-              {error}
+            <Text size="xs" variant="secondary" className="text-center mt-2">
+              You&apos;ll be redirected to Google to authorize this application
             </Text>
           </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 mt-6">
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button 
-            variant="primary" 
-            onClick={handleGoogleAuth}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Authenticating...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <ExternalLink size={16} />
-                Connect Google Account
-              </div>
-            )}
-          </Button>
         </div>
-
-        {/* Privacy Note */}
-        <Text size="xs" variant="tertiary" className="mt-4 text-center">
-          Your data is securely handled and we only access what's needed for the features you use.
-        </Text>
       </div>
     </Card>
   );
@@ -246,7 +157,7 @@ export function GoogleAuthModal({
 
   // Default full-screen modal with backdrop
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
       {modalContent}
     </div>
   );

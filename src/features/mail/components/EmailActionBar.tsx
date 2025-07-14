@@ -21,9 +21,7 @@ import {
   Check,
   Square,
   MinusSquare,
-  AlertTriangle,
-  Undo2,
-  RotateCcw
+  AlertTriangle
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
@@ -224,22 +222,22 @@ export function EmailActionBar({
 
   return (
     <>
-      <div className={`bg-[var(--bg-secondary)] border-b border-[var(--border-default)] ${className}`}>
+      <div className={`border-border-default border-b bg-secondary ${className}`}>
         <div className={`flex items-center justify-between px-4 ${compactMode ? 'py-2' : 'py-3'}`}>
           {/* Selection Info */}
           <div className="flex items-center gap-4">
             {/* Select All Checkbox */}
             <button
               onClick={handleSelectAll}
-              className="flex items-center justify-center w-6 h-6 rounded border border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] transition-colors"
+              className="border-border-default flex size-6 items-center justify-center rounded border transition-colors hover:bg-tertiary"
               title={allSelected ? 'Deselect all' : 'Select all'}
             >
               {allSelected ? (
-                <Check size={14} className="text-[var(--accent-primary)]" />
+                <Check size={14} className="text-accent-primary" />
               ) : someSelected ? (
-                <MinusSquare size={14} className="text-[var(--accent-primary)]" />
+                <MinusSquare size={14} className="text-accent-primary" />
               ) : (
-                <Square size={14} className="text-[var(--text-secondary)]" />
+                <Square size={14} className="text-secondary" />
               )}
             </button>
             
@@ -257,7 +255,7 @@ export function EmailActionBar({
                 variant="ghost"
                 size="sm"
                 onClick={onClearSelection}
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                className="text-secondary hover:text-primary"
               >
                 Clear selection
               </Button>
@@ -275,7 +273,7 @@ export function EmailActionBar({
                   onClick={handleMarkAsRead}
                   disabled={actionInProgress === 'mark_read' || isLoadingMessages}
                   title="Mark as read (R)"
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  className="text-secondary hover:text-primary"
                 >
                   <MailOpen size={compactMode ? 16 : 18} />
                   {!compactMode && <span className="ml-2">Mark read</span>}
@@ -289,7 +287,7 @@ export function EmailActionBar({
                   onClick={handleMarkAsUnread}
                   disabled={actionInProgress === 'mark_unread' || isLoadingMessages}
                   title="Mark as unread (U)"
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  className="text-secondary hover:text-primary"
                 >
                   <Mail size={compactMode ? 16 : 18} />
                   {!compactMode && <span className="ml-2">Mark unread</span>}
@@ -303,7 +301,7 @@ export function EmailActionBar({
                 onClick={handleToggleStar}
                 disabled={actionInProgress === 'star' || actionInProgress === 'unstar' || isLoadingMessages}
                 title={hasUnstarredSelected ? "Add star (S)" : "Remove star (S)"}
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                className="text-secondary hover:text-primary"
               >
                 {hasUnstarredSelected ? (
                   <Star size={compactMode ? 16 : 18} />
@@ -324,7 +322,7 @@ export function EmailActionBar({
                 onClick={handleArchive}
                 disabled={actionInProgress === 'archive' || isLoadingMessages}
                 title="Archive (A)"
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                className="text-secondary hover:text-primary"
               >
                 <Archive size={compactMode ? 16 : 18} />
                 {!compactMode && <span className="ml-2">Archive</span>}
@@ -337,7 +335,7 @@ export function EmailActionBar({
                 onClick={handleDelete}
                 disabled={actionInProgress === 'delete' || isLoadingMessages}
                 title="Delete (Shift+Delete)"
-                className="text-[var(--text-secondary)] hover:text-red-600"
+                className="text-secondary hover:text-error"
               >
                 <Trash2 size={compactMode ? 16 : 18} />
                 {!compactMode && <span className="ml-2">Delete</span>}
@@ -350,19 +348,19 @@ export function EmailActionBar({
                   size={compactMode ? "sm" : "default"}
                   onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
                   title="More actions"
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  className="text-secondary hover:text-primary"
                 >
                   <MoreHorizontal size={compactMode ? 16 : 18} />
                 </Button>
 
                 {/* Actions Dropdown */}
                 {isActionsMenuOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-md shadow-lg z-50">
+                  <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-md border bg-primary shadow-lg">
                     <div className="py-1">
                       {canReply && (
                         <>
                           <button
-                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                             onClick={() => {
                               // TODO: Implement reply functionality
                               console.log('Reply to message');
@@ -373,7 +371,7 @@ export function EmailActionBar({
                             Reply
                           </button>
                           <button
-                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                             onClick={() => {
                               // TODO: Implement reply all functionality
                               console.log('Reply all to message');
@@ -388,7 +386,7 @@ export function EmailActionBar({
                       
                       {canForward && (
                         <button
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+                          className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                           onClick={() => {
                             // TODO: Implement forward functionality
                             console.log('Forward messages');
@@ -401,7 +399,7 @@ export function EmailActionBar({
                       )}
                       
                       <button
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+                        className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                         onClick={() => {
                           // TODO: Implement label management
                           console.log('Manage labels');
@@ -421,7 +419,7 @@ export function EmailActionBar({
 
         {/* Keyboard Shortcuts Help */}
         {selectedCount > 0 && !compactMode && (
-          <div className="px-4 pb-2 text-xs text-[var(--text-tertiary)]">
+          <div className="px-4 pb-2 text-xs text-muted">
             Shortcuts: R (read), U (unread), S (star), A (archive), Shift+Del (delete), Esc (clear)
           </div>
         )}
@@ -429,18 +427,18 @@ export function EmailActionBar({
 
       {/* Confirmation Dialog */}
       {confirmation.isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-start gap-4 mb-4">
-              <AlertTriangle size={24} className="text-yellow-500 flex-shrink-0 mt-1" />
+        <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+          <div className="border-border-default mx-4 w-full max-w-md rounded-lg border bg-primary p-6 shadow-xl">
+            <div className="mb-4 flex items-start gap-4">
+              <AlertTriangle size={24} className="mt-1 shrink-0 text-warning" />
               <div>
-                <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+                <h3 className="mb-2 text-lg font-semibold text-primary">
                   {confirmation.type === 'delete' || confirmation.type === 'bulk_delete' 
                     ? 'Confirm Delete' 
                     : 'Confirm Archive'
                   }
                 </h3>
-                <p className="text-[var(--text-secondary)]">
+                <p className="text-secondary">
                   {confirmation.type === 'delete' 
                     ? 'Are you sure you want to delete this message? This action cannot be undone.'
                     : confirmation.type === 'bulk_delete'
@@ -451,7 +449,7 @@ export function EmailActionBar({
               </div>
             </div>
             
-            <div className="flex gap-3 justify-end">
+            <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
                 onClick={confirmation.onCancel}
@@ -480,4 +478,4 @@ export function EmailActionBar({
   );
 }
 
-export default EmailActionBar; 
+export default EmailActionBar;

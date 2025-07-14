@@ -40,7 +40,7 @@ export const AttachmentDownloadButton: React.FC<AttachmentDownloadButtonProps> =
         return {
           icon: 'hourglass_top',
           text: compact ? '' : 'Pending...',
-          color: 'text-yellow-600 dark:text-yellow-400',
+          color: 'text-warning',
           disabled: true,
         };
 
@@ -64,7 +64,7 @@ export const AttachmentDownloadButton: React.FC<AttachmentDownloadButtonProps> =
         return {
           icon: 'error',
           text: compact ? '' : 'Retry',
-          color: 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200',
+          color: 'text-error dark:text-red-400 hover:text-error dark:hover:text-red-200',
           disabled: false,
         };
 
@@ -72,7 +72,7 @@ export const AttachmentDownloadButton: React.FC<AttachmentDownloadButtonProps> =
         return {
           icon: 'cancel',
           text: compact ? '' : 'Cancelled',
-          color: 'text-gray-600 dark:text-gray-400',
+          color: 'text-secondary dark:text-muted',
           disabled: false,
         };
 
@@ -104,11 +104,11 @@ export const AttachmentDownloadButton: React.FC<AttachmentDownloadButtonProps> =
       onClick={handleClick}
       disabled={buttonContent.disabled}
       className={`
-        inline-flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-colors
+        inline-flex items-center space-x-2 rounded-lg px-3 py-2 font-medium transition-colors
         ${buttonContent.color}
         ${buttonContent.disabled 
           ? 'cursor-not-allowed opacity-50' 
-          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+          : 'hover:bg-surface dark:hover:bg-gray-700'
         }
         ${compact ? 'p-2' : 'px-3 py-2'}
         ${className}
@@ -123,8 +123,8 @@ export const AttachmentDownloadButton: React.FC<AttachmentDownloadButtonProps> =
     >
       {/* Icon with special handling for download progress */}
       {download?.status === 'downloading' ? (
-        <div className="relative w-5 h-5">
-          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <div className="relative size-5">
+          <svg className="size-5 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
               cx="12"
@@ -156,7 +156,7 @@ export const AttachmentDownloadButton: React.FC<AttachmentDownloadButtonProps> =
 
       {/* Download speed and ETA for active downloads */}
       {download?.status === 'downloading' && !compact && (
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-xs text-secondary dark:text-muted">
           {formatFileSize(download.downloadedSize)} / {formatFileSize(download.size)}
         </div>
       )}

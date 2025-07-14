@@ -5,16 +5,16 @@ import {
   CheckSquare, 
   Pin, 
   Calendar, 
-  User, 
   ExternalLink,
-  Plus,
-  PanelRight
+  PanelRight,
+  MessageSquare,
+  Inbox
 } from 'lucide-react';
 
 interface ContextItem {
   id: string;
   title: string;
-  type: 'note' | 'task' | 'project' | 'message';
+  type: 'note' | 'task' | 'project' | 'message' | 'event' | 'chat' | 'mail';
   status?: 'pending' | 'in-progress' | 'completed';
   date?: string;
   priority?: 'low' | 'medium' | 'high';
@@ -22,7 +22,6 @@ interface ContextItem {
 
 interface ContextSidebarProps {
   isOpen?: boolean;
-  conversationId?: string;
   onToggle?: () => void;
 }
 
@@ -31,94 +30,99 @@ const mockContextData: ContextItem[] = [];
 
 const getItemIcon = (type: ContextItem['type']) => {
   switch (type) {
-    case 'note': return <FileText size={14} />;
-    case 'task': return <CheckSquare size={14} />;
-    case 'project': return <Calendar size={14} />;
-    case 'message': return <Pin size={14} />;
-    default: return <FileText size={14} />;
+    case 'note':
+      return <FileText className="size-4" />;
+    case 'task':
+      return <CheckSquare className="size-4" />;
+    case 'project':
+      return <Pin className="size-4" />;
+    case 'message':
+      return <MessageSquare className="size-4" />;
+    case 'event':
+      return <Calendar className="size-4" />;
+    case 'chat':
+      return <MessageSquare className="size-4" />;
+    case 'mail':
+      return <Inbox className="size-4" />;
+    default:
+      return <FileText className="size-4" />;
   }
 };
 
 const getStatusBadge = (item: ContextItem) => {
-  if (item.status) {
-    const statusConfig = {
-      'pending': { variant: 'secondary' as const, label: 'Pending' },
-      'in-progress': { variant: 'accent' as const, label: 'In Progress' },
-      'completed': { variant: 'success' as const, label: 'Completed' }
-    };
-    const config = statusConfig[item.status];
-    return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
-  }
+  if (!item.status) return null;
   
-  if (item.priority) {
-    const priorityConfig = {
-      'low': { variant: 'secondary' as const, label: 'Low' },
-      'medium': { variant: 'warning' as const, label: 'Medium' },
-      'high': { variant: 'error' as const, label: 'High' }
-    };
-    const config = priorityConfig[item.priority];
-    return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
-  }
+  const statusConfig = {
+    pending: { variant: 'secondary' as const, text: 'Pending' },
+    'in-progress': { variant: 'accent' as const, text: 'In Progress' },
+    completed: { variant: 'success' as const, text: 'Completed' }
+  };
   
-  return null;
+  const config = statusConfig[item.status];
+  if (!config) return null;
+  
+  return (
+    <Badge variant={config.variant} className="text-xs">
+      {config.text}
+    </Badge>
+  );
 };
 
-export function ContextSidebar({ isOpen = true, conversationId, onToggle }: ContextSidebarProps) {
+export function ContextSidebar({ isOpen = true, onToggle }: ContextSidebarProps) {
   // If closed, show only the toggle button
   if (!isOpen) {
     return (
-      <Card className="w-16 h-full flex flex-col bg-[var(--bg-secondary)]/30" padding="none">
-        <div className="p-[var(--space-3)] border-b border-[var(--border-default)] flex flex-col items-center">
+      <Card className="flex h-full w-16 flex-col bg-sidebar" padding="none">
+        <div className="border-border-default flex flex-col items-center border-b p-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            title="Show context panel"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]"
+            className="text-secondary hover:text-primary"
           >
             <PanelRight size={20} />
           </Button>
         </div>
         
-        <div className="flex-1 flex flex-col items-center pt-[var(--space-4)] gap-[var(--space-3)]">
+        <div className="flex flex-1 flex-col items-center gap-3 pt-4">
           {/* Context indicators */}
-          <div className="flex flex-col items-center gap-[var(--space-2)]">
+          <div className="flex flex-col items-center gap-2">
             {/* Tasks indicator */}
             <div 
-              title="Related Tasks"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              title="Related tasks"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <CheckSquare size={14} />
             </div>
             
             {/* Notes indicator */}
             <div 
-              title="Linked Notes"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              title="Linked notes"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <FileText size={14} />
             </div>
             
             {/* Projects indicator */}
             <div 
-              title="Related Projects"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              title="Related projects"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <Calendar size={14} />
             </div>
             
             {/* Pinned messages indicator */}
             <div 
-              title="Pinned Messages"
-              className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--accent-ghost)] transition-colors cursor-pointer"
+              title="Pinned messages"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-tertiary text-secondary transition-colors hover:bg-accent-ghost"
             >
               <Pin size={14} />
             </div>
           </div>
           
           {/* Context count indicator */}
-          <div className="flex flex-col items-center gap-[var(--space-1)] mt-[var(--space-2)]">
-            <div className="w-6 h-6 bg-[var(--accent-primary)] rounded-full flex items-center justify-center">
+          <div className="mt-2 flex flex-col items-center gap-1">
+            <div className="flex size-6 items-center justify-center rounded-full bg-accent-primary">
               <Text size="xs" weight="bold" className="text-white">
                 {mockContextData.length}
               </Text>
@@ -135,14 +139,17 @@ export function ContextSidebar({ isOpen = true, conversationId, onToggle }: Cont
   const linkedNotes = mockContextData.filter(item => item.type === 'note');
   const relatedTasks = mockContextData.filter(item => item.type === 'task');
   const pinnedMessages = mockContextData.filter(item => item.type === 'message');
+  const relatedEvents = mockContextData.filter(item => item.type === 'event');
+  const relatedChats = mockContextData.filter(item => item.type === 'chat');
+  const relatedMails = mockContextData.filter(item => item.type === 'mail');
   const relatedProjects = mockContextData.filter(item => item.type === 'project');
 
   return (
-    <Card className="w-80 flex-shrink-0 flex flex-col h-full" padding="none">
+    <Card className="flex h-full w-80 shrink-0 flex-col" padding="none">
       {/* Header */}
-      <div className="p-[var(--space-4)] border-b border-[var(--border-default)] flex items-center justify-between">
+      <div className="border-border-default flex items-center justify-between border-b p-4">
         <div>
-          <Heading level={4} className="text-[var(--text-primary)] mb-[var(--space-1)]">
+          <Heading level={4} className="mb-1 text-primary">
             Context
           </Heading>
           <Text variant="secondary" size="sm">
@@ -155,7 +162,7 @@ export function ContextSidebar({ isOpen = true, conversationId, onToggle }: Cont
             size="icon"
             onClick={onToggle}
             title="Hide context panel"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="text-secondary hover:text-primary"
           >
             <PanelRight size={18} />
           </Button>
@@ -163,40 +170,64 @@ export function ContextSidebar({ isOpen = true, conversationId, onToggle }: Cont
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-[var(--space-4)] space-y-[var(--space-6)]">
+      <div className="flex-1 space-y-6 overflow-y-auto p-4">
+        
+        {/* Quick Actions */}
+        <div>
+          <Text size="sm" weight="semibold" variant="body" className="mb-3">
+            Quick actions
+          </Text>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" size="sm" className="justify-start">
+              <CheckSquare size={14} />
+              Create task
+            </Button>
+            <Button variant="outline" size="sm" className="justify-start">
+              <FileText size={14} />
+              Take note
+            </Button>
+            <Button variant="outline" size="sm" className="justify-start">
+              <Calendar size={14} />
+              Schedule
+            </Button>
+            <Button variant="outline" size="sm" className="justify-start">
+              <Pin size={14} />
+              Pin message
+            </Button>
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div className="border-border-subtle border-t" />
         
         {/* Related Tasks */}
         {relatedTasks.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-[var(--space-3)]">
-              <Text weight="semibold" size="sm" className="text-[var(--text-primary)]">
-                Related Tasks
+            <div className="mb-3 flex items-center">
+              <Text weight="semibold" size="sm" className="text-primary">
+                Related tasks
               </Text>
-              <Button variant="ghost" size="sm" className="gap-[var(--space-1)]">
-                <Plus size={12} />
-                Add
-              </Button>
             </div>
-            <div className="space-y-[var(--space-2)]">
+            <div className="space-y-2">
               {relatedTasks.map(item => (
                 <div 
                   key={item.id}
-                  className="p-[var(--space-3)] border border-[var(--border-default)] rounded-[var(--radius-md)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer group"
+                  className="border-border-default group cursor-pointer rounded-md border p-3 transition-colors hover:bg-tertiary"
                 >
-                  <div className="flex items-start gap-[var(--space-3)]">
-                    <div className="text-[var(--text-muted)] mt-[var(--space-0-5)]">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted">
                       {getItemIcon(item.type)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-[var(--space-2)] mb-[var(--space-1)]">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
                         <Text size="sm" weight="medium" className="line-clamp-2">
                           {item.title}
                         </Text>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                        <Button variant="ghost" size="sm" className="p-1 opacity-0 transition-opacity group-hover:opacity-100">
                           <ExternalLink size={12} />
                         </Button>
                       </div>
-                      <div className="flex items-center gap-[var(--space-2)]">
+                      <div className="flex items-center gap-2">
                         {getStatusBadge(item)}
                         <Text variant="tertiary" size="xs">
                           {item.date}
@@ -213,31 +244,27 @@ export function ContextSidebar({ isOpen = true, conversationId, onToggle }: Cont
         {/* Linked Notes */}
         {linkedNotes.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-[var(--space-3)]">
-              <Text weight="semibold" size="sm" className="text-[var(--text-primary)]">
-                Linked Notes
+            <div className="mb-3 flex items-center">
+              <Text weight="semibold" size="sm" className="text-primary">
+                Linked notes
               </Text>
-              <Button variant="ghost" size="sm" className="gap-[var(--space-1)]">
-                <Plus size={12} />
-                Link
-              </Button>
             </div>
-            <div className="space-y-[var(--space-2)]">
+            <div className="space-y-2">
               {linkedNotes.map(item => (
                 <div 
                   key={item.id}
-                  className="p-[var(--space-3)] border border-[var(--border-default)] rounded-[var(--radius-md)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer group"
+                  className="border-border-default group cursor-pointer rounded-md border p-3 transition-colors hover:bg-tertiary"
                 >
-                  <div className="flex items-start gap-[var(--space-3)]">
-                    <div className="text-[var(--text-muted)] mt-[var(--space-0-5)]">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted">
                       {getItemIcon(item.type)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-[var(--space-2)] mb-[var(--space-1)]">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
                         <Text size="sm" weight="medium" className="line-clamp-2">
                           {item.title}
                         </Text>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                        <Button variant="ghost" size="sm" className="p-1 opacity-0 transition-opacity group-hover:opacity-100">
                           <ExternalLink size={12} />
                         </Button>
                       </div>
@@ -255,27 +282,141 @@ export function ContextSidebar({ isOpen = true, conversationId, onToggle }: Cont
         {/* Pinned Messages */}
         {pinnedMessages.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-[var(--space-3)]">
-              <Text weight="semibold" size="sm" className="text-[var(--text-primary)]">
+            <div className="mb-3 flex items-center justify-between">
+              <Text weight="semibold" size="sm" className="text-primary">
                 Pinned Messages
               </Text>
             </div>
-            <div className="space-y-[var(--space-2)]">
+            <div className="space-y-2">
               {pinnedMessages.map(item => (
                 <div 
                   key={item.id}
-                  className="p-[var(--space-3)] border border-[var(--border-default)] rounded-[var(--radius-md)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer group"
+                  className="border-border-default group cursor-pointer rounded-md border p-3 transition-colors hover:bg-tertiary"
                 >
-                  <div className="flex items-start gap-[var(--space-3)]">
-                    <div className="text-[var(--text-muted)] mt-[var(--space-0-5)]">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted">
                       {getItemIcon(item.type)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-[var(--space-2)] mb-[var(--space-1)]">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
                         <Text size="sm" weight="medium" className="line-clamp-2">
                           {item.title}
                         </Text>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                        <Button variant="ghost" size="sm" className="p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <ExternalLink size={12} />
+                        </Button>
+                      </div>
+                      <Text variant="tertiary" size="xs">
+                        {item.date}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Related Events */}
+        {relatedEvents.length > 0 && (
+          <div>
+            <div className="mb-3 flex items-center">
+              <Text weight="semibold" size="sm" className="text-primary">
+                Related events
+              </Text>
+            </div>
+            <div className="space-y-2">
+              {relatedEvents.map(item => (
+                <div 
+                  key={item.id}
+                  className="border-border-default group cursor-pointer rounded-md border p-3 transition-colors hover:bg-tertiary"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted">
+                      {getItemIcon(item.type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <Text size="sm" weight="medium" className="line-clamp-2">
+                          {item.title}
+                        </Text>
+                        <Button variant="ghost" size="sm" className="p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <ExternalLink size={12} />
+                        </Button>
+                      </div>
+                      <Text variant="tertiary" size="xs">
+                        {item.date}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Related Chats */}
+        {relatedChats.length > 0 && (
+          <div>
+            <div className="mb-3 flex items-center">
+              <Text weight="semibold" size="sm" className="text-primary">
+                Related chats
+              </Text>
+            </div>
+            <div className="space-y-2">
+              {relatedChats.map(item => (
+                <div 
+                  key={item.id}
+                  className="border-border-default group cursor-pointer rounded-md border p-3 transition-colors hover:bg-tertiary"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted">
+                      {getItemIcon(item.type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <Text size="sm" weight="medium" className="line-clamp-2">
+                          {item.title}
+                        </Text>
+                        <Button variant="ghost" size="sm" className="p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <ExternalLink size={12} />
+                        </Button>
+                      </div>
+                      <Text variant="tertiary" size="xs">
+                        {item.date}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Related Mails */}
+        {relatedMails.length > 0 && (
+          <div>
+            <div className="mb-3 flex items-center">
+              <Text weight="semibold" size="sm" className="text-primary">
+                Related mails
+              </Text>
+            </div>
+            <div className="space-y-2">
+              {relatedMails.map(item => (
+                <div 
+                  key={item.id}
+                  className="border-border-default group cursor-pointer rounded-md border p-3 transition-colors hover:bg-tertiary"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted">
+                      {getItemIcon(item.type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <Text size="sm" weight="medium" className="line-clamp-2">
+                          {item.title}
+                        </Text>
+                        <Button variant="ghost" size="sm" className="p-1 opacity-0 transition-opacity group-hover:opacity-100">
                           <ExternalLink size={12} />
                         </Button>
                       </div>
@@ -293,27 +434,27 @@ export function ContextSidebar({ isOpen = true, conversationId, onToggle }: Cont
         {/* Related Projects */}
         {relatedProjects.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-[var(--space-3)]">
-              <Text weight="semibold" size="sm" className="text-[var(--text-primary)]">
-                Related Projects
+            <div className="mb-3 flex items-center">
+              <Text weight="semibold" size="sm" className="text-primary">
+                Related projects
               </Text>
             </div>
-            <div className="space-y-[var(--space-2)]">
+            <div className="space-y-2">
               {relatedProjects.map(item => (
                 <div 
                   key={item.id}
-                  className="p-[var(--space-3)] border border-[var(--border-default)] rounded-[var(--radius-md)] hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer group"
+                  className="border-border-default group cursor-pointer rounded-md border p-3 transition-colors hover:bg-tertiary"
                 >
-                  <div className="flex items-start gap-[var(--space-3)]">
-                    <div className="text-[var(--text-muted)] mt-[var(--space-0-5)]">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted">
                       {getItemIcon(item.type)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-[var(--space-2)] mb-[var(--space-1)]">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
                         <Text size="sm" weight="medium" className="line-clamp-2">
                           {item.title}
                         </Text>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                        <Button variant="ghost" size="sm" className="p-1 opacity-0 transition-opacity group-hover:opacity-100">
                           <ExternalLink size={12} />
                         </Button>
                       </div>

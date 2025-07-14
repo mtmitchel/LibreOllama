@@ -78,14 +78,14 @@ export function GmailSecurityMigration() {
 
   if (status.isLoading && !status.hasMigrationNeeded) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Clock className="text-blue-500" size={24} />
-          <Text size="lg" weight="semibold" className="text-gray-900">
+      <div className="border-border-default rounded-lg border bg-surface p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <Clock className="text-accent-primary" size={24} />
+          <Text size="lg" weight="semibold" className="text-primary">
             Checking Gmail Security Status
           </Text>
         </div>
-        <Text className="text-gray-600">
+        <Text className="text-secondary">
           Checking if security migration is needed...
         </Text>
       </div>
@@ -94,15 +94,13 @@ export function GmailSecurityMigration() {
 
   if (!status.hasMigrationNeeded && !status.isCompleted) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <CheckCircle className="text-green-500" size={24} />
-          <Text size="lg" weight="semibold" className="text-green-900">
-            Gmail Security: Up to Date
-          </Text>
-        </div>
-        <Text className="text-green-700">
-          Your Gmail tokens are already using secure storage with OS keyring encryption.
+      <div className="rounded-lg border border-success bg-success-ghost p-6">
+        <CheckCircle className="text-success" size={24} />
+        <Text size="lg" weight="semibold" className="text-success">
+          Secure connection established
+        </Text>
+        <Text className="text-success">
+          Your Gmail account is now securely connected to LibreOllama.
         </Text>
       </div>
     );
@@ -110,51 +108,41 @@ export function GmailSecurityMigration() {
 
   if (status.isCompleted) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <CheckCircle className="text-green-500" size={24} />
-          <Text size="lg" weight="semibold" className="text-green-900">
-            Migration Completed Successfully
-          </Text>
-        </div>
-        <Text className="text-green-700 mb-4">
-          {status.migratedCount > 0 
-            ? `Successfully migrated ${status.migratedCount} Gmail account(s) to secure storage.`
-            : 'No accounts needed migration.'
-          }
+      <div className="rounded-lg border border-success bg-success-ghost p-6">
+        <CheckCircle className="text-success" size={24} />
+        <Text size="lg" weight="semibold" className="text-success">
+          Security upgrade complete
         </Text>
-        {status.migratedCount > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-            <Text size="sm" className="text-yellow-800">
-              <strong>Important:</strong> Due to security improvements, you'll need to re-authenticate 
-              your Gmail accounts. This ensures your tokens are encrypted with the highest security standards.
-            </Text>
-          </div>
-        )}
+        <Text className="mb-4 text-success">
+          Your Gmail integration is now using the latest security protocols.
+        </Text>
+        <Text className="text-success">
+          Your Gmail tokens are already using secure storage with OS keyring encryption.
+        </Text>
       </div>
     );
   }
 
   return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <AlertTriangle className="text-yellow-500" size={24} />
-        <Text size="lg" weight="semibold" className="text-yellow-900">
+    <div className="bg-warning-bg rounded-lg border border-warning p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <AlertTriangle className="text-warning" size={24} />
+        <Text size="lg" weight="semibold" className="text-warning-fg">
           Gmail Security Upgrade Required
         </Text>
       </div>
 
       <div className="space-y-4">
-        <Text className="text-yellow-800">
+        <Text className="text-warning-fg">
           We've detected Gmail accounts using an older, less secure token storage method. 
           For your security, we recommend migrating to our new secure storage system.
         </Text>
 
-        <div className="bg-white border border-yellow-200 rounded-md p-4">
-          <Text size="sm" weight="semibold" className="text-gray-900 mb-2">
+        <div className="rounded-md border border-warning bg-white p-4">
+          <Text size="sm" weight="semibold" className="mb-2 text-primary">
             What will happen during migration:
           </Text>
-          <ul className="space-y-1 text-sm text-gray-700">
+          <ul className="space-y-1 text-sm text-primary">
             <li>• Your Gmail tokens will be moved to OS-level secure storage</li>
             <li>• Tokens will be encrypted using hardware-backed security</li>
             <li>• You'll need to re-authenticate your Gmail accounts</li>
@@ -162,14 +150,14 @@ export function GmailSecurityMigration() {
           </ul>
         </div>
 
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="rounded-md border border-error bg-error-ghost p-4">
           <div className="flex items-start gap-2">
-            <Shield className="text-red-500 mt-0.5" size={16} />
+            <Shield className="mt-0.5 text-error" size={16} />
             <div>
-              <Text size="sm" weight="semibold" className="text-red-900">
+              <Text size="sm" weight="semibold" className="text-error">
                 Security Notice
               </Text>
-              <Text size="sm" className="text-red-800">
+              <Text size="sm" className="text-error">
                 Your current token storage has security vulnerabilities. 
                 Migration is strongly recommended to protect your Gmail access.
               </Text>
@@ -178,8 +166,8 @@ export function GmailSecurityMigration() {
         </div>
 
         {status.error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <Text size="sm" className="text-red-800">
+          <div className="rounded-md border border-error bg-error-ghost p-4">
+            <Text size="sm" className="text-error">
               <strong>Error:</strong> {status.error}
             </Text>
           </div>
@@ -189,7 +177,7 @@ export function GmailSecurityMigration() {
           <Button
             onClick={runMigration}
             disabled={status.isLoading}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+            className="bg-warning text-white hover:bg-warning"
           >
             <Key size={16} className="mr-2" />
             {status.isLoading ? 'Migrating...' : 'Start Security Migration'}

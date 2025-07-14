@@ -154,15 +154,15 @@ export function Button({
   'aria-label': ariaLabel,
   ...props
 }: ButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center gap-2 border-none rounded-[var(--radius-md)] font-[var(--font-sans)] font-[var(--font-weight-medium)] leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]';
+  const baseClasses = 'inline-flex items-center justify-center gap-2 border-none rounded-md font-sans font-medium leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-primary';
   
   const variantClasses = {
-    primary: 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-secondary)] active:bg-[var(--accent-secondary)] active:scale-95 shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] active:shadow-sm',
-    secondary: 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] border border-[var(--border-default)] hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-surface)] active:scale-95 shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] active:shadow-sm',
-    ghost: 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] active:bg-[var(--bg-surface)] active:scale-95 hover:text-[var(--text-primary)]',
-    outline: 'bg-transparent text-[var(--text-primary)] border border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] active:bg-[var(--bg-surface)] active:scale-95 shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] active:shadow-sm',
-    destructive: 'bg-transparent text-[var(--error)] border border-[var(--error)] hover:bg-[var(--error)] hover:text-[var(--error-fg)] active:bg-[var(--error)] active:scale-95 focus:ring-[var(--error)]',
-    default: 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] border border-[var(--border-default)] hover:bg-[var(--bg-elevated)] active:bg-[var(--bg-surface)] active:scale-95 shadow-[var(--shadow-button)] hover:shadow-[var(--shadow-button-hover)] active:shadow-sm'
+    primary: 'bg-accent-primary text-white hover:bg-accent-secondary active:bg-accent-secondary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm',
+    secondary: 'bg-tertiary text-primary border border-primary hover:bg-secondary active:bg-tertiary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm',
+    ghost: 'bg-transparent text-primary hover:bg-tertiary active:bg-secondary active:scale-95 hover:text-primary',
+    outline: 'bg-transparent text-primary border border-primary hover:bg-tertiary active:bg-secondary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm',
+    destructive: 'bg-transparent text-error border border-error hover:bg-error hover:text-white active:bg-error active:scale-95 focus:ring-error',
+    default: 'bg-tertiary text-primary border border-primary hover:bg-secondary active:bg-tertiary active:scale-95 shadow-sm hover:shadow-md active:shadow-sm'
   };
   
   const sizeClasses = {
@@ -183,7 +183,7 @@ export function Button({
     >
       {isLoading && (
         <div
-          className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"
+          className="mr-2 size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
           aria-hidden="true"
         />
       )}
@@ -229,7 +229,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
       {label && (
         <label 
           htmlFor={inputId}
-          className="block text-sm font-medium text-[var(--text-primary)] mb-1"
+          className="mb-1 block text-sm font-medium text-primary"
         >
           {label}
         </label>
@@ -237,7 +237,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
       {description && (
         <p 
           id={descriptionId}
-          className="text-sm text-[var(--text-secondary)] mb-2"
+          className="mb-2 text-sm text-secondary"
         >
           {description}
         </p>
@@ -264,8 +264,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
           aria-live="polite"
           style={{
             marginTop: 'var(--space-1)',
-            fontSize: 'var(--font-size-xs)',
-            color: 'var(--error)'
+            fontSize: 'var(--text-xs)',
+            color: 'var(--status-error)'
           }}
         >
           {error}
@@ -280,25 +280,23 @@ Input.displayName = 'Input';
 // Card Component - Uses Tailwind utilities with design system variables
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  variant?: 'widget' | 'card';
   padding?: 'none' | 'sm' | 'default' | 'lg';
 }
 
 export function Card({ 
   className = '', 
   children, 
-  variant = 'card',
   padding = 'default',
   style,
   ...props 
 }: CardProps) {
-  const baseClasses = 'bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-[var(--radius-lg)] relative shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-md)] transition-shadow duration-200';
+  const baseClasses = 'bg-tertiary border border-default rounded-lg relative shadow-sm hover:shadow-md transition-shadow duration-200';
   
   const paddingClasses = {
     none: '',
-    sm: 'p-[var(--space-3)]',
-    default: 'p-[var(--space-6)]',
-    lg: 'p-[var(--space-8)]'
+    sm: 'p-3',
+    default: 'p-6',
+    lg: 'p-8'
   };
   
   return (
@@ -339,7 +337,7 @@ export function AddNewCard({
 
   return (
     <div
-      className={`cursor-pointer transition-all duration-200 hover:scale-[1.02] flex flex-col items-center justify-center text-center border-2 border-dashed border-[var(--border-default)] hover:border-[var(--accent-primary)] hover:bg-[var(--accent-ghost)] bg-transparent focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 rounded-[var(--radius-lg)] p-[var(--space-6)] ${className}`.trim()}
+      className={`cursor-pointer transition-all duration-200 hover:scale-[1.02] flex flex-col items-center justify-center text-center border-2 border-dashed border-default hover:border-accent-primary hover:bg-accent-soft bg-transparent focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 rounded-lg p-6 ${className}`.trim()}
       style={{ minHeight, ...props.style }}
       onClick={onAdd}
       tabIndex={0}
@@ -349,15 +347,15 @@ export function AddNewCard({
       {...props}
     >
       {icon && (
-        <div className="text-[var(--text-muted)] mb-4">
+        <div className="mb-4 text-muted">
           {icon}
         </div>
       )}
-      <h3 className="font-semibold text-[var(--text-primary)] mb-2 text-base">
+      <h3 className="mb-2 text-base font-semibold text-primary">
         {title}
       </h3>
       {description && (
-        <p className="text-sm text-[var(--text-muted)]">
+        <p className="text-sm text-muted">
           {description}
         </p>
       )}
@@ -418,11 +416,11 @@ export function Progress({ value, max = 100, className = '', ...props }: Progres
   
   return (
     <div
-      className={`w-full bg-[var(--bg-tertiary)] rounded-full h-[var(--space-2)] ${className}`.trim()}
+      className={`w-full bg-tertiary rounded-full h-2 ${className}`.trim()}
       {...props}
     >
       <div
-        className="bg-[var(--accent-primary)] h-[var(--space-2)] rounded-full transition-all duration-300"
+        className="h-2 rounded-full bg-accent-primary transition-all duration-300"
         style={{ width: `${percentage}%` }}
       />
     </div>
@@ -438,17 +436,17 @@ interface SpinnerProps {
 
 export function Spinner({ size = 'md', color = 'primary', className = '' }: SpinnerProps) {
   const sizeClasses = {
-    sm: 'w-[var(--space-4)] h-[var(--space-4)] border-2',
-    md: 'w-[var(--space-6)] h-[var(--space-6)] border-2',
-    lg: 'w-[var(--space-8)] h-[var(--space-8)] border-3'
+    sm: 'w-4 h-4 border-2',
+    md: 'w-6 h-6 border-2',
+    lg: 'w-8 h-8 border-3'
   };
   
   const colorClasses = {
-    primary: 'border-[var(--accent-primary)] border-t-transparent',
-    secondary: 'border-[var(--accent-secondary)] border-t-transparent',
-    success: 'border-[var(--success)] border-t-transparent',
-    error: 'border-[var(--error)] border-t-transparent',
-    warning: 'border-[var(--warning)] border-t-transparent'
+    primary: 'border-accent-primary border-t-transparent',
+    secondary: 'border-accent-secondary border-t-transparent',
+    success: 'border-success border-t-transparent',
+    error: 'border-error border-t-transparent',
+    warning: 'border-warning border-t-transparent'
   };
   
   return (
@@ -512,7 +510,7 @@ export function LoadingState({ size = 'md', text = 'Loading...', className = '' 
   return (
     <div className={`flex flex-col items-center justify-center ${sizeClasses[size]} ${className}`.trim()}>
       <Spinner size={size} className="mb-3" />
-      <p className="text-[var(--text-secondary)] text-sm font-medium">{text}</p>
+      <p className="text-sm font-medium text-secondary">{text}</p>
     </div>
   );
 }
@@ -552,7 +550,7 @@ export function Skeleton({
   
   return (
     <div
-      className={`bg-[var(--bg-secondary)] ${variantClasses[variant]} ${animationClasses[animation]} ${className}`.trim()}
+      className={`bg-secondary ${variantClasses[variant]} ${animationClasses[animation]} ${className}`.trim()}
       style={style}
       role="status"
       aria-label="Loading content"
@@ -569,11 +567,11 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className = '', error, style, ...props }, ref) => {
-    const baseClasses = 'w-full bg-[var(--input-bg)] border border-[var(--border-default)] rounded-md font-sans text-sm text-[var(--text-primary)] transition-all duration-150 placeholder:text-[var(--input-placeholder)] focus:outline-none resize-vertical min-h-[80px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[var(--bg-secondary)]';
+    const baseClasses = 'w-full bg-input-bg border border-border-primary rounded-md font-sans text-sm text-text-primary transition-all duration-150 placeholder:text-text-secondary focus:outline-none resize-vertical min-h-[80px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-secondary';
     
     const stateClasses = error 
-      ? 'border-[var(--error)] focus:border-[var(--error)] focus:ring-2 focus:ring-error/20'
-      : 'focus:border-input-focus-ring focus:ring-2 focus:ring-primary/20';
+      ? 'border-error focus:border-error focus:ring-2 focus:ring-error/20'
+      : 'focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20';
 
     return (
       <div className="w-full">
@@ -584,11 +582,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p style={{
-            marginTop: 'var(--space-1)',
-            fontSize: '12px',
-            color: 'var(--error)'
-          }}>
+          <p className="mt-1 text-xs text-error">
             {error}
           </p>
         )}
@@ -653,7 +647,7 @@ export function TabsList({ children, className = '' }: TabsListProps) {
   return (
     <div
       role="tablist"
-      className={`inline-flex h-10 items-center justify-center rounded-md bg-[var(--bg-tertiary)] p-1 text-[var(--text-secondary)] ${className}`}
+      className={`inline-flex h-10 items-center justify-center rounded-md bg-tertiary p-1 text-secondary ${className}`}
     >
       {children}
     </div>
@@ -674,7 +668,7 @@ export function TabsTrigger({ value, children, className = '' }: TabsTriggerProp
       aria-controls={`tabpanel-${value}`}
       id={`tab-${value}`}
       onClick={() => setActiveTab(value)}
-      className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-bg-primary transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${isActive ? 'bg-primary text-primary shadow-sm' : ''} ${className}`}
+      className={`ring-offset-bg-primary inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${isActive ? 'bg-primary text-primary shadow-sm' : ''} ${className}`}
     >
       {children}
     </button>
@@ -730,11 +724,11 @@ export function Checkbox({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-start gap-3">
-        <div className="relative flex items-center justify-center w-5 h-5 mt-0.5">
+        <div className="relative mt-0.5 flex size-5 items-center justify-center">
           <input
             id={checkboxId}
             type="checkbox"
-            className={`h-4 w-4 rounded-sm border-border-default text-accent-primary focus:ring-accent-primary focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${error ? 'border-error' : ''} ${className}`}
+            className={`border-border-default focus:ring-accent-primary size-4 rounded-sm text-accent-primary focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${error ? 'border-error' : ''} ${className}`}
             aria-invalid={error ? 'true' : 'false'}
             aria-describedby={ariaDescribedBy}
             onChange={handleChange}
@@ -745,7 +739,7 @@ export function Checkbox({
           {label && (
             <label 
               htmlFor={checkboxId} 
-              className="text-sm font-medium leading-none text-primary cursor-pointer block"
+              className="block cursor-pointer text-sm font-medium leading-none text-primary"
             >
               {label}
             </label>
@@ -753,7 +747,7 @@ export function Checkbox({
           {description && (
             <p 
               id={descriptionId}
-              className="text-sm text-[var(--text-secondary)] mt-1"
+              className="mt-1 text-sm text-secondary"
             >
               {description}
             </p>
@@ -765,7 +759,7 @@ export function Checkbox({
           id={errorId}
           role="alert"
           aria-live="polite"
-          className="text-sm text-[var(--error)] ml-8"
+          className="ml-8 text-sm text-error"
         >
           {error}
         </p>
@@ -793,10 +787,10 @@ export function Alert({
   onDismiss
 }: AlertProps) {
   const variantClasses = {
-    info: 'border-[var(--accent-primary)]/20 bg-[var(--accent-soft)] text-[var(--accent-primary)]',
-    success: 'border-[var(--success)]/20 bg-[var(--success)]/10 text-[var(--success)]',
-    warning: 'border-[var(--warning)]/20 bg-[var(--warning)]/10 text-[var(--warning)]',
-    error: 'border-[var(--error)]/20 bg-[var(--error)]/10 text-[var(--error)]'
+    info: 'border-accent-primary/20 bg-accent-soft text-accent-primary',
+    success: 'border-success/20 bg-success/10 text-success',
+    warning: 'border-warning/20 bg-warning/10 text-warning',
+    error: 'border-error/20 bg-error/10 text-error'
   };
   
   const iconMap = {
@@ -808,24 +802,24 @@ export function Alert({
   
   return (
     <div
-      className={`border rounded-[var(--radius-lg)] p-[var(--space-4)] ${variantClasses[variant]} ${className}`.trim()}
+      className={`border rounded-lg p-4 ${variantClasses[variant]} ${className}`.trim()}
       role="alert"
       aria-live="polite"
     >
-      <div className="flex items-start gap-[var(--space-3)]">
-        <span className="text-[var(--font-size-lg)] flex-shrink-0" aria-hidden="true">
+      <div className="flex items-start gap-3">
+        <span className="shrink-0 text-lg" aria-hidden="true">
           {iconMap[variant]}
         </span>
         <div className="flex-1">
           {title && (
-            <h4 className="font-[var(--font-weight-medium)] mb-[var(--space-1)]">{title}</h4>
+            <h4 className="mb-1 font-medium">{title}</h4>
           )}
-          <div className="text-[var(--font-size-sm)]">{children}</div>
+          <div className="text-sm">{children}</div>
         </div>
         {dismissible && onDismiss && (
           <button
             onClick={onDismiss}
-            className="flex-shrink-0 ml-[var(--space-2)] text-current hover:opacity-70 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] rounded-[var(--radius-sm)]"
+            className="focus:ring-accent-primary ml-2 shrink-0 rounded-sm text-current transition-opacity hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary"
             aria-label="Dismiss alert"
           >
             ✕
@@ -868,17 +862,17 @@ export function Toast({
   }, [duration, onDismiss]);
   
   const variantClasses = {
-    info: 'border-[var(--accent-primary)]/20 bg-[var(--bg-elevated)] text-[var(--text-primary)]',
-    success: 'border-[var(--success)]/20 bg-[var(--bg-elevated)] text-[var(--text-primary)]',
-    warning: 'border-[var(--warning)]/20 bg-[var(--bg-elevated)] text-[var(--text-primary)]',
-    error: 'border-[var(--error)]/20 bg-[var(--bg-elevated)] text-[var(--text-primary)]'
+    info: 'border-accent-primary/20 bg-surface text-primary',
+    success: 'border-success/20 bg-surface text-primary',
+    warning: 'border-warning/20 bg-surface text-primary',
+    error: 'border-error/20 bg-surface text-primary'
   };
   
   const iconClasses = {
-    info: 'text-[var(--accent-primary)]',
-    success: 'text-[var(--success)]',
-    warning: 'text-[var(--warning)]',
-    error: 'text-[var(--error)]'
+    info: 'text-accent-primary',
+    success: 'text-success',
+    warning: 'text-warning',
+    error: 'text-error'
   };
   
   const iconMap = {
@@ -903,21 +897,21 @@ export function Toast({
       aria-live="assertive"
     >
       <div className="flex items-start gap-3">
-        <span className={`text-lg flex-shrink-0 ${iconClasses[variant]}`} aria-hidden="true">
+        <span className={`shrink-0 text-lg ${iconClasses[variant]}`} aria-hidden="true">
           {iconMap[variant]}
         </span>
         <div className="flex-1">
           {title && (
-            <h4 className="font-medium mb-1">{title}</h4>
+            <h4 className="mb-1 font-medium">{title}</h4>
           )}
-          <p className="text-sm text-[var(--text-secondary)]">{message}</p>
+          <p className="text-sm text-secondary">{message}</p>
         </div>
         <button
           onClick={() => {
             setIsVisible(false);
             setTimeout(() => onDismiss?.(), 300);
           }}
-          className="flex-shrink-0 ml-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary rounded-sm"
+          className="ml-2 shrink-0 rounded-sm text-muted transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
           aria-label="Dismiss notification"
         >
           ✕
@@ -962,10 +956,10 @@ export function ErrorState({
       <div className={`${iconSizes[size]} mb-4`} role="img" aria-label="Error">
         😞
       </div>
-      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+      <h3 className="mb-2 text-lg font-semibold text-primary">
         {title}
       </h3>
-      <p className="text-sm text-[var(--text-secondary)] mb-4 max-w-md">
+      <p className="mb-4 max-w-md text-sm text-secondary">
         {message}
       </p>
       {onRetry && (
@@ -1015,10 +1009,10 @@ export function EmptyState({
       <div className={`${iconSizes[size]} mb-4`} role="img" aria-label="Empty state">
         {icon}
       </div>
-      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+      <h3 className="mb-2 text-lg font-semibold text-primary">
         {title}
       </h3>
-      <p className="text-sm text-[var(--text-secondary)] mb-4 max-w-md">
+      <p className="mb-4 max-w-md text-sm text-secondary">
         {message}
       </p>
       {action && (
@@ -1045,11 +1039,11 @@ export function StatusBadge({
   size = 'md'
 }: StatusBadgeProps) {
   const statusClasses = {
-    success: 'bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/20',
-    warning: 'bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/20',
-    error: 'bg-[var(--error)]/10 text-[var(--error)] border-[var(--error)]/20',
-    info: 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] border-[var(--accent-primary)]/20',
-    pending: 'bg-[var(--text-muted)]/10 text-[var(--text-muted)] border-[var(--text-muted)]/20'
+    success: 'bg-success/10 text-success border-success/20',
+    warning: 'bg-warning/10 text-warning border-warning/20',
+    error: 'bg-error/10 text-error border-error/20',
+    info: 'bg-accent-primary/10 text-accent-primary border-accent-primary/20',
+    pending: 'bg-text-tertiary/10 text-text-tertiary border-text-tertiary/20'
   };
   
   const sizeClasses = {
@@ -1086,3 +1080,29 @@ export { Avatar } from './Avatar';
 
 // Export the FlexibleGrid component
 export { FlexibleGrid } from './FlexibleGrid';
+
+// Export the ProgressRing component
+export { ProgressRing } from './ProgressRing';
+
+// Export the Stepper component
+export { Stepper } from './Stepper';
+export type { StepperStep } from './Stepper';
+
+// Export the ColorSwatch component
+export { ColorSwatch, ColorPalette } from './ColorSwatch';
+
+// Export the HeatMapCalendar component
+export { HeatMapCalendar } from './HeatMapCalendar';
+export type { HeatMapData } from './HeatMapCalendar';
+
+// Export the DragOverlay components
+export { DragOverlay, LiftedCard, DragPreview, DropZone, DragIndicator } from './DragOverlay';
+
+// Export the TypingIndicator components
+export { TypingIndicator, ChatTypingIndicator, SimpleTypingDots } from './TypingIndicator';
+
+// Export the ToggleRow components
+export { ToggleRow, ToggleGroup, ToggleCard } from './ToggleRow';
+
+// Export the Tooltip components
+export { Tooltip, TooltipTrigger, TruncatedText } from './Tooltip';

@@ -52,7 +52,7 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
         variant={isActive ? "primary" : "ghost"}
         size="icon"
         onClick={toggleDropdown}
-        className="h-9 w-9 relative"
+        className="relative size-9"
         title={`Connectors (${currentConnectorTool.name} selected)`}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -62,9 +62,9 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
       </Button>
       
       {isOpen && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-bg-elevated border border-border-default rounded-xl shadow-xl backdrop-blur-sm p-2 z-[1200] w-44">
+        <div className="bg-bg-elevated border-border-default absolute bottom-full left-1/2 z-[1200] mb-2 w-44 -translate-x-1/2 rounded-xl border p-2 shadow-xl backdrop-blur-sm">
           <div className="flex flex-col gap-1">
-            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide text-center px-2 py-1">
+            <div className="text-text-muted px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide">
               Connectors
             </div>
             <div className="flex flex-col gap-1">
@@ -76,7 +76,7 @@ const ConnectorDropdown: React.FC<ConnectorDropdownProps> = ({ onToolSelect }) =
                     key={tool.id}
                     variant={isToolActive ? "primary" : "ghost"}
                     onClick={() => handleConnectorSelect(tool.id)}
-                    className="flex items-center gap-2 justify-start px-2 py-1.5 h-auto text-left w-full"
+                    className="flex h-auto w-full items-center justify-start gap-2 px-2 py-1.5 text-left"
                     title={tool.name}
                   >
                     <IconComponent size={16} />
