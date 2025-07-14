@@ -9,7 +9,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Search, 
   X, 
-  Star
+  Star,
+  Filter
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
