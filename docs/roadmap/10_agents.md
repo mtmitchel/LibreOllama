@@ -49,6 +49,7 @@ This roadmap is aligned with the **Single-User MVP Strategy**.
 - [ ] **Define & Execute Workflows:** A system to define and run simple, single-user automated workflows.
 - [ ] **Agent Lifecycle Backend:** Backend commands for creating, starting, and stopping an agent.
 - [ ] **Agent List UI:** A UI to list all available, configured agents.
+- [ ] **Agent Creation Form:** Implement the agent creation modal/form.
 
 ### Post-MVP Enhancements
 

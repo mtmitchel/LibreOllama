@@ -3,6 +3,7 @@ import { Filter, X, Search, ChevronDown, ChevronUp, Tag, Loader2 } from 'lucide-
 import { useMailStore } from '../stores/mailStore';
 import { createGmailTauriService } from '../services/gmailTauriService';
 import type { GmailLabel } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface LabelFilterProps {
   selectedLabels: string[];
@@ -50,13 +51,13 @@ const LabelFilter: React.FC<LabelFilterProps> = ({
       setLoading(true);
       setError(null);
       
-      console.log('🏷️ [LabelFilter] Loading labels for account:', currentAccountId);
+      logger.debug('🏷️ [LabelFilter] Loading labels for account:', currentAccountId);
       
       // Use the proper Tauri service instead of HTTP requests
       const gmailService = createGmailTauriService(currentAccountId);
       const gmailLabels = await gmailService.getLabels();
       
-      console.log('🏷️ [LabelFilter] Successfully loaded', gmailLabels.length, 'labels');
+      logger.debug('🏷️ [LabelFilter] Successfully loaded', gmailLabels.length, 'labels');
       setLabels(gmailLabels);
     } catch (err) {
       console.error('🏷️ [LabelFilter] Error loading labels:', err);
@@ -317,7 +318,7 @@ const LabelItem: React.FC<LabelItemProps> = ({ label, isSelected, onToggle }) =>
             {label.name}
           </span>
           <span className="rounded-full bg-accent-soft px-2 py-0.5 text-accent-primary">
-            {label.messageCount}
+            {label.messagesTotal}
           </span>
         </div>
       </div>

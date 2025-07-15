@@ -6,6 +6,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-shell';
 import { 
   GmailTokens, 
   UserInfo, 
@@ -157,8 +158,7 @@ export class GmailAuthService {
     try {
       await invoke('open_browser', { url: authUrl });
     } catch (error) {
-      // Fallback to Tauri's opener plugin
-      const { open } = await import('@tauri-apps/plugin-opener');
+      // Fallback to Tauri's opener plugin (now using shell's open)
       await open(authUrl);
     }
   }
@@ -280,8 +280,8 @@ export class GmailAuthService {
    */
   async getStoredTokens(accountId?: string): Promise<GmailTokens | null> {
     try {
-      const tokens = await invoke('get_secure_tokens', { accountId });
-      return tokens ? (this.securityConfig.tokenEncryption ? await this.decryptTokens(tokens) : tokens) : null;
+      const tokens = await invoke('get_secure_tokens', { accountId }) as string | null;
+      return tokens ? (this.securityConfig.tokenEncryption ? await this.decryptTokens(tokens) : JSON.parse(tokens)) : null;
     } catch (error) {
       console.warn('Failed to retrieve stored tokens:', error);
       return null;
@@ -457,8 +457,8 @@ export class GmailAuthService {
 
   private async decryptTokens(encryptedTokens: string): Promise<GmailTokens> {
     // Use Tauri's secure decryption
-    const decrypted = await invoke('decrypt_data', { encryptedData: encryptedTokens });
-    return JSON.parse(decrypted);
+    const decrypted = await invoke('decrypt_data', { encryptedData: encryptedTokens }) as string;
+    return JSON.parse(decrypted) as GmailTokens;
   }
 
   private async getCurrentAccountId(): Promise<string | null> {

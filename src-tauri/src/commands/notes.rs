@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use tauri::{command, State};
 use crate::database::models::Note;
 use crate::database::operations;
-use chrono::TimeZone;
 
 #[derive(Debug, Serialize)]
 pub struct NoteResponse {

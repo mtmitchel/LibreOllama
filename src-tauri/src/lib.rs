@@ -18,7 +18,10 @@ use commands::tasks::*;        // Google Tasks API operations
 use commands::calendar::*;     // Google Calendar API operations
 use commands::agents::*;       // Agent lifecycle commands  
 use commands::chat::*;         // Chat session commands
+use commands::projects::*;     // Project management commands
 use commands::system::*;       // System and advanced commands
+use commands::text_processing::*;
+use commands::llm::*;
 
 // Legacy command imports (maintained for compatibility)
 use commands::ollama::*;
@@ -29,7 +32,6 @@ use commands::notes::*;
 // use commands::n8n::*;
 // use commands::links::*;
 // use commands::canvas::*;
-use commands::rate_limiter::*;
 
 // CONSOLIDATED: All Gmail auth functionality now in commands::gmail::auth
 // - secure_oauth_flow → gmail/auth
@@ -327,16 +329,38 @@ pub fn run() {
             export_chat_session,
             export_chat_session_markdown,
             get_system_health,
+            // Project commands
+            create_project,
+            get_projects,
+            get_project,
+            update_project,
+            delete_project,
+            create_project_goal,
+            get_project_goals,
+            update_project_goal,
+            delete_project_goal,
+            create_project_asset,
+            get_project_assets,
+            delete_project_asset,
+            get_project_stats,
             // Folder commands
-            // create_folder,
-            // get_folders,
-            // update_folder,
-            // delete_folder,
+            create_folder,
+            get_folders,
+            update_folder,
+            delete_folder,
             // Notes commands
             get_notes,
             create_note,
             update_note,
-            delete_note
+            delete_note,
+            clean_text,
+            llm_chat_openai,
+            llm_chat_mistral,
+            llm_list_mistral_models,
+            save_llm_provider_settings,
+            get_llm_provider_settings,
+            set_enabled_models,
+            get_enabled_models
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

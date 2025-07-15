@@ -17,6 +17,7 @@ import { Button } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface EnhancedMessageActionsProps {
   message: ParsedEmail;
@@ -34,7 +35,7 @@ interface ActionButtonProps {
   isActive?: boolean;
   isLoading?: boolean;
   variant?: 'primary' | 'secondary' | 'danger';
-  size?: 'sm' | 'md';
+  size?: 'default' | 'icon' | 'sm';
 }
 
 function ActionButton({ 
@@ -231,14 +232,14 @@ export function EnhancedMessageActions({
 
   const handleCopyMessageId = () => {
     navigator.clipboard.writeText(message.id).then(() => {
-      console.log('Message ID copied to clipboard');
+              logger.log('Message ID copied to clipboard');
     });
   };
 
   const handleCopyContent = () => {
     const content = message.body || message.snippet || '';
     navigator.clipboard.writeText(content).then(() => {
-      console.log('Message content copied to clipboard');
+              logger.log('Message content copied to clipboard');
     });
   };
 
@@ -320,7 +321,9 @@ export function EnhancedMessageActions({
             <ActionButton
               icon={Download}
               label={`${message.attachments.length} Attachment${message.attachments.length > 1 ? 's' : ''}`}
-              onClick={() => console.log('Download attachments')}
+              onClick={() => {
+            // Future Enhancement: Implement download all attachments functionality. This will likely involve iterating through `message.attachments` and calling a backend command for each, or creating a zip archive on the backend. (Phase 3.x)
+          }}
             />
           )}
         </div>

@@ -1,4 +1,4 @@
-import { ProcessedGmailMessage, ParsedEmail, EmailAddress, EmailAttachment } from '../types';
+import { ProcessedGmailMessage, ParsedEmail, EmailAddress, EmailAttachment, EmailThread } from '../types';
 
 /**
  * Converts ProcessedGmailMessage from backend to ParsedEmail for frontend
@@ -21,8 +21,8 @@ export function convertProcessedGmailMessage(
       id: att.id || '',
       filename: att.filename || 'attachment',
       mimeType: att.content_type || 'application/octet-stream',
-      size: att.size || 0,
-      data: att.data ? Array.from(att.data).map(b => String.fromCharCode(b)).join('') : undefined,
+      size: Number(att.size) || 0,
+      data: att.data ? Array.from(att.data).map(b => String.fromCharCode(Number(b))).join('') : undefined,
     })) || [];
   };
 
@@ -71,4 +71,48 @@ export function convertProcessedGmailMessages(
   accountId: string
 ): ParsedEmail[] {
   return processedMessages.map(msg => convertProcessedGmailMessage(msg, accountId));
+}
+
+/**
+ * Converts an array of ProcessedGmailMessage (representing a thread) to a single EmailThread
+ */
+export function convertProcessedGmailThreadToEmailThread(
+  processedMessages: ProcessedGmailMessage[],
+  accountId: string
+): EmailThread | undefined {
+  if (processedMessages.length === 0) return undefined;
+
+  const parsedEmails = processedMessages.map(msg => convertProcessedGmailMessage(msg, accountId));
+  const firstMessage = parsedEmails[0];
+  const lastMessage = parsedEmails[parsedEmails.length - 1];
+
+  // Collect all participants from all messages in the thread
+  const allParticipants = new Map<string, EmailAddress>();
+  parsedEmails.forEach(msg => {
+    allParticipants.set(msg.from.email, msg.from);
+    msg.to.forEach(p => allParticipants.set(p.email, p));
+    msg.cc?.forEach(p => allParticipants.set(p.email, p));
+    msg.bcc?.forEach(p => allParticipants.set(p.email, p));
+  });
+
+  // Collect all labels from all messages in the thread
+  const allLabels = new Set<string>();
+  parsedEmails.forEach(msg => {
+    msg.labels.forEach(label => allLabels.add(label));
+  });
+
+  return {
+    id: firstMessage.threadId,
+    accountId,
+    subject: firstMessage.subject || '(no subject)',
+    participants: Array.from(allParticipants.values()),
+    lastMessageDate: lastMessage.date,
+    messageCount: parsedEmails.length,
+    isRead: parsedEmails.every(msg => msg.isRead),
+    isStarred: parsedEmails.some(msg => msg.isStarred),
+    hasAttachments: parsedEmails.some(msg => msg.hasAttachments),
+    labels: Array.from(allLabels),
+    snippet: firstMessage.snippet,
+    messages: parsedEmails,
+  };
 } 

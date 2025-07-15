@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, LogOut, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { useGoogleAuth } from './GoogleAuthProvider';
 
 interface GmailAuthButtonProps {
@@ -20,6 +20,8 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
   onAuthError,
   className = ''
 }) => {
+  // Map size prop to Button component's expected values
+  const buttonSize = size === 'lg' ? 'default' : size === 'md' ? 'default' : 'sm';
   const { 
     isAuthenticated, 
     isLoading, 
@@ -72,7 +74,7 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
     return (
       <Button
         variant={variant}
-        size={size}
+        size={buttonSize}
         disabled
         className={`flex items-center gap-2 ${className}`}
       >
@@ -88,7 +90,7 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
       <div className={`flex flex-col gap-2 ${className}`}>
         <Button
           variant="outline"
-          size={size}
+          size={buttonSize}
           onClick={handleSignIn}
           className="flex items-center gap-2 border-error text-error hover:bg-error-ghost"
         >
@@ -131,7 +133,7 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
         
         <Button
           variant={variant === 'primary' ? 'outline' : variant}
-          size={size}
+          size={buttonSize}
           onClick={handleSignOut}
           className="flex items-center gap-2"
         >
@@ -144,12 +146,12 @@ export const GmailAuthButton: React.FC<GmailAuthButtonProps> = ({
 
   // Unauthenticated state
   return (
-    <Button
-      variant={variant}
-      size={size}
-      onClick={handleSignIn}
-      className={`flex items-center gap-2 ${className}`}
-    >
+            <Button
+          variant={variant}
+          size={buttonSize}
+          onClick={handleSignIn}
+          className={`flex items-center gap-2 ${className}`}
+        >
       <Mail size={16} />
       Connect Gmail
     </Button>

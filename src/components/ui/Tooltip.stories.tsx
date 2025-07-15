@@ -290,8 +290,7 @@ export const Tooltips: Story = () => {
           <div className="border-border-default rounded-lg border bg-surface p-6">
             <h3 className="mb-4 font-medium text-primary">Custom formatter</h3>
             <Tooltip 
-              content="Raw tooltip content"
-              tooltipFormatter={(content) => `Formatted: ${content}`}
+              content={"Formatted: Raw tooltip content"}
             >
               <Button variant="outline">Custom format</Button>
             </Tooltip>

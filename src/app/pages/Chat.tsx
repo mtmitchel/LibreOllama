@@ -8,177 +8,275 @@ import { useHeader } from '../contexts/HeaderContext';
 import { ContextSidebar } from '../../features/chat/components/ContextSidebar';
 import { ConversationList } from '../../features/chat/components/ConversationList';
 import { EmptyState } from '../../features/chat/components/EmptyState';
-import { createNewMessage, ChatMessage, ChatConversation } from '../../core/lib/chatMockData';
+import { useChatStore } from '../../features/chat/stores/chatStore';
 
 function Chat() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   
-  // --- STATE MANAGEMENT ---
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // --- ZUSTAND STORE ---
+  const {
+    conversations,
+    messages,
+    selectedConversationId,
+    isLoading,
+    isLoadingMessages,
+    isSending,
+    error,
+    searchQuery,
+    // Actions
+    fetchConversations,
+    createConversation,
+    deleteConversation,
+    selectConversation,
+    togglePinConversation,
+    setSearchQuery,
+    fetchMessages,
+    sendMessage,
+    regenerateResponse,
+    clearError
+  } = useChatStore();
+  
+  // --- LOCAL UI STATE ---
   const [newMessage, setNewMessage] = useState('');
   const [isConvoListOpen, setIsConvoListOpen] = useState(true);
   const [isContextOpen, setIsContextOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [hoveredConversationId, setHoveredConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // --- DATA LOADING & SYNC ---
   useEffect(() => {
-    // Initialize with empty data - API integration needed
-    setConversations([]);
-  }, []);
+    // Load conversations on mount
+    fetchConversations();
+  }, [fetchConversations]);
 
   useEffect(() => {
-    // Load messages for selected chat - API integration needed
-    if (selectedChatId) {
-      setMessages([]);
-    } else {
-      setMessages([]);
-    }
-    // Scroll to the bottom of the messages list
+    // Clear any errors when component mounts
+    clearError();
+  }, [clearError]);
+
+  useEffect(() => {
+    // Scroll to bottom when messages change
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedChatId]);
+  }, [messages, selectedConversationId]);
   
   // --- EVENT HANDLERS ---
-  const handleSendMessage = useCallback((e: React.FormEvent) => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent, attachments?: any[]) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedChatId) return;
-
-    const userMessage = createNewMessage(newMessage, 'user');
+    const hasText = newMessage.trim();
+    const hasAttachments = attachments && attachments.length > 0;
     
-    // Optimistically update UI
-    setMessages(prev => [...prev, userMessage]);
-    setNewMessage('');
+    if ((!hasText && !hasAttachments) || !selectedConversationId || isSending) return;
 
-    // TODO: Send message to backend and get AI response
-  }, [newMessage, selectedChatId]);
+    const messageContent = newMessage.trim();
+    setNewMessage(''); // Clear input immediately
+    
+    try {
+      // If there are attachments, include them in the message
+      if (hasAttachments) {
+        const messageWithAttachments = messageContent 
+          ? `${messageContent}\n\n[Attachments: ${attachments.map(att => att.filename).join(', ')}]`
+          : `[Attachments: ${attachments.map(att => att.filename).join(', ')}]`;
+        
+        await sendMessage(selectedConversationId, messageWithAttachments);
+        console.log('Sent message with attachments:', attachments);
+      } else {
+        await sendMessage(selectedConversationId, messageContent);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      // Error handling is managed by the store
+    }
+  }, [newMessage, selectedConversationId, isSending, sendMessage]);
+
+  const handleNewChat = useCallback(async () => {
+    try {
+      const newConversationId = await createConversation();
+      selectConversation(newConversationId);
+    } catch (error) {
+      console.error('Failed to create new conversation:', error);
+    }
+  }, [createConversation, selectConversation]);
 
   const handleSelectChat = useCallback((chatId: string) => {
-    setSelectedChatId(chatId);
-  }, []);
-  
-  const toggleConvoList = useCallback(() => {
-    setIsConvoListOpen(!isConvoListOpen);
-  }, [isConvoListOpen]);
+    selectConversation(chatId);
+  }, [selectConversation]);
 
-  const toggleContext = useCallback(() => {
-    setIsContextOpen(!isContextOpen);
-  }, [isContextOpen]);
-
-  const togglePinConversation = useCallback((conversationId: string) => {
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === conversationId ? { ...conv, isPinned: !conv.isPinned } : conv
-      ).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
-    );
-  }, []);
-
-  const deleteConversation = useCallback((conversationId: string) => {
-    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-    if (selectedChatId === conversationId) {
-      setSelectedChatId(null);
-      setMessages([]);
+  const handleDeleteConversation = useCallback(async (conversationId: string) => {
+    console.log('🗂️ Chat.tsx handleDeleteConversation called with ID:', conversationId);
+    try {
+      await deleteConversation(conversationId);
+      console.log('✅ Chat.tsx handleDeleteConversation completed successfully');
+    } catch (error) {
+      console.error('❌ Chat.tsx: Failed to delete conversation:', error);
     }
-  }, [selectedChatId]);
+  }, [deleteConversation]);
 
-  const handleEditMessage = useCallback((messageId: string) => {
-    // TODO: Implement message editing functionality
-    console.log('Edit message:', messageId);
-    alert(`Edit message: ${messageId}`);
+  const handleTogglePin = useCallback((conversationId: string) => {
+    togglePinConversation(conversationId);
+  }, [togglePinConversation]);
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, [setSearchQuery]);
+
+  // --- CONTEXT MENU HANDLERS ---
+  const handleRenameConversation = useCallback((conversationId: string) => {
+    // TODO: Implement conversation renaming
+    console.log('Rename conversation:', conversationId);
   }, []);
 
-  const handleCreateTaskFromMessage = useCallback((messageContent: string) => {
-    // TODO: Integrate with task management system
-    console.log('Create task from message:', messageContent);
-    alert(`Creating task from message: "${messageContent.substring(0, 50)}..."`);
+  const handleArchiveConversation = useCallback((conversationId: string) => {
+    // TODO: Implement conversation archiving
+    console.log('Archive conversation:', conversationId);
   }, []);
 
-  // Setup header when component mounts and when selectedChat changes
+  const handleExportConversation = useCallback((conversationId: string) => {
+    // TODO: Implement conversation export
+    console.log('Export conversation:', conversationId);
+  }, []);
+
+  const handleShareConversation = useCallback((conversationId: string) => {
+    // TODO: Implement conversation sharing
+    console.log('Share conversation:', conversationId);
+  }, []);
+
+  const handleRegenerate = useCallback(async (messageId: string) => {
+    if (!selectedConversationId) return;
+    try {
+      await regenerateResponse(selectedConversationId, messageId);
+    } catch (error) {
+      console.error('Failed to regenerate response:', error);
+    }
+  }, [selectedConversationId, regenerateResponse]);
+
+  // --- DERIVED DATA ---
+  const selectedChat = selectedConversationId 
+    ? conversations.find(c => c.id === selectedConversationId) 
+    : null;
+  
+  const currentMessages = selectedConversationId 
+    ? messages[selectedConversationId] || [] 
+    : [];
+
+  // --- HEADER CONFIGURATION ---
   useEffect(() => {
     setHeaderProps({
-      title: "Chat"
+      title: 'Chat',
+      subtitle: selectedChat ? selectedChat.title : 'Select a conversation or create a new one'
     });
+
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [setHeaderProps, clearHeaderProps, selectedChat]);
 
-  const selectedChat = conversations.find(c => c.id === selectedChatId);
+  // --- ERROR DISPLAY ---
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button 
+            onClick={clearError}
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
+  // --- RENDER ---
   return (
-    <div 
-      className="flex h-full"
-      style={{ 
-        background: 'var(--bg-content)',
-        padding: 'var(--space-6)',
-        gap: 'var(--space-6)'
-      }}
-    >
-      {/* SIDEBAR: CONVERSATION LIST */}
+    <div className="flex h-full gap-6 bg-primary p-6">
+      {/* Left Sidebar - Conversation List */}
       <ConversationList
         conversations={conversations}
-        selectedChatId={selectedChatId}
+        selectedChatId={selectedConversationId}
         searchQuery={searchQuery}
-        hoveredConversationId={hoveredConversationId}
         isOpen={isConvoListOpen}
         onSelectChat={handleSelectChat}
-        onNewChat={() => {}} // Removed handleNewChat
-        onSearchChange={setSearchQuery}
+        onNewChat={handleNewChat}
+        onSearchChange={handleSearchChange}
         onHoverConversation={setHoveredConversationId}
-        onTogglePin={togglePinConversation}
-        onDeleteConversation={deleteConversation}
-        onToggle={toggleConvoList}
+        onTogglePin={handleTogglePin}
+        onDeleteConversation={handleDeleteConversation}
+        onToggle={() => setIsConvoListOpen(!isConvoListOpen)}
+        onRenameConversation={handleRenameConversation}
+        onArchiveConversation={handleArchiveConversation}
+        onExportConversation={handleExportConversation}
+        onShareConversation={handleShareConversation}
       />
 
-      {/* MAIN CHAT AREA */}
-      <div className="bg-bg-tertiary flex h-full flex-1 flex-col rounded-lg">
+      {/* Main Chat Area */}
+      <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
         {selectedChat ? (
           <>
-            {/* Header */}
+            {/* Chat Header */}
             <ChatHeader
               selectedChat={selectedChat}
             />
 
-            {/* Messages Area with Fixed Maximum Width - Flexible Growth */}
-            <div className="bg-bg-tertiary min-h-0 flex-1 overflow-y-auto">
-              <div className="mx-auto flex h-full max-w-[1000px] flex-col gap-4 p-6">
-                <div className="flex flex-1 flex-col gap-4">
-                  {messages.map(message => (
-                    <ChatMessageBubble 
-                      key={message.id} 
-                      message={message}
-                      onEdit={handleEditMessage}
-                      onCreateTask={handleCreateTaskFromMessage}
-                    />
-                  ))}
+            {/* Messages Area */}
+            <div className="flex flex-1 overflow-hidden">
+              <div className="flex flex-1 flex-col">
+                <div className="flex-1 overflow-y-auto p-4">
+                  {isLoadingMessages ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-secondary">Loading messages...</div>
+                    </div>
+                  ) : currentMessages.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center text-secondary">
+                        <p>No messages yet.</p>
+                        <p>Start a conversation!</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {currentMessages.map((message) => (
+                        <ChatMessageBubble
+                          key={message.id}
+                          message={message}
+                          variant="ghost"
+                          onRegenerate={handleRegenerate}
+                        />
+                      ))}
+                      {isSending && (
+                        <div className="flex items-center space-x-2 text-secondary">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                          <span>AI is typing...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
 
-            {/* Input Area with Fixed Maximum Width - Anchored to Bottom */}
-            <div className="shrink-0">
-              <div className="mx-auto max-w-[1000px] px-6">
+                {/* Chat Input */}
                 <ChatInput
                   newMessage={newMessage}
-                  selectedChatId={selectedChatId}
-                  selectedChatTitle={selectedChat.title}
+                  selectedChatId={selectedConversationId}
+                  selectedChatTitle={selectedChat?.title}
                   onMessageChange={setNewMessage}
                   onSendMessage={handleSendMessage}
+                  disabled={isSending || isLoadingMessages}
                 />
               </div>
             </div>
           </>
         ) : (
-          <EmptyState onNewChat={() => {}} />
+          /* Empty State */
+          <div className="flex flex-1 items-center justify-center">
+            <EmptyState onNewChat={handleNewChat} />
+          </div>
         )}
       </div>
 
-      {/* CONTEXT SIDEBAR */}
-      <ContextSidebar 
+      {/* Context Sidebar */}
+      <ContextSidebar
         isOpen={isContextOpen}
-        conversationId={selectedChatId || undefined}
-        onToggle={toggleContext}
+        conversationId={selectedConversationId || undefined}
+        onToggle={() => setIsContextOpen(!isContextOpen)}
       />
     </div>
   );

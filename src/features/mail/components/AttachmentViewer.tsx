@@ -56,7 +56,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({
   useEffect(() => {
     const handleDownloadEvent = (event: DownloadEvent) => {
       if (event.data?.download) {
-        setDownloads(prev => new Map(prev.set(event.attachmentId, event.data.download)));
+        setDownloads(prev => new Map(prev.set(event.attachmentId, event.data!.download)));
       }
     };
 

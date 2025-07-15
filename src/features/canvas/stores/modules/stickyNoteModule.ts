@@ -129,7 +129,6 @@ export const createStickyNoteModule = (
 
       findStickyNoteAtPoint: (point) => {
         const { elements } = get();
-        console.log('🔍 [findStickyNoteAtPoint] Searching for sticky note at point:', point);
         
         for (const [id, element] of elements) {
           if (element.type === 'sticky-note' && element.isContainer) {
@@ -138,22 +137,12 @@ export const createStickyNoteModule = (
                                 point.y >= element.y && 
                                 point.y <= element.y + element.height;
             
-            console.log('🔍 [findStickyNoteAtPoint] Checking sticky note:', {
-              id,
-              point,
-              elementBounds: { x: element.x, y: element.y, width: element.width, height: element.height },
-              withinBounds,
-              isContainer: element.isContainer
-            });
-            
             if (withinBounds) {
-              console.log('✅ [findStickyNoteAtPoint] Found sticky note container:', id);
               return id as ElementId;
             }
           }
         }
         
-        console.log('❌ [findStickyNoteAtPoint] No sticky note container found at point');
         return null;
       },
 

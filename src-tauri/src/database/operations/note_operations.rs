@@ -4,7 +4,7 @@
 
 use rusqlite::{Connection, Result, params};
 use crate::database::models::Note;
-use chrono::{NaiveDateTime, Local};
+use chrono::Local;
 
 pub fn get_note(conn: &Connection, id: i32) -> Result<Option<Note>> {
     let mut stmt = conn.prepare("SELECT id, title, content, user_id, folder_id, created_at, updated_at FROM notes WHERE id = ?1")?;

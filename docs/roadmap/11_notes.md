@@ -117,6 +117,7 @@ This roadmap is aligned with the **Single-User MVP Strategy**.
 - [ ] **Tagging System:** Enhanced tagging with tag management UI.
 - [ ] **Note Templates:** Create reusable templates for different types of notes.
 - [ ] **Export Functionality:** Export notes as PDF, Markdown, or other formats.
+- [ ] **DOCX Export:** Investigate and implement a robust solution for exporting notes to `.docx` format.
 
 ### Future Vision & "Wow" Delighters
 
@@ -140,3 +141,9 @@ This roadmap is aligned with the **Single-User MVP Strategy**.
 - [ ] **Type Safety:** Ensure frontend types match backend API contracts.
 - [ ] **Test Coverage:** Add comprehensive tests for both frontend components and backend integration.
 - [ ] **Documentation:** Document the Notes API and frontend integration patterns. 
+
+### Phase 3 Hardening Tests
+
+- **Cross-feature workflow tests:** embed a Canvas snippet inside a Note, link that Note to a Project, reload, and verify all references remain valid.
+- **Cold-boot persistence:** create/edit a note, reload the app, assert editor content, formatting, and metadata are fully re-hydrated.
+- **Accessibility audit:** keyboard navigation for Tiptap fixed toolbar, slash command menu, and folder tree must pass `axe-core` with zero critical violations. 

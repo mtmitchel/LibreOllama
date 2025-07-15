@@ -57,12 +57,9 @@ const ElementRendererComponent: React.FC<ElementRendererProps> = ({
   const elements = useUnifiedCanvasStore(state => state.elements) as Map<ElementId, CanvasElement>;
   const isSnappingEnabled = useUnifiedCanvasStore(state => state.snapToGrid || false);
   const snapTolerance = useUnifiedCanvasStore(state => 10); // Default snap tolerance
-  // Snap lines functionality - temporarily disabled until unified store implements it
-  const snapLines: any[] = [];
-  const setSnapLines = useCallback((lines: any[]) => {
-    // TODO: Implement snap lines in unified store
-    canvasLog.debug('Snap lines would be set:', lines);
-  }, []);
+  // Snap lines functionality
+  const snapLines = useUnifiedCanvasStore(state => state.snapLines);
+  const setSnapLines = useUnifiedCanvasStore(state => state.setSnapLines);
 
   const handleDragMove = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     if (!isSnappingEnabled) return;

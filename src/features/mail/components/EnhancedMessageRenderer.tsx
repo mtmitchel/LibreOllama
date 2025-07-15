@@ -2,6 +2,8 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Copy, ExternalLink, Shield, AlertTriangle } from 'lucide-react';
 import { Text, Button } from '../../../components/ui';
 import { ParsedEmail, EmailAddress } from '../types';
+import 'highlight.js/styles/github.css';
+import { logger } from '../../../core/lib/logger';
 
 interface EnhancedMessageRendererProps {
   message: ParsedEmail;
@@ -217,12 +219,12 @@ function sanitizeHtmlContent(html: string, enableImages: boolean): { sanitized: 
 
 // Extract quoted text from message content
 function extractQuotedText(content: string): { main: string; quoted: string | null } {
-  // Common quoted text patterns
+  // Common quoted text patterns (using [\s\S] instead of 's' flag for ES compatibility)
   const patterns = [
-    /^(.*?)(\n\s*On .* wrote:\s*\n.*)/s,
-    /^(.*?)(\n\s*-----Original Message-----.*)/s,
-    /^(.*?)(\n\s*From:.*\nSent:.*\nTo:.*\nSubject:.*\n.*)/s,
-    /^(.*?)(\n\s*>.*)/s,
+    /^(.*?)(\n\s*On .* wrote:\s*\n[\s\S]*)/,
+    /^(.*?)(\n\s*-----Original Message-----[\s\S]*)/,
+    /^(.*?)(\n\s*From:.*\nSent:.*\nTo:.*\nSubject:.*\n[\s\S]*)/,
+    /^(.*?)(\n\s*>[\s\S]*)/,
   ];
 
   for (const pattern of patterns) {
@@ -280,7 +282,7 @@ export function EnhancedMessageRenderer({
   }, [content, contentType, showSource]);
 
   const handleLinkClick = (url: string) => {
-    console.log('External link clicked:', url);
+    logger.debug('External link clicked:', url);
     // Could add link preview functionality here
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -291,7 +293,7 @@ export function EnhancedMessageRenderer({
       : main;
     
     navigator.clipboard.writeText(textContent).then(() => {
-      console.log('Content copied to clipboard');
+      logger.debug('Content copied to clipboard');
     });
   };
 
@@ -352,7 +354,7 @@ export function EnhancedMessageRenderer({
       )}
 
       {/* Enhanced styling */}
-      <style jsx>{`
+      <style>{`
         .enhanced-message-renderer .html-content {
           max-width: 100%;
         }

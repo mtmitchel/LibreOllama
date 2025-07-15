@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Heading, Text } from '../../../components/ui';
-import { Download, MoreHorizontal } from 'lucide-react';
+import { ModelSelector } from './ModelSelector';
 
 interface ChatConversation {
   id: string;
@@ -25,20 +25,10 @@ export function ChatHeader({ selectedChat }: ChatHeaderProps) {
           <Heading level={4} className="mb-1">
             {selectedChat.title}
           </Heading>
-          <Text variant="secondary" size="sm">
-            Conversation
-          </Text>
         </div>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <Button variant="secondary" size="sm" className="flex items-center gap-2">
-          <Download size={14} />
-          Export
-        </Button>
-        <Button variant="ghost" size="icon" className="text-secondary hover:text-primary">
-          <MoreHorizontal size={18} />
-        </Button>
+        
+        {/* Model Selector */}
+        <ModelSelector />
       </div>
     </header>
   );

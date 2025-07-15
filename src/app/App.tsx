@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HeaderProvider } from './contexts/HeaderContext';
 import { ThemeProvider } from '../components/ThemeProvider';
 import Sidebar from '../components/navigation/Sidebar';
-import { TopBar } from '../components/layout/TopBar';
+import { UnifiedHeader } from '../components/layout/UnifiedHeader';
 import { CommandPalette } from '../components/CommandPalette';
 import { useCommandPalette } from '../core/hooks/useCommandPalette';
 import { StagewiseToolbar } from '@stagewise/toolbar-react';
+import { useInitializeSettings } from '../stores/settingsStore';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -28,7 +29,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden">
       <header role="banner">
-        <TopBar />
+        <UnifiedHeader />
       </header>
       <main 
         role="main" 
@@ -41,7 +42,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
           <Route path="/mail" element={<Mail />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/notes" element={<Notes />} />
-          <Route path="/canvas" element={<CanvasPage appSidebarOpen={isSidebarOpen} />} />
+          <Route path="/canvas" element={<CanvasPage />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/agents" element={<Agents />} />
@@ -56,6 +57,11 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
 export default function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const { isOpen, close } = useCommandPalette();
+  const initializeSettings = useInitializeSettings();
+
+  useEffect(() => {
+    initializeSettings();
+  }, [initializeSettings]);
 
   return (
     <ThemeProvider>

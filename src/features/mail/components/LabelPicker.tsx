@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tag, Plus, Check, X, Search, Loader2 } from 'lucide-react';
+import { logger, debugLogger } from '../../../core/lib/logger';
 
 interface Label {
   id: string;
@@ -109,7 +110,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
       setLoading(true);
       setError(null);
       
-      // TODO: Replace with actual Gmail API call
+      // Future Enhancement: Replace with actual Gmail API call to fetch labels (Phase 3.x)
       const response = await fetch('/api/gmail/labels');
       const data = await response.json();
       
@@ -119,7 +120,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
         throw new Error(data.error || 'Failed to load labels');
       }
     } catch (err) {
-      console.error('Error loading labels:', err);
+      debugLogger.error('Error loading labels:', err); // Use debugLogger
       setError(err instanceof Error ? err.message : 'Failed to load labels');
     } finally {
       setLoading(false);
@@ -140,7 +141,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
         labelListVisibility: 'show'
       };
 
-      // TODO: Replace with actual Gmail API call
+      // Future Enhancement: Replace with actual Gmail API call to create a new label (Phase 3.x)
       const response = await fetch('/api/gmail/labels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -159,7 +160,7 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
         throw new Error(data.error || 'Failed to create label');
       }
     } catch (err) {
-      console.error('Error creating label:', err);
+      debugLogger.error('Error creating label:', err); // Use debugLogger
       setError(err instanceof Error ? err.message : 'Failed to create label');
     } finally {
       setLoading(false);

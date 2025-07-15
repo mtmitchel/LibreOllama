@@ -14,6 +14,7 @@ export interface FocusItem {
   title: string;
   team: string;
   color: string;
+  isCompleted?: boolean;
 }
 
 export interface AgentStatus {

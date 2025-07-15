@@ -34,7 +34,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const root = window.document.documentElement;
     
     const getSystemTheme = () => {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      // Guard against test environments where matchMedia might not be properly mocked
+      if (!window.matchMedia) {
+        return 'light'; // Default to light theme in test environments
+      }
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      return mediaQuery?.matches ? 'dark' : 'light';
     };
 
     const applyTheme = (themeToApply: 'light' | 'dark') => {
@@ -47,7 +52,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       const systemTheme = getSystemTheme();
       applyTheme(systemTheme);
 
+      // Add guard for test environments
+      if (!window.matchMedia) {
+        return () => {}; // Return empty cleanup function for tests
+      }
+
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      // Additional guard for test environments where mock might not be complete
+      if (!mediaQuery || typeof mediaQuery.addEventListener !== 'function') {
+        return () => {}; // Return empty cleanup function for incomplete mocks
+      }
+
       const handleChange = () => {
         const newSystemTheme = getSystemTheme();
         applyTheme(newSystemTheme);

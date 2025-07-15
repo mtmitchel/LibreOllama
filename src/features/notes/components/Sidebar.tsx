@@ -49,7 +49,7 @@ const DroppableFolder = ({ folder, children }: { folder: any, children: React.Re
 }
 
 const ForwardedCard = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Card>>((props, ref) => (
-  <Card {...props} ref={ref} />
+  <div {...props} ref={ref} />
 ));
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => {
@@ -253,8 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
         return (
           <DroppableFolder key={item.id} folder={item}>
             <div
-              className={`group flex cursor-pointer items-center justify-between rounded-md p-2 text-sm font-medium ${selectedFolderId === item.id ? 'bg-accent-soft text-accent-primary' : 'hover:bg-tertiary'}`}
-              className={`pl-${paddingLeft / 4}`}
+              className={`group flex cursor-pointer items-center justify-between rounded-md p-2 text-sm font-medium ${selectedFolderId === item.id ? 'bg-accent-soft text-accent-primary' : 'hover:bg-tertiary'} pl-${parseFloat(paddingLeft) / 4}`}
             >
               <div className="flex flex-1 items-center gap-2" onClick={() => selectFolder(item.id)}>
                 <ChevronRight 

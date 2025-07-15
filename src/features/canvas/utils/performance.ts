@@ -2,6 +2,8 @@
 // Simplified performance monitoring for canvas operations
 // Replaces 16 duplicate performance monitoring files
 
+import { performanceLogger } from '../../../core/lib/logger'; // Import performanceLogger
+
 export interface MemoryAlert {
   type: 'warning' | 'critical';
   message: string;
@@ -20,7 +22,7 @@ export interface MemorySnapshot {
 export const canvasMetrics = {
   trackRender: (component: string, duration: number) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Canvas render: ${component} - ${duration}ms`);
+      performanceLogger.debug(`Canvas render: ${component} - ${duration}ms`); // Use performanceLogger
     }
   },
   
@@ -36,7 +38,7 @@ export const canvasMetrics = {
       const start = performance.now();
       fn();
       const duration = performance.now() - start;
-      console.debug(`Canvas operation: ${operation} - ${duration}ms`);
+      performanceLogger.debug(`Canvas operation: ${operation} - ${duration}ms`); // Use performanceLogger
     } else {
       fn();
     }
@@ -47,7 +49,7 @@ export const canvasMetrics = {
       const start = performance.now();
       await fn();
       const duration = performance.now() - start;
-      console.debug(`Canvas async operation: ${operation} - ${duration}ms`);
+      performanceLogger.debug(`Canvas async operation: ${operation} - ${duration}ms`); // Use performanceLogger
     } else {
       await fn();
     }
@@ -87,14 +89,14 @@ export const MemoryUsageMonitor = {
   setComponentInstances(count: number) {
     // Simplified - just for compatibility
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Canvas components: ${count}`);
+      performanceLogger.debug(`Canvas components: ${count}`); // Use performanceLogger
     }
   },
 
   addCanvasElements(count: number) {
     // Simplified - just for compatibility
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Canvas elements added: ${count}`);
+      performanceLogger.debug(`Canvas elements added: ${count}`); // Use performanceLogger
     }
   },
 
@@ -126,32 +128,32 @@ export const MemoryUsageMonitor = {
   // Compatibility stubs for MVP - simplified implementations
   trackCanvasOperation: <T>(name: string, operation: () => T): T => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Canvas operation: ${name}`);
+      performanceLogger.debug(`Canvas operation: ${name}`); // Use performanceLogger
     }
     return operation();
   },
 
   addKonvaNode: (count: number) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Konva nodes added: ${count}`);
+      performanceLogger.debug(`Konva nodes added: ${count}`); // Use performanceLogger
     }
   },
 
   removeKonvaNode: (count: number) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Konva nodes removed: ${count}`);
+      performanceLogger.debug(`Konva nodes removed: ${count}`); // Use performanceLogger
     }
   },
 
   addTextureMemory: (sizeMB: number) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Texture memory added: ${sizeMB}MB`);
+      performanceLogger.debug(`Texture memory added: ${sizeMB}MB`); // Use performanceLogger
     }
   },
 
   removeTextureMemory: (sizeMB: number) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Texture memory removed: ${sizeMB}MB`);
+      performanceLogger.debug(`Texture memory removed: ${sizeMB}MB`); // Use performanceLogger
     }
   },
 
@@ -172,7 +174,7 @@ export const MemoryUsageMonitor = {
   forceGarbageCollection: () => {
     // No-op for compatibility
     if (process.env.NODE_ENV === 'development') {
-      console.debug('GC request (no-op in simplified version)');
+      performanceLogger.debug('GC request (no-op in simplified version)'); // Use performanceLogger
     }
   },
 
@@ -193,13 +195,13 @@ export const MemoryUsageMonitor = {
 
   setEventListeners: (count: number) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Event listeners: ${count}`);
+      performanceLogger.debug(`Event listeners: ${count}`); // Use performanceLogger
     }
   },
 
   setCachedElements: (count: number) => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`Cached elements: ${count}`);
+      performanceLogger.debug(`Cached elements: ${count}`); // Use performanceLogger
     }
   }
 };
@@ -207,7 +209,7 @@ export const MemoryUsageMonitor = {
 // Legacy compatibility exports to minimize breaking changes
 export const recordMetric = (name: string, value: number, category?: string, metadata?: object) => {
   if (process.env.NODE_ENV === 'development') {
-    console.debug(`Canvas metric: ${name} = ${value}`, category && { category }, metadata && { metadata });
+    performanceLogger.debug(`Canvas metric: ${name} = ${value}`, category && { category }, metadata && { metadata }); // Use performanceLogger
   }
 };
 

@@ -46,12 +46,21 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 - [x] **Secure Token Storage:** Use the OS keyring for OAuth tokens. *(Existing)*
 - [x] **Chat Backend Services:** Complete backend implementation for chat functionality. *(Existing)*
 
+### Code-Level Cleanup & Feature Completion
+- [ ] **Implement Async Database Connections:** Refactor database operations in `agent_operations.rs`, `template_operations.rs`, and `performance_operations.rs` to use a proper async connection pool instead of placeholder sync connections.
+- [ ] **Implement Secure Key Management:** Replace the placeholder key management in `database/connection.rs` with a secure production-ready solution.
+- [ ] **Implement Attachment Extraction:** Add the logic to properly extract and process email attachments in `api_service.rs`.
+
 ### Post-MVP Enhancements
 
 - [ ] **Background Sync:** A system for background data sync for email and calendar.
 - [ ] **WebSocket Support:** Add WebSocket support for future real-time features.
 - [ ] **Projects Backend:** Create backend services and APIs for the Projects system.
 - [ ] **Notes Backend:** Create backend services and APIs for the Notes system.
+- [ ] **Advanced Text Processing & AI Quality:**
+    - [ ] Implement self-critique validation loops where the LLM evaluates its own response for accuracy and formatting before finalizing.
+    - [ ] Add a multi-response ranking system to generate several answers and automatically select the highest-quality one.
+    - [ ] Integrate advanced text normalization libraries (`unicode-normalization`, `unaccent`) for more robust text cleaning.
 
 ### Future Vision & "Wow" Delighters
 

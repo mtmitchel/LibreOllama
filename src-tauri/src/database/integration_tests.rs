@@ -4,8 +4,6 @@
 //! ensuring all systems work together properly.
 
 use anyhow::Result;
-use std::fs;
-use uuid::Uuid;
 
 use crate::database::{self, DatabaseManager};
 use crate::commands::agents::{CreateAgentRequest, UpdateAgentRequest};
@@ -13,6 +11,7 @@ use crate::commands::agents::{CreateAgentRequest, UpdateAgentRequest};
 /// Test helper functions that work with DatabaseManager directly
 mod test_helpers {
     use super::*;
+    use uuid::Uuid;
     use crate::database::operations;
     use crate::commands::agents::{Agent, AgentExecution};
     use crate::database::{AgentExecution as DbAgentExecution, ChatSession as DbChatSession, ChatMessage as DbChatMessage};
@@ -75,7 +74,7 @@ mod test_helpers {
             }
         }
     }
-    use chrono::{DateTime, Utc, TimeZone};
+    use chrono::TimeZone;
 
     /// Create a database manager for testing
     pub async fn create_test_db_manager() -> Result<DatabaseManager> {

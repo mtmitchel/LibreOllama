@@ -1,17 +1,27 @@
 import React from 'react';
+import { Text, Card, Caption, Button, Avatar } from '../../../components/ui';
 import { ChatMessage } from '../../../core/lib/chatMockData';
-import { Caption, Text, Button, Avatar, Card } from '../../../components/ui';
-import { User, Bot, Copy, Edit3, CheckSquare } from 'lucide-react';
+import { formatTimestamp } from '../utils/formatTimestamp';
+import { User, Bot, Copy, Edit3, CheckSquare, RotateCcw } from 'lucide-react';
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
-  variant?: 'muted' | 'ghost' | 'outlined';
+  variant?: 'default' | 'ghost' | 'muted' | 'outlined';
   onEdit?: (messageId: string) => void;
   onCreateTask?: (messageContent: string) => void;
+  onRegenerate?: (messageId: string) => void;
 }
 
-export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreateTask }: ChatMessageBubbleProps) {
+export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreateTask, onRegenerate }: ChatMessageBubbleProps) {
   const isUser = message.sender === 'user';
+  
+  // Debug: remove in production
+  // console.log('ChatMessageBubble', {
+  //   messageId: message.id,
+  //   sender: message.sender,
+  //   isUser,
+  //   hasOnRegenerate: !!onRegenerate
+  // });
 
   const handleCopyMessage = () => {
     navigator.clipboard.writeText(message.content);
@@ -26,6 +36,12 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
   const handleCreateTask = () => {
     if (onCreateTask) {
       onCreateTask(message.content);
+    }
+  };
+
+  const handleRegenerate = () => {
+    if (onRegenerate && !isUser) {
+      onRegenerate(message.id);
     }
   };
 
@@ -69,14 +85,16 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
             {isUser ? 'You' : 'LibreOllama'}
           </Text>
           <span className="text-text-secondary mx-1">·</span>
-          <span className="text-text-secondary">{message.timestamp}</span>
+          <span className="text-text-secondary">{formatTimestamp(message.timestamp)}</span>
         </Caption>
         
-        {/* Message Bubble using Card Component with proper elevation */}
-        <Card 
-          className={`group relative ${getBubbleClasses()}`}
-          padding="default"
-        >
+        {/* Message Bubble and Actions Container */}
+        <div className="group">
+          {/* Message Bubble using Card Component with proper elevation */}
+          <Card 
+            className={`relative ${getBubbleClasses()}`}
+            padding="default"
+          >
           {/* Enhanced readability with proper line spacing and typography */}
           <Text 
             size="sm" 
@@ -97,46 +115,62 @@ export function ChatMessageBubble({ message, variant = 'ghost', onEdit, onCreate
             ))}
           </Text>
           
-          {/* Message Actions - Positioned top-right of the bubble */}
-          <div className="absolute -right-2 -top-2 flex gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
-            {/* Copy Button - Always available */}
+
+        </Card>
+        
+        {/* Message Actions - Positioned at the bottom of the message */}
+        <div className={`mt-2 flex gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+          {/* Copy Button - Always available */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleCopyMessage}
+            title="Copy message"
+            className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
+          >
+            <Copy className="text-text-secondary size-3" />
+          </Button>
+
+          {/* Regenerate Button - Only for AI messages */}
+          {!isUser && onRegenerate && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleCopyMessage}
-              title="Copy message"
+              onClick={handleRegenerate}
+              title="Regenerate response"
               className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
             >
-              <Copy className="text-text-secondary size-3" />
+              <RotateCcw className="text-text-secondary size-3" />
             </Button>
+          )}
 
-            {/* Edit Button - Only for user messages */}
-            {isUser && onEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleEditMessage}
-                title="Edit message"
-                className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
-              >
-                <Edit3 className="text-text-secondary size-3" />
-              </Button>
-            )}
+          {/* Edit Button - Only for user messages */}
+          {isUser && onEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleEditMessage}
+              title="Edit message"
+              className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
+            >
+              <Edit3 className="text-text-secondary size-3" />
+            </Button>
+          )}
 
-            {/* Create Task Button - Available for all messages */}
-            {onCreateTask && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCreateTask}
-                title="Create task from message"
-                className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
-              >
-                <CheckSquare className="text-text-secondary size-3" />
-              </Button>
-            )}
-          </div>
-        </Card>
+          {/* Create Task Button - Available for all messages */}
+          {onCreateTask && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCreateTask}
+              title="Create task from message"
+              className="border-border-primary size-auto rounded-lg border bg-content p-2 shadow-sm motion-safe:hover:scale-105"
+            >
+              <CheckSquare className="text-text-secondary size-3" />
+            </Button>
+          )}
+        </div>
+        </div>
       </div>
     </div>
   );

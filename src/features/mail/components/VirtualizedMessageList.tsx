@@ -5,6 +5,7 @@ import { Text, Button } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface VirtualizedMessageListProps {
   className?: string;
@@ -128,7 +129,7 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick, style }: M
           className="min-w-0 flex-1 cursor-pointer overflow-hidden"
           onClick={() => onMessageClick(message)}
         >
-          <div className="flex min-w-0 items-baseline" className="gap-1">
+                      <div className="flex min-w-0 items-baseline gap-1">
             <Text 
               size="sm" 
               weight={!message.isRead ? 'semibold' : 'normal'}
@@ -261,7 +262,8 @@ export function VirtualizedMessageList({
     totalMessages,
     messagesLoadedSoFar,
     pageSize,
-    currentPage
+    currentPage,
+    setCurrentMessage
   } = useMailStore();
   
   const { executeFetchOperation } = useMailOperation();
@@ -281,46 +283,31 @@ export function VirtualizedMessageList({
   const virtualItems = rowVirtualizer.getVirtualItems();
 
   const handleMessageClick = async (message: ParsedEmail) => {
-    console.log('🔍 [DEBUG] Email clicked:', {
-      messageId: message.id,
+    if (!message) return;
+
+    logger.debug('🔍 [DEBUG] Email clicked:', {
+      id: message.id,
       subject: message.subject,
-      currentMessage: useMailStore.getState().currentMessage?.id
     });
-    
-    try {
-      // Immediate fallback: Set the message directly from the list data
-      useMailStore.setState({ 
-        currentMessage: message,
-        isLoading: false,
-        error: null 
-      });
-      
-      console.log('🚀 [DEBUG] Set message immediately from list data');
-      
-      // Try to fetch full message details in the background
-      try {
-        await executeFetchOperation(
-          () => fetchMessage(message.id),
-          'message details'
-        );
-        
-        console.log('✅ [DEBUG] Full message details fetched successfully');
-      } catch (fetchError) {
-        console.warn('⚠️ [DEBUG] Full message fetch failed, using list data:', fetchError);
-      }
-      
-      // Call optional callback
-      if (onMessageSelect) {
-        onMessageSelect(message);
-      }
-      
-    } catch (error) {
-      console.error('❌ [DEBUG] Message click failed completely:', error);
-      useMailStore.setState({ 
-        error: `Failed to open email: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        isLoading: false 
-      });
+
+    // Optimistic update: set the current message immediately from the list data
+    // This makes the UI feel faster while the full details are fetched
+    if (message.body) { // Changed from message.textBody || message.htmlBody
+      logger.debug('🚀 [DEBUG] Set message immediately from list data');
+      setCurrentMessage(message);
     }
+
+    // Asynchronous fetch: get the full message details from the backend
+    fetchMessage(message.id)
+      .then((fullMessage) => {
+        if (fullMessage) {
+          logger.debug('✅ [DEBUG] Full message details fetched successfully');
+          setCurrentMessage(fullMessage); // Update with full details
+        }
+      })
+      .catch(err => {
+        logger.error('❌ [DEBUG] Failed to fetch full message details', err);
+      });
   };
 
   const handleSelect = (messageId: string, isSelected: boolean) => {

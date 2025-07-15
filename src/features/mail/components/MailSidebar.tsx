@@ -26,6 +26,7 @@ import { GmailAccount } from '../types';
 import { useState } from 'react';
 import LabelManager from './LabelManager';
 import LabelSettings from './LabelSettings';
+import { logger } from '../../../core/lib/logger';
 
 interface MailSidebarProps {
   isOpen?: boolean;
@@ -128,18 +129,18 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       
       // Don't auto-refresh if account has authentication errors
       if (!hasAuthError) {
-        console.log('🏷️ [SIDEBAR] Fetching labels for account:', currentAccountId);
+        logger.debug('🏷️ [SIDEBAR] Fetching labels for account:', currentAccountId);
         fetchLabels(currentAccountId).catch(error => {
-          console.error('🏷️ [SIDEBAR] Failed to fetch labels:', error);
+          logger.error('🏷️ [SIDEBAR] Failed to fetch labels:', error);
         });
         
         // Also refresh account quota to get latest values
-        console.log('💾 [SIDEBAR] Refreshing quota for account:', currentAccountId);
+        logger.debug('💾 [SIDEBAR] Refreshing quota for account:', currentAccountId);
         refreshAccount(currentAccountId).catch(error => {
-          console.error('💾 [SIDEBAR] Failed to refresh quota:', error);
+          logger.error('💾 [SIDEBAR] Failed to refresh quota:', error);
         });
       } else {
-        console.log('⚠️ [SIDEBAR] Skipping auto-refresh due to authentication error for account:', currentAccountId);
+        logger.warn('⚠️ [SIDEBAR] Skipping auto-refresh due to authentication error for account:', currentAccountId);
       }
     }
   }, [isAuthenticated, currentAccountId, fetchLabels, refreshAccount, getCurrentAccount]);
@@ -153,7 +154,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
       
       // Don't auto-refresh if account has authentication errors
       if (!hasQuotaData && !hasAuthError) {
-        console.log('🔄 [SIDEBAR] Auto-refreshing missing quota data');
+        logger.debug('🔄 [SIDEBAR] Auto-refreshing missing quota data');
         setIsRefreshingQuota(true);
         refreshAccount(currentAccountId).finally(() => {
           setIsRefreshingQuota(false);
@@ -164,19 +165,19 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
 
   // Debug logging for labels
   React.useEffect(() => {
-    console.log('🏷️ [SIDEBAR] Labels updated:', labels.length, labels);
-    console.log('🏷️ [SIDEBAR] All label types:', [...new Set(labels.map(l => l.type))]);
-    console.log('🏷️ [SIDEBAR] User labels:', labels.filter(l => l.type === 'user').length);
-    console.log('🏷️ [SIDEBAR] System labels:', labels.filter(l => l.type === 'system').length);
-    console.log('🏷️ [SIDEBAR] All user label IDs:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
-    console.log('🏷️ [SIDEBAR] show labels:', labels.filter(l => l.labelListVisibility === 'show').length);
-    console.log('🏷️ [SIDEBAR] hide labels:', labels.filter(l => l.labelListVisibility === 'hide').length);
-    console.log('🏷️ [SIDEBAR] All visibilities:', [...new Set(labels.map(l => l.labelListVisibility))]);
-    console.log('🏷️ [SIDEBAR] User labels with labelShow:', labels.filter(l => 
+    logger.debug('🏷️ [SIDEBAR] Labels updated:', labels.length, labels);
+    logger.debug('🏷️ [SIDEBAR] All label types:', [...new Set(labels.map(l => l.type))]);
+    logger.debug('🏷️ [SIDEBAR] User labels:', labels.filter(l => l.type === 'user').length);
+    logger.debug('🏷️ [SIDEBAR] System labels:', labels.filter(l => l.type === 'system').length);
+    logger.debug('🏷️ [SIDEBAR] All user label IDs:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
+    logger.debug('🏷️ [SIDEBAR] show labels:', labels.filter(l => l.labelListVisibility === 'show').length);
+    logger.debug('🏷️ [SIDEBAR] hide labels:', labels.filter(l => l.labelListVisibility === 'hide').length);
+    logger.debug('🏷️ [SIDEBAR] All visibilities:', [...new Set(labels.map(l => l.labelListVisibility))]);
+    logger.debug('🏷️ [SIDEBAR] User labels with labelShow:', labels.filter(l => 
       l.type === 'user' && 
       l.labelListVisibility === 'show'
     ).map(l => ({ id: l.id, name: l.name })));
-    console.log('🏷️ [SIDEBAR] All user labels regardless of visibility:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
+    logger.debug('🏷️ [SIDEBAR] All user labels regardless of visibility:', labels.filter(l => l.type === 'user').map(l => ({ id: l.id, name: l.name, visibility: l.labelListVisibility })));
   }, [labels]);
 
   // Get real counts from labels (use threadsUnread for conversations count)
@@ -186,7 +187,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     
     // Debug logging for problematic labels
     if (labelId === 'INBOX' || labelId === 'STARRED') {
-      console.log(`📊 [SIDEBAR] Label ${labelId}:`, {
+      logger.debug(`📊 [SIDEBAR] Label ${labelId}:`, {
         found: !!label,
         threadsUnread: label?.threadsUnread,
         messagesUnread: label?.messagesUnread,
@@ -241,6 +242,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   };
 
   const handleLabelClick = async (labelId: string) => {
+    logger.debug(`📊 [SIDEBAR] Label ${labelId} clicked`);
     setCurrentLabel(labelId);
     // Fetch messages for the selected label
     const { fetchMessages } = useMailStore.getState();
@@ -492,7 +494,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
 
           {labelsExpanded && (
             <div className="mt-2">
-              <div className="flex flex-col" className="gap-1">
+              <div className="flex flex-col gap-1">
                 {labels.length > 0 ? (
                   labels.filter(label => 
                     label.type === 'user'
@@ -513,8 +515,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                       >
                         <div className="p-3">
                           <div 
-                            className="flex items-center"
-                            className="gap-3"
+                            className="flex items-center gap-3"
                           >
                             <Tag 
                               size={16} 
@@ -570,21 +571,21 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
         isOpen={isLabelManagerOpen}
         onClose={() => setIsLabelManagerOpen(false)}
         onLabelCreated={(label) => {
-          console.log('Label created:', label);
+          logger.debug('Label created:', label);
           // Refresh labels after creation
           if (currentAccountId) {
             fetchLabels(currentAccountId);
           }
         }}
         onLabelUpdated={(label) => {
-          console.log('Label updated:', label);
+          logger.debug('Label updated:', label);
           // Refresh labels after update
           if (currentAccountId) {
             fetchLabels(currentAccountId);
           }
         }}
         onLabelDeleted={(labelId) => {
-          console.log('Label deleted:', labelId);
+          logger.debug('Label deleted:', labelId);
           // Refresh labels after deletion
           if (currentAccountId) {
             fetchLabels(currentAccountId);
@@ -596,10 +597,12 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
         isOpen={isLabelSettingsOpen}
         onClose={() => setIsLabelSettingsOpen(false)}
         onSettingsChange={(settings) => {
-          console.log('Label settings changed:', settings);
+          logger.debug('Label settings changed:', settings);
           // Handle label settings change
         }}
       />
+
+
     </Card>
   );
 }

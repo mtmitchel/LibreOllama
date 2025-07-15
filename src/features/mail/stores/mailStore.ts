@@ -28,12 +28,14 @@ import {
   SearchOperator,
   SearchSuggestion
 } from '../types/search';
-import { convertProcessedGmailMessages, convertProcessedGmailMessage } from '../utils/messageConverter';
+import { convertProcessedGmailMessages, convertProcessedGmailMessage, convertProcessedGmailThreadToEmailThread } from '../utils/messageConverter';
 
 
 
 // Remove manual localStorage handling - Zustand persist will handle this
-console.log('🔑 [AUTH] Zustand persistence will restore authentication state automatically');
+import { logger } from '../../../core/lib/logger';
+
+logger.debug('🔑 [AUTH] Zustand persistence will restore authentication state automatically');
 
 const initialState: MailState = {
   // Multi-Account Authentication
@@ -180,7 +182,7 @@ const useMailStore = create<EnhancedMailStore>()(
           const state = get();
           const accountData = state.getActiveAccountData();
           const labels = accountData?.labels || [];
-          console.log('📋 [STORE] getLabels called, returning:', labels.length, 'labels for account:', state.currentAccountId);
+          logger.debug('📋 [STORE] getLabels called, returning:', labels.length, 'labels for account:', state.currentAccountId);
           return labels;
         },
 
@@ -220,7 +222,7 @@ const useMailStore = create<EnhancedMailStore>()(
           });
 
           try {
-            console.log('📧 [STORE] Adding account to store:', account.email);
+            logger.debug('📧 [STORE] Adding account to store:', account.email);
             
             // Add new account and make it active immediately (no artificial delay needed)
             set((state) => {
@@ -248,23 +250,23 @@ const useMailStore = create<EnhancedMailStore>()(
             // Fetch real data for the new account (skip in test environment to avoid race conditions)
             if (process.env.NODE_ENV !== 'test') {
               const { fetchMessages, fetchLabels } = get();
-              console.log(`🔄 [STORE] Fetching initial data for new account: ${account.email}`);
+              logger.debug(`🔄 [STORE] Fetching initial data for new account: ${account.email}`);
               
               try {
                 // Fetch labels first, then messages (labels needed for total count)
                 await fetchLabels(account.id);
                 await fetchMessages(undefined, undefined, undefined, account.id);
-                console.log(`✅ [STORE] Initial data loaded for account: ${account.email}`);
+                                  logger.debug(`✅ [STORE] Initial data loaded for account: ${account.email}`);
               } catch (dataError) {
                 console.warn(`⚠️ [STORE] Failed to load initial data for account: ${account.email}`, dataError);
                 // Don't fail the account addition, just log the warning
                 // User can manually refresh to load data
               }
             } else {
-              console.log(`🧪 [STORE] Test environment detected - skipping automatic data fetch for account: ${account.email}`);
+                              logger.debug(`🧪 [STORE] Test environment detected - skipping automatic data fetch for account: ${account.email}`);
             }
             
-            console.log('✅ [STORE] Account added successfully:', account.email);
+            logger.debug('✅ [STORE] Account added successfully:', account.email);
           } catch (error) {
             console.error('❌ [STORE] Failed to add account:', error);
             const handledError = handleGmailError(error, {
@@ -329,19 +331,19 @@ const useMailStore = create<EnhancedMailStore>()(
         refreshAccount: async (accountId: string) => {
           const account = get().accounts[accountId];
           if (!account) {
-            console.error('Account not found:', accountId);
+            logger.error('[MAIL_STORE] Account not found:', accountId);
             return;
           }
 
           // Check if account is already in error state with authentication issues
           if (account.syncStatus === 'error' && account.errorMessage?.includes('Authentication')) {
-            console.log('⚠️ [STORE] Skipping refresh for account with authentication error:', account.email);
+            logger.warn('[MAIL_STORE] Skipping refresh for account with authentication error:', account.email);
             return;
           }
 
           // Check if account is already syncing
           if (account.syncStatus === 'syncing') {
-            console.log('⚠️ [STORE] Account already syncing, skipping refresh:', account.email);
+            logger.warn('[MAIL_STORE] Account already syncing, skipping refresh:', account.email);
             return;
           }
 
@@ -352,7 +354,7 @@ const useMailStore = create<EnhancedMailStore>()(
           });
 
           try {
-            console.log('🔄 [STORE] Refreshing account quota:', account.email);
+            logger.log('[MAIL_STORE] Refreshing account quota:', account.email);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(accountId);
@@ -387,7 +389,7 @@ const useMailStore = create<EnhancedMailStore>()(
 
             // Fetch quota information using Google Drive API
             try {
-              console.log('🔍 [QUOTA] Fetching storage quota from Google Drive API...');
+              logger.debug('[MAIL_STORE] Fetching storage quota from Google Drive API...');
               
               // Create tokens object for quota fetch
               const tokens = {
@@ -405,10 +407,10 @@ const useMailStore = create<EnhancedMailStore>()(
               });
 
               if (!response.ok) {
-                console.warn('⚠️ [QUOTA] Drive API not available, keeping existing quota values');
+                logger.warn('[MAIL_STORE] Drive API not available, keeping existing quota values');
               } else {
                 const data = await response.json();
-                console.log('🔍 [QUOTA] Raw API response:', data);
+                logger.debug('[MAIL_STORE] Raw API response:', data);
                 const storageQuota = data.storageQuota;
                 
                 if (storageQuota) {
@@ -417,11 +419,11 @@ const useMailStore = create<EnhancedMailStore>()(
                   
                   // Some Google accounts (Workspace, Google One) don't return a limit
                   if (!total || total < 0) {
-                    console.log('⚠️ [QUOTA] No limit returned by API, account may have custom quota');
+                    logger.warn('[MAIL_STORE] No limit returned by API, account may have custom quota');
                     total = 0;
                   }
                   
-                  console.log('✅ [QUOTA] Storage quota parsed:', {
+                  logger.debug('[MAIL_STORE] Storage quota parsed:', {
                     used: `${(used / (1024 * 1024 * 1024)).toFixed(1)} GB`,
                     total: total > 0 ? `${(total / (1024 * 1024 * 1024)).toFixed(1)} GB` : 'Custom/Unlimited',
                     percentage: total > 0 ? `${((used / total) * 100).toFixed(1)}%` : 'N/A',
@@ -448,9 +450,9 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
             
-            console.log('✅ [STORE] Account refreshed successfully');
+            logger.log('[MAIL_STORE] Account refreshed successfully');
           } catch (error) {
-            console.error('❌ [STORE] Failed to refresh account:', error);
+            logger.error('[MAIL_STORE] Failed to refresh account:', error);
             set((state) => {
               if (state.accounts[accountId]) {
                 state.accounts[accountId].syncStatus = 'error';
@@ -466,11 +468,11 @@ const useMailStore = create<EnhancedMailStore>()(
         syncAllAccounts: async () => {
           const accounts = get().accounts;
           if (Object.keys(accounts).length === 0) {
-            console.log('📭 [SYNC] No accounts to sync');
+            logger.log('[MAIL_STORE] No accounts to sync');
             return;
           }
 
-          console.log(`🔄 [SYNC] Starting sync for ${Object.keys(accounts).length} accounts`);
+          logger.log(`[MAIL_STORE] Starting sync for ${Object.keys(accounts).length} accounts`);
           
           set((state) => {
             state.isLoadingAccounts = true;
@@ -486,16 +488,16 @@ const useMailStore = create<EnhancedMailStore>()(
             // Sync all accounts in parallel
             const syncPromises = Object.values(accounts).map(async (account) => {
               try {
-                console.log(`🔄 [SYNC] Syncing account: ${account.email}`);
+                logger.log(`[MAIL_STORE] Syncing account: ${account.email}`);
                 
                 // Fetch labels first, then messages (labels needed for total count)
                 await fetchLabels(account.id);
                 await fetchMessages(undefined, undefined, undefined, account.id);
                 
-                console.log(`✅ [SYNC] Account synced: ${account.email}`);
+                logger.log(`[MAIL_STORE] Account synced: ${account.email}`);
                 return account.id;
               } catch (error) {
-                console.error(`❌ [SYNC] Failed to sync account ${account.email}:`, error);
+                logger.error(`[MAIL_STORE] Failed to sync account ${account.email}:`, error);
                 set((state) => {
                   if (state.accounts[account.id]) {
                     state.accounts[account.id].syncStatus = 'error';
@@ -515,9 +517,9 @@ const useMailStore = create<EnhancedMailStore>()(
               state.isLoadingAccounts = false;
             });
             
-            console.log(`✅ [SYNC] All accounts synced successfully`);
+            logger.log(`[MAIL_STORE] All accounts synced successfully`);
           } catch (error) {
-            console.error('❌ [SYNC] Sync failed for some accounts:', error);
+            logger.error('[MAIL_STORE] Sync failed for some accounts:', error);
             const handledError = handleGmailError(error, {
               operation: 'sync_all_accounts',
             });
@@ -587,13 +589,13 @@ const useMailStore = create<EnhancedMailStore>()(
           // Wait for store hydration to complete before fetching messages
           const state = get();
           if (!state.isHydrated) {
-            console.log('⏳ [STORE] Waiting for store hydration before fetching messages...');
+            logger.debug('[MAIL_STORE] Waiting for store hydration before fetching messages...');
             // Wait a bit for hydration to complete
             await new Promise(resolve => setTimeout(resolve, 50));
             // Check again after waiting
             const updatedState = get();
             if (!updatedState.isHydrated) {
-              console.warn('⚠️ [STORE] Store not hydrated after waiting - proceeding anyway');
+              logger.warn('[MAIL_STORE] Store not hydrated after waiting - proceeding anyway');
             }
           }
 
@@ -603,7 +605,7 @@ const useMailStore = create<EnhancedMailStore>()(
           });
           
           try {
-            console.log(`📨 [STORE] Fetching real messages for account: ${targetAccountId}`);
+            logger.log(`[MAIL_STORE] Fetching real messages for account: ${targetAccountId}`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
@@ -622,28 +624,28 @@ const useMailStore = create<EnhancedMailStore>()(
               if (labelExists) {
                 labelIds = [labelId];
               } else {
-                console.warn(`⚠️ [STORE] Label ${labelId} not found, falling back to INBOX`);
+                logger.warn(`[MAIL_STORE] Label ${labelId} not found, falling back to INBOX`);
                 // Don't throw error - gracefully fall back to INBOX
                 labelIds = ['INBOX'];
               }
             }
             
             // Fetch real messages from Gmail API
-            console.log(`🔍 [STORE] Requesting messages:`, { query, labelIds, maxResults: 25, pageToken });
+            logger.debug(`[MAIL_STORE] Requesting messages:`, { query, labelIds, maxResults: 25, pageToken });
             const result = await gmailApi.searchMessages(query, labelIds, 25, pageToken);
             
-            console.log(`✅ [STORE] Fetched ${result.messages.length} real messages`);
-            console.log(`🔗 [STORE] API result:`, { 
+            logger.log(`[MAIL_STORE] Fetched ${result.messages.length} real messages`);
+            logger.debug(`[MAIL_STORE] API result:`, { 
               messageCount: result.messages.length, 
               nextPageToken: result.next_page_token,
               hasNextPageToken: !!result.next_page_token,
               resultSizeEstimate: result.result_size_estimate
             });
-            console.log(`🔗 [STORE] Full API result:`, result);
+            logger.debug(`[MAIL_STORE] Full API result:`, result);
             
             // Debug: Log first few message subjects to verify data
             if (result.messages.length > 0) {
-              console.log(`📧 [STORE] First few messages:`, result.messages.slice(0, 3).map(msg => ({
+              logger.debug(`[MAIL_STORE] First few messages:`, result.messages.slice(0, 3).map(msg => ({
                 id: msg.id,
                 subject: msg.parsed_content?.subject || 'No subject',
                 from: msg.parsed_content?.from?.email || 'No sender'
@@ -680,8 +682,8 @@ const useMailStore = create<EnhancedMailStore>()(
               const currentLabel = labelId || 'INBOX';
               const targetLabel = accountData.labels.find(label => label.id === currentLabel);
               
-              console.log(`[QUOTA_DEBUG] All labels for account ${targetAccountId}:`, JSON.stringify(accountData.labels, null, 2));
-              console.log(`[QUOTA_DEBUG] Searching for label: ${currentLabel}, Found:`, targetLabel);
+              logger.debug(`[MAIL_STORE] All labels for account ${targetAccountId}:`, JSON.stringify(accountData.labels, null, 2));
+              logger.debug(`[MAIL_STORE] Searching for label: ${currentLabel}, Found:`, targetLabel);
 
               let totalUnreadMessages = 0;
               
@@ -689,20 +691,20 @@ const useMailStore = create<EnhancedMailStore>()(
                 totalMessages = targetLabel.messagesTotal;
                 // Use threadsUnread instead of messagesUnread for conversation count
                 totalUnreadMessages = targetLabel.threadsUnread || 0;
-                console.log(`📄 [STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread conversations: ${totalUnreadMessages}`);
+                logger.debug(`[MAIL_STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread conversations: ${totalUnreadMessages}`);
               } else if (result.result_size_estimate && result.result_size_estimate > 0) {
                 // Secondary: Use API's result_size_estimate (often inaccurate)
                 totalMessages = result.result_size_estimate;
                 // For unread count when we don't have label data, count unread in current results
                 totalUnreadMessages = convertProcessedGmailMessages(result.messages, targetAccountId).filter(msg => !msg.isRead).length;
-                console.log(`📄 [STORE] Set totalMessages from API resultSizeEstimate: ${totalMessages}`);
+                logger.debug(`[MAIL_STORE] Set totalMessages from API resultSizeEstimate: ${totalMessages}`);
               } else {
                 // Last resort: estimate based on current data (likely wrong)
                 totalMessages = pageToken ? 
                   Math.max(result.messages.length, state.messagesLoadedSoFar + result.messages.length) :
                   result.messages.length;
                 totalUnreadMessages = convertProcessedGmailMessages(result.messages, targetAccountId).filter(msg => !msg.isRead).length;
-                console.log(`📄 [STORE] Set totalMessages from estimation fallback: ${totalMessages}`);
+                logger.debug(`[MAIL_STORE] Set totalMessages from estimation fallback: ${totalMessages}`);
               }
               
               state.accountData[targetAccountId].totalMessages = totalMessages;
@@ -736,7 +738,7 @@ const useMailStore = create<EnhancedMailStore>()(
               state.totalUnreadMessages = totalUnreadMessages;
               state.nextPageToken = result.next_page_token;
               
-              console.log(`📄 [STORE] *** FETCH COMPLETE ***`, {
+              logger.debug(`📄 [MAIL_STORE] *** FETCH COMPLETE ***`, {
                 messagesLoadedSoFar: state.messagesLoadedSoFar,
                 nextPageToken: state.nextPageToken,
                 tokensInStack: state.pageTokens.length,
@@ -748,7 +750,7 @@ const useMailStore = create<EnhancedMailStore>()(
               // No need for prevPageToken in token-based pagination
             });
           } catch (error) {
-            console.error('❌ [STORE] Failed to fetch messages:', error);
+            logger.error('❌ [STORE] Failed to fetch messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'fetch_messages',
               accountId: targetAccountId || undefined,
@@ -761,117 +763,91 @@ const useMailStore = create<EnhancedMailStore>()(
         },
 
         fetchMessage: async (messageId: string, accountId?: string) => {
-          const targetAccountId = accountId || get().currentAccountId;
-          if (!targetAccountId) return;
-
-          set((state) => {
-            state.isLoading = true;
-            state.error = null;
-          });
-          
+          set({ isLoadingMessages: true, error: null });
           try {
-            console.log(`📧 [STORE] Fetching real message: ${messageId}`);
-            
-            // Get Gmail API service for the account
-            const gmailApi = createGmailTauriService(targetAccountId);
-            if (!gmailApi) {
-              throw new Error('Failed to initialize Gmail API service');
-            }
+            const currentAccountId = accountId || get().currentAccountId;
+            if (!currentAccountId) throw new Error('No account selected');
 
-            // First check if we already have the message in our store
-            const accountData = get().accountData[targetAccountId];
-            let message = accountData?.messages.find(msg => msg.id === messageId);
-            
-            // If not found in store, fetch from API
-            if (!message) {
-              console.log(`🔍 [STORE] Message not in store, fetching from API...`);
-              const processedMessage = await gmailApi.getParsedMessage(messageId);
-              if (processedMessage) {
-                message = convertProcessedGmailMessage(processedMessage, targetAccountId);
+            const gmailApi = createGmailTauriService(currentAccountId);
+            if (!gmailApi) throw new Error('Gmail service not initialized');
+
+            // Use getParsedMessage to get the correct type for conversion
+            const message = await gmailApi.getParsedMessage(messageId); // Changed to getParsedMessage
+            if (!message) throw new Error('Message not found');
+
+            const parsedMessage = convertProcessedGmailMessage(message, currentAccountId); // Corrected argument order
+
+            set(state => {
+              const accountData = state.accountData[currentAccountId];
+              if (accountData) {
+                const existingMessageIndex = accountData.messages.findIndex(m => m.id === messageId);
+                if (existingMessageIndex !== -1) {
+                  accountData.messages[existingMessageIndex] = parsedMessage;
+                } else {
+                  accountData.messages.push(parsedMessage);
+                }
               }
-            }
-            
-            if (!message) {
-              throw new Error('Message not found');
-            }
-
-            console.log(`✅ [STORE] Message fetched: ${message.subject}`);
-
-            set((state) => {
-              state.currentMessage = message;
-              state.isLoading = false;
+              state.currentMessage = parsedMessage; // Set currentMessage
             });
+            logger.debug('[MAIL_STORE] Fetched message:', messageId);
+            return parsedMessage; // Return the parsed message
+
           } catch (error) {
-            console.error('❌ [STORE] Failed to fetch message:', error);
             const handledError = handleGmailError(error, {
               operation: 'fetch_message',
-              accountId: targetAccountId || undefined,
               messageId,
+              accountId,
             });
-            set((state) => {
-              state.error = handledError.message;
-              state.isLoading = false;
-            });
+            set({ error: handledError.message, isLoadingMessages: false });
+            throw handledError;
           }
         },
 
         fetchThread: async (threadId: string, accountId?: string) => {
-          const targetAccountId = accountId || get().currentAccountId;
-          if (!targetAccountId) return;
-
-          set((state) => {
-            state.isLoadingThreads = true;
-            state.error = null;
-          });
-          
+          set({ isLoadingThreads: true, error: null });
           try {
-            console.log(`🧵 [STORE] Fetching real thread: ${threadId}`);
+            const currentAccountId = accountId || get().currentAccountId;
+            if (!currentAccountId) throw new Error('No account selected');
+
+            const gmailApi = createGmailTauriService(currentAccountId);
+            if (!gmailApi) throw new Error('Gmail service not initialized');
+
+            const threadMessages = await gmailApi.getThread(threadId); // Get array of ProcessedGmailMessage
+            if (!threadMessages || threadMessages.length === 0) throw new Error('Thread not found or empty');
             
-            // Get Gmail API service for the account
-            const gmailApi = createGmailTauriService(targetAccountId);
-            if (!gmailApi) {
-              throw new Error('Failed to initialize Gmail API service');
-            }
+            // Use the new conversion function for threads
+            const parsedThread = convertProcessedGmailThreadToEmailThread(threadMessages, currentAccountId); 
+            if (!parsedThread) throw new Error('Failed to parse thread');
 
-            const messages = await gmailApi.getThread(threadId);
-
-            if (messages.length === 0) {
-              throw new Error('Thread not found or contains no messages.');
-            }
-
-            const convertedMessages = convertProcessedGmailMessages(messages, targetAccountId);
-            const thread: EmailThread = {
-              id: threadId,
-              accountId: targetAccountId!,
-              subject: messages[0].parsed_content.subject || '',
-              participants: Array.from(new Set([
-                ...convertedMessages.flatMap(msg => [msg.from, ...msg.to, ...(msg.cc || []), ...(msg.bcc || [])])
-              ])),
-              messages: convertedMessages,
-              lastMessageDate: new Date(messages[messages.length - 1].internal_date || Date.now()),
-              isRead: messages.every(msg => !msg.labels.includes('UNREAD')),
-              isStarred: messages.some(msg => msg.labels.includes('STARRED')),
-              labels: Array.from(new Set(messages.flatMap(msg => msg.labels))),
-              messageCount: messages.length,
-              hasAttachments: messages.some(msg => msg.parsed_content.attachments.length > 0),
-              snippet: messages[0]?.snippet || '',
-            };
-
-            set((state) => {
-              state.currentThread = thread;
-              state.isLoadingThreads = false;
+            set(state => {
+              // Update or add the thread to the accountData
+              const accountData = state.accountData[currentAccountId];
+              if (accountData) {
+                const existingThreadIndex = accountData.threads.findIndex(t => t.id === threadId);
+                if (existingThreadIndex !== -1) {
+                  accountData.threads[existingThreadIndex] = parsedThread;
+                } else {
+                  accountData.threads.push(parsedThread);
+                }
+              }
+              state.currentThread = parsedThread; // Set currentThread
             });
+            logger.debug('[MAIL_STORE] Fetched thread:', threadId);
+            return parsedThread; // Return the parsed thread
+
           } catch (error) {
             const handledError = handleGmailError(error, {
               operation: 'fetch_thread',
               threadId,
-              accountId: targetAccountId || undefined,
+              accountId,
             });
-            set((state) => {
-              state.error = handledError.message;
-              state.isLoadingThreads = false;
-            });
+            set({ error: handledError.message, isLoadingThreads: false });
+            throw handledError;
           }
+        },
+
+        setCurrentThread: (thread: EmailThread | null) => {
+          set(state => { state.currentThread = thread; });
         },
 
         // Real Gmail API implementations
@@ -880,7 +856,7 @@ const useMailStore = create<EnhancedMailStore>()(
           if (!targetAccountId) return;
 
           try {
-            console.log(`📖 [STORE] Marking ${messageIds.length} messages as read`);
+            logger.log(`[MAIL_STORE] Marking ${messageIds.length} messages as read`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
@@ -907,9 +883,9 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
             
-            console.log(`✅ [STORE] Successfully marked messages as read`);
+            logger.log(`[MAIL_STORE] Successfully marked messages as read`);
           } catch (error) {
-            console.error('❌ [STORE] Failed to mark messages as read:', error);
+            logger.error('❌ [STORE] Failed to mark messages as read:', error);
             const handledError = handleGmailError(error, {
               operation: 'mark_as_read',
               accountId: targetAccountId || undefined,
@@ -925,7 +901,7 @@ const useMailStore = create<EnhancedMailStore>()(
           if (!targetAccountId) return;
 
           try {
-            console.log(`📩 [STORE] Marking ${messageIds.length} messages as unread`);
+            logger.log(`[MAIL_STORE] Marking ${messageIds.length} messages as unread`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
@@ -954,9 +930,9 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
             
-            console.log(`✅ [STORE] Successfully marked messages as unread`);
+            logger.log(`[MAIL_STORE] Successfully marked messages as unread`);
           } catch (error) {
-            console.error('❌ [STORE] Failed to mark messages as unread:', error);
+            logger.error('❌ [STORE] Failed to mark messages as unread:', error);
             const handledError = handleGmailError(error, {
               operation: 'mark_as_unread',
               accountId: targetAccountId || undefined,
@@ -972,7 +948,7 @@ const useMailStore = create<EnhancedMailStore>()(
           if (!targetAccountId) return;
 
           try {
-            console.log(`🗑️ [STORE] Deleting ${messageIds.length} messages`);
+            logger.log(`[MAIL_STORE] Deleting ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
@@ -994,9 +970,9 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
             
-            console.log(`✅ [STORE] Successfully deleted messages`);
+            logger.log(`[MAIL_STORE] Successfully deleted messages`);
           } catch (error) {
-            console.error('❌ [STORE] Failed to delete messages:', error);
+            logger.error('❌ [STORE] Failed to delete messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'delete_messages',
               accountId: targetAccountId || undefined,
@@ -1012,7 +988,7 @@ const useMailStore = create<EnhancedMailStore>()(
           if (!targetAccountId) return;
 
           try {
-            console.log(`📦 [STORE] Archiving ${messageIds.length} messages`);
+            logger.log(`[MAIL_STORE] Archiving ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
@@ -1036,9 +1012,9 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
             
-            console.log(`✅ [STORE] Successfully archived messages`);
+            logger.log(`[MAIL_STORE] Successfully archived messages`);
           } catch (error) {
-            console.error('❌ [STORE] Failed to archive messages:', error);
+            logger.error('❌ [STORE] Failed to archive messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'archive_messages',
               accountId: targetAccountId || undefined,
@@ -1054,7 +1030,7 @@ const useMailStore = create<EnhancedMailStore>()(
           if (!targetAccountId) return;
 
           try {
-            console.log(`⭐ [STORE] Starring ${messageIds.length} messages`);
+            logger.log(`[MAIL_STORE] Starring ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
@@ -1081,9 +1057,9 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
             
-            console.log(`✅ [STORE] Successfully starred messages`);
+            logger.log(`[MAIL_STORE] Successfully starred messages`);
           } catch (error) {
-            console.error('❌ [STORE] Failed to star messages:', error);
+            logger.error('❌ [STORE] Failed to star messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'star_messages',
               accountId: targetAccountId || undefined,
@@ -1099,7 +1075,7 @@ const useMailStore = create<EnhancedMailStore>()(
           if (!targetAccountId) return;
 
           try {
-            console.log(`☆ [STORE] Unstarring ${messageIds.length} messages`);
+            logger.log(`[MAIL_STORE] Unstarring ${messageIds.length} messages`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
@@ -1124,9 +1100,9 @@ const useMailStore = create<EnhancedMailStore>()(
               }
             });
             
-            console.log(`✅ [STORE] Successfully unstarred messages`);
+            logger.log(`[MAIL_STORE] Successfully unstarred messages`);
           } catch (error) {
-            console.error('❌ [STORE] Failed to unstar messages:', error);
+            logger.error('❌ [STORE] Failed to unstar messages:', error);
             const handledError = handleGmailError(error, {
               operation: 'unstar_messages',
               accountId: targetAccountId || undefined,
@@ -1141,29 +1117,29 @@ const useMailStore = create<EnhancedMailStore>()(
         fetchLabels: async (accountId?: string) => {
           const targetAccountId = accountId || get().currentAccountId;
           if (!targetAccountId) {
-            console.warn('🏷️ [STORE] No target account ID for fetchLabels');
+            logger.warn('🏷️ [STORE] No target account ID for fetchLabels');
             return;
           }
 
           try {
-            console.log(`🏷️ [STORE] Fetching real labels for account: ${targetAccountId}`);
+            logger.log(`🏷️ [STORE] Fetching real labels for account: ${targetAccountId}`);
             
             // Get Gmail API service for the account
             const gmailApi = createGmailTauriService(targetAccountId);
             if (!gmailApi) {
-              console.error('🏷️ [STORE] Failed to get Gmail API service for account:', targetAccountId);
+              logger.error('🏷️ [STORE] Failed to get Gmail API service for account:', targetAccountId);
               throw new Error('Failed to initialize Gmail API service');
             }
 
             // Fetch real labels from Gmail API
             const labels = await gmailApi.getLabels();
             
-            console.log(`✅ [STORE] Fetched ${labels.length} real labels:`, labels.map(l => l.name));
+            logger.log(`✅ [STORE] Fetched ${labels.length} real labels:`, labels.map(l => l.name));
 
             set((state) => {
               // Initialize account data if it doesn't exist
               if (!state.accountData[targetAccountId]) {
-                console.log('🏷️ [STORE] Initializing account data for:', targetAccountId);
+                logger.debug('🏷️ [STORE] Initializing account data for:', targetAccountId);
                 state.accountData[targetAccountId] = {
                   messages: [],
                   threads: [],
@@ -1177,11 +1153,11 @@ const useMailStore = create<EnhancedMailStore>()(
               }
               
               // Update labels with real data
-              console.log(`🏷️ [STORE] Setting ${labels.length} labels for account:`, targetAccountId);
+              logger.debug(`🏷️ [STORE] Setting ${labels.length} labels for account:`, targetAccountId);
               state.accountData[targetAccountId].labels = labels;
             });
           } catch (error) {
-            console.error('❌ [STORE] Failed to fetch labels:', error);
+            logger.error('❌ [STORE] Failed to fetch labels:', error);
             
             // If tokens are corrupted, they've already been cleared by the API service
             if (error instanceof Error && error.message.includes('Authentication tokens are corrupted')) {
@@ -1218,7 +1194,7 @@ const useMailStore = create<EnhancedMailStore>()(
                 { id: 'DRAFT', name: 'Drafts', messageListVisibility: 'show' as const, labelListVisibility: 'show' as const, type: 'system' as const, messagesTotal: 0, messagesUnread: 0, threadsTotal: 0, threadsUnread: 0, color: '#fbbc04' },
               ];
               
-              console.log(`🏷️ [STORE] Setting fallback labels for account:`, targetAccountId);
+              logger.debug(`🏷️ [STORE] Setting fallback labels for account:`, targetAccountId);
               state.accountData[targetAccountId].labels = fallbackLabels;
             });
             
@@ -1559,7 +1535,7 @@ const useMailStore = create<EnhancedMailStore>()(
 
         saveDraft: async (email: ComposeEmail) => {
           // Implementation for saving draft
-          console.log('Saving draft for account:', email.accountId);
+          logger.log('Saving draft for account:', email.accountId);
         },
 
         cancelCompose: () => {
@@ -1599,9 +1575,9 @@ const useMailStore = create<EnhancedMailStore>()(
               state.searchQuery = query;
             });
             
-            console.log(`✅ [SEARCH] Search completed: ${searchResult.messages.length} results in ${searchResult.searchTime}ms`);
+            logger.log(`✅ [SEARCH] Search completed: ${searchResult.messages.length} results in ${searchResult.searchTime}ms`);
           } catch (error) {
-            console.error('❌ [SEARCH] Search failed:', error);
+            logger.error('❌ [SEARCH] Search failed:', error);
             const handledError = handleGmailError(error, {
               operation: 'search_messages',
               accountId: targetAccountId,
@@ -1631,9 +1607,9 @@ const useMailStore = create<EnhancedMailStore>()(
               state.searchQuery = searchResult.query;
             });
             
-            console.log(`✅ [SEARCH] Filter search completed: ${searchResult.messages.length} results`);
+            logger.log(`✅ [SEARCH] Filter search completed: ${searchResult.messages.length} results`);
           } catch (error) {
-            console.error('❌ [SEARCH] Filter search failed:', error);
+            logger.error('❌ [SEARCH] Filter search failed:', error);
             const handledError = handleGmailError(error, {
               operation: 'search_with_filters',
               accountId: targetAccountId,
@@ -1663,9 +1639,9 @@ const useMailStore = create<EnhancedMailStore>()(
               state.searchQuery = searchResult.query;
             });
             
-            console.log(`✅ [SEARCH] Advanced search completed: ${searchResult.messages.length} results`);
+            logger.log(`✅ [SEARCH] Advanced search completed: ${searchResult.messages.length} results`);
           } catch (error) {
-            console.error('❌ [SEARCH] Advanced search failed:', error);
+            logger.error('❌ [SEARCH] Advanced search failed:', error);
             const handledError = handleGmailError(error, {
               operation: 'search_with_advanced_filters',
               accountId: targetAccountId,
@@ -1685,7 +1661,7 @@ const useMailStore = create<EnhancedMailStore>()(
           try {
             return await searchService.getSuggestions(query, targetAccountId);
           } catch (error) {
-            console.error('❌ [SEARCH] Failed to get suggestions:', error);
+            logger.error('❌ [SEARCH] Failed to get suggestions:', error);
             return [];
           }
         },
@@ -1704,7 +1680,7 @@ const useMailStore = create<EnhancedMailStore>()(
           try {
             await searchService.saveSearch(searchQuery);
           } catch (error) {
-            console.error('❌ [SEARCH] Failed to save search:', error);
+            logger.error('❌ [SEARCH] Failed to save search:', error);
           }
         },
 
@@ -1712,7 +1688,7 @@ const useMailStore = create<EnhancedMailStore>()(
           try {
             await searchService.deleteSearch(searchId);
           } catch (error) {
-            console.error('❌ [SEARCH] Failed to delete search:', error);
+            logger.error('❌ [SEARCH] Failed to delete search:', error);
           }
         },
 
@@ -1720,7 +1696,7 @@ const useMailStore = create<EnhancedMailStore>()(
           try {
             await searchService.clearSearchHistory();
           } catch (error) {
-            console.error('❌ [SEARCH] Failed to clear search history:', error);
+            logger.error('❌ [SEARCH] Failed to clear search history:', error);
           }
         },
 
@@ -1797,7 +1773,7 @@ const useMailStore = create<EnhancedMailStore>()(
         nextPage: async () => {
           const state = get();
           if (state.nextPageToken) {
-            console.log('🔄 [PAGINATION] Next page triggered:', {
+            logger.debug('🔄 [PAGINATION] Next page triggered:', {
               currentTokens: state.pageTokens.length,
               messagesLoadedSoFar: state.messagesLoadedSoFar,
               nextPageToken: state.nextPageToken
@@ -1816,7 +1792,7 @@ const useMailStore = create<EnhancedMailStore>()(
               s.pageTokens = newPageTokens;
               s.messagesLoadedSoFar = newMessagesLoadedSoFar;
               
-              console.log('🔄 [PAGINATION] Atomic state update complete:', {
+              logger.debug('🔄 [PAGINATION] Atomic state update complete:', {
                 tokens: s.pageTokens.length,
                 messagesLoadedSoFar: s.messagesLoadedSoFar,
                 calculation: `${newPageTokens.length} tokens * ${s.currentPageSize} pageSize = ${newMessagesLoadedSoFar}`
@@ -1827,7 +1803,7 @@ const useMailStore = create<EnhancedMailStore>()(
             
             // POST-UPDATE LOGGING: Confirm state after goToPage completes
             const finalState = get();
-            console.log('📄 [PAGINATION] Final state after nextPage complete:', {
+            logger.debug('📄 [PAGINATION] Final state after nextPage complete:', {
               messagesLoadedSoFar: finalState.messagesLoadedSoFar,
               pageTokens: finalState.pageTokens.length,
               totalMessages: finalState.totalMessages,
@@ -1841,7 +1817,7 @@ const useMailStore = create<EnhancedMailStore>()(
           const state = get();
           if (state.pageTokens.length === 0) return; // Can't go back from first page
           
-          console.log('🔄 [PAGINATION] Prev page triggered:', {
+          logger.debug('🔄 [PAGINATION] Prev page triggered:', {
             currentTokens: state.pageTokens.length,
             messagesLoadedSoFar: state.messagesLoadedSoFar
           });
@@ -1859,7 +1835,7 @@ const useMailStore = create<EnhancedMailStore>()(
             s.pageTokens = newTokens;
             s.messagesLoadedSoFar = newMessagesLoadedSoFar;
             
-            console.log('🔄 [PAGINATION] Atomic state update complete:', {
+            logger.debug('🔄 [PAGINATION] Atomic state update complete:', {
               tokens: s.pageTokens.length,
               messagesLoadedSoFar: s.messagesLoadedSoFar,
               calculation: `${newTokens.length} tokens * ${s.currentPageSize} pageSize = ${newMessagesLoadedSoFar}`
@@ -1870,7 +1846,7 @@ const useMailStore = create<EnhancedMailStore>()(
           
           // POST-UPDATE LOGGING: Confirm state after goToPage completes
           const finalState = get();
-          console.log('📄 [PAGINATION] Final state after prevPage complete:', {
+          logger.debug('📄 [PAGINATION] Final state after prevPage complete:', {
             messagesLoadedSoFar: finalState.messagesLoadedSoFar,
             pageTokens: finalState.pageTokens.length,
             totalMessages: finalState.totalMessages,
@@ -1887,7 +1863,7 @@ const useMailStore = create<EnhancedMailStore>()(
         // Reset pagination state - useful for debugging
         resetPagination: () => {
           set((state) => {
-            console.log('🔄 [PAGINATION] RESETTING PAGINATION STATE');
+            logger.debug('🔄 [PAGINATION] RESETTING PAGINATION STATE');
             state.pageTokens = [];
             state.messagesLoadedSoFar = 0;
             state.nextPageToken = undefined;
@@ -1997,12 +1973,12 @@ const useMailStore = create<EnhancedMailStore>()(
           isAuthenticated: state.isAuthenticated 
         }), // persist auth-related state
         onRehydrateStorage: () => (state) => {
-          console.log('🔄 [STORE] Store hydrated from localStorage, setting isHydrated to true');
+          logger.debug('🔄 [STORE] Store hydrated from localStorage, setting isHydrated to true');
           if (state) {
             state.isHydrated = true;
           } else {
             // If no persisted state, still set hydrated to true after attempt
-            console.log('🔄 [STORE] No persisted state found, marking as hydrated');
+            logger.debug('🔄 [STORE] No persisted state found, marking as hydrated');
           }
         },
       }
@@ -2014,7 +1990,7 @@ const useMailStore = create<EnhancedMailStore>()(
 setTimeout(() => {
   const state = useMailStore.getState();
   if (!state.isHydrated) {
-    console.log('🔄 [STORE] Manual hydration fallback triggered');
+    logger.debug('🔄 [STORE] Manual hydration fallback triggered');
     useMailStore.setState({ isHydrated: true });
   }
 }, 100);

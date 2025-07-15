@@ -213,7 +213,7 @@ const SubMenuContext = createContext<{
 function DropdownMenuSub({ children }: { children: React.ReactNode }) {
     const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
-    const timerRef = useRef<number | undefined>();
+    const timerRef = useRef<number | undefined>(undefined);
 
     const handleOpen = () => {
         window.clearTimeout(timerRef.current);

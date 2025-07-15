@@ -4,6 +4,7 @@ import { Card, ErrorState } from "../../../components/ui";
 interface Props {
   children: React.ReactNode;
   widgetName?: string;
+  fallback?: string | React.ReactNode;  // Add missing fallback prop
 }
 
 interface State {
@@ -31,6 +32,19 @@ export class WidgetErrorBoundary extends React.Component<Props, State> {
 
   override render() {
     if (this.state.hasError) {
+      // Use fallback prop if provided, otherwise default error state
+      if (this.props.fallback) {
+        return typeof this.props.fallback === 'string' ? (
+          <Card className="border-error/20 p-4">
+            <div className="text-center text-error">
+              {this.props.fallback}
+            </div>
+          </Card>
+        ) : (
+          this.props.fallback
+        );
+      }
+      
       return (
         <Card className="border-error/20">
           <ErrorState

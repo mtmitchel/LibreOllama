@@ -119,15 +119,17 @@ pub async fn get_sessions(
 pub async fn send_message(
     session_id_str: String,
     content: String,
+    role: String,
     db_manager: tauri::State<'_, crate::database::DatabaseManager>,
 ) -> Result<ChatMessageApi, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
 
     let db_manager_clone = db_manager.inner().clone();
     let content_clone = content.clone();
+    let role_clone = role.clone();
     let message_id = tokio::task::spawn_blocking(move || {
         let conn = db_manager_clone.get_connection()?;
-        operations::chat_operations::create_chat_message(&conn, session_id, "user", &content_clone)
+        operations::chat_operations::create_chat_message(&conn, session_id, &role_clone, &content_clone)
     })
     .await
     .map_err(|e| e.to_string())?

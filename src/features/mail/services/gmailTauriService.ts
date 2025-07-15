@@ -14,6 +14,7 @@ import type {
   MessageSearchResult,
   ProcessedGmailMessage
 } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 // =============================================================================
 // Authentication Functions
@@ -29,7 +30,7 @@ export async function startGmailAuth(redirectUri?: string): Promise<{
   error?: string;
 }> {
   try {
-    console.log('🔐 [TauriService] Starting Gmail OAuth flow');
+    logger.debug('[TauriService] Starting Gmail OAuth flow');
     
     const result = await invoke('start_gmail_oauth', {
       config: {
@@ -37,14 +38,14 @@ export async function startGmailAuth(redirectUri?: string): Promise<{
       }
     });
     
-    console.log('✅ [TauriService] OAuth flow started successfully');
+    logger.debug('[TauriService] OAuth flow started successfully');
     return {
       success: true,
       authUrl: (result as any).auth_url,
       state: (result as any).state
     };
   } catch (error) {
-    console.error('❌ [TauriService] Failed to start OAuth flow:', error);
+    logger.error('[TauriService] Failed to start OAuth flow:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -75,7 +76,7 @@ export async function completeGmailAuth(params: {
   error?: string;
 }> {
   try {
-    console.log('🔐 [TauriService] Completing Gmail OAuth flow');
+    logger.debug('[TauriService] Completing Gmail OAuth flow');
     
     const tokenResponse = await invoke('complete_gmail_oauth', {
       code: params.code,
@@ -102,7 +103,7 @@ export async function completeGmailAuth(params: {
       userInfo
     });
     
-    console.log('✅ [TauriService] OAuth flow completed successfully');
+    logger.debug('[TauriService] OAuth flow completed successfully');
     return {
       success: true,
       account: {
@@ -118,7 +119,7 @@ export async function completeGmailAuth(params: {
       }
     };
   } catch (error) {
-    console.error('❌ [TauriService] Failed to complete OAuth flow:', error);
+    logger.error('[TauriService] Failed to complete OAuth flow:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -136,21 +137,21 @@ export async function refreshToken(refreshToken: string): Promise<{
   error?: string;
 }> {
   try {
-    console.log('🔄 [TauriService] Refreshing Gmail token');
+    logger.debug('[TauriService] Refreshing Gmail token');
     
     const result = await invoke('refresh_gmail_token', {
       refreshToken,
       redirectUri: 'http://localhost:8080/auth/gmail/callback'
     });
     
-    console.log('✅ [TauriService] Token refreshed successfully');
+    logger.debug('[TauriService] Token refreshed successfully');
     return {
       success: true,
       newAccessToken: (result as any).access_token,
       expiresIn: (result as any).expires_in
     };
   } catch (error) {
-    console.error('❌ [TauriService] Failed to refresh token:', error);
+    logger.error('[TauriService] Failed to refresh token:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -169,16 +170,16 @@ export async function getAccounts(userId: string): Promise<Array<{
   isActive: boolean;
 }>> {
   try {
-    console.log('📋 [TauriService] Getting Gmail accounts');
+    logger.debug('[TauriService] Getting Gmail accounts');
     
     const accounts = await invoke('get_gmail_accounts_secure', {
       userId
     });
     
-    console.log(`✅ [TauriService] Retrieved ${(accounts as any[]).length} accounts`);
+    logger.debug(`[TauriService] Retrieved ${(accounts as any[]).length} accounts`);
     return accounts as any[];
   } catch (error) {
-    console.error('❌ [TauriService] Failed to get accounts:', error);
+    logger.error('[TauriService] Failed to get accounts:', error);
     return [];
   }
 }
@@ -191,16 +192,16 @@ export async function removeAccount(accountId: string): Promise<{
   error?: string;
 }> {
   try {
-    console.log(`🗑️ [TauriService] Removing Gmail account: ${accountId}`);
+    logger.debug(`[TauriService] Removing Gmail account: ${accountId}`);
     
     await invoke('remove_gmail_tokens_secure', {
       accountId
     });
     
-    console.log('✅ [TauriService] Account removed successfully');
+    logger.debug('✅ [TauriService] Account removed successfully');
     return { success: true };
   } catch (error) {
-    console.error('❌ [TauriService] Failed to remove account:', error);
+    logger.error('[TauriService] Failed to remove account:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -230,7 +231,7 @@ export async function sendGmailMessage(message: {
   error?: string;
 }> {
   try {
-    console.log('📤 [TauriService] Sending Gmail message');
+    logger.debug('[TauriService] Sending Gmail message');
     
     const result = await invoke('send_gmail_message', {
       composeRequest: {
@@ -246,14 +247,14 @@ export async function sendGmailMessage(message: {
       }
     });
     
-    console.log('✅ [TauriService] Message sent successfully');
+    logger.debug('[TauriService] Message sent successfully');
     return {
       success: true,
       messageId: (result as any).message_id,
       threadId: (result as any).thread_id
     };
   } catch (error) {
-    console.error('❌ [TauriService] Failed to send message:', error);
+    logger.error('[TauriService] Failed to send message:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -277,7 +278,7 @@ export async function saveDraft(draft: {
   error?: string;
 }> {
   try {
-    console.log('💾 [TauriService] Saving Gmail draft');
+    logger.debug('[TauriService] Saving Gmail draft');
     
     const result = await invoke('save_gmail_draft', {
       draftRequest: {
@@ -291,13 +292,13 @@ export async function saveDraft(draft: {
       }
     });
     
-    console.log('✅ [TauriService] Draft saved successfully');
+    logger.debug('[TauriService] Draft saved successfully');
     return {
       success: true,
       draftId: (result as any).draft_id
     };
   } catch (error) {
-    console.error('❌ [TauriService] Failed to save draft:', error);
+    logger.error('[TauriService] Failed to save draft:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -314,7 +315,7 @@ export async function downloadAttachment(attachmentId: string, messageId?: strin
   error?: string;
 }> {
   try {
-    console.log(`📎 [TauriService] Downloading attachment: ${attachmentId}`);
+    logger.debug(`[TauriService] Downloading attachment: ${attachmentId}`);
     
     // This would need to be implemented in the backend
     // For now, simulate the download
@@ -323,10 +324,10 @@ export async function downloadAttachment(attachmentId: string, messageId?: strin
       filePath: `C:\\Downloads\\attachment_${attachmentId}.pdf`
     };
     
-    console.log('✅ [TauriService] Attachment downloaded successfully');
+    logger.debug('[TauriService] Attachment downloaded successfully');
     return result;
   } catch (error) {
-    console.error('❌ [TauriService] Failed to download attachment:', error);
+    logger.error('[TauriService] Failed to download attachment:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -347,16 +348,16 @@ export class GmailTauriService {
    */
   async getLabels(): Promise<GmailLabel[]> {
     try {
-      console.log(`🔄 [TauriService] Getting labels for account: ${this.accountId}`);
+      logger.debug(`[TauriService] Getting labels for account: ${this.accountId}`);
       
       const labels = await invoke<GmailLabel[]>('get_gmail_labels', {
         accountId: this.accountId
       });
       
-      console.log(`✅ [TauriService] Successfully retrieved ${labels.length} labels`);
+      logger.debug(`[TauriService] Successfully retrieved ${labels.length} labels`);
       return labels;
     } catch (error) {
-      console.error('❌ [TauriService] Failed to get labels:', error);
+      logger.error('❌ [TauriService] Failed to get labels:', error);
       throw new Error(`Failed to get Gmail labels: ${error}`);
     }
   }
@@ -371,7 +372,7 @@ export class GmailTauriService {
     pageToken?: string
   ): Promise<MessageSearchResult> {
     try {
-      console.log(`🔄 [TauriService] Searching messages for account: ${this.accountId}`);
+      logger.debug(`[TauriService] Searching messages for account: ${this.accountId}`);
       
       const result = await invoke<MessageSearchResult>('search_gmail_messages', {
         accountId: this.accountId,
@@ -381,10 +382,10 @@ export class GmailTauriService {
         pageToken
       });
       
-      console.log(`✅ [TauriService] Successfully found ${result.messages.length} messages`);
+      logger.debug(`[TauriService] Successfully found ${result.messages.length} messages`);
       return result;
     } catch (error) {
-      console.error('❌ [TauriService] Failed to search messages:', error);
+      logger.error('❌ [TauriService] Failed to search messages:', error);
       throw new Error(`Failed to search Gmail messages: ${error}`);
     }
   }
@@ -392,60 +393,61 @@ export class GmailTauriService {
   /**
    * Get a specific message by ID (raw Gmail format)
    */
-  async getMessage(messageId: string): Promise<GmailMessage> {
+  async getMessage(messageId: string): Promise<GmailMessage | undefined> {
     try {
-      console.log(`🔄 [TauriService] Getting message: ${messageId}`);
+      logger.debug(`[TauriService] Getting message: ${messageId}`);
       
-      const message = await invoke<GmailMessage>('get_gmail_message', {
+      const message = await invoke<GmailMessage | undefined>('get_gmail_message', {
         accountId: this.accountId,
         messageId
       });
       
-      console.log(`✅ [TauriService] Successfully retrieved message: ${messageId}`);
+      logger.debug(`[TauriService] Successfully retrieved message: ${messageId}`);
       return message;
     } catch (error) {
-      console.error(`❌ [TauriService] Failed to get message ${messageId}:`, error);
-      throw new Error(`Failed to get Gmail message: ${error}`);
+      logger.error(`❌ [TauriService] Failed to get message ${messageId}:`, error);
+      // Return undefined or rethrow based on desired error handling
+      return undefined; // Changed to return undefined on error
     }
   }
 
   /**
    * Get a parsed message by ID (with processed content)
    */
-  async getParsedMessage(messageId: string): Promise<ProcessedGmailMessage> {
+  async getParsedMessage(messageId: string): Promise<ProcessedGmailMessage | undefined> {
     try {
-      console.log(`🔄 [TauriService] Getting parsed message: ${messageId}`);
+      logger.debug(`[TauriService] Getting parsed message: ${messageId}`);
       
-      const message = await invoke<ProcessedGmailMessage>('get_parsed_gmail_message', {
+      const message = await invoke<ProcessedGmailMessage | undefined>('get_parsed_gmail_message', {
         accountId: this.accountId,
         messageId
       });
       
-      console.log(`✅ [TauriService] Successfully retrieved parsed message: ${messageId}`);
+      logger.debug(`[TauriService] Successfully retrieved parsed message: ${messageId}`);
       return message;
     } catch (error) {
-      console.error(`❌ [TauriService] Failed to get parsed message ${messageId}:`, error);
-      throw new Error(`Failed to get parsed Gmail message: ${error}`);
+      logger.error(`❌ [TauriService] Failed to get parsed message ${messageId}:`, error);
+      return undefined; // Changed to return undefined on error
     }
   }
 
   /**
    * Get an entire thread with parsed messages
    */
-  async getThread(threadId: string): Promise<ProcessedGmailMessage[]> {
+  async getThread(threadId: string): Promise<ProcessedGmailMessage[] | undefined> {
     try {
-      console.log(`🔄 [TauriService] Getting thread: ${threadId}`);
+      logger.debug(`[TauriService] Getting thread: ${threadId}`);
       
-      const messages = await invoke<ProcessedGmailMessage[]>('get_gmail_thread', {
+      const messages = await invoke<ProcessedGmailMessage[] | undefined>('get_gmail_thread', {
         accountId: this.accountId,
         threadId
       });
       
-      console.log(`✅ [TauriService] Successfully retrieved thread with ${messages.length} messages`);
+      logger.debug(`[TauriService] Successfully retrieved thread with ${messages?.length || 0} messages`);
       return messages;
     } catch (error) {
-      console.error(`❌ [TauriService] Failed to get thread ${threadId}:`, error);
-      throw new Error(`Failed to get Gmail thread: ${error}`);
+      logger.error(`❌ [TauriService] Failed to get thread ${threadId}:`, error);
+      return undefined; // Changed to return undefined on error
     }
   }
 
@@ -454,7 +456,7 @@ export class GmailTauriService {
    */
   async getUserProfile(): Promise<{ id: string; email: string; name?: string; picture?: string }> {
     try {
-      console.log(`🔄 [TauriService] Getting user profile for account: ${this.accountId}`);
+      logger.debug(`[TauriService] Getting user profile for account: ${this.accountId}`);
       
       // First get the access token for this account
       const tokens = await invoke<any>('get_gmail_tokens_secure', {
@@ -469,10 +471,10 @@ export class GmailTauriService {
         accessToken: tokens.access_token
       });
       
-      console.log(`✅ [TauriService] Successfully retrieved user profile for: ${userInfo.email}`);
+      logger.debug(`[TauriService] Successfully retrieved user profile for: ${userInfo.email}`);
       return userInfo;
     } catch (error) {
-      console.error(`❌ [TauriService] Failed to get user profile for account ${this.accountId}:`, error);
+      logger.error(`❌ [TauriService] Failed to get user profile for account ${this.accountId}:`, error);
       throw new Error(`Failed to get Gmail user profile: ${error}`);
     }
   }
@@ -486,7 +488,7 @@ export class GmailTauriService {
     removeLabelIds: string[]
   ): Promise<void> {
     try {
-      console.log(`🔄 [TauriService] Modifying messages for account: ${this.accountId}`);
+      logger.debug(`[TauriService] Modifying messages for account: ${this.accountId}`);
       
       await invoke('modify_gmail_messages', {
         accountId: this.accountId,
@@ -495,9 +497,9 @@ export class GmailTauriService {
         removeLabelIds
       });
       
-      console.log(`✅ [TauriService] Successfully modified ${messageIds.length} messages`);
+      logger.debug(`[TauriService] Successfully modified ${messageIds.length} messages`);
     } catch (error) {
-      console.error('❌ [TauriService] Failed to modify messages:', error);
+      logger.error('❌ [TauriService] Failed to modify messages:', error);
       throw new Error(`Failed to modify Gmail messages: ${error}`);
     }
   }
@@ -527,16 +529,16 @@ export class GmailTauriService {
    */
   async deleteMessages(messageIds: string[]): Promise<void> {
     try {
-      console.log(`🗑️ [TauriService] Trashing messages for account: ${this.accountId}`);
+      logger.debug(`[TauriService] Trashing messages for account: ${this.accountId}`);
       
       await invoke('trash_gmail_messages', {
         accountId: this.accountId,
         messageIds
       });
       
-      console.log(`✅ [TauriService] Successfully trashed ${messageIds.length} messages`);
+      logger.debug(`[TauriService] Successfully trashed ${messageIds.length} messages`);
     } catch (error) {
-      console.error('❌ [TauriService] Failed to trash messages:', error);
+      logger.error('❌ [TauriService] Failed to trash messages:', error);
       throw new Error(`Failed to trash Gmail messages: ${error}`);
     }
   }
@@ -546,7 +548,7 @@ export class GmailTauriService {
    */
   async getAttachment(messageId: string, attachmentId: string): Promise<Uint8Array> {
     try {
-      console.log(`🔄 [TauriService] Getting attachment: ${attachmentId} from message: ${messageId}`);
+      logger.debug(`[TauriService] Getting attachment: ${attachmentId} from message: ${messageId}`);
       
       const data = await invoke<number[]>('get_gmail_attachment', {
         accountId: this.accountId,
@@ -554,10 +556,10 @@ export class GmailTauriService {
         attachmentId
       });
       
-      console.log(`✅ [TauriService] Successfully retrieved attachment: ${attachmentId}`);
+      logger.debug(`[TauriService] Successfully retrieved attachment: ${attachmentId}`);
       return new Uint8Array(data);
     } catch (error) {
-      console.error(`❌ [TauriService] Failed to get attachment ${attachmentId}:`, error);
+      logger.error(`❌ [TauriService] Failed to get attachment ${attachmentId}:`, error);
       throw new Error(`Failed to get Gmail attachment: ${error}`);
     }
   }
@@ -573,7 +575,7 @@ export class GmailTauriService {
     error?: string;
   }> {
     try {
-      console.log(`🧪 [TauriService] Starting end-to-end flow test for account: ${this.accountId}`);
+      logger.debug(`[TauriService] Starting end-to-end flow test for account: ${this.accountId}`);
       
       // Step 1: Get labels
       const labels = await this.getLabels();
@@ -585,14 +587,14 @@ export class GmailTauriService {
         5 // limit to 5 messages
       );
       
-      console.log(`🎉 [TauriService] End-to-end flow test completed successfully!`);
+      logger.debug(`[TauriService] End-to-end flow test completed successfully!`);
       return {
         success: true,
         labels,
         messages
       };
     } catch (error) {
-      console.error('❌ [TauriService] End-to-end flow test failed:', error);
+      logger.error('❌ [TauriService] End-to-end flow test failed:', error);
       return {
         success: false,
         labels: [],
@@ -615,7 +617,7 @@ export const createGmailTauriService = (accountId: string): GmailTauriService =>
  */
 export const getGmailTauriService = (accountId?: string): GmailTauriService | null => {
   if (!accountId) {
-    console.warn('⚠️ [TauriService] No account ID provided for Gmail Tauri service');
+    logger.warn('⚠️ [TauriService] No account ID provided for Gmail Tauri service');
     return null;
   }
   

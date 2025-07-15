@@ -104,21 +104,36 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   };
 
   const groupElements = () => {
-// TODO: Implement in unified store
+    const selectedIds = Array.from(selectedElementIds);
+    if (selectedIds.length >= 2) {
+      const groupId = useUnifiedCanvasStore.getState().groupElements(selectedIds);
+      return groupId;
+    }
     return null;
   };
   const ungroupElements = () => {
-// TODO: Implement in unified store
+    const selectedIds = Array.from(selectedElementIds);
+    if (selectedIds.length === 1) {
+      const elementId = selectedIds[0];
+      const groupId = useUnifiedCanvasStore.getState().isElementInGroup(elementId); // Get the groupId
+      if (groupId) {
+        useUnifiedCanvasStore.getState().ungroupElements(groupId); // Pass the groupId
+      }
+    }
   };
   const isElementInGroup = () => {
-    // TODO: Implement in unified store
+    const selectedIds = Array.from(selectedElementIds);
+    if (selectedIds.length === 1) {
+      const elementId = selectedIds[0];
+      return useUnifiedCanvasStore.getState().isElementInGroup(elementId);
+    }
     return false;
   };
 
   const handleDeleteSelected = () => {
     if (selectedElementId) {
       deleteElement(selectedElementId);
-}
+    }
   };
 
   // Add keyboard shortcut support for delete
@@ -138,7 +153,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   const handleGroupElements = () => {
     const selectedIds = Array.from(selectedElementIds);
     if (selectedIds.length >= 2) {
-      const groupId = groupElements(selectedIds);
+      const groupId = groupElements();
       if (groupId) {
         // Selection will be handled by the store
       }
@@ -147,11 +162,9 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
 
   const handleUngroupElements = () => {
     if (selectedElementId) {
-      const wasInGroup = isElementInGroup(selectedElementId);
-      ungroupElements(selectedElementId);
-      
-      if (wasInGroup) {
-        // Selection will be handled by the store
+      const groupId = useUnifiedCanvasStore.getState().isElementInGroup(selectedElementId); // Get the groupId
+      if (groupId) {
+        useUnifiedCanvasStore.getState().ungroupElements(groupId); // Pass the groupId
       }
     }
   };
@@ -190,7 +203,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
   
   // Check if current selection can be grouped/ungrouped
   const canGroup = selectedElementIds.size >= 2;
-  const canUngroup = selectedElementId ? !!isElementInGroup(selectedElementId) : false;
+  const canUngroup = selectedElementId ? !!isElementInGroup() : false;
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -239,7 +252,7 @@ const ModernKonvaToolbar: React.FC<ModernKonvaToolbarProps> = ({
           // Select the new image after a brief delay
           setTimeout(() => {
             const selectElement = useUnifiedCanvasStore.getState().selectElement;
-            selectElement(imageElement.id as string, false);
+            selectElement(imageElement.id as ElementId, false);
           }, 10);
 };
         img.src = event.target?.result as string;

@@ -45,6 +45,8 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     }
   };
 
+  const [isAddAssetModalOpen, setIsAddAssetModalOpen] = React.useState(false);
+
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       <Card className="flex flex-1 flex-col" padding="none">
@@ -187,7 +189,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 {/* Add Asset Card */}
                 <div 
                   className="border-border-default group flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:border-accent-primary hover:bg-accent-soft"
-                  onClick={() => console.log('Add asset clicked')}
+                  onClick={() => setIsAddAssetModalOpen(true)} // Open modal instead of TODO
                 >
                   <Plus size={24} className="mb-2 text-secondary group-hover:text-accent-primary" />
                   <Text size="sm" weight="medium" className="text-secondary group-hover:text-accent-primary">Add asset</Text>

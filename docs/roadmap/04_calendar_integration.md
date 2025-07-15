@@ -56,11 +56,17 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - [x] **Calendar View:** Standard Day/Week/Month views. *(Existing)*
 - [x] **Create/Edit Events:** Basic functionality to add and modify calendar events. *(Existing)*
-- [x] **Task Sidebar:** A view of the task list next to the calendar. *(Existing)*
+- [ ] **Task Sidebar:** A view of the task list next to the calendar. *(Existing)*
+- [ ] **Drag-and-Drop Scheduling:** Implement drag tasks from the sidebar onto the calendar to schedule them. *(Existing in UI but needs reliability & tests)*
+
+### Phase 3 Hardening Tests
+
+- **Time-blocking robustness:** simulate dragging tasks onto calendar across all views (day/week/month) and assert store + Google Calendar sync.
+- **Event/Task linkage:** verify bidirectional updates (editing event updates task, marking task complete updates calendar event).
+- **Accessibility audit:** ensure drag handles announce start/end via ARIA live regions.
 
 ### Post-MVP Enhancements
 
-- [ ] **Drag-and-Drop Scheduling:** Implement drag tasks from the sidebar onto the calendar to schedule them.
 - [ ] **Task-to-Event Modal:** A modal to confirm time/details when scheduling a task.
 - [ ] **Complete from Calendar:** Mark tasks as complete directly from the calendar view.
 - [ ] **Enhanced Event Modal:** Replace the basic event creation prompt with a full-featured modal.

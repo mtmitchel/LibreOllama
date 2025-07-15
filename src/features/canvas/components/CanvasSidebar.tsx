@@ -110,12 +110,12 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
       const parsed = JSON.parse(canvasData);
       clearCanvas();
       if (parsed.elements) {
-        Object.values(parsed.elements).forEach((element: CanvasElement) => {
+        (Object.values(parsed.elements) as CanvasElement[]).forEach((element: CanvasElement) => {
           addElement(element);
         });
       }
       if (parsed.sections && createSection) {
-        Object.values(parsed.sections).forEach((section: SectionElement) => {
+        (Object.values(parsed.sections) as SectionElement[]).forEach((section: SectionElement) => {
           createSection(section.x, section.y, section.width, section.height);
         });
       }

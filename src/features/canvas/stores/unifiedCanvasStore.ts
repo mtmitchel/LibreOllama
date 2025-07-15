@@ -48,7 +48,6 @@ export interface LegacyActions {
   createStressTestElements: (count: number) => void;
   groupElements: (elementIds: ElementId[]) => GroupId;
   ungroupElements: (groupId: GroupId) => void;
-  isElementInGroup: (elementId: ElementId) => boolean;
   clearCanvas: () => void;
 }
 
@@ -171,9 +170,6 @@ export const createCanvasStoreSlice: (set: Set, get: Get) => UnifiedCanvasStore 
     },
     ungroupElements: (groupId: GroupId) => {
       get().ungroupElements(groupId);
-    },
-    isElementInGroup: (elementId: ElementId) => {
-      return get().isElementInGroup(elementId);
     },
     clearCanvas: () => {
       get().clearAllElements();

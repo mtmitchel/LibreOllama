@@ -116,7 +116,10 @@ export function EnhancedSearchBar({
       
       // Save to recent searches (update history)
       const history = searchService.getSearchHistory();
-      setRecentSearches([query, ...history.recentSearches.slice(0, 9)].filter((q, i, arr) => arr.indexOf(q) === i));
+      const historyQueries = history.recentSearches.slice(0, 9).map((item: any) => 
+        typeof item === 'string' ? item : item.query || item.name || String(item)
+      );
+      setRecentSearches([query, ...historyQueries].filter((q, i, arr) => arr.indexOf(q) === i));
       
       // Call optional callback
       onSearch?.(query);

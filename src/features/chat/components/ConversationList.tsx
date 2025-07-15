@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Caption, Text, Heading, Button, Input, Card, EmptyState } from "../../../components/ui";
 import { ChatConversation } from "../../../core/lib/chatMockData";
+import { ConversationContextMenu } from "./ConversationContextMenu";
+import { formatConversationTimestamp } from "../utils/formatTimestamp";
 import { 
-  Plus, Search, Pin, MessagesSquare, Trash2, PanelLeft
+  Plus, Search, Pin, MessagesSquare, PanelLeft
 } from 'lucide-react';
 
 // TypeScript interfaces provide prop validation - PropTypes not needed in TS projects
@@ -18,6 +20,10 @@ interface ConversationListProps {
   onTogglePin: (conversationId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
   onToggle: () => void;
+  onRenameConversation?: (conversationId: string) => void;
+  onArchiveConversation?: (conversationId: string) => void;
+  onExportConversation?: (conversationId: string) => void;
+  onShareConversation?: (conversationId: string) => void;
 }
 
 export function ConversationList({
@@ -32,17 +38,29 @@ export function ConversationList({
   onTogglePin,
   onDeleteConversation,
   onToggle,
+  onRenameConversation,
+  onArchiveConversation,
+  onExportConversation,
+  onShareConversation,
 }: ConversationListProps) {
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    conversation: ChatConversation;
+    position: { x: number; y: number };
+  } | null>(null);
   
   // Filter conversations based on search query
-  const filteredConversations = conversations.filter(conv =>
-    conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConversations = conversations.filter(conv => {
+    const searchLower = searchQuery?.toLowerCase() || '';
+    return (
+      conv.title?.toLowerCase().includes(searchLower) ||
+      conv.lastMessage?.toLowerCase().includes(searchLower)
+    );
+  });
 
   // Separate pinned and recent conversations
-  const pinnedConversations = filteredConversations.filter(conv => conv.pinned);
-  const recentConversations = filteredConversations.filter(conv => !conv.pinned);
+  const pinnedConversations = filteredConversations.filter(conv => conv.isPinned);
+  const recentConversations = filteredConversations.filter(conv => !conv.isPinned);
 
   // If sidebar is closed, show only the toggle button
   if (!isOpen) {
@@ -71,6 +89,15 @@ export function ConversationList({
       }
     };
 
+    const handleContextMenu = (e: React.MouseEvent) => {
+      e.preventDefault();
+      console.log('🖱️ RIGHT-CLICK CONTEXT MENU triggered for conversation:', conv.id);
+      setContextMenu({
+        conversation: conv,
+        position: { x: e.clientX, y: e.clientY }
+      });
+    };
+
     return (
       <div
         key={conv.id}
@@ -79,6 +106,7 @@ export function ConversationList({
           ${selectedChatId === conv.id ? 'border-selected bg-selected' : 'border-transparent'}
         `}
         onClick={() => onSelectChat(conv.id)}
+        onContextMenu={handleContextMenu}
         onKeyDown={handleKeyDown}
         onMouseEnter={() => onHoverConversation(conv.id)}
         onMouseLeave={() => onHoverConversation(null)}
@@ -92,7 +120,7 @@ export function ConversationList({
               <Heading level={4} className="truncate">
                 {conv.title}
               </Heading>
-              {conv.pinned && (
+              {conv.isPinned && (
                 <Pin className="size-3 text-muted" />
               )}
             </div>
@@ -100,36 +128,8 @@ export function ConversationList({
               {conv.lastMessage}
             </Text>
             <Caption className="mt-1 text-xs">
-              {conv.timestamp}
+              {formatConversationTimestamp(conv.timestamp)}
             </Caption>
-          </div>
-          
-          {/* Action buttons - shown on hover */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 text-muted hover:text-primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTogglePin(conv.id);
-              }}
-              title={conv.pinned ? 'Unpin conversation' : 'Pin conversation'}
-            >
-              <Pin className="size-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 text-muted hover:text-destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteConversation(conv.id);
-              }}
-              title="Delete conversation"
-            >
-              <Trash2 className="size-3" />
-            </Button>
           </div>
         </div>
       </div>
@@ -137,7 +137,8 @@ export function ConversationList({
   };
 
   return (
-    <Card className="flex h-full w-80 flex-col bg-sidebar" padding="none">
+    <>
+      <Card className="flex h-full w-80 flex-col bg-sidebar" padding="none">
       {/* Header */}
       <div className="border-border-default flex shrink-0 items-center justify-between border-b p-4">
         <div className="flex items-center gap-3">
@@ -217,6 +218,30 @@ export function ConversationList({
           </div>
         )}
       </div>
-    </Card>
+      </Card>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ConversationContextMenu
+          conversation={contextMenu.conversation}
+          isOpen={true}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+          onAction={(action, conversationId) => {
+            console.log(`Context menu action: ${action} for conversation: ${conversationId}`);
+          }}
+          onRename={onRenameConversation}
+          onPin={onTogglePin}
+          onUnpin={onTogglePin}
+          onDelete={onDeleteConversation}
+          onArchive={onArchiveConversation}
+          onExport={onExportConversation}
+          onShare={onShareConversation}
+          onCopyLink={(conversationId) => {
+            console.log(`Copy link for conversation: ${conversationId}`);
+          }}
+        />
+      )}
+    </>
   );
 }

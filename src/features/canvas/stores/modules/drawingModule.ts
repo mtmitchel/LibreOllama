@@ -117,8 +117,7 @@ export const createDrawingModule = (
         const state = get();
         if (state.isDrawing && state.currentPath && state.currentPath.length >= 4) {
           // Create pen element with fallback color
-          const penColor = state.penColor || '#000000';
-          console.log('🖊️ [Store] Creating pen element with color:', penColor);
+          const penColor = get().penColor || '#000000';
           
           const penElement = {
             id: nanoid(),
@@ -133,8 +132,6 @@ export const createDrawingModule = (
             isLocked: false,
             isHidden: false
           };
-          
-          console.log('🖊️ [Store] Adding pen element to store:', penElement);
           
           // Add to store
           get().addElement(penElement as any);

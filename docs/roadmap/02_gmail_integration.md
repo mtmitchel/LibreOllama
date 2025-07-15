@@ -67,6 +67,18 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 - [x] **Attachment Preview:** Comprehensive preview system for images, videos, PDFs
 - [x] **Message Threading:** Full conversation threading with expand/collapse functionality
 
+### Code-Level Cleanup & Feature Completion
+- [ ] **Implement Email Actions:** Wire up the UI for `Reply`, `Reply All`, and `Forward` functionality in `MessageContextMenu.tsx`.
+- [ ] **Implement Print Functionality:** Add the print logic in `MessageContextMenu.tsx`.
+- [ ] **Implement Mark as Important:** Connect the "Mark as important" action in `MessageContextMenu.tsx` to the backend.
+- [ ] **Implement Label Management UI:** Hook up the "Manage labels" action in `MessageContextMenu.tsx`.
+- [ ] **Finalize Label Settings:** Replace the placeholder API call in `LabelSettings.tsx` with a real one to save user settings.
+- [ ] **Enable Search Suggestion Removal:** Implement the removal logic for recent and saved searches in `SearchSuggestions.tsx`.
+- [ ] **Add Tag Support for Saved Searches:** Extend the `SearchQuery` type and UI in `SavedSearches.tsx` to support tags.
+- [ ] **Implement Tag Filtering:** Add logic to filter saved searches by tag in `SavedSearches.tsx`.
+- [ ] **Add Toast Notifications:** Implement user feedback toasts for actions like copying a link or saving a search.
+- [ ] **Implement Real Context:** Fetch and display real contextual data in `MailContextSidebar.tsx` based on the selected message.
+
 ### Post-MVP Enhancements
 
 - [ ] **Canned Responses:** Save and reuse common email replies.
@@ -102,6 +114,14 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 - [ ] **Multi-Account UI:** Improve the UI for switching between and managing multiple linked Gmail accounts.
 - [ ] **Rich Text Editor:** Enhance the email composition window with a full-featured rich text editor (bold, italics, lists, etc.).
 - [ ] **Attachment Handling:** Design a more intuitive and powerful interface for viewing, downloading, and managing email attachments.
+
+### Phase 3 Hardening Tests
+
+- **OAuth token-expiry & refresh tests:** simulate `401 invalid_grant`, ensure automatic refresh and UI re-auth banner.
+- **XSRF rejection tests:** mock `403` XSRF response and assert proper logout & user notification.
+- **Contract tests (Tauri ↔ Frontend):** invoke `send_email`, `get_gmail_labels` via mocked `tauri.invoke` and assert store updates.
+- **Cold-boot persistence:** log in, persist tokens, reload app, verify account/session re-hydration.
+- **Accessibility audit:** axe-core scan of inbox, compose modal, and sidebar – zero critical issues.
 
 ### Technical Debt & Refactoring
 

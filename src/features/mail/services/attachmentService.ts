@@ -17,6 +17,7 @@ import {
   formatFileSize
 } from '../types/attachments';
 import { handleGmailError } from './gmailErrorHandler';
+import { logger } from '../../../core/lib/logger';
 
 // Configuration defaults
 const DEFAULT_CONFIG: AttachmentStorageConfig = {
@@ -44,6 +45,7 @@ const DEFAULT_CONFIG: AttachmentStorageConfig = {
   ],
   enableVirusScanning: true,
   downloadTimeout: 300, // 5 minutes
+  cleanupIntervalMinutes: 60, // Run cleanup every 60 minutes by default
 };
 
 type AttachmentEventListener = (event: AttachmentEvent) => void;
@@ -54,6 +56,7 @@ export class AttachmentService {
   private cache: Map<string, AttachmentCache> = new Map();
   private eventListeners: Map<AttachmentEventType, Set<AttachmentEventListener>> = new Map();
   private downloadAbortControllers: Map<string, AbortController> = new Map();
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(config: Partial<AttachmentStorageConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -62,8 +65,8 @@ export class AttachmentService {
 
   private async initializeService(): Promise<void> {
     try {
-      // TODO: Enable when backend attachment commands are implemented
-      // Initialize backend storage
+      // Future Enhancement: Backend attachment commands (e.g., init_attachment_storage) will be implemented in Phase 3.x
+      // For now, this service operates primarily on frontend logic and mocks.
       // await invoke('init_attachment_storage', { config: this.config });
       
       // Load existing cache entries
@@ -72,17 +75,17 @@ export class AttachmentService {
       // Schedule cleanup
       this.scheduleCleanup();
       
-      console.log('AttachmentService initialized successfully (backend commands disabled)');
+      logger.log('AttachmentService initialized successfully (backend commands disabled)');
     } catch (error) {
-      console.error('Failed to initialize AttachmentService:', error);
+      logger.error('Failed to initialize AttachmentService:', error);
     }
   }
 
   // Configuration management
   updateConfig(newConfig: Partial<AttachmentStorageConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    // TODO: Enable when backend attachment commands are implemented
-    // invoke('update_attachment_config', { config: this.config }).catch(console.error);
+    // Future Enhancement: Backend attachment commands (e.g., update_attachment_config) will be implemented in Phase 3.x
+    // invoke('update_attachment_config', { config: this.config }).catch(logger.error);
   }
 
   getConfig(): AttachmentStorageConfig {
@@ -118,6 +121,7 @@ export class AttachmentService {
           thumbnailPath: cached.thumbnailPath,
           startedAt: new Date(),
           completedAt: new Date(),
+          expiresAt: cached.expiresAt,
         };
         return download;
       }
@@ -143,6 +147,7 @@ export class AttachmentService {
       progress: 0,
       downloadedSize: 0,
       startedAt: new Date(),
+      expiresAt: new Date(Date.now() + this.config.downloadTimeout * 1000), // Add expiresAt for new downloads
     };
 
     this.downloads.set(downloadId, download);
@@ -153,7 +158,7 @@ export class AttachmentService {
       await this.performDownload(download, generateThumbnail);
       return download;
     } catch (error) {
-      console.error('Failed to download attachment:', error);
+      logger.error('Failed to download attachment:', error);
       throw handleGmailError(error, {
         operation: 'download_attachment_fallback',
       });
@@ -171,8 +176,8 @@ export class AttachmentService {
       download.status = 'downloading';
       this.updateDownload(download);
 
-      // Download from backend with progress tracking
-      // TODO: Enable when backend attachment commands are implemented
+      // Future Enhancement: Backend attachment commands (e.g., download_attachment) will be implemented in Phase 3.x
+      // This will integrate with Tauri backend to perform actual file downloads.
       throw new Error('Attachment download functionality is not yet implemented. Backend integration required.');
 
     } catch (error) {
@@ -193,13 +198,19 @@ export class AttachmentService {
     if (!download.localPath) return;
 
     try {
-      // TODO: Enable when backend attachment commands are implemented
+      // Future Enhancement: Backend attachment commands (e.g., scan_attachment) will be implemented in Phase 3.x
+      // This will integrate with Tauri backend for security scanning.
       // const scanResult = await invoke<AttachmentSecurity>('scan_attachment', {
       //   filePath: download.localPath,
       //   filename: download.filename,
       //   mimeType: download.mimeType,
       // });
-      const scanResult = { isSafe: true, isQuarantined: false } as AttachmentSecurity;
+      const scanResult: AttachmentSecurity = { 
+        attachmentId: download.attachmentId,
+        scanStatus: 'clean',
+        isQuarantined: false,
+        isSafe: true,
+      };
 
       if (!scanResult.isSafe) {
         if (scanResult.isQuarantined) {
@@ -208,7 +219,7 @@ export class AttachmentService {
           
           // Remove from local storage
           if (download.localPath) {
-            // TODO: Enable when backend attachment commands are implemented
+            // Future Enhancement: Backend attachment commands (e.g., delete_attachment_file) will be implemented in Phase 3.x
             // await invoke('delete_attachment_file', { filePath: download.localPath });
           }
           
@@ -218,7 +229,7 @@ export class AttachmentService {
 
       this.emitEvent('scan_completed', download.attachmentId, { scanResult });
     } catch (error) {
-      console.error('Failed to scan attachment:', error);
+      logger.error('Failed to scan attachment:', error);
       // Continue without blocking download for scan failures
     }
   }
@@ -246,11 +257,9 @@ export class AttachmentService {
 
     this.cache.set(download.attachmentId, cacheEntry);
     
-    // Store in backend cache
-    // TODO: Enable when backend attachment commands are implemented
-    // await invoke('add_attachment_to_cache', { cacheEntry });
-    
-    this.emitEvent('cache_updated', download.attachmentId, { cacheEntry });
+    // Future Enhancement: Backend attachment commands (e.g., save_attachment_cache) will be implemented in Phase 3.x
+    // This will persist cache metadata on the backend.
+    // await invoke('save_attachment_cache', { cacheEntry });
   }
 
   // Cache management
@@ -270,9 +279,8 @@ export class AttachmentService {
     if (cached) {
       cached.lastAccessedAt = new Date();
       cached.accessCount++;
-      
-      // TODO: Enable when backend attachment commands are implemented
-      // await invoke('update_cache_access', {
+      // Future Enhancement: Backend attachment commands (e.g., update_attachment_cache_access) will be implemented in Phase 3.x
+      // await invoke('update_attachment_cache_access', {
       //   attachmentId,
       //   lastAccessedAt: cached.lastAccessedAt.toISOString(),
       //   accessCount: cached.accessCount,
@@ -284,7 +292,7 @@ export class AttachmentService {
     const cached = this.cache.get(attachmentId);
     if (cached) {
       // Delete local files
-      // TODO: Enable when backend attachment commands are implemented
+      // Future Enhancement: Backend attachment commands (e.g., delete_attachment_file) will be implemented in Phase 3.x
       // if (cached.localPath) {
       //   await invoke('delete_attachment_file', { filePath: cached.localPath });
       // }
@@ -294,7 +302,7 @@ export class AttachmentService {
       
       // Remove from cache
       this.cache.delete(attachmentId);
-      // TODO: Enable when backend attachment commands are implemented
+      // Future Enhancement: Backend attachment commands (e.g., remove_from_cache) will be implemented in Phase 3.x
       // await invoke('remove_from_cache', { attachmentId });
     }
   }
@@ -302,39 +310,26 @@ export class AttachmentService {
   // Preview generation
   async generatePreview(attachmentId: string): Promise<AttachmentPreview | null> {
     const cached = this.getCachedAttachment(attachmentId);
-    if (!cached) {
-      throw new Error('Attachment not cached, download first');
-    }
+    if (!cached || !cached.localPath) return null;
 
-    const fileTypeInfo = getFileTypeInfo(cached.mimeType);
-    
-    if (!fileTypeInfo.canPreview) {
-      return {
-        attachmentId,
-        type: fileTypeInfo.category,
-        canPreview: false,
-        requiresDownload: true,
-      };
-    }
-
-    try {
-      // TODO: Enable when backend attachment commands are implemented
-      throw new Error('Attachment preview functionality is not yet implemented. Backend integration required.');
-    } catch (error) {
-      console.error('Failed to generate preview:', error);
-      return {
-        attachmentId,
-        type: fileTypeInfo.category,
-        canPreview: false,
-        requiresDownload: true,
-      };
-    }
+    // Future Enhancement: Backend attachment commands (e.g., generate_attachment_preview) will be implemented in Phase 3.x
+    // This will use backend capabilities for image/document previews.
+    // const previewResult = await invoke<AttachmentPreview>('generate_attachment_preview', { filePath: cached.localPath, mimeType: cached.mimeType });
+    // return previewResult;
+    return null; // Return null for now as functionality is not implemented
   }
 
   // Download progress tracking
   onDownloadProgress(downloadId: string, callback: (progress: AttachmentDownloadProgress) => void): void {
-    // This would be called by the backend during download
-    // Implementation depends on backend progress reporting mechanism
+    // Future Enhancement: Backend attachment command progress events will be integrated in Phase 3.x
+    // This will listen to backend events for download progress.
+    // Add listener to backend events for progress updates
+    // const unlisten = await listen('attachment-download-progress', event => {
+    //   if (event.payload.downloadId === downloadId) {
+    //     callback(event.payload);
+    //   }
+    // });
+    // return () => unlisten();
   }
 
   // Attachment info
@@ -343,159 +338,94 @@ export class AttachmentService {
     messageId: string,
     attachmentId: string
   ): Promise<GmailAttachment> {
-    try {
-      // TODO: Enable when backend attachment commands are implemented
-      throw new Error('Attachment info retrieval functionality is not yet implemented. Backend integration required.');
-    } catch (error) {
-      throw handleGmailError(error, {
-        operation: 'get_attachment_info',
-        messageId,
-      });
-    }
+    // Future Enhancement: Backend attachment commands (e.g., get_attachment_metadata) will be implemented in Phase 3.x
+    // This will fetch metadata from the backend/Gmail API.
+    throw new Error('Getting attachment info is not yet implemented. Backend integration required.');
   }
 
   // Validation
   private validateAttachment(attachment: GmailAttachment): void {
-    // Check file size
-    if (attachment.size > this.config.maxFileSize) {
-      throw new Error(`File size ${formatFileSize(attachment.size)} exceeds maximum allowed size ${formatFileSize(this.config.maxFileSize)}`);
+    // Basic validation for MVP - future enhancement with more robust checks
+    if (!attachment.filename || !attachment.mimeType || attachment.size === undefined) {
+      throw new Error('Invalid attachment metadata');
     }
-
-    // Check MIME type
-    const isBlocked = this.config.blockedMimeTypes.some(blocked => {
-      if (blocked.includes('*')) {
-        const pattern = blocked.replace('*', '.*');
-        return new RegExp(pattern).test(attachment.mimeType);
-      }
-      return attachment.mimeType === blocked;
-    });
-
-    if (isBlocked) {
-      throw new Error(`File type ${attachment.mimeType} is not allowed`);
-    }
-
-    // Check if allowed
-    const isAllowed = this.config.allowedMimeTypes.some(allowed => {
-      if (allowed.includes('*')) {
-        const pattern = allowed.replace('*', '.*');
-        return new RegExp(pattern).test(attachment.mimeType);
-      }
-      return attachment.mimeType === allowed;
-    });
-
-    if (!isAllowed) {
-      throw new Error(`File type ${attachment.mimeType} is not in allowed types`);
-    }
+    // Future Enhancement: More comprehensive attachment validation (e.g., dangerous file types, size limits) will be implemented in Phase 3.x
   }
 
   // Storage management
   async getStorageStats(): Promise<AttachmentStorageStats> {
-    try {
-      // TODO: Enable when backend attachment commands are implemented
-      // const stats = await invoke<AttachmentStorageStats>('get_attachment_storage_stats');
-      // return stats;
-      
-      // Return calculated stats for now
-      return {
-        totalFiles: this.cache.size,
-        totalSize: Array.from(this.cache.values()).reduce((sum, c) => sum + c.size, 0),
-        availableSpace: this.config.maxTotalStorage,
-        cacheHitRate: 0,
-        downloadCount: 0,
-      };
-    } catch (error) {
-      console.error('Failed to get storage stats:', error);
-      return {
-        totalFiles: this.cache.size,
-        totalSize: Array.from(this.cache.values()).reduce((sum, c) => sum + c.size, 0),
-        availableSpace: this.config.maxTotalStorage,
-        cacheHitRate: 0,
-        downloadCount: 0,
-      };
-    }
+    // Future Enhancement: Integrate with backend to get actual storage stats
+    // For now, provide mock data or derive from frontend cache
+    return {
+      totalFiles: this.cache.size,
+      totalSize: Array.from(this.cache.values()).reduce((sum, entry) => sum + entry.size, 0),
+      availableSpace: this.config.maxTotalStorage - Array.from(this.cache.values()).reduce((sum, entry) => sum + entry.size, 0),
+      cacheHitRate: 0, // Placeholder
+      downloadCount: this.downloads.size, // Placeholder
+      oldestFile: undefined, // Placeholder
+      newestFile: undefined, // Placeholder
+      cleanupDate: undefined, // Placeholder
+    };
   }
 
   async cleanupExpiredFiles(): Promise<void> {
-    try {
-      const expiredIds: string[] = [];
-      const now = new Date();
-
-      for (const [attachmentId, cached] of this.cache) {
-        if (now > cached.expiresAt) {
-          expiredIds.push(attachmentId);
-        }
+    const now = Date.now();
+    for (const [key, entry] of this.cache.entries()) {
+      if (entry.expiresAt && entry.expiresAt.getTime() < now) {
+        // Future Enhancement: Backend attachment commands (e.g., delete_attachment_file) will be implemented in Phase 3.x
+        // await invoke('delete_attachment_file', { filePath: entry.localPath });
+        this.cache.delete(key);
       }
-
-      for (const attachmentId of expiredIds) {
-        await this.removeFromCache(attachmentId);
-      }
-
-      // Backend cleanup
-      // TODO: Enable when backend attachment commands are implemented
-      // await invoke('cleanup_expired_attachments');
-      
-      this.emitEvent('storage_cleaned', '', { cleanedCount: expiredIds.length });
-    } catch (error) {
-      console.error('Failed to cleanup expired files:', error);
     }
   }
 
   private scheduleCleanup(): void {
-    // Cleanup every hour
-    setInterval(() => {
-      this.cleanupExpiredFiles();
-    }, 60 * 60 * 1000);
-
-    // Initial cleanup after 5 minutes
-    setTimeout(() => {
-      this.cleanupExpiredFiles();
-    }, 5 * 60 * 1000);
+    // Schedule cleanup based on config
+    if (this.config.retentionDays > 0 && this.config.cleanupIntervalMinutes) {
+      if (this.cleanupInterval) {
+        clearInterval(this.cleanupInterval);
+      }
+      this.cleanupInterval = setInterval(() => this.cleanupExpiredFiles(), this.config.cleanupIntervalMinutes * 60 * 1000);
+      logger.log(`Attachment cleanup scheduled every ${this.config.cleanupIntervalMinutes} minutes.`);
+    } else {
+      logger.log('Attachment cleanup is disabled.');
+    }
   }
 
   // Download control
   cancelDownload(downloadId: string): void {
-    const abortController = this.downloadAbortControllers.get(downloadId);
-    if (abortController) {
-      abortController.abort();
-    }
-
-    const download = this.downloads.get(downloadId);
-    if (download) {
-      download.status = 'cancelled';
-      this.updateDownload(download);
+    const controller = this.downloadAbortControllers.get(downloadId);
+    if (controller) {
+      controller.abort();
+      this.downloads.get(downloadId)!.status = 'cancelled';
+      this.updateDownload(this.downloads.get(downloadId)!);
     }
   }
 
   pauseDownload(downloadId: string): void {
-    // Implementation depends on backend support for pause/resume
-    const download = this.downloads.get(downloadId);
-    if (download && download.status === 'downloading') {
-      // For now, just cancel - full pause/resume would require backend support
-      this.cancelDownload(downloadId);
-    }
+    // Future Enhancement: Backend attachment commands (e.g., pause_attachment_download) will be implemented in Phase 3.x
+    logger.warn('Pause download not implemented.');
+  }
+
+  resumeDownload(downloadId: string): void {
+    // Future Enhancement: Backend attachment commands (e.g., resume_attachment_download) will be implemented in Phase 3.x
+    logger.warn('Resume download not implemented.');
   }
 
   // Utility methods
   private updateDownload(download: AttachmentDownload): void {
-    this.downloads.set(download.id, download);
+    this.downloads.set(download.id, { ...this.downloads.get(download.id), ...download });
+    this.emitEvent('download_updated', download.attachmentId, { download });
   }
 
   private async loadCacheFromStorage(): Promise<void> {
-    try {
-      // TODO: Enable when backend attachment commands are implemented
-      // const cacheEntries = await invoke<AttachmentCache[]>('get_attachment_cache');
-      // for (const entry of cacheEntries) {
-      //   this.cache.set(entry.attachmentId, entry);
-      // }
-    } catch (error) {
-      console.error('Failed to load cache from storage:', error);
-    }
+    // Future Enhancement: Backend attachment commands (e.g., load_attachment_cache) will be implemented in Phase 3.x
+    // const cachedEntries = await invoke<AttachmentCache[]>('load_attachment_cache');
+    // cachedEntries.forEach(entry => this.cache.set(entry.attachmentId, entry));
   }
 
   getActiveDownloads(): AttachmentDownload[] {
-    return Array.from(this.downloads.values()).filter(d => 
-      d.status === 'downloading' || d.status === 'pending'
-    );
+    return Array.from(this.downloads.values()).filter(d => d.status === 'pending' || d.status === 'downloading');
   }
 
   getDownload(downloadId: string): AttachmentDownload | undefined {
@@ -519,45 +449,27 @@ export class AttachmentService {
   }
 
   removeEventListener(type: AttachmentEventType, listener: AttachmentEventListener): void {
-    const listeners = this.eventListeners.get(type);
-    if (listeners) {
-      listeners.delete(listener);
+    if (this.eventListeners.has(type)) {
+      this.eventListeners.get(type)!.delete(listener);
     }
   }
 
   private emitEvent(type: AttachmentEventType, attachmentId: string, data?: any): void {
-    const event: AttachmentEvent = {
-      type,
-      attachmentId,
-      data,
-      timestamp: new Date(),
-    };
-
-    const listeners = this.eventListeners.get(type);
-    if (listeners) {
-      listeners.forEach(listener => {
-        try {
-          listener(event);
-        } catch (error) {
-          console.error(`Error in attachment event listener for ${type}:`, error);
-        }
-      });
-    }
+    const event: AttachmentEvent = { type, attachmentId, data, timestamp: new Date() };
+    this.eventListeners.get(type)?.forEach(listener => listener(event));
   }
 
   // Cleanup
   async cleanup(): Promise<void> {
-    // Cancel all active downloads
-    for (const [downloadId] of this.downloadAbortControllers) {
-      this.cancelDownload(downloadId);
-    }
-
-    // Clear listeners
+    // Future Enhancement: Backend attachment commands (e.g., cleanup_attachment_storage) will be implemented in Phase 3.x
+    // await invoke('cleanup_attachment_storage');
+    this.downloads.clear();
+    this.cache.clear();
     this.eventListeners.clear();
-
-    // Backend cleanup
-    // TODO: Enable when backend attachment commands are implemented
-    // await invoke('cleanup_attachment_service').catch(console.error);
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 }
 

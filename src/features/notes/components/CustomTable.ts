@@ -3,8 +3,8 @@ import { columnResizing, tableEditing } from 'prosemirror-tables';
 
 const CustomTable = Table.extend({
   addProseMirrorPlugins() {
-    const { isResizable } = this.options;
-    if (!isResizable) {
+    const resizable = this.options.resizable;
+    if (!resizable) {
       return [tableEditing()];
     }
 

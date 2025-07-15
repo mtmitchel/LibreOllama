@@ -244,13 +244,13 @@ export const DragOverlays: Story = () => {
             <div className="space-y-3">
               <DropZone isActive={false} className="min-h-[80px]">
                 <div className="space-y-2">
-                  <LiftedCard size="sm" padding="sm">
+                  <LiftedCard padding="sm">
                     <div className="flex items-center gap-2">
                       <div className="size-2 rounded-full bg-success"></div>
                       <span className="text-sm text-primary">Feature: Login system</span>
                     </div>
                   </LiftedCard>
-                  <LiftedCard size="sm" padding="sm" isDragging={true}>
+                  <LiftedCard padding="sm" isDragging={true}>
                     <div className="flex items-center gap-2">
                       <div className="size-2 rounded-full bg-warning"></div>
                       <span className="text-sm text-primary">Bug: Header layout</span>

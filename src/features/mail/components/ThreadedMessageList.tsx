@@ -4,6 +4,7 @@ import { Text, Card, EmptyState } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail, EmailThread } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface ThreadItemProps {
   thread: EmailThread;
@@ -164,7 +165,7 @@ function ThreadItem({
 
           {/* Subject and Snippet */}
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="flex min-w-0 items-baseline" className="gap-1">
+                          <div className="flex min-w-0 items-baseline gap-1">
               <Text 
                 size="sm" 
                 weight={hasUnreadMessages ? 'semibold' : 'normal'}
@@ -274,9 +275,10 @@ export function ThreadedMessageList() {
     getMessages, 
     selectedMessages, 
     selectMessage, 
-    fetchThread,
+    fetchThread, // Changed from getThread
     isLoadingMessages,
-    error 
+    error,
+    setCurrentThread, // Add setCurrentThread to destructuring
   } = useMailStore();
   const { executeFetchOperation } = useMailOperation();
 
@@ -341,40 +343,32 @@ export function ThreadedMessageList() {
   }, [messages]);
 
   const handleThreadClick = async (thread: EmailThread) => {
-    console.log('🔍 [DEBUG] Thread clicked:', {
-      threadId: thread.id,
+    logger.debug('🔍 [DEBUG] Thread clicked:', {
+      id: thread.id,
       subject: thread.subject,
-      messageCount: thread.messageCount
     });
     
     try {
-      // Immediate fallback: Set the latest message from the thread directly
-      // This ensures the email view opens instantly
-      const latestMessage = thread.messages[thread.messages.length - 1];
-      useMailStore.setState({ 
-        currentMessage: latestMessage,
-        currentThread: thread,
-        isLoading: false,
-        error: null 
-      });
-      
-      console.log('🚀 [DEBUG] Set thread message immediately from list data');
-      
-      // Try to fetch full thread details in the background
-      try {
-        await executeFetchOperation(
-          () => fetchThread(thread.id),
-          'thread details'
-        );
-        
-        console.log('✅ [DEBUG] Full thread details fetched successfully');
-      } catch (fetchError) {
-        console.warn('⚠️ [DEBUG] Full thread fetch failed, using list data:', fetchError);
-        // Keep the message/thread from list data - it's better than nothing
+      // Optimistic update
+      if (thread.messages.length > 0) {
+        logger.debug('🚀 [DEBUG] Set thread message immediately from list data');
+        setCurrentThread(thread);
       }
+
+      // Fetch full thread
+      await fetchThread(thread.id) // Changed from getThread
+        .then((fullThread: EmailThread | undefined) => { // Explicitly type fullThread as EmailThread | undefined
+          if (fullThread) {
+            logger.debug('✅ [DEBUG] Full thread details fetched successfully');
+            setCurrentThread(fullThread);
+          }
+        })
+        .catch((err: Error) => { // Explicitly type err
+          logger.error('❌ [DEBUG] Failed to fetch full thread details', err);
+        });
       
     } catch (error) {
-      console.error('❌ [DEBUG] Thread click failed completely:', error);
+      logger.error('❌ [DEBUG] Thread click failed completely:', error);
       useMailStore.setState({ 
         error: `Failed to open thread: ${error instanceof Error ? error.message : 'Unknown error'}`,
         isLoading: false 

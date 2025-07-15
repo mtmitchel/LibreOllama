@@ -57,7 +57,7 @@ const LibreOllamaRedesign = () => {
 
   // Keyboard shortcut for command palette
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandPaletteOpen(!commandPaletteOpen);
@@ -169,7 +169,7 @@ const LibreOllamaRedesign = () => {
     }
   };
 
-  const currentTheme = themes[theme];
+  const currentTheme = themes[theme as keyof typeof themes];
 
   // Mock data
   const workspaceItems = [
@@ -222,7 +222,7 @@ const LibreOllamaRedesign = () => {
   ];
 
   // Sidebar component
-  const Sidebar = ({ section }) => (
+  const Sidebar = ({ section }: { section: string }) => (
     <div className={`w-64 ${currentTheme.sidebarBg} ${currentTheme.border} flex h-full flex-col border-r`}>
       {/* Header */}
       <div className={`p-4 ${currentTheme.border} border-b`}>

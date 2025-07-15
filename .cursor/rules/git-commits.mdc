@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Do not stage, commit or push changes to the repository without permissin. 

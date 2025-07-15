@@ -55,20 +55,25 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         run_migration_v6(conn)?;
         record_migration(conn, 6)?;
     }
-
+    
     if current_version < 7 {
         run_migration_v7(conn)?;
         record_migration(conn, 7)?;
     }
-
+    
     if current_version < 8 {
         run_migration_v8(conn)?;
         record_migration(conn, 8)?;
     }
-
+    
     if current_version < 9 {
         run_migration_v9(conn)?;
         record_migration(conn, 9)?;
+    }
+    
+    if current_version < 10 {
+        run_migration_v10(conn)?;
+        record_migration(conn, 10)?;
     }
 
     Ok(())
@@ -570,6 +575,78 @@ fn run_migration_v8(conn: &Connection) -> Result<()> {
     
     // Re-enable foreign keys
     conn.execute("PRAGMA foreign_keys = ON", []).context("Failed to re-enable foreign keys")?;
+
+    Ok(())
+}
+
+/// Run migration v10 - Add project tables
+fn run_migration_v10(conn: &Connection) -> Result<()> {
+    // Create projects table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            color TEXT NOT NULL DEFAULT '#3b82f6',
+            status TEXT NOT NULL DEFAULT 'active',
+            progress INTEGER NOT NULL DEFAULT 0,
+            priority TEXT NOT NULL DEFAULT 'medium',
+            user_id TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    ).context("Failed to create projects table")?;
+
+    // Create project_goals table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS project_goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            completed BOOLEAN NOT NULL DEFAULT 0,
+            priority TEXT NOT NULL DEFAULT 'medium',
+            due_date DATETIME,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    ).context("Failed to create project_goals table")?;
+
+    // Create project_assets table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS project_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            asset_type TEXT NOT NULL,
+            url TEXT NOT NULL,
+            size INTEGER,
+            metadata TEXT,
+            uploaded_by TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )",
+        [],
+    ).context("Failed to create project_assets table")?;
+
+    // Create indexes for better performance
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id)",
+        [],
+    ).context("Failed to create projects user_id index")?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_goals_project_id ON project_goals(project_id)",
+        [],
+    ).context("Failed to create project_goals project_id index")?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_project_assets_project_id ON project_assets(project_id)",
+        [],
+    ).context("Failed to create project_assets project_id index")?;
 
     Ok(())
 }

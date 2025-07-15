@@ -83,7 +83,7 @@ function LayerItem({
 
   const handleElementClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect(element.id);
+    onSelect(element.id as ElementId);
   };
 
   return (
@@ -110,7 +110,7 @@ function LayerItem({
         </div>
 
         {/* Element Type Badge */}
-        <Badge variant="outline" size="sm" className="mr-2 text-xs">
+        <Badge variant="outline" className="mr-2 text-xs">
           {element.type}
         </Badge>
 
@@ -121,7 +121,7 @@ function LayerItem({
           className="mr-1 size-6 p-0"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleVisibility(element.id);
+            onToggleVisibility(element.id as ElementId);
           }}
         >
           {isVisible ? (
@@ -138,7 +138,7 @@ function LayerItem({
           className="mr-1 size-6 p-0"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleLock(element.id);
+            onToggleLock(element.id as ElementId);
           }}
         >
           {isLocked ? (
@@ -161,13 +161,13 @@ function LayerItem({
             </Button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Content>
-            <DropdownMenu.Item onSelect={() => onDuplicate(element.id)}>
+            <DropdownMenu.Item onSelect={() => onDuplicate(element.id as ElementId)}>
               <Copy className="mr-2 size-4" />
               Duplicate
             </DropdownMenu.Item>
             <DropdownMenu.Separator />
             <DropdownMenu.Item 
-              onSelect={() => onDelete(element.id)}
+              onSelect={() => onDelete(element.id as ElementId)}
               className="text-error"
             >
               <Trash2 className="mr-2 size-4" />
@@ -180,7 +180,30 @@ function LayerItem({
       {/* Child Elements (for sections) */}
       {hasChildren && (
         <div className="ml-4">
-          {/* TODO: Render child elements here when section children are implemented */}
+          {/* Render child elements here when section children are implemented */}
+          {element.type === 'section' && 'childElementIds' in element && element.childElementIds && Array.isArray(element.childElementIds) && (
+            element.childElementIds.map(childId => {
+              const childElement = useUnifiedCanvasStore.getState().elements.get(childId);
+              if (childElement) {
+                return (
+                  <LayerItem
+                    key={childElement.id}
+                    element={childElement}
+                    isSelected={isSelected} // Pass selection status down
+                    isVisible={'isVisible' in childElement ? childElement.isVisible !== false : true}
+                    isLocked={'isLocked' in childElement ? childElement.isLocked === true : false}
+                    depth={depth + 1}
+                    onSelect={onSelect}
+                    onToggleVisibility={onToggleVisibility}
+                    onToggleLock={onToggleLock}
+                    onDelete={onDelete}
+                    onDuplicate={onDuplicate}
+                  />
+                );
+              }
+              return null;
+            })
+          )}
         </div>
       )}
     </div>
@@ -223,8 +246,8 @@ export function LayersPanel({ isOpen = true, onToggle, className = '' }: LayersP
     const element = elements.get(elementId);
     if (element) {
       updateElement(elementId, { 
-        visible: !('visible' in element ? element.visible : true) 
-      });
+        isVisible: !('isVisible' in element ? element.isVisible : true) 
+      } as any);
     }
   };
 
@@ -232,7 +255,7 @@ export function LayersPanel({ isOpen = true, onToggle, className = '' }: LayersP
     const element = elements.get(elementId);
     if (element) {
       updateElement(elementId, { 
-        locked: !('locked' in element ? element.locked : false) 
+        isLocked: !('isLocked' in element ? element.isLocked : false) 
       });
     }
   };
@@ -250,7 +273,7 @@ export function LayersPanel({ isOpen = true, onToggle, className = '' }: LayersP
         x: element.x + 20,
         y: element.y + 20
       };
-      useUnifiedCanvasStore.getState().addElement(newElement);
+      useUnifiedCanvasStore.getState().addElement(newElement as CanvasElement);
     }
   };
 
@@ -295,9 +318,9 @@ export function LayersPanel({ isOpen = true, onToggle, className = '' }: LayersP
                     <LayerItem
                       key={element.id}
                       element={element}
-                      isSelected={selectedElementIds.has(element.id)}
-                      isVisible={'visible' in element ? element.visible !== false : true}
-                      isLocked={'locked' in element ? element.locked === true : false}
+                      isSelected={selectedElementIds.has(element.id as unknown as ElementId)}
+                      isVisible={'isVisible' in element ? element.isVisible !== false : true}
+                      isLocked={'isLocked' in element ? element.isLocked === true : false}
                       onSelect={handleElementSelect}
                       onToggleVisibility={handleToggleVisibility}
                       onToggleLock={handleToggleLock}
@@ -320,9 +343,9 @@ export function LayersPanel({ isOpen = true, onToggle, className = '' }: LayersP
                     <LayerItem
                       key={element.id}
                       element={element}
-                      isSelected={selectedElementIds.has(element.id)}
-                      isVisible={'visible' in element ? element.visible !== false : true}
-                      isLocked={'locked' in element ? element.locked === true : false}
+                      isSelected={selectedElementIds.has(element.id as ElementId)}
+                      isVisible={'isVisible' in element ? element.isVisible !== false : true}
+                      isLocked={'isLocked' in element ? element.isLocked === true : false}
                       onSelect={handleElementSelect}
                       onToggleVisibility={handleToggleVisibility}
                       onToggleLock={handleToggleLock}

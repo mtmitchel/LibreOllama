@@ -3,6 +3,7 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { GoogleAccount, GoogleTask, GoogleTaskList, TaskCreateData } from '../types/google';
 import { googleTasksService } from '../services/google/googleTasksService';
+import { logger } from '../core/lib/logger';
 import { useSettingsStore } from './settingsStore';
 
 interface GoogleTasksState {
@@ -78,7 +79,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
 
         // Authentication
         authenticate: (account: GoogleAccount) => {
-          console.log('🔐 [GOOGLE-TASKS] Authenticating account:', account.email);
+          logger.debug('[GOOGLE-TASKS] Authenticating account:', account.email);
           set({ isAuthenticated: true });
           
           // Auto-fetch task lists after authentication
@@ -86,7 +87,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
         },
 
         signOut: () => {
-          console.log('🚪 [GOOGLE-TASKS] Signing out');
+          logger.debug('[GOOGLE-TASKS] Signing out');
           set((state) => {
             state.isAuthenticated = false;
             state.taskLists = [];
@@ -104,10 +105,10 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           }
           set({ isLoading: true, error: null });
           try {
-            console.log('📝 [GOOGLE-TASKS] Fetching task lists for:', account.email);
-            const response = await googleTasksService.getTaskLists(account);
+            logger.debug('[GOOGLE-TASKS] Fetching task lists for:', account.email);
+            const response = await googleTasksService.getTaskLists(account as GoogleAccount);
             if (response.success && response.data) {
-              console.log('✅ [GOOGLE-TASKS] Setting task lists:', response.data.length);
+              logger.debug('[GOOGLE-TASKS] Setting task lists:', response.data.length);
               set({ taskLists: response.data });
             } else {
               throw new Error(response.error?.message || 'Failed to fetch task lists');
@@ -128,8 +129,8 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           }
           set({ isLoading: true, error: null });
           try {
-            console.log(`✅ [GOOGLE-TASKS] Fetching tasks for list: ${taskListId}`);
-            const response = await googleTasksService.getTasks(account, taskListId);
+            logger.debug(`[GOOGLE-TASKS] Fetching tasks for list: ${taskListId}`);
+            const response = await googleTasksService.getTasks(account as GoogleAccount, taskListId);
             if (response.success && response.data) {
               set((state) => {
                 state.tasks[taskListId] = response.data!.items || [];
@@ -152,7 +153,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
             return;
           }
 
-          console.log('🔄 [GOOGLE-TASKS] Syncing all task lists');
+                      logger.debug('[GOOGLE-TASKS] Syncing all task lists');
           await Promise.all(
             taskLists.map(list => get().fetchTasks(list.id))
           );
@@ -164,7 +165,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           if (!account) return;
 
           try {
-            console.log(`➕ [GOOGLE-TASKS] Creating task in list ${taskListId}:`, taskData.title);
+            logger.debug(`[GOOGLE-TASKS] Creating task in list ${taskListId}:`, taskData.title);
             const response = await googleTasksService.createTask(account, taskListId, {
               title: taskData.title,
               notes: taskData.notes,
@@ -194,7 +195,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           if (!account) return;
 
           try {
-            console.log(`✏️ [GOOGLE-TASKS] Updating task ${taskId} in list ${taskListId}`);
+            logger.debug(`[GOOGLE-TASKS] Updating task ${taskId} in list ${taskListId}`);
             const response = await googleTasksService.updateTask(account, taskListId, taskId, {
               title: updates.title,
               notes: updates.notes,
@@ -226,7 +227,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           if (!account) return;
 
           try {
-            console.log(`🗑️ [GOOGLE-TASKS] Deleting task ${taskId} from list ${taskListId}`);
+            logger.debug(`[GOOGLE-TASKS] Deleting task ${taskId} from list ${taskListId}`);
             const response = await googleTasksService.deleteTask(account, taskListId, taskId);
 
             if (response.success) {
@@ -249,7 +250,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           if (!account) return;
 
           try {
-            console.log(`🔄 [GOOGLE-TASKS] Moving task ${taskId} from ${fromListId} to ${toListId}`);
+            logger.debug(`[GOOGLE-TASKS] Moving task ${taskId} from ${fromListId} to ${toListId}`);
             
             // If moving within the same list, just update position
             if (fromListId === toListId) {
@@ -301,7 +302,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           if (!account) return;
 
           try {
-            console.log(`📋 [GOOGLE-TASKS] Creating task list: ${title}`);
+            logger.debug(`[GOOGLE-TASKS] Creating task list: ${title}`);
             const response = await googleTasksService.createTaskList(account, title);
 
             if (response.success && response.data) {
@@ -325,7 +326,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           if (!account) return;
 
           try {
-            console.log(`✏️ [GOOGLE-TASKS] Updating task list ${taskListId}: ${title}`);
+            logger.debug(`[GOOGLE-TASKS] Updating task list ${taskListId}: ${title}`);
             const response = await googleTasksService.updateTaskList(account, taskListId, title);
 
             if (response.success && response.data) {
@@ -351,7 +352,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           if (!account) return;
 
           try {
-            console.log(`🗑️ [GOOGLE-TASKS] Deleting task list: ${taskListId}`);
+            logger.debug(`[GOOGLE-TASKS] Deleting task list: ${taskListId}`);
             const response = await googleTasksService.deleteTaskList(account, taskListId);
 
             if (response.success) {
@@ -396,7 +397,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
           lastSyncAt: state.lastSyncAt,
         }),
         onRehydrateStorage: () => (state) => {
-          console.log('🔄 [GOOGLE-TASKS] Store hydrated from localStorage');
+          logger.debug('[GOOGLE-TASKS] Store hydrated from localStorage');
           if (state) {
             state.isHydrated = true;
           }
@@ -410,7 +411,7 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
 setTimeout(() => {
   const state = useGoogleTasksStore.getState();
   if (!state.isHydrated) {
-    console.log('🔄 [GOOGLE-TASKS] Manual hydration fallback triggered');
+              logger.debug('[GOOGLE-TASKS] Manual hydration fallback triggered');
     useGoogleTasksStore.setState({ isHydrated: true });
   }
 }, 100); 

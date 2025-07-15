@@ -51,8 +51,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({ onStageReady }
         <ModernKonvaToolbar 
           onUndo={undo} 
           onRedo={redo} 
-          sidebarOpen={sidebarOpen}
-          onToggleSidebar={handleToggleSidebar}
         />
         <CanvasDragDropHandler stageRef={stageRef}>
           <CanvasStage stageRef={stageRef} />

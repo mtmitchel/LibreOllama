@@ -91,4 +91,11 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 ### Technical Debt & Refactoring
 
 - [ ] **Performance Benchmarking:** Perform a performance benchmark to ensure the UI remains fast with a large number of tasks.
+- [ ] **Authentication Refactor:** Convert the `GoogleAccountSettings` format to the standard `GoogleAccount` format in `Tasks.tsx` to streamline authentication.
 - [ ] **Documentation:** Create documentation for the Kanban architecture and best practices. 
+
+### Phase 3 Hardening Tests
+
+- **Column drag/move robustness:** simulate 500 drag operations across columns and lists, assert final store state matches expected order.
+- **Calendar time-blocking workflow:** drag task onto calendar, ensure Google Calendar event created and task marked as scheduled; write Vitest integration with mocked FullCalendar `eventReceive`.
+- **Accessibility audit:** ensure draggable items have ARIA attributes (`aria-grabbed`, `aria-dropeffect`) and keyboard DnD works. 

@@ -529,7 +529,18 @@ const SavedSearches: React.FC<SavedSearchesProps> = ({
           setShowSaveModal(false);
           setEditingSearch(null);
         }}
-        onSave={editingSearch ? onUpdateSearch : onSaveSearch}
+        onSave={(searchData) => {
+          if (editingSearch) {
+            // When editing, merge the new data with the existing search
+            onUpdateSearch({
+              ...editingSearch,
+              ...searchData
+            });
+          } else {
+            // When creating new, use onSaveSearch
+            onSaveSearch(searchData);
+          }
+        }}
         initialQuery={currentQuery}
         initialData={editingSearch || undefined}
         accountId={currentAccountId}

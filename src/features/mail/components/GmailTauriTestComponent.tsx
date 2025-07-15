@@ -8,6 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { createGmailTauriService } from '../services/gmailTauriService';
 import type { GmailLabel, MessageSearchResult } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface TestResult {
   success: boolean;
@@ -53,7 +54,7 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
       
       switch (selectedTest) {
         case 'labels':
-          console.log('🧪 Testing labels only...');
+          logger.debug('🧪 Testing labels only...');
           const labels = await service.getLabels();
           result = {
             success: true,
@@ -64,7 +65,7 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
           break;
           
         case 'messages':
-          console.log('🧪 Testing messages only...');
+          logger.debug('🧪 Testing messages only...');
           const messages = await service.searchMessages(undefined, ['INBOX'], 5);
           result = {
             success: true,
@@ -76,7 +77,7 @@ export const GmailTauriTestComponent: React.FC<TestComponentProps> = ({
           
         case 'full':
         default:
-          console.log('🧪 Testing full end-to-end flow...');
+          logger.debug('🧪 Testing full end-to-end flow...');
           const fullResult = await service.testEndToEndFlow();
           result = {
             ...fullResult,

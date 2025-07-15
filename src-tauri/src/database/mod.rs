@@ -9,6 +9,7 @@ pub mod models;
 pub mod schema;
 pub mod operations;
 pub mod connection;
+#[cfg(test)]
 pub mod integration_tests;
 
 // Re-export DatabaseManager for easier access
@@ -54,8 +55,8 @@ pub async fn get_chat_template_by_id(template_id: &i32) -> Result<Option<ChatTem
 pub async fn get_application_logs(
     level: Option<LogLevel>,
     component: Option<String>,
-    start_time: Option<chrono::NaiveDateTime>,
-    end_time: Option<chrono::NaiveDateTime>,
+    _start_time: Option<chrono::NaiveDateTime>,
+    _end_time: Option<chrono::NaiveDateTime>,
     limit: Option<usize>,
 ) -> Result<Vec<ApplicationLog>> {
     let db_manager = DatabaseManager::new().await?;

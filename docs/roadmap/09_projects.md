@@ -70,6 +70,7 @@ This roadmap is aligned with the **Single-User MVP Strategy**.
 - [ ] **Project CRUD:** Backend and frontend integration for creating, reading, updating, and deleting projects.
 - [ ] **Associate Tasks:** Link tasks from the Tasks module to projects.
 - [ ] **Data Persistence:** Replace mock data with real database persistence.
+- [ ] **Implement Asset Management:** Wire up the UI for adding and managing project assets in the `ProjectDetails.tsx` view.
 
 ### Post-MVP Enhancements
 
@@ -102,3 +103,10 @@ This roadmap is aligned with the **Single-User MVP Strategy**.
     - [ ] Implement proper error handling and loading states.
 - [ ] **Test Coverage:** Add comprehensive tests for all project-related components and services.
 - [ ] **Documentation:** Document the project data model and API architecture. 
+
+### Phase 3 Hardening Tests
+
+- **Canvas ⇄ Projects link validation:** attach a Canvas export to a Project, reload, and assert the association persists.
+- **Cold-boot persistence:** create a project, set progress metrics, reload the app, verify re-hydration.
+- **Race-condition tests:** concurrently update project progress while adding tasks and ensure state consistency.
+- **Accessibility audit:** keyboard navigation of project sidebar, new-project modal, and metrics tabs must have zero critical axe violations. 

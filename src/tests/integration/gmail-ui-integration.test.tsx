@@ -70,7 +70,7 @@ import { useMailStore } from '../../features/mail/stores/mailStore';
 import { createTestMailStore } from '../../features/mail/stores/__tests__/mailStoreTestUtils';
 import { MessageList } from '../../features/mail/components/MessageList';
 import { MessageView } from '../../features/mail/components/MessageView';
-import { ComposeModal } from '../../features/mail/components/ComposeModal';
+import { ComposeModal } from '../../features/mail/components';
 import { MailSidebar } from '../../features/mail/components/MailSidebar';
 import Mail from '../../app/pages/Mail';
 import { HeaderProvider } from '../../app/contexts/HeaderContext';
@@ -79,6 +79,25 @@ import * as gmailTauriService from '../../features/mail/services/gmailTauriServi
 // Mock data
 import { createMockGmailMessage, createMockParsedEmail, convertMockMessageToParsedEmail, createMockGmailAccount, MockGmailApiServer } from '../helpers/gmailMockData';
 import { setupTauriMocks, cleanupTauriMocks } from '../helpers/tauriMocks';
+
+// Helper to convert MockGmailAccount to GmailAccount format
+const convertMockAccountToGmailAccount = (mockAccount: any): any => {
+  return {
+    id: mockAccount.id,
+    email: mockAccount.email,
+    displayName: mockAccount.name,
+    avatar: mockAccount.picture,
+    accessToken: 'test-access-token',
+    refreshToken: 'test-refresh-token',
+    tokenExpiry: new Date(Date.now() + 3600000),
+    isActive: mockAccount.isActive !== undefined ? mockAccount.isActive : true,
+    syncStatus: 'idle' as const,
+    lastSyncAt: new Date(),
+    errorMessage: undefined,
+    quotaUsed: 0,
+    quotaTotal: 15000000000,
+  };
+};
 
 // Test wrapper with all providers
 const TestWrapper: React.FC<{children: React.ReactNode}> = ({ children }) => (
@@ -241,7 +260,8 @@ describe('Gmail UI Integration Tests', () => {
       ];
       
       // Set up accounts in store
-      testStore.setTestAccounts(accounts);
+      const gmailAccounts = accounts.map(convertMockAccountToGmailAccount);
+      testStore.setTestAccounts(gmailAccounts);
       testStore.setTestAuthenticated(true);
       testStore.setTestCurrentAccountId('account-1');
       
@@ -357,7 +377,7 @@ describe('Gmail UI Integration Tests', () => {
         sender: 'Test User <test@example.com>'
       });
       
-      render(<MessageView message={mockMessage} />, { wrapper: TestWrapper });
+      render(<MessageView />, { wrapper: TestWrapper });
       
       await waitFor(() => {
         expect(screen.getByText('Test Email')).toBeInTheDocument();
@@ -369,7 +389,7 @@ describe('Gmail UI Integration Tests', () => {
       testStore.setTestAuthenticated(true);
       testStore.setTestCurrentAccountId('test-account-1');
       
-      render(<ComposeModal isOpen={true} onClose={vi.fn()} />, { wrapper: TestWrapper });
+      render(<ComposeModal />, { wrapper: TestWrapper });
       
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();

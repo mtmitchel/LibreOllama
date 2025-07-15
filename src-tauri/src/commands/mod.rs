@@ -8,8 +8,11 @@ pub mod tasks;    // Google Tasks API operations
 pub mod calendar; // Google Calendar API operations
 pub mod agents;   // Agent lifecycle and execution  
 pub mod chat;     // Chat sessions and messages
+pub mod projects; // Project management
 pub mod system;   // System health and advanced features
 pub mod image_proxy;
+pub mod text_processing;
+pub mod llm;
 
 // Legacy flat modules (to be reorganized)
 pub mod ollama;

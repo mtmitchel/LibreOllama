@@ -14,11 +14,13 @@ import {
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
+import { logger } from '../../../core/lib/logger';
+import { useShallow } from 'zustand/react/shallow';
 
 export function MailToolbar() {
+  // Use stable selectors to prevent infinite re-renders
+  const selectedMessages = useMailStore(useShallow(state => state.selectedMessages));
   const { 
-    selectedMessages, 
-    getMessages,
     selectAllMessages,
     clearSelection,
     archiveMessages,
@@ -28,18 +30,45 @@ export function MailToolbar() {
     starMessages,
     fetchMessages,
     isLoadingMessages,
-    // Token-based pagination
+    resetPagination,
+    getMessages, // Import getMessages selector
+  } = useMailStore(useShallow(state => ({
+    selectAllMessages: state.selectAllMessages,
+    clearSelection: state.clearSelection,
+    archiveMessages: state.archiveMessages,
+    deleteMessages: state.deleteMessages,
+    markAsRead: state.markAsRead,
+    markAsUnread: state.markAsUnread,
+    starMessages: state.starMessages,
+    fetchMessages: state.fetchMessages,
+    isLoadingMessages: state.isLoadingMessages,
+    resetPagination: state.resetPagination,
+    getMessages: state.getMessages, // Add getMessages to the selector
+  })));
+  
+  const {
     totalMessages,
-    totalUnreadMessages,
+    currentPage,
+    currentPageStartIndex,
     messagesLoadedSoFar,
     nextPageToken,
     isHydrated,
     prevPage,
     nextPage,
-    resetPagination
-  } = useMailStore();
+    isNavigatingBackwards,
+  } = useMailStore(useShallow(state => ({
+    totalMessages: state.totalMessages || 0,
+    currentPage: state.currentPage,
+    currentPageStartIndex: state.currentPageStartIndex,
+    messagesLoadedSoFar: state.messagesLoadedSoFar,
+    nextPageToken: state.nextPageToken,
+    isHydrated: state.isHydrated,
+    prevPage: state.prevPage,
+    nextPage: state.nextPage,
+    isNavigatingBackwards: state.isNavigatingBackwards,
+  })));
 
-  const messages = getMessages();
+  const messages = getMessages(); // Use the getMessages selector
   const selectedCount = selectedMessages.length;
   const isAllSelected = messages.length > 0 && selectedMessages.length === messages.length;
   const isPartiallySelected = selectedMessages.length > 0 && selectedMessages.length < messages.length;
@@ -99,6 +128,10 @@ export function MailToolbar() {
       await nextPage();
     }
   };
+
+  const start = currentPageStartIndex > 0 ? currentPageStartIndex - messages.length + 1 : 1;
+  const end = currentPageStartIndex > 0 ? currentPageStartIndex : messages.length;
+  const displayTotal = totalMessages > 0 ? totalMessages : '...';
 
   return (
     <div className="flex items-center justify-between gap-2 bg-tertiary px-4 py-3">
@@ -225,22 +258,12 @@ export function MailToolbar() {
             
             // CLARIFIED LOGIC: Always use totalMessages for "of X" to represent the total count being paginated
             // This should represent the total messages in the current view/label, not unread count
-            let displayTotal = totalMessages;
+            let displayTotal: string | number = totalMessages;
             
             // Fallback logic if totalMessages is not available
             if (!displayTotal || displayTotal <= 0) {
               displayTotal = nextPageToken ? `${end}+` : end.toString();
             }
-            
-            console.log(`📄 [TOOLBAR] PAGINATION DISPLAY - START: ${start}, END: ${end}, TOTAL: ${displayTotal}`, {
-              start,
-              end,
-              totalMessages,
-              totalUnreadMessages, // Still track but don't use in main display
-              messagesLoadedSoFar,
-              currentPageMessages: messages.length,
-              displayTotal
-            });
             
             return `${start}-${end} of ${displayTotal}`;
           })()}

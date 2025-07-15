@@ -24,6 +24,11 @@ export const TopBar = () => {
             <h1 className="m-0 text-lg font-semibold leading-tight text-primary">
               {headerProps.title}
             </h1>
+            {headerProps.subtitle && (
+              <p className="m-0 text-sm text-secondary opacity-80">
+                {headerProps.subtitle}
+              </p>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-4">
@@ -105,13 +110,15 @@ export const TopBar = () => {
           <HelpCircle size={18} className="text-muted" />
         </button>
         
-        <Avatar
-          size="sm"
-          className="cursor-pointer"
+        <button 
+          className="cursor-pointer rounded-full"
           onClick={() => {
             // TODO: Open user menu
+            console.log('User menu clicked');
           }}
-        />
+        >
+          <Avatar size="sm" />
+        </button>
       </div>
     </header>
   );

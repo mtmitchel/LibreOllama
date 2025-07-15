@@ -12,6 +12,9 @@ import { LinkDialog } from './LinkDialog';
 
 interface TiptapFixedToolbarProps {
   editor: Editor;
+  onExport: (format: 'pdf' | 'docx' | 'txt') => Promise<void>;
+  selectedNote?: any;
+  onDeleteNote?: () => void;
 }
 
 export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({ 
@@ -55,7 +58,7 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
 
     if (selected) {
       // selected is a File object: { path: string, name?: string } or string in older tauri versions
-      const filePath = typeof selected === 'string' ? selected : selected.path;
+      const filePath = typeof selected === 'string' ? selected : (selected as { path: string }).path;
       const contents = await readFile(filePath);
       const base64 = btoa(new Uint8Array(contents).reduce((data, byte) => data + String.fromCharCode(byte), ''));
       const dataUrl = `data:image/png;base64,${base64}`;
@@ -160,7 +163,7 @@ export const TiptapFixedToolbar: React.FC<TiptapFixedToolbarProps> = ({
               <ChevronDown size={10} className="absolute bottom-0 right-0" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
+          <DropdownMenuContent>
             <DropdownMenuItem onSelect={() => handleHeadingChange(0)}>
               <Type size={16} className="mr-2" />
               Normal text

@@ -3,6 +3,7 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { GoogleCalendarEvent, GoogleAccount, CalendarEventCreateRequest } from '../types/google';
 import { googleCalendarService } from '../services/google/googleCalendarService';
+import { logger } from '../core/lib/logger';
 import { useSettingsStore } from './settingsStore';
 
 interface GoogleCalendarState {
@@ -73,7 +74,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
 
         // Authentication
         authenticate: (account: GoogleAccount) => {
-          console.log('🔐 [GOOGLE-CALENDAR] Authenticating account:', account.email);
+          logger.debug('[GOOGLE-CALENDAR] Authenticating account:', account.email);
           set((state) => {
             state.isAuthenticated = true;
           });
@@ -87,7 +88,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
         },
 
         signOut: () => {
-          console.log('🚪 [GOOGLE-CALENDAR] Signing out');
+          logger.debug('[GOOGLE-CALENDAR] Signing out');
           set((state) => {
             state.isAuthenticated = false;
             state.events = [];
@@ -107,7 +108,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           }
 
           try {
-            console.log('📅 [GOOGLE-CALENDAR] Fetching calendars for:', account.email);
+            logger.debug('[GOOGLE-CALENDAR] Fetching calendars for:', account.email);
             const response = await googleCalendarService.getCalendars(account as GoogleAccount);
             
             if (response.success && response.data) {
@@ -140,7 +141,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           });
 
           try {
-            console.log('📆 [GOOGLE-CALENDAR] Fetching events for:', account.email);
+            logger.debug('[GOOGLE-CALENDAR] Fetching events for:', account.email);
             
             // Set default time range if not provided (current month)
             const now = new Date();
@@ -173,7 +174,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
         },
 
         syncCalendar: async () => {
-          console.log('🔄 [GOOGLE-CALENDAR] Syncing calendar');
+          logger.debug('[GOOGLE-CALENDAR] Syncing calendar');
           await Promise.all([
             get().fetchCalendars(),
             get().fetchEvents()
@@ -186,7 +187,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           if (!account) return;
 
           try {
-            console.log('➕ [GOOGLE-CALENDAR] Creating event:', eventData.summary);
+            logger.debug('[GOOGLE-CALENDAR] Creating event:', eventData.summary);
             const response = await googleCalendarService.createEvent(
               account, 
               eventData, 
@@ -213,7 +214,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           if (!account) return;
 
           try {
-            console.log(`✏️ [GOOGLE-CALENDAR] Updating event: ${eventId}`);
+            logger.debug(`[GOOGLE-CALENDAR] Updating event: ${eventId}`);
             const response = await googleCalendarService.updateEvent(
               account, 
               eventId, 
@@ -244,7 +245,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           if (!account) return;
 
           try {
-            console.log(`🗑️ [GOOGLE-CALENDAR] Deleting event: ${eventId}`);
+            logger.debug(`[GOOGLE-CALENDAR] Deleting event: ${eventId}`);
             const response = await googleCalendarService.deleteEvent(
               account, 
               eventId, 
@@ -297,7 +298,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           lastSyncAt: state.lastSyncAt,
         }),
         onRehydrateStorage: () => (state) => {
-          console.log('🔄 [GOOGLE-CALENDAR] Store hydrated from localStorage');
+          logger.debug('[GOOGLE-CALENDAR] Store hydrated from localStorage');
           if (state) {
             state.isHydrated = true;
           }
@@ -311,7 +312,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
 setTimeout(() => {
   const state = useGoogleCalendarStore.getState();
   if (!state.isHydrated) {
-    console.log('🔄 [GOOGLE-CALENDAR] Manual hydration fallback triggered');
+          logger.debug('[GOOGLE-CALENDAR] Manual hydration fallback triggered');
     useGoogleCalendarStore.setState({ isHydrated: true });
   }
 }, 100); 

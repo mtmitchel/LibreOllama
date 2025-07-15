@@ -54,7 +54,7 @@ export interface BaseElement {
   isHidden?: boolean;
   sectionId?: SectionId | null;
   layerId?: LayerId;
-  groupId?: ElementId | null;
+  groupId?: GroupId | null; // Changed from ElementId | null to GroupId | null
   zIndex?: number;
   createdAt: number;
   updatedAt: number;

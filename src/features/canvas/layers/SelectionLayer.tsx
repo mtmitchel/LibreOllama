@@ -54,7 +54,7 @@ export function SelectionLayer({
 
     const nodes = transformer.nodes();
     nodes.forEach((node) => {
-      const element = elements.get(node.id());
+      const element = elements.get(node.id() as ElementId);
       if (!element) return;
 
       const scaleX = node.scaleX();
@@ -74,7 +74,7 @@ export function SelectionLayer({
       };
 
       // Update through store
-      useUnifiedCanvasStore.getState().updateElement(node.id(), updates);
+      useUnifiedCanvasStore.getState().updateElement(node.id() as ElementId, updates);
     });
   }, [elements]);
 
@@ -106,8 +106,8 @@ export function SelectionLayer({
             <Rect
               x={element.x - 2}
               y={element.y - 2}
-              width={(element.width || 100) + 4}
-              height={(element.height || 100) + 4}
+              width={((element as any).width || 100) + 4}
+              height={((element as any).height || 100) + 4}
               stroke={canvasTheme.colors.primary}
               strokeWidth={2}
               fill="transparent"
@@ -117,9 +117,9 @@ export function SelectionLayer({
             {/* Corner handles for resize */}
             {[
               { x: element.x, y: element.y }, // top-left
-              { x: element.x + (element.width || 100), y: element.y }, // top-right
-              { x: element.x, y: element.y + (element.height || 100) }, // bottom-left
-              { x: element.x + (element.width || 100), y: element.y + (element.height || 100) } // bottom-right
+              { x: element.x + ((element as any).width || 100), y: element.y }, // top-right
+              { x: element.x, y: element.y + ((element as any).height || 100) }, // bottom-left
+              { x: element.x + ((element as any).width || 100), y: element.y + ((element as any).height || 100) } // bottom-right
             ].map((handle, index) => (
               <Circle
                 key={`handle-${elementId}-${index}`}

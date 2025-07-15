@@ -63,19 +63,28 @@ export const notesService = {
     await invoke('delete_note', { id });
   },
   async getFolders(): Promise<Folder[]> {
-    const folders = await invoke<any[]>('get_folders', { userId: 'default_user' });
+    const folders = await invoke<any[]>('get_folders');
     return folders.map(normalizeFolder);
   },
   async createFolder(folder: Omit<Folder, 'id' | 'children' | 'metadata'>): Promise<Folder> {
     const newFolder = await invoke<any>('create_folder', { 
         name: folder.name, 
-        parentId: folder.parentId ? parseInt(folder.parentId, 10) : null, 
+        parentId: folder.parentId ? parseInt(folder.parentId, 10) : null,
+        color: null, // Default color
         userId: 'default_user' 
     });
     return normalizeFolder(newFolder);
   },
   async updateFolder(folder: Partial<Folder> & { id: string }): Promise<Folder> {
-    const updatedFolder = await invoke<any>('update_folder', { id: folder.id, folder: { name: folder.name } });
+    const payload = {
+        id: folder.id,
+        folder: {
+            name: folder.name,
+            parent_id: folder.parentId ? parseInt(folder.parentId, 10) : null,
+            color: null
+        }
+    };
+    const updatedFolder = await invoke<any>('update_folder', payload);
     return normalizeFolder(updatedFolder);
   },
   async deleteFolder(id: string): Promise<void> {

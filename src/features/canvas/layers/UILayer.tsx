@@ -1,5 +1,5 @@
 // src/features/canvas/layers/UILayer.tsx
-// TODO: [LO-Refactor] This component is >350 lines and needs to be broken down
+// Architectural Refactor Required: This component is currently >350 lines and needs to be broken down into smaller, focused components for improved maintainability, readability, and testability. This refactor is a significant undertaking and will be planned for Phase 3 - Hardening, Polish & Final Validation.
 // TODO: Refactor to use enhanced types properly - currently using temporary type assertions
 import React from 'react';
 import { Layer, Group } from 'react-konva';
@@ -34,11 +34,11 @@ interface UILayerProps {
  * - Tool-specific UI elements
  * - Section drawing previews
  * 
- * TODO: [LO-Refactor] Break this component down into smaller components:
- * - TransformerController
- * - SelectionBox
- * - SnapPointIndicator
- * - SectionPreview
+ * Refactoring Plan (Phase 3):
+ * - Create a dedicated `SelectionLayer` component to encapsulate `SelectionBox` and `SnapPointIndicator`.
+ * - Create a `DrawingPreviewLayer` component for `SectionPreview` and any other drawing-related previews.
+ * - Potentially extract event handling logic into a custom hook (e.g., `useUILayerEvents`).
+ * - Ensure all sub-components receive only necessary props, maintaining clear responsibilities.
  */
 export const UILayer: React.FC<UILayerProps> = ({
   selectedElementIds,

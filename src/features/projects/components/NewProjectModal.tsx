@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, Text, Heading, Input, Select, Checkbox, Badge } from '../../../components/ui';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/Dialog';
+import { Button, Card, Text, Heading, Input, Checkbox, Badge } from '../../../components/ui';
 import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 
 interface ProjectForm {

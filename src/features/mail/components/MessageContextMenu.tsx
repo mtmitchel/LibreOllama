@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ParsedEmail } from '../types';
 import { useMailStore } from '../stores/mailStore';
+import { logger } from '../../../core/lib/logger';
 
 interface MessageContextMenuProps {
   message: ParsedEmail;
@@ -172,21 +173,21 @@ export function MessageContextMenu({
 
   const handleReply = useCallback(() => {
     // TODO: Implement reply functionality
-    console.log('Reply to message:', message.id);
+          logger.log('Reply to message:', message.id);
     onAction?.('reply', message.id);
     onClose();
   }, [message, onAction, onClose]);
 
   const handleReplyAll = useCallback(() => {
     // TODO: Implement reply all functionality
-    console.log('Reply all to message:', message.id);
+    logger.log('Reply all to message:', message.id);
     onAction?.('reply_all', message.id);
     onClose();
   }, [message, onAction, onClose]);
 
   const handleForward = useCallback(() => {
     // TODO: Implement forward functionality
-    console.log('Forward message:', message.id);
+    logger.log('Forward message:', message.id);
     onAction?.('forward', message.id);
     onClose();
   }, [message, onAction, onClose]);
@@ -195,7 +196,7 @@ export function MessageContextMenu({
     // Copy Gmail URL to clipboard
     const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${message.id}`;
     navigator.clipboard.writeText(gmailUrl).then(() => {
-      console.log('Gmail link copied to clipboard');
+      logger.log('Gmail link copied to clipboard');
     }).catch(err => {
       console.error('Failed to copy link:', err);
     });
@@ -204,21 +205,21 @@ export function MessageContextMenu({
 
   const handlePrint = useCallback(() => {
     // TODO: Implement print functionality
-    console.log('Print message:', message.id);
+    logger.log('Print message:', message.id);
     onAction?.('print', message.id);
     onClose();
   }, [message, onAction, onClose]);
 
   const handleMarkImportant = useCallback(() => {
     // TODO: Implement mark as important functionality
-    console.log('Mark as important:', message.id);
+    logger.log('Mark as important:', message.id);
     onAction?.('mark_important', message.id);
     onClose();
   }, [message, onAction, onClose]);
 
   const handleManageLabels = useCallback(() => {
     // TODO: Implement label management
-    console.log('Manage labels for:', message.id);
+    logger.log('Manage labels for:', message.id);
     onAction?.('manage_labels', message.id);
     onClose();
   }, [message, onAction, onClose]);

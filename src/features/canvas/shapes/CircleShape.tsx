@@ -233,7 +233,9 @@ export const CircleShape: React.FC<CircleShapeProps> = React.memo(({
   const timeoutsRef = useRef<{ focus?: NodeJS.Timeout; resize?: NodeJS.Timeout }>({});
   const tweenRef = useRef<Konva.Tween | null>(null);
 
-  const { radius = 50, fontSize = 14 } = element;
+  const { radius: rawRadius = 50, fontSize = 14 } = element;
+  // Ensure radius is always non-negative (Konva requirement)
+  const radius = Math.max(0, rawRadius);
   const diameter = radius * 2;
 
   const [liveText, setLiveText] = useState('');

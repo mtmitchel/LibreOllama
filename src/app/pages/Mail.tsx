@@ -4,7 +4,7 @@ import { MailSidebar } from '../../features/mail/components/MailSidebar';
 import { MailToolbar } from '../../features/mail/components/MailToolbar';
 import { EnhancedSearchBar, EnhancedMessageList } from '../../features/mail/components';
 import { MailContextSidebar } from '../../features/mail/components/MailContextSidebar';
-import { ComposeModal } from '../../features/mail/components/ComposeModal';
+import { ComposeModal } from '../../features/mail/components';
 import { useMailStore } from '../../features/mail/stores/mailStore';
 import { Tag } from 'lucide-react';
 
@@ -46,25 +46,12 @@ export default function Mail() {
           {/* Enhanced Search Bar */}
           <div className="bg-bg-tertiary shrink-0 rounded-t-xl p-4">
             <EnhancedSearchBar 
-              onAdvancedSearchToggle={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)}
+              onAdvancedSearch={() => setIsAdvancedSearchOpen(!isAdvancedSearchOpen)}
             />
           </div>
 
           {/* Mail Toolbar */}
-          <MailToolbar 
-            selectedCount={selectedMessages.length}
-            onSelectAll={() => {}}
-            onArchive={() => {}}
-            onDelete={() => {}}
-            onMarkAsRead={() => {}}
-            onMarkAsUnread={() => {}}
-            onAddLabel={() => handleOpenLabelPicker()}
-            selectedMessages={selectedMessages}
-            onRefresh={() => {}}
-            onToggleImportant={() => {}}
-            onToggleStar={() => {}}
-            onClearSelection={() => {}}
-          />
+          <MailToolbar />
 
           {/* View Toggle Options */}
           <div className="border-border-primary shrink-0 border-b bg-secondary px-4 py-3">
@@ -116,9 +103,7 @@ export default function Mail() {
           {/* Message List Content */}
           <div className="flex min-h-0 flex-1">
             <div className="min-w-0 flex-1">
-              <EnhancedMessageList 
-                isThreaded={isThreadedView}
-              />
+              <EnhancedMessageList />
             </div>
           </div>
         </div>

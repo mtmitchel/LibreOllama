@@ -1,5 +1,5 @@
 // src/components/canvas/shapes/TextShape.tsx
-import React, { useEffect, useRef, useCallback, memo } from 'react';
+import { useEffect, useRef, useCallback, memo, useMemo, type FC, type MutableRefObject } from 'react';
 import { Text, Group, Rect, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { TextElement, ElementId, CanvasElement } from '../types/enhanced.types';
@@ -16,7 +16,7 @@ interface TextShapeProps {
   konvaProps: any;
   onUpdate: (id: ElementId, updates: Partial<CanvasElement>) => void;
   onStartTextEdit: (elementId: ElementId) => void;
-  stageRef?: React.MutableRefObject<Konva.Stage | null> | undefined;
+  stageRef?: MutableRefObject<Konva.Stage | null> | undefined;
 }
 
 /**
@@ -225,7 +225,7 @@ const createTextEditor = (
 /**
  * TextShape - FigJam-style hybrid text editing
  */
-export const TextShape: React.FC<TextShapeProps> = memo(({
+export const TextShape: FC<TextShapeProps> = memo(({
   element,
   isSelected,
   konvaProps,
@@ -326,7 +326,7 @@ export const TextShape: React.FC<TextShapeProps> = memo(({
   }
 
   // Calculate dimensions based on actual content or placeholder
-  const measuredDimensions = React.useMemo(() => {
+  const measuredDimensions = useMemo(() => {
     const dimensions = measureTextDimensions(displayText, finalFontSize, fontFamily, 600, true);
     devLog.debug('📐 [TextShape] Calculated dimensions:', {
       displayText: displayText.substring(0, 20),
@@ -341,7 +341,7 @@ export const TextShape: React.FC<TextShapeProps> = memo(({
   const elementHeight = element.height || measuredDimensions.height;
   
   // Ensure Group bounds are correct after any scaling or dimension changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (groupRef.current) {
       const group = groupRef.current;
       // Force the group to update its bounds
@@ -724,7 +724,7 @@ return;
   }, [element, onUpdate, calculateTextareaPosition, setTextEditingElement, textColor]);
 
   // Handle drag
-  const handleDragEnd = React.useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
+  const handleDragEnd = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
     // Don't handle drag events while editing
     if (cleanupEditorRef.current) {
       devLog.debug('🚫 [TextShape] Drag ignored - text editing in progress');
@@ -743,10 +743,10 @@ return;
   }, [element.id, onUpdate]);
 
   // Track when text editing ends to prevent immediate transforms
-  const lastEditEndTime = React.useRef<number>(0);
+  const lastEditEndTime = useRef<number>(0);
   
   // Update last edit end time when editing completes
-  React.useEffect(() => {
+  useEffect(() => {
     if (textEditingElementId === element.id) {
       // Text editing started - reset timer
       lastEditEndTime.current = 0;
@@ -757,7 +757,7 @@ return;
   }, [textEditingElementId, element.id]);
 
   // React-Konva transform pattern: handle transform end on Text component
-  const handleTransformEnd = React.useCallback((e: Konva.KonvaEventObject<Event>) => {
+  const handleTransformEnd = useCallback((e: Konva.KonvaEventObject<Event>) => {
     const target = e.target;
     
     // Only handle transforms from the transformer, not from the text node directly

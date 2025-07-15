@@ -296,6 +296,7 @@ export function EnhancedMessageItem({
       {contextMenuPosition && (
         <MessageContextMenu
           message={message}
+          isOpen={true}
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
         />

@@ -136,7 +136,7 @@ export function ContextualToolbar({
   }
 
   return (
-    <Card
+    <div
       ref={toolbarRef}
       className={`
         border-border-default motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 fixed z-50
@@ -148,182 +148,183 @@ export function ContextualToolbar({
         top: position.y - 60, // Position above the selection
         maxWidth: '400px'
       }}
-      padding="sm"
     >
-      <div className="flex flex-wrap items-center gap-1">
-        {/* Basic formatting */}
-        <div className="border-border-default flex items-center gap-1 border-r pr-2">
-          {formatGroups[0].commands.map((cmd) => (
-            <Button
-              key={cmd.command}
-              variant="ghost"
-              size="icon"
-              className="size-8 motion-safe:transition-colors motion-safe:duration-150"
-              onClick={() => handleCommand(cmd.command)}
-              title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
-            >
-              {cmd.icon}
-            </Button>
-          ))}
-        </div>
-
-        {/* Headings */}
-        <div className="border-border-default flex items-center gap-1 border-r pr-2">
-          {formatGroups[1].commands.map((cmd) => (
-            <Button
-              key={cmd.command}
-              variant="ghost"
-              size="icon"
-              className="size-8 motion-safe:transition-colors motion-safe:duration-150"
-              onClick={() => handleCommand(cmd.command)}
-              title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
-            >
-              {cmd.icon}
-            </Button>
-          ))}
-        </div>
-
-        {/* Lists */}
-        <div className="border-border-default flex items-center gap-1 border-r pr-2">
-          {formatGroups[2].commands.map((cmd) => (
-            <Button
-              key={cmd.command}
-              variant="ghost"
-              size="icon"
-              className="size-8 motion-safe:transition-colors motion-safe:duration-150"
-              onClick={() => handleCommand(cmd.command)}
-              title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
-            >
-              {cmd.icon}
-            </Button>
-          ))}
-        </div>
-
-        {/* Colors and highlights */}
-        <div className="border-border-default flex items-center gap-1 border-r pr-2">
-          {/* Text Color */}
-          <DropdownMenu>
-            <DropdownMenu.Trigger asChild>
+      <Card padding="sm">
+        <div className="flex flex-wrap items-center gap-1">
+          {/* Basic formatting */}
+          <div className="border-border-default flex items-center gap-1 border-r pr-2">
+            {formatGroups[0].commands.map((cmd) => (
               <Button
+                key={cmd.command}
                 variant="ghost"
                 size="icon"
                 className="size-8 motion-safe:transition-colors motion-safe:duration-150"
-                title="Text color"
+                onClick={() => handleCommand(cmd.command)}
+                title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
               >
-                <Type className="size-4" />
+                {cmd.icon}
               </Button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content>
-              <div className="p-2">
-                <div className="mb-2 text-xs font-medium text-secondary">Text color</div>
-                <div className="grid grid-cols-4 gap-1">
-                  {textColors.map((color) => (
-                    <button
-                      key={color.value}
-                      className="border-border-default size-6 rounded border hover:scale-110 motion-safe:transition-transform motion-safe:duration-150"
-                      style={{ backgroundColor: color.color }}
-                      onClick={() => handleCommand('textColor', color.value)}
-                      title={color.label}
-                    />
-                  ))}
+            ))}
+          </div>
+
+          {/* Headings */}
+          <div className="border-border-default flex items-center gap-1 border-r pr-2">
+            {formatGroups[1].commands.map((cmd) => (
+              <Button
+                key={cmd.command}
+                variant="ghost"
+                size="icon"
+                className="size-8 motion-safe:transition-colors motion-safe:duration-150"
+                onClick={() => handleCommand(cmd.command)}
+                title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
+              >
+                {cmd.icon}
+              </Button>
+            ))}
+          </div>
+
+          {/* Lists */}
+          <div className="border-border-default flex items-center gap-1 border-r pr-2">
+            {formatGroups[2].commands.map((cmd) => (
+              <Button
+                key={cmd.command}
+                variant="ghost"
+                size="icon"
+                className="size-8 motion-safe:transition-colors motion-safe:duration-150"
+                onClick={() => handleCommand(cmd.command)}
+                title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
+              >
+                {cmd.icon}
+              </Button>
+            ))}
+          </div>
+
+          {/* Colors and highlights */}
+          <div className="border-border-default flex items-center gap-1 border-r pr-2">
+            {/* Text Color */}
+            <DropdownMenu>
+              <DropdownMenu.Trigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 motion-safe:transition-colors motion-safe:duration-150"
+                  title="Text color"
+                >
+                  <Type className="size-4" />
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content>
+                <div className="p-2">
+                  <div className="mb-2 text-xs font-medium text-secondary">Text color</div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {textColors.map((color) => (
+                      <button
+                        key={color.value}
+                        className="border-border-default size-6 rounded border hover:scale-110 motion-safe:transition-transform motion-safe:duration-150"
+                        style={{ backgroundColor: color.color }}
+                        onClick={() => handleCommand('textColor', color.value)}
+                        title={color.label}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </DropdownMenu.Content>
-          </DropdownMenu>
+              </DropdownMenu.Content>
+            </DropdownMenu>
 
-          {/* Highlight Color */}
-          <DropdownMenu>
-            <DropdownMenu.Trigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 motion-safe:transition-colors motion-safe:duration-150"
-                title="Highlight color"
-              >
-                <Highlighter className="size-4" />
-              </Button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content>
-              <div className="p-2">
-                <div className="mb-2 text-xs font-medium text-secondary">Highlight</div>
-                <div className="grid grid-cols-4 gap-1">
-                  {highlightColors.map((color) => (
-                    <button
-                      key={color.value}
-                      className="border-border-default size-6 rounded border hover:scale-110 motion-safe:transition-transform motion-safe:duration-150"
-                      style={{ backgroundColor: color.color }}
-                      onClick={() => handleCommand('highlight', color.value)}
-                      title={color.label}
-                    />
-                  ))}
+            {/* Highlight Color */}
+            <DropdownMenu>
+              <DropdownMenu.Trigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 motion-safe:transition-colors motion-safe:duration-150"
+                  title="Highlight color"
+                >
+                  <Highlighter className="size-4" />
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content>
+                <div className="p-2">
+                  <div className="mb-2 text-xs font-medium text-secondary">Highlight</div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {highlightColors.map((color) => (
+                      <button
+                        key={color.value}
+                        className="border-border-default size-6 rounded border hover:scale-110 motion-safe:transition-transform motion-safe:duration-150"
+                        style={{ backgroundColor: color.color }}
+                        onClick={() => handleCommand('highlight', color.value)}
+                        title={color.label}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </DropdownMenu.Content>
-          </DropdownMenu>
-        </div>
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </div>
 
-        {/* Additional actions */}
-        <div className="flex items-center gap-1">
-          {formatGroups[3].commands.map((cmd) => (
-            <Button
-              key={cmd.command}
-              variant="ghost"
-              size="icon"
-              className="size-8 motion-safe:transition-colors motion-safe:duration-150"
-              onClick={() => handleCommand(cmd.command)}
-              title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
-            >
-              {cmd.icon}
-            </Button>
-          ))}
-
-          {/* More options */}
-          <DropdownMenu>
-            <DropdownMenu.Trigger asChild>
+          {/* Additional actions */}
+          <div className="flex items-center gap-1">
+            {formatGroups[3].commands.map((cmd) => (
               <Button
+                key={cmd.command}
                 variant="ghost"
                 size="icon"
                 className="size-8 motion-safe:transition-colors motion-safe:duration-150"
-                title="More options"
+                onClick={() => handleCommand(cmd.command)}
+                title={cmd.tooltip + (cmd.shortcut ? ` (${cmd.shortcut})` : '')}
               >
-                <MoreHorizontal className="size-4" />
+                {cmd.icon}
               </Button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content>
-              <DropdownMenu.Item onSelect={() => handleCommand('alignLeft')}>
-                <AlignLeft className="mr-2 size-4" />
-                Align left
-              </DropdownMenu.Item>
-              <DropdownMenu.Item onSelect={() => handleCommand('alignCenter')}>
-                <AlignCenter className="mr-2 size-4" />
-                Align center
-              </DropdownMenu.Item>
-              <DropdownMenu.Item onSelect={() => handleCommand('alignRight')}>
-                <AlignRight className="mr-2 size-4" />
-                Align right
-              </DropdownMenu.Item>
-              <DropdownMenu.Separator />
-              <DropdownMenu.Item onSelect={() => handleCommand('clearFormat')}>
-                Clear formatting
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu>
-        </div>
-      </div>
+            ))}
 
-      {/* Selected text indicator */}
-      {selectedText && (
-        <div className="border-border-default mt-2 border-t pt-2">
-          <div className="truncate text-xs text-secondary">
-            "{selectedText.slice(0, 30)}{selectedText.length > 30 ? '...' : ''}"
+            {/* More options */}
+            <DropdownMenu>
+              <DropdownMenu.Trigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 motion-safe:transition-colors motion-safe:duration-150"
+                  title="More options"
+                >
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content>
+                <DropdownMenu.Item onSelect={() => handleCommand('alignLeft')}>
+                  <AlignLeft className="mr-2 size-4" />
+                  Align left
+                </DropdownMenu.Item>
+                <DropdownMenu.Item onSelect={() => handleCommand('alignCenter')}>
+                  <AlignCenter className="mr-2 size-4" />
+                  Align center
+                </DropdownMenu.Item>
+                <DropdownMenu.Item onSelect={() => handleCommand('alignRight')}>
+                  <AlignRight className="mr-2 size-4" />
+                  Align right
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item onSelect={() => handleCommand('clearFormat')}>
+                  Clear formatting
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
           </div>
         </div>
-      )}
-      <div className="flex items-center gap-2 px-2 py-1 text-xs text-subtle">
-        <span>Press</span>
-        <kbd className="bg-subtle text-xs px-1 py-0.5 rounded">Esc</kbd>
-        <span>to close or select text and use &quot;/&quot; for commands</span>
-      </div>
-    </Card>
+
+        {/* Selected text indicator */}
+        {selectedText && (
+          <div className="border-border-default mt-2 border-t pt-2">
+            <div className="truncate text-xs text-secondary">
+              "{selectedText.slice(0, 30)}{selectedText.length > 30 ? '...' : ''}"
+            </div>
+          </div>
+        )}
+        <div className="flex items-center gap-2 px-2 py-1 text-xs text-subtle">
+          <span>Press</span>
+          <kbd className="bg-subtle text-xs px-1 py-0.5 rounded">Esc</kbd>
+          <span>to close or select text and use &quot;/&quot; for commands</span>
+        </div>
+      </Card>
+    </div>
   );
 } 

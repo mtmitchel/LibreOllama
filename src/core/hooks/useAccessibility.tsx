@@ -124,7 +124,7 @@ export function useReducedMotion() {
  * Hook for generating unique IDs for accessibility attributes
  */
 export function useId(prefix: string = 'id') {
-  const id = useRef<string>();
+  const id = useRef<string | undefined>(undefined);
   
   if (!id.current) {
     id.current = `${prefix}-${Math.random().toString(36).substr(2, 9)}`;

@@ -4,6 +4,7 @@ import { Text, Card } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface MessageItemProps {
   message: ParsedEmail;
@@ -114,7 +115,7 @@ function MessageItem({ message, isSelected, onSelect, onMessageClick }: MessageI
           className="min-w-0 flex-1 cursor-pointer overflow-hidden"
           onClick={() => onMessageClick(message)}
         >
-          <div className="flex min-w-0 items-baseline" className="gap-1">
+                        <div className="flex min-w-0 items-baseline gap-1">
             <Text 
               size="sm" 
               weight={!message.isRead ? 'semibold' : 'normal'}
@@ -171,7 +172,7 @@ export function MessageList() {
   const messages = getMessages();
 
   const handleMessageClick = async (message: ParsedEmail) => {
-    console.log('🔍 [DEBUG] Email clicked:', {
+    logger.debug('🔍 [DEBUG] Email clicked:', {
       messageId: message.id,
       subject: message.subject,
       currentMessage: useMailStore.getState().currentMessage?.id
@@ -186,7 +187,7 @@ export function MessageList() {
         error: null 
       });
       
-      console.log('🚀 [DEBUG] Set message immediately from list data');
+      logger.debug('🚀 [DEBUG] Set message immediately from list data');
       
       // Try to fetch full message details in the background
       try {
@@ -195,14 +196,14 @@ export function MessageList() {
           'message details'
         );
         
-        console.log('✅ [DEBUG] Full message details fetched successfully');
+        logger.debug('✅ [DEBUG] Full message details fetched successfully');
       } catch (fetchError) {
-        console.warn('⚠️ [DEBUG] Full message fetch failed, using list data:', fetchError);
+        logger.warn('⚠️ [DEBUG] Full message fetch failed, using list data:', fetchError);
         // Keep the message from list data - it's better than nothing
       }
       
     } catch (error) {
-      console.error('❌ [DEBUG] Message click failed completely:', error);
+      logger.error('❌ [DEBUG] Message click failed completely:', error);
       useMailStore.setState({ 
         error: `Failed to open email: ${error instanceof Error ? error.message : 'Unknown error'}`,
         isLoading: false 

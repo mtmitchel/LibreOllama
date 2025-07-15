@@ -13,6 +13,9 @@ import {
   Tag
 } from 'lucide-react';
 import { SearchSuggestion, SearchOperator, GMAIL_SEARCH_OPERATORS } from '../types/search';
+import { useMailStore } from '../stores/mailStore';
+import { Button } from '../../../components/ui/index'; // Corrected import path
+import { logger } from '../../../core/lib/logger';
 
 interface SearchSuggestionsProps {
   query: string;
@@ -295,8 +298,8 @@ const SearchSuggestions: React.FC<SearchSuggestionsProps> = ({
 
   const removeSuggestion = (suggestion: SearchSuggestion, event: React.MouseEvent) => {
     event.stopPropagation();
+    logger.debug('Remove suggestion:', suggestion);
     // TODO: Implement remove from recent/saved searches
-    console.log('Remove suggestion:', suggestion);
   };
 
   if (!isOpen || suggestions.length === 0) return null;

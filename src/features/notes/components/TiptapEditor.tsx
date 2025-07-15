@@ -32,7 +32,7 @@ interface TiptapEditorProps {
   className?: string;
   selectedNote?: any;
   onDeleteNote?: () => void;
-  titleInputRef?: React.RefObject<HTMLInputElement>;
+  titleInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 const TiptapEditor: React.FC<TiptapEditorProps> = ({
@@ -59,7 +59,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     
     debounceTimeoutRef.current = setTimeout(() => {
       onChange?.(newContent);
-    }, 500); // Wait 500ms after user stops typing
+    }, 500) as unknown as number; // Wait 500ms after user stops typing
   }, [onChange]);
 
   // Cleanup timeout on unmount
@@ -247,7 +247,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     >
       <TiptapFixedToolbar
         editor={editor}
-        onImageUpload={handleImageUpload}
         onExport={exportAs}
         selectedNote={selectedNote}
         onDeleteNote={onDeleteNote}

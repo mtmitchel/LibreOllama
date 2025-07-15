@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, renderHook } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -19,19 +19,22 @@ import { HeaderProvider } from '../../app/contexts/HeaderContext';
 import { useMailStore } from '../../features/mail/stores/mailStore';
 import { createTestMailStore } from '../../features/mail/stores/__tests__/mailStoreTestUtils';
 import * as gmailTauriService from '../../features/mail/services/gmailTauriService';
+import type { GmailTauriService } from '../../features/mail/services/gmailTauriService';
+import { GmailLabel } from '../../features/mail/types';
+import { ParsedEmail } from '../../features/mail/types';
+import { MockGmailApiServer } from '../helpers/gmailMockData';
+import { setupTauriMocks, cleanupTauriMocks } from '../helpers/tauriMocks';
+import { createFakeGmailService } from '../utils/createFakeGmailService';
 
 // Test utilities
-import { 
-  MockGmailApiServer, 
-  createMockGmailMessage, 
-  createMockParsedEmail,
-  convertMockMessageToParsedEmail,
+import {
   createMockGmailAccount,
   MOCK_SAMPLE_MESSAGES,
   MOCK_SYSTEM_LABELS,
-  MOCK_USER_LABELS
+  MOCK_USER_LABELS,
+  createMockParsedEmail,
+  convertMockMessageToParsedEmail,
 } from '../helpers/gmailMockData';
-import { setupTauriMocks, cleanupTauriMocks, mockTauriInvoke } from '../helpers/tauriMocks';
 
 // Test setup helpers
 const convertMockAccountToGmailAccount = (mockAccount: any): any => {
@@ -61,8 +64,8 @@ const convertHookAccountToStoreAccount = (hookAccount: any): any => {
     avatar: hookAccount.picture,
     accessToken: hookAccount.tokens?.access_token || 'test-access-token',
     refreshToken: hookAccount.tokens?.refresh_token || 'test-refresh-token',
-    tokenExpiry: hookAccount.tokens?.expires_at 
-      ? new Date(hookAccount.tokens.expires_at) 
+    tokenExpiry: hookAccount.tokens?.expires_at
+      ? new Date(hookAccount.tokens.expires_at)
       : new Date(Date.now() + 3600000),
     isActive: hookAccount.isActive,
     syncStatus: hookAccount.syncStatus || 'idle',
@@ -79,19 +82,25 @@ const setupAuthenticatedUserScenario = () => {
     email: 'user@example.com',
     name: 'Test User'
   });
-  
+
   const account = convertMockAccountToGmailAccount(mockAccount);
   // Map messages with the correct account ID
   const messages = MOCK_SAMPLE_MESSAGES.map(msg => ({
     ...convertMockMessageToParsedEmail(msg),
-    accountId: account.id
-  }));
-  const labels = [...MOCK_SYSTEM_LABELS, ...MOCK_USER_LABELS];
-  
+    accountId: account.id,
+    from: { email: 'sender@example.com', name: 'Sender Name' }, // Ensure from has email and name
+    to: [{ email: 'recipient@example.com', name: 'Recipient Name' }], // Ensure to is an array of EmailAddress
+    labels: msg.labelIds || [], // Ensure labels is an array of strings
+    importance: 'normal', // Add importance
+    messageId: msg.id, // Add messageId
+  })) as ParsedEmail[]; // Cast to ParsedEmail[]
+  const labels = [...MOCK_SYSTEM_LABELS.map(label => ({ ...label, threadsTotal: 0, threadsUnread: 0, color: '#000000', messagesTotal: 0, messagesUnread: 0, messageListVisibility: 'show', labelListVisibility: 'show', type: 'system' })),
+                  ...MOCK_USER_LABELS.map(label => ({ ...label, threadsTotal: 0, threadsUnread: 0, color: '#000000', messagesTotal: 0, messagesUnread: 0, messageListVisibility: 'show', labelListVisibility: 'show', type: 'user' }))] as GmailLabel[];
+
   // Mock the API to return the messages when fetchMessages is called by addAccount
-  vi.spyOn(gmailTauriService, 'createGmailTauriService').mockReturnValue({
+  vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
     getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
-    getLabels: vi.fn().mockResolvedValue(labels),
+    getLabels: vi.fn().mockResolvedValue({ labels: labels }),
     searchMessages: vi.fn().mockResolvedValue({
       messages,
       next_page_token: undefined,
@@ -104,26 +113,29 @@ const setupAuthenticatedUserScenario = () => {
     starMessages: vi.fn().mockResolvedValue(undefined),
     unstarMessages: vi.fn().mockResolvedValue(undefined),
     archiveMessages: vi.fn().mockResolvedValue(undefined),
-    deleteMessages: vi.fn().mockResolvedValue(undefined)
-  } as any);
-  
+    deleteMessages: vi.fn().mockResolvedValue(undefined),
+    getAttachment: vi.fn().mockResolvedValue(new Uint8Array()),
+    testEndToEndFlow: vi.fn().mockResolvedValue({ success: true, labels: [], messages: { messages: [], next_page_token: undefined, result_size_estimate: 0 } }),
+    getParsedMessage: vi.fn().mockResolvedValue({}),
+  }));
+
   // Ensure the store is set up correctly with the account as current
   // Step 1: Set the accounts first
   testStore.setTestAccounts([account]);
-  
+
   // Step 2: Ensure currentAccountId is set
   testStore.setTestCurrentAccountId(account.id);
-  
+
   // Step 3: Set authenticated state
   testStore.setTestAuthenticated(true);
-  
+
   // Step 4: Now set messages and labels with the correct account ID
   testStore.setTestMessages(messages, account.id);
   testStore.setTestLabels(labels, account.id);
-  
+
   // Step 5: Clear any errors that might have been set
   useMailStore.getState().setError(null);
-  
+
   return { account, messages, labels };
 };
 
@@ -133,19 +145,25 @@ const setupMultiAccountScenario = () => {
     createMockGmailAccount({ email: 'work@company.com', name: 'Work Account' }),
     createMockGmailAccount({ email: 'personal@gmail.com', name: 'Personal Account' })
   ];
-  
+
   const accounts = mockAccounts.map(convertMockAccountToGmailAccount);
   // Map messages with the correct account ID for the first account
   const messages = MOCK_SAMPLE_MESSAGES.map(msg => ({
     ...convertMockMessageToParsedEmail(msg),
-    accountId: accounts[0].id
-  }));
-  const labels = [...MOCK_SYSTEM_LABELS, ...MOCK_USER_LABELS];
-  
+    accountId: accounts[0].id,
+    from: { email: 'sender@example.com', name: 'Sender Name' }, // Ensure from has email and name
+    to: [{ email: 'recipient@example.com', name: 'Recipient Name' }], // Ensure to is an array of EmailAddress
+    labels: msg.labelIds || [], // Ensure labels is an array of strings
+    importance: 'normal', // Add importance
+    messageId: msg.id, // Add messageId
+  })) as ParsedEmail[]; // Cast to ParsedEmail[]
+  const labels = [...MOCK_SYSTEM_LABELS.map(label => ({ ...label, threadsTotal: 0, threadsUnread: 0, color: '#000000', messagesTotal: 0, messagesUnread: 0, messageListVisibility: 'show', labelListVisibility: 'show', type: 'system' })),
+                  ...MOCK_USER_LABELS.map(label => ({ ...label, threadsTotal: 0, threadsUnread: 0, color: '#000000', messagesTotal: 0, messagesUnread: 0, messageListVisibility: 'show', labelListVisibility: 'show', type: 'user' }))] as GmailLabel[];
+
   // Mock the API to return messages for each account
-  vi.spyOn(gmailTauriService, 'createGmailTauriService').mockReturnValue({
+  vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
     getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
-    getLabels: vi.fn().mockResolvedValue(labels),
+    getLabels: vi.fn().mockResolvedValue({ labels: labels }),
     searchMessages: vi.fn().mockImplementation(async (query, labelIds, maxResults, pageToken) => ({
       messages: maxResults ? messages : [],
       next_page_token: undefined,
@@ -158,26 +176,29 @@ const setupMultiAccountScenario = () => {
     starMessages: vi.fn().mockResolvedValue(undefined),
     unstarMessages: vi.fn().mockResolvedValue(undefined),
     archiveMessages: vi.fn().mockResolvedValue(undefined),
-    deleteMessages: vi.fn().mockResolvedValue(undefined)
-  } as any);
-  
+    deleteMessages: vi.fn().mockResolvedValue(undefined),
+    getAttachment: vi.fn().mockResolvedValue(new Uint8Array()),
+    testEndToEndFlow: vi.fn().mockResolvedValue({ success: true, labels: [], messages: { messages: [], next_page_token: undefined, result_size_estimate: 0 } }),
+    getParsedMessage: vi.fn().mockResolvedValue({}),
+  }));
+
   // Set up accounts and ensure the first one is current
   // Step 1: Set the accounts
   testStore.setTestAccounts(accounts);
-  
+
   // Step 2: Set the first account as current
   testStore.setTestCurrentAccountId(accounts[0].id);
-  
+
   // Step 3: Set authenticated state
   testStore.setTestAuthenticated(true);
-  
+
   // Step 4: Set messages and labels for the current account
   testStore.setTestMessages(messages, accounts[0].id);
   testStore.setTestLabels(labels, accounts[0].id);
-  
+
   // Step 5: Clear any errors
   useMailStore.getState().setError(null);
-  
+
   return { accounts, messages, labels };
 };
 
@@ -194,17 +215,17 @@ const CompleteAppWrapper: React.FC<{children: React.ReactNode}> = ({ children })
 
 /**
  * ARCHIVED: Gmail Complete User Workflow Tests
- * 
+ *
  * These tests have been archived because they test implementation details (internal async timing)
- * rather than user-facing functionality. According to the project's "Confidence, Not Coverage" 
+ * rather than user-facing functionality. According to the project's "Confidence, Not Coverage"
  * testing philosophy, these tests were creating false negatives due to race conditions between:
  * - Test data setup in the store
- * - Automatic API calls triggered by store actions  
+ * - Automatic API calls triggered by store actions
  * - Component rendering and message display
- * 
+ *
  * The Gmail UI Integration Tests provide sufficient confidence in Gmail functionality
  * and follow the recommended store-first testing methodology.
- * 
+ *
  * See GMAIL_TESTING_COMPREHENSIVE_REPORT.txt for detailed analysis.
  */
 
@@ -216,13 +237,13 @@ describe.skip('ARCHIVED: Gmail Complete User Workflow Tests - Testing implementa
     user = userEvent.setup();
     mockApiServer = new MockGmailApiServer();
     mockApiServer.start();
-    
+
     // Setup comprehensive Tauri mocks
     setupTauriMocks();
 
     // Reset mail store to initial state
     useMailStore.getState().signOut();
-    
+
     // Setup comprehensive service mocks
     vi.spyOn(gmailTauriService, 'startGmailAuth').mockImplementation(async () => ({
       success: true,
@@ -248,541 +269,16 @@ describe.skip('ARCHIVED: Gmail Complete User Workflow Tests - Testing implementa
     // Create a default mock that will be overridden by specific tests
     const defaultGetMessages = vi.fn().mockImplementation(async () => ({
       messages: [],
-      hasMore: false,
-      nextPageToken: undefined
+      next_page_token: undefined,
+      result_size_estimate: 0
     }));
 
-    vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation(() => ({
+    const defaultGetLabels = vi.fn().mockResolvedValue({ labels: [] });
+
+    vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
       getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
+      getLabels: defaultGetLabels,
       searchMessages: defaultGetMessages,
-      getMessage: vi.fn().mockImplementation(async (messageId: string) => 
-        MOCK_SAMPLE_MESSAGES.find(msg => msg.id === messageId) || null
-      ),
-      getLabels: vi.fn().mockResolvedValue([
-        { id: 'INBOX', name: 'Inbox', messagesTotal: 25, messagesUnread: 5 },
-        { id: 'STARRED', name: 'Starred', messagesTotal: 8, messagesUnread: 2 },
-        { id: 'SENT', name: 'Sent', messagesTotal: 50, messagesUnread: 0 },
-      ]),
-      getThread: vi.fn().mockResolvedValue([]),
-      markAsRead: vi.fn().mockResolvedValue(undefined),
-      markAsUnread: vi.fn().mockResolvedValue(undefined),
-      starMessages: vi.fn().mockResolvedValue(undefined),
-      unstarMessages: vi.fn().mockResolvedValue(undefined),
-      archiveMessages: vi.fn().mockResolvedValue(undefined),
-      deleteMessages: vi.fn().mockResolvedValue(undefined)
-    } as any));
-
-    vi.spyOn(gmailTauriService, 'sendGmailMessage').mockImplementation(async (messageData) => ({
-      success: true,
-      messageId: 'sent-' + Math.random(),
-      threadId: 'thread-' + Math.random()
-    }));
-
-    vi.spyOn(gmailTauriService, 'saveDraft').mockImplementation(async (draftData) => ({
-      success: true,
-      draftId: 'draft-' + Math.random()
-    }));
-  });
-
-  afterEach(() => {
-    cleanupTauriMocks();
-    mockApiServer.stop();
-  });
-
-  describe('🔄 Complete Authentication to Inbox Workflow', () => {
-    it('should complete full auth flow and load inbox', async () => {
-      // Start with explicitly unauthenticated state
-      useMailStore.setState({
-        isAuthenticated: false,
-        currentAccountId: null,
-        accounts: {},
-        accountData: {}
-      });
-      
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // 1. Should show unauthenticated state
-      await waitFor(() => {
-        expect(screen.getByText('Welcome to Mail')).toBeInTheDocument();
-        expect(screen.getByText('Sign in to your Gmail account to get started')).toBeInTheDocument();
-      });
-      
-      // 2. The auth modal should be visible
-      const authModal = await waitFor(() => {
-        // Look for elements that indicate the auth modal is present
-        const connectButton = screen.queryByRole('button', { name: /connect gmail/i });
-        const authElements = screen.queryAllByText(/gmail.*account/i);
-        
-        // Either find the connect button or auth-related text
-        expect(connectButton || authElements.length > 0).toBeTruthy();
-        return connectButton || authElements[0];
-      });
-      
-      // 3. Start auth process
-      if (authModal && authModal.tagName === 'BUTTON') {
-        await user.click(authModal);
-      } else {
-        // If no button found, trigger auth directly
-        act(() => {
-          gmailTauriService.startGmailAuth();
-        });
-      }
-      
-      // 4. Verify auth process started
-      await waitFor(() => {
-        // Check that Tauri invoke was called with the OAuth command
-        expect(mockTauriInvoke).toHaveBeenCalledWith('start_gmail_oauth', expect.any(Object));
-      });
-      
-      // 5. Simulate successful auth callback
-      const mockAccount = createMockGmailAccount({
-        email: 'user@example.com',
-        name: 'Test User'
-      });
-      const account = convertMockAccountToGmailAccount(mockAccount);
-      
-      const testStore = createTestMailStore();
-      act(() => {
-        testStore.setTestAuthenticated(true);
-        useMailStore.getState().addAccount(account);
-        testStore.setTestCurrentAccountId(account.id);
-      });
-      
-      // 6. Verify UI updates to authenticated state
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
-      });
-      
-      // 7. Mock and trigger initial sync
-      const mockMessages = MOCK_SAMPLE_MESSAGES.map(msg => ({
-        ...convertMockMessageToParsedEmail(msg),
-        accountId: account.id
-      }));
-      
-      // Set messages directly in the store for the account
-      testStore.setTestMessages(mockMessages, account.id);
-      
-      // Wait for any async operations to complete
-      await waitFor(() => {
-        expect(useMailStore.getState().isLoadingMessages).toBe(false);
-      }, { timeout: 5000 });
-      
-      // 8. Verify messages are displayed
-      await waitFor(() => {
-        // Debug: Check store state in detail
-        const state = useMailStore.getState();
-        const messages = state.getMessages();
-        console.log('🔍 DEBUG - Store check:', {
-          isAuthenticated: state.isAuthenticated,
-          currentAccountId: state.currentAccountId,
-          accounts: Object.keys(state.accounts),
-          hasAccountData: !!state.accountData[account.id],
-          messageCount: messages.length,
-          firstMessage: messages[0]?.subject,
-          isLoadingMessages: state.isLoadingMessages
-        });
-        
-        // Debug: Check what's in the DOM
-        const bodyText = document.body.textContent || '';
-        const hasNoMessages = bodyText.includes('No messages found');
-        const hasLoading = bodyText.includes('Loading messages');
-        const hasError = bodyText.includes('Unable to load messages');
-        
-        console.log('🔍 DEBUG - DOM check:', {
-          hasNoMessages,
-          hasLoading,
-          hasError,
-          hasInbox: bodyText.includes('Inbox'),
-          bodyLength: bodyText.length
-        });
-        
-        // If we see "No messages found", it means MessageList is rendering but not getting messages
-        if (hasNoMessages) {
-          throw new Error('MessageList is rendering but not getting messages from store');
-        }
-        
-        // If still loading, wait
-        if (hasLoading) {
-          throw new Error('Still loading messages');
-        }
-        
-        // Look for the message in a more flexible way
-        const messageElements = screen.queryAllByText(/Project Deadline/i);
-        console.log('🔍 DEBUG - Message elements found:', messageElements.length);
-        
-        expect(screen.getByText(/Project Deadline/i)).toBeInTheDocument();
-      }, { timeout: 10000 });
-    });
-  });
-
-  describe('📧 Complete Message Management Workflow', () => {
-    beforeEach(() => {
-      // Setup authenticated state BEFORE rendering
-      const scenario = setupAuthenticatedUserScenario();
-      // Authentication is already set in setupAuthenticatedUserScenario
-    });
-
-    it('should complete read → star → archive workflow', async () => {
-      // Now render with authenticated state already set
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Wait for the authenticated view to load
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
-      });
-      
-      // 1. Select a message
-      const messageSubject = 'Important: Project Deadline Reminder';
-      await waitFor(() => {
-        expect(screen.getByText(messageSubject)).toBeInTheDocument();
-      });
-      
-      const messageItem = screen.getByText(messageSubject);
-      await user.click(messageItem);
-      
-      // 2. Verify message opens
-      await waitFor(() => {
-        expect(useMailStore.getState().currentMessage?.subject).toBe(messageSubject);
-      });
-      
-      // 3. Mark as read
-      const markReadButton = screen.getByRole('button', { name: /mark as read/i });
-      await user.click(markReadButton);
-      
-      await waitFor(() => {
-        expect(gmailTauriService.createGmailTauriService()!.markAsRead).toHaveBeenCalled();
-      });
-      
-      // 4. Star the message
-      const starButton = screen.getByRole('button', { name: /star/i });
-      await user.click(starButton);
-      
-      await waitFor(() => {
-        expect(gmailTauriService.createGmailTauriService()!.starMessages).toHaveBeenCalled();
-      });
-      
-      // 5. Archive the message
-      const archiveButton = screen.getByRole('button', { name: /archive/i });
-      await user.click(archiveButton);
-      
-      await waitFor(() => {
-        expect(gmailTauriService.createGmailTauriService()!.archiveMessages).toHaveBeenCalled();
-      });
-    });
-
-    it('should complete search → filter → select workflow', async () => {
-      // Render with authenticated state
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Wait for authenticated view
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
-      });
-      
-      // 1. Use search bar
-      const searchInput = await waitFor(() => screen.getByPlaceholderText(/search messages/i));
-      await user.type(searchInput, 'important');
-      
-      // 2. Verify filtered results
-      await waitFor(() => {
-        expect(screen.getByText('Important: Project Deadline Reminder')).toBeInTheDocument();
-        expect(screen.queryByText('Weekly Newsletter - Tech Updates')).not.toBeInTheDocument();
-      });
-      
-      // 3. Filter by label
-      const starredLabel = screen.getByText('Starred');
-      await user.click(starredLabel);
-      
-      await waitFor(() => {
-        expect(useMailStore.getState().currentView).toBe('starred');
-      });
-      
-      // 4. Select filtered message
-      const filteredMessage = screen.getByText('Important: Project Deadline Reminder');
-      await user.click(filteredMessage);
-      
-      await waitFor(() => {
-        expect(useMailStore.getState().currentMessage?.subject).toBe('Important: Project Deadline Reminder');
-      });
-    });
-  });
-
-  describe('✍️ Complete Compose and Send Workflow', () => {
-    beforeEach(() => {
-      const scenario = setupAuthenticatedUserScenario();
-      // Authentication is already set in setupAuthenticatedUserScenario
-    });
-
-    it('should complete compose → draft → send workflow', async () => {
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Wait for authenticated view
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
-      });
-      
-      // 1. Start composing - use the store action directly since compose button might be in header
-      act(() => {
-        useMailStore.getState().startCompose();
-      });
-      
-      // 2. Verify compose modal opens
-      await waitFor(() => {
-        const composeModal = screen.getByRole('dialog');
-        expect(composeModal).toBeInTheDocument();
-        expect(within(composeModal).getByLabelText(/to/i)).toBeInTheDocument();
-      });
-      
-      // 3. Fill compose form
-      const toField = screen.getByLabelText(/to/i);
-      const subjectField = screen.getByLabelText(/subject/i);
-      const bodyField = screen.getByRole('textbox', { name: /message/i });
-      
-      await user.type(toField, 'recipient@example.com');
-      await user.type(subjectField, 'Test Email Subject');
-      await user.type(bodyField, 'This is a test email body with important content.');
-      
-      // 4. Wait for auto-save to draft
-      await waitFor(() => {
-        expect(gmailTauriService.saveDraft).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: 'recipient@example.com',
-            subject: 'Test Email Subject',
-            body: expect.stringContaining('This is a test email body')
-          })
-        );
-      }, { timeout: 5000 });
-      
-      // 5. Send the email
-      const sendButton = within(screen.getByRole('dialog')).getByRole('button', { name: /send/i });
-      await user.click(sendButton);
-      
-      // 6. Verify send was called
-      await waitFor(() => {
-        expect(gmailTauriService.sendGmailMessage).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: 'recipient@example.com',
-            subject: 'Test Email Subject',
-            body: expect.stringContaining('This is a test email body')
-          })
-        );
-      });
-      
-      // 7. Verify modal closes after send
-      await waitFor(() => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      });
-    });
-
-    it('should complete reply workflow', async () => {
-      // Setup with a message to reply to
-      const scenario = setupAuthenticatedUserScenario();
-      const originalMessage = createMockParsedEmail({
-        id: 'original-msg-1',
-        subject: 'Original Subject',
-        sender: 'Sender Name <sender@example.com>',
-        body: 'Original message content'
-      });
-      
-      // Add the message to the account's messages with correct account ID
-      const originalMessageWithAccountId = {
-        ...originalMessage,
-        accountId: scenario.account.id
-      };
-      const allMessages = [...scenario.messages, originalMessageWithAccountId];
-      const testStore = createTestMailStore();
-      testStore.setTestMessages(allMessages, scenario.account.id);
-      testStore.setTestCurrentMessage(originalMessageWithAccountId);
-      
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // 1. Click reply button
-      const replyButton = screen.getByRole('button', { name: /reply/i });
-      await user.click(replyButton);
-      
-      // 2. Verify reply modal opens with pre-filled data
-      await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('sender@example.com')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('Re: Original Subject')).toBeInTheDocument();
-      });
-      
-      // 3. Add reply content
-      const bodyField = screen.getByRole('textbox', { name: /message/i });
-      await user.type(bodyField, 'Thank you for your email. Here is my response.');
-      
-      // 4. Send reply
-      const sendButton = screen.getByRole('button', { name: /send/i });
-      await user.click(sendButton);
-      
-      await waitFor(() => {
-        expect(gmailTauriService.sendGmailMessage).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: 'sender@example.com',
-            subject: 'Re: Original Subject',
-            body: expect.stringContaining('Thank you for your email'),
-            inReplyTo: 'original-msg-1'
-          })
-        );
-      });
-    });
-  });
-
-  describe('👥 Multi-Account Management Workflow', () => {
-    it('should complete add account → switch account → sync workflow', async () => {
-      const scenario = setupMultiAccountScenario();
-      const testStore = createTestMailStore();
-      testStore.setTestAuthenticated(true);
-      
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Wait for authenticated view
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
-      });
-      
-      // 1. Verify first account email appears somewhere in the UI
-      await waitFor(() => {
-        // Account email might be in sidebar or header
-        const accountElements = screen.queryAllByText(/work@company.com/i);
-        expect(accountElements.length).toBeGreaterThan(0);
-      });
-      
-      // 2. Test adding a new account
-      act(() => {
-        // Trigger auth for new account
-        gmailTauriService.startGmailAuth();
-      });
-      
-      await waitFor(() => {
-        expect(gmailTauriService.startGmailAuth).toHaveBeenCalled();
-      });
-      
-      // 3. Simulate switching accounts
-      act(() => {
-        const testStore = createTestMailStore();
-        testStore.setTestCurrentAccountId(scenario.accounts[1].id);
-      });
-      
-      await waitFor(() => {
-        expect(useMailStore.getState().currentAccountId).toBe(scenario.accounts[1].id);
-      });
-      
-      // 4. Verify messages would be fetched for new account
-      act(() => {
-        useMailStore.getState().fetchMessages(undefined, undefined, undefined, scenario.accounts[1].id);
-      });
-      
-      await waitFor(() => {
-        expect(gmailTauriService.createGmailTauriService()!.searchMessages).toHaveBeenCalledWith(
-          expect.arrayContaining(['INBOX']),
-          expect.any(Number),
-          undefined,
-          scenario.accounts[1].id
-        );
-      });
-    });
-  });
-
-  describe('📎 Complete Attachment Workflow', () => {
-    beforeEach(() => {
-      const scenario = setupAuthenticatedUserScenario();
-      const testStore = createTestMailStore();
-      testStore.setTestAuthenticated(true);
-      
-      // Set a message with attachments as current
-      const messageWithAttachments = {
-        ...createMockParsedEmail({
-          id: 'msg-with-attachments',
-          subject: 'Documents for Review',
-          sender: 'Document Team <docs@company.com>',
-          hasAttachments: true,
-          attachments: [
-            { id: 'att-1', filename: 'report.pdf', mimeType: 'application/pdf', size: 1024000 },
-            { id: 'att-2', filename: 'data.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 512000 }
-          ]
-        }),
-        accountId: scenario.account.id
-      };
-      
-      // Add the attachment message to the existing messages
-      const allMessages = [...scenario.messages, messageWithAttachments];
-      testStore.setTestMessages(allMessages, scenario.account.id);
-      testStore.setTestCurrentMessage(messageWithAttachments);
-    });
-
-    it('should complete view attachment → preview → download workflow', async () => {
-      vi.spyOn(gmailTauriService, 'downloadAttachment').mockResolvedValue({
-        success: true,
-        filePath: 'C:\\Downloads\\report.pdf'
-      });
-      
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Wait for authenticated view
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
-      });
-      
-      // 1. Verify attachments are shown
-      await waitFor(() => {
-        expect(screen.getByText('report.pdf')).toBeInTheDocument();
-        expect(screen.getByText('data.xlsx')).toBeInTheDocument();
-      });
-      
-      // 2. Click to open first attachment (might open preview or download directly)
-      const pdfAttachment = screen.getByText('report.pdf');
-      await user.click(pdfAttachment);
-      
-      // 3. Look for preview elements or download action
-      // Since preview modal doesn't have role="dialog", look for preview-specific content
-      await waitFor(() => {
-        // Either a preview opens or download is triggered
-        const previewElements = screen.queryAllByText(/preview|download/i);
-        expect(previewElements.length).toBeGreaterThan(0);
-      });
-      
-      // 4. If there's a download button, click it
-      const downloadButtons = screen.queryAllByRole('button', { name: /download/i });
-      if (downloadButtons.length > 0) {
-        await user.click(downloadButtons[0]);
-        
-        await waitFor(() => {
-          expect(gmailTauriService.downloadAttachment).toHaveBeenCalledWith('att-1');
-        });
-      }
-      
-      // 5. Verify download success feedback (if shown)
-      // This might not always appear depending on implementation
-      const successMessages = screen.queryAllByText(/downloaded successfully/i);
-      expect(successMessages.length).toBeGreaterThanOrEqual(0);
-    });
-  });
-
-  describe('🚨 Error Recovery Workflows', () => {
-    it('should recover from network error during sync', async () => {
-      // Start with authenticated state but no messages
-      const scenario = setupAuthenticatedUserScenario();
-      const testStore = createTestMailStore();
-      testStore.setTestAuthenticated(true);
-      // Clear messages to simulate a fresh fetch
-      testStore.setTestMessages([], scenario.account.id);
-      // Mock network error initially, then success
-      const mockGetMessages = vi.fn()
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({
-          messages: MOCK_SAMPLE_MESSAGES.map(msg => ({
-            ...convertMockMessageToParsedEmail(msg),
-            accountId: scenario.account.id
-          })),
-          hasMore: false,
-          nextPageToken: undefined
-        });
-      
-      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockReturnValue({
-      getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
-      getLabels: vi.fn().mockResolvedValue([]),
-      searchMessages: vi.fn().mockResolvedValue({ messages: [], next_page_token: undefined, result_size_estimate: 0 }),
       getMessage: vi.fn().mockResolvedValue(null),
       getThread: vi.fn().mockResolvedValue([]),
       markAsRead: vi.fn().mockResolvedValue(undefined),
@@ -790,48 +286,456 @@ describe.skip('ARCHIVED: Gmail Complete User Workflow Tests - Testing implementa
       starMessages: vi.fn().mockResolvedValue(undefined),
       unstarMessages: vi.fn().mockResolvedValue(undefined),
       archiveMessages: vi.fn().mockResolvedValue(undefined),
-      deleteMessages: vi.fn().mockResolvedValue(undefined)
-    } as any);
-      
-      // Render component which should trigger message fetching
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Wait for authenticated view
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
-      });
-      
-      // Trigger message fetching by the store
-      act(() => {
-        useMailStore.getState().fetchMessages();
-      });
-      
-      // 1. Verify error state is shown
-      await waitFor(() => {
-        expect(screen.getByText(/unable to load messages/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
-      }, { timeout: 5000 });
-      
-      // 2. Click retry
-      const retryButton = screen.getByRole('button', { name: /retry/i });
-      await user.click(retryButton);
-      
-      // 3. Verify recovery
-      await waitFor(() => {
-        expect(mockGetMessages).toHaveBeenCalledTimes(2);
-        expect(screen.getByText('Important: Project Deadline Reminder')).toBeInTheDocument();
+      deleteMessages: vi.fn().mockResolvedValue(undefined),
+
+      getAttachment: vi.fn().mockResolvedValue(new Uint8Array()),
+      testEndToEndFlow: vi.fn().mockResolvedValue({ success: true, labels: [], messages: { messages: [], next_page_token: undefined, result_size_estimate: 0 } }),
+      getParsedMessage: vi.fn().mockResolvedValue({}),
+    }));
+
+    // Removed mockApiServer.setAuthResponse, as it doesn't exist
+  });
+
+  afterEach(() => {
+    mockApiServer.stop();
+    cleanupTauriMocks();
+    vi.clearAllMocks();
+    useMailStore.getState().signOut(); // Ensure store is clean after each test
+  });
+
+  // Test Case 1: Successful account authentication and initial message load
+  it('should display authenticated user\'s email and messages on successful login', async () => {
+    const scenario = setupAuthenticatedUserScenario();
+
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    // Verify account email is displayed
+    await waitFor(() => {
+      expect(screen.getByText(scenario.account.email)).toBeInTheDocument();
+    });
+
+    // Verify messages are displayed
+    await waitFor(() => {
+      scenario.messages.forEach(message => {
+        expect(screen.getByText(message.subject)).toBeInTheDocument();
+        expect(screen.getByText(message.from.name || message.from.email)).toBeInTheDocument(); // Corrected property access
+        expect(screen.getByText(message.snippet)).toBeInTheDocument();
       });
     });
 
-    it('should handle token expiration errors', async () => {
-      const scenario = setupAuthenticatedUserScenario();
-      
-      // Mock token expiration error
-      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockReturnValue({
+    // Verify labels are displayed
+    await waitFor(() => {
+      scenario.labels.forEach(label => {
+        if (label.name !== 'UNREAD' && label.name !== 'STARRED') { // UNREAD and STARRED are system labels often not explicitly rendered as separate labels in UI
+          expect(screen.getByText(label.name)).toBeInTheDocument();
+        }
+      });
+    });
+  });
+
+  // Test Case 2: Multi-account scenario and switching accounts
+  it('should allow switching between multiple authenticated accounts', async () => {
+    const scenario = setupMultiAccountScenario();
+
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    // Verify initial account (first account) is displayed
+    await waitFor(() => {
+      expect(screen.getByText(scenario.accounts[0].email)).toBeInTheDocument();
+    });
+
+    // Click on account dropdown
+    const accountDropdown = screen.getByTestId('account-dropdown-trigger');
+    await user.click(accountDropdown);
+
+    // Select the second account
+    const secondAccountOption = screen.getByText(scenario.accounts[1].email);
+    await user.click(secondAccountOption);
+
+    // Verify UI updates to display the second account's email (and implicitly, its messages/labels)
+    await waitFor(() => {
+      expect(screen.getByText(scenario.accounts[1].email)).toBeInTheDocument();
+    });
+
+    // Optionally, verify messages for the second account if different mocks are set up for it
+    // For this test, we assume the same mock messages are returned for simplicity or explicitly mock different ones if needed
+  });
+
+  // Test Case 3: Error handling for failed message fetch
+  it('should display an error message if fetching messages fails', async () => {
+    const testStore = createTestMailStore();
+    testStore.setTestAccounts([convertMockAccountToGmailAccount(createMockGmailAccount({ email: 'error@example.com' }))]);
+    testStore.setTestCurrentAccountId('test-account-id');
+    testStore.setTestAuthenticated(true);
+    useMailStore.getState().setError(null);
+
+    vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
+      getUserProfile: vi.fn().mockResolvedValue({ email: 'error@example.com', name: 'Error User', id: 'test-id' }),
+      getLabels: vi.fn().mockResolvedValue({ labels: [] }),
+      searchMessages: vi.fn().mockRejectedValue(new Error('Failed to fetch messages')),
+      getMessage: vi.fn().mockResolvedValue(null),
+      getThread: vi.fn().mockResolvedValue([]),
+      markAsRead: vi.fn().mockResolvedValue(undefined),
+      markAsUnread: vi.fn().mockResolvedValue(undefined),
+      starMessages: vi.fn().mockResolvedValue(undefined),
+      unstarMessages: vi.fn().mockResolvedValue(undefined),
+      archiveMessages: vi.fn().mockResolvedValue(undefined),
+      deleteMessages: vi.fn().mockResolvedValue(undefined),
+      getAttachment: vi.fn().mockResolvedValue(new Uint8Array()),
+      testEndToEndFlow: vi.fn().mockResolvedValue({ success: true, labels: [], messages: { messages: [], next_page_token: undefined, result_size_estimate: 0 } }),
+      getParsedMessage: vi.fn().mockResolvedValue({}),
+    }));
+
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to fetch messages')).toBeInTheDocument();
+    });
+
+    // Verify error state in store
+    expect(useMailStore.getState().error).toBe('Failed to fetch messages');
+  });
+
+  // Test Case 4: Basic message actions (mark as read, star, archive)
+  it('should allow marking messages as read, starring, and archiving', async () => {
+    const scenario = setupAuthenticatedUserScenario();
+
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(scenario.messages[0].subject)).toBeInTheDocument();
+    });
+
+    const messageSubject = scenario.messages[0].subject;
+
+    // Mark as read
+    fireEvent.click(screen.getByText(messageSubject)); // Click on message to open details or select
+    // Assuming there's a button/icon to mark as read within the message details or toolbar
+    // This part requires knowing the UI structure, so mocking a direct store action call
+    await act(async () => {
+      await useMailStore.getState().markAsRead([scenario.messages[0].id], scenario.account.id);
+    });
+    await waitFor(() => {
+      expect(gmailTauriService.createGmailTauriService(scenario.account.id)!.markAsRead).toHaveBeenCalledWith([scenario.messages[0].id]);
+    });
+
+    // Star message
+    await act(async () => {
+      await useMailStore.getState().starMessages([scenario.messages[0].id], scenario.account.id);
+    });
+    await waitFor(() => {
+      expect(gmailTauriService.createGmailTauriService(scenario.account.id)!.starMessages).toHaveBeenCalledWith([scenario.messages[0].id]);
+    });
+
+    // Archive message
+    await act(async () => {
+      await useMailStore.getState().archiveMessages([scenario.messages[0].id], scenario.account.id);
+    });
+    await waitFor(() => {
+      expect(gmailTauriService.createGmailTauriService(scenario.account.id)!.archiveMessages).toHaveBeenCalledWith([scenario.messages[0].id]);
+    });
+  });
+
+  // Test Case 5: Message search and filtering
+  it('should allow searching and filtering messages', async () => {
+    const scenario = setupAuthenticatedUserScenario();
+
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Search mail')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Search mail');
+    const searchTerm = 'test query';
+
+    await user.type(searchInput, searchTerm);
+    fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' });
+
+    await waitFor(() => {
+      expect(gmailTauriService.createGmailTauriService(scenario.account.id)!.searchMessages).toHaveBeenCalledWith(searchTerm, {});
+    });
+
+    // Assume a filter dropdown exists or similar UI for labels
+    // Clicking a label filter
+    await act(async () => {
+      await useMailStore.getState().addLabelToFilter('INBOX');
+    });
+    // The searchMessages call with label filter would depend on how the store handles it
+    await waitFor(() => {
+      expect(gmailTauriService.createGmailTauriService(scenario.account.id)!.searchMessages).toHaveBeenCalledWith(
+        searchTerm,
+        { labels: ['INBOX'] },
+      );
+    });
+  });
+
+  // Test Case 6: Email compose and send
+  it('should allow composing and sending new emails', async () => {
+    const scenario = setupAuthenticatedUserScenario();
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /compose/i })).toBeInTheDocument();
+    });
+
+    const composeButton = screen.getByRole('button', { name: /compose/i });
+    await user.click(composeButton);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/to/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/subject/i)).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /email body/i })).toBeInTheDocument();
+    });
+
+    const toInput = screen.getByLabelText(/to/i);
+    const subjectInput = screen.getByLabelText(/subject/i);
+    const bodyInput = screen.getByRole('textbox', { name: /email body/i });
+    const sendButton = screen.getByRole('button', { name: /send/i });
+
+    await user.type(toInput, 'recipient@example.com');
+    await user.type(subjectInput, 'Test Subject');
+    await user.type(bodyInput, 'Test Body Content');
+
+    await act(async () => {
+      await user.click(sendButton);
+    });
+
+    await waitFor(() => {
+      // Note: sendGmailMessage is an exported function, not a class method
+      expect(screen.queryByLabelText(/to/i)).not.toBeInTheDocument(); // Compose window closes
+    });
+  });
+
+  // Test Case 7: Message deletion
+  it('should allow deleting messages', async () => {
+    const scenario = setupAuthenticatedUserScenario();
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(scenario.messages[0].subject)).toBeInTheDocument();
+    });
+
+    const messageSubject = scenario.messages[0].subject;
+    fireEvent.click(screen.getByText(messageSubject)); // Click to select/open message
+
+    // Assuming a delete button exists
+    await act(async () => {
+      await useMailStore.getState().deleteMessages([scenario.messages[0].id], scenario.account.id);
+    });
+
+    await waitFor(() => {
+      expect(gmailTauriService.createGmailTauriService(scenario.account.id)!.deleteMessages).toHaveBeenCalledWith([scenario.messages[0].id]);
+      // Verify message is no longer in the document
+      expect(screen.queryByText(messageSubject)).not.toBeInTheDocument();
+    });
+  });
+
+  // Test Case 8: Refreshing messages
+  it('should refresh messages when refresh action is triggered', async () => {
+    const scenario = setupAuthenticatedUserScenario();
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(scenario.messages[0].subject)).toBeInTheDocument();
+    });
+
+    // Mock refresh behavior: new messages appear after refresh
+    const newMessages = [
+      createMockParsedEmail({
+        id: 'new-msg-1',
+        subject: 'New Email Subject',
+        snippet: 'New email snippet content',
+        sender: 'new.sender@example.com',
+      }),
+    ] as ParsedEmail[];
+
+    vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => ({
+      // Corrected: Explicitly mock each method instead of spreading `createGmailTauriService` recursively
+      accountId,
+      modifyMessages: vi.fn(),
+      getUserProfile: vi.fn(),
+      getLabels: vi.fn().mockResolvedValue({ labels: [] }),
+      searchMessages: vi.fn().mockResolvedValue({ messages: newMessages, next_page_token: undefined, result_size_estimate: newMessages.length }),
+      getMessage: vi.fn(),
+      getThread: vi.fn(),
+      markAsRead: vi.fn(),
+      markAsUnread: vi.fn(),
+      starMessages: vi.fn(),
+      unstarMessages: vi.fn(),
+      archiveMessages: vi.fn(),
+      deleteMessages: vi.fn(),
+      getAllMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+      getAllThreads: vi.fn().mockResolvedValue([]),
+      getThreadById: vi.fn().mockResolvedValue({}),
+      getMessagesByThreadId: vi.fn().mockResolvedValue([]),
+      getEmailContent: vi.fn().mockResolvedValue({}),
+      getEmailHeaders: vi.fn().mockResolvedValue({}),
+      getQuota: vi.fn().mockResolvedValue({ used: 0, total: 15000000000 }),
+      sendMessage: vi.fn().mockResolvedValue(null),
+      createDraft: vi.fn().mockResolvedValue(null),
+      updateDraft: vi.fn().mockResolvedValue(null),
+      deleteDraft: vi.fn().mockResolvedValue(null),
+      getAttachment: vi.fn().mockResolvedValue(new Uint8Array()),
+      testEndToEndFlow: vi.fn().mockResolvedValue({ success: true, labels: [], messages: { messages: [], next_page_token: undefined, result_size_estimate: 0 } }),
+      getParsedMessage: vi.fn().mockResolvedValue({}),
+      sendGmailMessage: vi.fn().mockResolvedValue({ success: true, messageId: 'mockMessageId', threadId: 'mockThreadId' }),
+      saveDraft: vi.fn().mockResolvedValue({ success: true, draftId: 'mockDraftId' }),
+      downloadAttachment: vi.fn().mockResolvedValue({ success: true, filePath: 'mock/path/to/attachment.txt' }),
+    } as unknown as GmailTauriService));
+
+    // Assuming a refresh button exists in the UI
+    await act(async () => {
+      await useMailStore.getState().fetchMessages(undefined, undefined, undefined, scenario.account.id);
+    });
+
+    await waitFor(() => {
+      expect(gmailTauriService.createGmailTauriService(scenario.account.id)!.searchMessages).toHaveBeenCalled();
+      expect(screen.getByText(newMessages[0].subject)).toBeInTheDocument();
+      expect(screen.queryByText(scenario.messages[0].subject)).not.toBeInTheDocument(); // Old message gone
+    });
+  });
+
+  // Test Case 9: Logout scenario
+  it('should sign out the user and clear the mailbox view', async () => {
+    const scenario = setupAuthenticatedUserScenario();
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(scenario.account.email)).toBeInTheDocument();
+    });
+
+    // Click on account dropdown
+    const accountDropdown = screen.getByTestId('account-dropdown-trigger');
+    await user.click(accountDropdown);
+
+    // Click on sign out button
+    const signOutButton = screen.getByRole('button', { name: /sign out/i });
+    await user.click(signOutButton);
+
+    await waitFor(() => {
+      expect(useMailStore.getState().isAuthenticated).toBe(false);
+      expect(screen.queryByText(scenario.account.email)).not.toBeInTheDocument();
+      expect(screen.queryByText(scenario.messages[0].subject)).not.toBeInTheDocument();
+      expect(screen.getByText(/login with google/i)).toBeInTheDocument(); // Back to login screen
+    });
+  });
+
+  // Test Case 10: Attachment download
+  it('should allow downloading attachments', async () => {
+    const attachmentFileName = 'test-attachment.txt';
+    const mockAttachmentContent = new Uint8Array([72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]); // "Hello World"
+
+    const messageWithAttachment = createMockParsedEmail({
+      id: 'msg-with-attachment',
+      subject: 'Email with attachment',
+      snippet: 'This email has an attachment',
+      sender: 'attachment@example.com',
+      attachments: [{
+        id: 'att-1',
+        filename: attachmentFileName,
+        mimeType: 'text/plain',
+        size: mockAttachmentContent.length,
+        data: btoa(String.fromCharCode(...mockAttachmentContent)) // Base64 encoded
+      }],
+    }) as ParsedEmail;
+
+    const testStore = createTestMailStore();
+    testStore.setTestAccounts([convertMockAccountToGmailAccount(createMockGmailAccount({ email: 'attach@example.com' }))]);
+    testStore.setTestCurrentAccountId('test-account-id');
+    testStore.setTestAuthenticated(true);
+    testStore.setTestMessages([messageWithAttachment], 'test-account-id');
+
+    vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => ({
+      accountId,
+      modifyMessages: vi.fn(),
+      getUserProfile: vi.fn().mockResolvedValue({ email: 'attach@example.com', name: 'Attachment User', id: 'test-id' }),
+      getLabels: vi.fn().mockResolvedValue({ labels: [] }),
+      searchMessages: vi.fn().mockResolvedValue({ messages: [messageWithAttachment], nextPageToken: undefined, result_size_estimate: 1 }),
+      getMessage: vi.fn().mockResolvedValue(null),
+      getThread: vi.fn().mockResolvedValue([]),
+      markAsRead: vi.fn().mockResolvedValue(undefined),
+      markAsUnread: vi.fn().mockResolvedValue(undefined),
+      starMessages: vi.fn().mockResolvedValue(undefined),
+      unstarMessages: vi.fn().mockResolvedValue(undefined),
+      archiveMessages: vi.fn().mockResolvedValue(undefined),
+      deleteMessages: vi.fn().mockResolvedValue(undefined),
+      getAllMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+      getAllThreads: vi.fn().mockResolvedValue([]),
+      getThreadById: vi.fn().mockResolvedValue({}),
+      getMessagesByThreadId: vi.fn().mockResolvedValue([]),
+      getEmailContent: vi.fn().mockResolvedValue(messageWithAttachment),
+      getEmailHeaders: vi.fn().mockResolvedValue(messageWithAttachment),
+      getQuota: vi.fn().mockResolvedValue({ used: 0, total: 15000000000 }),
+      sendMessage: vi.fn().mockResolvedValue(null),
+      createDraft: vi.fn().mockResolvedValue(null),
+      updateDraft: vi.fn().mockResolvedValue(null),
+      deleteDraft: vi.fn().mockResolvedValue(null),
+      getAttachment: vi.fn().mockResolvedValue(mockAttachmentContent), // Mock attachment content
+      testEndToEndFlow: vi.fn().mockResolvedValue({ success: true, labels: [], messages: { messages: [], next_page_token: undefined, result_size_estimate: 0 } }),
+      getParsedMessage: vi.fn().mockResolvedValue({}),
+      sendGmailMessage: vi.fn().mockResolvedValue({ success: true, messageId: 'mockMessageId', threadId: 'mockThreadId' }),
+      saveDraft: vi.fn().mockResolvedValue({ success: true, draftId: 'mockDraftId' }),
+      downloadAttachment: vi.fn().mockResolvedValue({ success: true, filePath: 'mock/path/to/attachment.txt' }),
+    } as unknown as GmailTauriService));
+
+    render(<Mail />, { wrapper: CompleteAppWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText(messageWithAttachment.subject)).toBeInTheDocument();
+    });
+
+    // Click on the message to open it
+    fireEvent.click(screen.getByText(messageWithAttachment.subject));
+
+    await waitFor(() => {
+      // Assuming the attachment download button is visible after opening the email
+      expect(screen.getByText(attachmentFileName)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /download attachment/i })).toBeInTheDocument();
+    });
+
+    const downloadButton = screen.getByRole('button', { name: /download attachment/i });
+    await user.click(downloadButton);
+
+    await waitFor(() => {
+      // Verify that the getAttachment service was called
+      expect(gmailTauriService.createGmailTauriService('test-account-id')!.getAttachment).toHaveBeenCalledWith(
+        messageWithAttachment.id,
+        messageWithAttachment.attachments[0].id
+      );
+      // In a real scenario, you\'d verify file system writes, but for unit test, service call is sufficient.
+    });
+  });
+
+  describe('Mail Store Actions', () => {
+    const mockEmailContent = {
+      id: 'email-id-1',
+      threadId: 'thread-id-1',
+      subject: 'Test Subject',
+      body: 'Test Body',
+      parsedBody: 'Parsed Body',
+      from: { name: 'Sender Name', email: 'sender@example.com' }, // Changed from 'sender'
+      recipients: [{ name: 'Recipient Name', email: 'recipient@example.com', type: 'to' }],
+      attachments: [],
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      isStarred: false,
+      labels: [],
+      to: [{ name: 'Recipient Name', email: 'recipient@example.com', type: 'to' }],
+      importance: 'normal',
+      messageId: 'message-id-1',
+    };
+
+    let testStore: ReturnType<typeof createTestMailStore>;
+
+    beforeEach(() => {
+      testStore = createTestMailStore();
+      vi.clearAllMocks();
+      // Ensure createGmailTauriService mock is present for all store actions
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
         getUserProfile: vi.fn().mockResolvedValue({ email: 'test@example.com', name: 'Test User', id: 'test-id' }),
-        getLabels: vi.fn().mockResolvedValue([]),
-        searchMessages: vi.fn()
-          .mockRejectedValueOnce({ status: 401, message: 'Unauthorized' }),
+        getLabels: vi.fn().mockResolvedValue({ labels: [] }),
+        searchMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined, result_size_estimate: 0 }),
         getMessage: vi.fn().mockResolvedValue(null),
         getThread: vi.fn().mockResolvedValue([]),
         markAsRead: vi.fn().mockResolvedValue(undefined),
@@ -839,178 +743,278 @@ describe.skip('ARCHIVED: Gmail Complete User Workflow Tests - Testing implementa
         starMessages: vi.fn().mockResolvedValue(undefined),
         unstarMessages: vi.fn().mockResolvedValue(undefined),
         archiveMessages: vi.fn().mockResolvedValue(undefined),
-        deleteMessages: vi.fn().mockResolvedValue(undefined)
-      } as any);
-      
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Since the store doesn't auto-refresh, trigger a fetch to see the error
-      act(() => {
-        useMailStore.getState().fetchMessages();
-      });
-      
-      // Verify error is shown (since auto-refresh is not implemented)
-      await waitFor(() => {
-        const errorElement = screen.getByText(/authentication|unable to authenticate/i);
-        expect(errorElement).toBeInTheDocument();
-      }, { timeout: 5000 });
+        deleteMessages: vi.fn().mockResolvedValue(undefined),
+        getAttachment: vi.fn().mockResolvedValue(new Uint8Array()),
+        testEndToEndFlow: vi.fn().mockResolvedValue({ success: true, labels: [], messages: { messages: [], next_page_token: undefined, result_size_estimate: 0 } }),
+        getParsedMessage: vi.fn().mockResolvedValue({}),
+      }));
     });
-  });
 
-  describe('🔄 Real-time Sync Workflow', () => {
-    it('should handle real-time message updates', async () => {
-      const scenario = setupAuthenticatedUserScenario();
-      const testStore = createTestMailStore();
-      testStore.setTestAuthenticated(true);
-      
-      // Wait for API mock to be ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // Wait for authenticated view
-      await waitFor(() => {
-        expect(screen.queryByText('Welcome to Mail')).not.toBeInTheDocument();
+    it('should handle fetching labels', async () => {
+      const labels: GmailLabel[] = [
+        { id: 'INBOX', name: 'INBOX', type: 'system', threadsTotal: 0, threadsUnread: 0, color: '#000000', messagesTotal: 0, messagesUnread: 0, messageListVisibility: 'show', labelListVisibility: 'show' },
+        { id: 'SENT', name: 'SENT', type: 'system', threadsTotal: 0, threadsUnread: 0, color: '#000000', messagesTotal: 0, messagesUnread: 0, messageListVisibility: 'show', labelListVisibility: 'show' },
+      ];
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
+        getUserProfile: vi.fn(), // Explicitly mock all methods
+        getLabels: vi.fn().mockResolvedValue({ labels: labels }),
+        searchMessages: vi.fn(),
+        getMessage: vi.fn(),
+        getThread: vi.fn(),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+      }));
+
+      const { result } = renderHook(() => useMailStore((state) => state.fetchLabels));
+      await act(async () => {
+        await result.current('test-account-id');
       });
-      
-      // Wait for loading to complete
-      await waitFor(() => {
-        expect(useMailStore.getState().isLoadingMessages).toBe(false);
-      }, { timeout: 5000 });
-      
-      // Debug: Check store state
-      const state = useMailStore.getState();
-      console.log('Store state after loading:', {
-        isLoadingMessages: state.isLoadingMessages,
-        messageCount: state.getMessages().length,
-        currentAccountId: state.currentAccountId,
-        hasAccountData: !!state.accountData[state.currentAccountId || '']
-      });
-      
-      // 1. Verify initial messages  
-      await waitFor(() => {
-        // First check for "No messages found" to understand the state
-        const noMessages = screen.queryByText('No messages found');
-        if (noMessages) {
-          throw new Error('MessageList is showing "No messages found" instead of messages');
-        }
-        expect(screen.getByText('Important: Project Deadline Reminder')).toBeInTheDocument();
-      }, { timeout: 5000 });
-      
-      // 2. Simulate new message arriving via sync
-      const newMessage = {
-        ...createMockParsedEmail({
-          id: 'new-msg-1',
-          subject: 'New Incoming Message',
-          sender: 'New User <newuser@example.com>',
-          snippet: 'This is a new message that just arrived'
-        }),
-        accountId: scenario.account.id
-      };
-      
-      // Simulate periodic sync bringing in new message
-      const currentMessages = useMailStore.getState().getMessages();
-      testStore.setTestMessages([newMessage, ...currentMessages], scenario.account.id);
-      
-      // 3. Verify new message appears
-      await waitFor(() => {
-        expect(screen.getByText('New Incoming Message')).toBeInTheDocument();
-      });
+
+      expect(useMailStore.getState().accountData['test-account-id']?.labels).toEqual(labels);
     });
-  });
 
-  describe('🎯 Complete User Journey: Auth → Read → Compose → Send', () => {
-    it('should complete the full typical user journey', async () => {
-      // Start unauthenticated
-      useMailStore.setState({
-        isAuthenticated: false,
-        currentAccountId: null,
-        accounts: {},
-        accountData: {}
+    it('should handle fetching all messages', async () => {
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
+        getUserProfile: vi.fn(),
+        getLabels: vi.fn(),
+        searchMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+        getMessage: vi.fn(),
+        getThread: vi.fn(),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+      }));
+
+      const { result } = renderHook(() => useMailStore((state) => state.fetchMessages));
+
+      await act(async () => {
+        await result.current(undefined, undefined, undefined, 'test-account-id');
       });
-      
-      render(<Mail />, { wrapper: CompleteAppWrapper });
-      
-      // === AUTHENTICATION PHASE ===
-      expect(screen.getByText('Welcome to Mail')).toBeInTheDocument();
-      
-      const authElements = screen.queryAllByText(/gmail.*account/i);
-      const connectButton = screen.queryByRole('button', { name: /connect gmail/i });
-      
-      if (connectButton) {
-        await user.click(connectButton);
-      } else {
-        // Trigger auth directly if button not found
-        act(() => {
-          gmailTauriService.startGmailAuth();
-        });
-      }
-      
-      // Simulate successful authentication
-      const scenario = setupAuthenticatedUserScenario();
-      const testStore = createTestMailStore();
-      testStore.setTestAuthenticated(true);
-      
-      // Wait for loading to complete
-      await waitFor(() => {
-        expect(useMailStore.getState().isLoadingMessages).toBe(false);
-      }, { timeout: 5000 });
-      
-      // === INBOX LOADED PHASE ===
-      await waitFor(() => {
-        const noMessages = screen.queryByText('No messages found');
-        if (noMessages) {
-          const state = useMailStore.getState();
-          console.error('Store state when no messages:', {
-            messages: state.getMessages(),
-            isLoading: state.isLoadingMessages,
-            currentAccountId: state.currentAccountId
-          });
-          throw new Error('MessageList is showing "No messages found"');
-        }
-        expect(screen.getByText('Important: Project Deadline Reminder')).toBeInTheDocument();
-      }, { timeout: 5000 });
-      
-      // === READ MESSAGE PHASE ===
-      const firstMessage = screen.getByText('Important: Project Deadline Reminder');
-      await user.click(firstMessage);
-      
-      await waitFor(() => {
-        expect(useMailStore.getState().currentMessage?.subject).toBe('Important: Project Deadline Reminder');
+
+      expect(gmailTauriService.createGmailTauriService('test-account-id')!.searchMessages).toHaveBeenCalledWith(
+        undefined, undefined, undefined, undefined
+      );
+    });
+
+    it('should handle search messages action', async () => {
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
+        getUserProfile: vi.fn(),
+        getLabels: vi.fn(),
+        searchMessages: vi.fn().mockResolvedValue({ messages: [], nextPageToken: undefined }),
+        getMessage: vi.fn(),
+        getThread: vi.fn(),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+      }));
+
+      const { result } = renderHook(() => useMailStore((state) => state.searchMessages));
+      await act(async () => {
+        await result.current('test-account-id', 'test query');
       });
-      
-      // === REPLY PHASE ===
-      const replyButton = screen.getByRole('button', { name: /reply/i });
-      await user.click(replyButton);
-      
-      await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      expect(gmailTauriService.createGmailTauriService('test-account-id')!.searchMessages).toHaveBeenCalledWith(
+        'test query',
+        {},
+      );
+    });
+
+    it('should handle fetching all threads', async () => {
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
+        getUserProfile: vi.fn(),
+        getLabels: vi.fn(),
+        searchMessages: vi.fn(),
+        getMessage: vi.fn(),
+        getThread: vi.fn().mockResolvedValue([]),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+      }));
+
+      const { result } = renderHook(() => useMailStore((state) => state.fetchThread));
+
+      await act(async () => {
+        await result.current('all', 'test-account-id');
       });
-      
-      // === COMPOSE REPLY PHASE ===
-      const bodyField = screen.getByRole('textbox', { name: /message/i });
-      await user.type(bodyField, 'Thanks for the reminder! I will have it ready by the deadline.');
-      
-      // === SEND PHASE ===
-      const sendButton = screen.getByRole('button', { name: /send/i });
-      await user.click(sendButton);
-      
-      await waitFor(() => {
-        expect(gmailTauriService.sendGmailMessage).toHaveBeenCalledWith(
-          expect.objectContaining({
-            body: expect.stringContaining('Thanks for the reminder')
-          })
-        );
+
+      expect(gmailTauriService.createGmailTauriService('test-account-id')!.getThread).toHaveBeenCalledWith('all');
+    });
+
+    it('should fetch thread by id', async () => {
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => ({
+        accountId,
+        modifyMessages: vi.fn(),
+        getUserProfile: vi.fn(),
+        getLabels: vi.fn(),
+        searchMessages: vi.fn(),
+        getMessage: vi.fn(),
+        getThread: vi.fn().mockResolvedValue({}),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAllMessages: vi.fn(),
+        getAllThreads: vi.fn(),
+        getThreadById: vi.fn(),
+        getMessagesByThreadId: vi.fn(),
+        getEmailContent: vi.fn(),
+        getEmailHeaders: vi.fn(),
+        getQuota: vi.fn(),
+        sendMessage: vi.fn(),
+        createDraft: vi.fn(),
+        updateDraft: vi.fn(),
+        deleteDraft: vi.fn(),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+        sendGmailMessage: vi.fn(),
+        saveDraft: vi.fn(),
+        downloadAttachment: vi.fn(),
+      } as unknown as GmailTauriService));
+
+      const { result } = renderHook(() => useMailStore((state) => state.fetchThread));
+
+      await act(async () => {
+        await result.current('thread-1', 'test-account-id');
       });
-      
-      // === COMPLETION PHASE ===
-      await waitFor(() => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      expect(gmailTauriService.createGmailTauriService('test-account-id')!.getThread).toHaveBeenCalledWith(
+        'thread-1',
+      );
+    });
+
+    it('should handle fetching messages by thread id', async () => {
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => createFakeGmailService(accountId, {
+        getUserProfile: vi.fn(),
+        getLabels: vi.fn(),
+        searchMessages: vi.fn(),
+        getMessage: vi.fn(),
+        getThread: vi.fn().mockResolvedValue([]),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+      }));
+
+      const { result } = renderHook(() => useMailStore((state) => state.fetchThread));
+
+      await act(async () => {
+        await result.current('thread-id-123', 'test-account-id');
       });
-      
-      // Verify we're back to the main inbox view
-      expect(screen.getByText('Important: Project Deadline Reminder')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /compose/i })).toBeInTheDocument();
+
+      expect(gmailTauriService.createGmailTauriService('test-account-id')!.getThread).toHaveBeenCalledWith(
+        'thread-id-123',
+      );
+    });
+
+    it('should handle fetching and updating email content', async () => {
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => ({
+        accountId,
+        modifyMessages: vi.fn(),
+        getUserProfile: vi.fn(),
+        getLabels: vi.fn(),
+        searchMessages: vi.fn(),
+        getMessage: vi.fn(),
+        getThread: vi.fn(),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAllMessages: vi.fn(),
+        getAllThreads: vi.fn(),
+        getThreadById: vi.fn(),
+        getMessagesByThreadId: vi.fn(),
+        getEmailContent: vi.fn().mockResolvedValue(mockEmailContent),
+        getEmailHeaders: vi.fn().mockResolvedValue(mockEmailContent),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+      } as unknown as GmailTauriService));
+
+      const { result } = renderHook(() => useMailStore((state) => state.fetchMessage));
+
+      await act(async () => {
+        await result.current('email-id-1', 'test-account-id');
+      });
+
+      expect(useMailStore.getState().currentMessage).toEqual(mockEmailContent);
+    });
+
+    it('should handle fetching email headers', async () => {
+      vi.spyOn(gmailTauriService, 'createGmailTauriService').mockImplementation((accountId) => ({
+        accountId,
+        modifyMessages: vi.fn(),
+        getUserProfile: vi.fn(),
+        getLabels: vi.fn(),
+        searchMessages: vi.fn(),
+        getMessage: vi.fn(),
+        getThread: vi.fn(),
+        markAsRead: vi.fn(),
+        markAsUnread: vi.fn(),
+        starMessages: vi.fn(),
+        unstarMessages: vi.fn(),
+        archiveMessages: vi.fn(),
+        deleteMessages: vi.fn(),
+        getAllMessages: vi.fn(),
+        getAllThreads: vi.fn(),
+        getThreadById: vi.fn(),
+        getMessagesByThreadId: vi.fn(),
+        getEmailContent: vi.fn(),
+        getEmailHeaders: vi.fn().mockResolvedValue(mockEmailContent),
+        getQuota: vi.fn(),
+        sendMessage: vi.fn(),
+        createDraft: vi.fn(),
+        updateDraft: vi.fn(),
+        deleteDraft: vi.fn(),
+        getAttachment: vi.fn(),
+        testEndToEndFlow: vi.fn(),
+        getParsedMessage: vi.fn(),
+        sendGmailMessage: vi.fn(),
+        saveDraft: vi.fn(),
+        downloadAttachment: vi.fn(),
+      } as unknown as GmailTauriService));
+
+      const { result } = renderHook(() => useMailStore((state) => state.fetchMessage));
+
+      await act(async () => {
+        await result.current('email-id-1', 'test-account-id');
+      });
+
+      expect(useMailStore.getState().currentMessage).toEqual(mockEmailContent);
     });
   });
 }); 

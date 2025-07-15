@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '../ui';
+import { useHeader } from '../../app/contexts/HeaderContext'; // Import useHeader
 
 // Type definitions for the UnifiedHeader component
 interface BreadcrumbItem {
@@ -16,12 +17,15 @@ interface PrimaryAction {
 interface SecondaryAction {
   label: string;
   onClick: () => void;
+  icon?: React.ReactNode; // Added icon property
   variant?: 'ghost' | 'secondary';
 }
 
+// UnifiedHeaderProps now only defines props not managed by HeaderContext
 interface UnifiedHeaderProps {
   breadcrumb?: BreadcrumbItem[];
-  title: string;
+  // title: string; // Title will now come from HeaderContext
+  subtitle?: string;
   primaryAction?: PrimaryAction;
   viewSwitcher?: React.ReactNode;
   secondaryActions?: SecondaryAction[];
@@ -29,109 +33,36 @@ interface UnifiedHeaderProps {
 
 export function UnifiedHeader({
   breadcrumb,
-  title,
+  // title, // Remove title from destructured props
+  subtitle,
   primaryAction,
   viewSwitcher,
   secondaryActions
 }: UnifiedHeaderProps) {
-  const headerStyle = {
-    minHeight: '72px',
-    background: 'var(--bg-surface)',
-    borderBottom: '1px solid var(--border-subtle)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: `0 var(--space-5)`,
-    gap: 'var(--space-5)'
-  };
-
-  const leftSectionStyle = {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 'var(--space-1)',
-    flex: '1',
-    minWidth: '0'
-  };
-
-  const breadcrumbStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-1)',
-    fontSize: '12px',
-    color: 'var(--text-tertiary)',
-    margin: 'var(--space-1) 0'
-  };
-
-  const titleStyle = {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: 'var(--text-primary)',
-    margin: '0',
-    lineHeight: '1.2'
-  };
-
-  const rightSectionStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-3)',
-    flexShrink: 0
-  };
-
-  const secondaryActionsStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-2)'
-  };
-
-  const separatorStyle = {
-    color: 'var(--text-muted)',
-    fontSize: '12px',
-    userSelect: 'none' as const
-  };
+  const { headerProps } = useHeader(); // Use the header context
+  const title = headerProps.title; // Get title from context
 
   return (
-    <header style={headerStyle}>
-      <div style={leftSectionStyle}>
-        {breadcrumb && breadcrumb.length > 0 && (
-          <nav style={breadcrumbStyle}>
-            {breadcrumb.map((item, index) => (
-              <React.Fragment key={item.path}>
-                <span>{item.label}</span>
-                {index < breadcrumb.length - 1 && (
-                  <span style={separatorStyle}>›</span>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
-        )}
-        <h1 style={titleStyle}>{title}</h1>
+    <header className="flex h-16 items-center px-4 md:px-6">
+      <div className="flex items-center space-x-4 flex-1">
+        {/* Title and Subtitle */}
+        <div className="flex flex-col">
+          {title && <h1 className="text-xl font-semibold">{title}</h1>}
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
       </div>
 
-      <div style={rightSectionStyle}>
-        {/* Secondary Actions */}
-        {secondaryActions && secondaryActions.length > 0 && (
-          <div style={secondaryActionsStyle}>
-            {secondaryActions.map((action, index) => (
-              <Button
-                key={index}
-                variant={action.variant || 'ghost'}
-                onClick={action.onClick}
-                size="default"
-              >
-                {action.label}
-              </Button>
-            ))}
-          </div>
-        )}
-
-        {/* Primary Action Button */}
+      {/* Actions */}
+      <div className="flex items-center space-x-2">
+        {secondaryActions && secondaryActions.map((action, index) => (
+          <Button key={index} variant={action.variant || 'ghost'} size="sm" onClick={action.onClick}>
+            {action.icon && <span className="mr-2">{action.icon}</span>}
+            {action.label}
+          </Button>
+        ))}
         {primaryAction && (
-          <Button
-            variant="primary"
-            onClick={primaryAction.onClick}
-            className="gap-2"
-          >
-            {primaryAction.icon}
+          <Button variant="primary" size="sm" onClick={primaryAction.onClick}>
+            {primaryAction.icon && <span className="mr-2">{primaryAction.icon}</span>}
             {primaryAction.label}
           </Button>
         )}

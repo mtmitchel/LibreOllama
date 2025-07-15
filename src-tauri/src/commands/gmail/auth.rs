@@ -3,15 +3,52 @@
 //! This module provides Tauri command handlers for Gmail authentication,
 //! delegating all business logic to the GmailAuthService.
 
-use tauri::State;
 use std::sync::Arc;
+use tauri::State;
 use serde::{Deserialize, Serialize};
+use anyhow::Result;
 
 use crate::services::gmail::auth_service::{
-    GmailAuthService, AuthorizationRequest, GmailTokenResponse, 
-    GmailTokens, UserInfo, CallbackResult, StoredGmailAccount
+    GmailAuthService, 
+    GmailTokens, UserInfo, StoredGmailAccount
 };
-use crate::database::connection::DatabaseManager;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthUrlResponse {
+    pub auth_url: String,
+    pub state: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthCodeRequest {
+    pub code: String,
+    pub state: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TokenResponse {
+    pub access_token: String,
+    pub refresh_token: Option<String>,
+    pub expires_in: i64,
+    pub token_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserInfoResponse {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub picture: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AccountResponse {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub picture: Option<String>,
+    pub is_active: bool,
+}
 
 // =============================================================================
 // Configuration Structures
@@ -31,23 +68,27 @@ pub struct OAuthConfig {
 pub async fn start_gmail_oauth(
     config: OAuthConfig,
     auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<AuthorizationRequest, String> {
-    auth_service
+) -> Result<AuthUrlResponse, String> {
+    let auth_request = auth_service
         .start_authorization(Some(config.redirect_uri))
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    
+    Ok(AuthUrlResponse {
+        auth_url: auth_request.auth_url,
+        state: auth_request.state,
+    })
 }
 
 /// Start OAuth flow with automatic callback handling
 #[tauri::command]
 pub async fn start_gmail_oauth_with_callback(
     auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<GmailTokenResponse, String> {
+) -> Result<TokenResponse, String> {
     use std::sync::{Arc, Mutex};
     use std::thread;
     use std::time::Duration;
     use std::collections::HashMap;
-    use url::Url;
     
     // Start a temporary HTTP server on localhost:8080
     let result = Arc::new(Mutex::new(None));
@@ -55,7 +96,7 @@ pub async fn start_gmail_oauth_with_callback(
     
     let server_handle = thread::spawn(move || {
         use std::io::prelude::*;
-        use std::net::{TcpListener, TcpStream};
+        use std::net::TcpListener;
         
         let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
         listener.set_nonblocking(true).unwrap();
@@ -115,10 +156,17 @@ pub async fn start_gmail_oauth_with_callback(
         .ok_or("OAuth callback timeout or failed")?;
     
     // Complete OAuth flow
-    auth_service
+    let token_response = auth_service
         .complete_authorization(code, state, Some("http://localhost:8080/auth/callback".to_string()))
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    
+    Ok(TokenResponse {
+        access_token: token_response.access_token,
+        refresh_token: token_response.refresh_token,
+        expires_in: token_response.expires_in as i64,
+        token_type: token_response.token_type,
+    })
 }
 
 /// Complete Gmail OAuth2 authorization flow
@@ -128,11 +176,18 @@ pub async fn complete_gmail_oauth(
     state: String,
     redirect_uri: String,
     auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<GmailTokenResponse, String> {
-    auth_service
+) -> Result<TokenResponse, String> {
+    let token_response = auth_service
         .complete_authorization(code, state, Some(redirect_uri))
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    
+    Ok(TokenResponse {
+        access_token: token_response.access_token,
+        refresh_token: token_response.refresh_token,
+        expires_in: token_response.expires_in as i64,
+        token_type: token_response.token_type,
+    })
 }
 
 /// Refresh Gmail access token
@@ -141,11 +196,18 @@ pub async fn refresh_gmail_token(
     refresh_token: String,
     redirect_uri: String,
     auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<GmailTokenResponse, String> {
-    auth_service
+) -> Result<TokenResponse, String> {
+    let token_response = auth_service
         .refresh_token(refresh_token, Some(redirect_uri))
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    
+    Ok(TokenResponse {
+        access_token: token_response.access_token,
+        refresh_token: token_response.refresh_token,
+        expires_in: token_response.expires_in as i64,
+        token_type: token_response.token_type,
+    })
 }
 
 /// Revoke Gmail token
@@ -225,8 +287,8 @@ pub async fn remove_gmail_tokens_secure(
 /// Debug command to check secure table existence and contents
 #[tauri::command]
 pub async fn debug_gmail_secure_table(
-    auth_service: State<'_, Arc<GmailAuthService>>,
-    db_manager: State<'_, DatabaseManager>,
+    _auth_service: State<'_, Arc<GmailAuthService>>,
+    db_manager: State<'_, crate::database::connection::DatabaseManager>,
 ) -> Result<String, String> {
     let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
     
@@ -263,7 +325,7 @@ pub async fn debug_gmail_secure_table(
 /// Debug Gmail token expiration times
 #[tauri::command]
 pub async fn debug_gmail_token_expiration(
-    db_manager: State<'_, DatabaseManager>,
+    db_manager: State<'_, crate::database::connection::DatabaseManager>,
 ) -> Result<String, String> {
     let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
     
@@ -332,7 +394,7 @@ pub async fn debug_gmail_token_expiration(
 /// Clean up corrupted Gmail token expiration times
 #[tauri::command]
 pub async fn cleanup_corrupted_gmail_tokens(
-    db_manager: State<'_, DatabaseManager>,
+    db_manager: State<'_, crate::database::connection::DatabaseManager>,
 ) -> Result<String, String> {
     let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
     

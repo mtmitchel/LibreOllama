@@ -359,8 +359,9 @@ export interface MailActions {
   
   // Messages
   fetchMessages: (labelId?: string, query?: string, pageToken?: string, accountId?: string) => Promise<void>;
-  fetchMessage: (messageId: string, accountId?: string) => Promise<void>;
-  fetchThread: (threadId: string, accountId?: string) => Promise<void>;
+  fetchMessage: (messageId: string, accountId?: string) => Promise<ParsedEmail | undefined>; // Changed return type
+  fetchThread: (threadId: string, accountId?: string) => Promise<EmailThread | undefined>; // Changed return type
+  setCurrentThread: (thread: EmailThread | null) => void; // Added setCurrentThread
   markAsRead: (messageIds: string[], accountId?: string) => Promise<void>;
   markAsUnread: (messageIds: string[], accountId?: string) => Promise<void>;
   deleteMessages: (messageIds: string[], accountId?: string) => Promise<void>;
@@ -437,6 +438,7 @@ export interface MailActions {
   setAccounts: (accounts: GmailAccount[]) => void;
   setSyncInProgress: (inProgress: boolean, accountId?: string) => void;
   setCurrentMessage: (message: ParsedEmail | null) => void;
+  clearCurrentMessage: () => void;
   setLabels: (labels: GmailLabel[], accountId?: string) => void;
 }
 

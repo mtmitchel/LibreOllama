@@ -84,7 +84,9 @@ export const ProgressRings: Story = () => {
             <p className="mt-2 text-sm text-secondary">Show percentage</p>
           </div>
           <div className="text-center">
-            <ProgressRing value={42} showValue customLabel="42/100" />
+            <ProgressRing value={42} showValue>
+              42/100
+            </ProgressRing>
             <p className="mt-2 text-sm text-secondary">Custom label</p>
           </div>
         </div>

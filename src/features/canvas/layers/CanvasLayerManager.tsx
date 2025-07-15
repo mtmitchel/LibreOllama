@@ -21,7 +21,7 @@ import {
   ElementOrSectionId,
   SectionElement
 } from '../types/enhanced.types';
-// import { canvasSelectors } from '../stores/selectors'; // TODO: Replace with combinedSelectors when needed
+// import { canvasSelectors } from '../stores/selectors'; 
 import { useSimpleViewportCulling } from '../hooks/useSimpleViewportCulling';
 import { canvasLog } from '../utils/canvasLogger';
 

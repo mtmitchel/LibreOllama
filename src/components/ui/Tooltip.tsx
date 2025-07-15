@@ -45,7 +45,7 @@ export function Tooltip({
   
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<number>();
+  const timeoutRef = useRef<number | undefined>(undefined);
 
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : isVisible;
 

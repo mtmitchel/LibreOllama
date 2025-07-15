@@ -326,11 +326,17 @@ impl GmailApiService {
     pub async fn get_labels(&self, account_id: &str) -> Result<Vec<GmailLabel>> {
         println!("🏷️  [GMAIL-API] Getting labels for account: {}", account_id);
         
-        let tokens = self.auth_service.get_account_tokens(account_id).await?
-            .ok_or_else(|| LibreOllamaError::GmailAuth { message: "No tokens found for account".to_string(), code: None })?;
+        // Get valid tokens, though they are not used in the URL but required for auth
+        let _tokens = self.auth_service.get_account_tokens(account_id).await?
+            .ok_or_else(|| LibreOllamaError::InvalidInput {
+                field: Some("account_id".to_string()),
+                message: format!("No tokens found for account_id: {}", account_id),
+            })?;
+
+        let endpoint = format!("users/{}/labels", account_id);
 
         let list_response = self
-            .make_api_request::<serde_json::Value>(account_id, "users/me/labels").await?;
+            .make_api_request::<serde_json::Value>(account_id, &endpoint).await?;
 
         let mut labels = vec![];
         if let Some(items) = list_response.get("labels").and_then(|v| v.as_array()) {

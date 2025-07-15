@@ -43,8 +43,8 @@ const LabelManager: React.FC<LabelManagerProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     color: LABEL_COLORS[0],
-    messageListVisibility: 'show' as const,
-    labelListVisibility: 'show' as const
+    messageListVisibility: 'show' as 'show' | 'hide' | 'showIfUnread',
+    labelListVisibility: 'show' as 'show' | 'hide' | 'showIfUnread'
   });
 
   // Load labels when component mounts

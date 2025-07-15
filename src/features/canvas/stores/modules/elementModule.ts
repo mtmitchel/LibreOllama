@@ -5,7 +5,8 @@ import {
   ElementId, 
   ElementOrSectionId,
   isTableElement,
-  TableCell 
+  TableCell,
+  GroupId // Import GroupId
 } from '../../types/enhanced.types';
 import { StoreModule, StoreSet, StoreGet } from './types';
 
@@ -40,6 +41,10 @@ export interface ElementActions {
   // Import/Export operations
   exportElements: () => void;
   importElements: (elements: CanvasElement[]) => void;
+  
+  // Grouping operations for individual elements (moved from unified store)
+  isElementInGroup: (elementId: ElementId) => GroupId | null; // Changed return type
+  setElementGroup: (elementId: ElementId, groupId: GroupId | null) => void;
 }
 
 /**
@@ -95,19 +100,14 @@ export const createElementModule = (
       updateElement: (id, updates, options = {}) => {
         const { skipHistory = false, skipValidation = false } = options;
         
-        if (!skipValidation) {
-          console.log('🔄 [Store] updateElement called:', { id, updates });
-        }
         set(state => {
           const element = state.elements.get(id);
-          console.log('🔄 [Store] Current element:', element);
           if (element) {
             const oldX = element.x;
             const oldY = element.y;
 
             // Create a new element object to ensure proper change detection
             const updatedElement = { ...element, ...updates };
-            console.log('🔄 [Store] Updated element:', updatedElement);
 
             // If element is in a section, constrain its position
             if (updatedElement.sectionId) {
@@ -316,6 +316,20 @@ export const createElementModule = (
           });
         });
         get().addToHistory('importElements');
+      },
+
+      isElementInGroup: (elementId: ElementId) => {
+        const element = get().elements.get(elementId);
+        return element?.groupId || null; // Return groupId or null
+      },
+
+      setElementGroup: (elementId: ElementId, groupId: GroupId | null) => {
+        set(state => {
+          const element = state.elements.get(elementId);
+          if (element) {
+            state.elements.set(elementId, { ...element, groupId });
+          }
+        });
       },
     },
   };

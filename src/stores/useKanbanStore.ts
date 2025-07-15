@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { logger } from '../core/lib/logger';
 
-interface TaskMetadata {
+export interface TaskMetadata {
   labels: string[];
   priority: 'low' | 'normal' | 'high' | 'urgent';
   subtasks: Array<{
@@ -18,7 +19,7 @@ interface TaskMetadata {
   };
 }
 
-interface KanbanTask {
+export interface KanbanTask {
   id: string;
   title: string;
   notes?: string;
@@ -27,9 +28,10 @@ interface KanbanTask {
   position: string;
   updated: string;
   metadata?: TaskMetadata;
+  projectId?: string; // New field for project association
 }
 
-interface KanbanColumn {
+export interface KanbanColumn {
   id: string;
   title: string;
   tasks: KanbanTask[];
@@ -55,7 +57,7 @@ interface KanbanStore {
     notes?: string; 
     due?: string; 
     metadata?: TaskMetadata 
-  }): Promise<void>;
+  }): Promise<KanbanTask>;
   
   updateTask(columnId: string, taskId: string, updates: Partial<KanbanTask> & { 
     metadata?: TaskMetadata 
@@ -69,6 +71,12 @@ interface KanbanStore {
   getTask(taskId: string): { task: KanbanTask; columnId: string } | null;
   clearError(): void;
   clearAllData(): void;
+
+  // Project association methods
+  assignTaskToProject(taskId: string, projectId: string): void;
+  removeTaskFromProject(taskId: string): void;
+  getTasksByProject(projectId: string): KanbanTask[];
+  getUnassignedTasks(): KanbanTask[];
 }
 
 const useKanbanStore = create<KanbanStore>()(
@@ -131,6 +139,11 @@ const useKanbanStore = create<KanbanStore>()(
       },
 
       addColumn(id, title) {
+        const existingColumn = get().columns.find(c => c.id === id);
+        if (existingColumn) {
+          // Column already exists, don't add duplicate
+          return;
+        }
         const newColumns = [...get().columns, { id, title, tasks: [], isLoading: false }];
         set({ columns: newColumns });
         saveToStorage(newColumns);
@@ -162,13 +175,19 @@ const useKanbanStore = create<KanbanStore>()(
       },
 
       async loadTasks(columnId) {
-        // Set loading state
+        // Kanban board currently uses localStorage for persistence.
+        // Future Enhancement: Integrate with backend task management system for actual asynchronous task loading in Phase 3.x
+        
+        // Set loading state (simulated for now)
         const loadingColumns = get().columns.map(c =>
           c.id === columnId ? { ...c, isLoading: true } : c
         );
         set({ columns: loadingColumns });
 
         try {
+          // Simulate a network request
+          await new Promise(resolve => setTimeout(resolve, 300)); 
+
           // For now, just clear loading state since we're using localStorage
           const finalColumns = get().columns.map(c =>
             c.id === columnId ? { ...c, isLoading: false, error: undefined } : c
@@ -187,46 +206,34 @@ const useKanbanStore = create<KanbanStore>()(
       },
 
       async createTask(columnId, data) {
-        const tempId = `temp-${Date.now()}`;
+        // Generate permanent ID immediately for reliable testing
+        const permanentId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
-        // Optimistic UI update
+        // Create task with permanent ID
+        const newTask: KanbanTask = {
+          id: permanentId,
+          title: data.title,
+          notes: data.notes || '',
+          due: data.due,
+          status: 'needsAction' as const,
+          position: String(get().columns.find(c => c.id === columnId)?.tasks.length || 0),
+          updated: new Date().toISOString(),
+          metadata: data.metadata
+        };
+        
         const newColumns = get().columns.map(c =>
           c.id === columnId
             ? { 
                 ...c, 
-                tasks: [...c.tasks, { 
-                  id: tempId,
-                  title: data.title,
-                  notes: data.notes || '',
-                  due: data.due,
-                  status: 'needsAction' as const,
-                  position: String(c.tasks.length),
-                  updated: new Date().toISOString(),
-                  metadata: data.metadata
-                }] 
+                tasks: [...c.tasks, newTask] 
               }
             : c
         );
         
         set({ columns: newColumns });
         saveToStorage(newColumns);
-
-        // Generate a permanent ID and update the task
-        setTimeout(() => {
-          const permanentId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          const updatedColumns = get().columns.map(c =>
-            c.id === columnId
-              ? {
-                  ...c,
-                  tasks: c.tasks.map(t =>
-                    t.id === tempId ? { ...t, id: permanentId } : t
-                  )
-                }
-              : c
-          );
-          set({ columns: updatedColumns });
-          saveToStorage(updatedColumns);
-        }, 100);
+        
+        return newTask;
       },
 
       async updateTask(columnId, taskId, updates) {
@@ -331,15 +338,45 @@ const useKanbanStore = create<KanbanStore>()(
           // Save empty state to localStorage
           saveToStorage(emptyColumns);
           
-          console.log('✅ [KANBAN] All mock data cleared successfully');
+          logger.debug('[KANBAN] All mock data cleared successfully');
         } catch (error) {
-          console.error('❌ [KANBAN] Failed to clear data:', error);
+                      logger.error('[KANBAN] Failed to clear data:', error);
           set({ error: 'Failed to clear data' });
         }
+      },
+
+      // Project association methods
+      assignTaskToProject(taskId, projectId) {
+        const newColumns = get().columns.map(column => ({
+          ...column,
+          tasks: column.tasks.map(task =>
+            task.id === taskId ? { ...task, projectId } : task
+          )
+        }));
+        set({ columns: newColumns });
+        saveToStorage(newColumns);
+      },
+
+      removeTaskFromProject(taskId) {
+        const newColumns = get().columns.map(column => ({
+          ...column,
+          tasks: column.tasks.map(task =>
+            task.id === taskId ? { ...task, projectId: undefined } : task
+          )
+        }));
+        set({ columns: newColumns });
+        saveToStorage(newColumns);
+      },
+
+      getTasksByProject(projectId) {
+        return get().columns.flatMap(c => c.tasks).filter(t => t.projectId === projectId);
+      },
+
+      getUnassignedTasks() {
+        return get().columns.flatMap(c => c.tasks).filter(t => !t.projectId);
       }
     };
   })
 );
 
 export { useKanbanStore };
-export type { KanbanTask, KanbanColumn, TaskMetadata };

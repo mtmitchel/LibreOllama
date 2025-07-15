@@ -1,3 +1,5 @@
+import { logger, canvasLogger } from '../../../core/lib/logger'; // Import canvasLogger directly
+
 /**
  * Canvas-specific environment-aware logging utility
  * Improves production performance by disabling non-critical logging
@@ -19,29 +21,29 @@ const frameThrottle = (fn: (...args: any[]) => void) => {
 
 export const canvasLog = {
   // Debug logs only in development (throttled)
-  debug: isDevelopment ? frameThrottle(console.log.bind(console)) : () => {},
+  debug: isDevelopment ? frameThrottle(logger.debug.bind(logger)) : () => {},
   
   // Info logs in development and test (throttled)
-  log: (isDevelopment || isTest) ? frameThrottle(console.log.bind(console)) : () => {},
+  log: (isDevelopment || isTest) ? frameThrottle(logger.log.bind(logger)) : () => {},
   
   // Warnings always shown but throttled in production
-  warn: console.warn,
+  warn: logger.warn,
   
   // Errors always logged
-  error: console.error,
+  error: logger.error,
   
   // Performance logging only in development
-  perf: isDevelopment ? console.log : () => {},
+  perf: isDevelopment ? logger.debug : () => {},
   
-  // Group operations only in development
-  group: isDevelopment ? console.group : () => {},
-  groupEnd: isDevelopment ? console.groupEnd : () => {},
+  // Group operations only in development (using console directly since logger doesn't have group methods)
+  group: isDevelopment ? console.group.bind(console) : () => {},
+  groupEnd: isDevelopment ? console.groupEnd.bind(console) : () => {},
   
   // Memory logging only in development
-  memory: isDevelopment ? console.log : () => {},
+  memory: isDevelopment ? logger.debug : () => {},
   
   // Table-specific logging (heavily used in TableElement)
-  table: isDevelopment ? console.log : () => {},
+  table: isDevelopment ? logger.debug : () => {},
 };
 
 // Canvas-specific performance profiler
@@ -64,14 +66,14 @@ export const canvasPerf = {
   },
   
   time: (label: string) => {
-    if (isDevelopment && console.time) {
-      console.time(label);
+    if (isDevelopment) {
+      canvasLogger.time(label);
     }
   },
   
   timeEnd: (label: string) => {
-    if (isDevelopment && console.timeEnd) {
-      console.timeEnd(label);
+    if (isDevelopment) {
+      canvasLogger.timeEnd(label);
     }
   }
 }; 

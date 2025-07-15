@@ -105,3 +105,8 @@ The application features a well-implemented design system with good component co
 - ✅ **Icon System** - Standardized `lucide-react` usage patterns
 - ✅ **Ladle Documentation** - Components documented with interactive stories
 - ✅ **Command Palette** - Functional Cmd+K navigation system 
+
+## Future Work & Todos
+
+### Technical Debt & Refactoring
+- [ ] **Top Bar Integration:** Fully integrate the command palette and user menu in `TopBar.tsx`. 

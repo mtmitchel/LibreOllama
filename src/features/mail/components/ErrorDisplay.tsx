@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   AlertTriangle, 
   Wifi, 
@@ -310,7 +310,7 @@ export function SuccessMessage({
   className = '',
   autoHideAfter = 5000 
 }: SuccessMessageProps) {
-  React.useEffect(() => {
+  useEffect(() => {
     if (autoHideAfter && onDismiss) {
       const timer = setTimeout(onDismiss, autoHideAfter);
       return () => clearTimeout(timer);

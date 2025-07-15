@@ -4,6 +4,7 @@
  */
 
 import Konva from 'konva';
+import { logger } from '@/core/lib/logger';
 
 export type CanvasTool = 
   | 'select'
@@ -118,7 +119,7 @@ export class CursorManager {
     this.stage.container().style.cursor = cursor;
     
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`CursorManager: Set cursor to ${cursor}`);
+      logger.debug(`CursorManager: Set cursor to ${cursor}`);
     }
   }
 

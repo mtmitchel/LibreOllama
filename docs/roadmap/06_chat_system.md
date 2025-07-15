@@ -98,3 +98,9 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 - [ ] **AI Service Integration:** Integrate with Ollama or other AI services for generating responses.
 - [ ] **API Contract:** Create a clear, documented API contract between the frontend and backend chat services.
 - [ ] **Test Coverage:** Add comprehensive tests for the chat functionality, including backend unit tests and frontend integration tests. 
+
+### Phase 3 Hardening Tests
+
+- **Concurrent message dispatch:** simulate 50 rapid user + agent messages and ensure store order consistency and no dropped updates.
+- **Cold-boot persistence:** open a conversation, reload app, verify messages and scroll position restored.
+- **Accessibility audit:** ensure screen-reader labels for message bubbles and input, plus keyboard shortcuts work (Up arrow to edit last message, etc.). 

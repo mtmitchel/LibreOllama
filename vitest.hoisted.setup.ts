@@ -68,6 +68,41 @@ const mockInvoke = vi.hoisted(() => {
               resolve(undefined);
               break;
               
+            // ✅ ADD CHAT SYSTEM COMMANDS
+            case 'get_sessions':
+              resolve([
+                {
+                  id: `session-${Date.now()}`,
+                  title: 'Default Chat Session',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  message_count: 0
+                }
+              ]);
+              break;
+              
+            case 'create_session':
+              resolve(`session-${Date.now()}`);
+              break;
+              
+            case 'send_message':
+              resolve({
+                id: `message-${Date.now()}`,
+                session_id: args.sessionIdStr || 'default-session',
+                content: args.content || 'Default message',
+                role: 'user',
+                timestamp: new Date().toISOString()
+              });
+              break;
+              
+            case 'get_session_messages':
+              resolve([]);
+              break;
+              
+            case 'delete_session':
+              resolve(undefined);
+              break;
+              
             default:
               reject(new Error(`Unknown command: ${command}`));
           }
@@ -269,6 +304,41 @@ beforeEach(() => {
               break;
               
             case 'delete_task':
+              resolve(undefined);
+              break;
+              
+            // ✅ ADD CHAT SYSTEM COMMANDS
+            case 'get_sessions':
+              resolve([
+                {
+                  id: `session-${Date.now()}`,
+                  title: 'Default Chat Session',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  message_count: 0
+                }
+              ]);
+              break;
+              
+            case 'create_session':
+              resolve(`session-${Date.now()}`);
+              break;
+              
+            case 'send_message':
+              resolve({
+                id: `message-${Date.now()}`,
+                session_id: args.sessionIdStr || 'default-session',
+                content: args.content || 'Default message',
+                role: 'user',
+                timestamp: new Date().toISOString()
+              });
+              break;
+              
+            case 'get_session_messages':
+              resolve([]);
+              break;
+              
+            case 'delete_session':
               resolve(undefined);
               break;
               

@@ -43,7 +43,7 @@ interface ComposeModalProps {
   scheduledTime?: string;
 }
 
-export function ComposeModal({ 
+function ComposeModal({ 
   replyToMessage, 
   replyType = 'reply', 
   scheduledTime 
@@ -594,3 +594,5 @@ export function ComposeModal({
     </div>
   );
 }
+
+export default ComposeModal;

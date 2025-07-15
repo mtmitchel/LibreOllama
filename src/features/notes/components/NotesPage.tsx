@@ -14,7 +14,7 @@ export const NotesPage: React.FC = () => {
   const [isContextOpen, setIsContextOpen] = useState(false);
 
   const selectedNote = notes.find(note => note.id === selectedNoteId);
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   const toggleNotesSidebar = useCallback(() => {
     setIsNotesSidebarOpen(!isNotesSidebarOpen);
@@ -93,7 +93,6 @@ export const NotesPage: React.FC = () => {
       {/* Context Sidebar */}
       <NotesContextSidebar 
         isOpen={isContextOpen}
-        noteId={selectedNote?.id}
         onToggle={toggleContext}
       />
     </div>

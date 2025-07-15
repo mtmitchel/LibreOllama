@@ -4,8 +4,6 @@
 //! Currently unused but kept for future development.
 
 use serde::{Deserialize, Serialize};
-use tauri::State;
-use crate::database::DatabaseManager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateMcpServerRequest {

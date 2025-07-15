@@ -1,12 +1,13 @@
 // src/pages/Projects.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useHeader } from '../contexts/HeaderContext';
 import { ProjectsSidebar } from '../../features/projects/components/ProjectsSidebar';
 import { NoProjectSelected } from '../../features/projects/components/NoProjectSelected';
 import NewProjectModal from '../../features/projects/components/NewProjectModal';
 import { Card, Button, Text, Heading, Caption, Tag, FlexibleGrid } from '../../components/ui';
 import { MoreHorizontal, Edit3, Share2, UserPlus, Copy, Download, Archive, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { useProjectStore, Project, ProjectGoal, ProjectAsset } from '../../features/projects/stores/projectStore';
 
 interface FileItem {
   id: string;
@@ -16,65 +17,96 @@ interface FileItem {
   uploadedAt: string;
 }
 
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  active?: boolean;
-  progress?: number;
-  statusTag?: string;
-  icon?: React.ReactNode;
-  keyGoals?: { id: string; text: string; completed: boolean }[];
-  files?: FileItem[];
-  assets?: { id: string; type: string; count: number; icon: React.ComponentType<{ className?: string }> }[];
-}
-
-interface ProjectAsset {
-  id: string;
-  type: 'file' | 'image' | 'document' | 'link';
-  name: string;
-  url: string;
-  size?: number;
-  uploadedAt: string;
-  uploadedBy: string;
-}
-
-interface ProjectStats {
-  totalTasks: number;
-  completedTasks: number;
-  totalFiles: number;
-  totalNotes: number;
-  count: number;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-}
-
 interface ProjectForm {
   name: string;
   description: string;
   color: string;
 }
 
-const mockProjects: Project[] = [];
-
-const mockAssets: any[] = [];
-
 export function Projects() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
-  const [selectedProject, setSelectedProject] = useState<Project | null>(mockProjects[0] || null);
+  
+  // --- ZUSTAND STORE ---
+  const {
+    projects,
+    selectedProjectId,
+    projectGoals,
+    projectAssets,
+    projectStats,
+    isLoading,
+    isLoadingGoals,
+    isLoadingAssets,
+    isSaving,
+    error,
+    searchQuery,
+    // Actions
+    fetchProjects,
+    createProject,
+    updateProject,
+    deleteProject,
+    selectProject,
+    setSearchQuery,
+    fetchProjectGoals,
+    createProjectGoal,
+    updateProjectGoal,
+    deleteProjectGoal,
+    toggleProjectGoal, // Renamed from toggleGoalCompletion
+    fetchProjectAssets,
+    createProjectAsset,
+    deleteProjectAsset,
+    clearError
+  } = useProjectStore();
+  
+  // --- LOCAL UI STATE ---
   const [newProjectModalOpen, setNewProjectModalOpen] = useState(false);
   const [isProjectMenuOpen, setIsProjectMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [projectForm, setProjectForm] = useState<ProjectForm>({
     name: '',
     description: '',
-    color: 'var(--accent-primary)'
+    color: '#3b82f6'
   });
   const [newProjectStep, setNewProjectStep] = useState(1);
   const [aiAssist, setAiAssist] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
+  // --- DATA LOADING & SYNC ---
+  useEffect(() => {
+    // Load projects on mount
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    // Clear any errors when component mounts
+    clearError();
+  }, [clearError]);
+
+  // --- DERIVED DATA ---
+  const selectedProject = selectedProjectId 
+    ? projects.find(p => p.id === selectedProjectId) 
+    : null;
+  
+  const currentGoals = selectedProjectId 
+    ? projectGoals[selectedProjectId] || [] 
+    : [];
+    
+  const currentAssets = selectedProjectId 
+    ? projectAssets[selectedProjectId] || []
+    : [];
+
+  const currentStats = selectedProjectId
+    ? projectStats[selectedProjectId]
+    : null;
+
+  // --- HEADER CONFIGURATION ---
+  useEffect(() => {
+    setHeaderProps({
+      title: 'Projects',
+      subtitle: selectedProject ? selectedProject.name : 'Select a project or create a new one'
+    });
+    return () => clearHeaderProps();
+  }, [setHeaderProps, clearHeaderProps, selectedProject]);
+
+  // --- CLICK OUTSIDE HANDLER ---
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -90,40 +122,70 @@ export function Projects() {
     }
   }, [isProjectMenuOpen]);
 
-  useEffect(() => {
-    setHeaderProps({
-      title: "Projects"
-    });
-    return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
-
-  const handleCreateProject = () => {
+  // --- EVENT HANDLERS ---
+  const handleCreateProject = useCallback(() => {
     setNewProjectModalOpen(true);
-  };
+  }, []);
 
-  const handleActualProjectCreation = () => {
-    console.log('Creating project:', projectForm);
-    // Add actual project creation logic here
-    handleProjectCreated();
-  };
+  const handleActualProjectCreation = useCallback(async () => {
+    if (!projectForm.name.trim()) return;
+    
+    try {
+      const newProjectId = await createProject(
+        projectForm.name,
+        projectForm.description,
+        projectForm.color
+      );
+      
+      // Select the newly created project
+      selectProject(newProjectId);
+      
+      // Close modal and reset form
+      handleProjectCreated();
+    } catch (error) {
+      console.error('Failed to create project:', error);
+    }
+  }, [projectForm, createProject, selectProject]);
 
-  const handleProjectCreated = () => {
+  const handleProjectCreated = useCallback(() => {
     setNewProjectModalOpen(false);
     setProjectForm({
       name: '',
       description: '',
-      color: 'var(--accent-primary)'
+      color: '#3b82f6'
     });
     setNewProjectStep(1);
     setAiAssist(false);
-  };
+  }, []);
 
-  const handleSelectProject = (projectId: string) => {
-    const project = mockProjects.find(p => p.id === projectId);
-    setSelectedProject(project || null);
-  };
+  const handleSelectProject = useCallback((projectId: string) => {
+    selectProject(projectId);
+  }, [selectProject]);
 
-  const handleCreateAsset = (type: string) => {
+  const handleDeleteProject = useCallback(async () => {
+    if (!selectedProjectId) return;
+    
+    if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+      try {
+        await deleteProject(selectedProjectId);
+        setIsProjectMenuOpen(false);
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+      }
+    }
+  }, [selectedProjectId, deleteProject]);
+
+  const handleToggleGoal = useCallback(async (goalId: string) => {
+    try {
+      await toggleProjectGoal(goalId); // Renamed from toggleGoalCompletion
+    } catch (error) {
+      console.error('Failed to toggle goal:', error);
+    }
+  }, [toggleProjectGoal]);
+
+  const handleCreateAsset = useCallback((type: string) => {
+    if (!selectedProjectId) return;
+    
     console.log(`Creating new ${type} for project:`, selectedProject?.name);
     // Implementation for creating different types of assets
     switch (type) {
@@ -148,39 +210,52 @@ export function Projects() {
       default:
         console.log('Unknown asset type');
     }
-  };
-
-  const handleToggleGoal = (goalId: string) => {
-    if (!selectedProject) return;
-    
-    // This would typically update the project in your state management
-    console.log(`Toggling goal ${goalId} for project ${selectedProject.id}`);
-    
-    // For demo purposes, we'll just log the action
-    const goal = selectedProject.keyGoals?.find(g => g.id === goalId);
-    if (goal) {
-      console.log(`Goal "${goal.text}" ${goal.completed ? 'unchecked' : 'completed'}`);
-    }
-  };
+  }, [selectedProjectId, selectedProject]);
 
   const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'primary' | 'muted' => {
-    switch (status.toLowerCase()) {
-      case 'active':
+    switch (status) {
       case 'completed':
         return 'success';
-      case 'in progress':
-        return 'primary'; // Blue indicates active progress
-      case 'planning':
-        return 'muted'; // Gray indicates planning phase
-      case 'on hold':
-        return 'warning'; // Yellow indicates caution/attention needed
-      case 'cancelled':
-        return 'error';
+      case 'active':
+        return 'primary';
+      case 'on-hold':
+        return 'warning';
+      case 'archived':
+        return 'muted';
       default:
         return 'primary';
     }
   };
 
+  // Convert store data to component format
+  const projectsForSidebar = projects.map(project => ({
+    ...project,
+    statusTag: project.status,
+    keyGoals: currentGoals.map(goal => ({
+      id: goal.id,
+      text: goal.title,
+      completed: goal.completed
+    }))
+  }));
+
+  // --- ERROR DISPLAY ---
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button 
+            onClick={clearError}
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDER ---
   return (
     <div 
       className="flex h-full"
@@ -192,8 +267,8 @@ export function Projects() {
     >
       {/* Projects Sidebar */}
       <ProjectsSidebar
-        projects={mockProjects}
-        selectedProjectId={selectedProject?.id || null}
+        projects={projectsForSidebar}
+        selectedProjectId={selectedProjectId}
         onSelectProject={handleSelectProject}
         onNewProject={handleCreateProject}
         searchQuery={searchQuery}
@@ -208,7 +283,7 @@ export function Projects() {
           borderRadius: 'var(--radius-lg)'
         }}
       >
-        {selectedProject && (
+        {selectedProject ? (
           <Card className="flex h-full flex-col" padding="none">
             {/* Project Header */}
             <div 
@@ -228,6 +303,20 @@ export function Projects() {
                   >
                     {selectedProject.description}
                   </Text>
+                  <div className="mt-3 flex items-center gap-4">
+                    <Tag 
+                      color={getStatusColor(selectedProject.status)}
+                      className="capitalize"
+                    >
+                      {selectedProject.status.replace('-', ' ')}
+                    </Tag>
+                    <Text variant="tertiary" size="sm">
+                      Progress: {selectedProject.progress}%
+                    </Text>
+                    <Text variant="tertiary" size="sm" className="capitalize">
+                      Priority: {selectedProject.priority}
+                    </Text>
+                  </div>
                 </div>
                 <div className="relative" ref={dropdownRef}>
                   <Button
@@ -244,295 +333,232 @@ export function Projects() {
                   {/* Dropdown Menu */}
                   {isProjectMenuOpen && (
                     <div 
-                      className="absolute right-0 top-full z-10"
+                      className="absolute right-0 top-full z-10 min-w-[200px] py-2"
                       style={{
                         background: 'var(--bg-card)',
                         border: '1px solid var(--border-primary)',
-                        borderRadius: 'var(--radius-lg)',
-                        boxShadow: 'var(--shadow-lg)',
-                        marginTop: 'var(--space-2)',
-                        width: '12rem',
-                        padding: 'var(--space-1)'
+                        borderRadius: 'var(--radius-md)',
+                        boxShadow: 'var(--shadow-lg)'
                       }}
                     >
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button 
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
                         onClick={() => {
                           console.log('Edit project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start transition-colors"
-                        style={{ 
-                          gap: 'var(--space-2)',
-                          color: 'var(--text-primary)'
-                        }}
                       >
                         <Edit3 size={16} />
-                        <Text size="sm">Edit project</Text>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        Edit project
+                      </button>
+                      <button 
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
                         onClick={() => {
                           console.log('Share project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start transition-colors"
-                        style={{ 
-                          gap: 'var(--space-2)',
-                          color: 'var(--text-primary)'
-                        }}
                       >
                         <Share2 size={16} />
-                        <Text size="sm">Share project</Text>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        Share project
+                      </button>
+                      <button 
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
                         onClick={() => {
-                          console.log('Add collaborators');
+                          console.log('Add team member');
                           setIsProjectMenuOpen(false);
-                        }}
-                        className="w-full justify-start transition-colors"
-                        style={{ 
-                          gap: 'var(--space-2)',
-                          color: 'var(--text-primary)'
                         }}
                       >
                         <UserPlus size={16} />
-                        <Text size="sm">Add collaborators</Text>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        Add team member
+                      </button>
+                      <hr className="my-2 border-border" />
+                      <button 
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
                         onClick={() => {
                           console.log('Duplicate project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start transition-colors"
-                        style={{ 
-                          gap: 'var(--space-2)',
-                          color: 'var(--text-primary)'
-                        }}
                       >
                         <Copy size={16} />
-                        <Text size="sm">Duplicate project</Text>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        Duplicate
+                      </button>
+                      <button 
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
                         onClick={() => {
                           console.log('Export project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start transition-colors"
-                        style={{ 
-                          gap: 'var(--space-2)',
-                          color: 'var(--text-primary)'
-                        }}
                       >
                         <Download size={16} />
-                        <Text size="sm">Export project</Text>
-                      </Button>
-                      <div 
-                        style={{ 
-                          borderTop: '1px solid var(--border-primary)',
-                          margin: 'var(--space-1) 0'
-                        }}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        Export
+                      </button>
+                      <button 
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-secondary hover:bg-surface hover:text-primary"
                         onClick={() => {
                           console.log('Archive project');
                           setIsProjectMenuOpen(false);
                         }}
-                        className="w-full justify-start transition-colors"
-                        style={{ 
-                          gap: 'var(--space-2)',
-                          color: 'var(--text-primary)'
-                        }}
                       >
                         <Archive size={16} />
-                        <Text size="sm">Archive project</Text>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          console.log('Delete project');
-                          setIsProjectMenuOpen(false);
-                        }}
-                        className="w-full justify-start transition-colors"
-                        style={{ 
-                          gap: 'var(--space-2)',
-                          color: 'var(--red-500)'
-                        }}
+                        Archive
+                      </button>
+                      <hr className="my-2 border-border" />
+                      <button 
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+                        onClick={handleDeleteProject}
                       >
                         <Trash2 size={16} />
-                        <Text size="sm">Delete project</Text>
-                      </Button>
+                        Delete project
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
-              
-              {/* Key Metrics Bar */}
-              <div 
-                className="grid grid-cols-3"
-                style={{ 
-                  background: 'var(--bg-card)',
-                  borderRadius: 'var(--radius-lg)',
-                  gap: 'var(--space-6)',
-                  marginTop: 'var(--space-6)',
-                  padding: 'var(--space-4)'
-                }}
-              >
-                <div className="text-center">
-                  <Text size="2xl" weight="bold" variant="body" className="text-primary">
-                    {selectedProject.progress || 0}%
-                  </Text>
-                  <Caption>Complete</Caption>
-                </div>
-                <div className="text-center">
-                  <Text size="2xl" weight="bold" variant="body" className="text-primary">
-                    {mockAssets.reduce((total, asset) => total + asset.count, 0)}
-                  </Text>
-                  <Caption>Total assets</Caption>
-                </div>
-                <div className="text-center">
-                  <Text size="2xl" weight="bold" variant="body" className="text-primary">
-                    {selectedProject.keyGoals?.filter(goal => goal.completed).length || 0}
-                  </Text>
-                  <Caption>Goals completed</Caption>
-                </div>
-              </div>
             </div>
 
-            {/* Unified Dashboard Content */}
-            <div 
-              className="flex-1 overflow-y-auto"
-              style={{ 
-                padding: 'var(--space-6)',
-                gap: 'var(--space-8)'
-              }}
-            >
-              <div className="flex flex-col gap-8">
-                {/* Active Goals Section */}
-                <Card>
-                  <Heading level={3} className="mb-4 flex items-center gap-2">
-                    <CheckCircle2 className="text-primary" size={20} />
-                    Active goals
-                  </Heading>
-                  <div className="flex flex-col gap-2">
-                    {selectedProject?.keyGoals?.map(goal => (
-                      <Button
-                        key={goal.id}
-                        variant="ghost"
-                        onClick={() => handleToggleGoal(goal.id)}
-                        className="justify-start text-left transition-colors hover:bg-hover"
-                        style={{ 
-                          gap: 'var(--space-3)',
-                          padding: 'var(--space-2)',
-                          borderRadius: 'var(--radius-lg)',
-                          height: 'auto'
-                        }}
-                      >
-                        {goal.completed ? (
-                          <CheckCircle2 className="text-success" size={16} />
-                        ) : (
-                          <Circle className="text-secondary" size={16} />
-                        )}
-                        <Text 
-                          variant={goal.completed ? "secondary" : "body"}
-                          className={goal.completed ? 'line-through' : ''}
+            {/* Project Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Project Stats */}
+              {currentStats && (
+                <div className="mb-6">
+                  <div className="grid grid-cols-4 gap-4">
+                    <Card padding="sm">
+                      <div className="text-center">
+                        <Text size="lg" weight="semibold">{currentStats.goals.total}</Text>
+                        <Caption>Total Goals</Caption>
+                      </div>
+                    </Card>
+                    <Card padding="sm">
+                      <div className="text-center">
+                        <Text size="lg" weight="semibold">{currentStats.goals.completed}</Text>
+                        <Caption>Completed</Caption>
+                      </div>
+                    </Card>
+                    <Card padding="sm">
+                      <div className="text-center">
+                        <Text size="lg" weight="semibold">{currentStats.goals.completion_rate}%</Text>
+                        <Caption>Completion Rate</Caption>
+                      </div>
+                    </Card>
+                    <Card padding="sm">
+                      <div className="text-center">
+                        <Text size="lg" weight="semibold">{currentStats.assets.total}</Text>
+                        <Caption>Assets</Caption>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              )}
+
+              {/* Project Goals */}
+              <div className="mb-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <Heading level={3}>Goals</Heading>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      const title = prompt('Enter goal title:');
+                      if (title && selectedProjectId) {
+                        createProjectGoal(selectedProjectId, title, 'medium');
+                      }
+                    }}
+                  >
+                    Add Goal
+                  </Button>
+                </div>
+                
+                {isLoadingGoals ? (
+                  <div className="text-center py-4">
+                    <Text variant="secondary">Loading goals...</Text>
+                  </div>
+                ) : currentGoals.length === 0 ? (
+                  <Card padding="lg">
+                    <div className="text-center">
+                      <Text variant="secondary">No goals yet.</Text>
+                      <Text variant="tertiary" size="sm">Add your first goal to get started.</Text>
+                    </div>
+                  </Card>
+                ) : (
+                  <div className="space-y-2">
+                    {currentGoals.map((goal) => (
+                      <Card key={goal.id} padding="sm" className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleToggleGoal(goal.id)}
+                            className="flex-shrink-0"
+                          >
+                            {goal.completed ? (
+                              <CheckCircle2 size={20} className="text-success" />
+                            ) : (
+                              <Circle size={20} className="text-secondary" />
+                            )}
+                          </button>
+                          <Text 
+                            weight="medium" 
+                            className={goal.completed ? 'line-through text-secondary' : ''}
+                          >
+                            {goal.title}
+                          </Text>
+                        </div>
+                        <Tag 
+                          color={goal.priority === 'high' ? 'error' : goal.priority === 'medium' ? 'warning' : 'success'}
+                          size="sm"
                         >
-                          {goal.text}
-                        </Text>
-                      </Button>
+                          {goal.priority}
+                        </Tag>
+                      </Card>
                     ))}
                   </div>
-                </Card>
-
-                {/* Project Assets Section */}
-                <Card>
-                  <Heading level={3} className="mb-4">
-                    Project assets
-                  </Heading>
-                  <FlexibleGrid minItemWidth={180} gap={4}>
-                    {mockAssets.map(asset => {
-                      const Icon = asset.icon;
-                      return (
-                        <Button
-                          key={asset.type}
-                          variant="ghost"
-                          onClick={() => handleCreateAsset(asset.type)}
-                          className="flex h-auto flex-col items-center justify-center transition-colors hover:bg-hover"
-                          style={{
-                            padding: 'var(--space-4)',
-                            borderRadius: 'var(--radius-lg)',
-                            gap: 'var(--space-2)'
-                          }}
-                        >
-                          <div 
-                            className="flex items-center justify-center rounded-lg bg-accent-soft"
-                            style={{
-                              width: 'calc(var(--space-8) + var(--space-4))',
-                              height: 'calc(var(--space-8) + var(--space-4))'
-                            }}
-                          >
-                            <Icon className="size-6 text-primary" />
-                          </div>
-                          <div className="text-center">
-                            <Text size="lg" weight="bold" variant="body">
-                              {asset.count}
-                            </Text>
-                            <Caption>{asset.label}</Caption>
-                          </div>
-                        </Button>
-                      );
-                    })}
-                  </FlexibleGrid>
-                </Card>
-
-                {/* Project Status */}
-                {selectedProject.statusTag && (
-                  <Card>
-                    <Heading level={3} className="mb-4">
-                      Project Status
-                    </Heading>
-                    <Tag 
-                      variant="dot" 
-                      color={getStatusColor(selectedProject.statusTag)}
-                      size="md"
-                    >
-                      {selectedProject.statusTag}
-                    </Tag>
-                  </Card>
                 )}
+              </div>
+
+              {/* Quick Actions */}
+              <div>
+                <Heading level={3} className="mb-4">Quick actions</Heading>
+                <FlexibleGrid>
+                  {[
+                    { id: 'notes', label: 'Create notes', icon: '📝' },
+                    { id: 'tasks', label: 'Add tasks', icon: '✅' },
+                    { id: 'canvas', label: 'Open canvas', icon: '🎨' },
+                    { id: 'files', label: 'Upload files', icon: '📎' },
+                    { id: 'chat', label: 'Start chat', icon: '💬' },
+                    { id: 'agent', label: 'Configure agent', icon: '🤖' }
+                  ].map((action) => (
+                    <Card
+                      key={action.id}
+                      padding="lg"
+                      className="cursor-pointer text-center transition-shadow hover:shadow-md"
+                      onClick={() => handleCreateAsset(action.id)}
+                    >
+                      <div className="text-2xl mb-2">{action.icon}</div>
+                      <Text size="sm" weight="medium">{action.label}</Text>
+                    </Card>
+                  ))}
+                </FlexibleGrid>
               </div>
             </div>
           </Card>
+        ) : (
+          /* No Project Selected */
+          <NoProjectSelected onCreateProject={handleCreateProject} />
         )}
-
-        {!selectedProject && <NoProjectSelected onCreateProject={handleCreateProject} />}
       </div>
 
       {/* New Project Modal */}
-      {newProjectModalOpen && (
-        <NewProjectModal
-          isOpen={newProjectModalOpen}
-          onClose={() => setNewProjectModalOpen(false)}
-          projectForm={projectForm}
-          setProjectForm={setProjectForm}
-          newProjectStep={newProjectStep}
-          setNewProjectStep={setNewProjectStep}
-          aiAssist={aiAssist}
-          setAiAssist={setAiAssist}
-          onCreateProject={handleActualProjectCreation}
-        />
-      )}
+      <NewProjectModal
+        isOpen={newProjectModalOpen}
+        onClose={() => setNewProjectModalOpen(false)}
+        projectForm={projectForm}
+        setProjectForm={setProjectForm}
+        newProjectStep={newProjectStep}
+        setNewProjectStep={setNewProjectStep}
+        aiAssist={aiAssist}
+        setAiAssist={setAiAssist}
+        onCreateProject={handleActualProjectCreation}
+      />
     </div>
   );
 }
+
+export default Projects;

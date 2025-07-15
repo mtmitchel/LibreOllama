@@ -80,5 +80,13 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - [ ] **Refactor `UnifiedEventHandler`:** Review and refactor the central event handler for better clarity, performance, and maintainability.
 - [ ] **Increase Test Coverage:** Add more tests for complex user interactions like drag-and-drop and multi-select to improve stability.
+- [ ] **Type Safety:** Refactor the `UILayer.tsx` to use enhanced, properly defined types instead of temporary type assertions.
 - [ ] **Documentation:** Create detailed documentation for the canvas store architecture, data flow, and event handling logic.
 - [ ] **Backend Persistence:** Move from a single JSON file to a proper database solution for storing canvas data, especially for multi-canvas and multi-user support. 
+
+### Phase 3 Hardening Tests
+
+- **Cold-boot persistence validation:** save state, reload app, assert full store re-hydration (elements, viewport, history, auth)
+- **Race-condition tests:** run drawing + auto-save concurrently and ensure deterministic state & no history corruption
+- **Accessibility audit:** keyboard navigation (Tab order) and `axe-core` scan – zero critical violations
+- **Cross-feature workflow:** create canvas → embed in note → attach to project; verify links stay intact after reload 

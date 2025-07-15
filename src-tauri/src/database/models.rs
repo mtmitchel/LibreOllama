@@ -4,11 +4,8 @@
 //! Some unused constructors have been removed to clean up warnings.
 
 use chrono::NaiveDateTime;
-use rusqlite::{Row, Result as SqliteResult};
+use rusqlite::Row;
 use serde::{Deserialize, Serialize};
-
-// Re-export for easier access
-pub use crate::database::schema::*;
 
 // =============================================================================
 // Enums
@@ -508,14 +505,15 @@ pub struct ChatTemplate {
 }
 
 impl ChatTemplate {
-    pub fn new(name: String, description: String, template_content: String) -> Self {
+    pub fn new(name: String, _description: String, template_content: String) -> Self {
+        let now = chrono::Local::now().naive_local();
         ChatTemplate {
-            id: 0,
+            id: 0, // Default value, will be set by the database
             name: name.clone(),
-            template_name: name,
+            template_name: name.to_lowercase().replace(' ', "_"),
             template_content,
-            created_at: chrono::Local::now().naive_local(),
-            updated_at: chrono::Local::now().naive_local(),
+            created_at: now,
+            updated_at: now,
         }
     }
 }
@@ -544,4 +542,155 @@ pub struct N8nConnection {
     pub user_id: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+}
+
+// =============================================================================
+// Project Models
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Project {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+    pub color: String,
+    pub status: String, // 'active', 'completed', 'archived', 'on-hold'
+    pub progress: i32,  // 0-100
+    pub priority: String, // 'high', 'medium', 'low'
+    pub user_id: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl Project {
+    pub fn new(name: String, description: String, color: String, user_id: String) -> Self {
+        let now = chrono::Utc::now().naive_utc();
+        Self {
+            id: 0, // Will be set by database
+            name,
+            description,
+            color,
+            status: "active".to_string(),
+            progress: 0,
+            priority: "medium".to_string(),
+            user_id,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+impl From<&Row<'_>> for Project {
+    fn from(row: &Row) -> Self {
+        Self {
+            id: row.get("id").unwrap(),
+            name: row.get("name").unwrap(),
+            description: row.get("description").unwrap(),
+            color: row.get("color").unwrap(),
+            status: row.get("status").unwrap(),
+            progress: row.get("progress").unwrap(),
+            priority: row.get("priority").unwrap(),
+            user_id: row.get("user_id").unwrap(),
+            created_at: row.get("created_at").unwrap(),
+            updated_at: row.get("updated_at").unwrap(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectGoal {
+    pub id: i32,
+    pub project_id: i32,
+    pub title: String,
+    pub completed: bool,
+    pub priority: String, // 'high', 'medium', 'low'
+    pub due_date: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl ProjectGoal {
+    pub fn new(project_id: i32, title: String, priority: String) -> Self {
+        let now = chrono::Utc::now().naive_utc();
+        Self {
+            id: 0, // Will be set by database
+            project_id,
+            title,
+            completed: false,
+            priority,
+            due_date: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+impl From<&Row<'_>> for ProjectGoal {
+    fn from(row: &Row) -> Self {
+        Self {
+            id: row.get("id").unwrap(),
+            project_id: row.get("project_id").unwrap(),
+            title: row.get("title").unwrap(),
+            completed: row.get("completed").unwrap(),
+            priority: row.get("priority").unwrap(),
+            due_date: row.get("due_date").ok(),
+            created_at: row.get("created_at").unwrap(),
+            updated_at: row.get("updated_at").unwrap(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectAsset {
+    pub id: i32,
+    pub project_id: i32,
+    pub name: String,
+    pub asset_type: String, // 'file', 'image', 'document', 'link', 'note', 'chat'
+    pub url: String,
+    pub size: Option<i64>,
+    pub metadata: Option<String>, // JSON string for additional data
+    pub uploaded_by: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+impl ProjectAsset {
+    pub fn new(
+        project_id: i32,
+        name: String,
+        asset_type: String,
+        url: String,
+        uploaded_by: String
+    ) -> Self {
+        let now = chrono::Utc::now().naive_utc();
+        Self {
+            id: 0, // Will be set by database
+            project_id,
+            name,
+            asset_type,
+            url,
+            size: None,
+            metadata: None,
+            uploaded_by,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+impl From<&Row<'_>> for ProjectAsset {
+    fn from(row: &Row) -> Self {
+        Self {
+            id: row.get("id").unwrap(),
+            project_id: row.get("project_id").unwrap(),
+            name: row.get("name").unwrap(),
+            asset_type: row.get("asset_type").unwrap(),
+            url: row.get("url").unwrap(),
+            size: row.get("size").ok(),
+            metadata: row.get("metadata").ok(),
+            uploaded_by: row.get("uploaded_by").unwrap(),
+            created_at: row.get("created_at").unwrap(),
+            updated_at: row.get("updated_at").unwrap(),
+        }
+    }
 }

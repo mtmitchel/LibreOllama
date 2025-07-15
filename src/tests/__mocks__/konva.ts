@@ -4,11 +4,16 @@
  * This mock replaces the Konva library to prevent canvas.node loading
  */
 
+import { vi } from 'vitest';
+
 // Mock Konva namespace
 const Konva = {
   // Core classes
   Stage: class MockStage {
-    constructor() {}
+    constructor() {
+    }
+    on() { return this; }
+    off() { return this; }
     add() { return this; }
     draw() {}
     destroy() {}
@@ -25,8 +30,14 @@ const Konva = {
     setPosition() { return this; }
     getScale() { return { x: 1, y: 1 }; }
     getAbsolutePosition() { return { x: 0, y: 0 }; }
-    on() { return this; }
-    off() { return this; }
+    getAbsoluteTransform() { 
+      return {
+        copy: vi.fn().mockReturnThis(),
+        invert: vi.fn().mockReturnThis(),
+        point: vi.fn((p) => p),
+        getMatrix: vi.fn().mockReturnValue([1, 0, 0, 1, 0, 0])
+      };
+    }
     fire() { return this; }
     findOne() { return null; }
     find() { return []; }
@@ -34,7 +45,10 @@ const Konva = {
   },
   
   Layer: class MockLayer {
-    constructor() {}
+    constructor() {
+    }
+    on() { return this; }
+    off() { return this; }
     add() { return this; }
     draw() {}
     destroy() {}
@@ -42,8 +56,6 @@ const Konva = {
     getChildren() { return []; }
     findOne() { return null; }
     find() { return []; }
-    on() { return this; }
-    off() { return this; }
     moveToTop() { return this; }
     moveToBottom() { return this; }
   },

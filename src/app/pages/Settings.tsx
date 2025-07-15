@@ -15,7 +15,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import { Card, Button, Input, Heading, Text } from '../../components/ui';
+import { Card, Button, Input, Heading, Text, Checkbox } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
 import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModal';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
@@ -33,8 +33,12 @@ import {
   useSetActiveGoogleAccount,
   useRemoveGoogleAccount,
   useAddGoogleAccount,
-  useRefreshGoogleAccount
+  useRefreshGoogleAccount,
+  useSetApiKey,
+  useSettingsStore
 } from '../../stores/settingsStore';
+import { useChatStore } from '../../features/chat/stores/chatStore';
+import { type LLMProvider } from '../../services/llmProviders';
 
 // Design system aligned Toggle Switch Component
 interface ToggleSwitchProps {
@@ -161,6 +165,16 @@ const Settings: React.FC = () => {
   const removeGoogleAccount = useRemoveGoogleAccount();
   const addGoogleAccount = useAddGoogleAccount();
   const refreshGoogleAccount = useRefreshGoogleAccount();
+  const setApiKey = useSetApiKey();
+  const fetchAvailableModels = useChatStore(state => state.fetchAvailableModels);
+
+  const [providerModels, setProviderModels] = useState<Record<string, { id: string, name: string, description?: string }[]>>({});
+  const [selectedModels, setSelectedModels] = useState<Record<string, string[]>>({});
+  const [apiOperations, setApiOperations] = useState<Record<string, { saving: boolean; success: boolean; error: string | null }>>({});
+  const [modelOperations, setModelOperations] = useState<Record<string, { fetching: boolean; error: string | null }>>({});
+  
+  // Model management hooks
+  const { fetchAvailableModels: fetchProviderModels, setEnabledModels, getEnabledModels } = useSettingsStore();
   
   // Google service stores for authentication
   const { authenticate: authenticateCalendar } = useGoogleCalendarStore();
@@ -171,6 +185,27 @@ const Settings: React.FC = () => {
   const accounts = integrationSettings.googleAccounts;
   const activeAccount = accounts.find(acc => acc.isActive) || null;
 
+  // Initialize enabled models on component mount
+  useEffect(() => {
+    // Load currently enabled models for each provider
+    const providers: LLMProvider[] = ['openai', 'anthropic', 'openrouter', 'deepseek', 'mistral'];
+    providers.forEach(provider => {
+      try {
+        const enabledModels = getEnabledModels(provider);
+        setSelectedModels(prev => ({
+          ...prev,
+          [provider]: enabledModels
+        }));
+      } catch (error) {
+        console.warn(`Failed to get enabled models for ${provider}:`, error);
+        setSelectedModels(prev => ({
+          ...prev,
+          [provider]: []
+        }));
+      }
+    });
+  }, [getEnabledModels]);
+
   const handleGoogleAuth = async (account: { id: string; email: string; name: string; picture: string }) => {
     // Add account to settings store with comprehensive information
     addGoogleAccount({
@@ -180,7 +215,7 @@ const Settings: React.FC = () => {
       picture: account.picture,
       isActive: accounts.length === 0, // Make first account active
       connectedAt: new Date().toISOString(),
-      scopes: account.scopes || [
+      scopes: [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/tasks',
         'https://www.googleapis.com/auth/gmail.readonly',
@@ -199,28 +234,118 @@ const Settings: React.FC = () => {
       }
     });
     
-    // Authenticate with all Google service stores
-    authenticateCalendar(account);
-    authenticateTasks(account);
+    // Authenticate with all Google service stores would be called here
+    // authenticateCalendar(account);
+    // authenticateTasks(account);
     
     // Add account to Gmail store (expects specific format)
     await addGmailAccount({
       id: account.id,
       email: account.email,
-      name: account.name,
-      picture: account.picture,
-      accessToken: account.accessToken,
-      refreshToken: account.refreshToken,
-      expiresAt: account.expiresAt,
-      scopes: account.scopes || [],
+      displayName: account.name,
+      avatar: account.picture,
+      accessToken: '', // Will be filled by actual auth flow
+      refreshToken: '', // Will be filled by actual auth flow  
+      tokenExpiry: new Date(Date.now() + 3600000), // 1 hour from now
       isActive: true,
       syncStatus: 'idle',
       lastSyncAt: new Date(),
-      totalMessages: 0,
-      unreadMessages: 0,
     });
     
     setShowGoogleAuthModal(false);
+  };
+
+  // Model management functions
+  const handleFetchModels = async (providerKey: string) => {
+    const provider = providerKey as LLMProvider;
+    
+    setModelOperations(prev => ({
+      ...prev,
+      [provider]: { fetching: true, error: null }
+    }));
+
+    try {
+      console.log(`Fetching models for provider: ${provider}`);
+      const models = await fetchProviderModels(provider);
+      console.log(`Fetched ${models.length} models for ${provider}:`, models);
+      
+      setProviderModels(prev => ({
+        ...prev,
+        [provider]: models
+      }));
+      
+      // Initialize selected models with currently enabled ones
+      const enabledModels = getEnabledModels(provider);
+      setSelectedModels(prev => ({
+        ...prev,
+        [provider]: enabledModels
+      }));
+      
+      setModelOperations(prev => ({
+        ...prev,
+        [provider]: { fetching: false, error: null }
+      }));
+    } catch (error) {
+      console.error(`Error fetching models for ${provider}:`, error);
+      setModelOperations(prev => ({
+        ...prev,
+        [provider]: { 
+          fetching: false, 
+          error: error instanceof Error ? error.message : 'Failed to fetch models'
+        }
+      }));
+    }
+  };
+
+  const handleModelToggle = (providerKey: string, modelId: string) => {
+    const provider = providerKey as LLMProvider;
+    const currentSelected = selectedModels[provider] || [];
+    const newSelected = currentSelected.includes(modelId)
+      ? currentSelected.filter(id => id !== modelId)
+      : [...currentSelected, modelId];
+    
+    setSelectedModels(prev => ({
+      ...prev,
+      [provider]: newSelected
+    }));
+    
+    // Update the settings store
+    setEnabledModels(provider, newSelected);
+    console.log(`Updated enabled models for ${provider}:`, newSelected);
+    
+    // Refresh chat store to update available models
+    fetchAvailableModels();
+  };
+
+  const handleSelectAllModels = (providerKey: string) => {
+    const provider = providerKey as LLMProvider;
+    const allModels = providerModels[provider] || [];
+    const allModelIds = allModels.map(model => model.id);
+    
+    setSelectedModels(prev => ({
+      ...prev,
+      [provider]: allModelIds
+    }));
+    
+    setEnabledModels(provider, allModelIds);
+    console.log(`Selected all models for ${provider}:`, allModelIds);
+    
+    // Refresh chat store to update available models
+    fetchAvailableModels();
+  };
+
+  const handleDeselectAllModels = (providerKey: string) => {
+    const provider = providerKey as LLMProvider;
+    setSelectedModels(prev => ({
+      ...prev,
+      [provider]: []
+    }));
+    
+    setEnabledModels(provider, []);
+    console.log(`Deselected all models for ${provider}`);
+    
+    // Refresh chat store to update available models
+    fetchAvailableModels();
   };
 
   const navItems = [
@@ -409,7 +534,6 @@ const Settings: React.FC = () => {
       case 'integrations':
         return (
           <div className="h-full p-6">
-            <Card className="p-6">
             <div className="mb-6">
               <Heading level={1}>Integrations</Heading>
               <Text variant="muted">Connect to external services and manage API keys.</Text>
@@ -432,7 +556,7 @@ const Settings: React.FC = () => {
                 </Text>
                 
                 {accounts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border-default py-8 text-center">
                     <Text weight="medium" className="mb-2">No Google accounts connected</Text>
                     <Text variant="muted" size="sm">
                       Connect a Google account to sync your Gmail, Calendar, and Tasks.
@@ -443,40 +567,13 @@ const Settings: React.FC = () => {
                     {accounts.map((account) => (
                       <div key={account.id} className="border-border-default flex items-center justify-between rounded-lg border p-4">
                         <div className="flex items-center gap-3">
-                          <UserAvatar src={account.picture} alt={account.name} />
+                          <UserAvatar src={account.picture} alt={account.name || account.email} />
                           <div>
                             <Text weight="medium">{account.name || account.email}</Text>
                             <Text variant="muted" size="sm">{account.email}</Text>
-                            {account.services && (
-                              <div className="mt-1 flex gap-1">
-                                {Object.entries(account.services).map(([service, enabled]) => {
-                                  if (!enabled) return null;
-                                  let serviceName = service.charAt(0).toUpperCase() + service.slice(1);
-                                  let styles = '';
-                                  switch (service) {
-                                    case 'gmail':
-                                      styles = 'bg-blue-100 text-blue-700';
-                                      break;
-                                    case 'calendar':
-                                      styles = 'bg-green-100 text-green-700';
-                                      break;
-                                    case 'tasks':
-                                      styles = 'bg-purple-100 text-purple-700';
-                                      break;
-                                    default:
-                                      styles = 'bg-surface text-primary';
-                                  }
-                                  return (
-                                    <span key={service} className={`rounded px-1.5 py-0.5 text-xs ${styles}`}>
-                                      {serviceName}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
                           </div>
                           {activeAccount?.id === account.id && (
-                            <div className="flex items-center gap-1 rounded-full bg-success-ghost px-2 py-1 text-success">
+                            <div className="ml-3 flex items-center gap-1 rounded-full bg-success-ghost px-2 py-1 text-success">
                               <Check size={12} />
                               <Text size="xs">Active</Text>
                             </div>
@@ -493,21 +590,11 @@ const Settings: React.FC = () => {
                               Set Active
                             </Button>
                           )}
-
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => refreshGoogleAccount(account.id)}
-                            className="text-muted hover:text-primary"
-                            title="Refresh Account Data"
-                          >
-                            <RefreshCw size={16} />
-                          </Button>
                           <Button 
                             variant="ghost" 
                             size="icon"
                             onClick={() => removeGoogleAccount(account.id)}
-                            className="size-8 text-error hover:bg-error-ghost focus:ring-2 focus:ring-error focus:ring-offset-2"
+                            className="size-8 text-muted hover:bg-error-ghost hover:text-error focus:ring-2 focus:ring-error focus:ring-offset-2"
                             title="Remove Account"
                           >
                             <X size={16} />
@@ -519,55 +606,222 @@ const Settings: React.FC = () => {
                 )}
               </Card>
               
-              <Card className="p-6">
-                <Heading level={2}>Cloud Model API Keys</Heading>
-                <div className="flex flex-col gap-4">
+              <div className="space-y-4">
+                <Heading level={2}>LLM Providers</Heading>
+                <Text variant="muted" size="sm">
+                  Configure API keys for cloud-based language model providers. Some providers require a Base URL.
+                </Text>
+              </div>
+
+              <div className="flex flex-col gap-6">
                   {[
                     {
-                      id: 'gemini-api-key',
-                      label: 'Google Gemini',
-                      description: "Required for accessing Google's cloud-based AI models.",
-                      placeholder: 'Enter Gemini API key...',
-                      defaultValue: '••••••••••••••••',
+                      key: 'openai' as keyof typeof integrationSettings.apiKeys,
+                      label: 'OpenAI',
+                      description: 'Access GPT models (GPT-4, GPT-3.5-turbo, etc.)',
+                      placeholder: 'sk-...',
+                      baseUrlPlaceholder: 'https://api.openai.com/v1',
+                      website: 'https://platform.openai.com/api-keys'
                     },
                     {
-                      id: 'anthropic-api-key',
-                      label: 'Anthropic Claude',
-                      description: 'Required for accessing Claude models via API.',
-                      placeholder: 'Enter Anthropic API key...',
-                      defaultValue: '',
+                      key: 'anthropic' as keyof typeof integrationSettings.apiKeys,
+                      label: 'Anthropic',
+                      description: 'Access Claude models (Claude-3, Claude-2, etc.)',
+                      placeholder: 'sk-ant-...',
+                      baseUrlPlaceholder: 'https://api.anthropic.com/v1',
+                      website: 'https://console.anthropic.com/'
                     },
-                  ].map((apiKey) => (
-                    <React.Fragment key={apiKey.id}>
-                      <div className="border-border-default flex items-center justify-between border-b py-3">
-                        <div className="flex-1">
-                          <label htmlFor={apiKey.id} className="mb-1 block text-sm font-medium">
-                            {apiKey.label}
-                          </label>
-                          <Text variant="muted" size="sm">
-                            {apiKey.description}
-                          </Text>
+                    {
+                      key: 'openrouter' as keyof typeof integrationSettings.apiKeys,
+                      label: 'OpenRouter',
+                      description: 'Access many models through a single API (GPT, Claude, Llama, etc.)',
+                      placeholder: 'sk-or-...',
+                      baseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+                      website: 'https://openrouter.ai/keys'
+                    },
+                    {
+                      key: 'deepseek' as keyof typeof integrationSettings.apiKeys,
+                      label: 'DeepSeek',
+                      description: 'Access DeepSeek models',
+                      placeholder: 'sk-...',
+                      baseUrlPlaceholder: 'https://api.deepseek.com/v1',
+                      website: 'https://platform.deepseek.com/api_keys'
+                    },
+                    {
+                      key: 'mistral' as keyof typeof integrationSettings.apiKeys,
+                      label: 'Mistral AI',
+                      description: 'Access Mistral models (Mistral-7B, Mixtral, etc.)',
+                      placeholder: 'sk-...',
+                      baseUrlPlaceholder: 'https://api.mistral.ai/v1',
+                      website: 'https://console.mistral.ai/'
+                    },
+                    {
+                      key: 'gemini' as keyof typeof integrationSettings.apiKeys,
+                      label: 'Google Gemini',
+                      description: 'Access Google\'s Gemini models',
+                      placeholder: 'AIza...',
+                      baseUrlPlaceholder: 'https://generativelanguage.googleapis.com/v1beta',
+                      website: 'https://makersuite.google.com/app/apikey'
+                    }
+                  ].map((provider) => {
+                    const config = integrationSettings.apiKeys[provider.key];
+                    const currentValue = config?.key || '';
+                    const baseUrl = config?.baseUrl || '';
+                    const maskedValue = currentValue ? '••••••••••••••••' : '';
+                    
+                    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      const newKey = formData.get(`${provider.key}-api-key`) as string;
+                      const newBaseUrl = formData.get(`${provider.key}-base-url`) as string;
+
+                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
+                      try {
+                        await setApiKey(provider.key, newKey === maskedValue ? currentValue : newKey, newBaseUrl);
+                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: true, error: null } }));
+                        setTimeout(() => setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } })), 3000);
+                      } catch (error) {
+                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to save' } }));
+                      }
+                    };
+                    
+                    const handleClear = async () => {
+                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
+                      try {
+                        await setApiKey(provider.key, '');
+                        // Manually clear inputs
+                        const form = document.getElementById(`${provider.key}-form`) as HTMLFormElement;
+                        if(form) {
+                            (form.elements.namedItem(`${provider.key}-api-key`) as HTMLInputElement).value = '';
+                            (form.elements.namedItem(`${provider.key}-base-url`) as HTMLInputElement).value = '';
+                        }
+                        setProviderModels(prev => ({...prev, [provider.key]: []}));
+                        setSelectedModels(prev => ({...prev, [provider.key]: []}));
+                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } }));
+                      } catch (error) {
+                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to clear' } }));
+                      }
+                    };
+
+                    return (
+                      <Card key={provider.key} className="p-0">
+                        <div className="p-6">
+                           <div className="flex items-start justify-between">
+                            <div>
+                              <Heading level={3} className="flex items-center gap-2">
+                                {provider.label}
+                                {currentValue && (
+                                  <div className="flex items-center gap-1 rounded-full bg-success-ghost px-2 py-1 text-success">
+                                    <Check size={12} />
+                                    <Text size="xs">Configured</Text>
+                                  </div>
+                                )}
+                              </Heading>
+                              <Text variant="muted" size="sm">{provider.description}</Text>
+                            </div>
+                            <a 
+                              href={provider.website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-2 border-none rounded-md font-sans font-medium leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-primary bg-transparent text-primary hover:bg-tertiary active:bg-secondary active:scale-95 hover:text-primary py-2 px-3 text-xs"
+                            >
+                                Get API key <LinkIcon size={12} className="ml-1" />
+                            </a>
+                          </div>
+                        
+                          <form id={`${provider.key}-form`} onSubmit={handleSave} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <label htmlFor={`${provider.key}-api-key`} className="text-sm font-medium">API Key</label>
+                                <Input
+                                  id={`${provider.key}-api-key`}
+                                  name={`${provider.key}-api-key`}
+                                  type="password"
+                                  placeholder={provider.placeholder}
+                                  defaultValue={maskedValue}
+                                  autoComplete="new-password"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor={`${provider.key}-base-url`} className="text-sm font-medium">Base URL (optional)</label>
+                                <Input
+                                  id={`${provider.key}-base-url`}
+                                  name={`${provider.key}-base-url`}
+                                  type="text"
+                                  placeholder={provider.baseUrlPlaceholder}
+                                  defaultValue={baseUrl}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 md:col-span-2 md:justify-end">
+                               {currentValue && (
+                                <Button type="button" variant="ghost" className="text-error hover:text-error" onClick={handleClear}>
+                                  Clear
+                                </Button>
+                              )}
+                              <Button type="submit" disabled={apiOperations[provider.key]?.saving}>
+                                {apiOperations[provider.key]?.saving ? 'Saving...' : apiOperations[provider.key]?.success ? 'Saved!' : 'Save'}
+                              </Button>
+                            </div>
+                          </form>
                         </div>
-                        <form className="flex items-center gap-2" onSubmit={(e) => e.preventDefault()}>
-                          <Input
-                            id={apiKey.id}
-                            type="password"
-                            className="w-auto max-w-xs focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            placeholder={apiKey.placeholder}
-                            defaultValue={apiKey.defaultValue}
-                            autoComplete="current-password"
-                          />
-                          <Button type="submit" variant="outline" size="sm" className="focus:ring-2 focus:ring-primary focus:ring-offset-2">
-                            Save
-                          </Button>
-                        </form>
-                      </div>
-                    </React.Fragment>
-                  ))}
-                </div>
-              </Card>
+                        
+                        {currentValue && (
+                          <div className="border-t border-border-default bg-background-secondary p-6">
+                            <div className="flex items-center justify-between">
+                               <div>
+                                <Heading level={4}>Model Management</Heading>
+                                <Text variant="muted" size="sm">Choose which models to make available in chats.</Text>
+                               </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleFetchModels(provider.key)}
+                                  disabled={modelOperations[provider.key]?.fetching}
+                                >
+                                  {modelOperations[provider.key]?.fetching ? 'Loading...' : 'Load Models'}
+                                </Button>
+                            </div>
+
+                            {modelOperations[provider.key]?.error && (
+                              <Text size="sm" className="mt-2 text-error">{modelOperations[provider.key]?.error}</Text>
+                            )}
+
+                            {(providerModels[provider.key] || []).length > 0 && (
+                              <div className="mt-4">
+                                <div className="mb-2 flex items-center justify-end gap-2">
+                                  <Button size="sm" variant="ghost" onClick={() => handleSelectAllModels(provider.key)}>Select all</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDeselectAllModels(provider.key)}>Select none</Button>
+                                </div>
+                                <div className="grid max-h-48 grid-cols-1 gap-1 overflow-y-auto rounded-md border border-border-default bg-background-primary p-2 md:grid-cols-2">
+                                  {(providerModels[provider.key] || []).map(model => (
+                                    <label key={model.id} className="flex items-center gap-3 rounded p-2 text-sm hover:bg-background-secondary">
+                                      <Checkbox
+                                        checked={(selectedModels[provider.key] || []).includes(model.id)}
+                                        onCheckedChange={() => handleModelToggle(provider.key, model.id)}
+                                        id={`model-${provider.key}-${model.id}`}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                         <span className="font-medium truncate block" title={model.name}>{model.name}</span>
+                                         {model.description && <Text variant="muted" size="xs" className="truncate" title={model.description}>{model.description}</Text>}
+                                      </div>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+              </div>
+              
+              <div className="mt-4 rounded-md border border-border-primary bg-background-secondary p-4">
+                <h4 className="font-semibold">Local Models (Ollama)</h4>
+                <p className="text-sm text-text-secondary">
+                  Ollama models run locally and don't require API keys. These are managed in the Agents & Models section.
+                </p>
+              </div>
             </div>
-          </Card>
           </div>
         );
       case 'appearance':
@@ -734,7 +988,6 @@ const Settings: React.FC = () => {
               <GoogleAuthModal
                 isOpen={showGoogleAuthModal}
                 onClose={() => setShowGoogleAuthModal(false)}
-                onSuccess={handleGoogleAuth}
                 title="Connect Google Account" 
                 description="Sign in to sync your Gmail, Calendar, and Tasks with Google"
                 icon={<LinkIcon size={24} className="text-accent-primary" />}

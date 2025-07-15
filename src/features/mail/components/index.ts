@@ -12,7 +12,7 @@ export { InfiniteScrollMessageList } from './InfiniteScrollMessageList';
 export { ThreadedMessageList } from './ThreadedMessageList';
 export { MailSidebar } from './MailSidebar';
 export { MessageView } from './MessageView';
-export { ComposeModal } from './ComposeModal';
+export { default as ComposeModal } from './ComposeModal';
 export { EnhancedSearchBar } from './EnhancedSearchBar';
 export { SimpleAdvancedSearch } from './SimpleAdvancedSearch';
 export { EnhancedMessageList } from './EnhancedMessageList';

@@ -1,7 +1,8 @@
 // Chat component exports
-export { ConversationList } from './ConversationList';
-export { ChatMessageBubble } from './ChatMessageBubble';
-export { ChatInput } from './ChatInput';
 export { ChatHeader } from './ChatHeader';
-export { EmptyState } from './EmptyState';
+export { ChatInput } from './ChatInput';
+export { ChatMessageBubble } from './ChatMessageBubble';
+export { ConversationList } from './ConversationList';
 export { ContextSidebar } from './ContextSidebar';
+export { EmptyState } from './EmptyState';
+export { ModelSelector } from './ModelSelector';

@@ -13,6 +13,7 @@ import { EnhancedMessageItem } from './EnhancedMessageItem';
 import { useMailOperation } from '../hooks';
 import { Text, Button } from '../../../components/ui';
 import { ParsedEmail } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface EnhancedMessageListProps {
   compactMode?: boolean;
@@ -100,7 +101,7 @@ export function EnhancedMessageList({
 
   // Handle message click
   const handleMessageClick = useCallback(async (message: ParsedEmail) => {
-    console.log('🔍 [ENHANCED_LIST] Email clicked:', {
+    logger.debug('🔍 [ENHANCED_LIST] Email clicked:', {
       messageId: message.id,
       subject: message.subject,
       currentMessage: currentMessage?.id
@@ -114,7 +115,7 @@ export function EnhancedMessageList({
         error: null 
       });
       
-      console.log('🚀 [ENHANCED_LIST] Set message immediately from list data');
+      logger.debug('🚀 [ENHANCED_LIST] Set message immediately from list data');
       
       // Try to fetch full message details in the background
       try {
@@ -123,16 +124,16 @@ export function EnhancedMessageList({
           'message details'
         );
         
-        console.log('✅ [ENHANCED_LIST] Full message details fetched successfully');
+        logger.debug('✅ [ENHANCED_LIST] Full message details fetched successfully');
       } catch (fetchError) {
-        console.warn('⚠️ [ENHANCED_LIST] Full message fetch failed, using list data:', fetchError);
+        logger.warn('⚠️ [ENHANCED_LIST] Full message fetch failed, using list data:', fetchError);
       }
       
       // Call optional callback
       onMessageSelect?.(message);
       
     } catch (error) {
-      console.error('❌ [ENHANCED_LIST] Message click failed:', error);
+      logger.error('❌ [ENHANCED_LIST] Message click failed:', error);
       useMailStore.setState({ 
         error: `Failed to open email: ${error instanceof Error ? error.message : 'Unknown error'}`,
         isLoading: false 
@@ -146,7 +147,7 @@ export function EnhancedMessageList({
       try {
         await nextPage();
       } catch (error) {
-        console.error('Failed to load next page:', error);
+        logger.error('Failed to load next page:', error);
       }
     }
   }, [nextPageToken, isLoadingMessages, nextPage]);
@@ -156,7 +157,7 @@ export function EnhancedMessageList({
       try {
         await prevPage();
       } catch (error) {
-        console.error('Failed to load previous page:', error);
+        logger.error('Failed to load previous page:', error);
       }
     }
   }, [currentPage, isLoadingMessages, prevPage]);
@@ -167,7 +168,7 @@ export function EnhancedMessageList({
       try {
         await useMailStore.getState().fetchMessages(undefined, undefined, undefined, currentAccountId);
       } catch (error) {
-        console.error('Failed to refresh messages:', error);
+        logger.error('Failed to refresh messages:', error);
       }
     }
   }, [isLoadingMessages, currentAccountId]);

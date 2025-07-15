@@ -50,8 +50,8 @@ export const ColorSwatches: Story = () => {
             <p className="mt-2 text-sm text-secondary">Large (lg)</p>
           </div>
           <div className="text-center">
-            <ColorSwatch color="#3b82f6" size="xl" />
-            <p className="mt-2 text-sm text-secondary">Extra Large (xl)</p>
+            <ColorSwatch color="#3b82f6" size="lg" />
+            <p className="mt-2 text-sm text-secondary">Large (lg) - max size</p>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@ export const ColorSwatches: Story = () => {
             <ColorSwatch
               color="#f59e0b"
               size="lg"
-              isSelected={true}
+              selected={true}
             />
             <p className="mt-2 text-sm text-secondary">Selected</p>
           </div>
@@ -87,10 +87,9 @@ export const ColorSwatches: Story = () => {
             <ColorSwatch
               color="#8b5cf6"
               size="lg"
-              showTooltip={true}
-              tooltipText="Purple color"
+              label="Purple color"
             />
-            <p className="mt-2 text-sm text-secondary">With tooltip</p>
+            <p className="mt-2 text-sm text-secondary">With label</p>
           </div>
         </div>
       </div>
@@ -99,16 +98,16 @@ export const ColorSwatches: Story = () => {
         <h2 className="mb-6 text-2xl font-semibold text-primary">Border variants</h2>
         <div className="flex items-center gap-6">
           <div className="text-center">
-            <ColorSwatch color="#ffffff" size="lg" border="always" />
-            <p className="mt-2 text-sm text-secondary">Always border</p>
+            <ColorSwatch color="#ffffff" size="lg" />
+            <p className="mt-2 text-sm text-secondary">White color</p>
           </div>
           <div className="text-center">
-            <ColorSwatch color="#f3f4f6" size="lg" border="light" />
-            <p className="mt-2 text-sm text-secondary">Light colors</p>
+            <ColorSwatch color="#f3f4f6" size="lg" />
+            <p className="mt-2 text-sm text-secondary">Light gray</p>
           </div>
           <div className="text-center">
-            <ColorSwatch color="#1f2937" size="lg" border="never" />
-            <p className="mt-2 text-sm text-secondary">No border</p>
+            <ColorSwatch color="#1f2937" size="lg" />
+            <p className="mt-2 text-sm text-secondary">Dark gray</p>
           </div>
         </div>
       </div>
@@ -142,10 +141,9 @@ export const ColorSwatches: Story = () => {
           <div className="mb-4 flex items-center gap-4">
             <ColorSwatch
               color={selectedColor}
-              size="xl"
-              isSelected={true}
-              showTooltip={true}
-              tooltipText={selectedColor}
+              size="lg"
+              selected={true}
+              label={selectedColor}
             />
             <div>
               <p className="text-sm font-medium text-primary">Selected color</p>
@@ -159,9 +157,7 @@ export const ColorSwatches: Story = () => {
                 color={color}
                 size="md"
                 onClick={() => setSelectedColor(color)}
-                isSelected={selectedColor === color}
-                showTooltip={true}
-                tooltipText={color}
+                selected={selectedColor === color}
               />
             ))}
           </div>
@@ -176,19 +172,15 @@ export const ColorSwatches: Story = () => {
             <ColorSwatch
               color={selectedPaletteColor}
               size="lg"
-              isSelected={true}
-              showTooltip={true}
-              tooltipText={selectedPaletteColor}
+              selected={true}
             />
           </div>
           <ColorPalette
             colors={extendedPalette}
             selectedColor={selectedPaletteColor}
             onColorSelect={setSelectedPaletteColor}
-            swatchSize="md"
+            size="md"
             columns={8}
-            gap="sm"
-            showTooltips={true}
           />
         </div>
       </div>
@@ -200,10 +192,8 @@ export const ColorSwatches: Story = () => {
             colors={themeColors}
             selectedColor={selectedPaletteColor}
             onColorSelect={setSelectedPaletteColor}
-            swatchSize="sm"
+            size="sm"
             columns={4}
-            gap="xs"
-            showTooltips={false}
             className="w-fit"
           />
         </div>
@@ -221,8 +211,6 @@ export const ColorSwatches: Story = () => {
                   color="#3b82f6"
                   size="md"
                   onClick={() => console.log('Open color picker')}
-                  showTooltip={true}
-                  tooltipText="Click to change"
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -231,8 +219,6 @@ export const ColorSwatches: Story = () => {
                   color="#10b981"
                   size="md"
                   onClick={() => console.log('Open color picker')}
-                  showTooltip={true}
-                  tooltipText="Click to change"
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -241,8 +227,6 @@ export const ColorSwatches: Story = () => {
                   color="#f59e0b"
                   size="md"
                   onClick={() => console.log('Open color picker')}
-                  showTooltip={true}
-                  tooltipText="Click to change"
                 />
               </div>
             </div>
@@ -261,7 +245,6 @@ export const ColorSwatches: Story = () => {
                   <ColorSwatch
                     color={label.color}
                     size="sm"
-                    border="always"
                   />
                   <span className="text-sm text-primary">{label.name}</span>
                 </div>

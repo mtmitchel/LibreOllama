@@ -344,11 +344,12 @@ export function EnhancedAttachmentHandler({
           await uploadFile(attachment.file!, attachment.id);
         } catch {
           // Update attachment as error
-          onAttachmentsChange(prev => prev.map(att => 
+          const updatedAttachments = attachments.map((att: Attachment) => 
             att.id === attachment.id 
-              ? { ...att, uploadStatus: 'error', errorMessage: 'Upload failed' }
+              ? { ...att, uploadStatus: 'error' as const, errorMessage: 'Upload failed' }
               : att
-          ));
+          ) as Attachment[];
+          onAttachmentsChange(updatedAttachments);
         }
       }
     }

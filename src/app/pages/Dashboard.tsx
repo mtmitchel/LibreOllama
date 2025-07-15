@@ -10,20 +10,15 @@ import {
 import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetErrorBoundary";
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
 import { LoadingState, FlexibleGrid } from "../../components/ui";
-import {
-  migrationSprintTasks,
-  todaysFocusItems,
-  agentStatusItems
-} from "../../core/lib/mockData";
 
 export function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate loading data
+  // Simulate initial loading (minimal since widgets handle their own data loading)
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1000); // Simulate 1 second loading time
+    }, 500); // Reduced loading time since widgets load their own data
 
     return () => clearTimeout(timer);
   }, []);
@@ -53,48 +48,33 @@ export function Dashboard() {
   }
 
   return (
-          <div className="size-full bg-primary p-6">
+    <div className="size-full bg-primary p-6">
       <FlexibleGrid 
         minItemWidth={350} 
+        gap={6} 
         className="w-full gap-6"
       >
-        <WidgetErrorBoundary widgetName="Project progress">
-          <ProjectProgressWidget 
-            title="UI migration sprint"
-            percentage={67}
-            tasks={migrationSprintTasks}
-          />
+        <WidgetErrorBoundary fallback="Failed to load today's focus">
+          <TodaysFocusWidget />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Today's focus">
-          <TodaysFocusWidget 
-            items={todaysFocusItems}
-            onToggle={(item) => {
-              // Implement toggle logic
-              console.log('Toggle item:', item);
-            }}
-            onAddTask={(item) => {
-              // Implement add task logic
-              console.log('Add task:', item);
-            }}
-          />
+        <WidgetErrorBoundary fallback="Failed to load project progress">
+          <ProjectProgressWidget />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Agent status">
-          <AgentStatusWidget 
-            agents={agentStatusItems}
-          />
+        <WidgetErrorBoundary fallback="Failed to load agent status">
+          <AgentStatusWidget />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Quick actions">
+        <WidgetErrorBoundary fallback="Failed to load quick actions">
           <QuickActionsWidget />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Upcoming events">
+        <WidgetErrorBoundary fallback="Failed to load upcoming events">
           <UpcomingEventsWidget />
         </WidgetErrorBoundary>
         
-        <WidgetErrorBoundary widgetName="Pending tasks">
+        <WidgetErrorBoundary fallback="Failed to load pending tasks">
           <PendingTasksWidget />
         </WidgetErrorBoundary>
       </FlexibleGrid>

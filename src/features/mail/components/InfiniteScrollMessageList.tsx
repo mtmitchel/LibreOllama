@@ -5,6 +5,7 @@ import { Text } from '../../../components/ui';
 import { useMailStore } from '../stores/mailStore';
 import { useMailOperation } from '../hooks';
 import { ParsedEmail } from '../types';
+import { logger } from '../../../core/lib/logger';
 
 interface InfiniteScrollMessageListProps {
   className?: string;
@@ -227,7 +228,7 @@ export function InfiniteScrollMessageList({
   const virtualItems = rowVirtualizer.getVirtualItems();
 
   const handleMessageClick = async (message: ParsedEmail) => {
-    console.log('🔍 [DEBUG] Email clicked:', {
+    logger.debug('🔍 [MAIL_LIST] Email clicked:', {
       messageId: message.id,
       subject: message.subject,
       currentMessage: useMailStore.getState().currentMessage?.id
@@ -241,7 +242,7 @@ export function InfiniteScrollMessageList({
         error: null 
       });
       
-      console.log('🚀 [DEBUG] Set message immediately from list data');
+      logger.debug('🚀 [MAIL_LIST] Set message immediately from list data');
       
       // Try to fetch full message details in the background
       try {
@@ -250,9 +251,9 @@ export function InfiniteScrollMessageList({
           'message details'
         );
         
-        console.log('✅ [DEBUG] Full message details fetched successfully');
+        logger.debug('✅ [MAIL_LIST] Full message details fetched successfully');
       } catch (fetchError) {
-        console.warn('⚠️ [DEBUG] Full message fetch failed, using list data:', fetchError);
+        logger.warn('⚠️ [MAIL_LIST] Full message fetch failed, using list data:', fetchError);
       }
       
       // Call optional callback
@@ -261,7 +262,7 @@ export function InfiniteScrollMessageList({
       }
       
     } catch (error) {
-      console.error('❌ [DEBUG] Message click failed completely:', error);
+      logger.error('❌ [MAIL_LIST] Message click failed completely:', error);
       useMailStore.setState({ 
         error: `Failed to open email: ${error instanceof Error ? error.message : 'Unknown error'}`,
         isLoading: false 
@@ -280,7 +281,7 @@ export function InfiniteScrollMessageList({
     try {
       await nextPage();
     } catch (error) {
-      console.error('Failed to load more messages:', error);
+      logger.error('Failed to load more messages:', error);
     } finally {
       setIsLoadingMore(false);
     }

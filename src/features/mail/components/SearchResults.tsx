@@ -221,7 +221,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
                 <div className="space-y-4">
                   {Object.entries(facetsByType).map(([type, facets]) => {
-                    const Icon = facetIcons[type] || Tag;
+                    const Icon = facetIcons[type as keyof typeof facetIcons] || Tag;
                     const isExpanded = expandedFacetTypes.has(type);
                     const displayFacets = isExpanded ? facets : facets.slice(0, 5);
 

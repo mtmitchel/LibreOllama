@@ -126,6 +126,11 @@ export const logger = {
       console.log(...args);
     }
   },
+  info: (...args: unknown[]): void => {
+    if (!isTestMode) {
+      console.info(...args);
+    }
+  },
   warn: (...args: unknown[]): void => { 
     if (!isTestMode) {
       console.warn(...args);

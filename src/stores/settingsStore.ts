@@ -2,8 +2,11 @@ import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { useMailStore } from '../features/mail/stores/mailStore';
+import { logger } from '../core/lib/logger';
 import { useGoogleCalendarStore } from './googleCalendarStore';
 import { useGoogleTasksStore } from './googleTasksStore';
+import { LLMProviderManager, type LLMProvider, LLMModel } from '../services/llmProviders';
+import { invoke } from '@tauri-apps/api/core';
 
 // Settings interfaces
 export interface GeneralSettings {
@@ -26,7 +29,7 @@ export interface OllamaSettings {
   defaultModel: string;
 }
 
-export interface GoogleAccount {
+export interface GoogleAccountSettings {
   id: string;
   email: string;
   name?: string;
@@ -42,11 +45,15 @@ export interface GoogleAccount {
 }
 
 export interface IntegrationSettings {
-  googleAccounts: Array<GoogleAccount>;
+  googleAccounts: Array<GoogleAccountSettings>;
   apiKeys: {
-    gemini?: string;
-    anthropic?: string;
-    openai?: string;
+    [key in LLMProvider]?: {
+      key: string;
+      baseUrl?: string;
+    };
+  };
+  enabledModels: {
+    [key in LLMProvider]?: string[];
   };
 }
 
@@ -85,6 +92,7 @@ export interface SettingsState {
 
 // Settings actions
 export interface SettingsActions {
+  initializeSettings: () => Promise<void>; // Moved here from SettingsState
   // General actions
   updateGeneralSettings: (updates: Partial<GeneralSettings>) => void;
   updateAppearanceSettings: (updates: Partial<AppearanceSettings>) => void;
@@ -97,11 +105,17 @@ export interface SettingsActions {
   setTheme: (theme: AppearanceSettings['theme']) => void;
   setOllamaEndpoint: (endpoint: string) => void;
   setStartupView: (view: string) => void;
-  addGoogleAccount: (account: GoogleAccount) => void;
+  addGoogleAccount: (account: GoogleAccountSettings) => void;
   removeGoogleAccount: (accountId: string) => void;
   setActiveGoogleAccount: (accountId: string) => void;
   refreshGoogleAccount: (accountId: string) => Promise<void>;
-  setApiKey: (service: keyof IntegrationSettings['apiKeys'], key: string) => void;
+  setApiKey: (service: keyof IntegrationSettings['apiKeys'], key: string, baseUrl?: string) => Promise<void>;
+  
+  // Model management actions
+  fetchAvailableModels: (provider: LLMProvider) => Promise<LLMModel[]>;
+  setEnabledModels: (provider: LLMProvider, modelIds: string[]) => void;
+  toggleModelEnabled: (provider: LLMProvider, modelId: string) => void;
+  getEnabledModels: (provider: LLMProvider) => string[];
   
   // Utility actions
   resetToDefaults: () => void;
@@ -139,6 +153,7 @@ const defaultSettings: Omit<SettingsState, 'isLoading' | 'error' | 'isInitialize
   integrations: {
     googleAccounts: [],
     apiKeys: {},
+    enabledModels: {},
   },
   notifications: {
     emailNotifications: true,
@@ -257,7 +272,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         refreshGoogleAccount: async (accountId) => {
-          console.log(`🔄 [SETTINGS] Refreshing data for Google account: ${accountId}`);
+          logger.debug(`[SETTINGS] Refreshing data for Google account: ${accountId}`);
           set(state => ({ isLoading: true, error: null }));
           try {
             const { refreshAccount } = useMailStore.getState();
@@ -279,7 +294,7 @@ export const useSettingsStore = create<SettingsStore>()(
               // syncAllTasks(), // This might be too broad, let's stick to list-based for now
             ]);
 
-            console.log(`✅ [SETTINGS] Successfully refreshed data for account: ${accountId}`);
+            logger.debug(`[SETTINGS] Successfully refreshed data for account: ${accountId}`);
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error during refresh';
             console.error(`❌ [SETTINGS] Failed to refresh account ${accountId}:`, errorMessage);
@@ -289,10 +304,74 @@ export const useSettingsStore = create<SettingsStore>()(
           }
         },
 
-        setApiKey: (service, key) => {
-          set((state) => {
-            state.integrations.apiKeys[service] = key;
+        setApiKey: async (provider, key, baseUrl) => {
+          // Ensure newKey is always a string. If the placeholder is used, retrieve the existing key.
+          const newKey = key === '••••••••••••••••' 
+            ? get().integrations.apiKeys[provider]?.key || '' // Fallback to empty string if no existing key
+            : key;
+          
+          set(state => {
+            // Ensure apiKeys object exists for the provider if not already there
+            if (!state.integrations.apiKeys[provider]) {
+              state.integrations.apiKeys[provider] = { key: newKey, baseUrl };
+            } else {
+              state.integrations.apiKeys[provider]!.key = newKey; // Asserting it's not undefined
+              state.integrations.apiKeys[provider]!.baseUrl = baseUrl; // Update baseUrl
+            }
           });
+          
+          await invoke('save_llm_provider_settings', { settings: get().integrations.apiKeys });
+          
+          // Re-initialize the provider manager with new settings
+          LLMProviderManager.getInstance().reinitialize(get().integrations.apiKeys);
+          logger.debug(`Set API key for ${provider}`);
+        },
+
+        // Model management actions
+        fetchAvailableModels: async (provider: LLMProvider) => {
+          try {
+            const providerManager = LLMProviderManager.getInstance(get().integrations.apiKeys);
+            const providerInstance = providerManager.getProvider(provider);
+            
+            if (!providerInstance) throw new Error(`Provider ${provider} not found.`);
+
+            if (!providerInstance.isConfigured()) {
+              throw new Error(`${provider} provider not configured. Please add your API key.`);
+            }
+            
+            return await providerInstance.listModels();
+          } catch (error) {
+            logger.error(`Failed to fetch models for provider ${provider}:`, error);
+            throw error;
+          }
+        },
+
+        setEnabledModels: (provider, modelIds) => {
+          set(state => {
+            if (!state.integrations.enabledModels) {
+              state.integrations.enabledModels = {};
+            }
+            state.integrations.enabledModels[provider] = modelIds;
+          });
+          invoke('set_enabled_models', { provider, modelIds });
+        },
+
+        toggleModelEnabled: (provider: LLMProvider, modelId: string) => {
+          set((state) => {
+            if (!state.integrations.enabledModels) {
+              state.integrations.enabledModels = {};
+            }
+            const currentEnabled = state.integrations.enabledModels[provider] || [];
+            if (currentEnabled.includes(modelId)) {
+              state.integrations.enabledModels[provider] = currentEnabled.filter(id => id !== modelId);
+            } else {
+              state.integrations.enabledModels[provider] = [...currentEnabled, modelId];
+            }
+          });
+        },
+
+        getEnabledModels: (provider: LLMProvider) => {
+          return get().integrations.enabledModels?.[provider] || [];
         },
 
         // Utility actions
@@ -356,6 +435,44 @@ export const useSettingsStore = create<SettingsStore>()(
             state.isInitialized = true;
           });
         },
+
+        initializeSettings: async () => {
+          if (get().isInitialized) return;
+
+          try {
+            const apiKeys = await invoke('get_llm_provider_settings') as IntegrationSettings['apiKeys'];
+            const enabledModels: IntegrationSettings['enabledModels'] = {};
+            const providers: LLMProvider[] = ['ollama', 'openai', 'anthropic', 'openrouter', 'deepseek', 'mistral'];
+            
+            for (const provider of providers) {
+              // Check if the provider has an API key configured before trying to fetch models
+              if (apiKeys[provider]?.key) {
+                try {
+                  const models = await invoke('get_enabled_models', { provider });
+                  enabledModels[provider] = models as string[]; // Cast to string[]
+                } catch (error) {
+                  logger.warn(`Failed to retrieve enabled models for ${provider} during initialization:`, error);
+                  // Continue even if fetching models for one provider fails
+                }
+              }
+            }
+            
+            set(state => {
+              state.integrations.apiKeys = apiKeys;
+              state.integrations.enabledModels = enabledModels;
+              state.isInitialized = true;
+            });
+
+            // Initialize manager with loaded settings
+            LLMProviderManager.getInstance(get().integrations.apiKeys);
+
+            logger.log('[SETTINGS] Settings initialized successfully.');
+          } catch (error) {
+            logger.error('[SETTINGS] Failed to initialize settings:', error);
+            get().setError(error instanceof Error ? error.message : 'Unknown error during settings initialization');
+          }
+        },
+
       }))
     ),
     {
@@ -416,6 +533,10 @@ export const useResetToDefaults = () => useSettingsStore((state) => state.resetT
 export const useExportSettings = () => useSettingsStore((state) => state.exportSettings);
 export const useImportSettings = () => useSettingsStore((state) => state.importSettings);
 export const useClearError = () => useSettingsStore((state) => state.clearError);
+export const useSetEnabledModels = () => useSettingsStore((state) => state.setEnabledModels);
+export const useGetEnabledModels = () => useSettingsStore((state) => state.getEnabledModels);
+export const useFetchAvailableModels = () => useSettingsStore((state) => state.fetchAvailableModels);
+export const useInitializeSettings = () => useSettingsStore((state) => state.initializeSettings);
 
 // Backward compatibility - but this creates new objects on every render, avoid in components
 export const useSettingsActions = () => useSettingsStore((state) => ({

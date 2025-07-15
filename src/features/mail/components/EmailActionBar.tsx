@@ -154,24 +154,24 @@ export function EmailActionBar({
   const handleMarkAsRead = useCallback(() => {
     if (hasUnreadSelected) {
       const unreadMessages = selectedMessageObjects.filter(msg => !msg.isRead).map(msg => msg.id);
-      executeAction('mark_read', () => markAsRead(unreadMessages, currentAccountId));
+      executeAction('mark_read', () => markAsRead(unreadMessages, currentAccountId || undefined));
     }
   }, [hasUnreadSelected, selectedMessageObjects, executeAction, markAsRead, currentAccountId]);
 
   const handleMarkAsUnread = useCallback(() => {
     if (hasReadSelected) {
       const readMessages = selectedMessageObjects.filter(msg => msg.isRead).map(msg => msg.id);
-      executeAction('mark_unread', () => markAsUnread(readMessages, currentAccountId));
+      executeAction('mark_unread', () => markAsUnread(readMessages, currentAccountId || undefined));
     }
   }, [hasReadSelected, selectedMessageObjects, executeAction, markAsUnread, currentAccountId]);
 
   const handleToggleStar = useCallback(() => {
     if (hasUnstarredSelected) {
       const unstarredMessages = selectedMessageObjects.filter(msg => !msg.isStarred).map(msg => msg.id);
-      executeAction('star', () => starMessages(unstarredMessages, currentAccountId));
+      executeAction('star', () => starMessages(unstarredMessages, currentAccountId || undefined));
     } else if (hasStarredSelected) {
       const starredMessages = selectedMessageObjects.filter(msg => msg.isStarred).map(msg => msg.id);
-      executeAction('unstar', () => unstarMessages(starredMessages, currentAccountId));
+      executeAction('unstar', () => unstarMessages(starredMessages, currentAccountId || undefined));
     }
   }, [hasUnstarredSelected, hasStarredSelected, selectedMessageObjects, executeAction, starMessages, unstarMessages, currentAccountId]);
 
@@ -183,13 +183,13 @@ export function EmailActionBar({
         type: 'archive',
         messageCount: selectedCount,
         onConfirm: () => {
-          executeAction('archive', () => archiveMessages(selectedMessages, currentAccountId));
+          executeAction('archive', () => archiveMessages(selectedMessages, currentAccountId || undefined));
           setConfirmation(prev => ({ ...prev, isOpen: false }));
         },
         onCancel: () => setConfirmation(prev => ({ ...prev, isOpen: false }))
       });
     } else {
-      executeAction('archive', () => archiveMessages(selectedMessages, currentAccountId));
+      executeAction('archive', () => archiveMessages(selectedMessages, currentAccountId || undefined));
     }
   }, [selectedCount, selectedMessages, executeAction, archiveMessages, currentAccountId]);
 
@@ -200,7 +200,7 @@ export function EmailActionBar({
       type: selectedCount > 1 ? 'bulk_delete' : 'delete',
       messageCount: selectedCount,
       onConfirm: () => {
-        executeAction('delete', () => deleteMessages(selectedMessages, currentAccountId));
+        executeAction('delete', () => deleteMessages(selectedMessages, currentAccountId || undefined));
         setConfirmation(prev => ({ ...prev, isOpen: false }));
       },
       onCancel: () => setConfirmation(prev => ({ ...prev, isOpen: false }))
@@ -362,8 +362,7 @@ export function EmailActionBar({
                           <button
                             className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                             onClick={() => {
-                              // TODO: Implement reply functionality
-                              console.log('Reply to message');
+                              // Future Enhancement: Implement reply functionality (Phase 3.x)
                               setIsActionsMenuOpen(false);
                             }}
                           >
@@ -373,8 +372,7 @@ export function EmailActionBar({
                           <button
                             className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                             onClick={() => {
-                              // TODO: Implement reply all functionality
-                              console.log('Reply all to message');
+                              // Future Enhancement: Implement reply all functionality (Phase 3.x)
                               setIsActionsMenuOpen(false);
                             }}
                           >
@@ -388,8 +386,7 @@ export function EmailActionBar({
                         <button
                           className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                           onClick={() => {
-                            // TODO: Implement forward functionality
-                            console.log('Forward messages');
+                            // Future Enhancement: Implement forward functionality (Phase 3.x)
                             setIsActionsMenuOpen(false);
                           }}
                         >
@@ -401,8 +398,7 @@ export function EmailActionBar({
                       <button
                         className="flex w-full items-center gap-3 px-4 py-2 text-sm text-primary transition-colors hover:bg-secondary"
                         onClick={() => {
-                          // TODO: Implement label management
-                          console.log('Manage labels');
+                          // Future Enhancement: Implement label management functionality (Phase 3.x)
                           setIsActionsMenuOpen(false);
                         }}
                       >

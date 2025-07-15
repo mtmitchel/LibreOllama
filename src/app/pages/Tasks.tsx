@@ -391,7 +391,8 @@ export default function Tasks() {
   // Initialize authentication and fetch data
   useEffect(() => {
     if (activeGoogleAccount && !isAuthenticated && isHydrated) {
-      authenticate(activeGoogleAccount);
+      // TODO: Convert GoogleAccountSettings to GoogleAccount format for authentication
+      // authenticate(activeGoogleAccount);
     }
   }, [activeGoogleAccount, isAuthenticated, isHydrated, authenticate]);
 

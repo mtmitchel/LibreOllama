@@ -11,6 +11,4 @@ pub mod cache;
 // Re-export all Gmail commands for easy access
 pub use auth::*;
 pub use api::*;
-pub use compose::*;
-pub use sync::*;
-pub use cache::*; 
+pub use compose::*; 

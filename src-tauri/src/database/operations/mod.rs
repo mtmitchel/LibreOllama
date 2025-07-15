@@ -20,6 +20,7 @@ pub mod note_operations;
 pub mod onboarding_operations;
 pub mod performance_operations;
 pub mod preference_operations;
+pub mod project_operations;
 pub mod template_operations;
 
 // Re-export all operations for convenience
@@ -44,5 +45,4 @@ pub mod template_operations;
 // pub use note_operations::*;
 // pub use onboarding_operations::*;
 // pub use performance_operations::*;
-// pub use preference_operations::*;
-pub use template_operations::*; 
+// pub use preference_operations::*; 

@@ -230,7 +230,7 @@ export function ToggleGroup({
   );
 }
 
-interface ToggleCardProps extends Omit<ToggleRowProps, 'variant'> {
+interface ToggleCardProps extends Omit<ToggleRowProps, 'variant' | 'label'> {
   title: string;
   subtitle?: string;
   footer?: React.ReactNode;

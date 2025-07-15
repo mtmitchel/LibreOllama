@@ -57,14 +57,15 @@ export const createHistoryModule = (
     
     actions: {
       addToHistory: (operation) => {
+        const currentState = get();
         set(state => {
           // Simple history implementation
           const historyEntry = {
             id: nanoid(),
             timestamp: Date.now(),
             operation,
-            elementsSnapshot: new Map(state.elements),
-            selectionSnapshot: new Set(state.selectedElementIds)
+            elementsSnapshot: new Map(currentState.elements),
+            selectionSnapshot: new Set(currentState.selectedElementIds)
           };
           
           // Remove future history if we're not at the end
@@ -89,14 +90,15 @@ export const createHistoryModule = (
       },
 
       addHistoryEntry: (operation, metadata) => {
+        const currentState = get();
         set(state => {
           // Use the same logic as addToHistory for consistency
           const historyEntry = {
             id: nanoid(),
             timestamp: Date.now(),
             operation,
-            elementsSnapshot: new Map(state.elements),
-            selectionSnapshot: new Set(state.selectedElementIds)
+            elementsSnapshot: new Map(currentState.elements),
+            selectionSnapshot: new Set(currentState.selectedElementIds)
           };
           
           // Remove future history if we're not at the end

@@ -6,7 +6,7 @@ import {
   DateSelectArg, 
   EventClickArg, 
   EventDropArg,
-  DropArg,
+  EventApi
 } from '@fullcalendar/core';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, Search, ListChecks, CheckCircle, ChevronDown } from 'lucide-react';
 
@@ -16,7 +16,7 @@ import { useGoogleTasksStore } from '../../stores/googleTasksStore';
 import { useHeader } from '../contexts/HeaderContext';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
+import interactionPlugin, { Draggable, DropArg } from '@fullcalendar/interaction';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { devLog } from '../../utils/devLog';
 import './calendar.css';
@@ -337,9 +337,9 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                     onChange={(e) => setFormData(prev => ({ ...prev, recurringEnabled: e.target.checked }))}
                     className="border-border-primary focus:ring-accent-primary/20 size-4 rounded border focus:border-accent-primary focus:ring-2"
                   />
-                  <Text as="label" htmlFor="recurring-enabled" size="sm">
+                  <label htmlFor="recurring-enabled" className="text-sm text-text-primary">
                     Make this task recurring
-                  </Text>
+                  </label>
                 </div>
                 
                 {formData.recurringEnabled && (
@@ -667,7 +667,7 @@ export default function Calendar() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventApi | null>(null);
   const [currentViewTitle, setCurrentViewTitle] = useState<string>('Calendar');
 
   const {
@@ -697,7 +697,7 @@ export default function Calendar() {
 
   useEffect(() => {
     if (activeAccount && !isTasksAuthenticated && isTasksHydrated) {
-      authenticateTasks(activeAccount);
+      authenticateTasks(activeAccount as any);
     }
   }, [activeAccount, isTasksAuthenticated, isTasksHydrated, authenticateTasks]);
 
@@ -987,7 +987,7 @@ export default function Calendar() {
       const targetTaskListId = selectedColumnId === 'all' ? taskLists[0]?.id : selectedColumnId;
       
       if (!targetTaskListId) {
-        devLog('No task list available for creating task');
+        devLog.debug('No task list available for creating task');
         return;
       }
 
@@ -998,7 +998,7 @@ export default function Calendar() {
       });
       setShowTaskModal(false);
     } catch (error) {
-      devLog('Error creating task:', error);
+      devLog.error('Error creating task:', error);
     }
   };
 
@@ -1027,8 +1027,8 @@ export default function Calendar() {
     const query = searchQuery.toLowerCase();
     return fullCalendarEvents.filter(event => 
       event.title.toLowerCase().includes(query) ||
-      (event.extendedProps.description && (event.extendedProps.description as string).toLowerCase().includes(query)) ||
-      (event.extendedProps.location && (event.extendedProps.location as string).toLowerCase().includes(query))
+      ((event.extendedProps as any).description && ((event.extendedProps as any).description as string).toLowerCase().includes(query)) ||
+      ((event.extendedProps as any).location && ((event.extendedProps as any).location as string).toLowerCase().includes(query))
     );
   }, [fullCalendarEvents, searchQuery]);
 
@@ -1253,8 +1253,8 @@ export default function Calendar() {
                 eventContent={renderEventContent}
                 eventDidMount={(info) => {
                   // Direct DOM manipulation with CSS injection - research-based solution
-                  const titleElement = info.el.querySelector('.fc-event-title');
-                  const timeElement = info.el.querySelector('.fc-event-time');
+                                      const titleElement = info.el.querySelector('.fc-event-title') as HTMLElement;
+                                      const timeElement = info.el.querySelector('.fc-event-time') as HTMLElement;
                   
                   // Inject CSS directly into the element to override FullCalendar
                   const style = document.createElement('style');
@@ -1327,8 +1327,8 @@ export default function Calendar() {
                   info.el.style.setProperty('max-width', '100%', 'important');
                   
                   // Tooltip for truncated text
-                  if (info.isMore) {
-                    info.el.title = `${info.num} more events`;
+                  if ((info as any).isMore) {
+                    info.el.title = `${(info as any).num} more events`;
                   } else if (info.el.scrollWidth > info.el.clientWidth) {
                     info.el.title = info.event.title;
                   }
@@ -1357,7 +1357,7 @@ export default function Calendar() {
                   }
                   return classes;
                 }}
-                noEventsContent={
+                                 {...({ noEventsContent:
                   <div className="px-4 py-12 text-center">
                     <div className="bg-bg-tertiary mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
                       <CalendarIcon size={32} className="text-text-muted" />
@@ -1380,8 +1380,8 @@ export default function Calendar() {
                         <Text size="xs">Drag tasks</Text>
                       </div>
                     </div>
-                  </div>
-                }
+                                     </div>
+                 } as any)}
               />
               
               {/* Empty State Overlay for Week/Day Views */}
@@ -1580,7 +1580,7 @@ export default function Calendar() {
             <div className="border-border-primary flex items-center justify-between gap-2 rounded-b-lg border-t bg-content p-4">
               <div>
                 {editingEvent && (
-                    <Button variant="danger" onClick={handleEventDelete}>Delete event</Button>
+                    <Button variant="destructive" onClick={handleEventDelete}>Delete event</Button>
                 )}
               </div>
               <div className="flex items-center gap-2">

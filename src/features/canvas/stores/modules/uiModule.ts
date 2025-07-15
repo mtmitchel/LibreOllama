@@ -12,6 +12,7 @@ export interface UIState {
   showGrid: boolean;
   snapToGrid: boolean;
   isUploading: boolean;
+  snapLines: number[]; // Added snapLines state
 }
 
 /**
@@ -22,6 +23,7 @@ export interface UIActions {
   setTextEditingElement: (id: ElementId | null) => void;
   setSelectedStickyNoteColor: (color: string) => void;
   setPenColor: (color: string) => void;
+  setSnapLines: (lines: number[]) => void; // Added setSnapLines action
   
   // Legacy compatibility
   setStickyNoteColor: (color: string) => void;
@@ -49,6 +51,7 @@ export const createUIModule = (
       showGrid: true,
       snapToGrid: false,
       isUploading: false,
+      snapLines: [], // Initialize snapLines
     },
     
     actions: {
@@ -73,6 +76,8 @@ export const createUIModule = (
       setSelectedStickyNoteColor: (color) => set(state => { state.selectedStickyNoteColor = color; }),
 
       setPenColor: (color) => set(state => { state.penColor = color; }),
+
+      setSnapLines: (lines) => set(state => { state.snapLines = lines; }), // Added implementation for setSnapLines
 
       // Legacy compatibility
       setStickyNoteColor: (color) => set(state => { state.selectedStickyNoteColor = color; }),

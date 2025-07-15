@@ -22,6 +22,7 @@ export interface SecondaryAction {
 
 export interface HeaderProps {
   title?: string;
+  subtitle?: string;  // Add missing subtitle property
   breadcrumb?: BreadcrumbItem[];
   primaryAction?: PrimaryAction;
   viewSwitcher?: React.ReactNode;

@@ -22,7 +22,6 @@ export interface SelectionActions {
   getSelectedElements: () => CanvasElement[];
   groupElements: (elementIds: ElementId[]) => GroupId;
   ungroupElements: (groupId: GroupId) => void;
-  isElementInGroup: (elementId: ElementId) => boolean;
 }
 
 /**
@@ -91,6 +90,8 @@ export const createSelectionModule = (
           // Update element to group mapping
           elementIds.forEach((elementId: ElementId) => {
             state.elementToGroupMap.set(elementId, groupId);
+            // Also update the element itself to store the groupId
+            get().setElementGroup(elementId, groupId);
           });
         });
         return groupId;
@@ -100,19 +101,15 @@ export const createSelectionModule = (
         set(state => {
           const elementIds = state.groups.get(groupId);
           if (elementIds) {
-            // Remove elements from group mapping
+            // Remove elements from group mapping and clear groupId on element
             elementIds.forEach((elementId: ElementId) => {
               state.elementToGroupMap.delete(elementId);
+              get().setElementGroup(elementId, null);
             });
             // Remove the group
             state.groups.delete(groupId);
           }
         });
-      },
-
-      isElementInGroup: (elementId: ElementId) => {
-        const { elementToGroupMap } = get();
-        return elementToGroupMap.has(elementId);
       },
     },
   };

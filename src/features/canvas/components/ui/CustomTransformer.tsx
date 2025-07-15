@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Transformer, Circle } from 'react-konva';
+import { Transformer } from 'react-konva';
 import Konva from 'konva';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useUnifiedCanvasStore } from '../../stores/unifiedCanvasStore';
-import { ElementId, CanvasElement, isTableElement, isConnectorElement } from '../../types/enhanced.types';
+import { ElementId, isTableElement, isConnectorElement } from '../../types/enhanced.types';
 import { useCursorManager } from '../../utils/performance/cursorManager';
 
 type CustomTransformerProps = {
@@ -16,7 +16,7 @@ const rotationCursor = `url('data:image/svg+xml;charset=utf-8,<svg width="20" he
 
 export const CustomTransformer: React.FC<CustomTransformerProps> = ({ selectedNodeIds, stageRef }) => {
   const transformerRef = useRef<Konva.Transformer>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
   const [isRotating, setIsRotating] = useState(false);
   const [showRotationHandle, setShowRotationHandle] = useState(false);
   const [rotationStart, setRotationStart] = useState<{ angle: number; nodeRotation: number } | null>(null);

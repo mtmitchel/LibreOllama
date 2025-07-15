@@ -142,6 +142,7 @@ export interface AttachmentStorageConfig {
   blockedMimeTypes: string[];
   enableVirusScanning: boolean;
   downloadTimeout: number; // in seconds
+  cleanupIntervalMinutes?: number; // Added to control cleanup frequency
 }
 
 export interface AttachmentStorageStats {
@@ -220,7 +221,8 @@ export type AttachmentEventType =
   | 'download_failed'
   | 'scan_completed'
   | 'cache_updated'
-  | 'storage_cleaned';
+  | 'storage_cleaned'
+  | 'download_updated'; // Added new event type
 
 export interface AttachmentEvent {
   type: AttachmentEventType;

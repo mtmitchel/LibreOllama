@@ -199,8 +199,7 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
         </div>
         
         <div 
-          className="space-y-2"
-          className="gap-2"
+          className="space-y-2 gap-2"
         >
           {items.map(item => (
             <Card
@@ -209,8 +208,7 @@ export function MailContextSidebar({ isOpen = true, messageId, onToggle }: MailC
               className="border-border-default cursor-pointer border transition-colors hover:bg-surface"
             >
               <div 
-                className="flex items-start"
-                className="gap-2"
+                className="flex items-start gap-2"
               >
                 <div className="mt-1 text-secondary">
                   {getItemIcon(item.type)}

@@ -83,8 +83,8 @@ export function UnifiedLabelManager({
   const [labelFormData, setLabelFormData] = useState({
     name: '',
     color: LABEL_COLORS[0],
-    messageListVisibility: 'show' as const,
-    labelListVisibility: 'show' as const
+    messageListVisibility: 'show' as 'show' | 'hide' | 'showIfUnread',
+    labelListVisibility: 'show' as 'show' | 'hide' | 'showIfUnread'
   });
 
   // Settings form data

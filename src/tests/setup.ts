@@ -4,6 +4,16 @@ import { cleanup } from '@testing-library/react';
 import { enableMapSet } from 'immer';
 import { resetAllStores } from '../test-utils/zustand-reset';
 
+// Mock Konva with comprehensive mock that avoids canvas.node loading
+vi.mock('konva', () => {
+  return import('./__mocks__/konva');
+});
+
+// Mock React-Konva to provide test-friendly DOM structure
+vi.mock('react-konva', () => {
+  return import('./__mocks__/react-konva');
+});
+
 enableMapSet();
 
 // Mock import.meta for Vitest environment to ensure DEV mode is true
@@ -72,21 +82,67 @@ global.performance = {
   now: vi.fn(() => Date.now()),
 };
 
-// Mock window.matchMedia 
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+// Mock window.matchMedia - robust implementation for all environments
+const createMockMatchMedia = () => {
+  return vi.fn().mockImplementation((query: string) => {
+    return {
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(), // deprecated
+      removeListener: vi.fn(), // deprecated
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+  });
+};
 
+const mockMatchMedia = createMockMatchMedia();
+
+// Set up window.matchMedia for all possible environments
+// JSDOM environment
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: mockMatchMedia,
+  });
+}
+
+// Node.js global environment
+if (typeof global !== 'undefined') {
+  Object.defineProperty(global, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: mockMatchMedia,
+  });
+  
+  // Ensure global.window exists and has matchMedia
+  if (!global.window) {
+    Object.defineProperty(global, 'window', {
+      writable: true,
+      configurable: true,
+      value: {
+        matchMedia: mockMatchMedia,
+        document: { 
+          documentElement: { 
+            classList: { 
+              remove: vi.fn(), 
+              add: vi.fn() 
+            } 
+          } 
+        },
+      },
+    });
+  } else {
+    Object.defineProperty(global.window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: mockMatchMedia,
+    });
+  }
+}
 // Note: ESM modules don't support vi.mock in setup files
 // Individual test files should use vi.mock() for proper ESM module mocking
 // as recommended in the testing guide
