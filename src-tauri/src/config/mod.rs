@@ -279,17 +279,20 @@ impl EnvConfig {
 
     /// Validate configuration values
     fn validate_config(config: &AppConfig) -> Result<()> {
-        // Validate OAuth configuration
-        if config.oauth.client_id.is_empty() {
+        // Check if we're in development/test mode
+        let is_dev_mode = cfg!(debug_assertions) || env::var("NODE_ENV").unwrap_or_default() == "development";
+        
+        // OAuth configuration validation - allow empty in development mode
+        if !is_dev_mode && config.oauth.client_id.is_empty() {
             return Err(LibreOllamaError::Configuration {
-                message: "OAuth client ID is required".to_string(),
+                message: "OAuth client ID is required for production deployment".to_string(),
                 config_key: Some("oauth.client_id".to_string()),
             });
         }
 
-        if config.oauth.client_secret.is_empty() {
+        if !is_dev_mode && config.oauth.client_secret.is_empty() {
             return Err(LibreOllamaError::Configuration {
-                message: "OAuth client secret is required".to_string(),
+                message: "OAuth client secret is required for production deployment".to_string(),
                 config_key: Some("oauth.client_secret".to_string()),
             });
         }

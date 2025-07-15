@@ -158,13 +158,19 @@ pub fn move_folder(conn: &Connection, folder_id: i32, new_parent_id: Option<i32>
 }
 
 pub fn delete_folder(conn: &Connection, folder_id: i32) -> Result<()> {
-    // First, recursively delete all subfolders
+    // First, orphan any notes in this folder (set folder_id to NULL)
+    conn.execute(
+        "UPDATE notes SET folder_id = NULL WHERE folder_id = ?1",
+        params![folder_id],
+    )?;
+
+    // Then, recursively delete all subfolders
     let subfolders = get_subfolders(conn, folder_id)?;
     for subfolder in subfolders {
         delete_folder(conn, subfolder.id)?;
     }
 
-    // Then delete the folder itself
+    // Finally delete the folder itself
     conn.execute(
         "DELETE FROM folders WHERE id = ?1",
         params![folder_id],

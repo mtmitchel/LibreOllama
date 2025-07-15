@@ -63,22 +63,7 @@ pub struct OAuthConfig {
 // Command Handlers
 // =============================================================================
 
-/// Start Gmail OAuth2 authorization flow
-#[tauri::command]
-pub async fn start_gmail_oauth(
-    config: OAuthConfig,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<AuthUrlResponse, String> {
-    let auth_request = auth_service
-        .start_authorization(Some(config.redirect_uri))
-        .await
-        .map_err(|e| e.to_string())?;
-    
-    Ok(AuthUrlResponse {
-        auth_url: auth_request.auth_url,
-        state: auth_request.state,
-    })
-}
+// Removed unused start_gmail_oauth function - not registered in Tauri handler
 
 /// Start OAuth flow with automatic callback handling
 #[tauri::command]
@@ -169,58 +154,9 @@ pub async fn start_gmail_oauth_with_callback(
     })
 }
 
-/// Complete Gmail OAuth2 authorization flow
-#[tauri::command]
-pub async fn complete_gmail_oauth(
-    code: String,
-    state: String,
-    redirect_uri: String,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<TokenResponse, String> {
-    let token_response = auth_service
-        .complete_authorization(code, state, Some(redirect_uri))
-        .await
-        .map_err(|e| e.to_string())?;
-    
-    Ok(TokenResponse {
-        access_token: token_response.access_token,
-        refresh_token: token_response.refresh_token,
-        expires_in: token_response.expires_in as i64,
-        token_type: token_response.token_type,
-    })
-}
+// Removed unused complete_gmail_oauth function - not registered in Tauri handler
 
-/// Refresh Gmail access token
-#[tauri::command]
-pub async fn refresh_gmail_token(
-    refresh_token: String,
-    redirect_uri: String,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<TokenResponse, String> {
-    let token_response = auth_service
-        .refresh_token(refresh_token, Some(redirect_uri))
-        .await
-        .map_err(|e| e.to_string())?;
-    
-    Ok(TokenResponse {
-        access_token: token_response.access_token,
-        refresh_token: token_response.refresh_token,
-        expires_in: token_response.expires_in as i64,
-        token_type: token_response.token_type,
-    })
-}
-
-/// Revoke Gmail token
-#[tauri::command]
-pub async fn revoke_gmail_token(
-    token: String,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<(), String> {
-    auth_service
-        .revoke_token(token)
-        .await
-        .map_err(|e| e.to_string())
-}
+// Removed unused refresh_gmail_token and revoke_gmail_token functions - not registered in Tauri handler
 
 /// Get user information using access token (for initial auth flow)
 #[tauri::command]
@@ -272,17 +208,7 @@ pub async fn get_gmail_accounts_secure(
         .map_err(|e| e.to_string())
 }
 
-/// Remove Gmail account
-#[tauri::command]
-pub async fn remove_gmail_tokens_secure(
-    account_id: String,
-    auth_service: State<'_, Arc<GmailAuthService>>,
-) -> Result<(), String> {
-    auth_service
-        .remove_account(&account_id)
-        .await
-        .map_err(|e| e.to_string())
-}
+// Removed unused remove_gmail_tokens_secure function - not registered in Tauri handler
 
 /// Debug command to check secure table existence and contents
 #[tauri::command]

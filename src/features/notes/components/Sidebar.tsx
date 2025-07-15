@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useNotesStore } from '../store';
-import { Button, Text, Input, Card } from '../../../components/ui';
+import { Button, Text, Input, Card, Heading } from '../../../components/ui';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '../../../components/ui/DropdownMenu';
 import { FolderPlus, FilePlus, Search, MoreHorizontal, Edit, Trash2, Folder as FolderIcon, FileText as NoteIcon, ChevronRight, X, FileDown, PanelLeft } from 'lucide-react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core';
@@ -13,16 +13,18 @@ import { save } from '@tauri-apps/plugin-dialog';
 interface SidebarProps {
   isOpen?: boolean;
   onToggle?: () => void;
+  onSelectNote: (noteId: string | null) => void;
+  onCreateNote: () => void;
 }
 
-const NoteDragPreview = ({ note }: { note: any }) => (
+const NoteDragPreview = ({ note }: { note: { title: string } }) => (
     <div className="ring-accent-primary flex items-center gap-2 rounded-md bg-accent-soft p-2 text-sm font-medium text-accent-primary shadow-lg ring-2">
         <NoteIcon size={16} />
         <span>{note.title}</span>
     </div>
 );
 
-const DraggableNote = ({ note, children }: { note: any, children: React.ReactNode }) => {
+const DraggableNote = ({ note, children }: { note: { id: string }, children: React.ReactNode }) => {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: `note-${note.id}`,
         data: { type: 'note', note: note },
@@ -35,7 +37,7 @@ const DraggableNote = ({ note, children }: { note: any, children: React.ReactNod
     );
 }
 
-const DroppableFolder = ({ folder, children }: { folder: any, children: React.ReactNode }) => {
+const DroppableFolder = ({ folder, children }: { folder: { id: string }, children: React.ReactNode }) => {
     const { isOver, setNodeRef } = useDroppable({
         id: `folder-${folder.id}`,
         data: { type: 'folder', folderId: folder.id },
@@ -51,9 +53,10 @@ const DroppableFolder = ({ folder, children }: { folder: any, children: React.Re
 const ForwardedCard = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof Card>>((props, ref) => (
   <div {...props} ref={ref} />
 ));
+ForwardedCard.displayName = 'ForwardedCard';
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => {
-  const { folders, notes, selectedNoteId, selectedFolderId, fetchFolders, fetchNotes, createNote, createFolder, updateFolder, deleteFolder, updateNote, deleteNote, selectNote, selectFolder, isLoading, error } = useNotesStore();
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSelectNote, onCreateNote }) => {
+  const { folders, notes, selectedNoteId, selectedFolderId, fetchFolders, fetchNotes, createNote, createFolder, updateFolder, deleteFolder, updateNote, selectFolder } = useNotesStore();
   
   const [expandedFolders, setExpandedFolders] = useState(new Set<string>());
   const [showFolderInput, setShowFolderInput] = useState(false);
@@ -92,9 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
 
     // If there's a search query, just return a flat list of filtered notes
     if (searchQuery) {
-        return notes
-            .filter(note => note.title.toLowerCase().includes(lowerCaseQuery) || (note.content as string).toLowerCase().includes(lowerCaseQuery))
-            .map(note => ({ ...note, type: 'note' }));
+        return filteredNotes.map(note => ({ ...note, type: 'note' }));
     }
     
     // Otherwise, build the folder tree structure
@@ -133,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
     })
   );
 
-  const handleDragStart = useCallback((event: any) => {
+  const handleDragStart = useCallback((event: { active: { id: string }}) => {
     setActiveId(event.active.id);
   }, []);
 
@@ -168,11 +169,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
     await fetchFolders();
   };
   
-  const handleCreateNote = async () => {
-    await createNote({ title: 'Untitled Note', content: '<p></p>', folderId: selectedFolderId });
-    await fetchNotes();
-  };
-
   const handleRenameFolder = async () => {
     if (!renamingFolderId || !renameFolderName.trim()) return;
     const folder = folders.find(f => f.id === renamingFolderId);
@@ -247,18 +243,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
   const renderTree = (items: any[], level: number): React.ReactNode => {
     const paddingLeft = `${level * 1.5}rem`;
 
-    return items.map(item => {
+    return items.map((item: any) => {
       if (item.type === 'folder') {
         const isExpanded = expandedFolders.has(item.id);
         return (
           <DroppableFolder key={item.id} folder={item}>
             <div
-              className={`group flex cursor-pointer items-center justify-between rounded-md p-2 text-sm font-medium ${selectedFolderId === item.id ? 'bg-accent-soft text-accent-primary' : 'hover:bg-tertiary'} pl-${parseFloat(paddingLeft) / 4}`}
+              className={`group flex cursor-pointer items-center justify-between rounded-xl p-2 text-sm font-medium transition-colors ${selectedFolderId === item.id ? 'bg-selected-bg text-selected-text' : 'hover:bg-hover-bg'}`}
+              style={{ paddingLeft }}
             >
               <div className="flex flex-1 items-center gap-2" onClick={() => selectFolder(item.id)}>
                 <ChevronRight 
                   size={16} 
-                  className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                  className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                   onClick={(e) => { e.stopPropagation(); toggleFolderExpansion(item.id); }}
                 />
                 <FolderIcon size={16} />
@@ -270,7 +267,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
                     <MoreHorizontal size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent className="z-50">
                   <DropdownMenuItem onSelect={() => { setRenamingFolderId(item.id); setRenameFolderName(item.name); }}>
                     <Edit size={14} className="mr-2" /> Rename
                   </DropdownMenuItem>
@@ -290,15 +287,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
       } else { // item.type === 'note'
         return (
           <DraggableNote key={item.id} note={item}>
-            <Card 
-              padding="sm"
-                              className={`group relative cursor-pointer ${selectedNoteId === item.id ? 'border-selected bg-selected text-selected' : 'hover:bg-hover'}`} 
-              onClick={() => selectNote(item.id)}
+            <div
+              className={`group relative cursor-pointer rounded-lg border px-3 py-2 transition-all ${selectedNoteId === item.id ? 'border-selected bg-selected' : 'border-transparent'}`} 
+              onClick={() => onSelectNote(item.id)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <NoteIcon size={16} />
-                    <Text weight="medium" variant="body">{item.title}</Text>
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Text weight="medium" className="truncate">{item.title}</Text>
+                  </div>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -306,7 +303,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
                       <MoreHorizontal size={16} />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
+                  <DropdownMenuContent className="z-50">
                     <DropdownMenuItem onSelect={() => { setRenamingNoteId(item.id); setRenameNoteTitle(item.title); }}>
                       <Edit size={14} className="mr-2" /> Rename
                     </DropdownMenuItem>
@@ -338,7 +335,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </Card>
+            </div>
           </DraggableNote>
         );
       }
@@ -405,63 +402,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
   }
 
   return (
-    <ForwardedCard 
-      className="flex h-full w-[340px] shrink-0 flex-col"
-      padding="default"
-      ref={sidebarRef}
-    >
-      {/* Header */}
-      <div className="border-border-default mb-4 flex items-center justify-between border-b p-4">
-        <div className="flex items-center gap-2">
-          <NoteIcon className="text-text-secondary size-5" />
-          <Text size="lg" weight="semibold">Notes</Text>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button onClick={() => setShowFolderInput(s => !s)} variant="ghost" size="icon" title="New folder">
-            <FolderPlus size={16} />
-          </Button>
-          {onToggle && (
+    <>
+      <Card className="flex h-full w-80 flex-col bg-sidebar" padding="none">
+        {/* Header */}
+        <div className="border-border-default flex shrink-0 items-center justify-between border-b p-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={onToggle}
-              title="Hide notes sidebar"
-              className="text-text-secondary hover:text-text-primary"
+              className="text-secondary hover:text-primary"
             >
-              <PanelLeft size={18} />
+              <PanelLeft size={20} />
             </Button>
-          )}
+            <Heading level={3}>Notes</Heading>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCreateNote}
+            className="text-secondary hover:text-primary"
+          >
+            <FilePlus size={20} />
+          </Button>
         </div>
-      </div>
 
-      {/* Create Note Button */}
-      <div className="mb-4">
-        <Button
-          onClick={handleCreateNote}
-          variant="primary"
-          className="w-full"
-          size="default"
-        >
-          <FilePlus size={18} />
-                      Create note
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-4 shrink-0">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-        <Input 
-          type="search" 
-          placeholder="Search notes..." 
-          className="pl-14"
-          hasIcon={true}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        {searchQuery && <X size={16} className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted" onClick={() => setSearchQuery('')} />}
-      </div>
-
-      {showFolderInput && (
+        {/* Search */}
+        <div className="shrink-0 p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+            <Input 
+              placeholder="Search notes..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+        
+        {showFolderInput && (
         <div className="mb-4 flex items-center gap-2 rounded-md bg-tertiary p-2">
             <Input 
               placeholder="New folder name..." 
@@ -477,23 +456,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle }) => 
             </Button>
         </div>
       )}
-
-      {/* Note & Folder List */}
-      <div className="flex-1 space-y-1 overflow-y-auto pr-1">
-        {isLoading && <Text>Loading...</Text>}
-        {error && <Text color="error">{error}</Text>}
-        {!isLoading && !error && dataTree.length === 0 && searchQuery && (
-            <Text variant="secondary" className="p-4 text-center">No notes found.</Text>
-        )}
-        {!isLoading && !error && (
-          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToWindowEdges]}>
-            {renderTree(dataTree, 0)}
-            <DragOverlay>
-              {activeId && activeNote ? <NoteDragPreview note={activeNote} /> : null}
-            </DragOverlay>
-          </DndContext>
-        )}
-      </div>
-    </ForwardedCard>
+      
+      {/* Folder/Note List */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <div className="space-y-1">
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToWindowEdges]}>
+              {renderTree(dataTree, 0)}
+              <DragOverlay>
+                {activeId && activeNote ? <NoteDragPreview note={activeNote} /> : null}
+              </DragOverlay>
+            </DndContext>
+          </div>
+        </div>
+      </Card>
+    </>
   );
 }; 

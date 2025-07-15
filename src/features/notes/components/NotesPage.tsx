@@ -1,100 +1,167 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useRef } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { Sidebar } from './Sidebar';
-import TiptapEditor from './TiptapEditor';
+import BlockNoteEditor from './BlockNoteEditor'; // Primary editor
 import { useNotesStore } from '../store';
+import { Button } from '@/components/ui';
+import { Block } from '@blocknote/core';
 import { NotesContextSidebar } from './NotesContextSidebar';
-import { Input, EmptyState } from '../../../components/ui';
 import { useHeader } from '../../../app/contexts/HeaderContext';
+import { useDebounce } from '@/core/hooks';
 
-export const NotesPage: React.FC = () => {
+const NotesPage: React.FC = () => {
   const { setHeaderProps, clearHeaderProps } = useHeader();
-  const { notes, selectedNoteId, updateNote, selectNote, createNote, selectedFolderId } = useNotesStore();
+  const {
+    notes,
+    selectedNoteId,
+    selectNote,
+    updateNote,
+    createNote,
+    deleteNote,
+    selectedFolderId
+  } = useNotesStore(
+    useShallow((state) => ({
+      notes: state.notes,
+      selectedNoteId: state.selectedNoteId,
+      selectNote: state.selectNote,
+      updateNote: state.updateNote,
+      createNote: state.createNote,
+      deleteNote: state.deleteNote,
+      selectedFolderId: state.selectedFolderId
+    }))
+  );
+
   const [isNotesSidebarOpen, setIsNotesSidebarOpen] = useState(true);
   const [isContextOpen, setIsContextOpen] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const [editorContent, setEditorContent] = useState<string>('');
+  const debouncedEditorContent = useDebounce(editorContent, 500); // 500ms delay
 
-  const selectedNote = notes.find(note => note.id === selectedNoteId);
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedNote = useMemo(() => {
+    return notes.find(note => note.id === selectedNoteId);
+  }, [notes, selectedNoteId]);
+
+  // Load note content into local state when a note is selected
+  useEffect(() => {
+    if (selectedNote) {
+      setEditorContent(selectedNote.content);
+    } else {
+      setEditorContent('');
+    }
+  }, [selectedNote]);
+
+  // Save debounced content to the store
+  useEffect(() => {
+    // Ensure there's a selected note, and the debounced content is different
+    // from the content already in the store to prevent unnecessary updates.
+    if (selectedNote && debouncedEditorContent !== selectedNote.content) {
+      updateNote({ id: selectedNote.id, content: debouncedEditorContent });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedEditorContent]);
+
 
   const toggleNotesSidebar = useCallback(() => {
-    setIsNotesSidebarOpen(!isNotesSidebarOpen);
-  }, [isNotesSidebarOpen]);
+    setIsNotesSidebarOpen(prev => !prev);
+  }, []);
 
-  const toggleContext = useCallback(() => {
-    setIsContextOpen(!isContextOpen);
-  }, [isContextOpen]);
+  const handleNoteSelect = useCallback((noteId: string | null) => {
+    selectNote(noteId);
+  }, [selectNote]);
 
   useEffect(() => {
     setHeaderProps({
-      title: "Notes"
+      title: 'Notes',
+      actions: [
+        <Button
+          key="toggle-sidebar"
+          variant="ghost"
+          size="sm"
+          onClick={toggleNotesSidebar}
+        >
+          {isNotesSidebarOpen ? 'Hide' : 'Show'} Sidebar
+        </Button>
+      ]
     });
+
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [setHeaderProps, clearHeaderProps, isNotesSidebarOpen, toggleNotesSidebar]);
 
   useEffect(() => {
-    if (!selectedNoteId && notes.length > 0) {
+    if (notes.length > 0 && !selectedNoteId) {
       selectNote(notes[0].id);
     }
   }, [notes, selectedNoteId, selectNote]);
 
-  const handleContentChange = useCallback((newContent: string) => {
+  const handleTitleBlur = useCallback(() => {
     if (selectedNote) {
-      updateNote({ ...selectedNote, content: newContent });
+      const title = titleInputRef.current?.value || '';
+      if (!title) return; // Do not save if title is empty
+      const content = selectedNote.content || '';
+      if (title !== selectedNote.title || content !== selectedNote.content) {
+        updateNote({ id: selectedNote.id, title, content });
+      }
     }
   }, [selectedNote, updateNote]);
-  
+
+  const handleContentChange = useCallback((blocks: Block[]) => {
+    // Update local state on every change for a responsive UI
+    const jsonContent = JSON.stringify(blocks);
+    setEditorContent(jsonContent);
+  }, []);
+
   const handleCreateNote = async () => {
-    await createNote({ title: 'Untitled Note', content: '', folderId: selectedFolderId });
+    // Create new note with initial BlockNote format
+    const initialContent = JSON.stringify([{ type: 'paragraph', content: '' }]);
+    await createNote({ title: 'Untitled Note', content: initialContent, folderId: selectedFolderId });
   };
 
   return (
     <div className="flex h-full gap-6 bg-primary p-6">
-      {/* Notes Sidebar */}
-      <Sidebar 
+      <Sidebar
         isOpen={isNotesSidebarOpen}
         onToggle={toggleNotesSidebar}
+        onSelectNote={handleNoteSelect}
+        onCreateNote={handleCreateNote}
       />
-
-      {/* Main Notes Container */}
       <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
         {selectedNote ? (
-          <div className="flex min-h-0 flex-1 flex-col p-4">
-            <Input
-              ref={titleInputRef}
-              value={selectedNote.title}
-              onChange={(e) => updateNote({ ...selectedNote, title: e.target.value })}
-              className="notes-title-input mb-4 border-none bg-transparent p-0 text-2xl font-bold focus:border-none focus:ring-0"
-              placeholder="Untitled Note"
-            />
-            <div className="min-h-0 flex-1">
-              <TiptapEditor
-                key={selectedNote.id}
-                content={selectedNote.content}
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            <div className="border-b border-primary p-4">
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={selectedNote.title}
+                onChange={(e) => updateNote({ id: selectedNote.id, title: e.target.value })}
+                onBlur={handleTitleBlur}
+                placeholder="Untitled Note"
+                className="w-full bg-transparent text-2xl font-bold text-primary outline-none"
+              />
+            </div>
+            <div className="flex-1 p-6">
+              <BlockNoteEditor
+                content={editorContent} // Use local state for editor content
                 onChange={handleContentChange}
-                selectedNote={selectedNote}
-                placeholder="Start writing your note..."
+                readOnly={false}
                 className="h-full"
-                titleInputRef={titleInputRef}
               />
             </div>
           </div>
         ) : (
-          <div className="flex h-full flex-1 items-center justify-center">
-            <EmptyState
-              title="No Note Selected"
-              message="Select a note from the sidebar to view it, or create a new one."
-              icon="📝"
-              action={{ label: 'Create a New Note', onClick: handleCreateNote }}
-            />
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-muted">
+              {notes.length === 0 ? 'Create your first note' : 'Select a note to view'}
+            </p>
           </div>
         )}
       </div>
-
-      {/* Context Sidebar */}
-      <NotesContextSidebar 
+      <NotesContextSidebar
         isOpen={isContextOpen}
-        onToggle={toggleContext}
+        onToggle={() => setIsContextOpen(!isContextOpen)}
+        selectedNote={selectedNote}
       />
     </div>
   );
-}; 
+};
+
+export { NotesPage }; 

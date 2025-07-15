@@ -1,0 +1,78 @@
+/* 
+  BlockNote Editor - Custom Structural Styles
+  Theming is now handled by the `customLightTheme` object in `BlockNoteEditor.tsx`.
+  This file should only contain structural overrides or minor adjustments 
+  that are not covered by the theme object.
+*/
+
+/* Ensure BlockNote controls appear above other UI elements like context menus */
+.bn-side-menu,
+.bn-drag-handle {
+  z-index: 100 !important;
+}
+
+/* Editor container and content area */
+.blocknote-editor-container .ProseMirror {
+  padding: var(--space-4) var(--space-6) !important;
+  min-height: calc(100vh - 200px) !important; /* Ensure it fills vertical space */
+  caret-color: var(--accent-primary) !important;
+}
+
+/* Anchoring: Add visual pointer to the caret for the suggestion menu */
+.bn-suggestion-menu::before {
+  content: '';
+  position: absolute !important;
+  top: -7px !important;
+  left: 24px !important;
+  width: 12px !important;
+  height: 12px !important;
+  background-color: var(--bg-card) !important;
+  border-top: 1px solid var(--border-primary) !important;
+  border-left: 1px solid var(--border-primary) !important;
+  transform: rotate(45deg) !important;
+  z-index: 999 !important;
+}
+
+/* Refined Icon Styling */
+.bn-suggestion-menu .bn-suggestion-menu-item-icon {
+  color: var(--text-tertiary) !important; /* Muted icon color */
+  transition: color var(--transition-fast) !important;
+}
+
+.bn-suggestion-menu .bn-suggestion-menu-item:hover .bn-suggestion-menu-item-icon,
+.bn-suggestion-menu .bn-suggestion-menu-item[data-selected="true"] .bn-suggestion-menu-item-icon {
+  color: var(--accent-text) !important; /* Use accent color on hover/select */
+}
+
+/* Shortcuts: Muted, smaller, and revealed on hover */
+.bn-suggestion-menu .bn-suggestion-menu-item-badge {
+  color: var(--text-muted) !important; /* Dimmed text color */
+  background-color: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 2px 6px !important; /* Smaller padding */
+  font-size: 10px !important;   /* Smaller font */
+  font-family: var(--font-mono) !important;
+  font-weight: var(--font-normal) !important;
+  opacity: 0 !important; /* Hidden by default */
+  transform: translateX(5px) !important;
+  transition: opacity var(--transition-medium), transform var(--transition-medium) !important;
+  margin-left: auto !important;
+}
+
+.bn-suggestion-menu .bn-suggestion-menu-item:hover .bn-suggestion-menu-item-badge,
+.bn-suggestion-menu .bn-suggestion-menu-item[data-selected="true"] .bn-suggestion-menu-item-badge {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+/*
+  Hide the awkward blue frame around selected blocks (e.g., images).
+  This targets both BlockNote's and the underlying Prosemirror editor's
+  selection classes to ensure the default browser/library outline is removed.
+*/
+.bn-block-selected,
+.ProseMirror-selectednode {
+  outline: none !important;
+  box-shadow: none !important;
+} 

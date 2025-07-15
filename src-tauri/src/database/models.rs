@@ -562,23 +562,7 @@ pub struct Project {
     pub updated_at: NaiveDateTime,
 }
 
-impl Project {
-    pub fn new(name: String, description: String, color: String, user_id: String) -> Self {
-        let now = chrono::Utc::now().naive_utc();
-        Self {
-            id: 0, // Will be set by database
-            name,
-            description,
-            color,
-            status: "active".to_string(),
-            progress: 0,
-            priority: "medium".to_string(),
-            user_id,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-}
+// Removed unused Project::new constructor - use database operations instead
 
 impl From<&Row<'_>> for Project {
     fn from(row: &Row) -> Self {
@@ -609,21 +593,7 @@ pub struct ProjectGoal {
     pub updated_at: NaiveDateTime,
 }
 
-impl ProjectGoal {
-    pub fn new(project_id: i32, title: String, priority: String) -> Self {
-        let now = chrono::Utc::now().naive_utc();
-        Self {
-            id: 0, // Will be set by database
-            project_id,
-            title,
-            completed: false,
-            priority,
-            due_date: None,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-}
+// Removed unused ProjectGoal::new constructor - use database operations instead
 
 impl From<&Row<'_>> for ProjectGoal {
     fn from(row: &Row) -> Self {
@@ -654,29 +624,7 @@ pub struct ProjectAsset {
     pub updated_at: NaiveDateTime,
 }
 
-impl ProjectAsset {
-    pub fn new(
-        project_id: i32,
-        name: String,
-        asset_type: String,
-        url: String,
-        uploaded_by: String
-    ) -> Self {
-        let now = chrono::Utc::now().naive_utc();
-        Self {
-            id: 0, // Will be set by database
-            project_id,
-            name,
-            asset_type,
-            url,
-            size: None,
-            metadata: None,
-            uploaded_by,
-            created_at: now,
-            updated_at: now,
-        }
-    }
-}
+// Removed unused ProjectAsset::new constructor - use database operations instead
 
 impl From<&Row<'_>> for ProjectAsset {
     fn from(row: &Row) -> Self {

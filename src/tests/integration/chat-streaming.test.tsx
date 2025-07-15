@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, vi, afterEach, type Mock } from 'vitest';
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { OllamaService, StreamEvent, ChatMessage } from '../../services/ollamaService';
-import { invoke, listen } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 
 // Mock Tauri API
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
+}));
+vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn(),
 }));
 

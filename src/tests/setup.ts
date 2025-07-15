@@ -1,154 +1,317 @@
+import { vi } from 'vitest';
 import '@testing-library/jest-dom';
-import { vi, beforeEach, afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import { enableMapSet } from 'immer';
-import { resetAllStores } from '../test-utils/zustand-reset';
 
-// Mock Konva with comprehensive mock that avoids canvas.node loading
-vi.mock('konva', () => {
-  return import('./__mocks__/konva');
+// Mock Tauri APIs inline
+const tauriMocks = {
+  invoke: vi.fn(),
+  transformCallback: vi.fn(),
+  Channel: vi.fn(),
+};
+
+// Apply Tauri mocks globally
+Object.assign(global, tauriMocks);
+
+// Mock @tauri-apps/api/core
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(),
+}));
+
+// Comprehensive DOM API mocks for Tiptap/ProseMirror
+function getBoundingClientRect(): DOMRect {
+  const rect = {
+    x: 0,
+    y: 0,
+    bottom: 0,
+    height: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+    width: 0,
+  };
+  return { ...rect, toJSON: () => rect };
+}
+
+class FakeDOMRectList extends Array implements DOMRectList {
+  item(index: number): DOMRect | null {
+    return this[index] || null;
+  }
+  
+  [Symbol.iterator](): Iterator<DOMRect, any, undefined> {
+    return super[Symbol.iterator]();
+  }
+}
+
+// Mock DOM APIs that ProseMirror requires
+global.Range = class Range {
+  startContainer: Node = document.body;
+  startOffset: number = 0;
+  endContainer: Node = document.body;
+  endOffset: number = 0;
+  collapsed: boolean = true;
+  commonAncestorContainer: Node = document.body;
+
+  setStart(node: Node, offset: number): void {
+    this.startContainer = node;
+    this.startOffset = offset;
+  }
+
+  setEnd(node: Node, offset: number): void {
+    this.endContainer = node;
+    this.endOffset = offset;
+  }
+
+  getBoundingClientRect(): DOMRect {
+    return getBoundingClientRect();
+  }
+
+  getClientRects(): DOMRectList {
+    return new FakeDOMRectList();
+  }
+
+  createContextualFragment(html: string): DocumentFragment {
+    const fragment = document.createDocumentFragment();
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    while (div.firstChild) {
+      fragment.appendChild(div.firstChild);
+    }
+    return fragment;
+  }
+
+  selectNodeContents(): void {}
+  selectNode(): void {}
+  collapse(): void {}
+  insertNode(): void {}
+  deleteContents(): void {}
+  extractContents(): DocumentFragment {
+    return document.createDocumentFragment();
+  }
+  cloneContents(): DocumentFragment {
+    return document.createDocumentFragment();
+  }
+  cloneRange(): Range {
+    return new Range();
+  }
+  detach(): void {}
+  isPointInRange(): boolean { return false; }
+  comparePoint(): number { return 0; }
+  intersectsNode(): boolean { return false; }
+  toString(): string { return ''; }
+} as any;
+
+// Mock document.createRange
+document.createRange = (): Range => new Range();
+
+// Mock element methods
+document.elementFromPoint = (): null => null;
+document.elementsFromPoint = (): Element[] => [];
+(document as any).caretRangeFromPoint = (): Range | null => null;
+
+// Mock HTMLElement methods
+HTMLElement.prototype.getBoundingClientRect = getBoundingClientRect;
+HTMLElement.prototype.getClientRects = (): DOMRectList => new FakeDOMRectList();
+
+// Mock Element methods
+Element.prototype.getBoundingClientRect = getBoundingClientRect;
+Element.prototype.getClientRects = (): DOMRectList => new FakeDOMRectList();
+Element.prototype.scrollIntoView = vi.fn();
+
+// Mock Text node methods
+if (typeof Text !== 'undefined') {
+  (Text.prototype as any).getBoundingClientRect = getBoundingClientRect;
+  (Text.prototype as any).getClientRects = (): DOMRectList => new FakeDOMRectList();
+}
+
+// Mock Selection API
+class MockSelection implements Selection {
+  anchorNode: Node | null = null;
+  anchorOffset: number = 0;
+  focusNode: Node | null = null;
+  focusOffset: number = 0;
+  isCollapsed: boolean = true;
+  rangeCount: number = 0;
+  type: string = 'None';
+
+  addRange(): void {}
+  collapse(): void {}
+  collapseToEnd(): void {}
+  collapseToStart(): void {}
+  containsNode(): boolean { return false; }
+  deleteFromDocument(): void {}
+  empty(): void {}
+  extend(): void {}
+  getRangeAt(): Range { return new Range(); }
+  modify(): void {}
+  removeAllRanges(): void {}
+  removeRange(): void {}
+  selectAllChildren(): void {}
+  setBaseAndExtent(): void {}
+  setPosition(): void {}
+  toString(): string { return ''; }
+}
+
+Object.defineProperty(window, 'getSelection', {
+  value: () => new MockSelection(),
+  writable: true,
 });
 
-// Mock React-Konva to provide test-friendly DOM structure
-vi.mock('react-konva', () => {
-  return import('./__mocks__/react-konva');
+Object.defineProperty(document, 'getSelection', {
+  value: () => new MockSelection(),
+  writable: true,
 });
 
-enableMapSet();
+// Mock ClipboardEvent and DragEvent for Tiptap interactions
+class ClipboardDataMock {
+  getData = vi.fn().mockReturnValue('');
+  setData = vi.fn();
+  clearData = vi.fn();
+  items: DataTransferItemList = [] as any;
+  types: readonly string[] = [];
+  files: FileList = [] as any;
+}
 
-// Mock import.meta for Vitest environment to ensure DEV mode is true
-Object.defineProperty(import.meta, 'env', {
+global.ClipboardEvent = class ClipboardEvent extends Event {
+  clipboardData = new ClipboardDataMock();
+  constructor(type: string, options?: EventInit) {
+    super(type, options);
+  }
+} as any;
+
+class DataTransferMock {
+  data: { [key: string]: string } = {};
+  
+  setData(format: string, data: string): void {
+    this.data[format] = data;
+  }
+  
+  getData(format: string): string {
+    return this.data[format] || '';
+  }
+  
+  clearData(): void {
+    this.data = {};
+  }
+  
+  items: DataTransferItemList = [] as any;
+  types: readonly string[] = [];
+  files: FileList = [] as any;
+  dropEffect: string = 'none';
+  effectAllowed: string = 'uninitialized';
+}
+
+global.DragEvent = class DragEvent extends Event {
+  dataTransfer = new DataTransferMock();
+  constructor(type: string, options?: EventInit) {
+    super(type, options);
+  }
+} as any;
+
+// Mock ResizeObserver if needed
+global.ResizeObserver = class ResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  constructor(callback: ResizeObserverCallback) {}
+} as any;
+
+// Mock IntersectionObserver if needed
+global.IntersectionObserver = class IntersectionObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {}
+} as any;
+
+// Konva Canvas mocks
+global.HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextType) => {
+  if (contextType === '2d') {
+    return {
+      fillRect: vi.fn(),
+      clearRect: vi.fn(),
+      getImageData: vi.fn(() => ({ data: new Array(4) })),
+      putImageData: vi.fn(),
+      createImageData: vi.fn(() => ({ data: new Array(4) })),
+      setTransform: vi.fn(),
+      drawImage: vi.fn(),
+      save: vi.fn(),
+      fillText: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      stroke: vi.fn(),
+      translate: vi.fn(),
+      scale: vi.fn(),
+      rotate: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      measureText: vi.fn(() => ({ width: 0 })),
+      transform: vi.fn(),
+      rect: vi.fn(),
+      clip: vi.fn(),
+    };
+  }
+  return null;
+});
+
+// Additional mocks for compatibility
+Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+  configurable: true,
+  value: 100,
+});
+
+Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+  configurable: true,
+  value: 100,
+});
+
+// Mock zustand persist middleware
+vi.mock('zustand/middleware', () => ({
+  persist: vi.fn((fn) => fn),
+  subscribeWithSelector: vi.fn((fn) => fn),
+  devtools: vi.fn((fn) => fn),
+  createJSONStorage: vi.fn(() => ({
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+  })),
+}));
+
+// Canvas Image data mocks
+global.createImageBitmap = vi.fn().mockResolvedValue({});
+
+// Additional window/document mocks
+Object.defineProperty(window, 'localStorage', {
   value: {
-    MODE: 'test',
-    DEV: true,
-    VITE_APP_NAME: 'LibreOllama',
-    VITE_APP_VERSION: '1.0.0',
-    BASE_URL: '/',
-    PROD: false,
-    SSR: false,
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
   },
   writable: true,
 });
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
-// Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
-// Mock fetch
-global.fetch = vi.fn();
-
-// Mock localStorage for tests
-const localStorageMock = {
-  getItem: vi.fn((key: string) => {
-    return localStorageMock.storage[key] || null;
-  }),
-  setItem: vi.fn((key: string, value: string) => {
-    localStorageMock.storage[key] = value;
-  }),
-  removeItem: vi.fn((key: string) => {
-    delete localStorageMock.storage[key];
-  }),
-  clear: vi.fn(() => {
-    localStorageMock.storage = {};
-  }),
-  storage: {} as Record<string, string>,
-};
-
-Object.defineProperty(global, 'localStorage', {
-  value: localStorageMock,
+Object.defineProperty(window, 'sessionStorage', {
+  value: {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+  },
   writable: true,
 });
 
-// Mock requestAnimationFrame
-global.requestAnimationFrame = vi.fn(cb => {
-  setTimeout(cb, 0);
-  return 1; // Return a mock request ID
-}) as any;
-global.cancelAnimationFrame = vi.fn();
+// Mock URL.createObjectURL
+global.URL.createObjectURL = vi.fn(() => 'mock-url');
+global.URL.revokeObjectURL = vi.fn();
 
-// Mock performance
-global.performance = {
-  ...global.performance,
-  now: vi.fn(() => Date.now()),
-};
-
-// Mock window.matchMedia - robust implementation for all environments
-const createMockMatchMedia = () => {
-  return vi.fn().mockImplementation((query: string) => {
-    return {
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(), // deprecated
-      removeListener: vi.fn(), // deprecated
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    };
-  });
-};
-
-const mockMatchMedia = createMockMatchMedia();
-
-// Set up window.matchMedia for all possible environments
-// JSDOM environment
-if (typeof window !== 'undefined') {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    configurable: true,
-    value: mockMatchMedia,
-  });
+// Mock CSS.supports if needed
+if (typeof CSS === 'undefined') {
+  global.CSS = {
+    supports: vi.fn().mockReturnValue(true),
+  } as any;
 }
-
-// Node.js global environment
-if (typeof global !== 'undefined') {
-  Object.defineProperty(global, 'matchMedia', {
-    writable: true,
-    configurable: true,
-    value: mockMatchMedia,
-  });
-  
-  // Ensure global.window exists and has matchMedia
-  if (!global.window) {
-    Object.defineProperty(global, 'window', {
-      writable: true,
-      configurable: true,
-      value: {
-        matchMedia: mockMatchMedia,
-        document: { 
-          documentElement: { 
-            classList: { 
-              remove: vi.fn(), 
-              add: vi.fn() 
-            } 
-          } 
-        },
-      },
-    });
-  } else {
-    Object.defineProperty(global.window, 'matchMedia', {
-      writable: true,
-      configurable: true,
-      value: mockMatchMedia,
-    });
-  }
-}
-// Note: ESM modules don't support vi.mock in setup files
-// Individual test files should use vi.mock() for proper ESM module mocking
-// as recommended in the testing guide
-
-// Store mocks removed - tests will use real store instances with zustand/vanilla
-// This provides better test reliability and validates actual store implementation
 
 // Global test utilities
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({
@@ -157,29 +320,11 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn()
 }));
 
-// Suppress console warnings in tests unless explicitly testing them
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
-const originalConsoleLog = console.log;
-
-beforeEach(() => {
-  console.error = vi.fn();
-  console.warn = vi.fn();
-  console.log = vi.fn();
+// Mock requestAnimationFrame for Konva
+global.requestAnimationFrame = vi.fn((callback) => {
+  return setTimeout(() => callback(Date.now()), 0);
 });
 
-// Cleanup after each test
-afterEach(() => {
-  cleanup();
-  resetAllStores();
-  vi.clearAllMocks();
-  
-  // Clean up localStorage
-  if (typeof localStorage !== 'undefined') {
-    localStorage.clear();
-  }
-  
-  console.error = originalConsoleError;
-  console.warn = originalConsoleWarn;
-  console.log = originalConsoleLog;
-});
+global.cancelAnimationFrame = vi.fn();
+
+console.log('Test setup complete with comprehensive DOM API mocks');

@@ -379,32 +379,49 @@ impl GmailAuthService {
             None
         };
 
-        // Store account with encrypted tokens
-        conn.execute(
-            "INSERT OR REPLACE INTO gmail_accounts_secure (
-                id, email_address, display_name, profile_picture_url,
-                access_token_encrypted, refresh_token_encrypted, token_expires_at,
-                scopes, is_active, last_sync_at, created_at, updated_at, user_id
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-            (
-                &account_id,
-                &user_info.email,
-                &user_info.name,
-                &user_info.picture,
-                &access_token_encrypted,
-                &refresh_token_encrypted,
-                &tokens.expires_at,
-                &serde_json::to_string(GMAIL_SCOPES).unwrap_or_default(),
-                true, // is_active
-                None::<String>, // last_sync_at
-                &chrono::Utc::now().to_rfc3339(),
-                &chrono::Utc::now().to_rfc3339(),
-                &user_info.email, // use email as user_id for now
-            ),
-        ).map_err(|e| LibreOllamaError::DatabaseQuery {
-            message: format!("Failed to store account tokens: {}", e),
-            query_type: "insert".to_string(),
-        })?;
+        // Store account with encrypted tokens - retry logic for reliability
+        let mut retry_count = 0;
+        const MAX_RETRIES: u32 = 3;
+        
+        loop {
+            let result = conn.execute(
+                "INSERT OR REPLACE INTO gmail_accounts_secure (
+                    id, email_address, display_name, profile_picture_url,
+                    access_token_encrypted, refresh_token_encrypted, token_expires_at,
+                    scopes, is_active, last_sync_at, created_at, updated_at, user_id
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+                (
+                    &account_id,
+                    &user_info.email,
+                    &user_info.name,
+                    &user_info.picture,
+                    &access_token_encrypted,
+                    &refresh_token_encrypted,
+                    &tokens.expires_at,
+                    &serde_json::to_string(GMAIL_SCOPES).unwrap_or_default(),
+                    true, // is_active
+                    None::<String>, // last_sync_at
+                    &chrono::Utc::now().to_rfc3339(),
+                    &chrono::Utc::now().to_rfc3339(),
+                    &user_info.email, // use email as user_id for now
+                ),
+            );
+            
+            match result {
+                Ok(_) => break,
+                Err(e) => {
+                    retry_count += 1;
+                    if retry_count >= MAX_RETRIES {
+                        return Err(LibreOllamaError::DatabaseQuery {
+                            message: format!("Failed to store account tokens after {} retries: {}", MAX_RETRIES, e),
+                            query_type: "insert".to_string(),
+                        });
+                    }
+                    // Wait a bit before retrying
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100 * retry_count as u64)).await;
+                }
+            }
+        }
 
         Ok(())
     }
@@ -417,18 +434,37 @@ impl GmailAuthService {
                 query_type: "connection".to_string(),
             })?;
 
-        let result = conn.query_row(
-            "SELECT access_token_encrypted, refresh_token_encrypted, token_expires_at
-             FROM gmail_accounts_secure WHERE id = ?1 AND is_active = 1",
-            [account_id],
-            |row| {
-                let access_token_encrypted: String = row.get(0)?;
-                let refresh_token_encrypted: Option<String> = row.get(1)?;
-                let expires_at: Option<String> = row.get(2)?;
-                
-                Ok((access_token_encrypted, refresh_token_encrypted, expires_at))
-            },
-        );
+        // Add retry logic for token retrieval reliability
+        let mut retry_count = 0;
+        const MAX_RETRIES: u32 = 3;
+        
+        let result = loop {
+            let query_result = conn.query_row(
+                "SELECT access_token_encrypted, refresh_token_encrypted, token_expires_at
+                 FROM gmail_accounts_secure WHERE id = ?1 AND is_active = 1",
+                [account_id],
+                |row| {
+                    let access_token_encrypted: String = row.get(0)?;
+                    let refresh_token_encrypted: Option<String> = row.get(1)?;
+                    let expires_at: Option<String> = row.get(2)?;
+                    
+                    Ok((access_token_encrypted, refresh_token_encrypted, expires_at))
+                },
+            );
+            
+            match query_result {
+                Ok(data) => break Ok(data),
+                Err(rusqlite::Error::QueryReturnedNoRows) => break Err(rusqlite::Error::QueryReturnedNoRows),
+                Err(e) => {
+                    retry_count += 1;
+                    if retry_count >= MAX_RETRIES {
+                        break Err(e);
+                    }
+                    // Wait a bit before retrying
+                    std::thread::sleep(std::time::Duration::from_millis(50 * retry_count as u64));
+                }
+            }
+        };
 
         match result {
             Ok((access_encrypted, refresh_encrypted, expires_at)) => {

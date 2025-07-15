@@ -4,6 +4,7 @@ import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { notesService } from './services/notesService';
 import { Note, Folder } from './types';
+import { migrateNotesToBlockNote } from './utils/migrationScript';
 
 interface NotesState {
   notes: Note[];
@@ -12,6 +13,7 @@ interface NotesState {
   selectedFolderId: string | null;
   isLoading: boolean;
   error: string | null;
+  isMigrated: boolean; // Track if migration has been run
   fetchNotes: () => Promise<void>;
   fetchFolders: () => Promise<void>;
   createNote: (note: Omit<Note, 'id' | 'metadata'>) => Promise<void>;
@@ -24,6 +26,7 @@ interface NotesState {
   selectFolder: (id: string | null) => void;
   clearError: () => void;
   reset: () => void;
+  runMigration: () => Promise<void>; // Manual migration trigger
 }
 
 // Initial state
@@ -34,6 +37,7 @@ const initialState = {
   selectedFolderId: null,
   isLoading: false,
   error: null,
+  isMigrated: false,
 };
 
 export const useNotesStore = create<NotesState>()(
@@ -46,25 +50,43 @@ export const useNotesStore = create<NotesState>()(
           async fetchNotes() {
             set({ isLoading: true, error: null });
             try {
-              devLog('Fetching notes...');
               const notes = await notesService.getNotes();
-              devLog('Fetched notes:', notes);
               set(state => {
                 state.notes = notes;
                 state.isLoading = false;
               });
+              
+              // Run migration automatically if not done yet
+              if (!get().isMigrated && notes.length > 0) {
+                console.log('🔄 Auto-migrating notes to BlockNote format...');
+                await get().runMigration();
+              }
             } catch (error) {
               console.error('Failed to fetch notes:', error);
               set({ error: 'Failed to fetch notes', isLoading: false });
             }
           },
 
+          async runMigration() {
+            try {
+              const stats = await migrateNotesToBlockNote();
+              set({ isMigrated: true });
+              
+              if (stats.migrated > 0) {
+                console.log(`✅ Successfully migrated ${stats.migrated} notes to BlockNote format`);
+                // Refresh notes after migration
+                await get().fetchNotes();
+              }
+            } catch (error) {
+              console.error('Migration failed:', error);
+              set({ error: 'Failed to migrate notes to BlockNote format' });
+            }
+          },
+
           async fetchFolders() {
             set({ isLoading: true, error: null });
             try {
-              devLog('Fetching folders...');
               const folders = await notesService.getFolders();
-              devLog('Fetched folders:', folders);
               set(state => {
                 state.folders = folders;
                 state.isLoading = false;
@@ -78,9 +100,8 @@ export const useNotesStore = create<NotesState>()(
           async createNote(note) {
             set({ isLoading: true, error: null });
             try {
-              devLog('Creating note:', note);
+              // Content is already in the correct format (JSON string for BlockNote)
               const newNote = await notesService.createNote(note);
-              devLog('Created note:', newNote);
               set(state => {
                 state.notes.push(newNote);
                 state.selectedNoteId = newNote.id;
@@ -95,9 +116,8 @@ export const useNotesStore = create<NotesState>()(
           async updateNote(note) {
             set({ error: null });
             try {
-              devLog('Updating note:', note);
+              // Content is already in the correct format (JSON string for BlockNote)
               const updatedNote = await notesService.updateNote(note);
-              devLog('Updated note:', updatedNote);
               set(state => {
                 const index = state.notes.findIndex(n => n.id === note.id);
                 if (index !== -1) {
@@ -113,7 +133,6 @@ export const useNotesStore = create<NotesState>()(
           async deleteNote(id) {
             set({ isLoading: true, error: null });
             try {
-              devLog('Deleting note:', id);
               await notesService.deleteNote(id);
               set(state => {
                 state.notes = state.notes.filter(n => n.id !== id);
@@ -131,9 +150,7 @@ export const useNotesStore = create<NotesState>()(
           async createFolder(folder) {
             set({ isLoading: true, error: null });
             try {
-              devLog('Creating folder:', folder);
               const newFolder = await notesService.createFolder(folder);
-              devLog('Created folder:', newFolder);
               set(state => {
                 state.folders.push(newFolder);
                 state.isLoading = false;
@@ -147,9 +164,7 @@ export const useNotesStore = create<NotesState>()(
           async updateFolder(folder) {
             set({ error: null });
             try {
-              devLog('Updating folder:', folder);
               const updatedFolder = await notesService.updateFolder(folder);
-              devLog('Updated folder:', updatedFolder);
               set(state => {
                 const index = state.folders.findIndex(f => f.id === folder.id);
                 if (index !== -1) {
@@ -165,7 +180,6 @@ export const useNotesStore = create<NotesState>()(
           async deleteFolder(id) {
             set({ isLoading: true, error: null });
             try {
-              devLog('Deleting folder:', id);
               await notesService.deleteFolder(id);
               set(state => {
                 state.folders = state.folders.filter(f => f.id !== id);
@@ -174,6 +188,8 @@ export const useNotesStore = create<NotesState>()(
                 }
                 state.isLoading = false;
               });
+              // Refresh notes to reflect orphaned notes (folder_id = null)
+              await get().fetchNotes();
             } catch (error) {
               console.error('Failed to delete folder:', error);
               set({ error: 'Failed to delete folder', isLoading: false });
@@ -206,15 +222,10 @@ export const useNotesStore = create<NotesState>()(
           folders: state.folders,
           selectedNoteId: state.selectedNoteId,
           selectedFolderId: state.selectedFolderId,
+          isMigrated: state.isMigrated, // Persist migration status
         })
       }
     ),
     { name: 'notes-store' }
   )
-);
-
-function devLog(message: string, ...optionalParams: any[]) {
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-    console.log(`[NotesStore] ${message}`, ...optionalParams);
-  }
-} 
+); 

@@ -7,11 +7,12 @@ use anyhow::Result;
 
 use crate::database::{self, DatabaseManager};
 use crate::commands::agents::{CreateAgentRequest, UpdateAgentRequest};
+use uuid::Uuid;
+use std::fs;
 
 /// Test helper functions that work with DatabaseManager directly
 mod test_helpers {
     use super::*;
-    use uuid::Uuid;
     use crate::database::operations;
     use crate::commands::agents::{Agent, AgentExecution};
     use crate::database::{AgentExecution as DbAgentExecution, ChatSession as DbChatSession, ChatMessage as DbChatMessage};
@@ -325,6 +326,7 @@ use test_helpers::*;
 #[cfg(test)]
 mod database_health_tests {
     use super::*;
+    use std::fs;
 
     #[tokio::test]
     async fn test_database_initialization() {
@@ -393,6 +395,7 @@ mod database_health_tests {
 mod chat_functionality_tests {
     use super::*;
     use super::test_helpers::*;
+    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_chat_session_lifecycle() {

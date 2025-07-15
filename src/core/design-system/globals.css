@@ -947,56 +947,21 @@ body {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--accent-primary);
+  outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
 
 html {
   scroll-behavior: smooth;
 }
-
 * {
   box-sizing: border-box;
-}
-
-/* ===== TIPTAP EDITOR STYLES ===== */
-.tableWrapper.is-empty,
-.tableWrapper.is-empty .resize-cursor {
-  display: none;
-}
-
-.tiptap-table-header:empty,
-.tiptap-table-header:empty::before {
-  display: none;
-}
-
-.tiptap table:empty {
-  display: none;
+  margin: 0;
+  padding: 0;
 }
 
 .notes-title-input:not(:focus) {
-  background: transparent;
-  border: none;
-}
-
-.tiptap-editor-content p {
-  margin: 0.5em 0;
-}
-
-.tiptap-editor-content p:first-child {
-  margin-top: 0;
-}
-
-.tiptap-editor-content {
-  outline: none;
-  line-height: 1.6;
-}
-
-.ProseMirror:focus {
-  outline: none;
-}
-
-.ProseMirror-focused .ProseMirror-selectednode {
-  outline: 2px solid var(--accent-primary);
+  border-bottom: 1px solid transparent; /* Hide border when not focused */
+  transition: border-bottom-color 0.2s ease-in-out;
 }
 
