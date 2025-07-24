@@ -37,6 +37,11 @@ describe('ModelSelector Component Tests', () => {
   });
 
   it('should render model selector with current selection', () => {
+    vi.mocked(useChatStore).mockReturnValue({
+      ...mockChatStore,
+      selectedModel: null,
+    });
+
     render(<ModelSelector />);
     
     // When no model is selected, it should show "Select Model"
@@ -46,10 +51,7 @@ describe('ModelSelector Component Tests', () => {
   it('should show selected model name when model is selected', () => {
     vi.mocked(useChatStore).mockReturnValue({
       ...mockChatStore,
-      selectedModel: 'GPT-4', // This should match the model.name field
-      availableModels: [
-        { id: 'gpt-4', name: 'GPT-4', provider: 'openai', description: 'Most capable model', contextLength: 8192 }
-      ]
+      selectedModel: 'gpt-4',
     });
 
     render(<ModelSelector />);

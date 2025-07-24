@@ -173,10 +173,10 @@ function Chat() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 mb-4">{error}</p>
+          <p className="mb-4 text-red-500">{error}</p>
           <button 
             onClick={clearError}
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80"
+            className="hover:bg-primary/80 rounded bg-primary px-4 py-2 text-white"
           >
             Retry
           </button>
@@ -221,11 +221,11 @@ function Chat() {
               <div className="flex flex-1 flex-col">
                 <div className="flex-1 overflow-y-auto p-4">
                   {isLoadingMessages ? (
-                    <div className="flex items-center justify-center h-full">
+                    <div className="flex h-full items-center justify-center">
                       <div className="text-secondary">Loading messages...</div>
                     </div>
                   ) : currentMessages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
+                    <div className="flex h-full items-center justify-center">
                       <div className="text-center text-secondary">
                         <p>No messages yet.</p>
                         <p>Start a conversation!</p>
@@ -243,7 +243,7 @@ function Chat() {
                       ))}
                       {isSending && (
                         <div className="flex items-center space-x-2 text-secondary">
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                          <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                           <span>AI is typing...</span>
                         </div>
                       )}

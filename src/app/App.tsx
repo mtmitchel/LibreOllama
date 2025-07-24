@@ -8,6 +8,7 @@ import { CommandPalette } from '../components/CommandPalette';
 import { useCommandPalette } from '../core/hooks/useCommandPalette';
 import { StagewiseToolbar } from '@stagewise/toolbar-react';
 import { useInitializeSettings } from '../stores/settingsStore';
+import { MailStoreProvider } from '../features/mail/components/MailStoreProvider';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -63,11 +64,19 @@ export default function App() {
     initializeSettings();
   }, [initializeSettings]);
 
+  // Load test utilities in development
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      import('../tests/integration/auth-persistence-test').catch(console.error);
+    }
+  }, []);
+
   return (
     <ThemeProvider>
       <Router>
         <HeaderProvider>
-          <div className="flex h-screen bg-page font-sans text-primary">
+          <MailStoreProvider>
+            <div className="flex h-screen bg-page font-sans text-primary">
             {/* Skip to main content link for keyboard users */}
             <a 
               href="#main-content"
@@ -92,6 +101,7 @@ export default function App() {
               }}
             />
           </div>
+          </MailStoreProvider>
         </HeaderProvider>
       </Router>
     </ThemeProvider>

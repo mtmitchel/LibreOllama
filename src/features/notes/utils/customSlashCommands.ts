@@ -1,5 +1,4 @@
-import { createSuggestionItems } from '@blocknote/react';
-import { defaultCommands } from './defaultCommands';
+import { BlockNoteEditor } from '@blocknote/core';
 
 // Custom slash commands that integrate with your design system
 export const createCustomSlashCommands = (editor: BlockNoteEditor) => [
@@ -7,13 +6,11 @@ export const createCustomSlashCommands = (editor: BlockNoteEditor) => [
     name: 'Heading 1',
     execute: () => {
       editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'heading',
-          props: { level: 1 },
-        })
-        .run();
+      editor.insertBlocks([{
+        type: 'heading',
+        props: { level: 1 },
+        content: '',
+      }], editor.getTextCursorPosition().block.id, 'after');
     },
     aliases: ['h1', 'title'],
     group: 'Headings',
@@ -24,13 +21,11 @@ export const createCustomSlashCommands = (editor: BlockNoteEditor) => [
     name: 'Heading 2',
     execute: () => {
       editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'heading',
-          props: { level: 2 },
-        })
-        .run();
+      editor.insertBlocks([{
+        type: 'heading',
+        props: { level: 2 },
+        content: '',
+      }], editor.getTextCursorPosition().block.id, 'after');
     },
     aliases: ['h2', 'subtitle'],
     group: 'Headings',
@@ -38,50 +33,28 @@ export const createCustomSlashCommands = (editor: BlockNoteEditor) => [
     hint: 'Medium section heading',
   },
   {
-    name: 'Info Callout',
+    name: 'Quote Block',
     execute: () => {
       editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'callout',
-          props: { type: 'info', title: 'Info' },
-        })
-        .run();
+      editor.insertBlocks([{
+        type: 'quote',
+        content: '',
+      }], editor.getTextCursorPosition().block.id, 'after');
     },
-    aliases: ['info', 'note'],
+    aliases: ['quote', 'blockquote'],
     group: 'Advanced',
-    icon: 'ℹ️',
-    hint: 'Important information block',
-  },
-  {
-    name: 'Warning Callout',
-    execute: () => {
-      editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'callout',
-          props: { type: 'warning', title: 'Warning' },
-        })
-        .run();
-    },
-    aliases: ['warning', 'caution'],
-    group: 'Advanced',
-    icon: '⚠️',
-    hint: 'Cautionary information block',
+    icon: '"',
+    hint: 'Important quote or note',
   },
   {
     name: 'Code Block',
     execute: () => {
       editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'code',
-          props: { language: 'javascript' },
-        })
-        .run();
+      editor.insertBlocks([{
+        type: 'codeBlock',
+        props: { language: 'javascript' },
+        content: '',
+      }], editor.getTextCursorPosition().block.id, 'after');
     },
     aliases: ['code', 'js', 'typescript'],
     group: 'Advanced',
@@ -92,12 +65,10 @@ export const createCustomSlashCommands = (editor: BlockNoteEditor) => [
     name: 'Bullet List',
     execute: () => {
       editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'bulletListItem',
-        })
-        .run();
+      editor.insertBlocks([{
+        type: 'bulletListItem',
+        content: '',
+      }], editor.getTextCursorPosition().block.id, 'after');
     },
     aliases: ['ul', 'list'],
     group: 'Basic blocks',
@@ -108,12 +79,10 @@ export const createCustomSlashCommands = (editor: BlockNoteEditor) => [
     name: 'Numbered List',
     execute: () => {
       editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'numberedListItem',
-        })
-        .run();
+      editor.insertBlocks([{
+        type: 'numberedListItem',
+        content: '',
+      }], editor.getTextCursorPosition().block.id, 'after');
     },
     aliases: ['ol', 'numbered'],
     group: 'Basic blocks',
@@ -124,12 +93,26 @@ export const createCustomSlashCommands = (editor: BlockNoteEditor) => [
     name: 'Table',
     execute: () => {
       editor.focus();
-      editor
-        .chain()
-        .BNCreateBlock({
-          type: 'table',
-        })
-        .run();
+      editor.insertBlocks([{
+        type: 'table',
+        content: {
+          type: 'tableContent',
+          rows: [
+            {
+              cells: [
+                [{ type: 'text', text: 'Cell 1', styles: {} }],
+                [{ type: 'text', text: 'Cell 2', styles: {} }]
+              ]
+            },
+            {
+              cells: [
+                [{ type: 'text', text: 'Cell 3', styles: {} }],
+                [{ type: 'text', text: 'Cell 4', styles: {} }]
+              ]
+            }
+          ]
+        }
+      }], editor.getTextCursorPosition().block.id, 'after');
     },
     aliases: ['table', 'grid'],
     group: 'Advanced',

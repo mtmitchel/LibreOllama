@@ -226,28 +226,29 @@ export function EmailActionBar({
         <div className={`flex items-center justify-between px-4 ${compactMode ? 'py-2' : 'py-3'}`}>
           {/* Selection Info */}
           <div className="flex items-center gap-4">
-            {/* Select All Checkbox */}
-            <button
-              onClick={handleSelectAll}
-              className="border-border-default flex size-6 items-center justify-center rounded border transition-colors hover:bg-tertiary"
-              title={allSelected ? 'Deselect all' : 'Select all'}
-            >
-              {allSelected ? (
-                <Check size={14} className="text-accent-primary" />
-              ) : someSelected ? (
-                <MinusSquare size={14} className="text-accent-primary" />
-              ) : (
-                <Square size={14} className="text-secondary" />
-              )}
-            </button>
+            {/* Select All Checkbox - Only show when messages are selected */}
+            {selectedCount > 0 && (
+              <button
+                onClick={handleSelectAll}
+                className="border-border-default flex size-6 items-center justify-center rounded border transition-colors hover:bg-tertiary"
+                title={allSelected ? 'Deselect all' : 'Select all'}
+              >
+                {allSelected ? (
+                  <Check size={14} className="text-accent-primary" />
+                ) : someSelected ? (
+                  <MinusSquare size={14} className="text-accent-primary" />
+                ) : (
+                  <Square size={14} className="text-secondary" />
+                )}
+              </button>
+            )}
             
             {/* Selection Count */}
-            <Text size="sm" variant="secondary">
-              {selectedCount === 0 
-                ? `${allMessages.length} messages` 
-                : `${selectedCount} selected`
-              }
-            </Text>
+            {selectedCount > 0 && (
+              <Text size="sm" variant="secondary">
+                {`${selectedCount} selected`}
+              </Text>
+            )}
 
             {/* Clear Selection */}
             {selectedCount > 0 && (

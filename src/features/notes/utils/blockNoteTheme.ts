@@ -1,4 +1,4 @@
-import { Theme } from '@blocknote/core';
+import { Theme } from '@blocknote/mantine';
 
 // Custom theme that integrates with LibreOllama design system
 export const libreOllamaTheme: Partial<Theme> = {
@@ -10,15 +10,10 @@ export const libreOllamaTheme: Partial<Theme> = {
     menu: {
       text: '#18181b',
       background: '#ffffff',
-      textDisabled: '#a1a1aa',
-      backgroundHover: '#f4f4f5',
-      backgroundSelected: '#eef2ff',
     },
     tooltip: {
-      text: '#18181b',
-      background: '#ffffff',
-      backgroundInverted: '#18181b',
-      textInverted: '#ffffff',
+      text: '#ffffff',
+      background: '#18181b',
     },
     hovered: {
       text: '#18181b',
@@ -90,9 +85,6 @@ export const libreOllamaDarkTheme: Partial<Theme> = {
     menu: {
       text: '#f4f4f5',
       background: '#27272a',
-      textDisabled: '#71717a',
-      backgroundHover: '#3f3f46',
-      backgroundSelected: 'rgba(99, 102, 241, 0.3)',
     },
     // ... other dark theme overrides
   },

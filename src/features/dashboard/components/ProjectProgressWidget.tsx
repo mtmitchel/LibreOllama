@@ -28,12 +28,12 @@ export const ProjectProgressWidget: React.FC = () => {
     return (
       <Card>
         <div className="animate-pulse">
-          <div className="h-6 bg-secondary rounded mb-4"></div>
-          <div className="h-2 bg-secondary rounded mb-4"></div>
+          <div className="mb-4 h-6 rounded bg-secondary"></div>
+          <div className="mb-4 h-2 rounded bg-secondary"></div>
           <div className="space-y-3">
-            <div className="h-4 bg-secondary rounded"></div>
-            <div className="h-4 bg-secondary rounded"></div>
-            <div className="h-4 bg-secondary rounded"></div>
+            <div className="h-4 rounded bg-secondary"></div>
+            <div className="h-4 rounded bg-secondary"></div>
+            <div className="h-4 rounded bg-secondary"></div>
           </div>
         </div>
       </Card>
@@ -43,7 +43,7 @@ export const ProjectProgressWidget: React.FC = () => {
   if (error) {
     return (
       <Card>
-        <div className="text-center py-4">
+        <div className="py-4 text-center">
           <Text variant="secondary" size="sm">{error}</Text>
         </div>
       </Card>
@@ -59,8 +59,8 @@ export const ProjectProgressWidget: React.FC = () => {
             No active projects
           </Text>
         </div>
-        <div className="text-center py-8">
-          <FolderOpen className="mx-auto mb-3 h-8 w-8 text-secondary" />
+        <div className="py-8 text-center">
+          <FolderOpen className="mx-auto mb-3 size-8 text-secondary" />
           <Text variant="secondary" size="sm">No active projects to show</Text>
           <Text variant="tertiary" size="xs" className="mt-1">Create a project to see progress here</Text>
         </div>
@@ -88,7 +88,7 @@ export const ProjectProgressWidget: React.FC = () => {
           return (
             <li key={project.id} className="flex items-center gap-3">
               <div 
-                className="w-3 h-3 rounded-full flex-shrink-0"
+                className="size-3 shrink-0 rounded-full"
                 style={{ backgroundColor: project.color }}
               />
               <div className="min-w-0 flex-1">
@@ -109,7 +109,7 @@ export const ProjectProgressWidget: React.FC = () => {
         })}
       </ul>
       {projects.length > 3 && (
-        <div className="mt-4 pt-3 border-t border-border">
+        <div className="border-border mt-4 border-t pt-3">
           <Button variant="ghost" size="sm" className="w-full text-secondary">
             View all projects ({projects.length})
           </Button>

@@ -24,8 +24,7 @@ import {
 import { useMailStore } from '../stores/mailStore';
 import { GmailAccount } from '../types';
 import { useState } from 'react';
-import LabelManager from './LabelManager';
-import LabelSettings from './LabelSettings';
+import { StreamlinedLabelManager } from './StreamlinedLabelManager';
 import { logger } from '../../../core/lib/logger';
 
 interface MailSidebarProps {
@@ -50,11 +49,26 @@ function StorageInfo({
     setIsRefreshing(false);
   };
   
-  if (typeof quotaUsed !== 'number' || typeof quotaTotal !== 'number' || quotaTotal <= 0) {
+  // Handle different quota scenarios
+  if (typeof quotaUsed !== 'number') {
     return (
       <div className="py-2 text-center">
         <Text size="xs" variant="tertiary">
           {isRefreshing ? 'Loading storage info...' : 'Storage info unavailable'}
+        </Text>
+      </div>
+    );
+  }
+
+  // Handle unlimited storage (quotaTotal is null, undefined, or 0)
+  if (quotaTotal === null || quotaTotal === undefined || quotaTotal === 0) {
+    return (
+      <div className="py-2 text-center">
+        <Text size="xs" variant="secondary">
+          Unlimited storage
+        </Text>
+        <Text size="xs" variant="tertiary" className="mt-1">
+          {(quotaUsed / (1024 * 1024 * 1024)).toFixed(1)} GiB used
         </Text>
       </div>
     );
@@ -119,25 +133,19 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
   const [labelsExpanded, setLabelsExpanded] = React.useState(true);
   const [isRefreshingQuota, setIsRefreshingQuota] = React.useState(false);
   const [isLabelManagerOpen, setIsLabelManagerOpen] = React.useState(false);
-  const [isLabelSettingsOpen, setIsLabelSettingsOpen] = React.useState(false);
+  const [labelManagerMode, setLabelManagerMode] = React.useState<'filter' | 'pick' | 'manage'>('manage');
 
-  // Fetch labels and refresh quota when component mounts or account changes
+  // Only fetch labels if we don't have any yet (lazy loading)
   React.useEffect(() => {
-    if (isAuthenticated && currentAccountId) {
+    if (isAuthenticated && currentAccountId && labels.length === 0) {
       const currentAccount = getCurrentAccount();
       const hasAuthError = currentAccount?.syncStatus === 'error' && currentAccount?.errorMessage?.includes('Authentication');
       
       // Don't auto-refresh if account has authentication errors
       if (!hasAuthError) {
-        logger.debug('🏷️ [SIDEBAR] Fetching labels for account:', currentAccountId);
+        logger.debug('🏷️ [SIDEBAR] No labels loaded, fetching for account:', currentAccountId);
         fetchLabels(currentAccountId).catch(error => {
           logger.error('🏷️ [SIDEBAR] Failed to fetch labels:', error);
-        });
-        
-        // Also refresh account quota to get latest values
-        logger.debug('💾 [SIDEBAR] Refreshing quota for account:', currentAccountId);
-        refreshAccount(currentAccountId).catch(error => {
-          logger.error('💾 [SIDEBAR] Failed to refresh quota:', error);
         });
       } else {
         logger.warn('⚠️ [SIDEBAR] Skipping auto-refresh due to authentication error for account:', currentAccountId);
@@ -210,7 +218,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
     ...(hasSnoozedLabel ? [{ id: 'snoozed', name: 'Snoozed', icon: Clock, count: getLabelCount('SNOOZED') }] : []),
     { id: 'sent', name: 'Sent', icon: Send, count: getLabelCount('SENT') },
     { id: 'drafts', name: 'Drafts', icon: FileText, count: getLabelCount('DRAFT') },
-    { id: 'all', name: 'All Mail', icon: Archive },
+    { id: 'all', name: 'All mail', icon: Archive },
     { id: 'spam', name: 'Spam', icon: AlertTriangle, count: getLabelCount('SPAM') },
     { id: 'trash', name: 'Trash', icon: Trash2, count: getLabelCount('TRASH') },
   ];
@@ -426,11 +434,13 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     >
                       {folder.name}
                     </Text>
-                    {folder.count && folder.count > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {folder.count}
-                      </Badge>
-                    )}
+                    <div className="flex items-center justify-center min-w-[24px]">
+                      {folder.count && folder.count > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {folder.count}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -469,21 +479,10 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     className="size-8 text-primary hover:text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
+                      setLabelManagerMode('manage');
                       setIsLabelManagerOpen(true);
                     }}
-                    title="Create new label"
-                  >
-                    <Plus size={18} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 text-primary hover:text-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsLabelSettingsOpen(true);
-                    }}
-                    title="Label settings"
+                    title="Manage labels"
                   >
                     <Settings size={18} />
                   </Button>
@@ -529,11 +528,13 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                             >
                               {label.name}
                             </Text>
-                            {label.threadsUnread && label.threadsUnread > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {label.threadsUnread}
-                              </Badge>
-                            )}
+                            <div className="flex items-center justify-center min-w-[24px]">
+                              {label.threadsUnread && label.threadsUnread > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {label.threadsUnread}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </Card>
@@ -566,8 +567,9 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
         )}
       </div>
 
-      {/* Label Management Modals */}
-      <LabelManager
+      {/* Streamlined Label Manager */}
+      <StreamlinedLabelManager
+        mode={labelManagerMode}
         isOpen={isLabelManagerOpen}
         onClose={() => setIsLabelManagerOpen(false)}
         onLabelCreated={(label) => {
@@ -590,15 +592,6 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
           if (currentAccountId) {
             fetchLabels(currentAccountId);
           }
-        }}
-      />
-
-      <LabelSettings
-        isOpen={isLabelSettingsOpen}
-        onClose={() => setIsLabelSettingsOpen(false)}
-        onSettingsChange={(settings) => {
-          logger.debug('Label settings changed:', settings);
-          // Handle label settings change
         }}
       />
 

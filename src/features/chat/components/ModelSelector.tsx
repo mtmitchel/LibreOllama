@@ -19,8 +19,8 @@ export function ModelSelector() {
     fetchAvailableModels();
   }, [fetchAvailableModels]);
 
-  const handleModelSelect = (modelName: string) => {
-    setSelectedModel(modelName);
+  const handleModelSelect = async (modelName: string) => {
+    await setSelectedModel(modelName);
   };
 
   const handleRefreshModels = (e: React.MouseEvent) => {
@@ -30,13 +30,13 @@ export function ModelSelector() {
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 text-destructive">
+      <div className="text-destructive flex items-center gap-2">
         <span className="text-sm">Failed to load models</span>
         <Button
           variant="ghost"
           size="icon"
           onClick={handleRefreshModels}
-          className="h-6 w-6"
+          className="size-6"
           title="Retry loading models"
         >
           <RefreshCw size={14} />
@@ -62,7 +62,7 @@ export function ModelSelector() {
           variant="ghost"
           size="icon"
           onClick={handleRefreshModels}
-          className="h-6 w-6"
+          className="size-6"
           title="Refresh models"
         >
           <RefreshCw size={14} />
@@ -71,7 +71,7 @@ export function ModelSelector() {
     );
   }
 
-  const currentModel = availableModels.find(model => model.name === selectedModel);
+  const currentModel = availableModels.find(model => (model.id || model.name) === selectedModel);
   const displayName = currentModel?.name || 'Select Model';
 
   return (
@@ -79,7 +79,7 @@ export function ModelSelector() {
       <DropdownMenu.Trigger asChild>
         <Button
           variant="ghost"
-          className="flex items-center gap-2 h-8 px-3 text-sm font-medium"
+          className="flex h-8 items-center gap-2 px-3 text-sm font-medium"
           title={`Current model: ${displayName}`}
         >
           <span className="max-w-32 truncate">{displayName}</span>
@@ -88,34 +88,34 @@ export function ModelSelector() {
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Content className="w-64">
-        <div className="flex items-center justify-between px-2 py-1.5 text-xs font-medium text-secondary border-b border-border-default">
+        <div className="border-border-default flex items-center justify-between border-b px-2 py-1.5 text-xs font-medium text-secondary">
           <span>Available Models</span>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleRefreshModels}
-            className="h-5 w-5"
+            className="size-5"
             title="Refresh models"
           >
             <RefreshCw size={12} />
           </Button>
         </div>
         
-        {availableModels.map((model) => (
+        {availableModels.map((model, index) => (
           <DropdownMenu.Item
-            key={model.name}
-            onSelect={() => handleModelSelect(model.name)}
+            key={`${model.provider}-${model.id || model.name}-${index}`}
+            onSelect={() => handleModelSelect(model.id || model.name)}
             className={`${
-              selectedModel === model.name 
+              selectedModel === (model.id || model.name)
                 ? 'bg-accent text-accent-foreground' 
                 : ''
             }`}
           >
-            <div className="flex flex-col items-start gap-1 w-full">
-              <div className="flex items-center justify-between w-full">
-                <span className="font-medium truncate">{model.name}</span>
-                {selectedModel === model.name && (
-                  <div className="w-2 h-2 bg-primary rounded-full" />
+            <div className="flex w-full flex-col items-start gap-1">
+              <div className="flex w-full items-center justify-between">
+                <span className="truncate font-medium">{model.name}</span>
+                {selectedModel === (model.id || model.name) && (
+                  <div className="size-2 rounded-full bg-primary" />
                 )}
               </div>
               {model.parameter_size && (

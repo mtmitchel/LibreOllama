@@ -1,34 +1,48 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import BlockNoteEditor from '../components/BlockNoteEditor';
 
-// Mock the BlockNote packages - much simpler than Tiptap mocking
+// Mock the BlockNote packages
 vi.mock('@blocknote/react', () => ({
-  useCreateBlockNote: vi.fn(),
-  BlockNoteView: (props: any) => <div data-testid="blocknote-view" {...props} />,
+  useCreateBlockNote: vi.fn(() => {
+    // Return a mock editor object that is immediately available
+    return {
+      onEditorContentChange: vi.fn(() => vi.fn()), // Mock onEditorContentChange to return a cleanup function
+      topLevelBlocks: [{ type: 'paragraph', content: 'Mock initial content' }], // Provide mock content
+      getTextCursorPosition: vi.fn(() => ({ block: { id: 'mock-block-id' } })), // For slash commands
+      insertBlocks: vi.fn(), // For slash commands
+      replaceBlocks: vi.fn(), // Added missing method
+      focus: vi.fn(), // For focus operations
+      destroy: vi.fn(), // For editor cleanup
+      // Add other necessary editor properties/methods as needed for tests
+    };
+  }),
 }));
 
-vi.mock('@blocknote/mantine', () => ({
-  BlockNoteView: ({ editor, editable }: any) => (
-    <div 
-      data-testid="blocknote-view"
-      data-editable={editable}
-      contentEditable={editable}
-      onInput={(e: any) => {
-        // Simulate content change
-        const content = e.target.textContent || '';
-        // Trigger the editor's onChange with mock block data
-        if (editor?.onEditorContentChange) {
-          const mockBlocks = content ? [{ type: 'paragraph', content }] : [];
-          // We'll simulate this in the test instead
-        }
-      }}
-    >
-      {editor ? 'BlockNote Editor Ready' : 'Loading...'}
-    </div>
-  ),
-}));
+vi.mock('@blocknote/mantine', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    BlockNoteView: ({ editor, editable, theme }: any) => (
+      <div
+        data-testid="blocknote-view"
+        data-editable={editable}
+        data-theme={theme ? theme.name : 'default'}
+        contentEditable={editable}
+        onInput={(e: any) => {
+          // Simulate content change by calling the mocked onEditorContentChange callback
+          if (editor?.onEditorContentChange && editor.onEditorContentChange.mock.calls.length > 0) {
+            // The actual callback is the first argument of the first call to onEditorContentChange
+            editor.onEditorContentChange.mock.calls[0][0]();
+          }
+        }}
+      >
+        {editor ? 'BlockNote Editor Ready' : 'Loading...'}
+      </div>
+    ),
+  };
+});
 
 describe('BlockNote Editor Tests', () => {
   const mockOnChange = vi.fn();

@@ -264,6 +264,7 @@ function AttachmentList({ attachments }: AttachmentListProps) {
 export function MessageView() {
   const { currentMessage, startCompose } = useMailStore();
   const [isHeaderExpanded, setIsHeaderExpanded] = React.useState(false);
+  const [showImages, setShowImages] = React.useState(false);
 
   if (!currentMessage) {
     return (
@@ -316,9 +317,9 @@ export function MessageView() {
   };
 
   return (
-    <div className="border-border-default m-2 flex flex-1 flex-col overflow-hidden rounded-lg border bg-tertiary shadow-sm">
+    <div className="flex h-full flex-col overflow-hidden bg-white">
       {/* Message Header */}
-      <div className="rounded-t-lg bg-tertiary">
+      <div className="shrink-0 border-b border-border-default bg-tertiary">
         <MessageHeader
           message={currentMessage}
           isExpanded={isHeaderExpanded}
@@ -327,31 +328,72 @@ export function MessageView() {
       </div>
 
       {/* Attachments */}
-      <AttachmentList attachments={currentMessage.attachments} />
+      {currentMessage.attachments && currentMessage.attachments.length > 0 && (
+        <div className="shrink-0 border-b border-border-default">
+          <AttachmentList attachments={currentMessage.attachments} />
+        </div>
+      )}
 
-      {/* Enhanced Message Content */}
-      <div className="flex-1 overflow-y-auto bg-tertiary">
-        <div className="p-4">
+      {/* Image Loading Option */}
+      {!showImages && (
+        <div className="shrink-0 border-b border-border-default bg-yellow-50 px-4 py-2">
+          <div className="flex items-center justify-between">
+            <Text size="sm" variant="secondary">
+              Images are blocked for security
+            </Text>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowImages(true)}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              Show images
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Message Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto bg-white">
+        <div className="p-6">
           <EnhancedMessageRenderer 
             message={currentMessage}
-            enableImageLoading={false} // Security: images blocked by default
+            enableImageLoading={showImages}
             enableLinkPreview={false}
             showRawSource={false}
           />
         </div>
       </div>
 
-      {/* Enhanced Action Buttons */}
-      <div 
-        className="border-border-default rounded-b-lg border-t bg-secondary p-3"
-      >
-        <EnhancedMessageActions 
-          message={currentMessage}
-          showAllActions={true}
-          onReply={handleReply}
-          onReplyAll={handleReplyAll}
-          onForward={handleForward}
-        />
+      {/* Compact Action Buttons */}
+      <div className="shrink-0 border-t border-border-default bg-tertiary px-4 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleReply} className="text-primary hover:bg-hover">
+              <Reply size={16} className="mr-1" />
+              Reply
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleReplyAll} className="text-primary hover:bg-hover">
+              <ReplyAll size={16} className="mr-1" />
+              Reply all
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleForward} className="text-primary hover:bg-hover">
+              <Forward size={16} className="mr-1" />
+              Forward
+            </Button>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="size-8 text-secondary hover:text-primary" title="Print">
+              <Printer size={16} />
+            </Button>
+            <Button variant="ghost" size="icon" className="size-8 text-secondary hover:text-primary" title="Archive">
+              <Archive size={16} />
+            </Button>
+            <Button variant="ghost" size="icon" className="size-8 text-secondary hover:text-primary" title="Delete">
+              <Trash2 size={16} />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

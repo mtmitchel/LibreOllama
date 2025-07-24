@@ -143,7 +143,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loadingText?: string;
 }
 
-export function Button({
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   className = '',
   variant = 'secondary',
   size = 'default',
@@ -153,7 +153,7 @@ export function Button({
   disabled,
   'aria-label': ariaLabel,
   ...props
-}: ButtonProps) {
+}, ref) => {
   const baseClasses = 'inline-flex items-center justify-center gap-2 border-none rounded-md font-sans font-medium leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-primary';
   
   const variantClasses = {
@@ -173,13 +173,19 @@ export function Button({
 
   const isDisabled = disabled || isLoading;
   
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    props.onClick?.(e);
+  };
+
   return (
     <button
+      ref={ref}
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${isLoading ? 'cursor-not-allowed' : ''} ${className}`.trim()}
       disabled={isDisabled}
       aria-disabled={isDisabled}
       aria-label={ariaLabel}
       {...props}
+      onClick={handleClick}
     >
       {isLoading && (
         <div
@@ -190,7 +196,9 @@ export function Button({
       {isLoading ? (loadingText || 'Loading...') : children}
     </button>
   );
-}
+});
+
+Button.displayName = 'Button';
 
 // Input Component - Uses Tailwind utilities with design system variables
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -469,7 +477,7 @@ interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   children: React.ReactNode;
 }
 
-export function LoadingButton({ 
+export const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(({ 
   isLoading = false, 
   loadingText,
   variant = 'primary',
@@ -478,9 +486,10 @@ export function LoadingButton({
   className = '',
   disabled,
   ...props 
-}: LoadingButtonProps) {
+}, ref) => {
   return (
     <Button
+      ref={ref}
       variant={variant}
       size={size}
       disabled={isLoading || disabled}
@@ -491,7 +500,9 @@ export function LoadingButton({
       {isLoading ? (loadingText || 'Loading...') : children}
     </Button>
   );
-}
+});
+
+LoadingButton.displayName = 'LoadingButton';
 
 // Loading State Component
 interface LoadingStateProps {
@@ -1106,3 +1117,11 @@ export { ToggleRow, ToggleGroup, ToggleCard } from './ToggleRow';
 
 // Export the Tooltip components
 export { Tooltip, TooltipTrigger, TruncatedText } from './Tooltip';
+
+// Export the Kanban components
+export { KanbanBoard, KanbanColumn, KanbanTaskCard, CreateTaskModal, EditTaskModal, TaskListView } from '../kanban';
+
+// Export other UI components
+export { ContextMenu } from './ContextMenu';
+export { ConfirmDialog } from './ConfirmDialog';
+export { SyncStatus } from '../SyncStatus';

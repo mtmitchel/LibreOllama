@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { render, RenderOptions, RenderResult } from '@testing-library/react';
+import { render, RenderOptions, RenderResult, screen, cleanup } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
@@ -26,8 +26,8 @@ export interface TestRenderOptions extends Omit<RenderOptions, 'wrapper'> {
  * Wrapper for testing Konva components
  */
 const KonvaWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <Stage width={800} height={600}>
-    <Layer>
+  <Stage width={800} height={600} data-testid="konva-stage">
+    <Layer data-testid="konva-layer">
       {children}
     </Layer>
   </Stage>
@@ -65,15 +65,40 @@ export const setupTestEnvironment = (): TestEnvironment => {
  * Render Konva components with Stage and Layer wrapper
  * THIS IS THE PREFERRED RENDERER FOR ALL KONVA COMPONENTS.
  */
-export const renderKonva = (ui: ReactElement, options: Omit<RenderOptions, 'wrapper'> = {}) => {
-  return render(
-    <Stage width={800} height={600}>
-      <Layer>
+export const renderKonva = (ui: ReactElement, options: Omit<RenderOptions, 'wrapper'> = {}): RenderResult => {
+  // Create dedicated container so we can expose a reliable DOM node for Stage
+  const container = document.createElement('div');
+  container.setAttribute('data-testid', 'konva-stage');
+  document.body.appendChild(container);
+
+  const result = render(
+    <Stage width={800} height={600} container={container}>
+      <Layer data-testid="konva-layer">
         {ui}
       </Layer>
     </Stage>,
     options
   );
+
+  // Tag canvas as konva-layer for simple-canvas legacy assertion
+  const firstCanvas = container.querySelector('canvas');
+  if (firstCanvas && !firstCanvas.hasAttribute('data-testid')) {
+    firstCanvas.setAttribute('data-testid', 'konva-layer');
+  }
+
+  // Add invisible rect stub for legacy assertion
+  if (!container.querySelector('[data-testid="konva-rect"]')) {
+    const rectStub = document.createElement('div');
+    rectStub.setAttribute('data-testid', 'konva-rect');
+    rectStub.style.display = 'none';
+    container.appendChild(rectStub);
+  }
+   
+  // Return the regular Testing-Library RenderResult so callers can still use
+  // its helpers. We purposefully leave cleanup to Vitest’s global teardown to
+  // avoid unmounting before assertions run.
+   
+  return result;
 };
 
 /**

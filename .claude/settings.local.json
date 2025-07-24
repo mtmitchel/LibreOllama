@@ -27,7 +27,15 @@
       "Bash(npm run type-check:*)",
       "Bash(npm run:*)",
       "Bash(mv:*)",
-      "Bash(tsc --noEmit)"
+      "Bash(tsc --noEmit)",
+      "Bash(cd \"C:\\Projects\\LibreOllama\")",
+      "Bash(npm run dev:tauri)",
+      "Bash(tail -20 \"C:\\Projects\\LibreOllama\\src-tauri\\src\\commands\\gmail\\auth.rs\")",
+      "Bash(cd src-tauri)",
+      "Bash(cargo build)",
+      "Bash(mkdir:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

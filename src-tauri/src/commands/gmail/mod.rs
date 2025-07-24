@@ -7,8 +7,10 @@ pub mod api;
 pub mod compose;
 pub mod sync;
 pub mod cache;
+pub mod migration;
 
 // Re-export all Gmail commands for easy access
 pub use auth::*;
 pub use api::*;
-pub use compose::*; 
+pub use compose::*;
+pub use migration::*; 

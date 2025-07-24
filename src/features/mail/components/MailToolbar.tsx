@@ -13,6 +13,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { Button, Text } from '../../../components/ui';
+import { Tooltip } from '../../../components/ui/Tooltip';
+import { Check } from 'lucide-react';
 import { useMailStore } from '../stores/mailStore';
 import { logger } from '../../../core/lib/logger';
 import { useShallow } from 'zustand/react/shallow';
@@ -48,6 +50,7 @@ export function MailToolbar() {
   
   const {
     totalMessages,
+    totalUnreadMessages,
     currentPage,
     currentPageStartIndex,
     messagesLoadedSoFar,
@@ -56,8 +59,13 @@ export function MailToolbar() {
     prevPage,
     nextPage,
     isNavigatingBackwards,
+    currentView,
+    currentLabel,
+    getLabels,
+    lastSyncTime,
   } = useMailStore(useShallow(state => ({
     totalMessages: state.totalMessages || 0,
+    totalUnreadMessages: state.totalUnreadMessages || 0,
     currentPage: state.currentPage,
     currentPageStartIndex: state.currentPageStartIndex,
     messagesLoadedSoFar: state.messagesLoadedSoFar,
@@ -66,7 +74,13 @@ export function MailToolbar() {
     prevPage: state.prevPage,
     nextPage: state.nextPage,
     isNavigatingBackwards: state.isNavigatingBackwards,
+    currentView: state.currentView,
+    currentLabel: state.currentLabel,
+    getLabels: state.getLabels,
+    lastSyncTime: state.lastSyncTime,
   })));
+  
+  const labels = getLabels();
 
   const messages = getMessages(); // Use the getMessages selector
   const selectedCount = selectedMessages.length;
@@ -129,9 +143,20 @@ export function MailToolbar() {
     }
   };
 
-  const start = currentPageStartIndex > 0 ? currentPageStartIndex - messages.length + 1 : 1;
-  const end = currentPageStartIndex > 0 ? currentPageStartIndex : messages.length;
-  const displayTotal = totalMessages > 0 ? totalMessages : '...';
+  const formatLastSync = (date: Date | null) => {
+    if (!date) return 'Never synced';
+    
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
 
   return (
     <div className="flex items-center justify-between gap-2 bg-tertiary px-4 py-3">
@@ -161,6 +186,13 @@ export function MailToolbar() {
         >
           <RefreshCw size={16} className={isLoadingMessages ? 'animate-spin' : ''} />
         </Button>
+
+        {/* Sync Status Indicator */}
+        <Tooltip content={`Last sync: ${formatLastSync(lastSyncTime)}`} position="bottom" delay={100}>
+          <div className="flex items-center text-success">
+            <Check size={16} />
+          </div>
+        </Tooltip>
 
         {/* Action Buttons - Only show when messages are selected */}
         {selectedCount > 0 && (
@@ -256,14 +288,77 @@ export function MailToolbar() {
             const start = messagesLoadedSoFar + 1;
             const end = messagesLoadedSoFar + messages.length;
             
-            // CLARIFIED LOGIC: Always use totalMessages for "of X" to represent the total count being paginated
-            // This should represent the total messages in the current view/label, not unread count
-            let displayTotal: string | number = totalMessages;
+            // For INBOX, show the unread thread count
+            // For other labels/views, show the total messages
+            let displayTotal: string | number;
             
-            // Fallback logic if totalMessages is not available
+            // Debug logging to understand the issue
+            console.log('🔍 [MAIL_TOOLBAR] Pagination Debug:', {
+              currentView,
+              currentLabel,
+              totalMessages,
+              totalUnreadMessages,
+              labelsCount: labels?.length || 0,
+              inboxLabel: labels?.find(label => label.id === 'INBOX'),
+            });
+            
+            // Determine which label/view is currently selected
+            const selectedLabelId = currentLabel || currentView;
+            
+            // IMPORTANT: The pagination should show different counts based on the view
+            // - For INBOX: Show threadsUnread (conversations with unread messages)
+            // - For other labels: Show messagesTotal (total messages in that label)
+            // - For currentLabel (user labels): Use the label's count
+            
+            if (selectedLabelId === 'INBOX') {
+              // Get the INBOX label to access its counts
+              const inboxLabel = labels.find(label => label.id === 'INBOX');
+              
+              // For INBOX, we want to show threadsUnread (unread conversations)
+              // NOT messagesTotal (total messages)
+              displayTotal = inboxLabel?.threadsUnread || totalUnreadMessages || 0;
+              
+              console.log('📊 [MAIL_TOOLBAR] INBOX displayTotal calculation:', {
+                selectedLabelId,
+                inboxLabel,
+                threadsUnread: inboxLabel?.threadsUnread,
+                messagesTotal: inboxLabel?.messagesTotal,
+                totalUnreadMessages,
+                totalMessages,
+                displayTotal,
+                decision: `Using threadsUnread: ${inboxLabel?.threadsUnread}`
+              });
+            } else if (currentLabel) {
+              // For user-selected labels, show that label's total
+              const selectedLabel = labels.find(label => label.id === currentLabel);
+              displayTotal = selectedLabel?.messagesTotal || totalMessages;
+              console.log('📊 [MAIL_TOOLBAR] User label displayTotal:', {
+                currentLabel,
+                selectedLabel,
+                messagesTotal: selectedLabel?.messagesTotal,
+                displayTotal
+              });
+            } else {
+              // For other system views (SENT, DRAFT, etc.), use totalMessages
+              displayTotal = totalMessages;
+              console.log('📊 [MAIL_TOOLBAR] System view displayTotal:', {
+                selectedLabelId,
+                totalMessages,
+                displayTotal
+              });
+            }
+            
+            // Fallback logic if displayTotal is not available
             if (!displayTotal || displayTotal <= 0) {
               displayTotal = nextPageToken ? `${end}+` : end.toString();
             }
+            
+            console.log('🎯 [MAIL_TOOLBAR] Final pagination display:', {
+              start,
+              end,
+              displayTotal,
+              returnValue: `${start}-${end} of ${displayTotal}`
+            });
             
             return `${start}-${end} of ${displayTotal}`;
           })()}

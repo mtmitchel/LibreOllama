@@ -8,9 +8,11 @@ import {
   EventDropArg,
   EventApi
 } from '@fullcalendar/core';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, Search, ListChecks, CheckCircle, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, Search, ListChecks, CheckCircle, ChevronDown, Edit2, Copy, Trash2, CheckSquare } from 'lucide-react';
 
 import { Button, Card, Text, Heading, Input } from '../../components/ui';
+import { ContextMenu } from '../../components/ui/ContextMenu';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 import { useGoogleTasksStore } from '../../stores/googleTasksStore';
 import { useHeader } from '../contexts/HeaderContext';
@@ -180,7 +182,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
   return (
     <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto">
-        <Card className="w-full">
+        <Card className="w-full !bg-bg-primary" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 p-6">
             <Heading level={2} className="text-lg font-semibold">
@@ -464,7 +466,7 @@ const ScheduleTaskModal = ({
 
   return (
     <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md !bg-bg-primary" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 p-6">
             <div className="flex items-center justify-between">
@@ -669,6 +671,9 @@ export default function Calendar() {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventApi | null>(null);
   const [currentViewTitle, setCurrentViewTitle] = useState<string>('Calendar');
+  const [editingTask, setEditingTask] = useState<GoogleTask | null>(null);
+  const [showDeleteTaskDialog, setShowDeleteTaskDialog] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<GoogleTask | null>(null);
 
   const {
     taskLists,
@@ -677,6 +682,8 @@ export default function Calendar() {
     error: tasksError,
     fetchTaskLists,
     createTask: createGoogleTask,
+    updateTask: updateGoogleTask,
+    deleteTask: deleteGoogleTask,
     toggleTaskComplete,
     authenticate: authenticateTasks,
     isAuthenticated: isTasksAuthenticated,
@@ -821,12 +828,31 @@ export default function Calendar() {
     setShowEventModal(true);
   };
 
-  const handleTaskDrop = (info: DropArg) => {
+  const handleTaskDrop = async (info: DropArg) => {
     if (info.draggedEl.getAttribute('data-task')) {
       const task: GoogleTask = JSON.parse(info.draggedEl.getAttribute('data-task') || '{}');
-      setSelectedTaskForScheduling(task);
-      setSelectedScheduleDate(info.date);
-      setShowScheduleModal(true);
+      
+      // Find which task list this task belongs to
+      const taskListId = Object.keys(googleTasks).find(listId => 
+        googleTasks[listId].some(t => t.id === task.id)
+      );
+      
+      if (taskListId) {
+        try {
+          // Update the task with the new due date
+          const updatedTask = {
+            ...task,
+            due: info.date.toISOString()
+          };
+          
+          await updateGoogleTask(taskListId, task.id, updatedTask);
+          
+          // The calendar will automatically refresh since we're watching the googleTasks state
+        } catch (err) {
+          console.error('Failed to update task due date:', err);
+          setError('Failed to update task. Please try again.');
+        }
+      }
     }
   };
 
@@ -984,21 +1010,80 @@ export default function Calendar() {
 
   const handleTaskModalSubmit = async (data: { title: string; notes?: string; due?: string; metadata?: any }) => {
     try {
-      const targetTaskListId = selectedColumnId === 'all' ? taskLists[0]?.id : selectedColumnId;
-      
-      if (!targetTaskListId) {
-        devLog.debug('No task list available for creating task');
-        return;
-      }
+      if (editingTask) {
+        // Find which task list this task belongs to
+        const taskListId = Object.keys(googleTasks).find(listId => 
+          googleTasks[listId].some(t => t.id === editingTask.id)
+        );
+        
+        if (taskListId) {
+          await updateGoogleTask(taskListId, editingTask.id, {
+            ...editingTask,
+            title: data.title,
+            notes: data.notes,
+            due: data.due,
+          });
+        }
+      } else {
+        const targetTaskListId = selectedColumnId === 'all' ? taskLists[0]?.id : selectedColumnId;
+        
+        if (!targetTaskListId) {
+          devLog.debug('No task list available for creating task');
+          return;
+        }
 
-      await createGoogleTask(targetTaskListId, {
-        title: data.title,
-        notes: data.notes,
-        due: data.due,
-      });
+        await createGoogleTask(targetTaskListId, {
+          title: data.title,
+          notes: data.notes,
+          due: data.due,
+        });
+      }
       setShowTaskModal(false);
+      setEditingTask(null);
     } catch (error) {
-      devLog.error('Error creating task:', error);
+      devLog.error('Error creating/updating task:', error);
+    }
+  };
+
+  // Handle task deletion
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+    
+    try {
+      // Find which task list this task belongs to
+      const taskListId = Object.keys(googleTasks).find(listId => 
+        googleTasks[listId].some(t => t.id === taskToDelete.id)
+      );
+      
+      if (taskListId) {
+        await deleteGoogleTask(taskListId, taskToDelete.id);
+      }
+      
+      setShowDeleteTaskDialog(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      devLog.error('Error deleting task:', error);
+      setError('Failed to delete task. Please try again.');
+    }
+  };
+
+  // Handle task duplicate
+  const handleDuplicateTask = async (task: GoogleTask) => {
+    try {
+      const taskListId = Object.keys(googleTasks).find(listId => 
+        googleTasks[listId].some(t => t.id === task.id)
+      );
+      
+      if (taskListId) {
+        await createGoogleTask(taskListId, {
+          title: `${task.title} (Copy)`,
+          notes: task.notes,
+          due: task.due,
+        });
+      }
+    } catch (error) {
+      devLog.error('Error duplicating task:', error);
+      setError('Failed to duplicate task. Please try again.');
     }
   };
 
@@ -1060,15 +1145,17 @@ export default function Calendar() {
     <>
       {/* Google Calendar authentication now handled centrally in Settings */}
       
-      <div className="flex h-full gap-6 bg-content p-6">
+      <div className="flex h-full gap-6 bg-primary p-6">
         {/* Main Calendar Area */}
-        <div className="bg-bg-tertiary flex flex-1 flex-col rounded-lg">
-          <div className="flex flex-1 flex-col gap-6 p-6">
-            {/* Header */}
-            <div className="bg-bg-tertiary border-border-primary flex items-center justify-between rounded-lg border p-4">
-              <div className="flex items-center gap-4">
+        <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="flex flex-col gap-6 p-6 h-full">
+            {/* Consolidated Header */}
+            <div className="bg-bg-tertiary border-border-primary flex items-center gap-4 rounded-lg border p-3">
+              {/* Left side - Navigation and Title */}
+              <div className="flex items-center gap-3">
                 <Button 
                   variant="outline" 
+                  size="sm"
                   onClick={goToToday}
                   className="font-medium"
                 >
@@ -1077,125 +1164,114 @@ export default function Calendar() {
                 <div className="bg-bg-card border-border-primary flex items-center rounded-md border">
                   <Button 
                     variant="ghost" 
-                    size="sm" 
+                    size="icon"
                     onClick={() => navigateCalendar('prev')}
-                    className="border-border-primary rounded-r-none border-r"
+                    className="border-border-primary size-8 rounded-r-none border-r"
                   >
-                    <ChevronLeft size={18} />
+                    <ChevronLeft size={16} />
                   </Button>
                   <Button 
                     variant="ghost" 
-                    size="sm" 
+                    size="icon"
                     onClick={() => navigateCalendar('next')}
-                    className="rounded-l-none"
+                    className="size-8 rounded-l-none"
                   >
-                    <ChevronRight size={18} />
+                    <ChevronRight size={16} />
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CalendarIcon size={20} className="text-accent-primary" />
-                  <Heading level={2} className="text-text-primary text-xl font-semibold">
+                  <Text weight="semibold" className="text-text-primary">
                     {currentViewTitle}
-                  </Heading>
+                  </Text>
                   {isRefreshing && (
                     <div className="size-4 animate-spin rounded-full border-2 border-accent-primary border-t-transparent" />
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="border-border-primary flex items-center gap-1 rounded-lg border bg-card p-1 shadow-sm">
-                    <Button
-                        variant={view === 'dayGridMonth' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => changeView('dayGridMonth')}
-                        className="rounded-md font-medium"
-                    >
-                        Month
-                    </Button>
-                    <Button
-                        variant={view === 'timeGridWeek' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => changeView('timeGridWeek')}
-                        className="rounded-md font-medium"
-                    >
-                        Week
-                    </Button>
-                    <Button
-                        variant={view === 'timeGridDay' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => changeView('timeGridDay')}
-                        className="rounded-md font-medium"
-                    >
-                        Day
-                    </Button>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="flex items-center gap-2 font-medium"
-                >
-                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-                  <span>Refresh</span>
-                </Button>
-                <Button 
-                  variant="primary" 
-                  onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
-                  className="font-medium shadow-sm"
-                >
-                  <Plus size={16} className="mr-2" />
-                  New event
-                </Button>
-              </div>
-            </div>
 
-            {/* Search Bar and Filters */}
-            <div className="bg-bg-card border-border-primary flex items-center gap-4 rounded-lg border p-3">
-              <div className="relative flex-1">
-                <Search size={16} className="text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
+              {/* Center - Search */}
+              <div className="relative flex-1 max-w-md">
+                <Search size={14} className="text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
                   type="search"
-                  placeholder="Search events and tasks..."
+                  placeholder="Search events..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-bg-tertiary border-border-secondary pl-10 pr-4 transition-colors focus:border-accent-primary"
+                  className="bg-bg-card border-border-secondary text-text-primary h-8 w-full rounded-md border pl-9 pr-3 text-sm transition-colors focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                 />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={showTasksInCalendar ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => setShowTasksInCalendar(!showTasksInCalendar)}
-                  className="flex items-center gap-2 font-medium"
-                >
-                  <ListChecks size={16} />
-                  {showTasksInCalendar ? 'Hide tasks' : 'Show tasks'}
-                </Button>
-                
-                {(view === 'timeGridWeek' || view === 'timeGridDay') && (
-                  <Button
-                    variant={compactMode ? 'secondary' : 'outline'}
-                    size="sm"
-                    onClick={() => setCompactMode(!compactMode)}
-                    className="flex items-center gap-2 font-medium"
-                  >
-                    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                    {compactMode ? 'Normal' : 'Compact'}
-                  </Button>
-                )}
-                
                 {searchQuery && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => setSearchQuery('')}
-                    className="text-text-muted hover:text-text-primary"
+                    className="absolute right-1 top-1/2 size-6 -translate-y-1/2 text-text-muted hover:text-text-primary"
                   >
-                    <X size={16} />
+                    <X size={12} />
                   </Button>
                 )}
+              </div>
+
+              {/* Right side - View toggles and actions */}
+              <div className="flex items-center gap-2">
+                <div className="border-border-primary flex items-center gap-0.5 rounded-md border bg-card p-0.5">
+                  <Button
+                    variant={view === 'dayGridMonth' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => changeView('dayGridMonth')}
+                    className="h-7 rounded px-3 text-xs font-medium"
+                  >
+                    Month
+                  </Button>
+                  <Button
+                    variant={view === 'timeGridWeek' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => changeView('timeGridWeek')}
+                    className="h-7 rounded px-3 text-xs font-medium"
+                  >
+                    Week
+                  </Button>
+                  <Button
+                    variant={view === 'timeGridDay' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => changeView('timeGridDay')}
+                    className="h-7 rounded px-3 text-xs font-medium"
+                  >
+                    Day
+                  </Button>
+                </div>
+                
+                <Button
+                  variant={showTasksInCalendar ? 'secondary' : 'ghost'}
+                  size="icon"
+                  onClick={() => setShowTasksInCalendar(!showTasksInCalendar)}
+                  className="size-8"
+                  title={showTasksInCalendar ? 'Hide tasks' : 'Show tasks'}
+                >
+                  <ListChecks size={16} />
+                </Button>
+                
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="size-8"
+                  title="Refresh"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+                </Button>
+                
+                <div className="bg-border-default mx-1 h-6 w-px" />
+                
+                <Button 
+                  variant="primary" 
+                  size="sm"
+                  onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
+                  className="font-medium shadow-sm"
+                >
+                  <Plus size={14} className="mr-1.5" />
+                  New event
+                </Button>
               </div>
             </div>
 
@@ -1218,6 +1294,7 @@ export default function Calendar() {
             {/* Calendar */}
             <div 
               className={`calendar-wrapper relative flex-1 overflow-hidden ${compactMode ? 'calendar-compact' : ''}`}
+              style={{ minHeight: 0 }}
             >
               <FullCalendar
                 ref={calendarRef}
@@ -1226,7 +1303,7 @@ export default function Calendar() {
                 headerToolbar={false}
                 height="100%"
                 slotMinTime="06:00:00"
-                slotMaxTime="22:00:00"
+                slotMaxTime="24:00:00"
                 allDaySlot={true}
                 scrollTime="08:00:00"
                 slotDuration="00:30:00"
@@ -1245,9 +1322,19 @@ export default function Calendar() {
                   meridiem: 'short'
                 }}
                 dayHeaderFormat={{
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric'
+                  weekday: 'short'
+                }}
+                dayCellContent={(arg) => {
+                  const date = arg.date;
+                  const dayNum = date.getDate();
+                  const isFirstOfMonth = dayNum === 1;
+                  
+                  if (isFirstOfMonth) {
+                    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                    return `${monthName} ${dayNum}`;
+                  }
+                  
+                  return dayNum.toString();
                 }}
                 events={fullCalendarEvents}
                 eventContent={renderEventContent}
@@ -1417,52 +1504,55 @@ export default function Calendar() {
         </div>
 
         {/* Task Side Panel */}
-        <div className={`transition-all duration-300 ${showTaskPanel ? 'w-80' : 'w-0'} overflow-hidden`}>
-          <Card className="border-border-primary flex h-full flex-col border bg-card shadow-lg">
-            <div className="border-border-primary bg-bg-tertiary flex items-center justify-between border-b p-4">
-              <div className="flex items-center gap-2">
-                <ListChecks size={18} className="text-accent-primary" />
-                <Heading level={3} className="text-md text-text-primary font-semibold">
-                  Tasks
-                </Heading>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowTaskPanel(false)}
-                className="text-text-muted hover:text-text-primary"
-              >
-                <X size={16} />
-              </Button>
-            </div>
-            
-            {/* Task List Selector and New Task Button */}
-            <div className="border-border-primary bg-bg-secondary/30 space-y-3 border-b p-4">
-              <div className="relative">
-                <select
-                  value={selectedColumnId}
-                  onChange={(e) => setSelectedColumnId(e.target.value)}
-                  className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full appearance-none rounded-lg border p-3 pr-10 font-medium transition-colors focus:border-accent-primary focus:ring-2"
+        {showTaskPanel && (
+          <div className="w-80 shrink-0">
+            <div className="border-border-primary flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+              {/* Tasks Header */}
+              <div className="border-border-primary flex items-center justify-between border-b p-4">
+                <div className="flex items-center gap-2">
+                  <ListChecks size={18} className="text-accent-primary" />
+                  <Heading level={3} className="text-md text-text-primary font-semibold">
+                    Tasks
+                  </Heading>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowTaskPanel(false)}
+                  className="size-8"
                 >
-                  <option value="all">All Tasks</option>
-                  {taskLists.map(taskList => (
-                    <option key={taskList.id} value={taskList.id}>{taskList.title}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="text-text-muted pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
+                  <X size={16} />
+                </Button>
               </div>
-              <Button 
-                variant="primary" 
-                size="sm" 
-                onClick={handleCreateTask}
-                className="w-full font-medium shadow-sm"
-              >
-                <Plus size={16} className="mr-2" />
-                New task
-              </Button>
-            </div>
-            
-            <div ref={taskPanelRef} className="flex-1 space-y-2 overflow-y-auto p-4">
+              
+              {/* Task List Selector and New Task Button */}
+              <div className="border-border-primary bg-bg-secondary/30 space-y-3 border-b p-4">
+                <div className="relative">
+                  <select
+                    value={selectedColumnId}
+                    onChange={(e) => setSelectedColumnId(e.target.value)}
+                    className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full appearance-none rounded-lg border p-3 pr-10 font-medium transition-colors focus:border-accent-primary focus:ring-2"
+                  >
+                    <option value="all">All Tasks</option>
+                    {taskLists.map(taskList => (
+                      <option key={taskList.id} value={taskList.id}>{taskList.title}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="text-text-muted pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
+                </div>
+                <Button 
+                  variant="primary" 
+                  size="sm" 
+                  onClick={handleCreateTask}
+                  className="w-full font-medium shadow-sm"
+                >
+                  <Plus size={16} className="mr-2" />
+                  New task
+                </Button>
+              </div>
+              
+              {/* Task List */}
+              <div ref={taskPanelRef} className="flex-1 space-y-2 overflow-y-auto p-4">
               {isTasksLoading ? (
                 <div className="py-8 text-center">
                   <div className="mx-auto mb-2 size-6 animate-spin rounded-full border-2 border-accent-primary border-t-transparent"></div>
@@ -1477,40 +1567,106 @@ export default function Calendar() {
                 <>
                   {filteredTasks.map(task => {
                     const isOverdue = task.due && new Date(task.due) < new Date() && task.status !== 'completed';
+                    const taskListId = Object.keys(googleTasks).find(listId => 
+                      googleTasks[listId].some(t => t.id === task.id)
+                    );
                     
                     return (
-                      <Card 
-                        key={task.id} 
-                        className={`draggable-task bg-bg-card border-border-primary group cursor-grab rounded-lg border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-primary hover:shadow-md${
-                          isOverdue ? 'border-l-status-error border-l-4' : 'border-l-4 border-l-transparent'
-                        } ${task.status === 'completed' ? 'opacity-60' : ''}`}
-                        data-task={JSON.stringify(task)}
+                      <ContextMenu
+                        key={task.id}
+                        items={[
+                          {
+                            label: 'Edit task',
+                            icon: <Edit2 size={14} />,
+                            onClick: () => {
+                              setEditingTask(task);
+                              setShowTaskModal(true);
+                            }
+                          },
+                          {
+                            label: task.status === 'completed' ? 'Mark as incomplete' : 'Mark as complete',
+                            icon: <CheckCircle size={14} />,
+                            onClick: async () => {
+                              if (taskListId) {
+                                await toggleTaskComplete(taskListId, task.id, task.status !== 'completed');
+                              }
+                            }
+                          },
+                          {
+                            separator: true
+                          },
+                          {
+                            label: 'Duplicate task',
+                            icon: <Copy size={14} />,
+                            onClick: () => handleDuplicateTask(task)
+                          },
+                          {
+                            separator: true
+                          },
+                          {
+                            label: 'Delete task',
+                            icon: <Trash2 size={14} />,
+                            onClick: () => {
+                              setTaskToDelete(task);
+                              setShowDeleteTaskDialog(true);
+                            },
+                            destructive: true
+                          }
+                        ]}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <Text size="sm" weight="medium" className="text-text-primary">
-                              {task.title}
-                            </Text>
-                            {task.due && (
-                                <Text size="xs" className={`mt-1 ${
-                                  isOverdue ? 'text-status-error' : 'text-text-muted'
-                                }`}>
-                                  Due: {new Date(task.due).toLocaleDateString()}
-                                </Text>
-                              )}
-                              {task.status === 'completed' && (
-                                <Text size="xs" className="mt-1 flex items-center gap-1 text-status-success">
-                                  <CheckCircle size={12}/> Completed
-                                </Text>
-                              )}
+                        <Card 
+                          className={`draggable-task bg-bg-card border-border-primary group cursor-grab rounded-lg border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-primary hover:shadow-md${
+                            isOverdue ? 'border-l-status-error border-l-4' : 'border-l-4 border-l-transparent'
+                          } ${task.status === 'completed' ? 'opacity-60' : ''}`}
+                          data-task={JSON.stringify(task)}
+                          onClick={(e) => {
+                            // Don't open edit modal if clicking on checkbox
+                            if ((e.target as HTMLElement).closest('button[data-checkbox]')) {
+                              return;
+                            }
+                            setEditingTask(task);
+                            setShowTaskModal(true);
+                          }}
+                        >
+                          <div className="flex gap-3">
+                            {/* Completion Checkbox */}
+                            <button
+                              data-checkbox
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (taskListId) {
+                                  await toggleTaskComplete(taskListId, task.id, task.status !== 'completed');
+                                }
+                              }}
+                              className={`
+                                flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center
+                                transition-colors duration-200
+                                ${task.status === 'completed' 
+                                  ? 'bg-success border-success text-white' 
+                                  : 'border-border-default hover:border-success'
+                                }
+                              `}
+                              title={task.status === 'completed' ? 'Mark as incomplete' : 'Mark as complete'}
+                            >
+                              {task.status === 'completed' && <CheckSquare size={12} />}
+                            </button>
+                            
+                            {/* Task Content */}
+                            <div className="flex-1">
+                              <Text size="sm" weight="medium" className={`text-text-primary ${task.status === 'completed' ? 'line-through' : ''}`}>
+                                {task.title}
+                              </Text>
+                              {task.due && (
+                                  <Text size="xs" className={`mt-1 ${
+                                    isOverdue ? 'text-status-error' : 'text-text-muted'
+                                  }`}>
+                                    Due: {new Date(task.due).toLocaleDateString()}
+                                  </Text>
+                                )}
+                            </div>
                           </div>
-                          <div className="text-text-muted ml-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                            <div className="size-1 rounded-full bg-current"></div>
-                            <div className="size-1 rounded-full bg-current"></div>
-                            <div className="size-1 rounded-full bg-current"></div>
-                          </div>
-                        </div>
-                      </Card>
+                        </Card>
+                      </ContextMenu>
                     );
                   })}
                   {filteredTasks.length === 0 && (
@@ -1526,9 +1682,10 @@ export default function Calendar() {
                   )}
                 </>
               )}
+              </div>
             </div>
-          </Card>
-        </div>
+          </div>
+        )}
       </div>
       
       {!showTaskPanel && (
@@ -1543,7 +1700,7 @@ export default function Calendar() {
       {/* Event Creation/Editing Modal */}
       {showEventModal && (
         <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg bg-card">
+          <Card className="w-full max-w-lg !bg-bg-primary" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <div className="space-y-4 p-6">
               <div className="flex items-center justify-between">
                 <Heading level={2} className="text-lg font-semibold">{editingEvent ? 'Edit event' : 'Create event'}</Heading>
@@ -1608,8 +1765,25 @@ export default function Calendar() {
 
       <SimpleTaskModal
         isOpen={showTaskModal}
-        onClose={() => setShowTaskModal(false)}
+        task={editingTask}
+        onClose={() => {
+          setShowTaskModal(false);
+          setEditingTask(null);
+        }}
         onSubmit={handleTaskModalSubmit}
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteTaskDialog}
+        onClose={() => {
+          setShowDeleteTaskDialog(false);
+          setTaskToDelete(null);
+        }}
+        onConfirm={handleDeleteTask}
+        title="Delete task"
+        message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        confirmVariant="destructive"
       />
     </>
   );

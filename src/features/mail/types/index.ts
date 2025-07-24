@@ -181,7 +181,7 @@ export interface GmailAccount {
   lastSyncAt?: Date;
   errorMessage?: string;
   quotaUsed?: number;
-  quotaTotal?: number;
+  quotaTotal?: number | null; // null for unlimited storage accounts
 }
 
 export interface AccountData {
@@ -312,6 +312,9 @@ export interface MailState {
   error: string | null;
   connectionStatus: 'connected' | 'disconnected' | 'connecting' | 'error';
   
+  // Sync state
+  lastSyncTime: Date | null;
+  
   // Settings
   settings: {
     enableUnifiedInbox: boolean;
@@ -352,6 +355,7 @@ export interface MailActions {
   switchAccount: (accountId: string) => void;
   refreshAccount: (accountId: string) => Promise<void>;
   syncAllAccounts: () => Promise<void>;
+  loadStoredAccounts: () => Promise<void>;
   
   // Authentication
   authenticate: (accountId?: string) => Promise<void>;
@@ -420,6 +424,9 @@ export interface MailActions {
   
   // Settings
   updateSettings: (settings: Partial<MailState['settings']>) => void;
+  
+  // Sync
+  setLastSyncTime: (time: Date) => void;
   
   // Error handling
   setError: (error: string | null) => void;

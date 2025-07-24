@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { invoke } from '@tauri-apps/api/core';
 import { 
   EnhancedMailStore, 
   MailState, 
@@ -18,7 +19,7 @@ import {
   LabelSettings,
 } from '../types';
 import { handleGmailError } from '../services/gmailErrorHandler';
-import { createGmailTauriService } from '../services/gmailTauriService';
+import { createGmailTauriService, getGmailAccounts } from '../services/gmailTauriService';
 import { searchService } from '../services/searchService';
 import { 
   SearchResult, 
@@ -104,6 +105,9 @@ const initialState: MailState = {
   // Error state
   error: null,
   connectionStatus: 'connected',
+  
+  // Sync state
+  lastSyncTime: null,
   
   // Settings
   settings: {
@@ -391,52 +395,56 @@ const useMailStore = create<EnhancedMailStore>()(
             try {
               logger.debug('[MAIL_STORE] Fetching storage quota from Google Drive API...');
               
-              // Create tokens object for quota fetch
-              const tokens = {
-                access_token: account.accessToken,
-                refresh_token: account.refreshToken,
-                expires_at: account.tokenExpiry ? account.tokenExpiry.toISOString() : new Date(Date.now() + 3600000).toISOString(), // 1 hour default if missing
-                token_type: 'Bearer' as const,
-              };
-              
-              const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=storageQuota(limit,usage,usageInDrive,usageInDriveTrash)', {
-                headers: {
-                  Authorization: `Bearer ${tokens.access_token}`,
-                  'Content-Type': 'application/json',
-                },
+              // Retrieve tokens securely from database (same method used by other APIs)
+              const secureTokens = await invoke<any>('get_gmail_tokens_secure', {
+                accountId: accountId
               });
-
-              if (!response.ok) {
-                logger.warn('[MAIL_STORE] Drive API not available, keeping existing quota values');
-              } else {
-                const data = await response.json();
-                logger.debug('[MAIL_STORE] Raw API response:', data);
-                const storageQuota = data.storageQuota;
+              
+              if (!secureTokens || !secureTokens.access_token) {
+                logger.warn('[MAIL_STORE] No access token found for quota fetch');
+                throw new Error('No access token available for quota fetch');
+              }
+              
+              logger.debug('[MAIL_STORE] Retrieved secure tokens for quota fetch');
+              logger.debug('[MAIL_STORE] Token length:', secureTokens.access_token?.length || 0);
+              
+              // Use Tauri command to fetch quota (avoids CORS issues)
+              try {
+                const quotaInfo = await invoke<{ used: number; total: number }>('get_google_drive_quota', {
+                  accessToken: secureTokens.access_token
+                });
                 
-                if (storageQuota) {
-                  const used = parseInt(storageQuota.usage || '0', 10);
-                  let total = parseInt(storageQuota.limit || '0', 10);
-                  
-                  // Some Google accounts (Workspace, Google One) don't return a limit
-                  if (!total || total < 0) {
-                    logger.warn('[MAIL_STORE] No limit returned by API, account may have custom quota');
-                    total = 0;
-                  }
+                logger.debug('[MAIL_STORE] Received quota info from Tauri command:', quotaInfo);
+                
+                if (quotaInfo) {
+                  // Normalize quota values to handle string responses and null values
+                  const normalizeQuotaValue = (value: any): number | null => {
+                    if (value === null || value === undefined || value === '') return null;
+                    const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
+                    return isNaN(numValue) ? null : numValue;
+                  };
+
+                  const used = normalizeQuotaValue(quotaInfo.used) || 0;
+                  const total = normalizeQuotaValue(quotaInfo.total);
                   
                   logger.debug('[MAIL_STORE] Storage quota parsed:', {
                     used: `${(used / (1024 * 1024 * 1024)).toFixed(1)} GB`,
-                    total: total > 0 ? `${(total / (1024 * 1024 * 1024)).toFixed(1)} GB` : 'Custom/Unlimited',
-                    percentage: total > 0 ? `${((used / total) * 100).toFixed(1)}%` : 'N/A',
+                    total: total !== null ? `${(total / (1024 * 1024 * 1024)).toFixed(1)} GB` : 'Unlimited',
+                    percentage: total !== null ? `${((used / total) * 100).toFixed(1)}%` : 'N/A',
+                    isUnlimited: total === null
                   });
                   
                   // Update account with new quota info
                   set((state) => {
                     if (state.accounts[accountId]) {
                       state.accounts[accountId].quotaUsed = used;
-                      state.accounts[accountId].quotaTotal = total;
+                      state.accounts[accountId].quotaTotal = total; // Can be null for unlimited
                     }
                   });
                 }
+              } catch (invokeError) {
+                logger.warn('[MAIL_STORE] Failed to invoke Tauri command for quota:', invokeError);
+                // Keep existing quota values if the command fails
               }
             } catch (quotaError) {
               console.warn('⚠️ [QUOTA] Failed to fetch quota info:', quotaError);
@@ -692,6 +700,14 @@ const useMailStore = create<EnhancedMailStore>()(
                 // Use threadsUnread instead of messagesUnread for conversation count
                 totalUnreadMessages = targetLabel.threadsUnread || 0;
                 logger.debug(`[MAIL_STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread conversations: ${totalUnreadMessages}`);
+                logger.debug(`[MAIL_STORE] Label details:`, {
+                  labelId: targetLabel.id,
+                  labelName: targetLabel.name,
+                  messagesTotal: targetLabel.messagesTotal,
+                  messagesUnread: targetLabel.messagesUnread,
+                  threadsTotal: targetLabel.threadsTotal,
+                  threadsUnread: targetLabel.threadsUnread
+                });
               } else if (result.result_size_estimate && result.result_size_estimate > 0) {
                 // Secondary: Use API's result_size_estimate (often inaccurate)
                 totalMessages = result.result_size_estimate;
@@ -744,7 +760,10 @@ const useMailStore = create<EnhancedMailStore>()(
                 tokensInStack: state.pageTokens.length,
                 totalMessages: state.totalMessages,
                 totalUnreadMessages: state.totalUnreadMessages,
-                currentMessages: result.messages.length
+                currentMessages: result.messages.length,
+                labelId: labelId || 'INBOX',
+                currentLabel: targetLabel?.name,
+                decision: targetLabel ? `Using label data for ${targetLabel.name}` : 'Using API estimate'
               });
               
               // No need for prevPageToken in token-based pagination
@@ -1756,11 +1775,107 @@ const useMailStore = create<EnhancedMailStore>()(
           });
         },
 
+        // Sync
+        setLastSyncTime: (time: Date) => {
+          set((state) => {
+            state.lastSyncTime = time;
+          });
+        },
+
         // Error handling
         setError: (error: string | null) => {
           set((state) => {
             state.error = error;
           });
+        },
+
+        // Load stored accounts on app startup
+        loadStoredAccounts: async () => {
+          logger.debug('🔄 [STORE] Loading stored accounts...');
+          set((state) => {
+            state.isLoadingAccounts = true;
+          });
+          
+          try {
+            const accounts = await getGmailAccounts('default_user');
+            logger.debug('🔄 [STORE] Received accounts from backend:', accounts);
+            if (accounts.length > 0) {
+              logger.debug(`✅ [STORE] Found ${accounts.length} stored accounts`);
+              
+              set((state) => {
+                // Clear existing accounts first
+                state.accounts = {};
+                
+                // Deduplicate accounts by email
+                const uniqueAccounts = new Map<string, typeof accounts[0]>();
+                accounts.forEach(account => {
+                  if (!uniqueAccounts.has(account.email)) {
+                    uniqueAccounts.set(account.email, account);
+                  } else {
+                    logger.warn(`[STORE] Duplicate account detected: ${account.email}, using first instance`);
+                  }
+                });
+                
+                // Add unique accounts to state
+                uniqueAccounts.forEach(account => {
+                  state.accounts[account.id] = {
+                    id: account.id,
+                    email: account.email,
+                    displayName: account.name || account.email || '',
+                    avatar: account.picture || '',
+                    accessToken: '', // Will be handled by backend
+                    refreshToken: '', // Will be handled by backend
+                    tokenExpiry: new Date(),
+                    isActive: account.is_active || false,
+                    syncStatus: 'idle',
+                    lastSyncAt: new Date(account.updated_at),
+                  };
+                  
+                  // Initialize account data structure if needed
+                  if (!state.accountData[account.id]) {
+                    state.accountData[account.id] = {
+                      messages: [],
+                      threads: [],
+                      labels: [],
+                      drafts: [],
+                      totalMessages: 0,
+                      unreadMessages: 0,
+                      lastSyncAt: new Date(),
+                      syncInProgress: false,
+                    };
+                  }
+                });
+                
+                // Restore current account or select first available
+                if (!state.currentAccountId || !state.accounts[state.currentAccountId]) {
+                  const firstActiveAccount = accounts.find(a => a.is_active);
+                  state.currentAccountId = firstActiveAccount?.id || accounts[0].id;
+                }
+                
+                state.isAuthenticated = true;
+                state.isLoadingAccounts = false;
+              });
+              
+              // Don't fetch data automatically - let pages load data when needed
+              logger.debug('✅ [STORE] Accounts loaded, skipping automatic data fetch for performance');
+            } else {
+              logger.debug('🔄 [STORE] No stored accounts found');
+              // No accounts found, clear auth state
+              set({ 
+                isAuthenticated: false, 
+                currentAccountId: null,
+                accounts: {},
+                isLoadingAccounts: false 
+              });
+            }
+          } catch (error) {
+            logger.error('❌ [STORE] Failed to load stored accounts:', error);
+            set({ 
+              isAuthenticated: false, 
+              error: 'Failed to restore authentication',
+              isLoadingAccounts: false 
+            });
+          }
         },
 
         clearError: () => {
@@ -1968,31 +2083,77 @@ const useMailStore = create<EnhancedMailStore>()(
         name: 'gmail-auth-storage', // name of the item in the storage (must be unique)
         storage: createJSONStorage(() => localStorage), // use localStorage
         partialize: (state) => ({ 
-          accounts: state.accounts,
+          // Don't persist accounts object as it contains sensitive data
+          // Only persist authentication state and current account ID
           currentAccountId: state.currentAccountId,
           isAuthenticated: state.isAuthenticated 
         }), // persist auth-related state
-        onRehydrateStorage: () => (state) => {
-          logger.debug('🔄 [STORE] Store hydrated from localStorage, setting isHydrated to true');
-          if (state) {
-            state.isHydrated = true;
-          } else {
-            // If no persisted state, still set hydrated to true after attempt
-            logger.debug('🔄 [STORE] No persisted state found, marking as hydrated');
-          }
-        },
+        skipHydration: true, // We'll manually control hydration
       }
     )
   )
 );
 
-// Fallback hydration trigger - ensure isHydrated is set to true even if persist doesn't work
-setTimeout(() => {
-  const state = useMailStore.getState();
-  if (!state.isHydrated) {
-    logger.debug('🔄 [STORE] Manual hydration fallback triggered');
-    useMailStore.setState({ isHydrated: true });
+// Initialize the store properly with async account loading
+export async function initializeMailStore() {
+  logger.debug('🔄 [STORE] Starting mail store initialization...');
+  
+  // Wait for Tauri to be ready
+  try {
+    if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+      logger.debug('🔄 [STORE] Tauri environment detected');
+    }
+  } catch (error) {
+    logger.warn('🔄 [STORE] Not in Tauri environment:', error);
   }
-}, 100);
+  
+  // Step 1: Rehydrate from localStorage
+  await useMailStore.persist.rehydrate();
+  logger.debug('🔄 [STORE] Rehydrated from localStorage');
+  
+  const state = useMailStore.getState();
+  
+  // Step 2: ALWAYS attempt to load accounts from backend
+  // The backend is the source of truth for account data
+  logger.debug('🔄 [STORE] Loading accounts from backend...');
+  try {
+    await state.loadStoredAccounts();
+    logger.debug('🔄 [STORE] Accounts loaded successfully');
+    
+    // If we have accounts but isAuthenticated is false, fix it
+    const accountIds = Object.keys(useMailStore.getState().accounts);
+    if (accountIds.length > 0) {
+      const currentState = useMailStore.getState();
+      if (!currentState.isAuthenticated) {
+        logger.debug('🔄 [STORE] Found accounts, setting authenticated state');
+        useMailStore.setState({ isAuthenticated: true });
+      }
+      
+      // If we have a currentAccountId that matches an account, keep it
+      // Otherwise set the first active account as current
+      if (!currentState.currentAccountId || !currentState.accounts[currentState.currentAccountId]) {
+        const activeAccount = accountIds.find(id => currentState.accounts[id].isActive);
+        if (activeAccount) {
+          logger.debug(`🔄 [STORE] Setting active account: ${activeAccount}`);
+          useMailStore.setState({ currentAccountId: activeAccount });
+        }
+      }
+    } else {
+      // No accounts found, ensure we're not authenticated
+      logger.debug('🔄 [STORE] No accounts found, clearing auth state');
+      useMailStore.setState({ 
+        isAuthenticated: false, 
+        currentAccountId: null 
+      });
+    }
+  } catch (error) {
+    logger.error('🔄 [STORE] Failed to load accounts:', error);
+    // Don't reset auth state here - let the UI handle the error
+  }
+  
+  // Step 3: Mark as hydrated only after everything is loaded
+  useMailStore.setState({ isHydrated: true });
+  logger.debug('🔄 [STORE] Mail store initialization complete');
+}
 
 export { useMailStore }; 

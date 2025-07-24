@@ -298,8 +298,8 @@ export function Tooltip({
             ${currentSizeClasses.padding}
             ${currentSizeClasses.text}
             ${currentVariantClasses}
-            border rounded-lg
-            whitespace-nowrap
+            whitespace-nowrap rounded-lg
+            border
             ${contentClassName}
           `}
           style={{

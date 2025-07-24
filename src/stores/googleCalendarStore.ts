@@ -5,6 +5,7 @@ import { GoogleCalendarEvent, GoogleAccount, CalendarEventCreateRequest } from '
 import { googleCalendarService } from '../services/google/googleCalendarService';
 import { logger } from '../core/lib/logger';
 import { useSettingsStore } from './settingsStore';
+import { getActiveAccount } from '../features/mail/stores/selectors';
 
 interface GoogleCalendarState {
   // Authentication
@@ -67,6 +68,29 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
 
         // Helper to get current account
         getCurrentAccount: (): GoogleAccount | null => {
+          // Try to get from mail store first (where accounts are properly loaded from backend)
+          const currentAccount = getActiveAccount();
+          
+          if (currentAccount) {
+            // Convert GmailAccount to GoogleAccount format
+            return {
+              id: currentAccount.id,
+              email: currentAccount.email,
+              name: currentAccount.displayName,
+              picture: currentAccount.avatar,
+              isActive: currentAccount.isActive,
+              accessToken: currentAccount.accessToken,
+              refreshToken: currentAccount.refreshToken,
+              expiresAt: currentAccount.tokenExpiry ? new Date(currentAccount.tokenExpiry).getTime() : Date.now() + 3600000,
+              scopes: {
+                calendar: true,
+                tasks: true,
+                mail: true
+              }
+            } as GoogleAccount;
+          }
+          
+          // Fallback to settings store
           const settingsState = useSettingsStore.getState();
           const account = settingsState.integrations.googleAccounts.find(acc => acc.isActive);
           return account ? account as unknown as GoogleAccount : null;
@@ -315,4 +339,11 @@ setTimeout(() => {
           logger.debug('[GOOGLE-CALENDAR] Manual hydration fallback triggered');
     useGoogleCalendarStore.setState({ isHydrated: true });
   }
-}, 100); 
+}, 100);
+
+// Initialize function for MailStoreProvider compatibility
+export async function initializeGoogleCalendarStore() {
+  logger.debug('[GOOGLE-CALENDAR] Initializing store...');
+  // The store uses automatic rehydration, so we just need to ensure it's ready
+  return Promise.resolve();
+} 

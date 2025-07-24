@@ -6,10 +6,11 @@
 // Available Mail Components
 export { MailErrorBoundary } from './MailErrorBoundary';
 export { MailLayout, MailSidebarLayout, MailThreeColumnLayout, MailFullLayout } from './MailLayout';
-export { MessageList } from './MessageList';
-export { VirtualizedMessageList } from './VirtualizedMessageList';
-export { InfiniteScrollMessageList } from './InfiniteScrollMessageList';
-export { ThreadedMessageList } from './ThreadedMessageList';
+// Archived components - replaced by EnhancedMessageList
+// export { MessageList } from './_archive/MessageList';
+// export { VirtualizedMessageList } from './_archive/VirtualizedMessageList';
+// export { InfiniteScrollMessageList } from './_archive/InfiniteScrollMessageList';
+// export { ThreadedMessageList } from './_archive/ThreadedMessageList';
 export { MailSidebar } from './MailSidebar';
 export { MessageView } from './MessageView';
 export { default as ComposeModal } from './ComposeModal';
@@ -20,10 +21,13 @@ export { MailContextSidebar } from './MailContextSidebar';
 export { default as LabelPicker } from './LabelPicker';
 export { default as LabelFilter } from './LabelFilter';
 export { MailToolbar } from './MailToolbar';
-export { GmailTauriTestComponent } from './GmailTauriTestComponent';
+// Test component - archived
+// export { GmailTauriTestComponent } from './_archive/GmailTauriTestComponent';
 export { default as SearchSuggestions } from './SearchSuggestions';
 export { default as SavedSearches } from './SavedSearches';
-export { default as UnifiedLabelManager } from './UnifiedLabelManager';
-export { default as LabelManager } from './LabelManager';
+// Archived - replaced by StreamlinedLabelManager
+// export { default as UnifiedLabelManager } from './_archive/UnifiedLabelManager';
+// export { default as LabelManager } from './_archive/LabelManager';
 export { default as LabelSettings } from './LabelSettings';
-export { ErrorDisplay, SuccessMessage, LoadingMessage } from './ErrorDisplay'; 
+export { ErrorDisplay, SuccessMessage, LoadingMessage } from './ErrorDisplay';
+export { MailStoreProvider } from './MailStoreProvider'; 

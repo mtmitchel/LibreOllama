@@ -36,7 +36,7 @@ class FakeDOMRectList extends Array implements DOMRectList {
     return this[index] || null;
   }
   
-  [Symbol.iterator](): Iterator<DOMRect, any, undefined> {
+  [Symbol.iterator](): ArrayIterator<DOMRect> {
     return super[Symbol.iterator]();
   }
 }
@@ -131,6 +131,7 @@ class MockSelection implements Selection {
   isCollapsed: boolean = true;
   rangeCount: number = 0;
   type: string = 'None';
+  direction: string = 'none';
 
   addRange(): void {}
   collapse(): void {}
@@ -223,37 +224,116 @@ global.IntersectionObserver = class IntersectionObserver {
 } as any;
 
 // Konva Canvas mocks
-global.HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation((contextType) => {
-  if (contextType === '2d') {
-    return {
-      fillRect: vi.fn(),
-      clearRect: vi.fn(),
-      getImageData: vi.fn(() => ({ data: new Array(4) })),
-      putImageData: vi.fn(),
-      createImageData: vi.fn(() => ({ data: new Array(4) })),
-      setTransform: vi.fn(),
-      drawImage: vi.fn(),
-      save: vi.fn(),
-      fillText: vi.fn(),
-      restore: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      closePath: vi.fn(),
-      stroke: vi.fn(),
-      translate: vi.fn(),
-      scale: vi.fn(),
-      rotate: vi.fn(),
-      arc: vi.fn(),
-      fill: vi.fn(),
-      measureText: vi.fn(() => ({ width: 0 })),
-      transform: vi.fn(),
-      rect: vi.fn(),
-      clip: vi.fn(),
-    };
-  }
-  return null;
+// Mock HTMLCanvasElement for Konva
+Object.defineProperty(global.HTMLCanvasElement.prototype, 'getContext', {
+  configurable: true,
+  value: vi.fn().mockImplementation((contextType) => {
+    if (contextType === '2d') {
+      return {
+        fillRect: vi.fn(),
+        clearRect: vi.fn(),
+        getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
+        putImageData: vi.fn(),
+        createImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
+        setTransform: vi.fn(),
+        drawImage: vi.fn(),
+        save: vi.fn(),
+        fillText: vi.fn(),
+        restore: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        closePath: vi.fn(),
+        stroke: vi.fn(),
+        translate: vi.fn(),
+        scale: vi.fn(),
+        rotate: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        measureText: vi.fn(() => ({ width: 0 })),
+        transform: vi.fn(),
+        rect: vi.fn(),
+        clip: vi.fn(),
+        quadraticCurveTo: vi.fn(), // Added missing method
+        arcTo: vi.fn(),          // Added missing method
+        bezierCurveTo: vi.fn(), // Added missing method
+      };
+    }
+    return null;
+  }),
 });
+
+// Add width and height properties to the prototype for Konva compatibility
+Object.defineProperty(global.HTMLCanvasElement.prototype, 'width', {
+  configurable: true,
+  value: 1000, // Provide a default reasonable value
+  writable: true,
+});
+
+Object.defineProperty(global.HTMLCanvasElement.prototype, 'height', {
+  configurable: true,
+  value: 1000, // Provide a default reasonable value
+  writable: true,
+});
+
+// Mock document.createElement to ensure canvas elements have mocked context
+const originalCreateElement = document.createElement;
+document.createElement = vi.fn((tagName: string) => {
+  if (tagName === 'canvas') {
+    const canvas = originalCreateElement.call(document, tagName);
+    // Ensure getContext is mocked for this specific canvas instance
+    Object.defineProperty(canvas, 'getContext', {
+      configurable: true,
+      value: vi.fn().mockImplementation((contextType: string) => {
+        if (contextType === '2d') {
+          return {
+            fillRect: vi.fn(),
+            clearRect: vi.fn(),
+            getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
+            putImageData: vi.fn(),
+            createImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
+            setTransform: vi.fn(),
+            drawImage: vi.fn(),
+            save: vi.fn(),
+            fillText: vi.fn(),
+            restore: vi.fn(),
+            beginPath: vi.fn(),
+            moveTo: vi.fn(),
+            lineTo: vi.fn(),
+            closePath: vi.fn(),
+            stroke: vi.fn(),
+            translate: vi.fn(),
+            scale: vi.fn(),
+            rotate: vi.fn(),
+            arc: vi.fn(),
+            fill: vi.fn(),
+            measureText: vi.fn(() => ({ width: 0 })),
+            transform: vi.fn(),
+            rect: vi.fn(),
+            clip: vi.fn(),
+            quadraticCurveTo: vi.fn(), // Added missing method
+            arcTo: vi.fn(),          // Added missing method
+            bezierCurveTo: vi.fn(), // Added missing method
+          };
+        }
+        return null;
+      }),
+    });
+    // Add width and height to the specific canvas instance as well
+    Object.defineProperty(canvas, 'width', {
+      configurable: true,
+      value: 1000,
+      writable: true,
+    });
+    Object.defineProperty(canvas, 'height', {
+      configurable: true,
+      value: 1000,
+      writable: true,
+    });
+    return canvas;
+  }
+  return originalCreateElement.call(document, tagName);
+}) as any;
 
 // Additional mocks for compatibility
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
@@ -322,7 +402,7 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 
 // Mock requestAnimationFrame for Konva
 global.requestAnimationFrame = vi.fn((callback) => {
-  return setTimeout(() => callback(Date.now()), 0);
+  return Number(setTimeout(() => callback(Date.now()), 0));
 });
 
 global.cancelAnimationFrame = vi.fn();

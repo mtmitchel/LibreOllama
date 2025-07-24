@@ -72,7 +72,7 @@ export const calloutBlock = createReactBlockSpec(
               color: style.text,
             }}
           >
-            {props.children}
+            {/* Inline content will be rendered here by BlockNote */}
           </div>
         </div>
       );
@@ -127,7 +127,7 @@ export const codeBlock = createReactBlockSpec(
               whiteSpace: 'pre-wrap',
             }}
           >
-            {props.children}
+            {/* Code content would be stored in block data */}
           </pre>
         </div>
       );

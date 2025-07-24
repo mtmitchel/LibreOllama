@@ -68,7 +68,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { useMailStore } from '../../features/mail/stores/mailStore';
 import { createTestMailStore } from '../../features/mail/stores/__tests__/mailStoreTestUtils';
-import { MessageList } from '../../features/mail/components/MessageList';
+import { EnhancedMessageList } from '../../features/mail/components/EnhancedMessageList';
 import { MessageView } from '../../features/mail/components/MessageView';
 import { ComposeModal } from '../../features/mail/components';
 import { MailSidebar } from '../../features/mail/components/MailSidebar';
@@ -354,7 +354,7 @@ describe('Gmail UI Integration Tests', () => {
   });
 
   describe('🧪 Component Integration', () => {
-    it('should render MessageList component', async () => {
+    it('should render EnhancedMessageList component', async () => {
       const testStore = createTestMailStore();
       const mockMessages = [
         createMockParsedEmail({ id: '1', subject: 'Test Email', sender: 'Test User <test@example.com>' }),
@@ -362,7 +362,7 @@ describe('Gmail UI Integration Tests', () => {
       
       testStore.setTestMessages(mockMessages, 'test-account-1');
       
-      render(<MessageList />, { wrapper: TestWrapper });
+      render(<EnhancedMessageList />, { wrapper: TestWrapper });
       
       await waitFor(() => {
         expect(screen.getByText('Test Email')).toBeInTheDocument();

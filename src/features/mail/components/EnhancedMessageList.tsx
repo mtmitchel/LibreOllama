@@ -53,6 +53,14 @@ export function EnhancedMessageList({
 
   const messages = getMessages();
 
+  // Load messages on mount if none exist
+  useEffect(() => {
+    if (messages.length === 0 && !isLoadingMessages && currentAccountId) {
+      logger.debug('[EnhancedMessageList] No messages loaded, fetching...');
+      useMailStore.getState().fetchMessages(undefined, undefined, undefined, currentAccountId);
+    }
+  }, [currentAccountId]); // Only depend on account ID to avoid re-fetching
+
   // Sync local selection with store
   useEffect(() => {
     setLocalSelectedMessages(selectedMessages);
@@ -223,8 +231,8 @@ export function EnhancedMessageList({
 
   return (
     <div className={`flex h-full flex-col ${className}`}>
-      {/* Action Bar */}
-      {showActionBar && (
+      {/* Action Bar - Only show when messages are selected */}
+      {showActionBar && localSelectedMessages.length > 0 && (
         <EmailActionBar
           selectedMessages={localSelectedMessages}
           onClearSelection={clearSelection}
@@ -232,58 +240,6 @@ export function EnhancedMessageList({
         />
       )}
 
-      {/* Toolbar */}
-      <div className="border-border-default flex items-center justify-between border-b bg-tertiary px-4 py-2">
-        {/* Sort and Filter Controls */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Text size="xs" variant="secondary">Sort by:</Text>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'date' | 'sender' | 'subject')}
-              className="border-border-default rounded border bg-primary px-2 py-1 text-xs"
-            >
-              <option value="date">Date</option>
-              <option value="sender">Sender</option>
-              <option value="subject">Subject</option>
-            </select>
-            
-            <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="border-border-default rounded border bg-primary px-2 py-1 text-xs hover:bg-secondary"
-            >
-              {sortOrder === 'asc' ? '↑' : '↓'}
-            </button>
-          </div>
-
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={filterUnread}
-              onChange={(e) => setFilterUnread(e.target.checked)}
-              className="size-4"
-            />
-            <Text size="xs" variant="secondary">Unread only</Text>
-          </label>
-        </div>
-
-        {/* Message Count and Refresh */}
-        <div className="flex items-center gap-4">
-          <Text size="xs" variant="secondary">
-            {processedMessages.length} of {totalMessages} messages
-          </Text>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isLoadingMessages}
-            className="p-1"
-          >
-            <RefreshCw size={16} className={isLoadingMessages ? 'animate-spin' : ''} />
-          </Button>
-        </div>
-      </div>
 
       {/* Message List */}
               <div className="flex-1 overflow-y-auto bg-content">

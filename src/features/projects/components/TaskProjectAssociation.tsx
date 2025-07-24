@@ -48,7 +48,7 @@ export const TaskProjectAssociation: React.FC<TaskProjectAssociationProps> = ({
         id={`project-select-${taskId}`}
         value={currentProjectId || ''}
         onChange={handleProjectChange}
-        className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">No project</option>
         {activeProjects.map(project => (
@@ -92,15 +92,15 @@ export const ProjectTasksList: React.FC<ProjectTasksListProps> = ({ projectId })
         {tasks.map(task => (
           <div
             key={task.id}
-            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
           >
             <div className="flex items-center space-x-3">
               <div
-                className={`w-3 h-3 rounded-full ${
+                className={`size-3 rounded-full ${
                   task.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'
                 }`}
               />
-              <span className={`${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+              <span className={`${task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
                 {task.title}
               </span>
             </div>

@@ -177,6 +177,14 @@ vi.mock('@dnd-kit/core', () => ({
   DragOverlay: vi.fn().mockImplementation(({ children }) => 
     React.createElement('div', { 'data-testid': 'drag-overlay' }, children)
   ),
+  useSensors: vi.fn(() => []),
+  useSensor: vi.fn(() => ({})),
+  PointerSensor: vi.fn(),
+}));
+
+// Mock @dnd-kit/modifiers
+vi.mock('@dnd-kit/modifiers', () => ({
+  restrictToWindowEdges: vi.fn(),
 }));
 
 // Mock @dnd-kit/sortable
@@ -235,6 +243,28 @@ global.Worker = vi.fn().mockImplementation(() => {
   }, 50);
   
   return worker;
+});
+
+// Mock window.matchMedia for Mantine support
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+// Mock window.getComputedStyle for proper styling
+Object.defineProperty(window, 'getComputedStyle', {
+  value: () => ({
+    getPropertyValue: () => '',
+  }),
 });
 
 // Set up proper before/after hooks

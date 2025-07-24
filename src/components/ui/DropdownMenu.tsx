@@ -141,9 +141,15 @@ const DropdownMenuTrigger = ({ children, asChild = false }: DropdownMenuTriggerP
   };
 
   if (asChild && React.isValidElement(children)) {
+    const originalOnClick = (children.props as any).onClick;
+    const composedOnClick = (e: React.MouseEvent) => {
+      originalOnClick?.(e);
+      handleTriggerClick(e);
+    };
+    
     return React.cloneElement(children, {
       ref: triggerRef as React.RefObject<HTMLElement>,
-      onClick: handleTriggerClick,
+      onClick: composedOnClick,
       onKeyDown: handleKeyDown,
       'aria-expanded': isOpen,
       'aria-haspopup': true,
@@ -184,7 +190,7 @@ const DropdownMenuContent = ({ children, className = '' }: DropdownMenuContentPr
       });
     }
   }, [isOpen, triggerRef]);
-
+  
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
@@ -192,7 +198,7 @@ const DropdownMenuContent = ({ children, className = '' }: DropdownMenuContentPr
       ref={menuRef}
       style={style}
       role="menu"
-      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-50 rounded-md border bg-surface py-1 shadow-lg ${className}`}
+      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[9999] rounded-md border bg-surface py-1 shadow-lg ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}
@@ -223,9 +229,11 @@ function DropdownMenuSub({ children }: { children: React.ReactNode }) {
     };
     
     const handleClose = () => {
+        console.log('⏰ DropdownMenuSub handleClose called - with delay');
+        // Add a small delay to prevent race conditions when moving from trigger to submenu
         timerRef.current = window.setTimeout(() => {
             setIsSubMenuOpen(false);
-        }, 100);
+        }, 150);
     };
 
     const value = { isSubMenuOpen, setIsSubMenuOpen, triggerRef, handleOpen, handleClose };
@@ -240,10 +248,19 @@ function DropdownMenuSub({ children }: { children: React.ReactNode }) {
 }
 
 const DropdownMenuSubTrigger = ({ children, className, ...props }: DropdownMenuItemProps) => {
-    const { triggerRef, handleOpen, handleClose } = useContext(SubMenuContext)!;
+    const { triggerRef, handleOpen, handleClose, isSubMenuOpen, setIsSubMenuOpen } = useContext(SubMenuContext)!;
+    
+    const handleClick = (e: React.MouseEvent) => {
+        console.log('🖱️ DropdownMenuSubTrigger handleClick called');
+        e.preventDefault();
+        e.stopPropagation();
+        setIsSubMenuOpen(!isSubMenuOpen);
+    };
+    
     return (
         <button
             ref={triggerRef}
+            onClick={handleClick}
             onMouseEnter={handleOpen}
             onMouseLeave={handleClose}
             className={`focus:ring-accent-primary flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm text-primary transition-colors hover:bg-tertiary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${className}`}
@@ -259,47 +276,93 @@ const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProp
     const { isSubMenuOpen, triggerRef, handleOpen, handleClose } = useContext(SubMenuContext)!;
     const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, position: 'fixed' });
     const menuRef = useRef<HTMLDivElement>(null);
+    const contentTimerRef = useRef<number | undefined>(undefined);
+
+    // Clear timers on unmount
+    useEffect(() => {
+        return () => {
+            if (contentTimerRef.current) {
+                window.clearTimeout(contentTimerRef.current);
+            }
+        };
+    }, []);
 
     useLayoutEffect(() => {
-      if (isSubMenuOpen && triggerRef.current && menuRef.current) {
+      if (isSubMenuOpen && triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect();
-        const menuRect = menuRef.current.getBoundingClientRect();
-
-        // Horizontal positioning
-        const spaceOnRight = window.innerWidth - rect.right;
-        let left = rect.right + 4;
-        if (spaceOnRight < menuRect.width && rect.left > menuRect.width) {
-          left = rect.left - menuRect.width - 4;
-        }
-
-        // Vertical positioning
-        const spaceBelow = window.innerHeight - rect.bottom;
-        let top = rect.top;
-        if (spaceBelow < menuRect.height && rect.top > menuRect.height) {
-          top = rect.bottom - menuRect.height;
-        }
-
+        
+        // Position submenu to overlap with trigger to prevent dead zones
+        const initialLeft = rect.right - 8; // Overlap by 8px to create buffer
+        const initialTop = rect.top;
+        
+        // Set initial position for measurement
         setStyle({
             position: 'fixed',
-            zIndex: 1000,
-            top: `${top}px`,
-            left: `${left}px`,
+            zIndex: 10000,
+            top: `${initialTop}px`,
+            left: `${initialLeft}px`,
             opacity: 1,
         });
+        
+        // Adjust positioning after render if needed
+        setTimeout(() => {
+          if (menuRef.current && isSubMenuOpen) {
+            const menuRect = menuRef.current.getBoundingClientRect();
+            
+            // Check if we need to adjust horizontal positioning
+            const spaceOnRight = window.innerWidth - rect.right;
+            let left = rect.right - 8; // Overlap by 8px
+            if (spaceOnRight < menuRect.width && rect.left > menuRect.width) {
+              left = rect.left - menuRect.width + 8; // Overlap when positioning left
+            }
+
+            // Check if we need to adjust vertical positioning
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top = rect.top;
+            if (spaceBelow < menuRect.height && rect.top > menuRect.height) {
+              top = rect.bottom - menuRect.height;
+            }
+
+            // Update with adjusted positioning if needed
+            setStyle({
+                position: 'fixed',
+                zIndex: 10000,
+                top: `${top}px`,
+                left: `${left}px`,
+                opacity: 1,
+            });
+          }
+        }, 0);
       } else {
-        setStyle({ opacity: 0, position: 'fixed' });
+        setStyle({ opacity: 0, position: 'fixed', zIndex: -1 });
       }
     }, [isSubMenuOpen, triggerRef]);
 
     if (!isSubMenuOpen) return null;
 
+    const handleContentMouseEnter = () => {
+        console.log('🎯 SubContent mouseEnter - clearing close timer');
+        if (contentTimerRef.current) {
+            window.clearTimeout(contentTimerRef.current);
+        }
+        handleOpen();
+    };
+
+    const handleContentMouseLeave = () => {
+        console.log('🎯 SubContent mouseLeave - starting close timer');
+        contentTimerRef.current = window.setTimeout(() => {
+            handleClose();
+        }, 150);
+    };
+
     return ReactDOM.createPortal(
         <div 
             ref={menuRef}
             style={style}
-            onMouseEnter={handleOpen}
-            onMouseLeave={handleClose}
-            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-50 rounded-md border bg-surface py-1 shadow-lg ${className}`}
+            onMouseEnter={handleContentMouseEnter}
+            onMouseLeave={handleContentMouseLeave}
+            onMouseDown={(e) => e.stopPropagation()}
+            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[10000] rounded-md border bg-surface py-1 shadow-lg ${className}`}
         >
             {children}
         </div>,
@@ -307,24 +370,32 @@ const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProp
     );
 };
 
-
 // 7. Item Component
 interface DropdownMenuItemProps {
   children: React.ReactNode;
   onSelect?: () => void;
   className?: string;
   variant?: 'default' | 'destructive';
+  disabled?: boolean;
 }
 
 let itemCounter = 0;
 
-const DropdownMenuItem = ({ 
-  children, 
-  onSelect, 
-  className = '', 
-  variant = 'default' 
+const DropdownMenuItem = ({
+  children,
+  onSelect,
+  className = '',
+  variant = 'default',
+  disabled = false
 }: DropdownMenuItemProps) => {
-  const { setIsOpen, itemRefs, focusedIndex, setFocusedIndex } = useDropdownMenu();
+  const dropdownContext = useContext(DropdownMenuContext);
+  const subMenuContext = useContext(SubMenuContext);
+  
+  // Use the appropriate context based on whether we're in a submenu
+  const context = subMenuContext || dropdownContext;
+  const isInSubmenu = !!subMenuContext;
+  
+  const { setIsOpen, itemRefs, focusedIndex, setFocusedIndex } = dropdownContext!;
   const [itemIndex] = useState(() => itemCounter++);
   
   const variantClasses = {
@@ -332,8 +403,27 @@ const DropdownMenuItem = ({
     destructive: 'text-error hover:bg-error/10'
   };
 
-  const handleSelect = () => {
-    onSelect?.();
+  const handleSelect = (e: React.MouseEvent) => {
+    if (disabled) return;
+    
+    console.log('🎯 DropdownMenuItem handleSelect called', { onSelect: !!onSelect, isInSubmenu });
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Execute the onSelect callback
+    if (onSelect) {
+      console.log('🚀 Executing onSelect callback');
+      onSelect();
+    }
+    
+    // Close the submenu if we're in one
+    if (isInSubmenu && subMenuContext) {
+      console.log('🔒 Closing submenu');
+      subMenuContext.setIsSubMenuOpen(false);
+    }
+    
+    // Close the main menu
+    console.log('🔒 Closing main menu');
     setIsOpen(false);
     setFocusedIndex(-1);
   };
@@ -341,7 +431,7 @@ const DropdownMenuItem = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      handleSelect();
+      handleSelect(e as unknown as React.MouseEvent);
     }
   };
 
@@ -367,8 +457,10 @@ const DropdownMenuItem = ({
         }
       }}
       role="menuitem"
-      className={`focus:ring-accent-primary w-full rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${variantClasses[variant]} ${className}`}
+      disabled={disabled}
+      className={`focus:ring-accent-primary w-full rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${variantClasses[variant]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       onClick={handleSelect}
+      onMouseDown={(e) => e.preventDefault()}
       onKeyDown={handleKeyDown}
       onMouseEnter={handleMouseEnter}
       tabIndex={focusedIndex === itemIndex ? 0 : -1}
@@ -405,4 +497,4 @@ export {
   DropdownMenuSubTrigger, 
   DropdownMenuSubContent, 
   DropdownMenuSeparator 
-}; 
+};

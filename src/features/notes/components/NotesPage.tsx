@@ -72,15 +72,12 @@ const NotesPage: React.FC = () => {
   useEffect(() => {
     setHeaderProps({
       title: 'Notes',
-      actions: [
-        <Button
-          key="toggle-sidebar"
-          variant="ghost"
-          size="sm"
-          onClick={toggleNotesSidebar}
-        >
-          {isNotesSidebarOpen ? 'Hide' : 'Show'} Sidebar
-        </Button>
+      secondaryActions: [
+        {
+          label: isNotesSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar',
+          onClick: toggleNotesSidebar,
+          variant: 'ghost' as const
+        }
       ]
     });
 
@@ -113,7 +110,7 @@ const NotesPage: React.FC = () => {
   const handleCreateNote = async () => {
     // Create new note with initial BlockNote format
     const initialContent = JSON.stringify([{ type: 'paragraph', content: '' }]);
-    await createNote({ title: 'Untitled Note', content: initialContent, folderId: selectedFolderId });
+    await createNote({ title: 'Untitled Note', content: initialContent, folderId: null });
   };
 
   return (
@@ -158,7 +155,6 @@ const NotesPage: React.FC = () => {
       <NotesContextSidebar
         isOpen={isContextOpen}
         onToggle={() => setIsContextOpen(!isContextOpen)}
-        selectedNote={selectedNote}
       />
     </div>
   );

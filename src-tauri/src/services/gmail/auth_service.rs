@@ -403,7 +403,7 @@ impl GmailAuthService {
                     None::<String>, // last_sync_at
                     &chrono::Utc::now().to_rfc3339(),
                     &chrono::Utc::now().to_rfc3339(),
-                    &user_info.email, // use email as user_id for now
+                    "default_user", // use default_user as user_id for now
                 ),
             );
             

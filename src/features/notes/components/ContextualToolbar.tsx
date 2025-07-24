@@ -319,9 +319,9 @@ export function ContextualToolbar({
             </div>
           </div>
         )}
-        <div className="flex items-center gap-2 px-2 py-1 text-xs text-subtle">
+        <div className="text-subtle flex items-center gap-2 px-2 py-1 text-xs">
           <span>Press</span>
-          <kbd className="bg-subtle text-xs px-1 py-0.5 rounded">Esc</kbd>
+          <kbd className="bg-subtle rounded px-1 py-0.5 text-xs">Esc</kbd>
           <span>to close or select text and use &quot;/&quot; for commands</span>
         </div>
       </Card>

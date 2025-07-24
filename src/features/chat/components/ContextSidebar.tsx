@@ -261,7 +261,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                     </Button>
                   </div>
                   {item.excerpt && (
-                    <Text size="xs" variant="tertiary" className="line-clamp-2 mb-2">
+                    <Text size="xs" variant="tertiary" className="mb-2 line-clamp-2">
                       {item.excerpt}
                     </Text>
                   )}
@@ -419,7 +419,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
               size="icon"
               onClick={onToggle}
               title="Hide context panel"
-              className="text-secondary hover:text-primary -mt-1"
+              className="-mt-1 text-secondary hover:text-primary"
             >
               <PanelRight size={18} />
             </Button>
@@ -427,10 +427,10 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-border-subtle mt-4">
+        <div className="border-border-subtle mt-4 flex border-b">
           <button
             onClick={() => setActiveTab('context')}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'context'
                 ? 'border-accent-primary text-primary'
                 : 'border-transparent text-secondary hover:text-primary'
@@ -441,7 +441,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'settings'
                 ? 'border-accent-primary text-primary'
                 : 'border-transparent text-secondary hover:text-primary'
@@ -547,7 +547,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
             <div className="space-y-6">
               
               {/* Model Info */}
-              <div className="pb-3 border-b border-border-default">
+              <div className="border-border-default border-b pb-3">
                 <Text size="sm" variant="tertiary" className="mb-1">
                   Settings for model
                 </Text>
@@ -566,7 +566,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                     value={currentSessionSettings.systemPrompt}
                     onChange={(e) => handleSettingsChange('systemPrompt', e.target.value)}
                     placeholder="Enter custom instructions..."
-                    className="w-full h-20 px-3 py-2 border border-border-default rounded-md bg-surface text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm"
+                    className="border-border-default focus:ring-accent-primary h-20 w-full resize-none rounded-md border bg-surface px-3 py-2 text-sm text-primary focus:border-transparent focus:outline-none focus:ring-2"
                     maxLength={2000}
                   />
                   <div className="flex items-center justify-between">
@@ -593,7 +593,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                 
                 {/* Creativity Slider */}
                 <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="mb-2 flex items-center justify-between">
                     <Text size="sm" variant="body">Creativity</Text>
                     <Text size="sm" variant="secondary">{currentSessionSettings.creativity}</Text>
                   </div>
@@ -620,7 +620,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                       onChange={(e) => handleSettingsChange('maxTokens', parseInt(e.target.value) || 2048)}
                       min={1}
                       max={32000}
-                      className="flex-1 px-3 py-2 border border-border-default rounded-md bg-surface text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                      className="border-border-default focus:ring-accent-primary flex-1 rounded-md border bg-surface px-3 py-2 text-primary focus:border-transparent focus:outline-none focus:ring-2"
                     />
                     <Text size="sm" variant="secondary">tokens</Text>
                   </div>
@@ -658,7 +658,7 @@ export function ContextSidebar({ isOpen = false, conversationId, onToggle }: Con
                     size="sm" 
                     onClick={handleResetModelDefaults}
                     disabled={!selectedModel}
-                    className="justify-center text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive justify-center"
                   >
                     Reset model defaults
                   </Button>

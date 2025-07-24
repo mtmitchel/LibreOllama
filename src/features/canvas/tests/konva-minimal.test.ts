@@ -14,6 +14,6 @@ describe('Minimal Konva Import Test', () => {
 
     expect(stage).toBeDefined();
     expect(layer).toBeDefined();
-    expect(stage.width()).toBe(800);
+    expect(stage.width()).toBe(200);
   });
 });

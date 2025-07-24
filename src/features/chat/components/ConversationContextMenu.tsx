@@ -247,7 +247,7 @@ export function ConversationContextMenu({
       {/* Context Menu */}
       <div
         ref={menuRef}
-        className="fixed z-50 min-w-[220px] rounded-lg border border-border-default bg-surface shadow-lg"
+        className="border-border-default fixed z-50 min-w-[220px] rounded-lg border bg-surface shadow-lg"
         style={{
           left: `${menuPosition.x}px`,
           top: `${menuPosition.y}px`,
@@ -261,7 +261,7 @@ export function ConversationContextMenu({
               return (
                 <div
                   key={item.id}
-                  className="my-1 border-t border-border-default"
+                  className="border-border-default my-1 border-t"
                   role="separator"
                 />
               );
@@ -300,9 +300,9 @@ export function ConversationContextMenu({
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-overlay/50">
-          <div className="w-full max-w-md rounded-lg border border-border-default bg-surface p-6 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
+        <div className="bg-overlay/50 fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="border-border-default w-full max-w-md rounded-lg border bg-surface p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-full bg-error-ghost">
                 <AlertTriangle className="size-5 text-error" />
               </div>

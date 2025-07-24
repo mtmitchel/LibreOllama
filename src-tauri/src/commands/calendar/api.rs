@@ -261,9 +261,13 @@ pub async fn get_calendar_events(
 
     // Make API call to Google Calendar Events
     let client = reqwest::Client::new();
-    let mut url = format!("https://www.googleapis.com/calendar/v3/calendars/{}/events", calendar_id);
+    // URL-encode the calendar ID to handle special characters
+    let encoded_calendar_id = urlencoding::encode(&calendar_id);
+    let mut url = format!("https://www.googleapis.com/calendar/v3/calendars/{}/events", encoded_calendar_id);
     url.push_str(&format!("?timeMin={}&timeMax={}&maxResults={}&showDeleted={}&singleEvents={}", 
                          time_min, time_max, max_results, show_deleted, single_events));
+    
+    println!("📆 [CALENDAR-API] Requesting URL: {}", url);
 
     let response = client
         .get(&url)
@@ -273,7 +277,10 @@ pub async fn get_calendar_events(
         .map_err(|e| format!("API request failed: {}", e))?;
 
     if !response.status().is_success() {
-        return Err(format!("Calendar Events API failed: {}", response.status()));
+        let status = response.status();
+        let error_body = response.text().await.unwrap_or_else(|_| "No error details".to_string());
+        println!("❌ [CALENDAR-API] Error response: {} - {}", status, error_body);
+        return Err(format!("Calendar Events API failed: {} - {}", status, error_body));
     }
 
     let events_data: serde_json::Value = response.json().await

@@ -99,10 +99,11 @@ interface ChatState {
   fetchMessages: (conversationId: string) => Promise<void>;
   sendMessage: (conversationId: string, content: string) => Promise<void>;
   regenerateResponse: (conversationId: string, messageId: string) => Promise<void>;
+  generateTitle: (conversationId: string, firstMessage: string) => Promise<void>;
   
   // Model management
   fetchAvailableModels: (provider?: LLMProvider) => Promise<void>;
-  setSelectedModel: (modelId: string) => void;
+  setSelectedModel: (modelId: string) => Promise<void>;
   setSelectedProvider: (provider: LLMProvider) => void;
   
   // Conversation settings
@@ -313,6 +314,56 @@ export const useChatStore = create<ChatState>()(
           }
         },
 
+        async generateTitle(conversationId: string, firstMessage: string): Promise<void> {
+          try {
+            const providerManager = LLMProviderManager.getInstance();
+            let { selectedProvider, selectedModel } = get();
+            
+            // Double-check provider matches model to avoid mismatches
+            const modelInList = get().availableModels.find(m => m.id === selectedModel);
+            if (modelInList && modelInList.provider !== selectedProvider) {
+              selectedProvider = modelInList.provider;
+            }
+            
+            // Create a prompt to generate a concise title
+            const titlePrompt: LLMMessage[] = [
+              {
+                role: 'system' as const,
+                content: 'Generate a concise 3-5 word title for this conversation based on the user\'s first message. Return only the title, no quotes, no punctuation.'
+              },
+              {
+                role: 'user' as const,
+                content: firstMessage
+              }
+            ];
+            
+            // Generate title using the current LLM
+            const rawTitle = await providerManager.chat(selectedProvider, titlePrompt, selectedModel || undefined);
+            
+            // Clean and truncate the title
+            const cleanTitle = rawTitle.trim().replace(/['"]/g, '').substring(0, 50);
+            
+            // Update the title in the backend
+            await invoke('update_session_title', {
+              sessionIdStr: conversationId,
+              newTitle: cleanTitle
+            });
+            
+            // Update the title in the frontend state
+            set(state => {
+              const conversation = state.conversations.find(c => c.id === conversationId);
+              if (conversation) {
+                conversation.title = cleanTitle;
+              }
+            });
+            
+            logger.debug('Generated title for conversation:', conversationId, cleanTitle);
+          } catch (error) {
+            logger.error('Failed to generate title:', error);
+            // Don't throw - title generation failure shouldn't break the chat
+          }
+        },
+
         async sendMessage(conversationId: string, content: string) {
           if (!content.trim()) return;
           
@@ -354,7 +405,15 @@ export const useChatStore = create<ChatState>()(
             }));
 
             // Use selected provider and model
-            const { selectedProvider, selectedModel, conversationSettings } = get();
+            let { selectedProvider, selectedModel, conversationSettings } = get();
+            
+            // Double-check provider matches model to avoid mismatches
+            const modelInList = get().availableModels.find(m => m.id === selectedModel);
+            if (modelInList && modelInList.provider !== selectedProvider) {
+              selectedProvider = modelInList.provider;
+              logger.warn('chatStore: Provider mismatch detected. Correcting to:', selectedProvider);
+            }
+            
             logger.debug('chatStore: Sending message with provider:', selectedProvider, 'model:', selectedModel);
             const rawAiResponse = await providerManager.chat(selectedProvider, llmMessages, selectedModel || undefined);
 
@@ -386,6 +445,13 @@ export const useChatStore = create<ChatState>()(
               
               state.isSending = false;
             });
+
+            // 6. Generate title if this is the first message in the conversation
+            const conversation = get().conversations.find(c => c.id === conversationId);
+            if (conversation && conversation.title === 'New chat') {
+              // Generate title asynchronously without blocking
+              get().generateTitle(conversationId, content.trim());
+            }
 
           } catch (error) {
             logger.error('Failed to send message:', error);
@@ -538,7 +604,12 @@ export const useChatStore = create<ChatState>()(
           get().fetchAvailableModels();
         },
 
-        setSelectedModel(modelId: string) {
+        async setSelectedModel(modelId: string) {
+          // First, ensure we have the latest models
+          if (get().availableModels.length === 0) {
+            await get().fetchAvailableModels();
+          }
+          
           const currentState = get();
           set(state => {
             state.selectedModel = modelId;
@@ -546,6 +617,26 @@ export const useChatStore = create<ChatState>()(
             const model = state.availableModels.find(m => m.id === modelId);
             if (model) {
               state.selectedProvider = model.provider;
+              logger.debug('chatStore: Updated provider to', model.provider, 'for model', modelId);
+            } else {
+              // Fallback: determine provider from model ID patterns
+              let inferredProvider: LLMProvider = 'ollama';
+              if (modelId.includes('gpt')) {
+                inferredProvider = 'openai';
+              } else if (modelId.includes('claude')) {
+                inferredProvider = 'anthropic';
+              } else if (modelId.includes('mistral') || modelId === 'open-mistral-nemo') {
+                inferredProvider = 'mistral';
+              } else if (modelId.includes('gemini')) {
+                inferredProvider = 'gemini';
+              } else if (modelId.includes('deepseek')) {
+                inferredProvider = 'deepseek';
+              }
+              
+              state.selectedProvider = inferredProvider;
+              logger.warn('chatStore: Model not found in availableModels:', modelId);
+              logger.warn('chatStore: Inferred provider:', inferredProvider);
+              logger.debug('chatStore: Available models:', state.availableModels.map(m => m.id));
             }
             
             // Load model defaults if they exist

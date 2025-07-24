@@ -28,7 +28,6 @@ export interface KanbanTask {
   position: string;
   updated: string;
   metadata?: TaskMetadata;
-  projectId?: string; // New field for project association
 }
 
 export interface KanbanColumn {
@@ -72,38 +71,10 @@ interface KanbanStore {
   clearError(): void;
   clearAllData(): void;
 
-  // Project association methods
-  assignTaskToProject(taskId: string, projectId: string): void;
-  removeTaskFromProject(taskId: string): void;
-  getTasksByProject(projectId: string): KanbanTask[];
-  getUnassignedTasks(): KanbanTask[];
 }
 
 const useKanbanStore = create<KanbanStore>()(
   devtools((set, get) => {
-    // LocalStorage persistence
-    const STORAGE_KEY = 'kanban-tasks-data';
-    
-    const saveToStorage = (columns: KanbanColumn[]) => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(columns));
-      } catch (error) {
-        console.warn('Failed to save to localStorage:', error);
-      }
-    };
-
-    const loadFromStorage = (): KanbanColumn[] => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          return JSON.parse(stored);
-        }
-      } catch (error) {
-        console.warn('Failed to load from localStorage:', error);
-      }
-      return [];
-    };
-
 
 
     return {
@@ -115,27 +86,9 @@ const useKanbanStore = create<KanbanStore>()(
       async initialize() {
         if (get().isInitialized) return;
         
-        try {
-          // First try to load from localStorage
-          const storedColumns = loadFromStorage();
-          if (storedColumns.length > 0) {
-            set({ columns: storedColumns, isInitialized: true });
-            return;
-          }
-          
-          // If no stored data, create default columns
-          const defaultColumns: KanbanColumn[] = [
-            { id: 'todo', title: 'To Do', tasks: [], isLoading: false },
-            { id: 'in-progress', title: 'In Progress', tasks: [], isLoading: false },
-            { id: 'done', title: 'Done', tasks: [], isLoading: false }
-          ];
-          
-          set({ columns: defaultColumns, isInitialized: true });
-          saveToStorage(defaultColumns);
-        } catch (error) {
-          console.error('Failed to initialize kanban board:', error);
-          set({ error: 'Failed to initialize kanban board' });
-        }
+        // Don't create default columns - let Google Tasks sync handle it
+        // Just mark as initialized with empty columns
+        set({ columns: [], isInitialized: true });
       },
 
       addColumn(id, title) {
@@ -146,63 +99,17 @@ const useKanbanStore = create<KanbanStore>()(
         }
         const newColumns = [...get().columns, { id, title, tasks: [], isLoading: false }];
         set({ columns: newColumns });
-        saveToStorage(newColumns);
       },
 
       async loadColumns() {
-        // This method is now mainly for backwards compatibility
-        // The initialize method handles loading from localStorage
-        try {
-          const storedColumns = loadFromStorage();
-          if (storedColumns.length > 0) {
-            set({ columns: storedColumns });
-            return;
-          }
-          
-          // If no stored data, create default empty columns
-          const defaultColumns: KanbanColumn[] = [
-            { id: 'todo', title: 'To Do', tasks: [], isLoading: false },
-            { id: 'in-progress', title: 'In Progress', tasks: [], isLoading: false },
-            { id: 'done', title: 'Done', tasks: [], isLoading: false }
-          ];
-          
-          set({ columns: defaultColumns });
-          saveToStorage(defaultColumns);
-        } catch (error) {
-          console.error('Failed to load task lists:', error);
-          set({ error: 'Failed to load task lists' });
-        }
+        // Don't create default columns - let Google Tasks sync handle it
+        set({ columns: [] });
       },
 
       async loadTasks(columnId) {
-        // Kanban board currently uses localStorage for persistence.
-        // Future Enhancement: Integrate with backend task management system for actual asynchronous task loading in Phase 3.x
-        
-        // Set loading state (simulated for now)
-        const loadingColumns = get().columns.map(c =>
-          c.id === columnId ? { ...c, isLoading: true } : c
-        );
-        set({ columns: loadingColumns });
-
-        try {
-          // Simulate a network request
-          await new Promise(resolve => setTimeout(resolve, 300)); 
-
-          // For now, just clear loading state since we're using localStorage
-          const finalColumns = get().columns.map(c =>
-            c.id === columnId ? { ...c, isLoading: false, error: undefined } : c
-          );
-          set({ columns: finalColumns });
-          saveToStorage(finalColumns);
-        } catch (error) {
-          const errorColumns = get().columns.map(c =>
-            c.id === columnId 
-              ? { ...c, isLoading: false, error: 'Failed to load tasks' }
-              : c
-          );
-          set({ columns: errorColumns });
-          saveToStorage(errorColumns);
-        }
+        // Tasks are now loaded via Google Tasks sync
+        // This method is kept for compatibility but doesn't do anything
+        logger.debug('[KANBAN] loadTasks called for:', columnId);
       },
 
       async createTask(columnId, data) {
@@ -231,7 +138,6 @@ const useKanbanStore = create<KanbanStore>()(
         );
         
         set({ columns: newColumns });
-        saveToStorage(newColumns);
         
         return newTask;
       },
@@ -253,7 +159,6 @@ const useKanbanStore = create<KanbanStore>()(
         );
         
         set({ columns: newColumns });
-        saveToStorage(newColumns);
       },
 
       async moveTask(taskId, fromColumn, toColumn, position) {
@@ -279,7 +184,6 @@ const useKanbanStore = create<KanbanStore>()(
         });
         
         set({ columns: newColumns });
-        saveToStorage(newColumns);
       },
 
       async toggleComplete(columnId, taskId, completed) {
@@ -298,7 +202,6 @@ const useKanbanStore = create<KanbanStore>()(
         );
         
         set({ columns: newColumns });
-        saveToStorage(newColumns);
       },
 
       getTask(taskId) {
@@ -317,63 +220,16 @@ const useKanbanStore = create<KanbanStore>()(
       },
 
       clearAllData() {
-        try {
-          // Clear localStorage
-          localStorage.removeItem(STORAGE_KEY);
-          
-          // Reset store to initial state with empty columns
-          const emptyColumns: KanbanColumn[] = [
-            { id: 'todo', title: 'To Do', tasks: [], isLoading: false },
-            { id: 'in-progress', title: 'In Progress', tasks: [], isLoading: false },
-            { id: 'done', title: 'Done', tasks: [], isLoading: false }
-          ];
-          
-          set({ 
-            columns: emptyColumns, 
-            isInitialized: true, 
-            error: undefined,
-            isSyncing: false 
-          });
-          
-          // Save empty state to localStorage
-          saveToStorage(emptyColumns);
-          
-          logger.debug('[KANBAN] All mock data cleared successfully');
-        } catch (error) {
-                      logger.error('[KANBAN] Failed to clear data:', error);
-          set({ error: 'Failed to clear data' });
-        }
-      },
-
-      // Project association methods
-      assignTaskToProject(taskId, projectId) {
-        const newColumns = get().columns.map(column => ({
-          ...column,
-          tasks: column.tasks.map(task =>
-            task.id === taskId ? { ...task, projectId } : task
-          )
-        }));
-        set({ columns: newColumns });
-        saveToStorage(newColumns);
-      },
-
-      removeTaskFromProject(taskId) {
-        const newColumns = get().columns.map(column => ({
-          ...column,
-          tasks: column.tasks.map(task =>
-            task.id === taskId ? { ...task, projectId: undefined } : task
-          )
-        }));
-        set({ columns: newColumns });
-        saveToStorage(newColumns);
-      },
-
-      getTasksByProject(projectId) {
-        return get().columns.flatMap(c => c.tasks).filter(t => t.projectId === projectId);
-      },
-
-      getUnassignedTasks() {
-        return get().columns.flatMap(c => c.tasks).filter(t => !t.projectId);
+        // Reset store to initial state with NO columns
+        // Google Tasks sync will create the appropriate columns
+        set({ 
+          columns: [], 
+          isInitialized: true, 
+          error: undefined,
+          isSyncing: false 
+        });
+        
+        logger.debug('[KANBAN] All data cleared successfully');
       }
     };
   })

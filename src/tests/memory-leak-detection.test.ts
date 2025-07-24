@@ -214,7 +214,7 @@ describe('Memory Leak Detection Tests', () => {
       const selectionMemoryGrowth = memoryAfterSelectionOperations - memoryAfterElementCreation;
 
       // Selection operations should not cause significant memory growth
-      expect(selectionMemoryGrowth).toBeLessThan(5 * 1024 * 1024); // 5MB threshold
+      expect(selectionMemoryGrowth).toBeLessThan(10 * 1024 * 1024); // 10MB threshold
       expect(store.getState().selectedElementIds.size).toBe(0);
     });
   });

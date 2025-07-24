@@ -56,14 +56,14 @@ export const AgentStatusWidget: React.FC = () => {
     return (
       <Card>
         <div className="animate-pulse">
-          <div className="flex justify-between items-center mb-4">
-            <div className="h-6 bg-secondary rounded w-32"></div>
-            <div className="h-8 bg-secondary rounded w-20"></div>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="h-6 w-32 rounded bg-secondary"></div>
+            <div className="h-8 w-20 rounded bg-secondary"></div>
           </div>
           <div className="space-y-3">
-            <div className="h-16 bg-secondary rounded-lg"></div>
-            <div className="h-16 bg-secondary rounded-lg"></div>
-            <div className="h-16 bg-secondary rounded-lg"></div>
+            <div className="h-16 rounded-lg bg-secondary"></div>
+            <div className="h-16 rounded-lg bg-secondary"></div>
+            <div className="h-16 rounded-lg bg-secondary"></div>
           </div>
         </div>
       </Card>
@@ -100,7 +100,7 @@ export const AgentStatusWidget: React.FC = () => {
             </DropdownMenu>
           </div>
         </div>
-        <div className="text-center py-4">
+        <div className="py-4 text-center">
           <Text variant="secondary" size="sm">{error}</Text>
         </div>
       </Card>
@@ -138,18 +138,18 @@ export const AgentStatusWidget: React.FC = () => {
       </div>
 
       {agents.length === 0 ? (
-        <div className="text-center py-8">
-          <Bot className="mx-auto mb-3 h-8 w-8 text-secondary" />
+        <div className="py-8 text-center">
+          <Bot className="mx-auto mb-3 size-8 text-secondary" />
           <Text variant="secondary" size="sm">No agents configured</Text>
           <Text variant="tertiary" size="xs" className="mt-1">Create agents to see their status here</Text>
         </div>
       ) : (
         <div className="space-y-3">
           {agents.map((agent) => (
-            <div key={agent.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+            <div key={agent.id} className="bg-secondary/30 flex items-center justify-between rounded-lg p-3">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-accent-soft">
-                  <Bot className="w-4 h-4 text-accent-primary" />
+                <div className="flex size-8 items-center justify-center rounded-full bg-accent-soft">
+                  <Bot className="size-4 text-accent-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -169,8 +169,8 @@ export const AgentStatusWidget: React.FC = () => {
                 </div>
               </div>
               {agent.is_active && (
-                <div className="flex items-center justify-center w-6 h-6">
-                  <Zap className="w-3 h-3 text-green-500 animate-pulse" />
+                <div className="flex size-6 items-center justify-center">
+                  <Zap className="size-3 animate-pulse text-green-500" />
                 </div>
               )}
             </div>
@@ -178,7 +178,7 @@ export const AgentStatusWidget: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-4 pt-3 border-t border-border">
+      <div className="border-border mt-4 border-t pt-3">
         <div className="flex items-center justify-between text-xs text-secondary">
           <span>{agents.filter(a => a.is_active).length} active of {agents.length} total</span>
           <Button variant="ghost" size="sm" className="text-secondary">

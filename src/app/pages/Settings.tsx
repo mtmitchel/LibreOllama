@@ -556,7 +556,7 @@ const Settings: React.FC = () => {
                 </Text>
                 
                 {accounts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border-default py-8 text-center">
+                  <div className="border-border-default flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-8 text-center">
                     <Text weight="medium" className="mb-2">No Google accounts connected</Text>
                     <Text variant="muted" size="sm">
                       Connect a Google account to sync your Gmail, Calendar, and Tasks.
@@ -677,7 +677,9 @@ const Settings: React.FC = () => {
 
                       setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
                       try {
-                        await setApiKey(provider.key, newKey === maskedValue ? currentValue : newKey, newBaseUrl);
+                        // If the input is masked and unchanged, keep the existing key; otherwise use the new key
+                        const keyToSave = (newKey === maskedValue && currentValue) ? currentValue : newKey;
+                        await setApiKey(provider.key, keyToSave, newBaseUrl);
                         setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: true, error: null } }));
                         setTimeout(() => setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } })), 3000);
                       } catch (error) {
@@ -723,7 +725,7 @@ const Settings: React.FC = () => {
                               href={provider.website} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-2 border-none rounded-md font-sans font-medium leading-none cursor-pointer transition-all duration-150 no-underline whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-primary bg-transparent text-primary hover:bg-tertiary active:bg-secondary active:scale-95 hover:text-primary py-2 px-3 text-xs"
+                              className="focus:ring-accent-primary inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border-none bg-transparent px-3 py-2 font-sans text-xs font-medium leading-none text-primary no-underline transition-all duration-150 hover:bg-tertiary hover:text-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary active:scale-95 active:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Get API key <LinkIcon size={12} className="ml-1" />
                             </a>
@@ -765,7 +767,7 @@ const Settings: React.FC = () => {
                         </div>
                         
                         {currentValue && (
-                          <div className="border-t border-border-default bg-background-secondary p-6">
+                          <div className="border-border-default bg-background-secondary border-t p-6">
                             <div className="flex items-center justify-between">
                                <div>
                                 <Heading level={4}>Model Management</Heading>
@@ -791,16 +793,16 @@ const Settings: React.FC = () => {
                                   <Button size="sm" variant="ghost" onClick={() => handleSelectAllModels(provider.key)}>Select all</Button>
                                   <Button size="sm" variant="ghost" onClick={() => handleDeselectAllModels(provider.key)}>Select none</Button>
                                 </div>
-                                <div className="grid max-h-48 grid-cols-1 gap-1 overflow-y-auto rounded-md border border-border-default bg-background-primary p-2 md:grid-cols-2">
+                                <div className="border-border-default bg-background-primary grid max-h-48 grid-cols-1 gap-1 overflow-y-auto rounded-md border p-2 md:grid-cols-2">
                                   {(providerModels[provider.key] || []).map(model => (
-                                    <label key={model.id} className="flex items-center gap-3 rounded p-2 text-sm hover:bg-background-secondary">
+                                    <label key={model.id} className="hover:bg-background-secondary flex items-center gap-3 rounded p-2 text-sm">
                                       <Checkbox
                                         checked={(selectedModels[provider.key] || []).includes(model.id)}
                                         onCheckedChange={() => handleModelToggle(provider.key, model.id)}
                                         id={`model-${provider.key}-${model.id}`}
                                       />
-                                      <div className="flex-1 min-w-0">
-                                         <span className="font-medium truncate block" title={model.name}>{model.name}</span>
+                                      <div className="min-w-0 flex-1">
+                                         <span className="block truncate font-medium" title={model.name}>{model.name}</span>
                                          {model.description && <Text variant="muted" size="xs" className="truncate" title={model.description}>{model.description}</Text>}
                                       </div>
                                     </label>
@@ -815,9 +817,9 @@ const Settings: React.FC = () => {
                   })}
               </div>
               
-              <div className="mt-4 rounded-md border border-border-primary bg-background-secondary p-4">
+              <div className="border-border-primary bg-background-secondary mt-4 rounded-md border p-4">
                 <h4 className="font-semibold">Local Models (Ollama)</h4>
-                <p className="text-sm text-text-secondary">
+                <p className="text-text-secondary text-sm">
                   Ollama models run locally and don't require API keys. These are managed in the Agents & Models section.
                 </p>
               </div>
@@ -988,6 +990,7 @@ const Settings: React.FC = () => {
               <GoogleAuthModal
                 isOpen={showGoogleAuthModal}
                 onClose={() => setShowGoogleAuthModal(false)}
+                onSuccess={handleGoogleAuth}
                 title="Connect Google Account" 
                 description="Sign in to sync your Gmail, Calendar, and Tasks with Google"
                 icon={<LinkIcon size={24} className="text-accent-primary" />}

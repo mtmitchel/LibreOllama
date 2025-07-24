@@ -20,11 +20,13 @@ The Tasks page provides local Kanban task management with Google Tasks API integ
 - **State Management:** The `useKanbanStore.ts` is a dedicated Zustand store that manages all task and column data. It handles all CRUD operations and state logic.
 - **Persistence:** All tasks and columns are persisted in the browser's `localStorage`, making any changes available across page refreshes. The store handles serialization and deserialization automatically.
 - **Google Tasks Integration:** The `useGoogleTasksStore.ts` provides integration with Google Tasks API for synchronization with Google's task management system.
+- **Two-Way Sync Service:** The `kanbanGoogleTasksSync.ts` service provides seamless two-way synchronization between local Kanban and Google Tasks, with automatic 5-minute sync intervals.
 - **Drag and Drop:** The `@dnd-kit` library is used to provide a professional and accessible drag-and-drop experience for moving tasks between columns. It includes features like a `DragOverlay` for visual feedback.
 - **Component Structure:**
     - `Tasks.tsx`: The main page component that orchestrates the different views and the modal.
     - `TaskColumn.tsx` & `TaskCard.tsx`: Memoized components for displaying columns and individual tasks, optimized to prevent unnecessary re-renders.
     - `SimpleTaskModal.tsx`: A comprehensive modal for creating and editing tasks with full metadata support.
+    - `KanbanTaskCard.tsx`: Enhanced task card with right-click context menu support for quick actions (edit, complete, duplicate, delete).
 - **Metadata:** Tasks support rich metadata, including priority, labels, subtasks with completion status, and complex recurring task rules.
 
 ### Backend Architecture
@@ -44,12 +46,16 @@ The Tasks page provides local Kanban task management with Google Tasks API integ
 - Multi-account Google Tasks support.
 - Timezone-correct date handling.
 - Performance optimized with `React.memo`, `useCallback`, and efficient re-renders.
+- Dynamic Kanban columns based on Google Task lists (no hardcoded columns).
+- Two-way sync with automatic 5-minute intervals.
+- Task sorting by "My order", "Date", and "Title".
+- Right-click context menu on task cards for quick actions.
+- Duplicate prevention logic using Google Task IDs as source of truth.
 
 ### Current Limitations
 
 - **Testing Coverage:** Limited test coverage with testing audit score of 45/100, indicating gaps in reliability testing.
 - **API Integration Gaps:** While Google Tasks integration exists, some edge cases and error scenarios need better handling.
-- **Sync Reliability:** Synchronization between local Kanban and Google Tasks may have consistency issues under certain conditions.
 - **Offline Handling:** Limited offline functionality when Google Tasks API is unavailable.
 
 ## Future Work & Todos
@@ -71,8 +77,10 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - [x] **Subtasks & Due Dates:** Add subtasks and due dates to cards. *(Existing, but can be improved)*
 - [x] **Recurring Tasks:** Set tasks to repeat on a schedule. *(Existing)*
-- [ ] **Filters & Sorting:** Advanced filtering and sorting options.
+- [x] **Filters & Sorting:** Task sorting by "My order", "Date", and "Title" implemented. *(Completed - 2025-01-23)*
 - [ ] **Search:** Add a search functionality to quickly find tasks.
+- [x] **Two-Way Sync:** Seamless synchronization between local Kanban and Google Tasks with 5-minute auto-sync. *(Completed - 2025-01-23)*
+- [x] **Right-Click Context Menu:** Quick task actions via context menu (edit, complete, duplicate, delete). *(Completed - 2025-01-23)*
 - [ ] **Task Dependencies:** Implement a system for defining dependencies between tasks.
 
 ### Future Vision & "Wow" Delighters

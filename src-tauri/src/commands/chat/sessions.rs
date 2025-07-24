@@ -274,3 +274,23 @@ pub async fn delete_session(
     
     Ok(true)
 }
+
+#[tauri::command]
+pub async fn update_session_title(
+    session_id_str: String,
+    new_title: String,
+    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+) -> Result<bool, String> {
+    let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
+    
+    let db_manager_clone = db_manager.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db_manager_clone.get_connection()?;
+        operations::chat_operations::update_chat_session(&conn, session_id, &new_title)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e: anyhow::Error| e.to_string())?;
+    
+    Ok(true)
+}

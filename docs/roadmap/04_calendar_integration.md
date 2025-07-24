@@ -33,12 +33,19 @@ The Calendar page provides comprehensive calendar functionality with Google Cale
 - Day, Week, and Month calendar views with navigation
 - Create, edit, and delete calendar events with Google Calendar sync
 - Task sidebar with Google Tasks integration and column filtering
-- Drag-and-drop task scheduling from sidebar to calendar
-- Task-to-event conversion with scheduling modal
+- Drag-and-drop task scheduling from sidebar to calendar (direct drop without modal)
+- Task-to-event conversion with automatic 1-hour duration
 - Multi-account Google Calendar and Tasks support
 - Real-time event updates and synchronization
 - Event resizing and drag-and-drop repositioning
 - Search and filtering capabilities
+- Task sorting in sidebar by "My order", "Date", and "Title"
+- Right-click context menu for tasks with quick actions
+- 5-minute auto-sync for Google Tasks
+- Direct task placement on calendar without popup modal
+- Calendar shows ALL subscribed calendars with color coding
+- Task click opens edit modal instead of marking complete
+- Proper month transitions in calendar headers (e.g., "Jul 1", "Aug 1")
 
 ### Current Limitations
 
@@ -47,6 +54,7 @@ The Calendar page provides comprehensive calendar functionality with Google Cale
 - **Sync Reliability:** Potential synchronization issues between local state and Google services.
 - **Performance:** May have performance issues with large datasets or frequent updates.
 - **Edge Cases:** Limited handling of complex calendar scenarios (recurring events, timezone issues, etc.).
+- **Undo Functionality:** No undo feature for accidentally marked tasks.
 
 ## Future Work & Todos
 
@@ -56,8 +64,11 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - [x] **Calendar View:** Standard Day/Week/Month views. *(Existing)*
 - [x] **Create/Edit Events:** Basic functionality to add and modify calendar events. *(Existing)*
-- [ ] **Task Sidebar:** A view of the task list next to the calendar. *(Existing)*
-- [ ] **Drag-and-Drop Scheduling:** Implement drag tasks from the sidebar onto the calendar to schedule them. *(Existing in UI but needs reliability & tests)*
+- [x] **Task Sidebar:** A view of the task list next to the calendar. *(Implemented - 2025-01-23)*
+- [x] **Drag-and-Drop Scheduling:** Implement drag tasks from the sidebar onto the calendar to schedule them. *(Completed - 2025-01-23, direct drop without modal)*
+- [x] **Task Sorting:** Sort tasks by "My order", "Date", or "Title" in calendar sidebar. *(Completed - 2025-01-23)*
+- [x] **Right-Click Context Menu:** Quick task actions via context menu. *(Completed - 2025-01-23)*
+- [x] **5-Minute Auto-Sync:** Automatic synchronization with Google Tasks. *(Completed - 2025-01-23)*
 
 ### Phase 3 Hardening Tests
 
@@ -67,10 +78,11 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### Post-MVP Enhancements
 
-- [ ] **Task-to-Event Modal:** A modal to confirm time/details when scheduling a task.
-- [ ] **Complete from Calendar:** Mark tasks as complete directly from the calendar view.
+- [x] **Complete from Calendar:** Mark tasks as complete directly from the calendar view. *(Implemented - 2025-01-23, checkbox on task cards)*
 - [ ] **Enhanced Event Modal:** Replace the basic event creation prompt with a full-featured modal.
-- [ ] **Event Resizing:** Allow users to resize events directly on the calendar to change their duration.
+- [x] **Event Resizing:** Allow users to resize events directly on the calendar to change their duration. *(Implemented - 2025-01-23, edge dragging enabled)*
+- [x] **Task Click to Edit:** Clicking tasks opens edit modal instead of marking complete. *(Implemented - 2025-01-23)*
+- [ ] **Undo Task Completion:** Add undo functionality for accidentally marked tasks.
 
 ### Future Vision & "Wow" Delighters
 
@@ -87,7 +99,9 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### Technical Debt & Refactoring
 
-- [ ] **Google Calendar Integration:** Connect to real Google Calendar API instead of mock data.
-- [ ] **Drag-and-Drop Implementation:** Implement the core drag-and-drop scheduling workflow.
+- [x] **Google Calendar Integration:** Connect to real Google Calendar API instead of mock data. *(Completed - shows all subscribed calendars)*
+- [x] **Drag-and-Drop Implementation:** Implement the core drag-and-drop scheduling workflow. *(Completed - 2025-01-23)*
 - [ ] **Improve Test Coverage:** Write integration tests that cover the scheduling workflow.
-- [ ] **Recurring Tasks:** Add the ability to see and manage recurring tasks on the calendar. 
+- [ ] **Recurring Tasks:** Add the ability to see and manage recurring tasks on the calendar.
+- [x] **Month Display Fix:** Calendar headers show proper month transitions. *(Completed - 2025-01-23)*
+- [x] **All Calendars Display:** Show events from ALL subscribed Google calendars with colors. *(Completed - 2025-01-23)* 

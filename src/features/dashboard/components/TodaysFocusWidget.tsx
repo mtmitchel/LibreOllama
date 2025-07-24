@@ -67,14 +67,14 @@ export const TodaysFocusWidget: React.FC = () => {
     return (
       <Card>
         <div className="animate-pulse">
-          <div className="flex justify-between items-center mb-4">
-            <div className="h-6 bg-secondary rounded w-32"></div>
-            <div className="h-6 w-6 bg-secondary rounded"></div>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="h-6 w-32 rounded bg-secondary"></div>
+            <div className="size-6 rounded bg-secondary"></div>
           </div>
           <div className="space-y-3">
-            <div className="h-16 bg-secondary rounded-lg"></div>
-            <div className="h-16 bg-secondary rounded-lg"></div>
-            <div className="h-16 bg-secondary rounded-lg"></div>
+            <div className="h-16 rounded-lg bg-secondary"></div>
+            <div className="h-16 rounded-lg bg-secondary"></div>
+            <div className="h-16 rounded-lg bg-secondary"></div>
           </div>
         </div>
       </Card>
@@ -99,7 +99,7 @@ export const TodaysFocusWidget: React.FC = () => {
             </DropdownMenu.Content>
           </DropdownMenu>
         </div>
-        <div className="text-center py-4">
+        <div className="py-4 text-center">
           <Text variant="secondary" size="sm">{error}</Text>
         </div>
       </Card>
@@ -125,18 +125,18 @@ export const TodaysFocusWidget: React.FC = () => {
       </div>
       
       {todayEvents.length === 0 ? (
-        <div className="text-center py-8">
-          <Calendar className="mx-auto mb-3 h-8 w-8 text-secondary" />
+        <div className="py-8 text-center">
+          <Calendar className="mx-auto mb-3 size-8 text-secondary" />
           <Text variant="secondary" size="sm">No events scheduled for today</Text>
           <Text variant="tertiary" size="xs" className="mt-1">Your calendar is clear - time to focus!</Text>
         </div>
       ) : (
         <div className="space-y-3">
           {todayEvents.map((event) => (
-            <div key={event.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+            <div key={event.id} className="bg-secondary/30 flex items-center justify-between rounded-lg p-3">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-accent-soft">
-                  <Clock className="w-4 h-4 text-accent-primary" />
+                <div className="flex size-8 items-center justify-center rounded-full bg-accent-soft">
+                  <Clock className="size-4 text-accent-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <Text variant="body" size="sm" weight="medium" className="truncate">
@@ -154,7 +154,7 @@ export const TodaysFocusWidget: React.FC = () => {
       )}
       
       {events.length > todayEvents.length && (
-        <div className="mt-4 pt-3 border-t border-border">
+        <div className="border-border mt-4 border-t pt-3">
           <Button variant="ghost" size="sm" className="w-full text-secondary">
             View all events ({events.length})
           </Button>

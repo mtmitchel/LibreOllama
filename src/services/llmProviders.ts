@@ -103,11 +103,27 @@ export class OpenAIProvider extends BaseLLMProvider {
   }
 
   async listModels(): Promise<LLMModel[]> {
-    return [
-      { id: 'gpt-4', name: 'GPT-4', provider: 'openai', description: 'Most capable GPT-4 model', contextLength: 8192 },
-      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'openai', description: 'Latest GPT-4 with improved performance', contextLength: 128000 },
-      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'openai', description: 'Fast and efficient model', contextLength: 16385 }
-    ];
+    if (!this.isConfigured()) {
+      throw new Error('OpenAI provider not configured. Please add your API key.');
+    }
+
+    try {
+      const models = await invoke('llm_list_openai_models', {
+        apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl
+      });
+      
+      return (models as any[]).map(model => ({
+        id: model.id,
+        name: model.id,
+        provider: 'openai' as const,
+        description: `OpenAI model: ${model.id}`,
+        contextLength: model.context_length || undefined
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch OpenAI models:', error);
+      throw new Error(`Failed to fetch OpenAI models: ${error}`);
+    }
   }
 
   isConfigured(): boolean {
@@ -139,11 +155,27 @@ export class AnthropicProvider extends BaseLLMProvider {
   }
 
   async listModels(): Promise<LLMModel[]> {
-    return [
-      { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'anthropic', description: 'Most powerful Claude model', contextLength: 200000 },
-      { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', provider: 'anthropic', description: 'Balanced performance and speed', contextLength: 200000 },
-      { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', provider: 'anthropic', description: 'Fastest Claude model', contextLength: 200000 }
-    ];
+    if (!this.isConfigured()) {
+      throw new Error('Anthropic provider not configured. Please add your API key.');
+    }
+
+    try {
+      const models = await invoke('llm_list_anthropic_models', {
+        apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl
+      });
+      
+      return (models as any[]).map(model => ({
+        id: model.id,
+        name: model.display_name || model.id,
+        provider: 'anthropic' as const,
+        description: `Anthropic model: ${model.display_name || model.id}`,
+        contextLength: model.context_length || 200000
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch Anthropic models:', error);
+      throw new Error(`Failed to fetch Anthropic models: ${error}`);
+    }
   }
 
   isConfigured(): boolean {
@@ -175,12 +207,27 @@ export class OpenRouterProvider extends BaseLLMProvider {
   }
 
   async listModels(): Promise<LLMModel[]> {
-    return [
-      { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus (OpenRouter)', provider: 'openrouter', description: 'Claude 3 Opus via OpenRouter', contextLength: 200000 },
-      { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet (OpenRouter)', provider: 'openrouter', description: 'Claude 3 Sonnet via OpenRouter', contextLength: 200000 },
-      { id: 'openai/gpt-4', name: 'GPT-4 (OpenRouter)', provider: 'openrouter', description: 'GPT-4 via OpenRouter', contextLength: 8192 },
-      { id: 'meta-llama/llama-2-70b-chat', name: 'Llama 2 70B', provider: 'openrouter', description: 'Llama 2 70B via OpenRouter', contextLength: 4096 }
-    ];
+    if (!this.isConfigured()) {
+      throw new Error('OpenRouter provider not configured. Please add your API key.');
+    }
+
+    try {
+      const models = await invoke('llm_list_openrouter_models', {
+        apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl
+      });
+      
+      return (models as any[]).map(model => ({
+        id: model.id,
+        name: model.name || model.id,
+        provider: 'openrouter' as const,
+        description: model.description || `OpenRouter model: ${model.name || model.id}`,
+        contextLength: model.context_length || model.max_context_length || undefined
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch OpenRouter models:', error);
+      throw new Error(`Failed to fetch OpenRouter models: ${error}`);
+    }
   }
 
   isConfigured(): boolean {
@@ -212,10 +259,27 @@ export class DeepSeekProvider extends BaseLLMProvider {
   }
 
   async listModels(): Promise<LLMModel[]> {
-    return [
-      { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'deepseek', description: 'DeepSeek conversational model', contextLength: 32768 },
-      { id: 'deepseek-coder', name: 'DeepSeek Coder', provider: 'deepseek', description: 'DeepSeek specialized for coding', contextLength: 16384 }
-    ];
+    if (!this.isConfigured()) {
+      throw new Error('DeepSeek provider not configured. Please add your API key.');
+    }
+
+    try {
+      const models = await invoke('llm_list_deepseek_models', {
+        apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl
+      });
+      
+      return (models as any[]).map(model => ({
+        id: model.id,
+        name: model.name || model.id,
+        provider: 'deepseek' as const,
+        description: model.description || `DeepSeek model: ${model.name || model.id}`,
+        contextLength: model.context_length || undefined
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch DeepSeek models:', error);
+      throw new Error(`Failed to fetch DeepSeek models: ${error}`);
+    }
   }
 
   isConfigured(): boolean {
@@ -267,20 +331,7 @@ export class MistralProvider extends BaseLLMProvider {
       }));
     } catch (error) {
       logger.error('Failed to fetch Mistral models:', error);
-      // Fallback to hardcoded models if API call fails
-      return [
-        // Premier Models
-        { id: 'mistral-large-latest', name: 'Mistral Large 2', provider: 'mistral', description: 'Top-tier reasoning and knowledge', contextLength: 128000 },
-        { id: 'mistral-small-latest', name: 'Mistral Small', provider: 'mistral', description: 'Fast and cost-effective for simple tasks', contextLength: 128000 },
-        { id: 'mistral-embed', name: 'Mistral Embed', provider: 'mistral', description: 'State-of-the-art embedding model', contextLength: 16384 },
-        
-        // Open Models
-        { id: 'open-mistral-7b', name: 'Mistral 7B Instruct', provider: 'mistral', description: 'High-quality and efficient base model', contextLength: 32768 },
-        { id: 'open-mixtral-8x7b', name: 'Mixtral 8x7B Instruct', provider: 'mistral', description: 'High-quality sparse mixture of experts', contextLength: 32768 },
-        { id: 'open-mixtral-8x22b', name: 'Mixtral 8x22B', provider: 'mistral', description: 'High-performance open-source sparse mixture-of-experts', contextLength: 65536 },
-        { id: 'codestral-latest', name: 'Codestral', provider: 'mistral', description: 'State-of-the-art code generation model', contextLength: 32768 },
-        { id: 'mathstral-7b-instruct', name: 'Mathstral', provider: 'mistral', description: 'Specialized model for mathematical reasoning', contextLength: 32768 },
-      ];
+      throw new Error(`Failed to fetch Mistral models: ${error}`);
     }
   }
 
@@ -317,11 +368,27 @@ export class GeminiProvider extends BaseLLMProvider {
   }
 
   async listModels(): Promise<LLMModel[]> {
-    // Mock models for now; replace with actual API call in Phase 3.x
-    return [
-      { id: 'gemini-pro', name: 'Gemini Pro', provider: 'gemini', description: 'Google\'s Gemini Pro model', contextLength: 32768 },
-      { id: 'gemini-pro-vision', name: 'Gemini Pro Vision', provider: 'gemini', description: 'Google\'s Gemini Pro Vision model', contextLength: 16384 }
-    ];
+    if (!this.isConfigured()) {
+      throw new Error('Gemini provider not configured. Please add your API key.');
+    }
+
+    try {
+      const models = await invoke('llm_list_gemini_models', {
+        apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl
+      });
+      
+      return (models as any[]).map(model => ({
+        id: model.name?.replace('models/', '') || model.id,
+        name: model.displayName || model.name?.replace('models/', '') || model.id,
+        provider: 'gemini' as const,
+        description: model.description || `Gemini model: ${model.displayName || model.name || model.id}`,
+        contextLength: model.inputTokenLimit || undefined
+      }));
+    } catch (error) {
+      logger.error('Failed to fetch Gemini models:', error);
+      throw new Error(`Failed to fetch Gemini models: ${error}`);
+    }
   }
 
   isConfigured(): boolean {
@@ -363,31 +430,31 @@ export class LLMProviderManager {
     this.providers.clear();
 
     // Initialize Ollama
-    const ollamaConfig = { enabled: true, ...settings.ollama }; // Ollama is always considered enabled if present
+    const ollamaConfig = { enabled: true, apiKey: settings.ollama?.key, baseUrl: settings.ollama?.base_url };
     this.providers.set('ollama', new OllamaProvider(ollamaConfig as LLMProviderConfig));
 
     // Initialize OpenAI
-    const openaiConfig = { enabled: !!settings.openai?.key, ...settings.openai };
+    const openaiConfig = { enabled: !!settings.openai?.key, apiKey: settings.openai?.key, baseUrl: settings.openai?.base_url };
     this.providers.set('openai', new OpenAIProvider(openaiConfig as LLMProviderConfig));
 
     // Initialize Anthropic
-    const anthropicConfig = { enabled: !!settings.anthropic?.key, ...settings.anthropic };
+    const anthropicConfig = { enabled: !!settings.anthropic?.key, apiKey: settings.anthropic?.key, baseUrl: settings.anthropic?.base_url };
     this.providers.set('anthropic', new AnthropicProvider(anthropicConfig as LLMProviderConfig));
 
     // Initialize OpenRouter
-    const openrouterConfig = { enabled: !!settings.openrouter?.key, ...settings.openrouter };
+    const openrouterConfig = { enabled: !!settings.openrouter?.key, apiKey: settings.openrouter?.key, baseUrl: settings.openrouter?.base_url };
     this.providers.set('openrouter', new OpenRouterProvider(openrouterConfig as LLMProviderConfig));
 
     // Initialize DeepSeek
-    const deepseekConfig = { enabled: !!settings.deepseek?.key, ...settings.deepseek };
+    const deepseekConfig = { enabled: !!settings.deepseek?.key, apiKey: settings.deepseek?.key, baseUrl: settings.deepseek?.base_url };
     this.providers.set('deepseek', new DeepSeekProvider(deepseekConfig as LLMProviderConfig));
 
     // Initialize Mistral
-    const mistralConfig = { enabled: !!settings.mistral?.key, ...settings.mistral };
+    const mistralConfig = { enabled: !!settings.mistral?.key, apiKey: settings.mistral?.key, baseUrl: settings.mistral?.base_url };
     this.providers.set('mistral', new MistralProvider(mistralConfig as LLMProviderConfig));
 
     // Initialize Gemini
-    const geminiConfig = { enabled: !!settings.gemini?.key, ...settings.gemini };
+    const geminiConfig = { enabled: !!settings.gemini?.key, apiKey: settings.gemini?.key, baseUrl: settings.gemini?.base_url };
     this.providers.set('gemini', new GeminiProvider(geminiConfig as LLMProviderConfig));
 
     logger.log('[LLMProviderManager] Providers initialized:', Array.from(this.providers.keys()));
@@ -418,7 +485,17 @@ export class LLMProviderManager {
         }
       }
     }
-    return models;
+    
+    // Deduplicate models based on provider + id combination
+    const uniqueModels = new Map<string, LLMModel>();
+    for (const model of models) {
+      const key = `${model.provider}-${model.id}`;
+      if (!uniqueModels.has(key)) {
+        uniqueModels.set(key, model);
+      }
+    }
+    
+    return Array.from(uniqueModels.values());
   }
 
   async chat(provider: LLMProvider, messages: LLMMessage[], model?: string): Promise<string> {

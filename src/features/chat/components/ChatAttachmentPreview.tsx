@@ -46,15 +46,15 @@ export function ChatAttachmentPreview({
   };
 
   return (
-    <div className={`border-t border-border-default bg-surface/50 p-3 ${className}`}>
+    <div className={`border-border-default bg-surface/50 border-t p-3 ${className}`}>
       <div className="flex flex-wrap gap-2">
         {attachments.map((attachment) => (
           <div
             key={attachment.id}
-            className="flex items-center gap-2 rounded-lg border border-border-default bg-surface p-2 max-w-xs"
+            className="border-border-default flex max-w-xs items-center gap-2 rounded-lg border bg-surface p-2"
           >
             {/* Icon or Thumbnail */}
-            <div className={`flex items-center justify-center size-8 rounded ${getAttachmentColor(attachment.type)}`}>
+            <div className={`flex size-8 items-center justify-center rounded ${getAttachmentColor(attachment.type)}`}>
               {attachment.type === 'image' && attachment.thumbnailUrl ? (
                 <img
                   src={attachment.thumbnailUrl}
@@ -67,8 +67,8 @@ export function ChatAttachmentPreview({
             </div>
 
             {/* File Info */}
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-primary truncate">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-primary">
                 {attachment.filename}
               </div>
               <div className="text-xs text-secondary">
@@ -77,9 +77,9 @@ export function ChatAttachmentPreview({
               
               {/* Upload Progress */}
               {attachment.uploadStatus === 'uploading' && (
-                <div className="w-full bg-surface-muted rounded-full h-1 mt-1">
+                <div className="bg-surface-muted mt-1 h-1 w-full rounded-full">
                   <div
-                    className="bg-primary h-1 rounded-full transition-all duration-300"
+                    className="h-1 rounded-full bg-primary transition-all duration-300"
                     style={{ width: `${attachment.uploadProgress}%` }}
                   />
                 </div>
@@ -87,7 +87,7 @@ export function ChatAttachmentPreview({
               
               {/* Upload Status */}
               {attachment.uploadStatus === 'failed' && (
-                <div className="text-xs text-error mt-1">
+                <div className="mt-1 text-xs text-error">
                   {attachment.error || 'Upload failed'}
                 </div>
               )}
@@ -96,7 +96,7 @@ export function ChatAttachmentPreview({
             {/* Remove Button */}
             <button
               onClick={() => onRemove(attachment.id)}
-              className="flex items-center justify-center size-6 rounded-full text-secondary hover:text-error hover:bg-error-ghost transition-colors"
+              className="flex size-6 items-center justify-center rounded-full text-secondary transition-colors hover:bg-error-ghost hover:text-error"
               title="Remove attachment"
             >
               <X size={14} />

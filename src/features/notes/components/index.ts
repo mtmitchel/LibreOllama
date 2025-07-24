@@ -1,13 +1,9 @@
-export { SlashCommandMenu } from './SlashCommandMenu';
+// SlashCommandMenu archived - was Tiptap component, replaced by BlockNote
 export { ContextualToolbar } from './ContextualToolbar';
-export * from './TiptapEditor';
-export * from './TiptapFixedToolbar';
-export * from './TiptapSlashCommand';
-export * from './TiptapSlashExtension';
-export * from './TiptapContextMenu';
+export * from './BlockNoteEditor';
 export * from './NotesContextSidebar';
 export * from './Sidebar';
 export * from './NotesPage';
-export * from './CustomTable';
-export * from './LinkDialog';
+// CustomTable archived - was Tiptap component, replaced by BlockNote
+// LinkDialog archived - was Tiptap component, replaced by BlockNote
 export type { Note, Folder } from '../types'; 

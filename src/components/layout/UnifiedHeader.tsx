@@ -44,11 +44,11 @@ export function UnifiedHeader({
 
   return (
     <header className="flex h-16 items-center px-4 md:px-6">
-      <div className="flex items-center space-x-4 flex-1">
+      <div className="flex flex-1 items-center space-x-4">
         {/* Title and Subtitle */}
         <div className="flex flex-col">
           {title && <h1 className="text-xl font-semibold">{title}</h1>}
-          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="text-muted-foreground text-sm">{subtitle}</p>}
         </div>
       </div>
 

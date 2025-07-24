@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Block, BlockNoteEditor as BlockNoteEditorType, PartialBlock } from '@blocknote-core';
+import { Block, BlockNoteEditor as BlockNoteEditorType, PartialBlock } from '@blocknote/core';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView, lightDefaultTheme, Theme } from '@blocknote/mantine';
 import '@blocknote/core/style.css';
@@ -49,7 +49,7 @@ const customLightTheme: Theme = {
       text: '#ffffff', // var(--text-inverted)
       background: '#18181b', // var(--gray-900)
     },
-    hover: {
+    hovered: {
       text: '#18181b', // var(--text-primary)
       background: '#f4f4f5', // var(--gray-100), close to --state-hover
     },
@@ -64,9 +64,43 @@ const customLightTheme: Theme = {
     shadow: '#d4d4d8', // var(--gray-300)
     border: '#e4e4e7', // var(--border-primary)
     sideMenu: '#71717a', // var(--text-tertiary)
-    highlight: {
-      text: '#18181b',
-      background: '#e0e7ff', // var(--indigo-100)
+    highlights: {
+      gray: {
+        text: '#18181b',
+        background: '#f4f4f5',
+      },
+      brown: {
+        text: '#18181b',
+        background: '#f5f5dc',
+      },
+      red: {
+        text: '#18181b',
+        background: '#fee2e2',
+      },
+      orange: {
+        text: '#18181b',
+        background: '#fed7aa',
+      },
+      yellow: {
+        text: '#18181b',
+        background: '#fef3c7',
+      },
+      green: {
+        text: '#18181b',
+        background: '#dcfce7',
+      },
+      blue: {
+        text: '#18181b',
+        background: '#e0e7ff',
+      },
+      purple: {
+        text: '#18181b',
+        background: '#e9d5ff',
+      },
+      pink: {
+        text: '#18181b',
+        background: '#fce7f3',
+      },
     },
   },
   borderRadius: 6, // Corresponds to --radius-md
@@ -146,19 +180,21 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
       return;
     }
 
-    const unsub = editor.onEditorContentChange(() => {
-      // If the editor is being updated by a prop change, do not trigger the onChange handler.
-      if (!isUpdatingFromProps.current) {
-        onChangeRef.current(editor.topLevelBlocks);
-      }
-    });
+    try {
+      const unsub = editor.onEditorContentChange(() => {
+        // If the editor is being updated by a prop change, do not trigger the onChange handler.
+        if (!isUpdatingFromProps.current) {
+          onChangeRef.current(editor.topLevelBlocks);
+        }
+      });
 
-    // Return cleanup function, with a guard to ensure unsub is callable
-    return () => {
-      if (typeof unsub === 'function') {
-        unsub();
-      }
-    };
+      // Return cleanup function if unsub is a function, otherwise return empty cleanup
+      return typeof unsub === 'function' ? unsub : () => {};
+    } catch (error) {
+      // If onEditorContentChange doesn't return a cleanup function, handle gracefully
+      console.warn('Editor content change listener setup failed:', error);
+      return () => {};
+    }
   }, [editor]);
 
 
@@ -167,7 +203,7 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
   }
 
   return (
-    <div className={`blocknote-editor-container h-full w-full ${className}`}>
+    <div className={`blocknote-editor-container size-full ${className}`}>
       <BlockNoteView
         editor={editor}
         editable={!readOnly}

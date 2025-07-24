@@ -375,4 +375,75 @@ pub async fn cleanup_corrupted_gmail_tokens(
         corrupted_accounts.len(),
         cleaned_count
     ))
+}
+
+/// Debug command to list all Gmail accounts in database
+#[tauri::command]
+pub async fn debug_list_all_gmail_accounts(
+    db_manager: State<'_, crate::database::connection::DatabaseManager>,
+) -> Result<String, String> {
+    let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
+    
+    // Get all accounts
+    let mut stmt = conn.prepare(
+        "SELECT id, email_address, user_id, is_active, created_at FROM gmail_accounts_secure ORDER BY created_at DESC"
+    ).map_err(|e| e.to_string())?;
+    
+    let mut results = Vec::new();
+    let rows = stmt.query_map([], |row| {
+        let id: String = row.get(0)?;
+        let email: String = row.get(1)?;
+        let user_id: String = row.get(2)?;
+        let is_active: bool = row.get(3)?;
+        let created_at: String = row.get(4)?;
+        Ok((id, email, user_id, is_active, created_at))
+    }).map_err(|e| e.to_string())?;
+    
+    for row in rows {
+        let (id, email, user_id, is_active, created_at) = row.map_err(|e| e.to_string())?;
+        results.push(format!(
+            "Account ID: {}\n  Email: {}\n  User ID: {}\n  Active: {}\n  Created: {}", 
+            id, email, user_id, is_active, created_at
+        ));
+    }
+    
+    if results.is_empty() {
+        Ok("No Gmail accounts found in database".to_string())
+    } else {
+        Ok(format!("Gmail Accounts in Database:\n\n{}", results.join("\n\n")))
+    }
+}
+
+/// Clear all Gmail tokens to force re-authentication
+#[tauri::command]
+pub async fn clear_all_gmail_tokens(
+    db_manager: State<'_, crate::database::connection::DatabaseManager>,
+) -> Result<String, String> {
+    use crate::utils::crypto::{encrypt_data, get_persistent_encryption_key};
+    
+    let conn = db_manager.get_connection().map_err(|e| e.to_string())?;
+    
+    // Create a properly encrypted dummy token that will be invalid when used
+    let encryption_key = get_persistent_encryption_key();
+    let dummy_token = encrypt_data("INVALID_REAUTH_REQUIRED", &encryption_key)
+        .map_err(|e| format!("Failed to create dummy token: {}", e))?;
+    
+    // Update accounts with the dummy encrypted token and mark as requiring re-authentication
+    match conn.execute(
+        &format!("UPDATE gmail_accounts_secure SET 
+         access_token_encrypted = '{}', 
+         refresh_token_encrypted = '{}', 
+         token_expires_at = '1970-01-01T00:00:00Z',
+         is_active = 0,
+         requires_reauth = 1
+         WHERE 1=1", dummy_token, dummy_token),
+        [],
+    ) {
+        Ok(count) => {
+            Ok(format!("Invalidated tokens for {} accounts. Please re-authenticate.", count))
+        }
+        Err(e) => {
+            Err(format!("Failed to clear tokens: {}", e))
+        }
+    }
 } 

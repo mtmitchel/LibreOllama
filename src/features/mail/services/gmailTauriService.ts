@@ -21,6 +21,21 @@ import { logger } from '../../../core/lib/logger';
 // =============================================================================
 
 /**
+ * Get all Gmail accounts for a user
+ */
+export async function getGmailAccounts(userId: string): Promise<any[]> {
+  try {
+    logger.debug('[TauriService] Getting Gmail accounts for user:', userId);
+    const accounts = await invoke('get_gmail_accounts_secure', { userId });
+    logger.debug('[TauriService] Retrieved accounts:', accounts);
+    return accounts as any[];
+  } catch (error) {
+    logger.error('[TauriService] Failed to get Gmail accounts:', error);
+    throw error;
+  }
+}
+
+/**
  * Start Gmail OAuth2 authentication flow
  */
 export async function startGmailAuth(redirectUri?: string): Promise<{

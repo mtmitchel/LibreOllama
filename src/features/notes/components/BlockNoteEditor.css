@@ -18,6 +18,18 @@
   caret-color: var(--accent-primary) !important;
 }
 
+/* Remove all blue focus outlines and borders from editor */
+.blocknote-editor-container,
+.blocknote-editor-container .ProseMirror,
+.blocknote-editor-container .ProseMirror:focus,
+.blocknote-editor-container:focus,
+.blocknote-editor-container:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  ring: none !important;
+}
+
 /* Anchoring: Add visual pointer to the caret for the suggestion menu */
 .bn-suggestion-menu::before {
   content: '';

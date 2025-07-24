@@ -16,6 +16,7 @@ mod services;
 use commands::gmail::*;        // Gmail auth and operations (consolidated)
 use commands::tasks::*;        // Google Tasks API operations
 use commands::calendar::*;     // Google Calendar API operations
+use commands::google_drive::*; // Google Drive API operations
 use commands::agents::*;       // Agent lifecycle commands  
 use commands::chat::*;         // Chat session commands
 use commands::projects::*;     // Project management commands
@@ -261,6 +262,9 @@ pub fn run() {
             debug_gmail_secure_table,
             debug_gmail_token_expiration,
             cleanup_corrupted_gmail_tokens,
+            debug_list_all_gmail_accounts,
+            migrate_gmail_accounts_to_default_user,
+            clear_all_gmail_tokens,
             get_gmail_attachment,
             send_gmail_message,
             save_gmail_draft,
@@ -282,12 +286,15 @@ pub fn run() {
             create_calendar_event,
             update_calendar_event,
             delete_calendar_event,
+            // Google Drive commands
+            get_google_drive_quota,
             // Chat commands
             create_session,
             get_sessions,
             send_message,
             get_session_messages,
             delete_session,
+            update_session_title,
             get_database_stats,
             // Ollama commands - legacy
             ollama_health_check,
@@ -354,9 +361,21 @@ pub fn run() {
             update_note,
             delete_note,
             clean_text,
+            // LLM chat commands
             llm_chat_openai,
+            llm_chat_anthropic,
+            llm_chat_openrouter,
+            llm_chat_deepseek,
+            llm_chat_gemini,
             llm_chat_mistral,
+            // LLM model listing commands
+            llm_list_openai_models,
+            llm_list_anthropic_models,
+            llm_list_openrouter_models,
+            llm_list_deepseek_models,
+            llm_list_gemini_models,
             llm_list_mistral_models,
+            // LLM settings commands
             save_llm_provider_settings,
             get_llm_provider_settings,
             set_enabled_models,
