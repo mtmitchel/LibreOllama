@@ -23,7 +23,6 @@ interface ConversationListProps {
   onRenameConversation?: (conversationId: string) => void;
   onArchiveConversation?: (conversationId: string) => void;
   onExportConversation?: (conversationId: string) => void;
-  onShareConversation?: (conversationId: string) => void;
 }
 
 export function ConversationList({
@@ -41,7 +40,6 @@ export function ConversationList({
   onRenameConversation,
   onArchiveConversation,
   onExportConversation,
-  onShareConversation,
 }: ConversationListProps) {
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -236,10 +234,6 @@ export function ConversationList({
           onDelete={onDeleteConversation}
           onArchive={onArchiveConversation}
           onExport={onExportConversation}
-          onShare={onShareConversation}
-          onCopyLink={(conversationId) => {
-            console.log(`Copy link for conversation: ${conversationId}`);
-          }}
         />
       )}
     </>

@@ -198,7 +198,7 @@ const DropdownMenuContent = ({ children, className = '' }: DropdownMenuContentPr
       ref={menuRef}
       style={style}
       role="menu"
-      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[9999] rounded-md border bg-surface py-1 shadow-lg ${className}`}
+      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[9999] rounded-md border bg-white dark:bg-gray-900 py-1 shadow-lg ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}
@@ -362,7 +362,7 @@ const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProp
             onMouseEnter={handleContentMouseEnter}
             onMouseLeave={handleContentMouseLeave}
             onMouseDown={(e) => e.stopPropagation()}
-            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[10000] rounded-md border bg-surface py-1 shadow-lg ${className}`}
+            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[10000] rounded-md border bg-white dark:bg-gray-900 py-1 shadow-lg ${className}`}
         >
             {children}
         </div>,

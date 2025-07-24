@@ -1,6 +1,7 @@
 // src/pages/Chat.tsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { ChatInput } from '../../features/chat/components/ChatInput';
 import { ChatMessageBubble } from '../../features/chat/components/ChatMessageBubble';
 import { ChatHeader } from '../../features/chat/components/ChatHeader';
@@ -120,24 +121,44 @@ function Chat() {
   }, [setSearchQuery]);
 
   // --- CONTEXT MENU HANDLERS ---
-  const handleRenameConversation = useCallback((conversationId: string) => {
-    // TODO: Implement conversation renaming
-    console.log('Rename conversation:', conversationId);
-  }, []);
+  const handleRenameConversation = useCallback(async (conversationId: string) => {
+    const conversation = conversations.find(c => c.id === conversationId);
+    if (!conversation) return;
+    
+    // Simple prompt for new name
+    const newTitle = prompt('Enter new conversation title:', conversation.title);
+    if (newTitle && newTitle.trim() && newTitle !== conversation.title) {
+      try {
+        // Update title in backend
+        await invoke('update_session_title', {
+          sessionIdStr: conversationId,
+          newTitle: newTitle.trim()
+        });
+        
+        // Refresh conversations to show the update
+        await fetchConversations();
+      } catch (error) {
+        console.error('Failed to rename conversation:', error);
+      }
+    }
+  }, [conversations, fetchConversations]);
 
-  const handleArchiveConversation = useCallback((conversationId: string) => {
-    // TODO: Implement conversation archiving
+  const handleArchiveConversation = useCallback(async (conversationId: string) => {
+    // For now, archiving will delete the conversation
+    // In the future, we could add a proper archive feature
     console.log('Archive conversation:', conversationId);
-  }, []);
+    if (confirm('Archive this conversation? (This will remove it from your active conversations)')) {
+      try {
+        await deleteConversation(conversationId);
+      } catch (error) {
+        console.error('Failed to archive conversation:', error);
+      }
+    }
+  }, [deleteConversation]);
 
   const handleExportConversation = useCallback((conversationId: string) => {
-    // TODO: Implement conversation export
+    // Export is now handled in the ConversationContextMenu component
     console.log('Export conversation:', conversationId);
-  }, []);
-
-  const handleShareConversation = useCallback((conversationId: string) => {
-    // TODO: Implement conversation sharing
-    console.log('Share conversation:', conversationId);
   }, []);
 
   const handleRegenerate = useCallback(async (messageId: string) => {
@@ -204,7 +225,6 @@ function Chat() {
         onRenameConversation={handleRenameConversation}
         onArchiveConversation={handleArchiveConversation}
         onExportConversation={handleExportConversation}
-        onShareConversation={handleShareConversation}
       />
 
       {/* Main Chat Area */}
