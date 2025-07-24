@@ -1,33 +1,41 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button, Card, Text, Heading, Input } from '../../../components/ui';
 import { X } from 'lucide-react';
+import { Project } from '../stores/projectStore';
 
-interface ProjectForm {
-  name: string;
-  description: string;
-}
-
-interface NewProjectModalProps {
+interface EditProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  projectForm: ProjectForm;
-  setProjectForm: React.Dispatch<React.SetStateAction<ProjectForm>>;
-  onCreateProject: () => void;
+  project: Project | null;
+  onSave: (project: Project) => void;
 }
 
-const NewProjectModal: React.FC<NewProjectModalProps> = ({
+const EditProjectModal: React.FC<EditProjectModalProps> = ({
   isOpen,
   onClose,
-  projectForm,
-  setProjectForm,
-  onCreateProject
+  project,
+  onSave
 }) => {
-  if (!isOpen) return null;
+  const [name, setName] = React.useState('');
+  const [description, setDescription] = React.useState('');
+
+  useEffect(() => {
+    if (project) {
+      setName(project.name);
+      setDescription(project.description);
+    }
+  }, [project]);
+
+  if (!isOpen || !project) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (projectForm.name.trim()) {
-      onCreateProject();
+    if (name.trim()) {
+      onSave({
+        ...project,
+        name: name.trim(),
+        description: description.trim()
+      });
     }
   };
 
@@ -37,7 +45,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
         <form onSubmit={handleSubmit}>
           <div className="p-6">
             <div className="mb-6 flex items-center justify-between">
-              <Heading level={2}>Create new project</Heading>
+              <Heading level={2}>Edit project</Heading>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -57,8 +65,8 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 <Input
                   type="text"
                   placeholder="Enter project name..."
-                  value={projectForm.name}
-                  onChange={(e) => setProjectForm(prev => ({ ...prev, name: e.target.value }))}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   autoFocus
                 />
               </div>
@@ -70,8 +78,8 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 <Input
                   type="text"
                   placeholder="Describe your project..."
-                  value={projectForm.description}
-                  onChange={(e) => setProjectForm(prev => ({ ...prev, description: e.target.value }))}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
             </div>
@@ -87,9 +95,9 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
               <Button 
                 variant="primary" 
                 type="submit"
-                disabled={!projectForm.name.trim()}
+                disabled={!name.trim()}
               >
-                Create project
+                Save changes
               </Button>
             </div>
           </div>
@@ -99,4 +107,4 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
   );
 };
 
-export default NewProjectModal;
+export default EditProjectModal;

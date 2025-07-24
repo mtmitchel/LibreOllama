@@ -23,7 +23,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
   const workspaceItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Chat', path: '/chat', icon: MessageSquare, count: 3 },
+    { name: 'Chat', path: '/chat', icon: MessageSquare },
     { name: 'Mail', path: '/mail', icon: Mail },
     { name: 'Projects', path: '/projects', icon: FolderOpen },
     { name: 'Notes', path: '/notes', icon: FileText },

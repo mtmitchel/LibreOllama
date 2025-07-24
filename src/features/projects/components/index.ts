@@ -1,3 +1,4 @@
 export { ProjectDetails } from './ProjectDetails';
 export { NoProjectSelected } from './NoProjectSelected';
-export { ProjectsSidebar } from './ProjectsSidebar'; 
+export { ProjectsSidebar } from './ProjectsSidebar';
+export { ProjectContextMenu } from './ProjectContextMenu'; 

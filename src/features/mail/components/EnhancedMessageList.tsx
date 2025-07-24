@@ -193,15 +193,39 @@ export function EnhancedMessageList({
 
   // Error state
   if (error && messages.length === 0) {
+    // Parse error to provide better user experience
+    const isAuthError = error.toLowerCase().includes('authentication failed') || 
+                       error.toLowerCase().includes('no refresh token');
+    
     return (
       <div className={`flex h-64 flex-col items-center justify-center ${className}`}>
         <AlertCircle size={32} className="mb-4 text-error" />
-        <Text size="sm" variant="secondary" className="mb-4">
-          {error}
+        <Text size="lg" weight="medium" className="mb-2">
+          {isAuthError ? 'Connection expired' : 'Unable to load messages'}
         </Text>
-        <Button variant="outline" onClick={handleRefresh}>
-          Try again
-        </Button>
+        <Text size="sm" variant="secondary" className="mb-4 max-w-md text-center">
+          {isAuthError 
+            ? 'Your Gmail connection needs to be refreshed. Please reconnect your account to continue.'
+            : 'We encountered an issue loading your messages. Please try again.'
+          }
+        </Text>
+        <div className="flex gap-2">
+          {isAuthError ? (
+            <Button 
+              variant="primary" 
+              onClick={() => {
+                // Open settings to reconnect account
+                window.location.href = '/settings?tab=accounts';
+              }}
+            >
+              Reconnect account
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={handleRefresh}>
+              Try again
+            </Button>
+          )}
+        </div>
       </div>
     );
   }

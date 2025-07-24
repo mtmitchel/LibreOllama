@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Card, Text, Caption, Progress, Input } from '../../../components/ui';
 import { Plus, Search, PanelLeft, Folder, FileText, Calendar, CheckSquare } from 'lucide-react';
+import { ProjectContextMenu } from './ProjectContextMenu';
 
 interface Project {
   id: string;
@@ -21,6 +22,10 @@ interface ProjectsSidebarProps {
   onNewProject: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onEditProject: (project: Project) => void;
+  onDuplicateProject: (project: Project) => void;
+  onArchiveProject: (project: Project) => void;
+  onDeleteProject: (project: Project) => void;
 }
 
 export function ProjectsSidebar({
@@ -29,8 +34,16 @@ export function ProjectsSidebar({
   onSelectProject,
   onNewProject,
   searchQuery,
-  onSearchChange
+  onSearchChange,
+  onEditProject,
+  onDuplicateProject,
+  onArchiveProject,
+  onDeleteProject
 }: ProjectsSidebarProps) {
+  const [contextMenu, setContextMenu] = useState<{
+    project: Project;
+    position: { x: number; y: number };
+  } | null>(null);
   // Group projects by status
   const groupedProjects = projects.reduce((acc, project) => {
     const status = project.statusTag || 'Other';
@@ -72,11 +85,11 @@ export function ProjectsSidebar({
 
       {/* Search */}
       <div className="relative mb-4 shrink-0">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+        <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
         <Input 
           type="search" 
           placeholder="Search projects..." 
-          className="pl-14"
+          className="pl-9"
           hasIcon={true}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -104,13 +117,16 @@ export function ProjectsSidebar({
                         : 'hover:bg-surface'
                     }`}
                     onClick={() => onSelectProject(project.id)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({
+                        project,
+                        position: { x: e.clientX, y: e.clientY }
+                      });
+                    }}
                   >
                     <div>
                       <div className="flex items-center gap-3">
-                        <span 
-                          className="size-3 shrink-0 rounded-full"
-                          style={{ backgroundColor: project.color }}
-                        />
                         <Text weight="semibold" variant="body" className="truncate">
                           {project.name}
                         </Text>
@@ -118,12 +134,12 @@ export function ProjectsSidebar({
                       <Text 
                         size="sm" 
                         variant="secondary" 
-                        className="ml-6 mt-1 truncate"
+                        className="mt-1 truncate"
                       >
                         {project.description}
                       </Text>
                       {project.progress !== undefined && (
-                        <div className="ml-6 mt-2">
+                        <div className="mt-2">
                           <div className="mb-1 flex justify-between">
                             <Caption>Progress</Caption>
                             <Caption>{project.progress}%</Caption>
@@ -142,6 +158,19 @@ export function ProjectsSidebar({
           ))}
         </div>
       </div>
+
+      {contextMenu && (
+        <ProjectContextMenu
+          project={contextMenu.project}
+          isOpen={true}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+          onEdit={onEditProject}
+          onDuplicate={onDuplicateProject}
+          onArchive={onArchiveProject}
+          onDelete={onDeleteProject}
+        />
+      )}
     </Card>
   );
 } 
