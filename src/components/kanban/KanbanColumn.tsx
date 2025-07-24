@@ -9,6 +9,7 @@ import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2
 interface KanbanColumnProps {
   column: KanbanColumnType;
   className?: string;
+  searchQuery?: string;
   onDelete?: (columnId: string) => void;
   onRename?: (columnId: string, newTitle: string) => void;
 }
@@ -18,6 +19,7 @@ type SortOption = 'order' | 'date' | 'title';
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({ 
   column, 
   className = '',
+  searchQuery = '',
   onDelete,
   onRename
 }) => {
@@ -71,9 +73,22 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     },
   });
 
-  // Sort tasks based on current sort option
+  // Filter and sort tasks based on search query and sort option
   const sortedTasks = useMemo(() => {
-    const tasks = [...column.tasks];
+    let tasks = [...column.tasks];
+    
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      tasks = tasks.filter(task => {
+        const matchesTitle = task.title.toLowerCase().includes(query);
+        const matchesNotes = task.notes?.toLowerCase().includes(query);
+        const matchesLabels = task.metadata?.labels?.some(label => 
+          label.toLowerCase().includes(query)
+        );
+        return matchesTitle || matchesNotes || matchesLabels;
+      });
+    }
     
     switch (sortBy) {
       case 'order':
@@ -100,7 +115,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       default:
         return tasks;
     }
-  }, [column.tasks, sortBy]);
+  }, [column.tasks, sortBy, searchQuery]);
 
   // Handle task creation
   const handleCreateTask = useCallback(async (data: {
@@ -167,7 +182,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               <>
                 <h3 className="font-semibold text-primary text-sm truncate">{column.title}</h3>
                 <span className="text-xs text-secondary bg-card px-2.5 py-1 rounded-full font-medium shadow-sm flex-shrink-0">
-                  {column.tasks.length}
+                  {sortedTasks.length}{searchQuery && ` / ${column.tasks.length}`}
                 </span>
               </>
             )}
@@ -295,13 +310,27 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               <p className="text-error text-sm font-medium mb-1">Error loading tasks</p>
               <p className="text-xs text-muted">{column.error}</p>
             </div>
-          ) : column.tasks.length === 0 ? (
+          ) : sortedTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-12 h-12 bg-tertiary rounded-full flex items-center justify-center mb-4 opacity-60">
-                <Plus size={20} className="text-secondary" />
-              </div>
-              <p className="text-sm font-medium text-primary mb-1">No tasks yet</p>
-              <p className="text-xs text-muted max-w-32">Drop tasks here or click the + button to create your first task</p>
+              {searchQuery && column.tasks.length > 0 ? (
+                <>
+                  <div className="w-12 h-12 bg-tertiary rounded-full flex items-center justify-center mb-4 opacity-60">
+                    <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-primary mb-1">No matching tasks</p>
+                  <p className="text-xs text-muted max-w-48">No tasks match your search in this list</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 bg-tertiary rounded-full flex items-center justify-center mb-4 opacity-60">
+                    <Plus size={20} className="text-secondary" />
+                  </div>
+                  <p className="text-sm font-medium text-primary mb-1">No tasks yet</p>
+                  <p className="text-xs text-muted max-w-32">Drop tasks here or click the + button to create your first task</p>
+                </>
+              )}
             </div>
           ) : (
             sortedTasks.map((task) => (

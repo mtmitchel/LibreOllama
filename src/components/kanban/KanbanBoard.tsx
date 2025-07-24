@@ -191,6 +191,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               key={column.id}
               column={column}
               className="flex-1 min-w-80"
+              searchQuery={searchQuery}
               onDelete={onDeleteList}
               onRename={onRenameList}
             />

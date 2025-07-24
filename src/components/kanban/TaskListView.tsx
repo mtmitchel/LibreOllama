@@ -1,16 +1,26 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useKanbanStore, KanbanTask } from '../../stores/useKanbanStore';
 import { EditTaskModal } from './EditTaskModal';
 import { CreateTaskModal } from './CreateTaskModal';
 import { Card, Button, Input } from '../ui';
-import { Plus, Search, Filter, Calendar, CheckSquare, Square, Tag, MoreHorizontal, RotateCcw } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, CheckSquare, Square, Tag, MoreHorizontal, RotateCcw, ArrowUpDown, GripVertical, Type, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TaskListViewProps {
   className?: string;
+  searchQuery?: string;
+  showHeader?: boolean;
+  selectedListId?: string;
+  sortBy?: 'created' | 'due' | 'title';
 }
 
-export const TaskListView: React.FC<TaskListViewProps> = ({ className = '' }) => {
+export const TaskListView: React.FC<TaskListViewProps> = ({ 
+  className = '', 
+  searchQuery: parentSearchQuery = '',
+  showHeader = true,
+  selectedListId: parentSelectedListId,
+  sortBy: parentSortBy
+}) => {
   const {
     columns,
     updateTask,
@@ -23,14 +33,23 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ className = '' }) =>
   const [selectedColumnId, setSelectedColumnId] = useState<string>('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all');
-  const [sortBy, setSortBy] = useState<'title' | 'due' | 'priority' | 'created'>('created');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const searchQuery = parentSearchQuery || localSearchQuery;
+  const [localSelectedListId, setLocalSelectedListId] = useState<string>('all');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [localSortBy, setLocalSortBy] = useState<'created' | 'due' | 'title'>('created');
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Use parent props if provided, otherwise use local state
+  const selectedListId = parentSelectedListId ?? localSelectedListId;
+  const sortBy = parentSortBy ?? localSortBy;
 
-  // Get all tasks from all columns
-  const allTasks = columns.flatMap(column => 
-    column.tasks.map(task => ({ ...task, columnId: column.id, columnTitle: column.title }))
-  );
+  // Get all tasks from all columns or filtered by list
+  const allTasks = columns
+    .filter(column => selectedListId === 'all' || column.id === selectedListId)
+    .flatMap(column => 
+      column.tasks.map(task => ({ ...task, columnId: column.id, columnTitle: column.title }))
+    );
 
   // Filter and sort tasks
   const filteredTasks = allTasks
@@ -46,9 +65,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ className = '' }) =>
         if (!matchesTitle && !matchesNotes && !matchesTags) return false;
       }
 
-      // Status filter
-      if (filterStatus === 'active' && task.status === 'completed') return false;
-      if (filterStatus === 'completed' && task.status !== 'completed') return false;
+      // No status filter needed - list selection handles filtering
 
       return true;
     })
@@ -61,11 +78,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ className = '' }) =>
           if (!a.due) return 1;
           if (!b.due) return -1;
           return new Date(a.due).getTime() - new Date(b.due).getTime();
-        case 'priority':
-          const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
-          const aPriority = priorityOrder[a.metadata?.priority || 'normal'];
-          const bPriority = priorityOrder[b.metadata?.priority || 'normal'];
-          return bPriority - aPriority;
         case 'created':
         default:
           return new Date(b.updated).getTime() - new Date(a.updated).getTime();
@@ -139,64 +151,88 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ className = '' }) =>
   return (
     <>
       <div className={`h-full flex flex-col ${className}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold text-primary">Task list</h2>
-            <span className="text-sm text-secondary">
+        {/* Streamlined Filters Bar */}
+        {showHeader && (
+          <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            {/* Task Count */}
+            <span className="text-sm text-secondary bg-card px-3 py-1.5 rounded-full font-medium">
               {filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'}
             </span>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus size={16} />
-            New task
-          </Button>
-        </div>
 
-        {/* Filters and Search */}
-        <Card className="mb-6 p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
-              <Input
-                type="text"
-                placeholder="Search tasks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            {/* List Filter Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedListId}
+                onChange={(e) => setLocalSelectedListId(e.target.value)}
+                className="h-8 pl-3 pr-8 text-sm border border-border-default rounded-lg bg-card text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none cursor-pointer"
+              >
+                <option value="all">All lists</option>
+                {columns.map(column => (
+                  <option key={column.id} value={column.id}>{column.title}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
             </div>
-
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-3 py-2 border border-border-default rounded-md bg-secondary text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-            >
-              <option value="all">All tasks</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-            </select>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-2 border border-border-default rounded-md bg-secondary text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-            >
-              <option value="created">Date created</option>
-              <option value="title">Title</option>
-              <option value="due">Due date</option>
-              <option value="priority">Priority</option>
-            </select>
           </div>
-        </Card>
+
+          <div className="flex items-center gap-2">
+            {/* Sort Menu Button */}
+            <div className="relative" ref={sortMenuRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 flex items-center gap-2 hover:bg-tertiary"
+                onClick={() => setShowSortMenu(!showSortMenu)}
+              >
+                <ArrowUpDown size={14} />
+                <span className="text-sm">Sort</span>
+              </Button>
+              
+              {showSortMenu && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
+                  <button
+                    onClick={() => {
+                      setLocalSortBy('created');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg ${
+                      sortBy === 'created' ? 'bg-accent-soft' : ''
+                    }`}
+                  >
+                    <GripVertical size={14} className="mr-2" />
+                    Date created
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLocalSortBy('due');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary ${
+                      sortBy === 'due' ? 'bg-accent-soft' : ''
+                    }`}
+                  >
+                    <Calendar size={14} className="mr-2" />
+                    Due date
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLocalSortBy('title');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary last:rounded-b-lg ${
+                      sortBy === 'title' ? 'bg-accent-soft' : ''
+                    }`}
+                  >
+                    <Type size={14} className="mr-2" />
+                    Title
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        )}
 
         {/* Task List */}
         <div className="flex-1 overflow-y-auto">
@@ -206,15 +242,15 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ className = '' }) =>
                 <CheckSquare size={24} className="text-secondary" />
               </div>
               <h3 className="text-lg font-medium text-primary mb-2">
-                {searchQuery || filterStatus !== 'all' ? 'No tasks found' : 'No tasks yet'}
+                {searchQuery || selectedListId !== 'all' ? 'No tasks found' : 'No tasks yet'}
               </h3>
               <p className="text-secondary mb-4">
-                {searchQuery || filterStatus !== 'all' 
+                {searchQuery || selectedListId !== 'all' 
                   ? 'Try adjusting your search or filters'
                   : 'Create your first task to get started'
                 }
               </p>
-              {!searchQuery && filterStatus === 'all' && (
+              {!searchQuery && selectedListId === 'all' && (
                 <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
                   Create task
                 </Button>

@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { KanbanBoard } from '../../components/kanban';
 import { TaskListView } from '../../components/kanban/TaskListView';
 import { useHeader } from '../contexts/HeaderContext';
 import { Button } from '../../components/ui';
-import { LayoutGrid, List, RefreshCw, Plus, Search, X } from 'lucide-react';
+import { LayoutGrid, List, RefreshCw, Plus, Search, X, ArrowUpDown, ChevronDown, GripVertical, Calendar, Type } from 'lucide-react';
 import { useGoogleTasksStore } from '../../stores/googleTasksStore';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { kanbanGoogleSync, setupAutoSync } from '../../services/kanbanGoogleTasksSync';
+import { useKanbanStore } from '../../stores/useKanbanStore';
 
 type ViewMode = 'kanban' | 'list';
 
@@ -18,6 +19,10 @@ export default function Tasks() {
   const [showNewListDialog, setShowNewListDialog] = useState(false);
   const [newListTitle, setNewListTitle] = useState('');
   const [isCreatingList, setIsCreatingList] = useState(false);
+  const [selectedListId, setSelectedListId] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'created' | 'due' | 'title'>('created');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
   
   const activeAccount = useActiveGoogleAccount();
   const {
@@ -30,6 +35,22 @@ export default function Tasks() {
     updateTaskList,
     deleteTaskList,
   } = useGoogleTasksStore();
+  
+  const { columns } = useKanbanStore();
+  
+  // Close sort menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setShowSortMenu(false);
+      }
+    };
+    
+    if (showSortMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showSortMenu]);
 
   // Setup header when component mounts
   useEffect(() => {
@@ -198,6 +219,87 @@ export default function Tasks() {
             )}
           </div>
           
+          {/* List View Controls - only show in list view */}
+          {viewMode === 'list' && (
+            <>
+              {/* Task Count */}
+              <span className="text-sm text-secondary bg-card px-3 py-1.5 rounded-full font-medium">
+                {columns.flatMap(c => c.tasks).filter(task => 
+                  selectedListId === 'all' || columns.find(c => c.id === selectedListId)?.tasks.includes(task)
+                ).length} tasks
+              </span>
+              
+              {/* List Filter */}
+              <div className="relative">
+                <select
+                  value={selectedListId}
+                  onChange={(e) => setSelectedListId(e.target.value)}
+                  className="h-8 pl-3 pr-8 text-sm border border-border-default rounded-lg bg-card text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none cursor-pointer"
+                >
+                  <option value="all">All lists</option>
+                  {columns.map(column => (
+                    <option key={column.id} value={column.id}>{column.title}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
+              </div>
+              
+              {/* Sort Menu */}
+              <div className="relative" ref={sortMenuRef}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 flex items-center gap-2 hover:bg-tertiary"
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                >
+                  <ArrowUpDown size={14} />
+                  <span className="text-sm">Sort</span>
+                </Button>
+                
+                {showSortMenu && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
+                    <button
+                      onClick={() => {
+                        setSortBy('created');
+                        setShowSortMenu(false);
+                      }}
+                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg ${
+                        sortBy === 'created' ? 'bg-accent-soft' : ''
+                      }`}
+                    >
+                      <GripVertical size={14} className="mr-2" />
+                      Date created
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortBy('due');
+                        setShowSortMenu(false);
+                      }}
+                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary ${
+                        sortBy === 'due' ? 'bg-accent-soft' : ''
+                      }`}
+                    >
+                      <Calendar size={14} className="mr-2" />
+                      Due date
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSortBy('title');
+                        setShowSortMenu(false);
+                      }}
+                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary last:rounded-b-lg ${
+                        sortBy === 'title' ? 'bg-accent-soft' : ''
+                      }`}
+                    >
+                      <Type size={14} className="mr-2" />
+                      Title
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+          
           <Button
             variant="ghost"
             size="sm"
@@ -242,7 +344,13 @@ export default function Tasks() {
             onRenameList={handleRenameList}
           />
         ) : (
-          <TaskListView className="h-full" />
+          <TaskListView 
+            className="h-full" 
+            searchQuery={searchQuery}
+            showHeader={false}
+            selectedListId={selectedListId}
+            sortBy={sortBy}
+          />
         )}
       </div>
 
