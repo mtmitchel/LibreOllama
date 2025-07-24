@@ -1,40 +1,117 @@
 # LibreOllama Documentation Hub
 
-Welcome to the central documentation hub for the LibreOllama project. This document is the primary entry point for all team members to find the information they need.
+Welcome to the central documentation hub for LibreOllama. This is your starting point for all project information, organized by role and purpose.
+
+## Quick Navigation
+
+### 🎯 For Product Managers & Leadership
+- **[Production Readiness Plan](./PRODUCTION_READINESS.md)** - Complete roadmap with phases, status, and deliverables
+- **[Feature Roadmap](./roadmap/README.md)** - Detailed feature specifications and requirements
+
+### 🎨 For Designers & UI/UX
+- **[Design System](./DESIGN_SYSTEM.md)** - Complete design system with tokens, components, and animations
+- **[Design Mockups](../design/mockups/)** - Visual mockups for all application screens
+- **[Component Explorer](https://storybook.js.org/)** - Run `npm run ladle` for interactive component gallery
+
+### 👩‍💻 For Developers & Engineers
+- **[Architecture Guide](./ARCHITECTURE.md)** - Technical implementation patterns and system design
+- **[Testing Strategy](./TESTING_STRATEGY.md)** - Comprehensive testing approach and best practices
+- **[Development Setup](./guides/getting-started.md)** - Quick start guide for new contributors
 
 ---
 
-### For Product Managers & High-Level Overview
+## Core Documentation
 
-- **[Project Roadmap](./ROADMAP.md):** The master plan. See what features are planned, in progress, and completed. Each feature links to a detailed roadmap with more context.
+### System Architecture
+- **[Architecture Guide](./ARCHITECTURE.md)** - System design, patterns, and technical implementation
+- **[Testing Strategy](./TESTING_STRATEGY.md)** - Testing approach, frameworks, and best practices
+
+### Design & User Experience  
+- **[Design System](./DESIGN_SYSTEM.md)** - Colors, typography, components, animations, and accessibility
+- **Component Library** - Run `npm run ladle` for interactive component explorer
+
+### Project Management
+- **[Production Readiness](./PRODUCTION_READINESS.md)** - Complete project roadmap with 3 phases
+- **[Feature Roadmap](./roadmap/)** - Individual feature specifications and requirements
+
+### Development Guides
+- **[Getting Started](./guides/getting-started.md)** - New developer onboarding
+- **[Development Setup](./guides/development-setup.md)** - Detailed environment configuration
+- **[Deployment Guide](./guides/deployment.md)** - Production deployment instructions
 
 ---
 
-### For Designers & UI/UX Professionals
+## Feature-Specific Documentation
 
-- **[Design Overview](../../design/system/overview.md):** **(Primary Document)** This is the authoritative source for our design philosophy, color palettes, typography, and component-level design thinking.
-- **[Design Mockups](../../design/mockups/):** A directory containing all the visual mockups for various application screens.
-- **[Design Specs](../../design/specs/):** A directory containing detailed design specifications.
-- **Ladle Component Explorer (Interactive):** Run `npm run ladle` to launch an interactive workshop of all our UI components. This is the best way to see the design system in action.
+The `/roadmap` directory contains detailed specifications for each major feature:
+
+- [Canvas System](./roadmap/01_canvas.md) - Visual content creation and manipulation
+- [Gmail Integration](./roadmap/02_gmail_integration.md) - Email client functionality  
+- [Tasks Management](./roadmap/03_tasks_management.md) - Kanban board and Google Tasks sync
+- [Calendar Integration](./roadmap/04_calendar_integration.md) - Google Calendar sync and management
+- [Backend Services](./roadmap/05_backend_services.md) - Rust/Tauri backend architecture
+- [Chat System](./roadmap/06_chat_system.md) - AI chat with multi-provider support
+- [Dashboard](./roadmap/07_dashboard.md) - Main application dashboard
+- [UI/UX](./roadmap/08_ui_ux.md) - User interface and experience guidelines
+- [Projects](./roadmap/09_projects.md) - Project management features
+- [Agents](./roadmap/10_agents.md) - AI agent system
+- [Notes](./roadmap/11_notes.md) - Rich text note-taking with BlockNote
+- [Settings](./roadmap/12_settings.md) - Application configuration
 
 ---
 
-### For Developers & Engineers
+## Development Workflow
 
-- **[Developer Design Guide](./DEVELOPER_DESIGN_GUIDE.md):** **(Start Here)** A practical guide on how to work with the design system, including how to use the design tokens, run the component explorer (Ladle), and write component stories.
-- **[Implementation Guide](./IMPLEMENTATION_GUIDE.md):** A deep-dive into the technical architecture of the application's various features.
-- **[Project Roadmap](./ROADMAP.md):** Your guide to the work that needs to be done, with links to detailed, feature-specific roadmaps containing technical implementation notes.
+### Getting Started
+1. Read [Getting Started Guide](./guides/getting-started.md)
+2. Set up development environment with [Development Setup](./guides/development-setup.md)
+3. Review [Architecture Guide](./ARCHITECTURE.md) for patterns and conventions
+4. Explore components with `npm run ladle`
 
-## Design & UI/UX
+### Contributing
+1. Follow [Design System](./DESIGN_SYSTEM.md) guidelines
+2. Write tests according to [Testing Strategy](./TESTING_STRATEGY.md)
+3. Reference feature roadmaps for requirements
+4. Use production readiness plan for prioritization
 
-- **[Design System Overview](../design/system/overview.md)**: The foundational guide to our design philosophy, color palette, typography, and core principles. **(Required reading for Designers and PMs)**.
-- **[Component Library (Ladle)](../.ladle)**: An interactive workshop for viewing, testing, and understanding our React components in isolation.
-- **[Developer Design Guide](./DEVELOPER_DESIGN_GUIDE.md)**: A practical guide for developers on how to use the token-based design system, Tailwind configuration, and component library.
+### Quality Standards
+- **TypeScript**: Zero errors policy
+- **Testing**: Comprehensive coverage with Vitest
+- **Design**: Design system compliance
+- **Accessibility**: WCAG AA minimum
+- **Performance**: 60fps animations, optimized renders
 
-## Code & Design Audits
+---
 
-- **[Design System Audit](./DESIGN_SYSTEM_AUDIT.md)**: A detailed, component-by-component analysis of the design system's implementation status across the application. Use this to identify and prioritize UI technical debt.
+## Quick Commands
 
-## Backend & Architecture
+```bash
+# Development
+npm run dev              # Start dev server
+npm run dev:tauri        # Start Tauri dev mode
 
-- **[Backend Services Overview](./roadmap/05_backend_services.md)**: A high-level look at the backend architecture, services, and APIs.
+# Testing  
+npm test                 # Run all tests
+npm run test:watch       # Watch mode
+npm run test:coverage    # Coverage report
+
+# Quality
+npm run lint             # ESLint check
+npm run type-check       # TypeScript validation
+
+# Design System
+npm run ladle            # Component explorer
+```
+
+---
+
+## Support & Questions
+
+- **Technical Issues**: Check [Architecture Guide](./ARCHITECTURE.md) and [Testing Strategy](./TESTING_STRATEGY.md)
+- **Design Questions**: Reference [Design System](./DESIGN_SYSTEM.md)
+- **Feature Requirements**: See feature-specific roadmaps in `/roadmap`
+- **Project Status**: Check [Production Readiness Plan](./PRODUCTION_READINESS.md)
+
+---
+
+*This documentation is maintained by the LibreOllama team. For updates or corrections, please follow the standard contribution process.*
