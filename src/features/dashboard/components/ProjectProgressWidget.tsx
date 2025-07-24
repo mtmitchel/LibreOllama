@@ -26,7 +26,7 @@ export const ProjectProgressWidget: React.FC = () => {
 
   if (isLoading && projects.length === 0) {
     return (
-      <Card>
+      <Card padding="sm">
         <div className="animate-pulse">
           <div className="mb-4 h-6 rounded bg-secondary"></div>
           <div className="mb-4 h-2 rounded bg-secondary"></div>
@@ -42,7 +42,7 @@ export const ProjectProgressWidget: React.FC = () => {
 
   if (error) {
     return (
-      <Card>
+      <Card padding="sm">
         <div className="py-4 text-center">
           <Text variant="secondary" size="sm">{error}</Text>
         </div>
@@ -52,17 +52,17 @@ export const ProjectProgressWidget: React.FC = () => {
 
   if (activeProjects.length === 0) {
     return (
-      <Card>
+      <Card padding="sm">
         <div className="mb-4 flex items-center justify-between">
           <Heading level={3}>Project progress</Heading>
           <Text variant="body" size="sm" weight="medium" className="rounded-xl bg-secondary px-3 py-1 text-secondary">
             No active projects
           </Text>
         </div>
-        <div className="py-8 text-center">
-          <FolderOpen className="mx-auto mb-3 size-8 text-secondary" />
-          <Text variant="secondary" size="sm">No active projects to show</Text>
-          <Text variant="tertiary" size="xs" className="mt-1">Create a project to see progress here</Text>
+        <div className="py-3 text-center">
+          <FolderOpen className="mx-auto mb-1.5 size-6 text-secondary" />
+          <Text variant="secondary" size="xs">No active projects to show</Text>
+          <Text variant="tertiary" size="xs" className="mt-0.5 text-[10px]">Create a project to see progress here</Text>
         </div>
       </Card>
     );
@@ -70,38 +70,38 @@ export const ProjectProgressWidget: React.FC = () => {
 
   return (
     <Card>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <Heading level={3}>Project progress</Heading>
         <Text variant="body" size="sm" weight="medium" className="rounded-xl bg-accent-soft px-3 py-1 text-accent-primary">
           {totalProgress}% average
         </Text>
       </div>
-      <div className="mb-4">
+      <div className="mb-3">
         <Progress value={totalProgress} max={100} />
       </div>
-      <ul className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-2">
         {activeProjects.map((project) => {
           const stats = projectStats[project.id];
           const completedGoals = stats?.goals.completed || 0;
           const totalGoals = stats?.goals.total || 0;
           
           return (
-            <li key={project.id} className="flex items-center gap-3">
+            <li key={project.id} className="flex items-center gap-2">
               <div 
-                className="size-3 shrink-0 rounded-full"
+                className="size-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: project.color }}
               />
               <div className="min-w-0 flex-1">
-                <Text variant="body" size="sm" weight="medium" className="truncate">
-                  {project.name}
-                </Text>
+                <div className="flex items-center justify-between gap-2">
+                  <Text variant="body" size="xs" weight="medium" className="truncate">
+                    {project.name}
+                  </Text>
+                  <Text size="xs" variant="secondary" className="shrink-0">
+                    {project.progress}%
+                  </Text>
+                </div>
                 <Text variant="secondary" size="xs" className="truncate">
                   {totalGoals > 0 ? `${completedGoals}/${totalGoals} goals` : 'No goals set'}
-                </Text>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-secondary">
-                <Text as="div" size="sm" variant="secondary" className="shrink-0">
-                  {project.progress}%
                 </Text>
               </div>
             </li>

@@ -94,7 +94,7 @@ export const PendingTasksWidget: React.FC = () => {
   };
 
   return (
-    <Card>
+    <Card padding="sm">
       <div className="mb-4 flex items-center justify-between">
         <Heading level={3}>Pending tasks</Heading>
         <DropdownMenu>
@@ -116,55 +116,49 @@ export const PendingTasksWidget: React.FC = () => {
       </div>
       
       {pendingTasks.length === 0 ? (
-        <div className="py-8 text-center">
-          <CheckSquare className="mx-auto mb-3 size-8 text-tertiary" />
-          <Text variant="secondary" size="sm">No pending tasks</Text>
+        <div className="py-2 text-center">
+          <CheckSquare className="mx-auto mb-1 size-5 text-tertiary" />
+          <Text variant="secondary" size="xs">No pending tasks</Text>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={handleAddTask}
-            className="mt-2"
+            className="mt-1 text-xs h-auto py-0.5 px-2"
           >
             Add your first task
           </Button>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-2">
           {pendingTasks.map((task) => {
             const dueDate = formatDueDate(task.due);
             const isOverdue = task.due && isPast(new Date(task.due));
             const priority = task.metadata?.priority;
             
             return (
-              <li key={task.id} className="flex items-start gap-3">
+              <li key={task.id} className="flex items-start gap-2 py-1">
                 <button
                   onClick={() => handleToggleTask(task.id, task.columnId)}
-                  className="border-border-primary mt-1 size-4 shrink-0 rounded border transition-colors hover:bg-secondary"
+                  className="border-border-primary mt-0.5 size-3.5 shrink-0 rounded-sm border transition-colors hover:bg-secondary"
                   aria-label={`Mark ${task.title} as completed`}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-start justify-between">
-                    <Text size="sm" weight="medium" variant="body" className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <Text size="xs" weight="medium" variant="body" className="min-w-0 flex-1 leading-snug">
                       {task.title}
                     </Text>
-                    {priority && (
-                      <span className={`ml-2 text-xs font-medium ${getPriorityColor(priority)}`}>
-                        {priority}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Text size="xs" variant="secondary">
-                      {getColumnName(task.columnId)}
-                    </Text>
-                    {dueDate && (
-                      <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-secondary'}`}>
-                        <Calendar className="size-3" />
-                        <Text size="xs" className={isOverdue ? 'text-red-500' : ''}>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {priority && (
+                        <span className={`text-xs font-medium ${getPriorityColor(priority)}`}>
+                          {priority[0].toUpperCase()}
+                        </span>
+                      )}
+                      {dueDate && (
+                        <Text size="xs" className={isOverdue ? 'text-red-500 font-medium' : 'text-secondary'}>
                           {dueDate}
                         </Text>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </li>

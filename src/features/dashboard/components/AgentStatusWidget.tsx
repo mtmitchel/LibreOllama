@@ -56,7 +56,7 @@ export const AgentStatusWidget: React.FC = () => {
     return (
       <Card>
         <div className="animate-pulse">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between">
             <div className="h-6 w-32 rounded bg-secondary"></div>
             <div className="h-8 w-20 rounded bg-secondary"></div>
           </div>
@@ -73,8 +73,8 @@ export const AgentStatusWidget: React.FC = () => {
   if (error) {
     return (
       <Card>
-        <div className="mb-4 flex items-center justify-between">
-          <Heading level={3}>Agent status</Heading>
+        <div className="mb-3 flex items-center justify-between">
+          <Heading level={3}>Available agents</Heading>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={handleConfigureAgents}>
               Configure
@@ -108,9 +108,9 @@ export const AgentStatusWidget: React.FC = () => {
   }
 
   return (
-    <Card>
-      <div className="mb-4 flex items-center justify-between">
-        <Heading level={3}>Agent status</Heading>
+    <Card padding="sm">
+      <div className="mb-3 flex items-center justify-between">
+        <Heading level={3}>Available agents</Heading>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={handleConfigureAgents}>
             Configure
@@ -138,10 +138,10 @@ export const AgentStatusWidget: React.FC = () => {
       </div>
 
       {agents.length === 0 ? (
-        <div className="py-8 text-center">
-          <Bot className="mx-auto mb-3 size-8 text-secondary" />
-          <Text variant="secondary" size="sm">No agents configured</Text>
-          <Text variant="tertiary" size="xs" className="mt-1">Create agents to see their status here</Text>
+        <div className="py-2 text-center">
+          <Bot className="mx-auto mb-1 size-5 text-secondary" />
+          <Text variant="secondary" size="xs">No agents configured</Text>
+          <Text variant="tertiary" size="xs" className="mt-0.5 text-[10px]">Create agents to see their status here</Text>
         </div>
       ) : (
         <div className="space-y-3">
@@ -178,13 +178,11 @@ export const AgentStatusWidget: React.FC = () => {
         </div>
       )}
 
-      <div className="border-border mt-4 border-t pt-3">
-        <div className="flex items-center justify-between text-xs text-secondary">
-          <span>{agents.filter(a => a.is_active).length} active of {agents.length} total</span>
-          <Button variant="ghost" size="sm" className="text-secondary">
-            Manage agents
-          </Button>
-        </div>
+      <div className="mt-3 flex items-center justify-between text-xs text-secondary">
+        <span>{agents.filter(a => a.is_active).length} active of {agents.length} total</span>
+        <Button variant="ghost" size="sm" className="text-xs text-secondary p-1 h-auto">
+          Manage agents
+        </Button>
       </div>
     </Card>
   );

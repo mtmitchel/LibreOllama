@@ -6,3 +6,6 @@ export { UpcomingEventsWidget } from './UpcomingEventsWidget';
 export { PendingTasksWidget } from './PendingTasksWidget';
 export { WidgetErrorBoundary } from './WidgetErrorBoundary';
 export { WidgetSkeleton } from './WidgetSkeleton';
+export { FocusEventsWidget } from './FocusEventsWidget';
+export { MailWidget } from './MailWidget';
+export { RecentActivityWidget } from './RecentActivityWidget';

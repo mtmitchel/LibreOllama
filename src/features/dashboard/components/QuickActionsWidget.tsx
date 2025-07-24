@@ -57,7 +57,7 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
   };
 
   return (
-    <Card>
+    <Card padding="sm">
       <div className="mb-4 flex items-center justify-between">
         <Heading level={3}>Quick actions</Heading>
         <DropdownMenu>
@@ -84,16 +84,16 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
           </DropdownMenu.Content>
         </DropdownMenu>
       </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3">
         {actions.map((action) => (
           <Button
             key={action.id}
             variant="secondary"
             onClick={action.onClick}
-            className="flex h-24 flex-col items-center justify-center gap-2 whitespace-normal p-2 text-center"
+            className="flex h-20 flex-col items-center justify-center gap-2 whitespace-normal p-2 text-center"
           >
             {action.icon}
-            <span className="text-sm font-semibold leading-tight text-primary">{action.label}</span>
+            <span className="text-xs font-medium leading-tight text-primary">{action.label}</span>
           </Button>
         ))}
       </div>
