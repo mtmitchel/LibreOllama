@@ -150,13 +150,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
   return (
     <>
-      <div className={`h-full flex flex-col ${className}`}>
+      <div className={`flex h-full flex-col ${className}`}>
         {/* Streamlined Filters Bar */}
         {showHeader && (
-          <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="mb-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             {/* Task Count */}
-            <span className="text-sm text-secondary bg-card px-3 py-1.5 rounded-full font-medium">
+            <span className="rounded-full bg-card px-3 py-1.5 text-sm font-medium text-secondary">
               {filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'}
             </span>
 
@@ -165,14 +165,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               <select
                 value={selectedListId}
                 onChange={(e) => setLocalSelectedListId(e.target.value)}
-                className="h-8 pl-3 pr-8 text-sm border border-border-default rounded-lg bg-card text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none cursor-pointer"
+                className="border-border-default focus:ring-primary/20 h-8 cursor-pointer appearance-none rounded-lg border bg-card pl-3 pr-8 text-sm text-primary transition-colors focus:border-primary focus:outline-none focus:ring-2"
               >
                 <option value="all">All lists</option>
                 {columns.map(column => (
                   <option key={column.id} value={column.id}>{column.title}</option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
+              <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-secondary" />
             </div>
           </div>
 
@@ -182,7 +182,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-3 flex items-center gap-2 hover:bg-tertiary"
+                className="flex h-8 items-center gap-2 px-3 hover:bg-tertiary"
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
                 <ArrowUpDown size={14} />
@@ -190,13 +190,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               </Button>
               
               {showSortMenu && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
+                <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-card shadow-lg">
                   <button
                     onClick={() => {
                       setLocalSortBy('created');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg ${
+                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-tertiary ${
                       sortBy === 'created' ? 'bg-accent-soft' : ''
                     }`}
                   >
@@ -220,7 +220,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                       setLocalSortBy('title');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary last:rounded-b-lg ${
+                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-tertiary ${
                       sortBy === 'title' ? 'bg-accent-soft' : ''
                     }`}
                   >
@@ -238,13 +238,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         <div className="flex-1 overflow-y-auto">
           {filteredTasks.length === 0 ? (
             <Card className="p-12 text-center">
-              <div className="w-16 h-16 bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-tertiary">
                 <CheckSquare size={24} className="text-secondary" />
               </div>
-              <h3 className="text-lg font-medium text-primary mb-2">
+              <h3 className="mb-2 text-lg font-medium text-primary">
                 {searchQuery || selectedListId !== 'all' ? 'No tasks found' : 'No tasks yet'}
               </h3>
-              <p className="text-secondary mb-4">
+              <p className="mb-4 text-secondary">
                 {searchQuery || selectedListId !== 'all' 
                   ? 'Try adjusting your search or filters'
                   : 'Create your first task to get started'
@@ -267,7 +267,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                 return (
                   <Card
                     key={task.id}
-                    className={`p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-border-hover ${
+                    className={`hover:border-border-hover cursor-pointer p-4 transition-all duration-200 hover:shadow-md ${
                       isCompleted ? 'opacity-75' : ''
                     } ${isOverdue ? 'border-l-4 border-l-error' : ''}`}
                     onClick={() => handleTaskClick(task)}
@@ -280,10 +280,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           handleToggleComplete(task);
                         }}
                         className={`
-                          flex-shrink-0 mt-1 w-5 h-5 rounded border-2 flex items-center justify-center
-                          transition-colors duration-200
+                          mt-1 flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors
+                          duration-200
                           ${isCompleted 
-                            ? 'bg-success border-success text-white' 
+                            ? 'border-success bg-success text-white' 
                             : 'border-border-default hover:border-success'
                           }
                         `}
@@ -292,20 +292,20 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                       </button>
 
                       {/* Task Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className={`font-medium text-base leading-tight ${
-                              isCompleted ? 'line-through text-secondary' : 'text-primary'
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h3 className={`text-base font-medium leading-tight ${
+                              isCompleted ? 'text-secondary line-through' : 'text-primary'
                             }`}>
                               {task.title}
                             </h3>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-secondary bg-tertiary px-2 py-1 rounded-full">
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="rounded-full bg-tertiary px-2 py-1 text-xs text-secondary">
                                 {task.columnTitle}
                               </span>
                               {task.metadata?.priority && task.metadata.priority !== 'normal' && (
-                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                <span className={`rounded-full px-2 py-1 text-xs font-medium ${
                                   task.metadata.priority === 'high' ? 'bg-warning-ghost text-warning' :
                                   task.metadata.priority === 'urgent' ? 'bg-error-ghost text-error' :
                                   'bg-tertiary text-muted'
@@ -319,7 +319,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0"
+                            className="size-8 p-0 opacity-0 group-hover:opacity-100"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleTaskClick(task);
@@ -331,7 +331,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
                         {/* Task Notes */}
                         {task.notes && (
-                          <p className="text-sm text-secondary line-clamp-2 mb-3">
+                          <p className="mb-3 line-clamp-2 text-sm text-secondary">
                             {task.notes}
                           </p>
                         )}
@@ -379,17 +379,17 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
                         {/* Labels Preview */}
                         {task.metadata?.labels && task.metadata.labels.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
+                          <div className="mt-2 flex flex-wrap gap-1">
                             {task.metadata.labels.slice(0, 3).map((label, index) => (
                               <span
                                 key={index}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-soft text-accent-primary"
+                                className="inline-flex items-center rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-primary"
                               >
                                 {label}
                               </span>
                             ))}
                             {task.metadata.labels.length > 3 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-tertiary text-secondary">
+                              <span className="inline-flex items-center rounded-full bg-tertiary px-2 py-0.5 text-xs font-medium text-secondary">
                                 +{task.metadata.labels.length - 3}
                               </span>
                             )}

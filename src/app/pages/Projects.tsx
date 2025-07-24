@@ -257,10 +257,10 @@ export function Projects() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 mb-4">{error}</p>
+          <p className="mb-4 text-red-500">{error}</p>
           <button 
             onClick={clearError}
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80"
+            className="hover:bg-primary/80 rounded bg-primary px-4 py-2 text-white"
           >
             Retry
           </button>

@@ -434,7 +434,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     >
                       {folder.name}
                     </Text>
-                    <div className="flex items-center justify-center min-w-[24px]">
+                    <div className="flex min-w-[24px] items-center justify-center">
                       {folder.count && folder.count > 0 && (
                         <Badge variant="secondary" className="text-xs">
                           {folder.count}
@@ -528,7 +528,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                             >
                               {label.name}
                             </Text>
-                            <div className="flex items-center justify-center min-w-[24px]">
+                            <div className="flex min-w-[24px] items-center justify-center">
                               {label.threadsUnread && label.threadsUnread > 0 && (
                                 <Badge variant="secondary" className="text-xs">
                                   {label.threadsUnread}

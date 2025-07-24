@@ -28,14 +28,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-80">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4">
       <Card className="w-full max-w-md">
         <div className="p-6">
-          <h2 className="text-lg font-semibold text-primary mb-4">{title}</h2>
+          <h2 className="mb-4 text-lg font-semibold text-primary">{title}</h2>
           
           {isDestructive && (
-            <div className="flex items-start gap-3 mb-6">
-              <AlertTriangle className="text-red-500 flex-shrink-0 mt-0.5" size={20} />
+            <div className="mb-6 flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 shrink-0 text-red-500" size={20} />
               <p className="text-text-primary">{message}</p>
             </div>
           )}

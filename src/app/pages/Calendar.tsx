@@ -182,7 +182,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
   return (
     <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto">
-        <Card className="w-full !bg-bg-primary" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <Card className="!bg-bg-primary w-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 p-6">
             <Heading level={2} className="text-lg font-semibold">
@@ -339,7 +339,7 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
                     onChange={(e) => setFormData(prev => ({ ...prev, recurringEnabled: e.target.checked }))}
                     className="border-border-primary focus:ring-accent-primary/20 size-4 rounded border focus:border-accent-primary focus:ring-2"
                   />
-                  <label htmlFor="recurring-enabled" className="text-sm text-text-primary">
+                  <label htmlFor="recurring-enabled" className="text-text-primary text-sm">
                     Make this task recurring
                   </label>
                 </div>
@@ -466,7 +466,7 @@ const ScheduleTaskModal = ({
 
   return (
     <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-md !bg-bg-primary" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <Card className="!bg-bg-primary w-full max-w-md" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 p-6">
             <div className="flex items-center justify-between">
@@ -1159,7 +1159,7 @@ export default function Calendar() {
       <div className="flex h-full gap-6 bg-primary p-6">
         {/* Main Calendar Area */}
         <div className="border-border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="flex flex-col gap-6 p-6 h-full">
+          <div className="flex h-full flex-col gap-6 p-6">
             {/* Consolidated Header */}
             <div className="bg-bg-tertiary border-border-primary flex items-center gap-4 rounded-lg border p-3">
               {/* Left side - Navigation and Title */}
@@ -1201,21 +1201,21 @@ export default function Calendar() {
               </div>
 
               {/* Center - Search */}
-              <div className="relative flex-1 max-w-md">
+              <div className="relative max-w-md flex-1">
                 <Search size={14} className="text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="search"
                   placeholder="Search events..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-bg-card border-border-secondary text-text-primary h-8 w-full rounded-md border pl-9 pr-3 text-sm transition-colors focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                  className="bg-bg-card border-border-secondary text-text-primary focus:ring-accent-primary h-8 w-full rounded-md border pl-9 pr-3 text-sm transition-colors focus:border-accent-primary focus:outline-none focus:ring-1"
                 />
                 {searchQuery && (
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-1 top-1/2 size-6 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                    className="text-text-muted hover:text-text-primary absolute right-1 top-1/2 size-6 -translate-y-1/2"
                   >
                     <X size={12} />
                   </Button>
@@ -1650,10 +1650,10 @@ export default function Calendar() {
                                 }
                               }}
                               className={`
-                                flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center
-                                transition-colors duration-200
+                                mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2 transition-colors
+                                duration-200
                                 ${task.status === 'completed' 
-                                  ? 'bg-success border-success text-white' 
+                                  ? 'border-success bg-success text-white' 
                                   : 'border-border-default hover:border-success'
                                 }
                               `}
@@ -1711,7 +1711,7 @@ export default function Calendar() {
       {/* Event Creation/Editing Modal */}
       {showEventModal && (
         <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg !bg-bg-primary" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          <Card className="!bg-bg-primary w-full max-w-lg" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <div className="space-y-4 p-6">
               <div className="flex items-center justify-between">
                 <Heading level={2} className="text-lg font-semibold">{editingEvent ? 'Edit event' : 'Create event'}</Heading>

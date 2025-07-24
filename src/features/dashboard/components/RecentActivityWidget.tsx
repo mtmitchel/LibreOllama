@@ -90,10 +90,10 @@ export function RecentActivityWidget() {
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border-default p-4 h-full flex flex-col">
+    <div className="border-border-default flex h-full flex-col rounded-xl border bg-card p-4">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-indigo-500/10">
           <Activity size={20} className="text-indigo-500" />
         </div>
         <h3 className="text-lg font-semibold">Recent activity</h3>
@@ -103,23 +103,23 @@ export function RecentActivityWidget() {
       <div className="flex-1 overflow-y-auto">
         <div className="space-y-2">
           {activities.length === 0 ? (
-            <p className="text-secondary text-center py-8">No recent activity</p>
+            <p className="py-8 text-center text-secondary">No recent activity</p>
           ) : (
             activities.map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-start gap-2 p-2 rounded-lg hover:bg-tertiary/50 transition-colors"
+                className="hover:bg-tertiary/50 flex items-start gap-2 rounded-lg p-2 transition-colors"
               >
-                <div className={`w-6 h-6 rounded-md ${getActivityColor(activity.type)} flex items-center justify-center flex-shrink-0`}>
+                <div className={`size-6 rounded-md ${getActivityColor(activity.type)} flex shrink-0 items-center justify-center`}>
                   {getActivityIcon(activity.type)}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm">
                     <span className="font-medium text-primary">{activity.user || 'System'}</span>
                     <span className="text-secondary"> {activity.action} </span>
                     <span className="font-medium text-primary">{activity.target}</span>
                   </p>
-                  <p className="text-xs text-secondary mt-0.5">{activity.timestamp}</p>
+                  <p className="mt-0.5 text-xs text-secondary">{activity.timestamp}</p>
                 </div>
               </div>
             ))
@@ -128,8 +128,8 @@ export function RecentActivityWidget() {
       </div>
 
       {/* View All Link */}
-      <div className="mt-3 pt-2 border-t border-border-default">
-        <button className="text-xs text-primary hover:text-primary-hover transition-colors">
+      <div className="border-border-default mt-3 border-t pt-2">
+        <button className="hover:text-primary-hover text-xs text-primary transition-colors">
           View all activity →
         </button>
       </div>

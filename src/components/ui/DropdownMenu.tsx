@@ -198,7 +198,7 @@ const DropdownMenuContent = ({ children, className = '' }: DropdownMenuContentPr
       ref={menuRef}
       style={style}
       role="menu"
-      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[9999] rounded-md border bg-white dark:bg-gray-900 py-1 shadow-lg ${className}`}
+      className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[9999] rounded-md border bg-white py-1 shadow-lg dark:bg-gray-900 ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}
@@ -362,7 +362,7 @@ const DropdownMenuSubContent = ({ children, className }: DropdownMenuContentProp
             onMouseEnter={handleContentMouseEnter}
             onMouseLeave={handleContentMouseLeave}
             onMouseDown={(e) => e.stopPropagation()}
-            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[10000] rounded-md border bg-white dark:bg-gray-900 py-1 shadow-lg ${className}`}
+            className={`border-border-default animate-in fade-in-0 zoom-in-95 z-[10000] rounded-md border bg-white py-1 shadow-lg dark:bg-gray-900 ${className}`}
         >
             {children}
         </div>,
@@ -458,7 +458,7 @@ const DropdownMenuItem = ({
       }}
       role="menuitem"
       disabled={disabled}
-      className={`focus:ring-accent-primary w-full rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${variantClasses[variant]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`focus:ring-accent-primary w-full rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface ${variantClasses[variant]} ${className} ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
       onClick={handleSelect}
       onMouseDown={(e) => e.preventDefault()}
       onKeyDown={handleKeyDown}

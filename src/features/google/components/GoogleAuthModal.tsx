@@ -219,7 +219,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         return (
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
-              <div className="bg-blue-100 mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-blue-100">
                 <svg className="size-8 animate-pulse text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
                 </svg>
@@ -241,7 +241,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         return (
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
-              <div className="bg-yellow-100 mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-yellow-100">
                 <svg className="size-8 animate-spin text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
@@ -258,7 +258,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         return (
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
-              <div className="bg-green-100 mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
                 <svg className="size-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -275,7 +275,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         return (
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
-              <div className="bg-red-100 mx-auto mb-4 flex size-16 items-center justify-center rounded-full">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-red-100">
                 <svg className="size-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>

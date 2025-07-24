@@ -96,10 +96,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           className="fixed z-50"
           style={{ left: position.x, top: position.y }}
         >
-          <Card className="min-w-[180px] !bg-bg-primary p-1 shadow-lg" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          <Card className="!bg-bg-primary min-w-[180px] p-1 shadow-lg" style={{ backgroundColor: 'var(--bg-primary)' }}>
             {items.map((item, index) => (
               item.separator ? (
-                <div key={index} className="my-1 h-px bg-border-default" />
+                <div key={index} className="bg-border-default my-1 h-px" />
               ) : (
                 <button
                   key={index}
@@ -114,7 +114,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                   } ${item.destructive ? 'text-error' : 'text-primary'}`}
                 >
                   {item.icon && (
-                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="shrink-0">{item.icon}</span>
                   )}
                   <span className="flex-1 text-left">{item.label}</span>
                 </button>

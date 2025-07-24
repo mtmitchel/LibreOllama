@@ -1,26 +1,24 @@
 /**
- * Message Context Menu - Phase 2.2
+ * Message Context Menu - Updated to match Gmail
  * 
- * Right-click context menu for individual email messages with quick actions.
+ * Right-click context menu for individual email messages with Gmail-style actions.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-  Mail, 
-  MailOpen, 
-  Star, 
-  StarOff, 
-  Archive, 
-  Trash2, 
   Reply, 
   ReplyAll, 
   Forward, 
-  Tag, 
-  Copy,
-  ExternalLink,
-  Printer,
-  Flag,
-  AlertTriangle
+  Archive, 
+  Trash2, 
+  Mail,
+  Clock,
+  CheckSquare,
+  FolderOpen,
+  Tag,
+  VolumeX,
+  Search,
+  ExternalLink
 } from 'lucide-react';
 import { ParsedEmail } from '../types';
 import { useMailStore } from '../stores/mailStore';
@@ -43,6 +41,7 @@ interface ContextMenuItem {
   disabled?: boolean;
   destructive?: boolean;
   separator?: boolean;
+  submenu?: ContextMenuItem[];
 }
 
 export function MessageContextMenu({
@@ -59,11 +58,12 @@ export function MessageContextMenu({
     unstarMessages, 
     archiveMessages, 
     deleteMessages,
-    currentAccountId 
+    currentAccountId,
+    startCompose
   } = useMailStore();
 
   const menuRef = useRef<HTMLDivElement>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -115,37 +115,46 @@ export function MessageContextMenu({
   }, [position]);
 
   // Action handlers
-  const handleReadToggle = useCallback(async () => {
-    if (!currentAccountId) return;
-    
-    try {
-      if (message.isRead) {
-        await markAsUnread([message.id], currentAccountId);
-      } else {
-        await markAsRead([message.id], currentAccountId);
-      }
-      onAction?.('read_toggle', message.id);
-    } catch (error) {
-      console.error('Failed to toggle read status:', error);
-    }
+  const handleReply = useCallback(() => {
+    startCompose({
+      to: [message.from],
+      subject: message.subject.startsWith('Re: ') 
+        ? message.subject 
+        : `Re: ${message.subject}`,
+      replyToMessageId: message.id,
+    });
     onClose();
-  }, [message, markAsRead, markAsUnread, currentAccountId, onAction, onClose]);
+  }, [message, startCompose, onClose]);
 
-  const handleStarToggle = useCallback(async () => {
-    if (!currentAccountId) return;
-    
-    try {
-      if (message.isStarred) {
-        await unstarMessages([message.id], currentAccountId);
-      } else {
-        await starMessages([message.id], currentAccountId);
-      }
-      onAction?.('star_toggle', message.id);
-    } catch (error) {
-      console.error('Failed to toggle star:', error);
-    }
+  const handleReplyAll = useCallback(() => {
+    const allRecipients = [
+      message.from,
+      ...message.to,
+      ...(message.cc || [])
+    ].filter((addr, index, self) => 
+      index === self.findIndex(a => a.email === addr.email)
+    );
+
+    startCompose({
+      to: allRecipients,
+      subject: message.subject.startsWith('Re: ') 
+        ? message.subject 
+        : `Re: ${message.subject}`,
+      replyToMessageId: message.id,
+    });
     onClose();
-  }, [message, starMessages, unstarMessages, currentAccountId, onAction, onClose]);
+  }, [message, startCompose, onClose]);
+
+  const handleForward = useCallback(() => {
+    startCompose({
+      to: [],
+      subject: message.subject.startsWith('Fwd: ') 
+        ? message.subject 
+        : `Fwd: ${message.subject}`,
+      body: `\n\n---------- Forwarded message ---------\nFrom: ${message.from.name || message.from.email}\nDate: ${message.date.toLocaleString()}\nSubject: ${message.subject}\nTo: ${message.to.map(addr => addr.email).join(', ')}\n\n${message.body}`,
+    });
+    onClose();
+  }, [message, startCompose, onClose]);
 
   const handleArchive = useCallback(async () => {
     if (!currentAccountId) return;
@@ -171,74 +180,51 @@ export function MessageContextMenu({
     onClose();
   }, [message, deleteMessages, currentAccountId, onAction, onClose]);
 
-  const handleReply = useCallback(() => {
-    // TODO: Implement reply functionality
-          logger.log('Reply to message:', message.id);
-    onAction?.('reply', message.id);
+  const handleMarkAsRead = useCallback(async () => {
+    if (!currentAccountId) return;
+    
+    try {
+      if (message.isRead) {
+        await markAsUnread([message.id], currentAccountId);
+      } else {
+        await markAsRead([message.id], currentAccountId);
+      }
+      onAction?.('read_toggle', message.id);
+    } catch (error) {
+      console.error('Failed to toggle read status:', error);
+    }
     onClose();
-  }, [message, onAction, onClose]);
+  }, [message, markAsRead, markAsUnread, currentAccountId, onAction, onClose]);
 
-  const handleReplyAll = useCallback(() => {
-    // TODO: Implement reply all functionality
-    logger.log('Reply all to message:', message.id);
-    onAction?.('reply_all', message.id);
-    onClose();
-  }, [message, onAction, onClose]);
-
-  const handleForward = useCallback(() => {
-    // TODO: Implement forward functionality
-    logger.log('Forward message:', message.id);
-    onAction?.('forward', message.id);
-    onClose();
-  }, [message, onAction, onClose]);
-
-  const handleCopyLink = useCallback(() => {
-    // Copy Gmail URL to clipboard
-    const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${message.id}`;
-    navigator.clipboard.writeText(gmailUrl).then(() => {
-      logger.log('Gmail link copied to clipboard');
-    }).catch(err => {
-      console.error('Failed to copy link:', err);
-    });
-    onClose();
-  }, [message.id, onClose]);
-
-  const handlePrint = useCallback(() => {
-    // TODO: Implement print functionality
-    logger.log('Print message:', message.id);
-    onAction?.('print', message.id);
-    onClose();
-  }, [message, onAction, onClose]);
-
-  const handleMarkImportant = useCallback(() => {
-    // TODO: Implement mark as important functionality
-    logger.log('Mark as important:', message.id);
-    onAction?.('mark_important', message.id);
-    onClose();
-  }, [message, onAction, onClose]);
-
-  const handleManageLabels = useCallback(() => {
-    // TODO: Implement label management
-    logger.log('Manage labels for:', message.id);
-    onAction?.('manage_labels', message.id);
-    onClose();
-  }, [message, onAction, onClose]);
-
-  // Create menu items
+  // Create menu items matching Gmail
   const menuItems: ContextMenuItem[] = [
     {
-      id: 'read_toggle',
-      label: message.isRead ? 'Mark as unread' : 'Mark as read',
-      icon: message.isRead ? <Mail size={16} /> : <MailOpen size={16} />,
-      action: handleReadToggle,
-      shortcut: 'U'
+      id: 'reply',
+      label: 'Reply',
+      icon: <Reply size={16} />,
+      action: handleReply
     },
     {
-      id: 'star_toggle',
-      label: message.isStarred ? 'Remove star' : 'Add star',
-      icon: message.isStarred ? <StarOff size={16} /> : <Star size={16} />,
-      action: handleStarToggle,
-      shortcut: 'S'
+      id: 'reply_all',
+      label: 'Reply all',
+      icon: <ReplyAll size={16} />,
+      action: handleReplyAll
+    },
+    {
+      id: 'forward',
+      label: 'Forward',
+      icon: <Forward size={16} />,
+      action: handleForward
+    },
+    {
+      id: 'forward_attachment',
+      label: 'Forward as attachment',
+      icon: <Forward size={16} />,
+      action: () => {
+        console.log('Forward as attachment');
+        onClose();
+      },
+      disabled: true
     },
     {
       id: 'separator1',
@@ -248,25 +234,40 @@ export function MessageContextMenu({
       separator: true
     },
     {
-      id: 'reply',
-      label: 'Reply',
-      icon: <Reply size={16} />,
-      action: handleReply,
-      shortcut: 'R'
+      id: 'archive',
+      label: 'Archive',
+      icon: <Archive size={16} />,
+      action: handleArchive
     },
     {
-      id: 'reply_all',
-      label: 'Reply all',
-      icon: <ReplyAll size={16} />,
-      action: handleReplyAll,
-      shortcut: 'Shift+R'
+      id: 'delete',
+      label: 'Delete',
+      icon: <Trash2 size={16} />,
+      action: handleDelete
     },
     {
-      id: 'forward',
-      label: 'Forward',
-      icon: <Forward size={16} />,
-      action: handleForward,
-      shortcut: 'F'
+      id: 'mark_as_read',
+      label: message.isRead ? 'Mark as unread' : 'Mark as read',
+      icon: <Mail size={16} />,
+      action: handleMarkAsRead
+    },
+    {
+      id: 'snooze',
+      label: 'Snooze',
+      icon: <Clock size={16} />,
+      action: () => {
+        console.log('Snooze');
+        onClose();
+      }
+    },
+    {
+      id: 'add_to_tasks',
+      label: 'Add to Tasks',
+      icon: <CheckSquare size={16} />,
+      action: () => {
+        console.log('Add to Tasks');
+        onClose();
+      }
     },
     {
       id: 'separator2',
@@ -276,19 +277,35 @@ export function MessageContextMenu({
       separator: true
     },
     {
-      id: 'archive',
-      label: 'Archive',
-      icon: <Archive size={16} />,
-      action: handleArchive,
-      shortcut: 'A'
+      id: 'move_to',
+      label: 'Move to',
+      icon: <FolderOpen size={16} />,
+      action: () => {},
+      submenu: [
+        { id: 'inbox', label: 'Inbox', icon: null, action: () => console.log('Move to Inbox') },
+        { id: 'starred', label: 'Starred', icon: null, action: () => console.log('Move to Starred') },
+        { id: 'important', label: 'Important', icon: null, action: () => console.log('Move to Important') },
+      ]
     },
     {
-      id: 'delete',
-      label: 'Delete',
-      icon: <Trash2 size={16} />,
-      action: () => setShowDeleteConfirm(true),
-      shortcut: 'Shift+Del',
-      destructive: true
+      id: 'label_as',
+      label: 'Label as',
+      icon: <Tag size={16} />,
+      action: () => {},
+      submenu: [
+        { id: 'work', label: 'Work', icon: null, action: () => console.log('Label as Work') },
+        { id: 'personal', label: 'Personal', icon: null, action: () => console.log('Label as Personal') },
+        { id: 'receipts', label: 'Receipts', icon: null, action: () => console.log('Label as Receipts') },
+      ]
+    },
+    {
+      id: 'mute',
+      label: 'Mute',
+      icon: <VolumeX size={16} />,
+      action: () => {
+        console.log('Mute conversation');
+        onClose();
+      }
     },
     {
       id: 'separator3',
@@ -298,17 +315,13 @@ export function MessageContextMenu({
       separator: true
     },
     {
-      id: 'mark_important',
-      label: 'Mark as important',
-      icon: <Flag size={16} />,
-      action: handleMarkImportant
-    },
-    {
-      id: 'manage_labels',
-      label: 'Labels',
-      icon: <Tag size={16} />,
-      action: handleManageLabels,
-      shortcut: 'L'
+      id: 'find_emails',
+      label: `Find emails from ${message.from.name || message.from.email}`,
+      icon: <Search size={16} />,
+      action: () => {
+        console.log('Find emails from sender');
+        onClose();
+      }
     },
     {
       id: 'separator4',
@@ -318,27 +331,13 @@ export function MessageContextMenu({
       separator: true
     },
     {
-      id: 'copy_link',
-      label: 'Copy Gmail link',
-      icon: <Copy size={16} />,
-      action: handleCopyLink
-    },
-    {
-      id: 'open_gmail',
-      label: 'Open in Gmail',
+      id: 'open_new_window',
+      label: 'Open in new window',
       icon: <ExternalLink size={16} />,
       action: () => {
-        const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${message.id}`;
-        window.open(gmailUrl, '_blank');
+        console.log('Open in new window');
         onClose();
       }
-    },
-    {
-      id: 'print',
-      label: 'Print',
-      icon: <Printer size={16} />,
-      action: handlePrint,
-      shortcut: 'Ctrl+P'
     }
   ];
 
@@ -347,98 +346,82 @@ export function MessageContextMenu({
   const menuPosition = getMenuPosition();
 
   return (
-    <>
-      <div
-        ref={menuRef}
-        className="border-border-default fixed z-50 min-w-[200px] rounded-md border bg-primary py-1 shadow-lg"
-        style={{
-          left: menuPosition.x,
-          top: menuPosition.y
-        }}
-      >
-        {menuItems.map((item) => {
-          if (item.separator) {
-            return (
-              <div
-                key={item.id}
-                className="bg-border-default mx-2 my-1 h-px"
-              />
-            );
-          }
-
+    <div
+      ref={menuRef}
+      className="fixed z-50 w-64 rounded-lg bg-white py-1 shadow-lg border border-gray-200"
+      style={{
+        left: menuPosition.x,
+        top: menuPosition.y
+      }}
+    >
+      {menuItems.map((item) => {
+        if (item.separator) {
           return (
-            <button
+            <div
               key={item.id}
-              onClick={item.action}
-              disabled={item.disabled}
-              className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition-colors ${
-                item.disabled
-                  ? 'cursor-not-allowed text-muted'
-                  : item.destructive
-                  ? 'text-error hover:bg-error-ghost hover:text-error'
-                  : 'text-primary hover:bg-secondary'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {item.icon}
-                <span>{item.label}</span>
-              </div>
-              {item.shortcut && (
-                <span className="text-xs text-muted">
-                  {item.shortcut}
-                </span>
-              )}
-            </button>
+              className="my-1 h-px bg-gray-200"
+            />
           );
-        })}
-      </div>
+        }
 
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
-        <div className="bg-bg-overlay z-60 fixed inset-0 flex items-center justify-center backdrop-blur-sm">
-          <div className="border-border-default mx-4 w-full max-w-md rounded-lg border bg-primary p-6 shadow-xl">
-            <div className="mb-4 flex items-start gap-4">
-              <AlertTriangle size={24} className="mt-1 shrink-0 text-warning" />
-              <div>
-                <h3 className="mb-2 text-lg font-semibold text-primary">
-                  Confirm Delete
-                </h3>
-                <p className="text-secondary">
-                  Are you sure you want to delete this message? This action cannot be undone.
-                </p>
-                <div className="mt-2 rounded-md bg-tertiary p-3">
-                  <p className="truncate text-sm font-medium text-primary">
-                    {message.subject}
-                  </p>
-                  <p className="truncate text-xs text-secondary">
-                    From: {message.from.name || message.from.email}
-                  </p>
+        if (item.submenu) {
+          return (
+            <div
+              key={item.id}
+              className="relative"
+              onMouseEnter={() => setActiveSubmenu(item.id)}
+              onMouseLeave={() => setActiveSubmenu(null)}
+            >
+              <button
+                className="flex w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                <div className="flex items-center gap-3">
+                  {item.icon}
+                  <span>{item.label}</span>
                 </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-sm text-secondary transition-colors hover:text-primary"
-              >
-                Cancel
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
-              <button
-                onClick={() => {
-                  handleDelete();
-                  setShowDeleteConfirm(false);
-                }}
-                className="hover:bg-error-fg rounded-md bg-error px-4 py-2 text-sm text-white transition-colors"
-              >
-                Delete
-              </button>
+              
+              {activeSubmenu === item.id && (
+                <div className="absolute left-full top-0 ml-1 w-48 rounded-lg bg-white py-1 shadow-lg border border-gray-200">
+                  {item.submenu.map((subItem) => (
+                    <button
+                      key={subItem.id}
+                      onClick={() => {
+                        subItem.action();
+                        onClose();
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      {subItem.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
-    </>
+          );
+        }
+
+        return (
+          <button
+            key={item.id}
+            onClick={item.action}
+            disabled={item.disabled}
+            className={`flex w-full items-center gap-3 px-4 py-2 text-sm ${
+              item.disabled
+                ? 'cursor-not-allowed text-gray-400'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-export default MessageContextMenu; 
+export default MessageContextMenu;

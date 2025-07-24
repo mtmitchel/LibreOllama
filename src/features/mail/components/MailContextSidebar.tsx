@@ -500,7 +500,7 @@ export function MailContextSidebar({
                         name="viewMode"
                         checked={mailSettings.viewMode === 'threaded'}
                         onChange={() => handleMailSettingsChange('viewMode', 'threaded')}
-                        className="text-accent-primary focus:ring-accent-primary"
+                        className="focus:ring-accent-primary text-accent-primary"
                       />
                       <Text size="sm" variant="secondary">Threaded</Text>
                     </label>
@@ -511,7 +511,7 @@ export function MailContextSidebar({
                         name="viewMode"
                         checked={mailSettings.viewMode === 'flat'}
                         onChange={() => handleMailSettingsChange('viewMode', 'flat')}
-                        className="text-accent-primary focus:ring-accent-primary"
+                        className="focus:ring-accent-primary text-accent-primary"
                       />
                       <Text size="sm" variant="secondary">Flat</Text>
                     </label>

@@ -1,0 +1,33 @@
+/* Custom scrollbar styles for mail components */
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+.mail-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.mail-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 6px;
+}
+
+.mail-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-primary, #d1d5db);
+  border-radius: 6px;
+  border: 2px solid var(--bg-secondary, #f3f4f6);
+}
+
+.mail-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary, #9ca3af);
+}
+
+/* Firefox */
+.mail-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-primary, #d1d5db) var(--bg-secondary, #f3f4f6);
+}
+
+/* Ensure scrollbar is always visible on Windows/Linux */
+.mail-scrollbar-always {
+  overflow-y: scroll !important;
+}

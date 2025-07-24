@@ -323,7 +323,7 @@ function ComposeModal({
   }
 
   return (
-          <div className="bg-bg-overlay fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-bg-overlay fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="border-border-primary flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border bg-content shadow-2xl">
         {/* Header */}
         <div className="border-border-primary bg-bg-secondary flex items-center justify-between border-b p-4">

@@ -32,7 +32,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-80">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4">
       <Card className="w-full max-w-md">
         <form onSubmit={handleSubmit}>
           <div className="p-6">

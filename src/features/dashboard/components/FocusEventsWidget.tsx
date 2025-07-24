@@ -79,9 +79,9 @@ export function FocusEventsWidget() {
       case 'completed':
         return <CheckCircle size={16} className="text-green-500" />;
       case 'in-progress':
-        return <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />;
+        return <div className="size-2 animate-pulse rounded-full bg-blue-500" />;
       default:
-        return <div className="w-2 h-2 rounded-full bg-gray-400" />;
+        return <div className="size-2 rounded-full bg-gray-400" />;
     }
   };
 
@@ -97,11 +97,11 @@ export function FocusEventsWidget() {
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border-default p-4 h-full flex flex-col">
+    <div className="border-border-default flex h-full flex-col rounded-xl border bg-card p-4">
       {/* Header with Toggle */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
             {activeView === 'focus' ? (
               <Target size={20} className="text-blue-500" />
             ) : (
@@ -114,7 +114,7 @@ export function FocusEventsWidget() {
         </div>
         
         {/* Toggle Buttons */}
-        <div className="flex gap-1 p-1 bg-tertiary rounded-lg">
+        <div className="flex gap-1 rounded-lg bg-tertiary p-1">
           <Button
             variant={activeView === 'focus' ? 'primary' : 'ghost'}
             size="sm"
@@ -139,12 +139,12 @@ export function FocusEventsWidget() {
         {activeView === 'focus' ? (
           <div className="space-y-3">
             {focusItems.length === 0 ? (
-              <p className="text-secondary text-center py-8">No focus items for today</p>
+              <p className="py-8 text-center text-secondary">No focus items for today</p>
             ) : (
               focusItems.map((item) => (
                 <div
                   key={item.id}
-                  className="p-3 rounded-lg bg-tertiary/50 hover:bg-tertiary transition-colors cursor-pointer"
+                  className="bg-tertiary/50 cursor-pointer rounded-lg p-3 transition-colors hover:bg-tertiary"
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-1">{getStatusBadge(item.status)}</div>
@@ -156,7 +156,7 @@ export function FocusEventsWidget() {
                         </span>
                       </div>
                       {item.description && (
-                        <p className="text-sm text-secondary mt-1">{item.description}</p>
+                        <p className="mt-1 text-sm text-secondary">{item.description}</p>
                       )}
                     </div>
                   </div>
@@ -167,12 +167,12 @@ export function FocusEventsWidget() {
         ) : (
           <div className="space-y-2">
             {eventItems.length === 0 ? (
-              <p className="text-secondary text-center py-8">No upcoming events</p>
+              <p className="py-8 text-center text-secondary">No upcoming events</p>
             ) : (
               eventItems.map((event) => (
                 <div
                   key={event.id}
-                  className="p-3 rounded-lg bg-tertiary/50 hover:bg-tertiary transition-colors cursor-pointer"
+                  className="bg-tertiary/50 cursor-pointer rounded-lg p-3 transition-colors hover:bg-tertiary"
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">{getEventTypeIcon(event.type)}</div>
@@ -182,7 +182,7 @@ export function FocusEventsWidget() {
                         <span className="text-xs text-secondary">{event.time}</span>
                       </div>
                       {event.location && (
-                        <p className="text-xs text-secondary mt-1">{event.location}</p>
+                        <p className="mt-1 text-xs text-secondary">{event.location}</p>
                       )}
                     </div>
                   </div>

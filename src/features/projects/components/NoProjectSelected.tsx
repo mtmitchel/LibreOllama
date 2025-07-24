@@ -10,12 +10,12 @@ interface NoProjectSelectedProps {
 export const NoProjectSelected: React.FC<NoProjectSelectedProps> = ({ onCreateProject, hasProjects = false }) => {
   return (
     <div className="flex h-full flex-1 flex-col items-center justify-center p-6">
-      <div className="flex flex-col items-center justify-center text-center py-12">
-        <FolderOpen className="text-6xl mb-6 text-muted" />
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <FolderOpen className="mb-6 text-6xl text-muted" />
         {!hasProjects && (
           <button 
             onClick={onCreateProject}
-            className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors text-sm font-medium"
+            className="hover:bg-accent-primary/90 rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white transition-colors"
           >
             Create new project
           </button>

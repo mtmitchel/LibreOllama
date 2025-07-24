@@ -55,7 +55,7 @@ const DroppableFolder = ({ folder, children }: { folder: { id: string }, childre
     return (
         <div 
             ref={setNodeRef} 
-            className={`rounded-md transition-all duration-200 min-h-[40px] ${isOver ? 'folder-drop-target bg-accent-soft' : ''}`}
+            className={`min-h-[40px] rounded-md transition-all duration-200 ${isOver ? 'folder-drop-target bg-accent-soft' : ''}`}
             style={{ minWidth: '100%' }}
         >
             {children}
@@ -471,7 +471,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button 
-                        className="size-6 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-sm hover:bg-tertiary transition-colors"
+                        className="flex size-6 items-center justify-center rounded-sm opacity-0 transition-colors hover:bg-tertiary group-hover:opacity-100"
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
@@ -700,7 +700,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onToggle, onSel
       
       {/* Notification Display */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 max-w-sm rounded-lg p-4 shadow-lg transition-all duration-300 ${
+        <div className={`fixed right-4 top-4 z-50 max-w-sm rounded-lg p-4 shadow-lg transition-all duration-300 ${
           notification.type === 'success' ? 'bg-green-500 text-white' :
           notification.type === 'error' ? 'bg-red-500 text-white' :
           'bg-blue-500 text-white'

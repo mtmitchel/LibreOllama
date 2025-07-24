@@ -146,11 +146,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   if (error) {
     return (
       <Card className="p-6 text-center">
-        <div className="text-red-600 mb-4">
+        <div className="mb-4 text-red-600">
           <p className="font-medium">Error loading kanban board</p>
           <p className="text-sm">{error}</p>
         </div>
-        <div className="flex gap-2 justify-center">
+        <div className="flex justify-center gap-2">
           <Button variant="outline" onClick={clearError}>
             Dismiss
           </Button>
@@ -166,7 +166,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-b-2 border-primary"></div>
           <p className="text-muted">Loading kanban board...</p>
         </div>
       </div>
@@ -185,12 +185,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragCancel={handleDragCancel}
         modifiers={[restrictToWindowEdges]}
       >
-        <div className="flex gap-4 h-full overflow-x-auto pb-4">
+        <div className="flex h-full gap-4 overflow-x-auto pb-4">
           {columns.map((column) => (
             <KanbanColumn
               key={column.id}
               column={column}
-              className="flex-1 min-w-80"
+              className="min-w-80 flex-1"
               searchQuery={searchQuery}
               onDelete={onDeleteList}
               onRename={onRenameList}
@@ -201,7 +201,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <div className="rotate-2 opacity-95 scale-105 shadow-2xl">
+            <div className="rotate-2 scale-105 opacity-95 shadow-2xl">
               <KanbanTaskCard
                 task={activeTask}
                 isDragging={true}
@@ -214,17 +214,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
       {/* Empty State */}
       {columns.length === 0 && (
-        <div className="flex items-center justify-center h-full min-h-96">
-          <div className="text-center max-w-md mx-auto px-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex h-full min-h-96 items-center justify-center">
+          <div className="mx-auto max-w-md px-6 text-center">
+            <div className="from-primary/10 to-accent/10 mx-auto mb-6 flex size-20 items-center justify-center rounded-2xl bg-gradient-to-br">
+              <svg className="size-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-primary mb-3">
+            <h3 className="mb-3 text-xl font-semibold text-primary">
               Get organized with task lists
             </h3>
-            <p className="text-muted mb-6 leading-relaxed">
+            <p className="mb-6 leading-relaxed text-muted">
               Create task lists to organize your work by project, priority, or any way that helps you stay focused.
             </p>
             <p className="text-sm text-muted">

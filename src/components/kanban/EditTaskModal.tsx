@@ -193,11 +193,11 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
   const isOverdue = task.due && new Date(task.due) < new Date() && !isCompleted;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-80">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4">
+      <Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto">
         <form onSubmit={handleSubmit}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-border-default">
+          <div className="border-border-default flex items-center justify-between border-b p-6">
             <div>
               <h2 className="text-lg font-semibold text-primary">Edit task</h2>
               <p className="text-sm text-muted">Update task details</p>
@@ -208,25 +208,25 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
               size="sm"
               onClick={onClose}
               disabled={isSubmitting || isDeleting}
-              className="h-8 w-8 p-0"
+              className="size-8 p-0"
             >
               <X size={16} />
             </Button>
           </div>
 
           {/* Form Content */}
-          <div className="p-6 space-y-4">
+          <div className="space-y-4 p-6">
             {/* Error Message */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-error-soft border border-error rounded-md">
-                <AlertCircle size={16} className="text-error flex-shrink-0" />
+              <div className="bg-error-soft flex items-center gap-2 rounded-md border border-error p-3">
+                <AlertCircle size={16} className="shrink-0 text-error" />
                 <p className="text-sm text-error">{error}</p>
               </div>
             )}
 
             {/* Task Title */}
             <div>
-              <label htmlFor="task-title" className="block text-sm font-medium text-primary mb-1">
+              <label htmlFor="task-title" className="mb-1 block text-sm font-medium text-primary">
                 Title *
               </label>
               <Input
@@ -243,7 +243,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
             {/* Task Notes */}
             <div>
-              <label htmlFor="task-notes" className="block text-sm font-medium text-primary mb-1">
+              <label htmlFor="task-notes" className="mb-1 block text-sm font-medium text-primary">
                 Description
               </label>
               <textarea
@@ -253,14 +253,14 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 placeholder="Add task description..."
                 disabled={isSubmitting || isDeleting}
                 rows={3}
-                className="w-full px-3 py-2 border border-border-default rounded-md bg-card text-primary placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                className="border-border-default w-full resize-none rounded-md border bg-card px-3 py-2 text-primary placeholder:text-muted focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             {/* Due Date and Priority */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="task-due" className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
+                <label htmlFor="task-due" className="mb-1 flex items-center gap-2 text-sm font-medium text-primary">
                   <Calendar size={14} />
                   Due date
                 </label>
@@ -275,7 +275,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
               </div>
 
               <div>
-                <label htmlFor="task-priority" className="block text-sm font-medium text-primary mb-1">
+                <label htmlFor="task-priority" className="mb-1 block text-sm font-medium text-primary">
                   Priority
                 </label>
                 <select
@@ -286,7 +286,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent'
                   }))}
                   disabled={isSubmitting || isDeleting}
-                  className="w-full px-3 py-2 border border-border-default rounded-md bg-card text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="border-border-default w-full rounded-md border bg-card px-3 py-2 text-primary focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
@@ -298,7 +298,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
             {/* Tags */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
+              <label className="mb-1 flex items-center gap-2 text-sm font-medium text-primary">
                 <Tag size={14} />
                 Tags
               </label>
@@ -334,7 +334,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     {metadata.labels.map((label, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-accent-soft text-accent-primary rounded-full text-sm"
+                        className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-1 text-sm text-accent-primary"
                       >
                         {label}
                         <button
@@ -354,7 +354,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
             {/* Subtasks */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
+              <label className="mb-1 flex items-center gap-2 text-sm font-medium text-primary">
                 <CheckSquare size={14} />
                 Subtasks
               </label>
@@ -386,9 +386,9 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                   </Button>
                 </div>
                 {metadata.subtasks.length > 0 && (
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                  <div className="max-h-32 space-y-1 overflow-y-auto">
                     {metadata.subtasks.map((subtask) => (
-                      <div key={subtask.id} className="flex items-center gap-2 p-2 bg-tertiary rounded-md">
+                      <div key={subtask.id} className="flex items-center gap-2 rounded-md bg-tertiary p-2">
                         <input
                           type="checkbox"
                           checked={subtask.completed}
@@ -396,7 +396,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                           disabled={isSubmitting || isDeleting}
                           className="rounded"
                         />
-                        <span className={`flex-1 text-sm ${subtask.completed ? 'line-through text-muted' : 'text-primary'}`}>
+                        <span className={`flex-1 text-sm ${subtask.completed ? 'text-muted line-through' : 'text-primary'}`}>
                           {subtask.title}
                         </span>
                         <input
@@ -409,14 +409,14 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                             )
                           }))}
                           disabled={isSubmitting || isDeleting}
-                          className="text-xs px-2 py-1 border border-border-default rounded bg-card"
+                          className="border-border-default rounded border bg-card px-2 py-1 text-xs"
                           title="Due date"
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveSubtask(subtask.id)}
                           disabled={isSubmitting || isDeleting}
-                          className="text-muted hover:text-error p-1"
+                          className="p-1 text-muted hover:text-error"
                           title="Remove subtask"
                         >
                           <Trash2 size={12} />
@@ -430,7 +430,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
 
             {/* Recurring Due Dates */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
+              <label className="mb-1 flex items-center gap-2 text-sm font-medium text-primary">
                 <RotateCcw size={14} />
                 Recurring
               </label>
@@ -460,7 +460,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                 {metadata.recurring?.enabled && (
                   <div className="grid grid-cols-2 gap-3 pl-6">
                     <div>
-                      <label className="block text-xs font-medium text-primary mb-1">
+                      <label className="mb-1 block text-xs font-medium text-primary">
                         Repeat every
                       </label>
                       <div className="flex gap-2">
@@ -488,7 +488,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                             }
                           }))}
                           disabled={isSubmitting || isDeleting}
-                          className="flex-1 px-2 py-1 text-sm border border-border-default rounded-md bg-card text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                          className="border-border-default flex-1 rounded-md border bg-card px-2 py-1 text-sm text-primary focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                           <option value="daily">Day(s)</option>
                           <option value="weekly">Week(s)</option>
@@ -499,7 +499,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-primary mb-1">
+                      <label className="mb-1 block text-xs font-medium text-primary">
                         End date (optional)
                       </label>
                       <Input
@@ -523,17 +523,17 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between p-6 border-t border-border-default">
+          <div className="border-border-default flex items-center justify-between border-t p-6">
             <Button
               type="button"
               variant="outline"
               onClick={handleDelete}
               disabled={isSubmitting || isDeleting}
-              className="text-error border-error hover:bg-error-ghost flex items-center gap-2"
+              className="flex items-center gap-2 border-error text-error hover:bg-error-ghost"
             >
               {isDeleting ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-error border-t-transparent rounded-full animate-spin"></div>
+                  <div className="size-4 animate-spin rounded-full border-2 border-error border-t-transparent"></div>
                   Deleting...
                 </div>
               ) : (
@@ -561,7 +561,7 @@ export const EditTaskModal: React.FC<EditTaskModalProps> = ({
               >
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                     Saving...
                   </div>
                 ) : (

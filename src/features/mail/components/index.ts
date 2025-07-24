@@ -30,4 +30,5 @@ export { default as SavedSearches } from './SavedSearches';
 // export { default as LabelManager } from './_archive/LabelManager';
 export { default as LabelSettings } from './LabelSettings';
 export { ErrorDisplay, SuccessMessage, LoadingMessage } from './ErrorDisplay';
-export { MailStoreProvider } from './MailStoreProvider'; 
+export { MailStoreProvider } from './MailStoreProvider';
+export { InlineReply } from './InlineReply'; 

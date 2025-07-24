@@ -154,14 +154,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     <>
       <div 
         ref={setNodeRef}
-        className={`flex flex-col h-full ${className} ${
-          isOver ? 'ring-2 ring-primary ring-opacity-50 bg-accent-soft' : ''
+        className={`flex h-full flex-col ${className} ${
+          isOver ? 'bg-accent-soft ring-2 ring-primary ring-opacity-50' : ''
         }`}
       >
-        <Card className="flex flex-col h-full shadow-sm">
+        <Card className="flex h-full flex-col shadow-sm">
         {/* Column Header */}
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-border-default bg-tertiary">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="border-border-default flex items-center justify-between border-b bg-tertiary px-3 py-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             {isRenaming ? (
               <input
                 type="text"
@@ -175,13 +175,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                     handleRenameCancel();
                   }
                 }}
-                className="font-semibold text-primary text-sm bg-card border border-border-default rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary flex-1 min-w-0"
+                className="border-border-default focus:ring-primary/20 min-w-0 flex-1 rounded border bg-card px-2 py-1 text-sm font-semibold text-primary focus:border-primary focus:outline-none focus:ring-2"
                 autoFocus
               />
             ) : (
               <>
-                <h3 className="font-semibold text-primary text-sm truncate">{column.title}</h3>
-                <span className="text-xs text-secondary bg-card px-2.5 py-1 rounded-full font-medium shadow-sm flex-shrink-0">
+                <h3 className="truncate text-sm font-semibold text-primary">{column.title}</h3>
+                <span className="shrink-0 rounded-full bg-card px-2.5 py-1 text-xs font-medium text-secondary shadow-sm">
                   {sortedTasks.length}{searchQuery && ` / ${column.tasks.length}`}
                 </span>
               </>
@@ -200,13 +200,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               </Button>
               
               {showSortMenu && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
+                <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-card shadow-lg">
                   <button
                     onClick={() => {
                       setSortBy('order');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg ${
+                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-tertiary ${
                       sortBy === 'order' ? 'bg-accent-soft' : ''
                     }`}
                   >
@@ -230,7 +230,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                       setSortBy('title');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary last:rounded-b-lg ${
+                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-tertiary ${
                       sortBy === 'title' ? 'bg-accent-soft' : ''
                     }`}
                   >
@@ -263,14 +263,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               </Button>
               
               {showOptionsMenu && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
+                <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-card shadow-lg">
                   {onRename && (
                     <button
                       onClick={() => {
                         setIsRenaming(true);
                         setShowOptionsMenu(false);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg"
+                      className="flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-tertiary"
                     >
                       <Edit3 size={14} className="mr-2" />
                       Rename list
@@ -282,7 +282,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                         setShowOptionsMenu(false);
                         onDelete(column.id);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary text-red-600 hover:bg-red-50 last:rounded-b-lg"
+                      className="flex w-full items-center px-3 py-2 text-sm text-red-600 last:rounded-b-lg hover:bg-red-50 hover:bg-tertiary"
                     >
                       <Trash2 size={14} className="mr-2" />
                       Delete list
@@ -295,40 +295,40 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </div>
 
         {/* Column Content */}
-        <div className="flex-1 p-2.5 space-y-2 overflow-y-auto min-h-40">
+        <div className="min-h-40 flex-1 space-y-2 overflow-y-auto p-2.5">
           {column.isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <div className="size-6 animate-spin rounded-full border-b-2 border-primary"></div>
             </div>
           ) : column.error ? (
-            <div className="text-center py-12">
-              <div className="w-10 h-10 bg-error-ghost rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="py-12 text-center">
+              <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-error-ghost">
+                <svg className="size-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 15.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <p className="text-error text-sm font-medium mb-1">Error loading tasks</p>
+              <p className="mb-1 text-sm font-medium text-error">Error loading tasks</p>
               <p className="text-xs text-muted">{column.error}</p>
             </div>
           ) : sortedTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               {searchQuery && column.tasks.length > 0 ? (
                 <>
-                  <div className="w-12 h-12 bg-tertiary rounded-full flex items-center justify-center mb-4 opacity-60">
-                    <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-tertiary opacity-60">
+                    <svg className="size-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
-                  <p className="text-sm font-medium text-primary mb-1">No matching tasks</p>
-                  <p className="text-xs text-muted max-w-48">No tasks match your search in this list</p>
+                  <p className="mb-1 text-sm font-medium text-primary">No matching tasks</p>
+                  <p className="max-w-48 text-xs text-muted">No tasks match your search in this list</p>
                 </>
               ) : (
                 <>
-                  <div className="w-12 h-12 bg-tertiary rounded-full flex items-center justify-center mb-4 opacity-60">
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-tertiary opacity-60">
                     <Plus size={20} className="text-secondary" />
                   </div>
-                  <p className="text-sm font-medium text-primary mb-1">No tasks yet</p>
-                  <p className="text-xs text-muted max-w-32">Drop tasks here or click the + button to create your first task</p>
+                  <p className="mb-1 text-sm font-medium text-primary">No tasks yet</p>
+                  <p className="max-w-32 text-xs text-muted">Drop tasks here or click the + button to create your first task</p>
                 </>
               )}
             </div>

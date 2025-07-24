@@ -51,11 +51,11 @@ export function MailWidget() {
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border-default p-4 h-full flex flex-col">
+    <div className="border-border-default flex h-full flex-col rounded-xl border bg-card p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-purple-500/10">
             <Mail size={20} className="text-purple-500" />
           </div>
           <h3 className="text-lg font-semibold">Mail</h3>
@@ -71,7 +71,7 @@ export function MailWidget() {
       </div>
 
       {/* Stats - Compact inline version */}
-      <div className="flex items-center gap-4 mb-3 text-sm">
+      <div className="mb-3 flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1">
           <Inbox size={12} className="text-blue-500" />
           <span className="font-medium">{mailStats.unread}</span>
@@ -91,29 +91,29 @@ export function MailWidget() {
 
       {/* Recent Emails */}
       <div className="flex-1 overflow-y-auto">
-        <h4 className="text-sm font-medium text-secondary mb-2">Recent</h4>
+        <h4 className="mb-2 text-sm font-medium text-secondary">Recent</h4>
         <div className="space-y-2">
           {recentEmails.map((email) => (
             <div
               key={email.id}
-              className="p-3 rounded-lg bg-tertiary/50 hover:bg-tertiary transition-colors cursor-pointer"
+              className="bg-tertiary/50 cursor-pointer rounded-lg p-3 transition-colors hover:bg-tertiary"
               onClick={handleViewAll}
             >
               <div className="flex items-start gap-2">
                 {email.unread && (
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5" />
+                  <div className="mt-1.5 size-2 rounded-full bg-blue-500" />
                 )}
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <h5 className={`text-sm font-medium truncate ${email.unread ? 'text-primary' : 'text-secondary'}`}>
+                    <h5 className={`truncate text-sm font-medium ${email.unread ? 'text-primary' : 'text-secondary'}`}>
                       {email.sender}
                     </h5>
-                    <span className="text-xs text-secondary whitespace-nowrap">{email.time}</span>
+                    <span className="whitespace-nowrap text-xs text-secondary">{email.time}</span>
                   </div>
-                  <p className={`text-sm truncate ${email.unread ? 'text-primary font-medium' : 'text-secondary'}`}>
+                  <p className={`truncate text-sm ${email.unread ? 'font-medium text-primary' : 'text-secondary'}`}>
                     {email.subject}
                   </p>
-                  <p className="text-xs text-secondary truncate mt-0.5">{email.preview}</p>
+                  <p className="mt-0.5 truncate text-xs text-secondary">{email.preview}</p>
                 </div>
               </div>
             </div>

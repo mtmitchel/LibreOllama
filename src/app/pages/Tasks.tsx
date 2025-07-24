@@ -166,7 +166,7 @@ export default function Tasks() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Header Controls */}
       <div className="flex items-center justify-between p-6 pb-4">
         <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export default function Tasks() {
           </Button>
           
           {isSyncing && (
-            <div className="flex items-center gap-2 text-sm text-muted bg-accent-soft px-3 py-1.5 rounded-full">
+            <div className="flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-sm text-muted">
               <RefreshCw size={14} className="animate-spin" />
               <span>Syncing tasks...</span>
             </div>
@@ -198,20 +198,20 @@ export default function Tasks() {
 
         <div className="flex items-center gap-3">
           {/* Search Bar */}
-          <div className="relative flex-1 max-w-md">
-            <Search size={14} className="text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="relative max-w-md flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
               type="search"
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-card border-border-default text-primary h-8 w-full rounded-md border pl-9 pr-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+              className="border-border-default focus:ring-primary/20 h-8 w-full rounded-md border bg-card pl-9 pr-3 text-sm text-primary transition-colors focus:border-primary focus:outline-none focus:ring-1"
             />
             {searchQuery && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 size-6"
+                className="absolute right-1 top-1/2 size-6 -translate-y-1/2"
                 onClick={() => setSearchQuery('')}
               >
                 <X size={12} />
@@ -223,7 +223,7 @@ export default function Tasks() {
           {viewMode === 'list' && (
             <>
               {/* Task Count */}
-              <span className="text-sm text-secondary bg-card px-3 py-1.5 rounded-full font-medium">
+              <span className="rounded-full bg-card px-3 py-1.5 text-sm font-medium text-secondary">
                 {columns.flatMap(c => c.tasks).filter(task => 
                   selectedListId === 'all' || columns.find(c => c.id === selectedListId)?.tasks.includes(task)
                 ).length} tasks
@@ -234,14 +234,14 @@ export default function Tasks() {
                 <select
                   value={selectedListId}
                   onChange={(e) => setSelectedListId(e.target.value)}
-                  className="h-8 pl-3 pr-8 text-sm border border-border-default rounded-lg bg-card text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none cursor-pointer"
+                  className="border-border-default focus:ring-primary/20 h-8 cursor-pointer appearance-none rounded-lg border bg-card pl-3 pr-8 text-sm text-primary transition-colors focus:border-primary focus:outline-none focus:ring-2"
                 >
                   <option value="all">All lists</option>
                   {columns.map(column => (
                     <option key={column.id} value={column.id}>{column.title}</option>
                   ))}
                 </select>
-                <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
+                <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-secondary" />
               </div>
               
               {/* Sort Menu */}
@@ -249,7 +249,7 @@ export default function Tasks() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-3 flex items-center gap-2 hover:bg-tertiary"
+                  className="flex h-8 items-center gap-2 px-3 hover:bg-tertiary"
                   onClick={() => setShowSortMenu(!showSortMenu)}
                 >
                   <ArrowUpDown size={14} />
@@ -257,13 +257,13 @@ export default function Tasks() {
                 </Button>
                 
                 {showSortMenu && (
-                  <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
+                  <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-card shadow-lg">
                     <button
                       onClick={() => {
                         setSortBy('created');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg ${
+                      className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-tertiary ${
                         sortBy === 'created' ? 'bg-accent-soft' : ''
                       }`}
                     >
@@ -287,7 +287,7 @@ export default function Tasks() {
                         setSortBy('title');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary last:rounded-b-lg ${
+                      className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-tertiary ${
                         sortBy === 'title' ? 'bg-accent-soft' : ''
                       }`}
                     >
@@ -311,7 +311,7 @@ export default function Tasks() {
             <span className="hidden sm:inline">Refresh</span>
           </Button>
           
-          <div className="flex items-center gap-1 p-1 bg-tertiary rounded-lg">
+          <div className="flex items-center gap-1 rounded-lg bg-tertiary p-1">
             <Button
               variant={viewMode === 'kanban' ? 'primary' : 'ghost'}
               size="sm"
@@ -356,22 +356,22 @@ export default function Tasks() {
 
       {/* Sync Status */}
       {isAuthenticated && (
-        <div className="px-6 pb-2 text-xs text-gray-500 text-center">
+        <div className="px-6 pb-2 text-center text-xs text-gray-500">
           Connected to Google Tasks • Auto-sync enabled
         </div>
       )}
 
       {/* New List Dialog */}
       {showNewListDialog && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border-default rounded-xl shadow-2xl w-full max-w-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="border-border-default w-full max-w-md rounded-xl border bg-card shadow-2xl">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-primary mb-2">Create New Task List</h3>
-              <p className="text-sm text-muted mb-4">Give your task list a descriptive name to help organize your work.</p>
+              <h3 className="mb-2 text-lg font-semibold text-primary">Create New Task List</h3>
+              <p className="mb-4 text-sm text-muted">Give your task list a descriptive name to help organize your work.</p>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-secondary mb-2">
+                  <label className="mb-2 block text-sm font-medium text-secondary">
                     List name
                   </label>
                   <input
@@ -379,7 +379,7 @@ export default function Tasks() {
                     value={newListTitle}
                     onChange={(e) => setNewListTitle(e.target.value)}
                     placeholder="e.g., Personal Tasks, Work Projects, Shopping..."
-                    className="w-full px-4 py-3 border border-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                    className="border-border-default focus:ring-primary/20 w-full rounded-lg border px-4 py-3 transition-colors focus:border-primary focus:outline-none focus:ring-2"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -411,7 +411,7 @@ export default function Tasks() {
                   >
                     {isCreatingList ? (
                       <>
-                        <RefreshCw size={14} className="animate-spin mr-2" />
+                        <RefreshCw size={14} className="mr-2 animate-spin" />
                         Creating...
                       </>
                     ) : (

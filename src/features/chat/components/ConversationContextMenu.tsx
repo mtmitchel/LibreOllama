@@ -328,7 +328,7 @@ export function ConversationContextMenu({
       {/* Context Menu */}
       <div
         ref={menuRef}
-        className="border-border-default fixed z-50 min-w-[220px] rounded-lg border bg-white dark:bg-gray-900 shadow-lg"
+        className="border-border-default fixed z-50 min-w-[220px] rounded-lg border bg-white shadow-lg dark:bg-gray-900"
         style={{
           left: `${menuPosition.x}px`,
           top: `${menuPosition.y}px`,
@@ -365,8 +365,8 @@ export function ConversationContextMenu({
                   <button
                     onMouseEnter={() => setActiveSubmenu(item.id)}
                     className={`
-                      flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors
-                      text-primary hover:bg-hover hover:text-primary
+                      flex w-full items-center justify-between px-3 py-2 text-left text-sm text-primary
+                      transition-colors hover:bg-hover hover:text-primary
                     `}
                     role="menuitem"
                   >
@@ -374,13 +374,13 @@ export function ConversationContextMenu({
                       {item.icon}
                       <span>{item.label}</span>
                     </div>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
                   {activeSubmenu === item.id && (
                     <div 
-                      className="absolute left-full top-0 -ml-px min-w-[180px] rounded-lg border border-border-default bg-white dark:bg-gray-900 shadow-lg"
+                      className="border-border-default absolute left-full top-0 -ml-px min-w-[180px] rounded-lg border bg-white shadow-lg dark:bg-gray-900"
                       onMouseEnter={() => setActiveSubmenu(item.id)}
                       onMouseLeave={() => setActiveSubmenu(null)}
                     >
@@ -392,7 +392,7 @@ export function ConversationContextMenu({
                               subItem.action?.();
                               setActiveSubmenu(null);
                             }}
-                            className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors text-primary hover:bg-hover hover:text-primary"
+                            className="flex w-full items-center px-3 py-2 text-left text-sm text-primary transition-colors hover:bg-hover hover:text-primary"
                           >
                             {subItem.label}
                           </button>

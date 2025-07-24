@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useHeader } from '../contexts/HeaderContext';
 import { MailSidebar } from '../../features/mail/components/MailSidebar';
 import { MailToolbar } from '../../features/mail/components/MailToolbar';
-import { EnhancedSearchBar, EnhancedMessageList, MessageView } from '../../features/mail/components';
+import { EnhancedSearchBar, EnhancedMessageList } from '../../features/mail/components';
 import { MailContextSidebar } from '../../features/mail/components/MailContextSidebar';
 import { ComposeModal } from '../../features/mail/components';
+import { MessageViewModal } from '../../features/mail/components/MessageViewModal';
 import { useMailStore } from '../../features/mail/stores/mailStore';
 // Import debug utilities (only in dev mode)
 if (import.meta.env.DEV) {
@@ -15,7 +16,7 @@ export default function Mail() {
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const { isComposing, currentMessage, isHydrated, isAuthenticated, accounts, loadStoredAccounts } = useMailStore();
   const [isMailSidebarOpen, setIsMailSidebarOpen] = useState(true);
-  const [isContextOpen, setIsContextOpen] = useState(true);
+  const [isContextOpen, setIsContextOpen] = useState(false);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   const [isThreadedView, setIsThreadedView] = useState(true);
   const [listViewType, setListViewType] = useState<'enhanced'>('enhanced');
@@ -58,19 +59,9 @@ export default function Mail() {
           <MailToolbar />
 
 
-          {/* Message List and View Content */}
-          <div className="flex min-h-0 flex-1">
-            {/* Message List */}
-            <div className={`min-w-0 ${currentMessage ? 'w-1/2' : 'flex-1'} border-r border-border-default`}>
-              <EnhancedMessageList />
-            </div>
-            
-            {/* Message View */}
-            {currentMessage && (
-              <div className="min-w-0 w-1/2">
-                <MessageView />
-              </div>
-            )}
+          {/* Message List */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <EnhancedMessageList />
           </div>
           
       </div>
@@ -85,8 +76,11 @@ export default function Mail() {
         onListViewTypeChange={setListViewType}
       />
 
-      {/* Compose Modal */}
-      {isComposing && <ComposeModal />}
+      {/* Compose Modal - Only show for new compose, not replies */}
+      {isComposing && !currentMessage && <ComposeModal />}
+      
+      {/* Message View Modal */}
+      {currentMessage && <MessageViewModal />}
     </div>
   );
 } 

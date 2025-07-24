@@ -123,7 +123,7 @@ export const PendingTasksWidget: React.FC = () => {
             variant="ghost" 
             size="sm" 
             onClick={handleAddTask}
-            className="mt-1 text-xs h-auto py-0.5 px-2"
+            className="mt-1 h-auto px-2 py-0.5 text-xs"
           >
             Add your first task
           </Button>
@@ -147,14 +147,14 @@ export const PendingTasksWidget: React.FC = () => {
                     <Text size="xs" weight="medium" variant="body" className="min-w-0 flex-1 leading-snug">
                       {task.title}
                     </Text>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex shrink-0 items-center gap-2">
                       {priority && (
                         <span className={`text-xs font-medium ${getPriorityColor(priority)}`}>
                           {priority[0].toUpperCase()}
                         </span>
                       )}
                       {dueDate && (
-                        <Text size="xs" className={isOverdue ? 'text-red-500 font-medium' : 'text-secondary'}>
+                        <Text size="xs" className={isOverdue ? 'font-medium text-red-500' : 'text-secondary'}>
                           {dueDate}
                         </Text>
                       )}

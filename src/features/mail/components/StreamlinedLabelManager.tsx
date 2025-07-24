@@ -190,39 +190,39 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-xl max-h-[90vh] overflow-hidden">
+      <div className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-lg bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between border-b p-4">
           <div className="flex items-center gap-2">
             <Tag className="size-5 text-blue-600" />
             <h2 className="font-semibold">{getTitle()}</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 transition-colors"
+            className="rounded p-1 transition-colors hover:bg-gray-100"
           >
             <X className="size-5" />
           </button>
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b">
+        <div className="border-b p-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="Search or create label..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="p-4 bg-red-50 border-b border-red-200">
+          <div className="border-b border-red-200 bg-red-50 p-4">
             <div className="flex items-center gap-2 text-red-700">
               <AlertCircle className="size-4" />
               <span className="text-sm">{error}</span>
@@ -232,10 +232,10 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
 
         {/* Quick Create */}
         {showQuickCreate && (
-          <div className="p-4 bg-blue-50 border-b">
+          <div className="border-b bg-blue-50 p-4">
             <button
               onClick={handleQuickCreate}
-              className="flex items-center gap-2 w-full p-2 text-left rounded hover:bg-blue-100 transition-colors"
+              className="flex w-full items-center gap-2 rounded p-2 text-left transition-colors hover:bg-blue-100"
             >
               <Plus className="size-4 text-blue-600" />
               <span className="text-blue-700">Create "{searchTerm}"</span>
@@ -245,14 +245,14 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
 
         {/* Create Form */}
         {showCreateForm && (
-          <div className="p-4 bg-gray-50 border-b">
+          <div className="border-b bg-gray-50 p-4">
             <div className="space-y-3">
               <input
                 type="text"
                 placeholder="Label name"
                 value={newLabelName}
                 onChange={(e) => setNewLabelName(e.target.value)}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
               />
               <div className="flex items-center justify-between">
@@ -281,7 +281,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
                   <button
                     onClick={createNewLabel}
                     disabled={!newLabelName.trim() || loading}
-                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700 disabled:opacity-50"
                   >
                     Create
                   </button>
@@ -292,14 +292,14 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
         )}
 
         {/* Labels List */}
-        <div className="flex-1 overflow-y-auto max-h-80">
+        <div className="max-h-80 flex-1 overflow-y-auto">
           {loading ? (
             <div className="p-8 text-center text-gray-500">
               Loading labels...
             </div>
           ) : filteredLabels.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              <Tag className="size-8 mx-auto mb-2 text-gray-300" />
+              <Tag className="mx-auto mb-2 size-8 text-gray-300" />
               <p>{searchTerm ? 'No labels found' : 'No labels available'}</p>
             </div>
           ) : (
@@ -312,12 +312,12 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
                   <button
                     key={label.id}
                     onClick={() => handleLabelToggle(label.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors ${
-                      isSelected ? 'bg-blue-50 border border-blue-200' : ''
+                    className={`flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-50 ${
+                      isSelected ? 'border border-blue-200 bg-blue-50' : ''
                     }`}
                   >
-                    <div className={`size-4 border rounded flex items-center justify-center ${
-                      isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                    <div className={`flex size-4 items-center justify-center rounded border ${
+                      isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300'
                     }`}>
                       {isSelected && <Check className="size-3 text-white" />}
                     </div>
@@ -338,13 +338,13 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
                       </div>
                     </div>
                     {mode === 'manage' && label.type === 'user' && (
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingLabelId(label.id);
                           }}
-                          className="p-1 hover:bg-gray-200 rounded"
+                          className="rounded p-1 hover:bg-gray-200"
                         >
                           <Edit2 className="size-3" />
                         </button>
@@ -357,7 +357,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
                               onLabelDeleted?.(label.id);
                             }
                           }}
-                          className="p-1 hover:bg-red-200 rounded text-red-600"
+                          className="rounded p-1 text-red-600 hover:bg-red-200"
                         >
                           <Trash2 className="size-3" />
                         </button>
@@ -371,7 +371,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+        <div className="flex items-center justify-between border-t bg-gray-50 p-4">
           <div className="text-sm text-gray-500">
             {selectedLabels.size} selected
           </div>
@@ -386,7 +386,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                 >
                   Apply
                 </button>
@@ -395,7 +395,7 @@ export const StreamlinedLabelManager: React.FC<StreamlinedLabelManagerProps> = (
             {mode === 'manage' && (
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                className="rounded bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
               >
                 Done
               </button>

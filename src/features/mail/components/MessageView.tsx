@@ -4,10 +4,7 @@ import {
   Reply, 
   ReplyAll, 
   Forward, 
-  MoreHorizontal, 
   Paperclip,
-  ChevronDown,
-  ChevronUp,
   Printer,
   Archive,
   Trash2,
@@ -18,14 +15,15 @@ import { useMailStore } from '../stores/mailStore';
 import { ParsedEmail, EmailAddress } from '../types';
 import { EnhancedMessageRenderer } from './EnhancedMessageRenderer';
 import { EnhancedMessageActions } from './EnhancedMessageActions';
+import { safeDecodeHtmlEntities } from '../utils/htmlDecode';
+import { InlineReply } from './InlineReply';
+import './mail-scrollbar.css';
 
 interface MessageHeaderProps {
   message: ParsedEmail;
-  isExpanded: boolean;
-  onToggleExpanded: () => void;
 }
 
-function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderProps) {
+function MessageHeader({ message }: MessageHeaderProps) {
   const { starMessages, unstarMessages } = useMailStore();
   const clearCurrentMessage = useMailStore(state => state.clearCurrentMessage);
 
@@ -52,148 +50,93 @@ function MessageHeader({ message, isExpanded, onToggleExpanded }: MessageHeaderP
     });
   };
 
+
   const formatEmailAddresses = (addresses: EmailAddress[]) => {
     return addresses.map(addr => addr.name || addr.email).join(', ');
   };
 
   return (
-    <div className="border-border-default border-b bg-tertiary">
-      {/* Main Header - Optimized for compact space */}
-      <div 
-        className="flex flex-col p-3"
-      >
-        {/* Subject Line */}
-        <div className="mb-2 flex items-start justify-between">
-          <div className="min-w-0 flex-1 pr-2">
-            <Text size="lg" weight="semibold" variant="body" className="leading-tight">
-              {message.subject || '(no subject)'}
-            </Text>
-          </div>
-          
-          {/* Action buttons - more compact */}
-          <div 
-            className="flex shrink-0 items-center gap-1"
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCloseEmail}
-              className="size-6 rounded-sm text-secondary hover:text-primary"
-              title="Close email"
-            >
-              <X size={12} />
-            </Button>
+    <div className="border-b border-border-default bg-white">
+      <div className="px-6 py-5">
+        {/* Subject Line with action buttons */}
+        <div className="mb-4">
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-2xl font-semibold text-primary leading-tight">
+              {safeDecodeHtmlEntities(message.subject || '(no subject)')}
+            </h1>
             
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleStarClick}
-              className="size-6 rounded-sm text-secondary hover:text-primary"
-            >
-              <Star
-                size={12}
-                className={`${
-                  message.isStarred 
-                    ? 'fill-warning text-warning' 
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleExpanded}
-              className="size-6 rounded-sm text-secondary hover:text-primary"
-            >
-              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 rounded-sm text-secondary hover:text-primary"
-            >
-              <MoreHorizontal size={12} />
-            </Button>
+            {/* Action buttons - simplified */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleStarClick}
+                className="text-secondary hover:text-primary"
+                title={message.isStarred ? 'Remove star' : 'Add star'}
+              >
+                <Star
+                  size={20}
+                  className={message.isStarred ? 'fill-warning text-warning' : ''}
+                />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCloseEmail}
+                className="text-secondary hover:text-primary"
+                title="Close"
+              >
+                <X size={20} />
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Sender and Date Info - Stacked for better space usage */}
-        <div className="flex flex-col gap-1">
-          {/* Sender Info */}
-          <div className="flex min-w-0 items-center">
-            <Text size="sm" weight="medium" variant="body" className="truncate">
-              {message.from.name || message.from.email}
-            </Text>
-            <Text size="xs" variant="secondary" className="ml-1 truncate">
-              &lt;{message.from.email}&gt;
-            </Text>
-          </div>
-          
-          {/* Recipient and Date */}
-          <div className="flex items-center justify-between text-xs text-secondary">
-            <Text size="xs" variant="secondary" className="min-w-0 flex-1 truncate">
-              to {formatEmailAddresses(message.to)}
-            </Text>
-            <Text size="xs" variant="secondary" className="ml-2 shrink-0">
-              {formatDate(message.date)}
-            </Text>
-          </div>
-        </div>
-      </div>
-
-      {/* Expanded Header Details */}
-      {isExpanded && (
-        <div 
-          className="border-border-default mx-2 mb-2 rounded-sm border-t bg-secondary p-3 text-sm"
-        >
-          <div className="space-y-1">
-            <div className="flex">
-              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
-                from:
-              </Text>
-              <Text size="sm" variant="secondary" className="truncate">
-                {message.from.name || message.from.email} &lt;{message.from.email}&gt;
-              </Text>
+        {/* Metadata in a more compact, readable format */}
+        <div className="text-sm text-secondary">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {/* From */}
+            <div className="flex items-center gap-1">
+              <span className="font-medium">From:</span>
+              <span className="text-primary">
+                {message.from.name || message.from.email}
+              </span>
+              <span className="text-xs text-tertiary">
+                &lt;{message.from.email}&gt;
+              </span>
             </div>
-            <div className="flex">
-              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
-                to:
-              </Text>
-              <Text size="sm" variant="secondary" className="truncate">
-                {formatEmailAddresses(message.to)}
-              </Text>
-            </div>
-            {message.cc && message.cc.length > 0 && (
-              <div className="flex">
-                <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
-                  cc:
-                </Text>
-                <Text size="sm" variant="secondary" className="truncate">
-                  {formatEmailAddresses(message.cc)}
-                </Text>
+            
+            {/* To - inline when short */}
+            {message.to.length === 1 && (
+              <div className="flex items-center gap-1">
+                <span className="font-medium">To:</span>
+                <span className="text-primary">
+                  {message.to[0].name || message.to[0].email}
+                </span>
               </div>
             )}
-            <div className="flex">
-              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
-                date:
-              </Text>
-              <Text size="sm" variant="secondary" className="truncate">
+            
+            {/* Date */}
+            <div className="flex items-center gap-1">
+              <span className="font-medium">Date:</span>
+              <span className="text-primary">
                 {formatDate(message.date)}
-              </Text>
-            </div>
-            <div className="flex">
-              <Text size="sm" variant="secondary" className="mr-2 w-12 shrink-0 text-right">
-                subject:
-              </Text>
-              <Text size="sm" variant="secondary" className="truncate">
-                {message.subject || '(no subject)'}
-              </Text>
+              </span>
             </div>
           </div>
+          
+          {/* To - on new line when multiple recipients */}
+          {message.to.length > 1 && (
+            <div className="mt-1 flex items-start gap-1">
+              <span className="font-medium">To:</span>
+              <span className="text-primary">
+                {formatEmailAddresses(message.to)}
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -214,32 +157,25 @@ function AttachmentList({ attachments }: AttachmentListProps) {
   };
 
   return (
-    <div 
-              className="border-border-default mx-2 mb-2 rounded-sm border-b bg-secondary p-3"
-      >
-      <div 
-        className="mb-2 flex items-center gap-2"
-      >
+    <div className="border-b border-border-default bg-gray-50 p-4">
+      <div className="mb-3 flex items-center gap-2">
         <Paperclip size={16} className="text-secondary" />
-        <Text size="sm" variant="secondary">
+        <Text size="sm" weight="medium" variant="body">
           {attachments.length} attachment{attachments.length > 1 ? 's' : ''}
         </Text>
       </div>
-      <div 
-        className="grid grid-cols-1 gap-2"
-      >
+      <div className="space-y-2">
         {attachments.map((attachment, index) => (
-          <Card
+          <div
             key={index}
-            padding="sm"
-            className="border-border-default flex items-center justify-between rounded-md border bg-tertiary transition-colors hover:bg-surface"
+            className="flex items-center justify-between rounded-lg border border-border-default bg-white p-3 transition-colors hover:bg-gray-50"
           >
-            <div 
-              className="flex items-center gap-2"
-            >
-              <Paperclip size={14} className="text-secondary" />
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-gray-100 p-2">
+                <Paperclip size={16} className="text-secondary" />
+              </div>
               <div>
-                <Text size="sm" variant="body">
+                <Text size="sm" weight="medium" variant="body">
                   {attachment.filename}
                 </Text>
                 <Text size="xs" variant="secondary">
@@ -248,13 +184,12 @@ function AttachmentList({ attachments }: AttachmentListProps) {
               </div>
             </div>
             <Button 
-              variant="ghost" 
-              size="sm" 
-              className="rounded-sm text-secondary hover:text-primary"
+              variant="outline" 
+              size="sm"
             >
               Download
             </Button>
-          </Card>
+          </div>
         ))}
       </div>
     </div>
@@ -262,9 +197,9 @@ function AttachmentList({ attachments }: AttachmentListProps) {
 }
 
 export function MessageView() {
-  const { currentMessage, startCompose } = useMailStore();
-  const [isHeaderExpanded, setIsHeaderExpanded] = React.useState(false);
-  const [showImages, setShowImages] = React.useState(false);
+  const { currentMessage } = useMailStore();
+  const [showImages, setShowImages] = React.useState(true);
+  const [replyMode, setReplyMode] = React.useState<'reply' | 'reply_all' | 'forward' | null>(null);
 
   if (!currentMessage) {
     return (
@@ -279,122 +214,85 @@ export function MessageView() {
   }
 
   const handleReply = () => {
-    startCompose({
-      to: [currentMessage.from],
-      subject: currentMessage.subject.startsWith('Re: ') 
-        ? currentMessage.subject 
-        : `Re: ${currentMessage.subject}`,
-      replyToMessageId: currentMessage.id,
-    });
+    setReplyMode('reply');
   };
 
   const handleReplyAll = () => {
-    const allRecipients = [
-      currentMessage.from,
-      ...currentMessage.to,
-      ...(currentMessage.cc || [])
-    ].filter((addr, index, self) => 
-      index === self.findIndex(a => a.email === addr.email)
-    );
-
-    startCompose({
-      to: allRecipients,
-      subject: currentMessage.subject.startsWith('Re: ') 
-        ? currentMessage.subject 
-        : `Re: ${currentMessage.subject}`,
-      replyToMessageId: currentMessage.id,
-    });
+    setReplyMode('reply_all');
   };
 
   const handleForward = () => {
-    startCompose({
-      to: [],
-      subject: currentMessage.subject.startsWith('Fwd: ') 
-        ? currentMessage.subject 
-        : `Fwd: ${currentMessage.subject}`,
-      body: `\n\n---------- Forwarded message ---------\nFrom: ${currentMessage.from.name || currentMessage.from.email}\nDate: ${currentMessage.date.toLocaleString()}\nSubject: ${currentMessage.subject}\nTo: ${currentMessage.to.map(addr => addr.email).join(', ')}\n\n${currentMessage.body}`,
-    });
+    setReplyMode('forward');
   };
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
       {/* Message Header */}
-      <div className="shrink-0 border-b border-border-default bg-tertiary">
+      <div className="shrink-0">
         <MessageHeader
           message={currentMessage}
-          isExpanded={isHeaderExpanded}
-          onToggleExpanded={() => setIsHeaderExpanded(!isHeaderExpanded)}
         />
       </div>
 
       {/* Attachments */}
       {currentMessage.attachments && currentMessage.attachments.length > 0 && (
-        <div className="shrink-0 border-b border-border-default">
+        <div className="shrink-0">
           <AttachmentList attachments={currentMessage.attachments} />
         </div>
       )}
 
-      {/* Image Loading Option */}
-      {!showImages && (
-        <div className="shrink-0 border-b border-border-default bg-yellow-50 px-4 py-2">
+
+      {/* Message Content - Scrollable */}
+      <div className="mail-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-white px-6 py-4">
+        <EnhancedMessageRenderer 
+          message={currentMessage}
+          enableImageLoading={showImages}
+          enableLinkPreview={false}
+          showRawSource={false}
+        />
+      </div>
+
+      {/* Action Buttons - Only show if not in reply mode */}
+      {!replyMode && (
+        <div className="shrink-0 border-t border-border-default bg-white px-4 py-3">
           <div className="flex items-center justify-between">
-            <Text size="sm" variant="secondary">
-              Images are blocked for security
-            </Text>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowImages(true)}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              Show images
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="primary" size="sm" onClick={handleReply}>
+                <Reply size={16} className="mr-2" />
+                Reply
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleReplyAll}>
+                <ReplyAll size={16} className="mr-2" />
+                Reply all
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleForward}>
+                <Forward size={16} className="mr-2" />
+                Forward
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="text-secondary hover:text-primary" title="Print">
+                <Printer size={18} />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-secondary hover:text-primary" title="Archive">
+                <Archive size={18} />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-secondary hover:text-primary" title="Delete">
+                <Trash2 size={18} />
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Enhanced Message Content - Scrollable */}
-      <div className="flex-1 overflow-y-auto bg-white">
-        <div className="p-6">
-          <EnhancedMessageRenderer 
-            message={currentMessage}
-            enableImageLoading={showImages}
-            enableLinkPreview={false}
-            showRawSource={false}
-          />
-        </div>
-      </div>
-
-      {/* Compact Action Buttons */}
-      <div className="shrink-0 border-t border-border-default bg-tertiary px-4 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleReply} className="text-primary hover:bg-hover">
-              <Reply size={16} className="mr-1" />
-              Reply
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleReplyAll} className="text-primary hover:bg-hover">
-              <ReplyAll size={16} className="mr-1" />
-              Reply all
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleForward} className="text-primary hover:bg-hover">
-              <Forward size={16} className="mr-1" />
-              Forward
-            </Button>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="size-8 text-secondary hover:text-primary" title="Print">
-              <Printer size={16} />
-            </Button>
-            <Button variant="ghost" size="icon" className="size-8 text-secondary hover:text-primary" title="Archive">
-              <Archive size={16} />
-            </Button>
-            <Button variant="ghost" size="icon" className="size-8 text-secondary hover:text-primary" title="Delete">
-              <Trash2 size={16} />
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Inline Reply Section */}
+      {replyMode && (
+        <InlineReply
+          originalMessage={currentMessage}
+          replyType={replyMode}
+          onClose={() => setReplyMode(null)}
+        />
+      )}
     </div>
   );
 } 

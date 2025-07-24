@@ -14,6 +14,7 @@ import { useMailOperation } from '../hooks';
 import { Text, Button } from '../../../components/ui';
 import { ParsedEmail } from '../types';
 import { logger } from '../../../core/lib/logger';
+import './mail-scrollbar.css';
 
 interface EnhancedMessageListProps {
   compactMode?: boolean;
@@ -266,7 +267,7 @@ export function EnhancedMessageList({
 
 
       {/* Message List */}
-              <div className="flex-1 overflow-y-auto bg-content">
+      <div className="mail-scrollbar flex-1 overflow-y-auto overflow-x-hidden bg-content">
         {processedMessages.map((message) => (
           <EnhancedMessageItem
             key={message.id}

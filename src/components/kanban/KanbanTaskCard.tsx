@@ -130,26 +130,26 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
           {...listeners}
           {...attributes}
           className={`
-            group relative bg-card border border-border-default rounded-lg p-2.5 cursor-pointer
-            transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-border-hover hover:-translate-y-0.5
-            ${isBeingDragged ? 'opacity-50 rotate-2 scale-105 shadow-xl' : ''}
-            ${isCompleted ? 'opacity-75 bg-tertiary/30' : ''}
-            ${isOverdue ? 'border-l-4 border-l-error shadow-error/5' : ''}
+            border-border-default hover:shadow-primary/5 hover:border-border-hover group relative cursor-pointer rounded-lg border
+            bg-card p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg
+            ${isBeingDragged ? 'rotate-2 scale-105 opacity-50 shadow-xl' : ''}
+            ${isCompleted ? 'bg-tertiary/30 opacity-75' : ''}
+            ${isOverdue ? 'shadow-error/5 border-l-4 border-l-error' : ''}
           `}
           onClick={handleCardClick}
         >
         {/* Task Header */}
-        <div className="flex items-start justify-between gap-2.5 mb-2.5">
-          <div className="flex items-start gap-2.5 flex-1 min-w-0">
+        <div className="mb-2.5 flex items-start justify-between gap-2.5">
+          <div className="flex min-w-0 flex-1 items-start gap-2.5">
             {/* Completion Checkbox */}
             <button
               onClick={handleToggleComplete}
               className={`
-                flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center
-                transition-all duration-200
+                mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2 transition-all
+                duration-200
                 ${isCompleted 
-                  ? 'bg-success border-success text-white scale-110' 
-                  : 'border-border-default hover:border-success hover:bg-success/5'
+                  ? 'scale-110 border-success bg-success text-white' 
+                  : 'border-border-default hover:bg-success/5 hover:border-success'
                 }
               `}
               title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
@@ -159,8 +159,8 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
             {/* Task Title */}
             <h4 className={`
-              font-medium text-sm leading-snug flex-1 min-w-0
-              ${isCompleted ? 'line-through text-muted' : 'text-primary'}
+              min-w-0 flex-1 text-sm font-medium leading-snug
+              ${isCompleted ? 'text-muted line-through' : 'text-primary'}
             `}>
               {task.title}
             </h4>
@@ -170,7 +170,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className="opacity-0 group-hover:opacity-100 size-6 flex-shrink-0 hover:bg-tertiary"
+            className="size-6 shrink-0 opacity-0 hover:bg-tertiary group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               setIsEditModalOpen(true);
@@ -183,21 +183,21 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
         {/* Task Notes */}
         {task.notes && (
-          <p className="text-xs text-muted line-clamp-2 mb-2.5 leading-relaxed pl-6.5">
+          <p className="pl-6.5 mb-2.5 line-clamp-2 text-xs leading-relaxed text-muted">
             {task.notes}
           </p>
         )}
 
         {/* Task Metadata */}
-        <div className="space-y-2 pl-6.5">
+        <div className="pl-6.5 space-y-2">
           {/* Due Date and Priority Row */}
-          <div className="flex items-center flex-wrap gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             {/* Due Date */}
             {task.due && (
               <div className={`
-                flex items-center gap-1.5 px-2.5 py-1.5 rounded-full font-medium
+                flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-medium
                 ${isOverdue 
-                  ? 'bg-error-ghost text-error border border-error/20' 
+                  ? 'border-error/20 border bg-error-ghost text-error' 
                   : 'bg-tertiary text-secondary'
                 }
               `}>
@@ -209,10 +209,10 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
             {/* Priority Indicator */}
             {task.metadata?.priority && task.metadata.priority !== 'normal' && (
               <div className={`
-                px-2.5 py-1.5 rounded-full text-xs font-medium border
-                ${task.metadata.priority === 'high' ? 'bg-warning-ghost text-warning border-warning/20' : ''}
-                ${task.metadata.priority === 'urgent' ? 'bg-error-ghost text-error border-error/20' : ''}
-                ${task.metadata.priority === 'low' ? 'bg-tertiary text-muted border-border-default' : ''}
+                rounded-full border px-2.5 py-1.5 text-xs font-medium
+                ${task.metadata.priority === 'high' ? 'border-warning/20 bg-warning-ghost text-warning' : ''}
+                ${task.metadata.priority === 'urgent' ? 'border-error/20 bg-error-ghost text-error' : ''}
+                ${task.metadata.priority === 'low' ? 'border-border-default bg-tertiary text-muted' : ''}
               `}>
                 {task.metadata.priority}
               </div>
@@ -220,7 +220,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
             {/* Recurring Indicator */}
             {task.metadata?.recurring?.enabled && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-accent-soft text-accent-primary border border-accent/20 font-medium">
+              <div className="border-accent/20 flex items-center gap-1.5 rounded-full border bg-accent-soft px-2.5 py-1.5 font-medium text-accent-primary">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
                   <path d="M21 3v5h-5"/>
@@ -238,13 +238,13 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
               {task.metadata.labels.slice(0, 3).map((label, index) => (
                 <span
                   key={index}
-                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-accent-soft text-accent-primary"
+                  className="inline-flex items-center rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-primary"
                 >
                   {label}
                 </span>
               ))}
               {task.metadata.labels.length > 3 && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-tertiary text-muted">
+                <span className="inline-flex items-center rounded-full bg-tertiary px-2 py-0.5 text-xs font-medium text-muted">
                   +{task.metadata.labels.length - 3}
                 </span>
               )}
@@ -254,7 +254,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
         {/* Subtasks Progress */}
         {task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-border-default">
+          <div className="border-border-default mt-2 border-t pt-2">
             <div className="flex items-center gap-2 text-xs text-muted">
               <CheckSquare size={10} />
               <span>

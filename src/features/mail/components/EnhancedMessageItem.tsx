@@ -20,6 +20,7 @@ import { ParsedEmail } from '../types';
 import { useMailStore } from '../stores/mailStore';
 import { MessageContextMenu } from './MessageContextMenu';
 import { Text } from '../../../components/ui';
+import { safeDecodeHtmlEntities } from '../utils/htmlDecode';
 
 interface EnhancedMessageItemProps {
   message: ParsedEmail;
@@ -147,9 +148,9 @@ export function EnhancedMessageItem({
     ? senderDisplay.substring(0, 20) + '...' 
     : senderDisplay;
 
-  // Get subject with fallback
-  const subjectDisplay = message.subject || '(no subject)';
-  const snippetDisplay = message.snippet || '';
+  // Get subject with fallback and decode HTML entities
+  const subjectDisplay = safeDecodeHtmlEntities(message.subject || '(no subject)');
+  const snippetDisplay = safeDecodeHtmlEntities(message.snippet || '');
 
   // Check if this message is currently selected/viewed
   const isCurrentMessage = currentMessage?.id === message.id;
@@ -284,12 +285,6 @@ export function EnhancedMessageItem({
           </div>
         )}
 
-        {/* Read/Unread Indicator */}
-        {!message.isRead && (
-          <div className="shrink-0">
-            <div className="size-2 rounded-full bg-accent-primary"></div>
-          </div>
-        )}
       </div>
 
       {/* Context Menu */}

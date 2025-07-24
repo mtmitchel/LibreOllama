@@ -180,7 +180,7 @@ export const AgentStatusWidget: React.FC = () => {
 
       <div className="mt-3 flex items-center justify-between text-xs text-secondary">
         <span>{agents.filter(a => a.is_active).length} active of {agents.length} total</span>
-        <Button variant="ghost" size="sm" className="text-xs text-secondary p-1 h-auto">
+        <Button variant="ghost" size="sm" className="h-auto p-1 text-xs text-secondary">
           Manage agents
         </Button>
       </div>
