@@ -280,6 +280,10 @@ pub fn run() {
             update_task,
             delete_task,
             toggle_task_complete,
+            create_task_list,
+            update_task_list,
+            delete_task_list,
+            move_task,
             // Calendar commands
             get_calendars,
             get_calendar_events,

@@ -130,26 +130,26 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
           {...listeners}
           {...attributes}
           className={`
-            group relative bg-card border border-border-default rounded-lg p-3 cursor-pointer
-            transition-all duration-200 hover:shadow-md hover:border-border-hover
-            ${isBeingDragged ? 'opacity-50 rotate-2 scale-105' : ''}
-            ${isCompleted ? 'opacity-75' : ''}
-            ${isOverdue ? 'border-l-4 border-l-error' : ''}
+            group relative bg-card border border-border-default rounded-lg p-2.5 cursor-pointer
+            transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-border-hover hover:-translate-y-0.5
+            ${isBeingDragged ? 'opacity-50 rotate-2 scale-105 shadow-xl' : ''}
+            ${isCompleted ? 'opacity-75 bg-tertiary/30' : ''}
+            ${isOverdue ? 'border-l-4 border-l-error shadow-error/5' : ''}
           `}
           onClick={handleCardClick}
         >
         {/* Task Header */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-start gap-2 flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2.5 mb-2.5">
+          <div className="flex items-start gap-2.5 flex-1 min-w-0">
             {/* Completion Checkbox */}
             <button
               onClick={handleToggleComplete}
               className={`
                 flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center
-                transition-colors duration-200
+                transition-all duration-200
                 ${isCompleted 
-                  ? 'bg-success border-success text-white' 
-                  : 'border-border-default hover:border-success'
+                  ? 'bg-success border-success text-white scale-110' 
+                  : 'border-border-default hover:border-success hover:bg-success/5'
                 }
               `}
               title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
@@ -159,7 +159,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
             {/* Task Title */}
             <h4 className={`
-              font-medium text-sm leading-tight flex-1 min-w-0
+              font-medium text-sm leading-snug flex-1 min-w-0
               ${isCompleted ? 'line-through text-muted' : 'text-primary'}
             `}>
               {task.title}
@@ -169,8 +169,8 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
           {/* More Options */}
           <Button
             variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 flex-shrink-0"
+            size="icon"
+            className="opacity-0 group-hover:opacity-100 size-6 flex-shrink-0 hover:bg-tertiary"
             onClick={(e) => {
               e.stopPropagation();
               setIsEditModalOpen(true);
@@ -183,52 +183,53 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
         {/* Task Notes */}
         {task.notes && (
-          <p className="text-xs text-muted line-clamp-2 mb-2">
+          <p className="text-xs text-muted line-clamp-2 mb-2.5 leading-relaxed pl-6.5">
             {task.notes}
           </p>
         )}
 
         {/* Task Metadata */}
-        <div className="space-y-2">
+        <div className="space-y-2 pl-6.5">
           {/* Due Date and Priority Row */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              {/* Due Date */}
-              {task.due && (
-                <div className={`
-                  flex items-center gap-1 px-2 py-1 rounded-full
-                  ${isOverdue ? 'bg-error-ghost text-error' : 'bg-tertiary text-secondary'}
-                `}>
-                  <Calendar size={10} />
-                  <span>{format(new Date(task.due), 'MMM d')}</span>
-                </div>
-              )}
+          <div className="flex items-center flex-wrap gap-2 text-xs">
+            {/* Due Date */}
+            {task.due && (
+              <div className={`
+                flex items-center gap-1.5 px-2.5 py-1.5 rounded-full font-medium
+                ${isOverdue 
+                  ? 'bg-error-ghost text-error border border-error/20' 
+                  : 'bg-tertiary text-secondary'
+                }
+              `}>
+                <Calendar size={10} />
+                <span>{format(new Date(task.due), 'MMM d')}</span>
+              </div>
+            )}
 
-              {/* Recurring Indicator */}
-              {task.metadata?.recurring?.enabled && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-accent-soft text-accent-primary">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                    <path d="M21 3v5h-5"/>
-                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                    <path d="M3 21v-5h5"/>
-                  </svg>
-                  <span className="capitalize">{task.metadata.recurring.frequency}</span>
-                </div>
-              )}
+            {/* Priority Indicator */}
+            {task.metadata?.priority && task.metadata.priority !== 'normal' && (
+              <div className={`
+                px-2.5 py-1.5 rounded-full text-xs font-medium border
+                ${task.metadata.priority === 'high' ? 'bg-warning-ghost text-warning border-warning/20' : ''}
+                ${task.metadata.priority === 'urgent' ? 'bg-error-ghost text-error border-error/20' : ''}
+                ${task.metadata.priority === 'low' ? 'bg-tertiary text-muted border-border-default' : ''}
+              `}>
+                {task.metadata.priority}
+              </div>
+            )}
 
-              {/* Priority Indicator */}
-              {task.metadata?.priority && task.metadata.priority !== 'normal' && (
-                <div className={`
-                  px-2 py-1 rounded-full text-xs font-medium
-                  ${task.metadata.priority === 'high' ? 'bg-warning-ghost text-warning' : ''}
-                  ${task.metadata.priority === 'urgent' ? 'bg-error-ghost text-error' : ''}
-                  ${task.metadata.priority === 'low' ? 'bg-tertiary text-muted' : ''}
-                `}>
-                  {task.metadata.priority}
-                </div>
-              )}
-            </div>
+            {/* Recurring Indicator */}
+            {task.metadata?.recurring?.enabled && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-accent-soft text-accent-primary border border-accent/20 font-medium">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                  <path d="M3 21v-5h5"/>
+                </svg>
+                <span className="capitalize">{task.metadata.recurring.frequency}</span>
+              </div>
+            )}
           </div>
 
           {/* Labels/Tags */}

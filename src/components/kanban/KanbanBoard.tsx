@@ -15,13 +15,22 @@ import { useKanbanStore, KanbanTask } from "../../stores/useKanbanStore";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanTaskCard } from "./KanbanTaskCard";
 import { Button, Card } from "../ui";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useGoogleTasksStore } from "../../stores/googleTasksStore";
 
 interface KanbanBoardProps {
   className?: string;
+  searchQuery?: string;
+  onDeleteList?: (listId: string) => void;
+  onRenameList?: (listId: string, newTitle: string) => void;
 }
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ className = "" }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
+  className = "", 
+  searchQuery,
+  onDeleteList,
+  onRenameList 
+}) => {
   const {
     columns,
     initialize,
@@ -133,6 +142,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ className = "" }) => {
     }
   }, [initialize]);
 
+
   if (error) {
     return (
       <Card className="p-6 text-center">
@@ -165,28 +175,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ className = "" }) => {
 
   return (
     <div className={`h-full ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-end mb-6">
-        <div className="flex items-center gap-2">
-          {isSyncing && (
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <RefreshCw size={14} className="animate-spin" />
-              <span>Syncing...</span>
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isSyncing}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
       {/* Kanban Board */}
       <DndContext
         sensors={sensors}
@@ -197,12 +185,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ className = "" }) => {
         onDragCancel={handleDragCancel}
         modifiers={[restrictToWindowEdges]}
       >
-        <div className="flex gap-6 h-full overflow-x-auto pb-4">
+        <div className="flex gap-4 h-full overflow-x-auto pb-4">
           {columns.map((column) => (
             <KanbanColumn
               key={column.id}
               column={column}
-              className="min-w-80 flex-shrink-0"
+              className="flex-1 min-w-80"
+              onDelete={onDeleteList}
+              onRename={onRenameList}
             />
           ))}
         </div>
@@ -210,7 +200,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ className = "" }) => {
         {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <div className="rotate-3 opacity-95">
+            <div className="rotate-2 opacity-95 scale-105 shadow-2xl">
               <KanbanTaskCard
                 task={activeTask}
                 isDragging={true}
@@ -223,16 +213,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ className = "" }) => {
 
       {/* Empty State */}
       {columns.length === 0 && (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-tertiary rounded-full flex items-center justify-center mx-auto mb-4">
-              <RefreshCw size={24} className="text-secondary" />
+        <div className="flex items-center justify-center h-full min-h-96">
+          <div className="text-center max-w-md mx-auto px-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
             </div>
-            <h3 className="text-lg font-medium text-primary mb-2">
-              No task lists found
+            <h3 className="text-xl font-semibold text-primary mb-3">
+              Get organized with task lists
             </h3>
-            <p className="text-muted mb-4">
-              Click "Sync with Google" to load your Google Task lists
+            <p className="text-muted mb-6 leading-relaxed">
+              Create task lists to organize your work by project, priority, or any way that helps you stay focused.
+            </p>
+            <p className="text-sm text-muted">
+              Click "New List" in the header to create your first task list.
             </p>
           </div>
         </div>

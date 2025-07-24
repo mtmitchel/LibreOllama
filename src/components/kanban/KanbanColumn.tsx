@@ -4,23 +4,31 @@ import { useKanbanStore, KanbanColumn as KanbanColumnType } from '../../stores/u
 import { KanbanTaskCard } from './KanbanTaskCard';
 import { CreateTaskModal } from './CreateTaskModal';
 import { Card, Button } from '../ui';
-import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical } from 'lucide-react';
+import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3 } from 'lucide-react';
 
 interface KanbanColumnProps {
   column: KanbanColumnType;
   className?: string;
+  onDelete?: (columnId: string) => void;
+  onRename?: (columnId: string, newTitle: string) => void;
 }
 
 type SortOption = 'order' | 'date' | 'title';
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({ 
   column, 
-  className = '' 
+  className = '',
+  onDelete,
+  onRename
 }) => {
   const { createTask } = useKanbanStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(column.title);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const optionsMenuRef = useRef<HTMLDivElement>(null);
   
   // Load sort preference from localStorage
   const [sortBy, setSortBy] = useState<SortOption>(() => {
@@ -33,19 +41,22 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     localStorage.setItem(`kanban-sort-${column.id}`, sortBy);
   }, [sortBy, column.id]);
   
-  // Close sort menu when clicking outside
+  // Close menus when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
         setShowSortMenu(false);
       }
+      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target as Node)) {
+        setShowOptionsMenu(false);
+      }
     };
     
-    if (showSortMenu) {
+    if (showSortMenu || showOptionsMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showSortMenu]);
+  }, [showSortMenu, showOptionsMenu]);
 
   // Debug modal state changes
   React.useEffect(() => {
@@ -105,6 +116,25 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     }
   }, [createTask, column.id]);
 
+  // Handle rename submission
+  const handleRenameSubmit = useCallback(async () => {
+    if (!renameValue.trim() || !onRename) return;
+    
+    try {
+      await onRename(column.id, renameValue.trim());
+      setIsRenaming(false);
+      setShowOptionsMenu(false);
+    } catch (error) {
+      // Failed to rename task list
+    }
+  }, [onRename, column.id, renameValue]);
+
+  // Handle rename cancel
+  const handleRenameCancel = useCallback(() => {
+    setRenameValue(column.title);
+    setIsRenaming(false);
+  }, [column.title]);
+
   return (
     <>
       <div 
@@ -113,36 +143,55 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           isOver ? 'ring-2 ring-primary ring-opacity-50 bg-accent-soft' : ''
         }`}
       >
-        <Card className="flex flex-col h-full">
+        <Card className="flex flex-col h-full shadow-sm">
         {/* Column Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border-default">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-primary">{column.title}</h3>
-            <span className="text-xs text-muted bg-tertiary px-2 py-1 rounded-full">
-              {column.tasks.length}
-            </span>
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-border-default bg-tertiary">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {isRenaming ? (
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={handleRenameSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleRenameSubmit();
+                  } else if (e.key === 'Escape') {
+                    handleRenameCancel();
+                  }
+                }}
+                className="font-semibold text-primary text-sm bg-card border border-border-default rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary flex-1 min-w-0"
+                autoFocus
+              />
+            ) : (
+              <>
+                <h3 className="font-semibold text-primary text-sm truncate">{column.title}</h3>
+                <span className="text-xs text-secondary bg-card px-2.5 py-1 rounded-full font-medium shadow-sm flex-shrink-0">
+                  {column.tasks.length}
+                </span>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <div className="relative" ref={sortMenuRef}>
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-8 px-2 py-1"
+                size="icon"
+                className="size-7 text-xs font-medium hover:bg-card"
                 title="Sort tasks"
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
-                <ArrowUpDown size={14} className="mr-1" />
-                <span className="text-xs">Sort</span>
+                <ArrowUpDown size={12} />
               </Button>
               
               {showSortMenu && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-md border border-border-default bg-card shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
                   <button
                     onClick={() => {
                       setSortBy('order');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary ${
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg ${
                       sortBy === 'order' ? 'bg-accent-soft' : ''
                     }`}
                   >
@@ -166,7 +215,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                       setSortBy('title');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary ${
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary last:rounded-b-lg ${
                       sortBy === 'title' ? 'bg-accent-soft' : ''
                     }`}
                   >
@@ -177,46 +226,82 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               )}
             </div>
             
-            <button
-              type="button"
-              onClick={() => {
-                  setIsCreateModalOpen(true);
-              }}
-              className="h-8 w-8 p-1 rounded hover:bg-gray-100 flex items-center justify-center cursor-pointer"
-              title="Add task"
-              style={{ zIndex: 10 }}
-            >
-              <Plus size={16} />
-            </button>
-            
             <Button
               variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              title="Column options"
+              size="icon"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="size-7 hover:bg-card"
+              title="Add task"
             >
-              <MoreHorizontal size={14} />
+              <Plus size={16} />
             </Button>
+            
+            <div className="relative" ref={optionsMenuRef}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 hover:bg-card"
+                title="List options"
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+              >
+                <MoreHorizontal size={16} />
+              </Button>
+              
+              {showOptionsMenu && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border-default bg-card shadow-lg">
+                  {onRename && (
+                    <button
+                      onClick={() => {
+                        setIsRenaming(true);
+                        setShowOptionsMenu(false);
+                      }}
+                      className="flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary first:rounded-t-lg"
+                    >
+                      <Edit3 size={14} className="mr-2" />
+                      Rename list
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={() => {
+                        setShowOptionsMenu(false);
+                        onDelete(column.id);
+                      }}
+                      className="flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary text-red-600 hover:bg-red-50 last:rounded-b-lg"
+                    >
+                      <Trash2 size={14} className="mr-2" />
+                      Delete list
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Column Content */}
-        <div className="flex-1 p-4 space-y-3 overflow-y-auto min-h-40">
+        <div className="flex-1 p-2.5 space-y-2 overflow-y-auto min-h-40">
           {column.isLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : column.error ? (
-            <div className="text-center py-8">
-              <p className="text-error text-sm">{column.error}</p>
+            <div className="text-center py-12">
+              <div className="w-10 h-10 bg-error-ghost rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <p className="text-error text-sm font-medium mb-1">Error loading tasks</p>
+              <p className="text-xs text-muted">{column.error}</p>
             </div>
           ) : column.tasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted">
-              <div className="w-12 h-12 bg-tertiary rounded-full flex items-center justify-center mb-3">
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-12 h-12 bg-tertiary rounded-full flex items-center justify-center mb-4 opacity-60">
                 <Plus size={20} className="text-secondary" />
               </div>
-              <p className="text-sm font-medium">No tasks yet</p>
-              <p className="text-xs">Drop tasks here or click + to create</p>
+              <p className="text-sm font-medium text-primary mb-1">No tasks yet</p>
+              <p className="text-xs text-muted max-w-32">Drop tasks here or click the + button to create your first task</p>
             </div>
           ) : (
             sortedTasks.map((task) => (
