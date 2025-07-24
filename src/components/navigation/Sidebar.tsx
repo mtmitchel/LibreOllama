@@ -10,7 +10,9 @@ import {
   Calendar,
   CheckSquare,
   Users,
-  Settings
+  Settings,
+  PanelLeft,
+  PanelRight
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -18,7 +20,7 @@ interface SidebarProps {
   toggleSidebar: () => void;
 }
 
-export default function Sidebar({ isOpen }: SidebarProps) {
+export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const location = useLocation();
 
   const workspaceItems = [
@@ -72,9 +74,9 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
   return (
     <aside 
-      className="sidebar"
+      className="sidebar relative"
       style={{ 
-        width: isOpen ? '224px' : '64px',
+        width: isOpen ? '224px' : '40px',
         height: '100vh',
         background: 'var(--sidebar-bg)',
         borderRight: '1px solid var(--border-primary)',
@@ -84,15 +86,14 @@ export default function Sidebar({ isOpen }: SidebarProps) {
     >
       {/* Header */}
       <div 
-        className={`flex h-16 items-center border-b ${isOpen ? 'px-6' : 'px-4'}`}
+        className={`flex h-16 items-center ${isOpen ? 'justify-between border-b px-4 gap-4' : 'justify-center px-1'}`}
         style={{ 
-          borderBottom: '1px solid var(--border-primary)',
-          background: 'var(--header-bg)',
-          justifyContent: isOpen ? 'flex-start' : 'center'
+          borderBottom: isOpen ? '1px solid var(--border-primary)' : 'none',
+          background: 'var(--header-bg)'
         }}
       >
-        {isOpen ? (
-          <div className="flex items-center gap-3">
+        {isOpen && (
+          <div className="flex items-center gap-3 flex-1">
             <div 
               className="flex size-8 items-center justify-center"
               style={{ 
@@ -122,60 +123,55 @@ export default function Sidebar({ isOpen }: SidebarProps) {
               LibreOllama
             </h1>
           </div>
-        ) : (
+        )}
+        
+        {/* Toggle Button */}
+        <button
+          onClick={toggleSidebar}
+          className="flex h-8 w-8 items-center justify-center rounded-md transition-all hover:bg-hover shrink-0"
+          aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        >
+          <PanelLeft size={18} className="text-secondary" />
+        </button>
+      </div>
+
+      {/* Navigation - only show when open */}
+      {isOpen && (
+        <>
+          <nav 
+            className="flex-1 overflow-y-auto p-3"
+            role="navigation"
+            aria-label="Main navigation"
+          >
+            <div className="flex-1 space-y-2">
+              {workspaceItems.map((item) => (
+                <NavItem 
+                  key={item.name}
+                  icon={item.icon}
+                  label={item.name}
+                  count={item.count}
+                  path={item.path}
+                />
+              ))}
+            </div>
+          </nav>
+
+          {/* Settings Section */}
           <div 
-            className="flex size-8 items-center justify-center"
+            className="border-border-subtle border-t p-3"
             style={{ 
-              background: 'var(--accent-primary)',
-              borderRadius: 'var(--radius-xl)',
-              boxShadow: 'var(--shadow-sm)'
+              background: 'var(--header-bg)'
             }}
           >
-            <span 
-              className="font-semibold text-white"
-              style={{ 
-                fontSize: 'var(--text-sm)', 
-                fontWeight: 'var(--font-semibold)' 
-              }}
-            >
-              L
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Navigation */}
-      <nav 
-        className={`flex-1 overflow-y-auto ${isOpen ? 'p-3' : 'p-2'}`}
-        role="navigation"
-        aria-label="Main navigation"
-      >
-        <div className="flex-1 space-y-2">
-          {workspaceItems.map((item) => (
             <NavItem 
-              key={item.name}
-              icon={item.icon}
-              label={item.name}
-              count={item.count}
-              path={item.path}
+              icon={Settings}
+              label="Settings"
+              path="/settings"
             />
-          ))}
-        </div>
-      </nav>
-
-      {/* Settings Section */}
-      <div 
-        className={`border-border-subtle border-t ${isOpen ? 'p-3' : 'p-2'}`}
-        style={{ 
-          background: 'var(--header-bg)'
-        }}
-      >
-        <NavItem 
-          icon={Settings}
-          label="Settings"
-          path="/settings"
-        />
-      </div>
+          </div>
+        </>
+      )}
     </aside>
   );
 }
