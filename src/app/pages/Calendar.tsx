@@ -561,6 +561,7 @@ function renderEventContent(eventInfo: EventContentArg) {
   const isTask = event.extendedProps.type === 'task';
   const isCompleted = isTask && event.extendedProps.taskData?.status === 'completed';
   const isTimeGridView = view.type === 'timeGridWeek' || view.type === 'timeGridDay';
+  const calendarName = event.extendedProps.calendarName;
 
   // For time grid views, use a more detailed layout
   if (isTimeGridView) {
@@ -579,6 +580,11 @@ function renderEventContent(eventInfo: EventContentArg) {
           fontWeight: '500'
         }}>
           {event.title}
+          {calendarName && calendarName !== 'primary' && (
+            <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: '4px' }}>
+              ({calendarName})
+            </span>
+          )}
         </div>
       </div>
     );
@@ -625,6 +631,11 @@ function renderEventContent(eventInfo: EventContentArg) {
           fontWeight: '500'
         }}>
           {event.title}
+          {calendarName && calendarName !== 'primary' && (
+            <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: '4px' }}>
+              ({calendarName})
+            </span>
+          )}
         </div>
       </div>
       {timeText && (

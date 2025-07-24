@@ -167,27 +167,49 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           try {
             logger.debug('[GOOGLE-CALENDAR] Fetching events for:', account.email);
             
-            // Set default time range if not provided (current month)
+            // Set default time range if not provided (6 months before and after current date)
             const now = new Date();
-            const defaultTimeMin = timeMin || new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-            const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+            const defaultTimeMin = timeMin || new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString();
+            const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 6, 0).toISOString();
             
-            const response = await googleCalendarService.getEvents(
-              account as GoogleAccount, 
-              get().currentCalendarId, 
-              defaultTimeMin, 
-              defaultTimeMax
-            );
-            
-            if (response.success && response.data) {
-              set((state) => {
-                state.events = response.data!.items || [];
-                state.isLoading = false;
-                state.lastSyncAt = new Date();
-              });
-            } else {
-              throw new Error(response.error?.message || 'Failed to fetch events');
+            // First, get all calendars if we haven't already
+            if (get().calendars.length === 0) {
+              await get().fetchCalendars();
             }
+            
+            // Fetch events from all calendars
+            const allEvents: GoogleCalendarEvent[] = [];
+            const calendars = get().calendars.length > 0 ? get().calendars : [{ id: 'primary' }];
+            
+            for (const calendar of calendars) {
+              try {
+                const response = await googleCalendarService.getEvents(
+                  account as GoogleAccount, 
+                  calendar.id, 
+                  defaultTimeMin, 
+                  defaultTimeMax
+                );
+                
+                if (response.success && response.data) {
+                  // Add calendar info to each event
+                  const eventsWithCalendar = (response.data.items || []).map(event => ({
+                    ...event,
+                    calendarId: calendar.id,
+                    calendarName: calendar.summary || calendar.id
+                  }));
+                  allEvents.push(...eventsWithCalendar);
+                }
+              } catch (err) {
+                logger.warn(`[GOOGLE-CALENDAR] Failed to fetch events from calendar ${calendar.id}:`, err);
+              }
+            }
+            
+            set((state) => {
+              state.events = allEvents;
+              state.isLoading = false;
+              state.lastSyncAt = new Date();
+            });
+            
           } catch (error) {
             console.error('❌ [GOOGLE-CALENDAR] Failed to fetch events:', error);
             set((state) => {
