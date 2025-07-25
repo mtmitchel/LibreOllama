@@ -219,6 +219,7 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
             clearSelection();
           }}
           onAction={handleAIAction}
+          context={location.pathname}
         />
       )}
     </>
