@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTextSelection } from '../../core/hooks/useTextSelection';
 import { AIWritingToolsMenu, type AIAction } from './AIWritingToolsMenu';
-import { AIOutputModal } from './AIOutputModal';
+import { AIOutputModalPro } from './AIOutputModalPro';
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useNotesStore } from '../../features/notes/store';
 import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { LLMProviderManager, type LLMMessage } from '../../services/llmProviders';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface TextSelectionDetectorProps {
   children: React.ReactNode;
@@ -22,7 +24,10 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     output: string;
     isLoading: boolean;
     action: AIAction;
-  }>({ prompt: '', output: '', isLoading: false, action: 'rewrite-professional' });
+    originalText: string;
+    usedModel?: string;
+    usedProvider?: string;
+  }>({ prompt: '', output: '', isLoading: false, action: 'rewrite-professional', originalText: '' });
   
   // Disable on Notes page since BlockNote has its own integrated menu
   const isNotesPage = location.pathname === '/notes';
@@ -31,6 +36,7 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     onSelectionChange: (sel) => {
       console.log('Selection change:', { sel, disabled, isNotesPage, location: location.pathname });
       if (sel && !disabled && !isNotesPage) {
+        console.log('Valid selection, showing menu');
         setShowMenu(true);
       } else {
         setShowMenu(false);
@@ -60,6 +66,10 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   }, [isNotesPage]);
 
   const handleAIAction = useCallback(async (action: AIAction, text: string) => {
+    console.log('=== handleAIAction called ===');
+    console.log('Action:', action);
+    console.log('Text:', text);
+    
     // Close the menu first
     setShowMenu(false);
     
@@ -90,8 +100,8 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
         break;
       
       case 'translate':
-        // For now, default to Spanish. In future, we could show a language picker
-        await processWithAI(`Translate the following text to Spanish: "${text}"`, action);
+        // Default to Spanish, but the modal will allow language selection
+        await processWithAI(`Translate the following text to Spanish: "${text}"`, action, { originalText: text });
         break;
       
       case 'explain':
@@ -125,53 +135,133 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     }
   }, []);
 
-  const processWithAI = async (prompt: string, action: AIAction) => {
+
+  const processWithAI = useCallback(async (prompt: string, action: AIAction, options?: any) => {
+    console.log('=== processWithAI called ===');
+    console.log('Prompt:', prompt);
+    console.log('Action:', action);
+    
     try {
+      // Store original text if we have a selection
+      const originalText = selection?.text || modalData.originalText || '';
+      
       // Update modal to show loading state
-      setModalData(prev => ({ ...prev, prompt, isLoading: true, action }));
+      setModalData(prev => ({ ...prev, prompt, isLoading: true, action, originalText }));
       setShowModal(true);
+      console.log('Modal should be visible now');
       
-      // Get or create a conversation for AI tools
-      let conversationId = chatStore.selectedConversationId;
+      // Get AI writing settings and chat settings
+      const aiWritingSettings = useSettingsStore.getState().aiWriting;
+      const chatStore = useChatStore.getState();
       
-      if (!conversationId) {
-        conversationId = await chatStore.createConversation('AI Writing Tools');
-        chatStore.selectConversation(conversationId);
+      // Determine which provider and model to use
+      // Priority: AI Writing settings > Chat store settings
+      let provider = aiWritingSettings.defaultProvider || chatStore.selectedProvider;
+      let model = aiWritingSettings.defaultModel || chatStore.selectedModel;
+      
+      console.log('AI Writing Settings:', aiWritingSettings);
+      console.log('Chat Store - Provider:', chatStore.selectedProvider, 'Model:', chatStore.selectedModel);
+      console.log('Using - Provider:', provider, 'Model:', model);
+      
+      // Ensure we have valid provider and model
+      if (!provider || !model) {
+        throw new Error('No AI provider or model configured. Please configure AI settings.');
+      }
+      
+      // Modify prompt based on options (e.g., for translation)
+      let finalPrompt = prompt;
+      if (action === 'translate' && options?.language) {
+        finalPrompt = prompt.replace('Spanish', options.language);
       }
 
-      // Send the message and wait for response
-      await chatStore.sendMessage(conversationId, prompt);
+      // Prepare messages for LLM with action-specific system prompts
+      let systemPrompt = 'Return ONLY the processed text without any explanations, introductions, or commentary. Do not include phrases like "Here is", "This is", or any other preamble.';
       
-      // Wait a bit for the AI response to be generated
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get the latest AI response from the conversation
-      const messages = chatStore.messages[conversationId];
-      if (messages && messages.length >= 2) {
-        // Get the last message (should be the AI response)
-        const aiResponse = messages[messages.length - 1];
-        if (aiResponse.sender === 'ai' && aiResponse.content) {
-          // Update modal with the AI response
-          setModalData(prev => ({ 
-            ...prev, 
-            output: aiResponse.content, 
-            isLoading: false 
-          }));
-          
-          // Clear the conversation for next use
-          chatStore.selectConversation(null);
-        }
+      // Action-specific system prompts
+      switch (action) {
+        case 'explain':
+          systemPrompt = 'Explain the given text in simple, easy-to-understand terms. Return ONLY the explanation without any preamble.';
+          break;
+        case 'translate':
+          systemPrompt = 'Translate the given text accurately. Return ONLY the translation without any explanations.';
+          break;
+        case 'summarize':
+          systemPrompt = 'Provide a concise summary. Return ONLY the summary text without any introductory phrases.';
+          break;
+        case 'proofread':
+          systemPrompt = 'Correct any errors. Return ONLY the corrected text without explanations.';
+          break;
+        case 'create-list':
+          systemPrompt = 'Convert to a bulleted list. Return ONLY the list without any preamble.';
+          break;
+        case 'key-points':
+          systemPrompt = 'Extract key points as a bulleted list. Return ONLY the list without introductions.';
+          break;
+        case 'rewrite-professional':
+          systemPrompt = 'Rewrite in a professional tone. Return ONLY the rewritten text without any preamble like "Here\'s a professional rewrite:".';
+          break;
+        case 'rewrite-friendly':
+          systemPrompt = 'Rewrite in a friendly tone. Return ONLY the rewritten text without introductory phrases.';
+          break;
+        case 'rewrite-concise':
+          systemPrompt = 'Rewrite to be more concise. Return ONLY the shortened text without explanations like "Here\'s a more concise version:".';
+          break;
+        case 'rewrite-expanded':
+          systemPrompt = 'Expand with more detail. Return ONLY the expanded text without introductory phrases.';
+          break;
       }
+      
+      const messages: LLMMessage[] = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: finalPrompt
+        }
+      ];
+
+      // Get the provider manager and make the call
+      console.log('Using provider:', provider, 'model:', model);
+      const settingsState = useSettingsStore.getState();
+      const apiKeys = settingsState.integrations.apiKeys;
+      
+      const providerManager = LLMProviderManager.getInstance(apiKeys);
+      const llmProvider = providerManager.getProvider(provider);
+      
+      if (!llmProvider) {
+        throw new Error(`Provider ${provider} not found`);
+      }
+      
+      if (!llmProvider.isConfigured()) {
+        throw new Error(`Provider ${provider} is not configured. Please check your API keys in settings.`);
+      }
+
+      // Make the AI call
+      console.log('Making AI call with messages:', messages);
+      const response = await llmProvider.chat(messages, model || undefined);
+      console.log('AI response received:', response);
+      
+      // Update modal with the AI response
+      setModalData(prev => ({ 
+        ...prev, 
+        output: response, 
+        isLoading: false,
+        usedModel: model || undefined,
+        usedProvider: provider
+      }));
       
     } catch (error) {
       console.error('Failed to process with AI:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setModalData(prev => ({ 
         ...prev, 
-        output: 'Failed to generate AI response. Please try again.', 
+        output: `Error: ${errorMessage}`, 
         isLoading: false 
       }));
     }
-  };
+  }, [selection, modalData.originalText]);
 
   const createTaskFromText = async (text: string) => {
     try {
@@ -231,11 +321,72 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     });
   };
 
-  const handleRegenerate = useCallback(() => {
-    if (modalData.prompt && modalData.action && selection) {
-      processWithAI(modalData.prompt, modalData.action);
+  const handleRegenerate = useCallback(async (options?: any) => {
+    if (modalData.prompt && modalData.action && modalData.originalText) {
+      // Don't close the modal, just update with loading state
+      setModalData(prev => ({ ...prev, isLoading: true }));
+      
+      try {
+        // Get AI settings
+        const aiWritingSettings = useSettingsStore.getState().aiWriting;
+        const chatStore = useChatStore.getState();
+        
+        let provider = aiWritingSettings.defaultProvider || chatStore.selectedProvider;
+        let model = aiWritingSettings.defaultModel || chatStore.selectedModel;
+        
+        if (!provider || !model) {
+          throw new Error('No AI provider or model configured.');
+        }
+        
+        // Update prompt for translation with new language
+        let prompt = modalData.prompt;
+        if (modalData.action === 'translate' && options?.language) {
+          prompt = `Translate the following text to ${options.language}: "${modalData.originalText}"`;
+        }
+        
+        // Get system prompt
+        let systemPrompt = 'Return ONLY the processed text without any explanations, introductions, or commentary.';
+        if (modalData.action === 'translate') {
+          systemPrompt = 'Translate the given text accurately. Return ONLY the translation without any explanations.';
+        }
+        
+        const messages: LLMMessage[] = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ];
+        
+        // Make the API call
+        const settingsState = useSettingsStore.getState();
+        const apiKeys = settingsState.integrations.apiKeys;
+        const providerManager = LLMProviderManager.getInstance(apiKeys);
+        const llmProvider = providerManager.getProvider(provider);
+        
+        if (!llmProvider || !llmProvider.isConfigured()) {
+          throw new Error(`Provider ${provider} is not configured.`);
+        }
+        
+        const response = await llmProvider.chat(messages, model || undefined);
+        
+        // Update modal state without closing it
+        setModalData(prev => ({ 
+          ...prev, 
+          prompt,
+          output: response, 
+          isLoading: false,
+          usedModel: model || undefined,
+          usedProvider: provider
+        }));
+        
+      } catch (error) {
+        console.error('Failed to regenerate:', error);
+        setModalData(prev => ({ 
+          ...prev, 
+          output: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+          isLoading: false 
+        }));
+      }
     }
-  }, [modalData.prompt, modalData.action, selection]);
+  }, [modalData]);
 
   const handleReplace = useCallback((text: string) => {
     replaceSelection(text);
@@ -255,14 +406,22 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
           onAction={handleAIAction}
         />
       )}
-      <AIOutputModal
+      <AIOutputModalPro
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          console.log('Modal onClose callback triggered');
+          setShowModal(false);
+          // Don't reset modal data to preserve state
+        }}
         prompt={modalData.prompt}
         output={modalData.output}
         isLoading={modalData.isLoading}
         onReplace={handleReplace}
         onRegenerate={handleRegenerate}
+        action={modalData.action}
+        originalText={modalData.originalText}
+        usedModel={modalData.usedModel}
+        usedProvider={modalData.usedProvider}
       />
     </>
   );

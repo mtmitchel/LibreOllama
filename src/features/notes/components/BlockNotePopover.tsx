@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { BlockNoteEditor } from '@blocknote/core';
 import { useChatStore } from '../../../features/chat/stores/chatStore';
-import { AIOutputModal } from '../../../components/ai/AIOutputModal';
+import { useSettingsStore } from '../../../stores/settingsStore';
+import { LLMProviderManager, type LLMMessage } from '../../../services/llmProviders';
+import { AIOutputModalPro } from '../../../components/ai/AIOutputModalPro';
 import { 
   Bold, 
   Italic, 
@@ -58,7 +60,10 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     prompt: string;
     output: string;
     isLoading: boolean;
-  }>({ prompt: '', output: '', isLoading: false });
+    action: string;
+    originalText: string;
+  }>({ prompt: '', output: '', isLoading: false, action: '', originalText: '' });
+  const savedSelectionRef = useRef<Range | null>(null);
   
   // Check if we have text selected vs block selected
   const selectedText = editor.getSelectedText();
@@ -93,6 +98,222 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
       return () => document.removeEventListener('keydown', handleEscape);
     }
   }, [isOpen, onClose]);
+
+  // Define processWithAI before using it in callbacks
+  const processWithAI = useCallback(async (prompt: string, action: string, originalText: string, options?: any) => {
+    console.log('BlockNotePopover processWithAI called:', { prompt, action });
+    
+    try {
+      // Check if modal is already open (regenerating)
+      const isRegenerating = showModal;
+      
+      // Save the current selection before showing modal
+      if (!isRegenerating) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
+        }
+      }
+      
+      // Update modal to show loading state - preserve previous output if regenerating
+      setModalData(prev => ({ 
+        ...prev, 
+        prompt, 
+        output: isRegenerating ? prev.output : '', 
+        isLoading: true, 
+        action, 
+        originalText 
+      }));
+      
+      // Only set showModal and close popover if not regenerating
+      if (!isRegenerating) {
+        setShowModal(true);
+        onClose(); // Close the popover when modal opens
+      }
+      
+      // Get AI writing settings
+      const settingsStore = useSettingsStore.getState();
+      const aiWritingSettings = settingsStore.aiWriting;
+      const chatStore = useChatStore.getState();
+      
+      // Determine which provider and model to use
+      // Priority: AI Writing settings > Chat store settings
+      let provider = aiWritingSettings.defaultProvider || chatStore.selectedProvider;
+      let model = aiWritingSettings.defaultModel || chatStore.selectedModel;
+      
+      console.log('BlockNotePopover - AI Writing Settings:', aiWritingSettings);
+      console.log('BlockNotePopover - Chat Store:', { provider: chatStore.selectedProvider, model: chatStore.selectedModel });
+      console.log('BlockNotePopover - Using:', { provider, model });
+      
+      // Ensure we have valid provider and model
+      if (!provider || !model) {
+        throw new Error('No AI provider or model configured. Please configure AI settings.');
+      }
+
+      // Modify prompt based on options (e.g., for translation)
+      let finalPrompt = prompt;
+      if (action === 'translate' && options?.language) {
+        finalPrompt = prompt.replace('Spanish', options.language);
+      }
+
+      // Get system prompt based on action
+      let systemPrompt = 'Return ONLY the processed text without any explanations, introductions, or commentary. Do not include phrases like "Here is", "This is", or any other preamble.';
+      
+      switch (action) {
+        case 'explain':
+          systemPrompt = 'Explain the given text in simple, easy-to-understand terms. Return ONLY the explanation without any preamble.';
+          break;
+        case 'translate':
+          systemPrompt = 'Translate the given text accurately. Return ONLY the translation without any explanations.';
+          break;
+        case 'summarize':
+          systemPrompt = 'Provide a concise summary. Return ONLY the summary text without any introductory phrases.';
+          break;
+        case 'proofread':
+          systemPrompt = 'Correct any errors. Return ONLY the corrected text without explanations.';
+          break;
+        case 'create-list':
+          systemPrompt = 'Convert to a bulleted list. Return ONLY the list without any preamble.';
+          break;
+        case 'key-points':
+          systemPrompt = 'Extract key points as a bulleted list. Return ONLY the list without introductions.';
+          break;
+        case 'rewrite-professional':
+          systemPrompt = 'Rewrite in a professional tone. Return ONLY the rewritten text without any preamble like "Here\'s a professional rewrite:".';
+          break;
+        case 'rewrite-friendly':
+          systemPrompt = 'Rewrite in a friendly tone. Return ONLY the rewritten text without introductory phrases.';
+          break;
+        case 'rewrite-concise':
+          systemPrompt = 'Rewrite to be more concise. Return ONLY the shortened text without explanations like "Here\'s a more concise version:".';
+          break;
+        case 'rewrite-expanded':
+          systemPrompt = 'Expand with more detail. Return ONLY the expanded text without introductory phrases.';
+          break;
+      }
+
+      // Prepare messages for LLM
+      const messages: LLMMessage[] = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: finalPrompt
+        }
+      ];
+
+      // Get the provider manager and make the call
+      const apiKeys = settingsStore.integrations.apiKeys;
+      const providerManager = LLMProviderManager.getInstance(apiKeys);
+      const llmProvider = providerManager.getProvider(provider);
+      
+      if (!llmProvider || !llmProvider.isConfigured()) {
+        throw new Error(`Provider ${provider} is not configured. Please check your API keys in settings.`);
+      }
+
+      // Make the AI call
+      console.log('Making LLM call with:', { provider, model });
+      const response = await llmProvider.chat(messages, model || undefined);
+      
+      // Update modal with the AI response
+      setModalData(prev => ({ 
+        ...prev, 
+        output: response, 
+        isLoading: false 
+      }));
+    } catch (error) {
+      console.error('Failed to process with AI:', error);
+      setModalData(prev => ({ 
+        ...prev, 
+        output: 'Failed to generate AI response. Please try again.', 
+        isLoading: false 
+      }));
+    }
+  }, [onClose, showModal]);
+
+  const handleRegenerate = useCallback((options?: any) => {
+    if (modalData.prompt && modalData.action && modalData.originalText) {
+      // For translation, update the prompt with the new language
+      let prompt = modalData.prompt;
+      if (modalData.action === 'translate' && options?.language) {
+        prompt = `Translate the following text to ${options.language}: "${modalData.originalText}"`;
+      }
+      
+      // Don't reopen modal, just update loading state
+      setModalData(prev => ({ ...prev, isLoading: true }));
+      
+      // Process with updated prompt
+      processWithAI(prompt, modalData.action, modalData.originalText, options);
+    }
+  }, [modalData, processWithAI]);
+
+  const handleReplace = useCallback((text: string) => {
+    try {
+      // Focus the editor first
+      editor.focus();
+      
+      // Get current selection or use saved selection
+      const selection = window.getSelection();
+      
+      if (selection) {
+        // Clear current selection
+        selection.removeAllRanges();
+        
+        // Restore saved selection if available
+        if (savedSelectionRef.current) {
+          try {
+            selection.addRange(savedSelectionRef.current);
+          } catch (e) {
+            console.log('Could not restore saved selection:', e);
+          }
+        }
+        
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // Delete the current selection
+          range.deleteContents();
+          
+          // Create a text node with the new content
+          const textNode = document.createTextNode(text);
+          range.insertNode(textNode);
+          
+          // Move cursor to end of inserted text
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          // Trigger input event for BlockNote
+          const inputEvent = new InputEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            data: text
+          });
+          textNode.parentElement?.dispatchEvent(inputEvent);
+        } else {
+          // Fallback to execCommand
+          document.execCommand('insertText', false, text);
+        }
+      }
+      
+      // Clear saved selection
+      savedSelectionRef.current = null;
+      
+      // Trigger BlockNote to recognize the change
+      editor.focus();
+      
+      setShowModal(false);
+      onClose();
+    } catch (error) {
+      console.error('Failed to replace text:', error);
+      // Final fallback
+      document.execCommand('insertText', false, text);
+      setShowModal(false);
+    }
+  }, [editor, onClose]);
 
   if (!isOpen) return null;
 
@@ -151,55 +372,7 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     editor.focus();
   };
 
-  const processWithAI = async (prompt: string) => {
-    const chatStore = useChatStore.getState();
-    
-    try {
-      // Update modal to show loading state
-      setModalData({ prompt, output: '', isLoading: true });
-      setShowModal(true);
-      onClose(); // Close the popover when modal opens
-      
-      // Get or create a conversation for AI tools
-      let conversationId = chatStore.selectedConversationId;
-      
-      if (!conversationId) {
-        conversationId = await chatStore.createConversation('AI Writing Tools');
-        chatStore.selectConversation(conversationId);
-      }
-
-      // Send the message and wait for response
-      await chatStore.sendMessage(conversationId, prompt);
-      
-      // Wait a bit for the AI response to be generated
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get the latest AI response from the conversation
-      const messages = chatStore.messages[conversationId];
-      if (messages && messages.length >= 2) {
-        // Get the last message (should be the AI response)
-        const aiResponse = messages[messages.length - 1];
-        if (aiResponse.sender === 'ai' && aiResponse.content) {
-          // Update modal with the AI response
-          setModalData({ 
-            prompt, 
-            output: aiResponse.content, 
-            isLoading: false 
-          });
-          
-          // Clear the conversation for next use
-          chatStore.selectConversation(null);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to process with AI:', error);
-      setModalData({ 
-        prompt, 
-        output: 'Failed to generate AI response. Please try again.', 
-        isLoading: false 
-      });
-    }
-  };
+  // processWithAI is now defined above as a useCallback
 
   const handleAIAction = async (action: string, customQuestion?: string) => {
     const selectedText = editor.getSelectedText();
@@ -232,7 +405,7 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     const prompt = prompts[action];
     if (!prompt) return;
     
-    await processWithAI(prompt);
+    await processWithAI(prompt, action, selectedText);
   };
 
   const handleInsert = (type: string) => {
@@ -389,18 +562,6 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     { id: 'ai' as TabType, label: 'AI', icon: <Sparkles size={14} /> },
     { id: 'insert' as TabType, label: 'Insert', icon: <FileText size={14} /> }
   ];
-
-  const handleRegenerate = useCallback(() => {
-    if (modalData.prompt) {
-      processWithAI(modalData.prompt);
-    }
-  }, [modalData.prompt]);
-
-  const handleReplace = useCallback((text: string) => {
-    // Use document.execCommand for BlockNote compatibility
-    document.execCommand('insertText', false, text);
-    setShowModal(false);
-  }, []);
 
   return (
     <>
@@ -641,14 +802,21 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
         </div>,
         document.body
       )}
-      <AIOutputModal
+      <AIOutputModalPro
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          console.log('BlockNotePopover modal onClose triggered');
+          setShowModal(false);
+        }}
         prompt={modalData.prompt}
         output={modalData.output}
         isLoading={modalData.isLoading}
         onReplace={handleReplace}
         onRegenerate={handleRegenerate}
+        action={modalData.action as any}
+        originalText={modalData.originalText}
+        usedModel={modalData.usedModel}
+        usedProvider={modalData.usedProvider}
       />
     </>
   );

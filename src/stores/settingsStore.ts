@@ -73,6 +73,16 @@ export interface EditorSettings {
   tabSize: number;
 }
 
+export interface AIWritingSettings {
+  defaultProvider: LLMProvider;
+  defaultModel: string | null;
+  preferredStyle: 'concise' | 'detailed' | 'balanced';
+  autoReplace: boolean;
+  showConfidenceScores: boolean;
+  keepConversationHistory: boolean;
+  maxResponseLength: number;
+}
+
 // Combined settings state
 export interface SettingsState {
   general: GeneralSettings;
@@ -81,6 +91,7 @@ export interface SettingsState {
   integrations: IntegrationSettings;
   notifications: NotificationSettings;
   editor: EditorSettings;
+  aiWriting: AIWritingSettings;
   
   // Loading and error states
   isLoading: boolean;
@@ -100,6 +111,7 @@ export interface SettingsActions {
   updateIntegrationSettings: (updates: Partial<IntegrationSettings>) => void;
   updateNotificationSettings: (updates: Partial<NotificationSettings>) => void;
   updateEditorSettings: (updates: Partial<EditorSettings>) => void;
+  updateAIWritingSettings: (updates: Partial<AIWritingSettings>) => void;
   
   // Specific actions
   setTheme: (theme: AppearanceSettings['theme']) => void;
@@ -169,6 +181,15 @@ const defaultSettings: Omit<SettingsState, 'isLoading' | 'error' | 'isInitialize
     lineNumbers: false,
     tabSize: 2,
   },
+  aiWriting: {
+    defaultProvider: 'ollama' as LLMProvider,
+    defaultModel: null,
+    preferredStyle: 'balanced',
+    autoReplace: false,
+    showConfidenceScores: false,
+    keepConversationHistory: false,
+    maxResponseLength: 1000,
+  },
 };
 
 // Create the settings store with persistence
@@ -216,6 +237,12 @@ export const useSettingsStore = create<SettingsStore>()(
         updateEditorSettings: (updates) => {
           set((state) => {
             Object.assign(state.editor, updates);
+          });
+        },
+
+        updateAIWritingSettings: (updates) => {
+          set((state) => {
+            Object.assign(state.aiWriting, updates);
           });
         },
 
@@ -486,6 +513,7 @@ export const useSettingsStore = create<SettingsStore>()(
         integrations: state.integrations,
         notifications: state.notifications,
         editor: state.editor,
+        aiWriting: state.aiWriting,
       }),
       // Restore loading/error states to defaults after rehydration
       onRehydrateStorage: () => (state) => {
@@ -521,6 +549,7 @@ export const useUpdateOllamaSettings = () => useSettingsStore((state) => state.u
 export const useUpdateIntegrationSettings = () => useSettingsStore((state) => state.updateIntegrationSettings);
 export const useUpdateNotificationSettings = () => useSettingsStore((state) => state.updateNotificationSettings);
 export const useUpdateEditorSettings = () => useSettingsStore((state) => state.updateEditorSettings);
+export const useUpdateAIWritingSettings = () => useSettingsStore((state) => state.updateAIWritingSettings);
 export const useSetTheme = () => useSettingsStore((state) => state.setTheme);
 export const useSetOllamaEndpoint = () => useSettingsStore((state) => state.setOllamaEndpoint);
 export const useSetStartupView = () => useSettingsStore((state) => state.setStartupView);

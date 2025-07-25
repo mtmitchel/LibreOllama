@@ -14,6 +14,7 @@ import {
   Trash2,
   Check,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { Card, Button, Input, Heading, Text, Checkbox } from '../../components/ui';
 import { useHeader } from '../contexts/HeaderContext';
@@ -35,7 +36,8 @@ import {
   useAddGoogleAccount,
   useRefreshGoogleAccount,
   useSetApiKey,
-  useSettingsStore
+  useSettingsStore,
+  useUpdateAIWritingSettings
 } from '../../stores/settingsStore';
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { type LLMProvider } from '../../services/llmProviders';
@@ -155,10 +157,13 @@ const Settings: React.FC = () => {
   const appearanceSettings = useAppearanceSettings();
   const ollamaSettings = useOllamaSettings();
   const integrationSettings = useIntegrationSettings();
+  const aiWritingSettings = useSettingsStore(state => state.aiWriting);
+  const chatStore = useChatStore();
   
   // Individual action hooks
   const updateGeneralSettings = useUpdateGeneralSettings();
   const updateAppearanceSettings = useUpdateAppearanceSettings();
+  const updateAIWritingSettings = useUpdateAIWritingSettings();
   const setTheme = useSetTheme();
   const setOllamaEndpoint = useSetOllamaEndpoint();
   const setActiveGoogleAccount = useSetActiveGoogleAccount();
@@ -205,6 +210,13 @@ const Settings: React.FC = () => {
       }
     });
   }, [getEnabledModels]);
+
+  // Fetch available models when accessing agents-and-models section
+  useEffect(() => {
+    if (activeSection === 'agents-and-models' && chatStore.availableModels.length === 0) {
+      fetchAvailableModels();
+    }
+  }, [activeSection, fetchAvailableModels, chatStore.availableModels.length]);
 
   const handleGoogleAuth = async (account: { id: string; email: string; name: string; picture: string }) => {
     // Add account to settings store with comprehensive information
@@ -525,6 +537,183 @@ const Settings: React.FC = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="mb-4">
+                  <Heading level={2}>AI Writing Assistant</Heading>
+                  <Text variant="muted" size="sm">Configure default settings for AI-powered writing tools.</Text>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="ai-provider" className="block text-sm font-medium">
+                        Default AI Provider
+                      </label>
+                      <Text variant="muted" size="sm">
+                        Choose the default AI provider for writing assistance.
+                      </Text>
+                    </div>
+                    <div className="space-y-2">
+                      <select
+                        id="ai-provider"
+                        value={aiWritingSettings.defaultProvider}
+                        onChange={(e) => {
+                          const newProvider = e.target.value as LLMProvider;
+                          updateAIWritingSettings({ defaultProvider: newProvider });
+                          // Fetch models for the new provider
+                          chatStore.fetchAvailableModels(newProvider);
+                        }}
+                        className="w-full px-3 py-2 text-sm bg-surface border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-colors"
+                      >
+                        <option value="ollama">Ollama</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="mistral">Mistral</option>
+                        <option value="gemini">Google Gemini</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="ai-model" className="block text-sm font-medium">
+                        Default Model
+                      </label>
+                      <Text variant="muted" size="sm">
+                        Select the default model for the chosen provider.
+                      </Text>
+                    </div>
+                    <div className="space-y-2">
+                      <select
+                        id="ai-model"
+                        value={aiWritingSettings.defaultModel || ''}
+                        onChange={(e) => updateAIWritingSettings({ defaultModel: e.target.value || null })}
+                        className="w-full px-3 py-2 text-sm bg-surface border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-colors"
+                        disabled={chatStore.isLoadingModels}
+                      >
+                        <option value="">Auto-select</option>
+                        {chatStore.isLoadingModels ? (
+                          <option disabled>Loading models...</option>
+                        ) : (
+                          chatStore.availableModels
+                            .filter((model: any) => model.provider === aiWritingSettings.defaultProvider)
+                            .map((model: any) => (
+                              <option key={model.id} value={model.id}>
+                                {model.name}
+                              </option>
+                            ))
+                        )}
+                        {!chatStore.isLoadingModels && 
+                         chatStore.availableModels.filter((model: any) => model.provider === aiWritingSettings.defaultProvider).length === 0 && (
+                          <option disabled>No models available for {aiWritingSettings.defaultProvider}</option>
+                        )}
+                      </select>
+                      {!chatStore.isLoadingModels && 
+                       aiWritingSettings.defaultProvider === 'ollama' &&
+                       chatStore.availableModels.filter((model: any) => model.provider === 'ollama').length === 0 && (
+                        <Text variant="muted" size="xs" className="mt-1">
+                          Make sure Ollama is running at {ollamaSettings.endpoint}
+                        </Text>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="writing-style" className="block text-sm font-medium">
+                        Writing Style
+                      </label>
+                      <Text variant="muted" size="sm">
+                        Choose your preferred writing style for AI responses.
+                      </Text>
+                    </div>
+                    <div className="space-y-2">
+                      <select
+                        id="writing-style"
+                        value={aiWritingSettings.preferredStyle}
+                        onChange={(e) => updateAIWritingSettings({ preferredStyle: e.target.value as 'concise' | 'detailed' | 'balanced' })}
+                        className="w-full px-3 py-2 text-sm bg-surface border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-colors"
+                      >
+                        <option value="concise">Concise</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="detailed">Detailed</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-border-subtle">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <Text as="label" id="auto-replace-label" weight="medium" className="mb-1 block">
+                          Auto-replace for simple edits
+                        </Text>
+                        <Text variant="muted" size="sm">
+                          Skip the preview modal for simple corrections like grammar fixes.
+                        </Text>
+                      </div>
+                      <ToggleSwitch 
+                        enabled={aiWritingSettings.autoReplace} 
+                        onChange={(enabled) => updateAIWritingSettings({ autoReplace: enabled })} 
+                        labelId="auto-replace-label" 
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <Text as="label" id="show-confidence-label" weight="medium" className="mb-1 block">
+                          Show confidence scores
+                        </Text>
+                        <Text variant="muted" size="sm">
+                          Display AI confidence levels for suggestions.
+                        </Text>
+                      </div>
+                      <ToggleSwitch 
+                        enabled={aiWritingSettings.showConfidenceScores} 
+                        onChange={(enabled) => updateAIWritingSettings({ showConfidenceScores: enabled })} 
+                        labelId="show-confidence-label" 
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <Text as="label" id="keep-history-label" weight="medium" className="mb-1 block">
+                          Keep conversation history
+                        </Text>
+                        <Text variant="muted" size="sm">
+                          Maintain context across multiple AI interactions.
+                        </Text>
+                      </div>
+                      <ToggleSwitch 
+                        enabled={aiWritingSettings.keepConversationHistory} 
+                        onChange={(enabled) => updateAIWritingSettings({ keepConversationHistory: enabled })} 
+                        labelId="keep-history-label" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-border-subtle">
+                    <label htmlFor="max-response-length" className="block text-sm font-medium mb-2">
+                      Maximum response length: {aiWritingSettings.maxResponseLength} characters
+                    </label>
+                    <input
+                      id="max-response-length"
+                      type="range"
+                      min="100"
+                      max="2000"
+                      step="100"
+                      value={aiWritingSettings.maxResponseLength}
+                      onChange={(e) => updateAIWritingSettings({ maxResponseLength: parseInt(e.target.value) })}
+                      className="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <div className="flex justify-between text-xs text-muted mt-1">
+                      <span>100</span>
+                      <span>2000</span>
+                    </div>
+                  </div>
                 </div>
               </Card>
             </div>
