@@ -22,12 +22,11 @@ export default function Mail() {
   const [listViewType, setListViewType] = useState<'enhanced'>('enhanced');
   const [selectedMessages] = useState<string[]>([]);
 
+  // Mail has its own header, so we don't need the unified header
   useEffect(() => {
-    setHeaderProps({
-      title: "Mail"
-    });
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [clearHeaderProps]);
 
   // Auth initialization is now handled by MailStoreProvider
 

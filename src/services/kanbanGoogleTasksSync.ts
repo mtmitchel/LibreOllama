@@ -168,6 +168,9 @@ class KanbanGoogleTasksSync {
             notes: googleTask.notes,
             due: googleTask.due,
             metadata: {
+              labels: [],
+              priority: 'normal' as const,
+              subtasks: [],
               googleTaskId: googleTask.id,
               lastGoogleSync: new Date().toISOString()
             }
@@ -187,7 +190,10 @@ class KanbanGoogleTasksSync {
           await kanbanStore.updateTask(column.id, existingKanbanTask.id, {
             ...this.googleToKanbanTask(googleTask),
             metadata: {
-              ...existingKanbanTask.metadata,
+              labels: existingKanbanTask.metadata?.labels || [],
+              priority: existingKanbanTask.metadata?.priority || 'normal',
+              subtasks: existingKanbanTask.metadata?.subtasks || [],
+              recurring: existingKanbanTask.metadata?.recurring,
               googleTaskId: googleTask.id,
               lastGoogleSync: new Date().toISOString()
             }

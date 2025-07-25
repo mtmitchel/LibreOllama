@@ -70,19 +70,10 @@ const NotesPage: React.FC = () => {
   }, [selectNote]);
 
   useEffect(() => {
-    setHeaderProps({
-      title: 'Notes',
-      secondaryActions: [
-        {
-          label: isNotesSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar',
-          onClick: toggleNotesSidebar,
-          variant: 'ghost' as const
-        }
-      ]
-    });
-
+    // Clear header as Notes uses contextual header
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps, isNotesSidebarOpen, toggleNotesSidebar]);
+  }, [clearHeaderProps]);
 
   useEffect(() => {
     if (notes.length > 0 && !selectedNoteId) {

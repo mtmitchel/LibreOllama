@@ -21,6 +21,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin, { Draggable, DropArg } from '@fullcalendar/interaction';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { devLog } from '../../utils/devLog';
+import type { GoogleTask } from '../../types/google';
 import './calendar.css';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
@@ -37,15 +38,6 @@ interface Recurring {
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval: number;
   endDate?: string;
-}
-
-interface GoogleTask {
-  id: string;
-  title: string;
-  notes?: string;
-  due?: string;
-  status: 'needsAction' | 'completed';
-  [key: string]: unknown; // Allow other properties
 }
 
 // Google Calendar authentication now handled centrally in Settings
@@ -1129,10 +1121,10 @@ export default function Calendar() {
   }, [fullCalendarEvents, searchQuery]);
 
   useEffect(() => {
-    const headerProps = { title: "Calendar" };
-    setHeaderProps(headerProps);
+    // Clear header as Calendar uses contextual header
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [clearHeaderProps]);
 
   if (!activeAccount || (!isCalendarAuthenticated && !isTasksAuthenticated)) {
     return (
@@ -1793,8 +1785,8 @@ export default function Calendar() {
         onConfirm={handleDeleteTask}
         title="Delete task"
         message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        confirmVariant="destructive"
+        confirmText="Delete"
+        isDestructive={true}
       />
     </>
   );

@@ -17,6 +17,8 @@ export interface TaskMetadata {
     interval: number;
     endDate?: string;
   };
+  googleTaskId?: string;
+  lastGoogleSync?: string;
 }
 
 export interface KanbanTask {

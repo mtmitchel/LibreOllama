@@ -31,6 +31,8 @@ export type AIAction =
   | 'summarize'
   | 'translate'
   | 'explain'
+  | 'create-list'
+  | 'key-points'
   | 'create-task'
   | 'create-note'
   | 'ask-ai';
@@ -183,10 +185,10 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
         left: `${position.left}px`,
       }}
     >
-      <Card className="!bg-bg-primary p-2 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200" style={{ backgroundColor: 'var(--bg-primary)', minWidth: '280px' }}>
+      <Card className="!bg-bg-primary animate-in fade-in slide-in-from-bottom-2 p-2 shadow-lg duration-200" style={{ backgroundColor: 'var(--bg-primary)', minWidth: '280px' }}>
         {/* Rephrase Section */}
         <button
-          className="w-full px-2 py-1.5 text-left hover:bg-hover rounded flex items-center gap-2"
+          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-hover"
           onClick={() => {
             const newCategory = activeCategory === 'rewrite' ? null : 'rewrite';
             setActiveCategory(newCategory);
@@ -199,12 +201,12 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
         </button>
         
         {activeCategory === 'rewrite' && (
-          <div className="pl-6 space-y-0.5 mb-1">
+          <div className="mb-1 space-y-0.5 pl-6">
             {rewriteItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => handleAction(item.id)}
-                className="w-full px-2 py-1 text-left text-sm hover:bg-hover rounded"
+                className="w-full rounded px-2 py-1 text-left text-sm hover:bg-hover"
               >
                 {item.label}
               </button>
@@ -217,28 +219,28 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
           <button
             key={item.id}
             onClick={() => handleAction(item.id)}
-            className="w-full px-2 py-1.5 text-left hover:bg-hover rounded flex items-center gap-2"
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-hover"
           >
             {item.icon}
             <span className="text-sm">{item.label}</span>
           </button>
         ))}
 
-        <div className="border-t border-border-subtle my-2"></div>
+        <div className="border-border-subtle my-2 border-t"></div>
 
         {/* Create Actions */}
         {otherItems.filter(item => item.category === 'create' && item.id !== 'ask-ai').map(item => (
           <button
             key={item.id}
             onClick={() => handleAction(item.id)}
-            className="w-full px-2 py-1.5 text-left hover:bg-hover rounded flex items-center gap-2"
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-hover"
           >
             {item.icon}
             <span className="text-sm">{item.label}</span>
           </button>
         ))}
 
-        <div className="border-t border-border-subtle my-2"></div>
+        <div className="border-border-subtle my-2 border-t"></div>
 
         {/* AI Input Field */}
         <div className="flex items-center gap-1">
@@ -256,7 +258,7 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
               }
             }}
             placeholder="Ask AI anything..."
-            className="flex-1 px-2 py-1 text-sm bg-transparent border border-border-subtle rounded focus:outline-none focus:border-accent-primary"
+            className="border-border-subtle flex-1 rounded border bg-transparent px-2 py-1 text-sm focus:border-accent-primary focus:outline-none"
           />
           <button
             onClick={() => {
@@ -265,7 +267,7 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
                 setAiQuestion('');
               }
             }}
-            className="p-1.5 hover:bg-hover rounded"
+            className="rounded p-1.5 hover:bg-hover"
             title="Send"
           >
             <Send size={14} />

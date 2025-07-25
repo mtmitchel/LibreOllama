@@ -1,12 +1,14 @@
 # LibreOllama Production Readiness Plan
 
-**Version:** 2.0  
-**Last Updated:** 2025-01-24  
-**Status:** Phase 2 In Progress
+**Version:** 3.0  
+**Last Updated:** 2025-01-25  
+**Status:** Phase 2 In Progress (AI Writing Integration Added)
 
 ## Executive Summary
 
-LibreOllama is a Tauri-based desktop application combining AI capabilities with productivity tools. This document outlines the complete roadmap from initial development through production deployment.
+LibreOllama is a Tauri-based desktop application combining AI capabilities with productivity tools. This document outlines the complete roadmap from initial development through production deployment, now including comprehensive AI writing integration across all modules.
+
+**Version 3.0 Update**: Added AI writing integration roadmap leveraging existing LLM infrastructure to create "Contextual Productivity AI" - a workflow-native AI writing system across 52+ identified text input contexts.
 
 ## Project Overview
 
@@ -19,14 +21,15 @@ LibreOllama is a Tauri-based desktop application combining AI capabilities with 
 - **Testing:** Vitest with ESM configuration
 
 ### Core Features
-- AI Chat with multi-provider support
+- AI Chat with multi-provider support (OpenAI, Anthropic, Mistral, Gemini, DeepSeek, Ollama)
 - Gmail integration with full email client
-- Canvas system for visual content creation
+- Canvas system for visual content creation (15+ element types with rich text)
 - Notes with BlockNote editor
 - Calendar with Google Calendar sync
 - Tasks with Kanban board and Google Tasks sync
-- Projects management
-- Agent system
+- Projects management with goals and assets
+- Agent system for automated task execution
+- AI Writing Integration across 52+ text contexts
 
 ## Development Phases
 
@@ -117,20 +120,44 @@ Implement all MVP features with live data persistence and frontend-backend conne
 
 ##### 🔧 In Progress Features
 
-**Chat System (0%)**
-- Need to build chatStore.ts
-- Multi-provider LLM support (OpenAI, Anthropic, etc.)
-- API key management UI
-- File/image upload support
-- Context menu on messages
-- Message persistence
-- Real-time streaming
+**AI Writing Integration (40%)** 🆕
+- ✅ AI menu positioning fix (prevents screen cutoff)
+- ✅ Basic AI writing tools menu implemented with contextual actions
+- ✅ Comprehensive text input inventory (52+ contexts identified across all modules)
+- ✅ Text selection detection with cross-module support (except Notes page)
+- ✅ Integration with task/note creation workflows (createTaskFromText, createNoteFromText)
+- ✅ Basic text replacement functionality (replaceSelection via execCommand)
+- ✅ Context-aware menu behavior (disables on Notes, different actions per module)
+- 🔧 Replace mock AI responses with actual LLM integration
+- 🔧 Canvas text AI enhancement (15+ element types identified)
+- 🔧 Email smart compose integration
+- 🔧 Cross-module context sharing
+- 🔧 Spatial intelligence for canvas elements
+- 🔧 Writing agent deployment using existing agent system
+- 🔧 Visual feedback and loading states
+- *Phase 1 (Week 1): Canvas text, email compose, basic agents*
+- *Phase 2 (Week 2-3): Cross-module context, task/calendar AI*
+- *Phase 3 (Week 3-4): Workflow automation, collaborative AI*
 
-**Projects Feature (0%)**
-- Database schema design needed
-- projectStore.ts implementation
-- UI components
-- Task association
+**Chat System (90%)** ✅
+- ✅ Complete chatStore.ts with 769 lines
+- ✅ Multi-provider LLM support (OpenAI, Anthropic, Mistral, Gemini, DeepSeek, Ollama)
+- ✅ Model selection and management UI
+- ✅ Message persistence with backend integration
+- ✅ Real-time streaming responses
+- ✅ Session management and conversation history
+- ✅ Title generation for conversations
+- 🔧 File/image upload support (attachments system exists)
+- *Missing: Some context menu actions*
+
+**Projects Feature (75%)** ✅
+- ✅ Complete projectStore.ts implementation
+- ✅ UI components (sidebar, details, modals)
+- ✅ Project CRUD operations
+- ✅ Project goals and assets system
+- ✅ Task association infrastructure
+- 🔧 Backend integration refinement
+- *Missing: Full task-project sync*
 
 #### Success Criteria
 1. All MVP features fully functional with live backends
@@ -145,7 +172,7 @@ Implement all MVP features with live data persistence and frontend-backend conne
 **Target Date:** Q2 2025
 
 #### Objective
-Optimize performance, enhance UX, ensure comprehensive test coverage, and resolve quality issues.
+Optimize performance, enhance UX, ensure comprehensive test coverage, resolve quality issues, and refine AI writing integration for production readiness.
 
 #### Key Deliverables
 
@@ -171,12 +198,37 @@ Optimize performance, enhance UX, ensure comprehensive test coverage, and resolv
 - Consistent spacing and typography
 - Dark mode support
 - Responsive layouts
+- AI writing UX refinement
+- Context-aware AI placement optimization
+
+**AI Writing Polish** 🆕
+- Performance optimization for AI responses
+- Privacy controls and local-first options
+- Learning mechanisms for personalization
+- Workflow automation refinement
+- Multi-language support
+- Accessibility for AI features
+- **Contextual Productivity AI** implementation:
+  - Workflow-native integration across project lifecycles
+  - Spatial writing intelligence for canvas
+  - Anticipatory content system
+  - Memory-persistent collaboration
+- **Cross-Module Intelligence**:
+  - Temporal intelligence (calendar/task awareness)
+  - Multi-modal context synthesis
+  - Semantic memory architecture
+- **Canvas Spatial Intelligence**:
+  - Element proximity awareness
+  - Visual-text co-creation
+  - Non-linear thought support
 
 **Documentation**
 - API documentation
 - Deployment guides
 - User documentation
 - Contributing guidelines
+- AI writing integration guide
+- Privacy and data handling documentation
 
 #### Success Criteria
 - Test coverage ≥ 90%
@@ -272,6 +324,13 @@ Optimize performance, enhance UX, ensure comprehensive test coverage, and resolv
 - Support tickets < 5% MAU
 - Feature adoption > 60%
 
+### AI Writing Metrics
+- AI feature adoption rate > 60% within 30 days
+- Average AI interactions per session > 5
+- Writing time saved per task > 20%
+- AI suggestion acceptance rate > 30%
+- Cross-module context utilization > 40%
+
 ### Technical
 - Test coverage > 90%
 - Build time < 5 minutes
@@ -280,11 +339,32 @@ Optimize performance, enhance UX, ensure comprehensive test coverage, and resolv
 
 ## Next Steps
 
-1. Complete Chat system implementation
-2. Implement Projects feature
-3. Add comprehensive test coverage for Tasks
-4. Begin Phase 3 hardening process
-5. Prepare for alpha release
+1. **AI Writing Integration Phase 1** (Immediate):
+   - Replace mock AI responses with actual LLM integration
+   - Implement canvas text AI enhancement for 15+ element types
+   - Add email smart compose using existing LLM providers
+   - Deploy basic writing agents using existing agent system
+
+2. **Complete Remaining Features**:
+   - Finalize chat system UI enhancements (10% remaining)
+   - Complete project-task synchronization (25% remaining)
+   - Add recurring event support for calendar
+
+3. **AI Writing Phase 2-3** (Weeks 2-4):
+   - Implement cross-module context sharing
+   - Add spatial intelligence for canvas
+   - Deploy workflow automation agents
+   - Build semantic memory architecture
+
+4. **Testing & Quality**:
+   - Add comprehensive test coverage for AI features
+   - Performance optimization for AI responses
+   - Security audit for AI data handling
+
+5. **Phase 3 Hardening & Alpha Prep**:
+   - Complete all AI writing polish items
+   - Implement "Contextual Productivity AI" differentiators
+   - Prepare for alpha release with AI as key feature
 
 ---
 

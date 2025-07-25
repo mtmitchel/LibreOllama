@@ -58,7 +58,7 @@ class GmailAutoSync {
 
       // Sync current label/folder
       await mailStore.fetchMessages(
-        mailStore.selectedLabelId,
+        mailStore.selectedLabels[0] || 'INBOX',
         undefined,
         undefined,
         mailStore.currentAccountId

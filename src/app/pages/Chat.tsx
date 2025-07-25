@@ -180,14 +180,11 @@ function Chat() {
     : [];
 
   // --- HEADER CONFIGURATION ---
+  // Chat has its own header, so we don't need the unified header
   useEffect(() => {
-    setHeaderProps({
-      title: 'Chat',
-      subtitle: selectedChat ? selectedChat.title : 'Select a conversation or create a new one'
-    });
-
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps, selectedChat]);
+  }, [clearHeaderProps]);
 
   // --- ERROR DISPLAY ---
   if (error) {

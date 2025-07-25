@@ -52,13 +52,11 @@ export default function Tasks() {
     }
   }, [showSortMenu]);
 
-  // Setup header when component mounts
+  // Clear header as Tasks uses contextual header
   useEffect(() => {
-    setHeaderProps({
-      title: "Tasks"
-    });
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [clearHeaderProps]);
 
   // Auto-authenticate with Google Tasks
   useEffect(() => {

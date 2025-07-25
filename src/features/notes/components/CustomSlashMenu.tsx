@@ -5,19 +5,19 @@ import {
   Quote, ListTodo, Table, Image, FileText, CheckSquare
 } from 'lucide-react';
 
-export function CustomSlashMenu(props: SuggestionMenuProps) {
+export function CustomSlashMenu(props: SuggestionMenuProps<any>) {
   const { items, onItemClick, selectedIndex } = props;
 
   // Match context menu styling exactly
   return (
     <div 
-      className="bg-white border border-gray-200 dark:border-gray-800 rounded-lg p-3 shadow-lg animate-in fade-in slide-in-from-left-2 duration-200" 
+      className="animate-in fade-in slide-in-from-left-2 rounded-lg border border-gray-200 bg-white p-3 shadow-lg duration-200 dark:border-gray-800" 
       style={{ 
         backgroundColor: '#ffffff',
         minWidth: '240px'
       }}
     >
-      {items.map((item, index) => {
+      {items.map((item: any, index: number) => {
         // Map BlockNote icons to Lucide icons
         const getIcon = () => {
           switch (item.title) {
@@ -41,11 +41,11 @@ export function CustomSlashMenu(props: SuggestionMenuProps) {
           <button
             key={index}
             onClick={() => onItemClick?.(item)}
-            className={`w-full px-2 py-1.5 text-left hover:bg-gray-100 rounded flex items-center gap-2 text-sm ${
+            className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-gray-100 ${
               index === selectedIndex ? 'bg-gray-100' : ''
             }`}
             style={{ backgroundColor: index === selectedIndex ? '#f3f4f6' : 'transparent' }}
-            onMouseEnter={() => props.onItemHover?.(item)}
+            // onMouseEnter={() => props.onItemHover?.(item)} // onItemHover may not exist in all versions
           >
             <span className="text-purple-600">
               {getIcon()}

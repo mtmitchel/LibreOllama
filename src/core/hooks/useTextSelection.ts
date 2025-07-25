@@ -3,7 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 export interface TextSelection {
   text: string;
   range: Range | null;
-  rect: DOMRect | null;
+  rect: {
+    top: number;
+    left: number;
+    right: number;
+    bottom: number;
+    width: number;
+    height: number;
+  } | null;
   isCollapsed: boolean;
 }
 
@@ -18,24 +25,92 @@ export function useTextSelection(options: UseTextSelectionOptions = {}) {
 
   const getSelectionData = useCallback((): TextSelection | null => {
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+    console.log('getSelectionData check:', { 
+      hasSelection: !!sel, 
+      rangeCount: sel?.rangeCount,
+      text: sel?.toString(),
+      minLength 
+    });
+    
+    if (!sel || sel.rangeCount === 0) {
+      return null;
+    }
+
+    const text = sel.toString().trim();
+    if (text.length < minLength) {
+      console.log('Text too short:', text.length, 'min:', minLength);
       return null;
     }
 
     const range = sel.getRangeAt(0);
-    const text = sel.toString().trim();
-
-    if (text.length < minLength) {
-      return null;
+    let rect = range.getBoundingClientRect();
+    
+    // If rect is empty (common with textarea/input selections), try to get coordinates from the element
+    if (rect.width === 0 && rect.height === 0) {
+      const container = range.commonAncestorContainer;
+      const element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container as Element;
+      
+      // Check if we're in a textarea or input
+      if (element && (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT')) {
+        const input = element as HTMLTextAreaElement | HTMLInputElement;
+        const inputRect = input.getBoundingClientRect();
+        
+        // Position menu near the input element (top-right corner)
+        rect = {
+          top: inputRect.top,
+          left: inputRect.right,
+          right: inputRect.right + 240, // approximate menu width
+          bottom: inputRect.top + 24,
+          width: 240,
+          height: 24,
+          x: inputRect.right,
+          y: inputRect.top,
+          toJSON: () => ({})
+        } as DOMRect;
+      } else if (element) {
+        // For other elements, try to get a reasonable position
+        const elementRect = element.getBoundingClientRect();
+        rect = {
+          top: elementRect.top,
+          left: elementRect.left,
+          right: elementRect.left + 240,
+          bottom: elementRect.top + 24,
+          width: 240,
+          height: 24,
+          x: elementRect.left,
+          y: elementRect.top,
+          toJSON: () => ({})
+        } as DOMRect;
+      }
     }
-
-    // Get bounding rect for positioning the menu
-    const rect = range.getBoundingClientRect();
+    
+    // Create a truly static rect with only numeric values
+    const staticRect = {
+      top: rect.top,
+      left: rect.left,
+      right: rect.right,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height
+    };
+    
+    console.log('Valid selection found:', { 
+      text, 
+      originalRect: {
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height
+      },
+      staticRect 
+    });
 
     return {
       text,
       range,
-      rect,
+      rect: staticRect,
       isCollapsed: sel.isCollapsed
     };
   }, [minLength]);
@@ -52,7 +127,7 @@ export function useTextSelection(options: UseTextSelectionOptions = {}) {
 
     const debouncedHandler = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleSelectionChange, 200);
+      timeoutId = setTimeout(handleSelectionChange, 50);
     };
 
     // Listen for selection changes

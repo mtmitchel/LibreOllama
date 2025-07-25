@@ -54,7 +54,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <Button
               variant={isDestructive ? 'destructive' : 'primary'}
               onClick={onConfirm}
-              loading={isLoading}
+              isLoading={isLoading}
             >
               {confirmText}
             </Button>

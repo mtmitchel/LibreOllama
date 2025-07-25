@@ -70,7 +70,8 @@ export function SyncStatus({ className = '', showDetails = true }: SyncStatusPro
   const getLastSyncTime = () => {
     const times = [mailLastSync, calendarLastSync]
       .filter(Boolean)
-      .map(t => t instanceof Date ? t : new Date(t));
+      .map(t => t instanceof Date ? t : t ? new Date(t) : null)
+      .filter((t): t is Date => t !== null);
     if (times.length === 0) return null;
     return new Date(Math.max(...times.map(t => t.getTime())));
   };

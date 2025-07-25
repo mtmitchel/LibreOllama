@@ -348,7 +348,7 @@ export function MessageContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-64 rounded-lg bg-white py-1 shadow-lg border border-gray-200"
+      className="fixed z-50 w-64 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
       style={{
         left: menuPosition.x,
         top: menuPosition.y
@@ -379,13 +379,13 @@ export function MessageContextMenu({
                   {item.icon}
                   <span>{item.label}</span>
                 </div>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
               
               {activeSubmenu === item.id && (
-                <div className="absolute left-full top-0 ml-1 w-48 rounded-lg bg-white py-1 shadow-lg border border-gray-200">
+                <div className="absolute left-full top-0 ml-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                   {item.submenu.map((subItem) => (
                     <button
                       key={subItem.id}

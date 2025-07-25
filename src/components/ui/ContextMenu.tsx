@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { Card } from './index';
 
 interface ContextMenuItem {
-  label: string;
+  label?: string;
   icon?: ReactNode;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
   destructive?: boolean;
   separator?: boolean;
@@ -79,7 +79,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   };
 
   const handleItemClick = (item: ContextMenuItem) => {
-    if (!item.disabled && !item.separator) {
+    if (!item.disabled && !item.separator && item.onClick) {
       item.onClick();
       handleClose();
     }

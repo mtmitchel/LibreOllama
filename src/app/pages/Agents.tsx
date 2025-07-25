@@ -37,11 +37,10 @@ export function Agents() {
   ];
 
   useEffect(() => {
-    setHeaderProps({
-      title: "Agents"
-    });
+    // Clear header as Agents uses contextual header
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [clearHeaderProps]);
 
   return (
     <div className="size-full p-6 lg:p-8">

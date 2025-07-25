@@ -1125,3 +1125,4 @@ export { KanbanBoard, KanbanColumn, KanbanTaskCard, CreateTaskModal, EditTaskMod
 export { ContextMenu } from './ContextMenu';
 export { ConfirmDialog } from './ConfirmDialog';
 export { SyncStatus } from '../SyncStatus';
+export { FloatingActionButton, FloatingActionMenu } from './FloatingActionButton';

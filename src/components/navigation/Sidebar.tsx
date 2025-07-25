@@ -12,7 +12,8 @@ import {
   Users,
   Settings,
   PanelLeft,
-  PanelRight
+  PanelRight,
+  Search
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -86,14 +87,14 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     >
       {/* Header */}
       <div 
-        className={`flex h-16 items-center ${isOpen ? 'justify-between border-b px-4 gap-4' : 'justify-center px-1'}`}
+        className={`flex h-16 items-center ${isOpen ? 'justify-between gap-4 border-b px-4' : 'justify-center px-1'}`}
         style={{ 
           borderBottom: isOpen ? '1px solid var(--border-primary)' : 'none',
           background: 'var(--header-bg)'
         }}
       >
         {isOpen && (
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex flex-1 items-center gap-3">
             <div 
               className="flex size-8 items-center justify-center"
               style={{ 
@@ -128,7 +129,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         {/* Toggle Button */}
         <button
           onClick={toggleSidebar}
-          className="flex h-8 w-8 items-center justify-center rounded-md transition-all hover:bg-hover shrink-0"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md transition-all hover:bg-hover"
           aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         >
@@ -139,6 +140,37 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       {/* Navigation - only show when open */}
       {isOpen && (
         <>
+          {/* Global Search */}
+          <div className="border-b p-3" style={{ borderColor: 'var(--border-primary)' }}>
+            <div className="relative">
+              <Search 
+                size={16} 
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" 
+              />
+              <input
+                type="text"
+                placeholder="Search everywhere..."
+                className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm transition-all duration-200 focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderColor: 'var(--border-default)',
+                  color: 'var(--text-primary)'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'var(--accent-primary)';
+                  e.target.style.boxShadow = '0 0 0 3px var(--accent-primary-alpha)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'var(--border-default)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border bg-surface px-1.5 py-0.5 text-xs text-tertiary">
+                ⌘K
+              </kbd>
+            </div>
+          </div>
+
           <nav 
             className="flex-1 overflow-y-auto p-3"
             role="navigation"
@@ -150,7 +182,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                   key={item.name}
                   icon={item.icon}
                   label={item.name}
-                  count={item.count}
+                  count={undefined}
                   path={item.path}
                 />
               ))}

@@ -16,11 +16,12 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   const location = useLocation();
   const [showMenu, setShowMenu] = useState(false);
   
-  // Disable on Notes page since it has its own unified menu
+  // Disable on Notes page since BlockNote has its own integrated menu
   const isNotesPage = location.pathname === '/notes';
   
   const { selection, clearSelection, replaceSelection } = useTextSelection({
     onSelectionChange: (sel) => {
+      console.log('Selection change:', { sel, disabled, isNotesPage, location: location.pathname });
       if (sel && !disabled && !isNotesPage) {
         setShowMenu(true);
       } else {
@@ -96,6 +97,16 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
         await createNoteFromText(text);
         break;
       
+      case 'create-list':
+        // Create a bulleted list from the selected text
+        await processWithAI(`Convert the following text into a bulleted list: "${text}"`);
+        break;
+      
+      case 'key-points':
+        // Extract key points from the selected text
+        await processWithAI(`Extract the key points from the following text: "${text}"`);
+        break;
+      
       case 'ask-ai':
         // Navigate to chat with the text as context
         navigateToChatWithContext(text);
@@ -134,11 +145,20 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       // Extract task title from text (first line or first 50 chars)
       const title = text.split('\n')[0].substring(0, 50);
       
+      // Get the first task list or create a default one
+      const taskLists = tasksStore.taskLists;
+      const taskListId = taskLists.length > 0 ? taskLists[0].id : null;
+      
+      if (!taskListId) {
+        // Create a default task list if none exists
+        await tasksStore.createTaskList('My Tasks');
+        return;
+      }
+      
       // Create task with the selected text as description
-      await tasksStore.createTask({
+      await tasksStore.createTask(taskListId, {
         title,
-        notes: text,
-        status: 'needsAction'
+        notes: text
       });
       
       // Show success feedback (could be a toast in future)

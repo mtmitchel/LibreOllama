@@ -22,14 +22,13 @@ import Konva from 'konva';
   };
 
   useEffect(() => {
-    setHeaderProps({
-      title: "Canvas"
-    });
+    // Clear header as Canvas uses contextual header
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [clearHeaderProps]);
 
   return (
-    <div className="relative flex h-full gap-4 bg-canvas p-6">
+    <div className="relative flex h-full gap-4 overflow-hidden bg-canvas p-6">
       {isCanvasSidebarOpen && (
         <CanvasSidebar
           isOpen={isCanvasSidebarOpen}

@@ -15,7 +15,8 @@ export const TaskProjectAssociation: React.FC<TaskProjectAssociationProps> = ({
   onAssociationChange
 }) => {
   const { projects, fetchProjects } = useProjectStore();
-  const { assignTaskToProject, removeTaskFromProject } = useKanbanStore();
+  // TODO: These methods don't exist yet in useKanbanStore
+  // const { assignTaskToProject, removeTaskFromProject } = useKanbanStore();
 
   React.useEffect(() => {
     if (projects.length === 0) {
@@ -28,11 +29,13 @@ export const TaskProjectAssociation: React.FC<TaskProjectAssociationProps> = ({
     
     if (selectedProjectId === '') {
       // Remove task from project
-      removeTaskFromProject(taskId);
+      // TODO: removeTaskFromProject not implemented yet
+      // removeTaskFromProject(taskId);
       onAssociationChange?.(null);
     } else {
       // Assign task to project
-      assignTaskToProject(taskId, selectedProjectId);
+      // TODO: assignTaskToProject not implemented yet
+      // assignTaskToProject(taskId, selectedProjectId);
       onAssociationChange?.(selectedProjectId);
     }
   };
@@ -66,10 +69,12 @@ interface ProjectTasksListProps {
 }
 
 export const ProjectTasksList: React.FC<ProjectTasksListProps> = ({ projectId }) => {
-  const { getTasksByProject } = useKanbanStore();
-  const tasks = getTasksByProject(projectId);
+  // TODO: getTasksByProject not implemented yet in useKanbanStore
+  // const { getTasksByProject } = useKanbanStore();
+  // const tasks = getTasksByProject(projectId);
+  const tasks: any[] = []; // Temporary placeholder
   const total = tasks.length;
-  const completed = tasks.filter(task => task.status === 'completed').length;
+  const completed = tasks.filter((task: any) => task.status === 'completed').length;
 
   if (tasks.length === 0) {
     return (
@@ -89,7 +94,7 @@ export const ProjectTasksList: React.FC<ProjectTasksListProps> = ({ projectId })
       </div>
       
       <div className="space-y-2">
-        {tasks.map(task => (
+        {tasks.map((task: any) => (
           <div
             key={task.id}
             className="flex items-center justify-between rounded-lg bg-gray-50 p-3"

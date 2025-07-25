@@ -56,12 +56,12 @@ function MessageHeader({ message }: MessageHeaderProps) {
   };
 
   return (
-    <div className="border-b border-border-default bg-white">
+    <div className="border-border-default border-b bg-white">
       <div className="px-6 py-5">
         {/* Subject Line with action buttons */}
         <div className="mb-4">
           <div className="flex items-start justify-between gap-4">
-            <h1 className="text-2xl font-semibold text-primary leading-tight">
+            <h1 className="text-2xl font-semibold leading-tight text-primary">
               {safeDecodeHtmlEntities(message.subject || '(no subject)')}
             </h1>
             
@@ -157,7 +157,7 @@ function AttachmentList({ attachments }: AttachmentListProps) {
   };
 
   return (
-    <div className="border-b border-border-default bg-gray-50 p-4">
+    <div className="border-border-default border-b bg-gray-50 p-4">
       <div className="mb-3 flex items-center gap-2">
         <Paperclip size={16} className="text-secondary" />
         <Text size="sm" weight="medium" variant="body">
@@ -168,7 +168,7 @@ function AttachmentList({ attachments }: AttachmentListProps) {
         {attachments.map((attachment, index) => (
           <div
             key={index}
-            className="flex items-center justify-between rounded-lg border border-border-default bg-white p-3 transition-colors hover:bg-gray-50"
+            className="border-border-default flex items-center justify-between rounded-lg border bg-white p-3 transition-colors hover:bg-gray-50"
           >
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-gray-100 p-2">
@@ -254,7 +254,7 @@ export function MessageView() {
 
       {/* Action Buttons - Only show if not in reply mode */}
       {!replyMode && (
-        <div className="shrink-0 border-t border-border-default bg-white px-4 py-3">
+        <div className="border-border-default shrink-0 border-t bg-white px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button variant="primary" size="sm" onClick={handleReply}>

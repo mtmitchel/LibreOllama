@@ -8,7 +8,7 @@ import NewProjectModal from '../../features/projects/components/NewProjectModal'
 import EditProjectModal from '../../features/projects/components/EditProjectModal';
 import { Card, Button, Text, Heading, Caption, FlexibleGrid } from '../../components/ui';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { FileText, CheckSquare, Image, Paperclip, MessageSquare, Users } from 'lucide-react';
+import { FileText, CheckSquare, Image, Paperclip, MessageSquare, Users, Plus } from 'lucide-react';
 import { useProjectStore, Project, ProjectGoal, ProjectAsset } from '../../features/projects/stores/projectStore';
 
 interface FileItem {
@@ -99,12 +99,10 @@ export function Projects() {
 
   // --- HEADER CONFIGURATION ---
   useEffect(() => {
-    setHeaderProps({
-      title: 'Projects',
-      subtitle: selectedProject ? selectedProject.name : 'Select a project or create a new one'
-    });
+    // Clear header as Projects uses contextual header
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps, selectedProject]);
+  }, [clearHeaderProps]);
 
 
   // --- EVENT HANDLERS ---
@@ -241,16 +239,7 @@ export function Projects() {
     }
   };
 
-  // Convert store data to component format
-  const projectsForSidebar = projects.map(project => ({
-    ...project,
-    statusTag: project.status,
-    keyGoals: currentGoals.map(goal => ({
-      id: goal.id,
-      text: goal.title,
-      completed: goal.completed
-    }))
-  }));
+  // Use store data directly - no conversion needed
 
   // --- ERROR DISPLAY ---
   if (error) {
@@ -281,7 +270,7 @@ export function Projects() {
     >
       {/* Projects Sidebar */}
       <ProjectsSidebar
-        projects={projectsForSidebar}
+        projects={projects}
         selectedProjectId={selectedProjectId}
         onSelectProject={handleSelectProject}
         onNewProject={handleCreateProject}

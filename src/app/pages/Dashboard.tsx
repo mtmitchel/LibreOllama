@@ -10,7 +10,8 @@ import {
 } from "../../features/dashboard/components";
 import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetErrorBoundary";
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
-import { LoadingState } from "../../components/ui";
+import { LoadingState, FloatingActionButton } from "../../components/ui";
+import { Settings2 } from 'lucide-react';
 import './dashboard.css';
 import Masonry from 'react-masonry-css';
 
@@ -66,24 +67,34 @@ export function Dashboard() {
   }
 
   return (
-    <div className="dashboard-container bg-primary">
-      <Masonry
-        breakpointCols={breakpointColumns}
-        className="dashboard-masonry"
-        columnClassName="dashboard-masonry-column"
-      >
-        {widgets.map((widget) => {
-          const WidgetComponent = widget.component;
-          return (
-            <div key={widget.id} className="dashboard-widget-wrapper">
-              <WidgetErrorBoundary fallback={`Failed to load ${widget.id}`}>
-                <WidgetComponent />
-              </WidgetErrorBoundary>
-            </div>
-          );
-        })}
-      </Masonry>
-    </div>
+    <>
+      <div className="dashboard-container bg-primary">
+        <Masonry
+          breakpointCols={breakpointColumns}
+          className="dashboard-masonry"
+          columnClassName="dashboard-masonry-column"
+        >
+          {widgets.map((widget) => {
+            const WidgetComponent = widget.component;
+            return (
+              <div key={widget.id} className="dashboard-widget-wrapper">
+                <WidgetErrorBoundary fallback={`Failed to load ${widget.id}`}>
+                  <WidgetComponent />
+                </WidgetErrorBoundary>
+              </div>
+            );
+          })}
+        </Masonry>
+      </div>
+      
+      {/* Floating Action Button for Dashboard Customization */}
+      <FloatingActionButton
+        icon={Settings2}
+        label="Customize"
+        onClick={() => console.log('Open dashboard customization')}
+        position="bottom-right"
+      />
+    </>
   );
 }
 

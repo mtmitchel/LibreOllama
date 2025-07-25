@@ -2,18 +2,7 @@ import React, { useState } from 'react';
 import { Button, Card, Text, Caption, Progress, Input } from '../../../components/ui';
 import { Plus, Search, PanelLeft, Folder, FileText, Calendar, CheckSquare } from 'lucide-react';
 import { ProjectContextMenu } from './ProjectContextMenu';
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  active?: boolean;
-  progress?: number;
-  statusTag?: string;
-  icon?: React.ReactNode;
-  keyGoals?: { id: string; text: string; completed: boolean }[];
-}
+import type { Project } from '../stores/projectStore';
 
 interface ProjectsSidebarProps {
   projects: Project[];

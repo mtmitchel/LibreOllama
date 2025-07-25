@@ -934,12 +934,10 @@ const Settings: React.FC = () => {
   };
 
   useEffect(() => {
-    setHeaderProps({
-      title: "Settings",
-      // No primary/secondary actions needed for the main settings page header
-    });
+    // Clear header as Settings doesn't need a contextual header
+    clearHeaderProps();
     return () => clearHeaderProps();
-  }, [setHeaderProps, clearHeaderProps]);
+  }, [clearHeaderProps]);
 
   return (
     <div className="flex h-full gap-6 bg-content p-6 lg:gap-8 lg:p-8">

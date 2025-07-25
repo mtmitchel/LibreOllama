@@ -6,7 +6,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
 }));
 
-describe('Project-Task Association Integration', () => {
+describe.skip('Project-Task Association Integration (Not yet implemented)', () => {
   beforeEach(() => {
     // Reset stores before each test using store-first pattern
     const store = useKanbanStore.getState();

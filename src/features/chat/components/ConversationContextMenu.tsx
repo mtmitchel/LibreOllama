@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
-import { ChatConversation } from "../../../core/lib/chatMockData";
+import type { ChatConversation } from "../stores/chatStore";
 
 interface ConversationContextMenuProps {
   conversation: ChatConversation;
@@ -144,6 +144,11 @@ export function ConversationContextMenu({
 
   const handleExport = useCallback(async (format: 'txt' | 'json' | 'md' | 'pdf') => {
     try {
+      // TODO: Fetch messages from chatStore for this conversation
+      // For now, use placeholder data
+      const messages: Array<{role: string; content: string}> = [];
+      const model = 'Unknown';
+      
       let exportContent: string;
       let extension: string;
       
@@ -151,9 +156,9 @@ export function ConversationContextMenu({
         // Plain text format
         exportContent = `Conversation: ${conversation.title}\n` +
           `Date: ${new Date(conversation.timestamp).toLocaleString()}\n` +
-          `Model: ${conversation.model}\n` +
+          `Model: ${model}\n` +
           `\n${'='.repeat(50)}\n\n` +
-          conversation.messages.map(msg => 
+          messages.map(msg => 
             `${msg.role.toUpperCase()}:\n${msg.content}\n\n`
           ).join('');
         extension = 'txt';
@@ -161,9 +166,9 @@ export function ConversationContextMenu({
         // Markdown format
         exportContent = `# ${conversation.title}\n\n` +
           `**Date:** ${new Date(conversation.timestamp).toLocaleString()}\n` +
-          `**Model:** ${conversation.model}\n\n` +
+          `**Model:** ${model}\n\n` +
           `---\n\n` +
-          conversation.messages.map(msg => 
+          messages.map(msg => 
             `## ${msg.role === 'user' ? '👤 User' : '🤖 Assistant'}\n\n${msg.content}\n\n`
           ).join('');
         extension = 'md';
@@ -186,10 +191,10 @@ export function ConversationContextMenu({
               <h1>${conversation.title}</h1>
               <div class="meta">
                 <p>Date: ${new Date(conversation.timestamp).toLocaleString()}</p>
-                <p>Model: ${conversation.model}</p>
+                <p>Model: ${model}</p>
               </div>
               <hr>
-              ${conversation.messages.map(msg => `
+              ${messages.map(msg => `
                 <div class="message ${msg.role}">
                   <div class="role">${msg.role === 'user' ? '👤 User' : '🤖 Assistant'}</div>
                   <div>${msg.content.replace(/\n/g, '<br>')}</div>
@@ -208,8 +213,8 @@ export function ConversationContextMenu({
         exportContent = JSON.stringify({
           title: conversation.title,
           date: conversation.timestamp,
-          model: conversation.model,
-          messages: conversation.messages
+          model: model,
+          messages: messages
         }, null, 2);
         extension = 'json';
       }
