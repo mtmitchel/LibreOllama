@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { BlockNoteEditor } from '@blocknote/core';
 import { useChatStore } from '../../../features/chat/stores/chatStore';
+import { AIOutputModal } from '../../../components/ai/AIOutputModal';
 import { 
   Bold, 
   Italic, 
@@ -52,6 +53,12 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
   const [activeTab, setActiveTab] = useState<TabType>('format');
   const [aiQuestion, setAiQuestion] = useState('');
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalData, setModalData] = useState<{
+    prompt: string;
+    output: string;
+    isLoading: boolean;
+  }>({ prompt: '', output: '', isLoading: false });
   
   // Check if we have text selected vs block selected
   const selectedText = editor.getSelectedText();
@@ -144,10 +151,59 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     editor.focus();
   };
 
+  const processWithAI = async (prompt: string) => {
+    const chatStore = useChatStore.getState();
+    
+    try {
+      // Update modal to show loading state
+      setModalData({ prompt, output: '', isLoading: true });
+      setShowModal(true);
+      onClose(); // Close the popover when modal opens
+      
+      // Get or create a conversation for AI tools
+      let conversationId = chatStore.selectedConversationId;
+      
+      if (!conversationId) {
+        conversationId = await chatStore.createConversation('AI Writing Tools');
+        chatStore.selectConversation(conversationId);
+      }
+
+      // Send the message and wait for response
+      await chatStore.sendMessage(conversationId, prompt);
+      
+      // Wait a bit for the AI response to be generated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get the latest AI response from the conversation
+      const messages = chatStore.messages[conversationId];
+      if (messages && messages.length >= 2) {
+        // Get the last message (should be the AI response)
+        const aiResponse = messages[messages.length - 1];
+        if (aiResponse.sender === 'ai' && aiResponse.content) {
+          // Update modal with the AI response
+          setModalData({ 
+            prompt, 
+            output: aiResponse.content, 
+            isLoading: false 
+          });
+          
+          // Clear the conversation for next use
+          chatStore.selectConversation(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to process with AI:', error);
+      setModalData({ 
+        prompt, 
+        output: 'Failed to generate AI response. Please try again.', 
+        isLoading: false 
+      });
+    }
+  };
+
   const handleAIAction = async (action: string, customQuestion?: string) => {
     const selectedText = editor.getSelectedText();
     const currentBlock = editor.getTextCursorPosition().block;
-    const chatStore = useChatStore.getState();
     
     // For image blocks, handle differently
     if (currentBlock?.type === 'image' && !selectedText) {
@@ -176,41 +232,7 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     const prompt = prompts[action];
     if (!prompt) return;
     
-    try {
-      // Get or create a conversation for AI tools
-      let conversationId = chatStore.selectedConversationId;
-      
-      if (!conversationId) {
-        conversationId = await chatStore.createConversation('AI Writing Tools');
-        chatStore.selectConversation(conversationId);
-      }
-
-      // Send the message and wait for response
-      await chatStore.sendMessage(conversationId, prompt);
-      
-      // Wait a bit for the AI response to be generated
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get the latest AI response from the conversation
-      const messages = chatStore.messages[conversationId];
-      if (messages && messages.length >= 2) {
-        // Get the last message (should be the AI response)
-        const aiResponse = messages[messages.length - 1];
-        if (aiResponse.sender === 'ai' && aiResponse.content) {
-          // Use document.execCommand for BlockNote compatibility
-          document.execCommand('insertText', false, aiResponse.content);
-          onClose();
-          
-          // Clear the conversation for next use
-          chatStore.selectConversation(null);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to process with AI:', error);
-      // Fallback to original text if AI fails
-      document.execCommand('insertText', false, selectedText);
-      onClose();
-    }
+    await processWithAI(prompt);
   };
 
   const handleInsert = (type: string) => {
@@ -368,15 +390,29 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     { id: 'insert' as TabType, label: 'Insert', icon: <FileText size={14} /> }
   ];
 
-  return createPortal(
-    <div
-      ref={popoverRef}
-      className="fixed z-[100]"
-      style={{
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-      }}
-    >
+  const handleRegenerate = useCallback(() => {
+    if (modalData.prompt) {
+      processWithAI(modalData.prompt);
+    }
+  }, [modalData.prompt]);
+
+  const handleReplace = useCallback((text: string) => {
+    // Use document.execCommand for BlockNote compatibility
+    document.execCommand('insertText', false, text);
+    setShowModal(false);
+  }, []);
+
+  return (
+    <>
+      {createPortal(
+        <div
+          ref={popoverRef}
+          className="fixed z-[100]"
+          style={{
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+          }}
+        >
       <div className="animate-in fade-in slide-in-from-left-2 rounded-lg border border-gray-200 bg-white p-3 shadow-lg duration-200 dark:border-gray-800 dark:bg-gray-900" style={{ minWidth: '340px' }}>
         {/* Tab Navigation */}
         <div className="border-border-subtle mb-2 flex items-center gap-1 border-b pb-2">
@@ -602,7 +638,18 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
           </div>
         )}
       </div>
-    </div>,
-    document.body
+        </div>,
+        document.body
+      )}
+      <AIOutputModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        prompt={modalData.prompt}
+        output={modalData.output}
+        isLoading={modalData.isLoading}
+        onReplace={handleReplace}
+        onRegenerate={handleRegenerate}
+      />
+    </>
   );
 }

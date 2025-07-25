@@ -20,7 +20,6 @@ interface AIWritingToolsMenuProps {
   selection: TextSelection;
   onClose: () => void;
   onAction: (action: AIAction, text: string) => void;
-  context?: string; // Current page/context for filtering actions
 }
 
 export type AIAction = 
@@ -68,7 +67,7 @@ const menuItems: MenuItem[] = [
   { id: 'ask-ai', label: 'Ask AI anything...', icon: <MessageSquare size={16} className="text-purple-500" />, category: 'create' },
 ];
 
-export function AIWritingToolsMenu({ selection, onClose, onAction, context }: AIWritingToolsMenuProps) {
+export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingToolsMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isPositioned, setIsPositioned] = useState(false);
@@ -171,71 +170,8 @@ export function AIWritingToolsMenu({ selection, onClose, onAction, context }: AI
     onClose();
   };
 
-  // Filter menu items based on context
-  const getFilteredItems = useCallback(() => {
-    let allowedActions: AIAction[] = [];
-    
-    // Context-specific filtering
-    switch (context) {
-      case '/mail':
-        // Email-specific actions
-        allowedActions = [
-          'rewrite-professional', 'rewrite-friendly', 'rewrite-concise', 
-          'proofread', 'translate', 'summarize', 'ask-ai'
-        ];
-        break;
-        
-      case '/tasks':
-        // Task-specific actions
-        allowedActions = [
-          'rewrite-concise', 'summarize', 'create-list', 
-          'key-points', 'create-task', 'ask-ai'
-        ];
-        break;
-        
-      case '/projects':
-        // Project-specific actions
-        allowedActions = [
-          'rewrite-professional', 'summarize', 'key-points', 
-          'create-list', 'create-task', 'ask-ai'
-        ];
-        break;
-        
-      case '/chat':
-        // Chat-specific actions - maybe less formal rewrites
-        allowedActions = [
-          'rewrite-friendly', 'rewrite-concise', 'proofread', 
-          'explain', 'translate', 'ask-ai'
-        ];
-        break;
-        
-      case '/calendar':
-        // Calendar event descriptions
-        allowedActions = [
-          'rewrite-concise', 'proofread', 'create-list', 
-          'key-points', 'create-task', 'ask-ai'
-        ];
-        break;
-        
-      case '/dashboard':
-        // Dashboard widget text - keep it professional
-        allowedActions = [
-          'rewrite-professional', 'rewrite-concise', 'proofread', 
-          'create-note', 'ask-ai'
-        ];
-        break;
-        
-      default:
-        // Show all actions for general contexts
-        return menuItems;
-    }
-    
-    return menuItems.filter(item => allowedActions.includes(item.id));
-  }, [context]);
-
-  const filteredItems = getFilteredItems();
-  const rewriteItems = filteredItems.filter(item => item.category === 'rewrite');
-  const otherItems = filteredItems.filter(item => item.category !== 'rewrite');
+  const rewriteItems = menuItems.filter(item => item.category === 'rewrite');
+  const otherItems = menuItems.filter(item => item.category !== 'rewrite');
 
   return createPortal(
     <div

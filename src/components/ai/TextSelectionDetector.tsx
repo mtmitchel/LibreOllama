@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTextSelection } from '../../core/hooks/useTextSelection';
 import { AIWritingToolsMenu, type AIAction } from './AIWritingToolsMenu';
+import { AIOutputModal } from './AIOutputModal';
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useNotesStore } from '../../features/notes/store';
@@ -15,6 +16,13 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   const navigate = useNavigate();
   const location = useLocation();
   const [showMenu, setShowMenu] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalData, setModalData] = useState<{
+    prompt: string;
+    output: string;
+    isLoading: boolean;
+    action: AIAction;
+  }>({ prompt: '', output: '', isLoading: false, action: 'rewrite-professional' });
   
   // Disable on Notes page since BlockNote has its own integrated menu
   const isNotesPage = location.pathname === '/notes';
@@ -52,39 +60,42 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   }, [isNotesPage]);
 
   const handleAIAction = useCallback(async (action: AIAction, text: string) => {
+    // Close the menu first
+    setShowMenu(false);
+    
     // For now, we'll implement basic actions and integrate with chat for AI processing
     switch (action) {
       case 'rewrite-professional':
-        await processWithAI(`Rewrite the following text in a professional tone: "${text}"`);
+        await processWithAI(`Rewrite the following text in a professional tone: "${text}"`, action);
         break;
       
       case 'rewrite-friendly':
-        await processWithAI(`Rewrite the following text in a friendly, casual tone: "${text}"`);
+        await processWithAI(`Rewrite the following text in a friendly, casual tone: "${text}"`, action);
         break;
       
       case 'rewrite-concise':
-        await processWithAI(`Rewrite the following text to be more concise: "${text}"`);
+        await processWithAI(`Rewrite the following text to be more concise: "${text}"`, action);
         break;
       
       case 'rewrite-expanded':
-        await processWithAI(`Expand on the following text with more detail: "${text}"`);
+        await processWithAI(`Expand on the following text with more detail: "${text}"`, action);
         break;
       
       case 'proofread':
-        await processWithAI(`Proofread and correct any grammar or spelling errors in: "${text}"`);
+        await processWithAI(`Proofread and correct any grammar or spelling errors in: "${text}"`, action);
         break;
       
       case 'summarize':
-        await processWithAI(`Summarize the following text in 2-3 sentences: "${text}"`);
+        await processWithAI(`Summarize the following text in 2-3 sentences: "${text}"`, action);
         break;
       
       case 'translate':
         // For now, default to Spanish. In future, we could show a language picker
-        await processWithAI(`Translate the following text to Spanish: "${text}"`);
+        await processWithAI(`Translate the following text to Spanish: "${text}"`, action);
         break;
       
       case 'explain':
-        await processWithAI(`Explain the following text in simple terms: "${text}"`);
+        await processWithAI(`Explain the following text in simple terms: "${text}"`, action);
         break;
       
       case 'create-task':
@@ -99,12 +110,12 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       
       case 'create-list':
         // Create a bulleted list from the selected text
-        await processWithAI(`Convert the following text into a bulleted list: "${text}"`);
+        await processWithAI(`Convert the following text into a bulleted list: "${text}"`, action);
         break;
       
       case 'key-points':
         // Extract key points from the selected text
-        await processWithAI(`Extract the key points from the following text: "${text}"`);
+        await processWithAI(`Extract the key points from the following text: "${text}"`, action);
         break;
       
       case 'ask-ai':
@@ -114,8 +125,12 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     }
   }, []);
 
-  const processWithAI = async (prompt: string) => {
+  const processWithAI = async (prompt: string, action: AIAction) => {
     try {
+      // Update modal to show loading state
+      setModalData(prev => ({ ...prev, prompt, isLoading: true, action }));
+      setShowModal(true);
+      
       // Get or create a conversation for AI tools
       let conversationId = chatStore.selectedConversationId;
       
@@ -136,17 +151,25 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
         // Get the last message (should be the AI response)
         const aiResponse = messages[messages.length - 1];
         if (aiResponse.sender === 'ai' && aiResponse.content) {
-          // Replace the selected text with the AI response
-          replaceSelection(aiResponse.content);
+          // Update modal with the AI response
+          setModalData(prev => ({ 
+            ...prev, 
+            output: aiResponse.content, 
+            isLoading: false 
+          }));
           
           // Clear the conversation for next use
-          // This keeps the AI tools conversation clean
           chatStore.selectConversation(null);
         }
       }
       
     } catch (error) {
       console.error('Failed to process with AI:', error);
+      setModalData(prev => ({ 
+        ...prev, 
+        output: 'Failed to generate AI response. Please try again.', 
+        isLoading: false 
+      }));
     }
   };
 
@@ -208,6 +231,17 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     });
   };
 
+  const handleRegenerate = useCallback(() => {
+    if (modalData.prompt && modalData.action && selection) {
+      processWithAI(modalData.prompt, modalData.action);
+    }
+  }, [modalData.prompt, modalData.action, selection]);
+
+  const handleReplace = useCallback((text: string) => {
+    replaceSelection(text);
+    clearSelection();
+  }, [replaceSelection, clearSelection]);
+
   return (
     <>
       {children}
@@ -219,9 +253,17 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
             clearSelection();
           }}
           onAction={handleAIAction}
-          context={location.pathname}
         />
       )}
+      <AIOutputModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        prompt={modalData.prompt}
+        output={modalData.output}
+        isLoading={modalData.isLoading}
+        onReplace={handleReplace}
+        onRegenerate={handleRegenerate}
+      />
     </>
   );
 }
