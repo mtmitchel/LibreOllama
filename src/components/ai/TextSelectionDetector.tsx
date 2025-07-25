@@ -120,20 +120,30 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       let conversationId = chatStore.selectedConversationId;
       
       if (!conversationId) {
-        conversationId = await chatStore.createConversation();
+        conversationId = await chatStore.createConversation('AI Writing Tools');
         chatStore.selectConversation(conversationId);
       }
 
       // Send the message and wait for response
       await chatStore.sendMessage(conversationId, prompt);
       
-      // Get the AI response (this is simplified - in reality we'd need to wait for the stream)
-      // For now, we'll show a placeholder implementation
-      setTimeout(() => {
-        // In a real implementation, we'd get the actual AI response and replace the selection
-        const mockResponse = "AI response would appear here";
-        replaceSelection(mockResponse);
-      }, 1000);
+      // Wait a bit for the AI response to be generated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get the latest AI response from the conversation
+      const messages = chatStore.messages[conversationId];
+      if (messages && messages.length >= 2) {
+        // Get the last message (should be the AI response)
+        const aiResponse = messages[messages.length - 1];
+        if (aiResponse.sender === 'ai' && aiResponse.content) {
+          // Replace the selected text with the AI response
+          replaceSelection(aiResponse.content);
+          
+          // Clear the conversation for next use
+          // This keeps the AI tools conversation clean
+          chatStore.selectConversation(null);
+        }
+      }
       
     } catch (error) {
       console.error('Failed to process with AI:', error);

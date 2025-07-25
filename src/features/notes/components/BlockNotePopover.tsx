@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { BlockNoteEditor } from '@blocknote/core';
+import { useChatStore } from '../../../features/chat/stores/chatStore';
 import { 
   Bold, 
   Italic, 
@@ -143,9 +144,10 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     editor.focus();
   };
 
-  const handleAIAction = (action: string, customQuestion?: string) => {
+  const handleAIAction = async (action: string, customQuestion?: string) => {
     const selectedText = editor.getSelectedText();
     const currentBlock = editor.getTextCursorPosition().block;
+    const chatStore = useChatStore.getState();
     
     // For image blocks, handle differently
     if (currentBlock?.type === 'image' && !selectedText) {
@@ -156,28 +158,59 @@ export function BlockNotePopover({ isOpen, onClose, position, editor }: BlockNot
     
     if (!selectedText && action !== 'ask-custom') return;
     
-    // Mock AI responses for demonstration
-    const mockResponses: Record<string, string> = {
-      'rewrite-professional': `I trust this message finds you well. ${selectedText}`,
-      'rewrite-friendly': `Hey there! ${selectedText} 😊`,
-      'rewrite-concise': selectedText.split(' ').slice(0, Math.ceil(selectedText.split(' ').length / 2)).join(' '),
-      'rewrite-expanded': `${selectedText} Furthermore, this point warrants additional consideration and analysis.`,
-      'proofread': selectedText.charAt(0).toUpperCase() + selectedText.slice(1),
-      'summarize': `Summary: ${selectedText.substring(0, 50)}...`,
-      'translate': `[Translated] ${selectedText}`,
-      'explain': `This means: ${selectedText}`,
-      'create-list': `• ${selectedText.split('.').filter(s => s.trim()).join('\n• ')}`,
-      'key-points': `Key points:\n• ${selectedText.split('.').filter(s => s.trim()).slice(0, 3).join('\n• ')}`,
-      'ask-custom': `Response to "${customQuestion}" about: ${selectedText}`
+    // Map action to appropriate prompt
+    const prompts: Record<string, string> = {
+      'rewrite-professional': `Rewrite the following text in a professional tone: "${selectedText}"`,
+      'rewrite-friendly': `Rewrite the following text in a friendly, casual tone: "${selectedText}"`,
+      'rewrite-concise': `Rewrite the following text to be more concise: "${selectedText}"`,
+      'rewrite-expanded': `Expand on the following text with more detail: "${selectedText}"`,
+      'proofread': `Proofread and correct any grammar or spelling errors in: "${selectedText}"`,
+      'summarize': `Summarize the following text in 2-3 sentences: "${selectedText}"`,
+      'translate': `Translate the following text to Spanish: "${selectedText}"`,
+      'explain': `Explain the following text in simple terms: "${selectedText}"`,
+      'create-list': `Convert the following text into a bulleted list: "${selectedText}"`,
+      'key-points': `Extract the key points from the following text: "${selectedText}"`,
+      'ask-custom': customQuestion ? `${customQuestion} - Context: "${selectedText}"` : ''
     };
     
-    const newText = mockResponses[action] || selectedText;
+    const prompt = prompts[action];
+    if (!prompt) return;
     
-    // Use document.execCommand for BlockNote compatibility
-    setTimeout(() => {
-      document.execCommand('insertText', false, newText);
+    try {
+      // Get or create a conversation for AI tools
+      let conversationId = chatStore.selectedConversationId;
+      
+      if (!conversationId) {
+        conversationId = await chatStore.createConversation('AI Writing Tools');
+        chatStore.selectConversation(conversationId);
+      }
+
+      // Send the message and wait for response
+      await chatStore.sendMessage(conversationId, prompt);
+      
+      // Wait a bit for the AI response to be generated
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get the latest AI response from the conversation
+      const messages = chatStore.messages[conversationId];
+      if (messages && messages.length >= 2) {
+        // Get the last message (should be the AI response)
+        const aiResponse = messages[messages.length - 1];
+        if (aiResponse.sender === 'ai' && aiResponse.content) {
+          // Use document.execCommand for BlockNote compatibility
+          document.execCommand('insertText', false, aiResponse.content);
+          onClose();
+          
+          // Clear the conversation for next use
+          chatStore.selectConversation(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to process with AI:', error);
+      // Fallback to original text if AI fails
+      document.execCommand('insertText', false, selectedText);
       onClose();
-    }, 100);
+    }
   };
 
   const handleInsert = (type: string) => {
