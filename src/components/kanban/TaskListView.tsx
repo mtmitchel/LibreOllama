@@ -12,6 +12,7 @@ interface TaskListViewProps {
   showHeader?: boolean;
   selectedListId?: string;
   sortBy?: 'created' | 'due' | 'title';
+  onEditTask?: (task: KanbanTask, columnId: string) => void;
 }
 
 export const TaskListView: React.FC<TaskListViewProps> = ({ 
@@ -19,7 +20,8 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   searchQuery: parentSearchQuery = '',
   showHeader = true,
   selectedListId: parentSelectedListId,
-  sortBy: parentSortBy
+  sortBy: parentSortBy,
+  onEditTask
 }) => {
   const {
     columns,
@@ -86,10 +88,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
   // Handle task click
   const handleTaskClick = useCallback((task: KanbanTask & { columnId: string }) => {
-    setSelectedTask(task);
-    setSelectedColumnId(task.columnId);
-    setIsEditModalOpen(true);
-  }, []);
+    if (onEditTask) {
+      onEditTask(task, task.columnId);
+    } else {
+      setSelectedTask(task);
+      setSelectedColumnId(task.columnId);
+      setIsEditModalOpen(true);
+    }
+  }, [onEditTask]);
 
   // Handle task completion toggle
   const handleToggleComplete = useCallback(async (task: KanbanTask & { columnId: string }) => {

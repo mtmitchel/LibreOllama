@@ -19,7 +19,10 @@ import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
 import CanvasPage from './pages/Canvas';
 import Calendar from './pages/Calendar';
-import Tasks from './pages/Tasks';
+import CalendarAsanaStyle from './pages/CalendarAsanaStyle';
+import Tasks from './pages/TasksAsanaClean';
+import TasksRedesigned from './pages/TasksRedesigned';
+import TasksAsanaStyle from './pages/TasksAsanaStyle';
 import Agents from './pages/Agents';
 import Settings from './pages/Settings';
 
@@ -41,8 +44,11 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
         <Route path="/projects" element={<Projects />} />
         <Route path="/notes" element={<Notes />} />
         <Route path="/canvas" element={<CanvasPage />} />
-        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/calendar" element={<CalendarAsanaStyle />} />
+        <Route path="/calendar-old" element={<Calendar />} />
         <Route path="/tasks" element={<Tasks />} />
+        <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
+        <Route path="/tasks-asana" element={<TasksAsanaStyle />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
