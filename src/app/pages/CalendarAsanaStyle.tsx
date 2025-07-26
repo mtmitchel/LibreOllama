@@ -14,6 +14,7 @@ import { Button, Card, Text, Heading, Input } from '../../components/ui';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useTaskMetadataStore } from '../../stores/taskMetadataStore';
 import { useHeader } from '../contexts/HeaderContext';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -706,6 +707,9 @@ const AsanaTaskItem: React.FC<{
   onSchedule: () => void;
   onContextMenu: (e: React.MouseEvent, task: GoogleTask) => void;
 }> = ({ task, onToggle, onEdit, onDuplicate, onDelete, onSchedule, onContextMenu }) => {
+  const metadata = useTaskMetadataStore(state => state.getTaskMetadata(task.id));
+  const priority = metadata?.priority || 'normal';
+  
   return (
     <div 
       className="draggable-task p-4 rounded-xl bg-white transition-all cursor-pointer"
@@ -766,14 +770,31 @@ const AsanaTaskItem: React.FC<{
             </p>
           )}
           
-          {task.due && (
-            <div className="flex items-center gap-1.5 mt-2">
-              <CalendarIcon size={12} style={{ color: '#9CA6AF' }} />
-              <span style={asanaTypography.small}>
-                {new Date(task.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 mt-2">
+            {task.due && (
+              <div className="flex items-center gap-1.5">
+                <CalendarIcon size={12} style={{ color: '#9CA6AF' }} />
+                <span style={asanaTypography.small}>
+                  {new Date(task.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            )}
+            
+            {priority !== 'normal' && (
+              <div 
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+                style={{ 
+                  backgroundColor: priorityConfig[priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
+                  color: priorityConfig[priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
+                }}
+              >
+                <Flag size={10} />
+                <span style={{ fontSize: '11px', fontWeight: 500 }}>
+                  {priorityConfig[priority as keyof typeof priorityConfig]?.label || priority}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1520,14 +1541,9 @@ export default function CalendarAsanaStyle() {
               key={priority}
               className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
               onClick={() => {
-                // Update task priority
-                updateGoogleTask(contextMenu.listId, contextMenu.task.id, {
-                  ...contextMenu.task,
-                  metadata: {
-                    ...contextMenu.task.metadata,
-                    priority
-                  }
-                });
+                // Update task priority in metadata store
+                const setTaskMetadata = useTaskMetadataStore.getState().setTaskMetadata;
+                setTaskMetadata(contextMenu.task.id, { priority });
                 setContextMenu(null);
               }}
             >

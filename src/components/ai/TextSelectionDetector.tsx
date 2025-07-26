@@ -33,15 +33,13 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   const isNotesPage = location.pathname === '/notes';
   
   const { selection, clearSelection, replaceSelection } = useTextSelection({
-    onSelectionChange: (sel) => {
-      console.log('Selection change:', { sel, disabled, isNotesPage, location: location.pathname });
+    onSelectionChange: useCallback((sel) => {
       if (sel && !disabled && !isNotesPage) {
-        console.log('Valid selection, showing menu');
         setShowMenu(true);
       } else {
         setShowMenu(false);
       }
-    }
+    }, [disabled, isNotesPage])
   });
 
   // Store references for AI actions
@@ -66,9 +64,6 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   }, [isNotesPage]);
 
   const handleAIAction = useCallback(async (action: AIAction, text: string) => {
-    console.log('=== handleAIAction called ===');
-    console.log('Action:', action);
-    console.log('Text:', text);
     
     // Close the menu first
     setShowMenu(false);
@@ -137,9 +132,6 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
 
 
   const processWithAI = useCallback(async (prompt: string, action: AIAction, options?: any) => {
-    console.log('=== processWithAI called ===');
-    console.log('Prompt:', prompt);
-    console.log('Action:', action);
     
     try {
       // Store original text if we have a selection
@@ -148,7 +140,6 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       // Update modal to show loading state
       setModalData(prev => ({ ...prev, prompt, isLoading: true, action, originalText }));
       setShowModal(true);
-      console.log('Modal should be visible now');
       
       // Get AI writing settings and chat settings
       const aiWritingSettings = useSettingsStore.getState().aiWriting;
@@ -159,9 +150,6 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       let provider = aiWritingSettings.defaultProvider || chatStore.selectedProvider;
       let model = aiWritingSettings.defaultModel || chatStore.selectedModel;
       
-      console.log('AI Writing Settings:', aiWritingSettings);
-      console.log('Chat Store - Provider:', chatStore.selectedProvider, 'Model:', chatStore.selectedModel);
-      console.log('Using - Provider:', provider, 'Model:', model);
       
       // Ensure we have valid provider and model
       if (!provider || !model) {
@@ -223,7 +211,6 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       ];
 
       // Get the provider manager and make the call
-      console.log('Using provider:', provider, 'model:', model);
       const settingsState = useSettingsStore.getState();
       const apiKeys = settingsState.integrations.apiKeys;
       
@@ -239,9 +226,7 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       }
 
       // Make the AI call
-      console.log('Making AI call with messages:', messages);
       const response = await llmProvider.chat(messages, model || undefined);
-      console.log('AI response received:', response);
       
       // Update modal with the AI response
       setModalData(prev => ({ 
@@ -409,7 +394,6 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       <AIOutputModalPro
         isOpen={showModal}
         onClose={() => {
-          console.log('Modal onClose callback triggered');
           setShowModal(false);
           // Don't reset modal data to preserve state
         }}

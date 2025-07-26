@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { HeaderProvider } from './contexts/HeaderContext';
 import { ThemeProvider } from '../components/ThemeProvider';
 import Sidebar from '../components/navigation/Sidebar';
@@ -10,6 +12,7 @@ import { useCommandPalette } from '../core/hooks/useCommandPalette';
 import { StagewiseToolbar } from '@stagewise/toolbar-react';
 import { useInitializeSettings } from '../stores/settingsStore';
 import { MailStoreProvider } from '../features/mail/components/MailStoreProvider';
+import { queryClient } from '../config/queryClient';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -21,8 +24,9 @@ import CanvasPage from './pages/Canvas';
 import Calendar from './pages/Calendar';
 import CalendarAsanaStyle from './pages/CalendarAsanaStyle';
 import Tasks from './pages/TasksAsanaClean';
-import TasksRedesigned from './pages/TasksRedesigned';
-import TasksAsanaStyle from './pages/TasksAsanaStyle';
+// import TasksOld from './pages/TasksAsanaClean';
+// import TasksRedesigned from './pages/TasksRedesigned';
+// import TasksAsanaStyle from './pages/TasksAsanaStyle';
 import Agents from './pages/Agents';
 import Settings from './pages/Settings';
 
@@ -47,8 +51,8 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
         <Route path="/calendar" element={<CalendarAsanaStyle />} />
         <Route path="/calendar-old" element={<Calendar />} />
         <Route path="/tasks" element={<Tasks />} />
-        <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
-        <Route path="/tasks-asana" element={<TasksAsanaStyle />} />
+        {/* <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
+        <Route path="/tasks-asana" element={<TasksAsanaStyle />} /> */}
         <Route path="/agents" element={<Agents />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
@@ -73,12 +77,13 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <Router>
-        <HeaderProvider>
-          <MailStoreProvider>
-            <TextSelectionDetector>
-              <div className="flex h-screen bg-page font-sans text-primary">
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <Router>
+          <HeaderProvider>
+            <MailStoreProvider>
+              <TextSelectionDetector>
+                <div className="flex h-screen bg-page font-sans text-primary">
               {/* Skip to main content link for keyboard users */}
               <a 
                 href="#main-content"
@@ -108,5 +113,7 @@ export default function App() {
         </HeaderProvider>
       </Router>
     </ThemeProvider>
+    {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+    </QueryClientProvider>
   );
 }

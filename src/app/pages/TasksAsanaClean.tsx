@@ -12,6 +12,7 @@ import { useGoogleTasksStore } from '../../stores/googleTasksStore';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { kanbanGoogleSync, setupAutoSync } from '../../services/kanbanGoogleTasksSync';
 import { useKanbanStore, KanbanTask } from '../../stores/useKanbanStore';
+import { useTaskMetadataStore } from '../../stores/taskMetadataStore';
 import {
   DndContext,
   DragOverlay,
@@ -1283,12 +1284,16 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
 
   const handleUpdatePriority = async (task: KanbanTask, columnId: string, priority: 'low' | 'normal' | 'high' | 'urgent') => {
     try {
-      await updateTask(task.id, columnId, {
-        ...task,
-        metadata: {
-          ...task.metadata,
-          priority
-        }
+      // Update priority in metadata store
+      const setTaskMetadata = useTaskMetadataStore.getState().setTaskMetadata;
+      const currentMetadata = useTaskMetadataStore.getState().getTaskMetadata(task.id) || {
+        labels: [],
+        priority: 'normal',
+        subtasks: []
+      };
+      setTaskMetadata(task.id, {
+        ...currentMetadata,
+        priority
       });
       setContextMenu(null);
     } catch (error) {
@@ -1352,7 +1357,7 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
             >
               <Flag size={14} style={{ color: priorityConfig[priority]?.textColor || '#6B6F76' }} />
               {priorityConfig[priority]?.label || priority}
-              {contextMenu.task.metadata?.priority === priority && ' ✓'}
+              {useTaskMetadataStore.getState().getTaskMetadata(contextMenu.task.id)?.priority === priority && ' ✓'}
             </button>
           ))}
           
@@ -1620,6 +1625,13 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   } = useDraggable({
     id: task.id,
   });
+  
+  // Get metadata from store
+  const metadata = useTaskMetadataStore(state => state.getTaskMetadata(task.id)) || {
+    labels: [],
+    priority: 'normal' as const,
+    subtasks: []
+  };
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -1674,17 +1686,17 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       }}
     >
       {/* Priority indicator */}
-      {task.metadata?.priority && task.metadata.priority !== 'normal' && (
+      {metadata.priority && metadata.priority !== 'normal' && (
         <div className="mb-3">
           <span 
             className="px-3 py-1 rounded-lg inline-block"
             style={{ 
               ...asanaTypography.label,
-              backgroundColor: priorityConfig[task.metadata.priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
-              color: priorityConfig[task.metadata.priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
+              backgroundColor: priorityConfig[metadata.priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
+              color: priorityConfig[metadata.priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
             }}
           >
-            {priorityConfig[task.metadata.priority as keyof typeof priorityConfig]?.label || task.metadata.priority} Priority
+            {priorityConfig[metadata.priority as keyof typeof priorityConfig]?.label || metadata.priority} Priority
           </span>
         </div>
       )}
@@ -1740,9 +1752,9 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       )}
 
       {/* Labels */}
-      {task.metadata?.labels && task.metadata.labels.length > 0 && (
+      {metadata.labels && metadata.labels.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {task.metadata.labels.map((label: string) => (
+          {metadata.labels.map((label: string) => (
             <span
               key={label}
               className="px-2.5 py-1 rounded-lg"
@@ -1773,11 +1785,11 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
           )}
 
           {/* Subtasks */}
-          {task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
+          {metadata.subtasks && metadata.subtasks.length > 0 && (
             <div className="flex items-center gap-1">
               <CheckCircle2 size={14} style={{ color: '#14A085' }} />
               <span style={asanaTypography.small}>
-                {task.metadata.subtasks.filter(st => st.completed).length}/{task.metadata.subtasks.length}
+                {metadata.subtasks.filter((st: any) => st.completed).length}/{metadata.subtasks.length}
               </span>
             </div>
           )}

@@ -126,31 +126,38 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({ isOpen, onToggle, stageRe
     setSelectedCanvasId(canvasId);
   }, [selectedCanvasId, saveCurrentCanvas, clearCanvas, addElement, createSection]);
 
-  const loadCanvasesFromStorage = useCallback(() => {
+  const loadCanvasesFromStorage = useCallback((isInitialLoad = false) => {
     const storedCanvases = localStorage.getItem("libreollama_canvases");
     if (storedCanvases) {
       const parsed = JSON.parse(storedCanvases);
       setCanvases(parsed);
 
-      if (parsed.length > 0 && !selectedCanvasId) {
+      // Only set the first canvas on initial load
+      if (isInitialLoad && parsed.length > 0) {
         const firstCanvas = parsed[0];
         if (firstCanvas) {
           setSelectedCanvasId(firstCanvas.id);
-          setTimeout(() => {
-            loadCanvas(firstCanvas.id);
-          }, 0);
         }
       }
-    } else {
+    } else if (isInitialLoad) {
       const initialCanvas = createNewCanvas(0);
       setCanvases([initialCanvas]);
       setSelectedCanvasId(initialCanvas.id);
     }
-  }, [selectedCanvasId, loadCanvas, createNewCanvas]);
+  }, [createNewCanvas]);
 
+  // Load canvases on mount only
   useEffect(() => {
-    loadCanvasesFromStorage();
-  }, [loadCanvasesFromStorage]);
+    loadCanvasesFromStorage(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only once
+
+  // Handle canvas loading when selectedCanvasId changes
+  useEffect(() => {
+    if (selectedCanvasId) {
+      loadCanvas(selectedCanvasId);
+    }
+  }, [selectedCanvasId, loadCanvas]);
 
   const handleCreateCanvas = () => {
     saveCurrentCanvas();

@@ -1,0 +1,2594 @@
+DEEP RESEARCH PROMPT: Task System Complete Failure - Priority, Labels, and Due Dates Not Persisting
+
+=================================================================================
+CRITICAL ISSUE SUMMARY
+=================================================================================
+The task management system in LibreOllama is failing to properly persist task metadata including:
+1. Priority levels (low, normal, high, urgent) - MUST persist locally
+2. Labels/tags - MUST persist locally  
+3. Due dates - MUST sync with Google Tasks (standard field)
+
+Despite implementing a hybrid system where standard fields sync with Google Tasks and custom metadata is stored in SQLite, NOTHING is persisting across page refreshes.
+
+=================================================================================
+SYSTEM ARCHITECTURE
+=================================================================================
+The system uses:
+- Frontend: React with Zustand stores (googleTasksStore, kanbanStore)
+- Backend: Tauri (Rust) with SQLite for local metadata storage
+- External API: Google Tasks API for standard task fields
+- Sync Service: kanbanGoogleTasksSync.ts to coordinate between local and Google data
+
+=================================================================================
+EXPECTED BEHAVIOR (HYBRID SYSTEM)
+=================================================================================
+Per the research document, we need to implement Option 2:
+- Standard fields (title, notes, due date) sync with Google Tasks API
+- Custom fields (priority, labels) stored ONLY in local SQLite database
+- On fetch, merge Google data with local metadata
+- Tasks should show priority badges and labels in the UI
+- Due dates should persist through Google Tasks
+
+=================================================================================
+CURRENT PROBLEMS
+=================================================================================
+1. Tasks create successfully but metadata doesn't persist
+2. Due dates are sent to Google but don't show after refresh
+3. Priority and labels are saved to SQLite but don't load on refresh
+4. Backend logs show metadata being saved but not loaded
+5. Frontend receives tasks without metadata populated
+
+=================================================================================
+RECENT CHANGES ATTEMPTED
+=================================================================================
+1. Added #[serde(rename_all = "camelCase")] to fix Tauri serialization
+2. Fixed inline task creation to pass actual labels
+3. Added update flow to sync metadata on task edit
+4. Converted due dates to RFC 3339 format for Google Tasks
+5. Added extensive logging throughout the stack
+
+=================================================================================
+KEY CODE FILES
+=================================================================================
+
+FILE: src-tauri/src/commands/tasks/api.rs
+----------------------------------------
+//! Google Tasks API Commands
+//!
+//! This module provides Tauri command handlers for Google Tasks API operations.
+
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tauri::State;
+use crate::db::DbPool;
+
+// Define the task structures that match the frontend types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleTask {
+    pub id: String,
+    pub title: String,
+    pub notes: Option<String>,
+    pub status: String,
+    pub due: Option<String>,
+    pub completed: Option<String>,
+    pub updated: Option<String>,
+    pub parent: Option<String>,
+    pub position: Option<String>,
+    pub kind: Option<String>,
+    pub etag: Option<String>,
+    pub self_link: Option<String>,
+    pub links: Option<Vec<TaskLink>>,
+    pub hidden: Option<bool>,
+    pub deleted: Option<bool>,
+    // Local metadata not stored in Google
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<TaskMetadata>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskMetadata {
+    pub priority: Option<String>,
+    pub labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskLink {
+    #[serde(rename = "type")]
+    pub link_type: String,
+    pub description: String,
+    pub link: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleTaskList {
+    pub id: String,
+    pub title: String,
+    pub updated: Option<String>,
+    pub self_link: Option<String>,
+    pub etag: Option<String>,
+    pub kind: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskCreateData {
+    pub title: String,
+    pub notes: Option<String>,
+    pub due: Option<String>,
+    pub parent: Option<String>,
+    pub previous: Option<String>,
+    pub metadata: Option<TaskMetadata>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskUpdateData {
+    pub title: Option<String>,
+    pub notes: Option<String>,
+    pub status: Option<String>,
+    pub due: Option<String>,
+    pub completed: Option<String>,
+    pub metadata: Option<TaskMetadata>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TasksResponse {
+    pub kind: String,
+    pub etag: String,
+    pub next_page_token: Option<String>,
+    pub items: Vec<GoogleTask>,
+}
+
+// =============================================================================
+// Command Handlers
+// =============================================================================
+
+/// Get all task lists for an account
+#[tauri::command]
+pub async fn get_task_lists(
+    account_id: String,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
+) -> Result<Vec<GoogleTaskList>, String> {
+    println!("📋 [TASKS-API] Getting task lists for account: {}", account_id);
+    
+    // Get access token and refresh if needed
+    let tokens = auth_service.validate_and_refresh_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get or refresh tokens: {}", e))?;
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://www.googleapis.com/tasks/v1/users/@me/lists")
+        .bearer_auth(&tokens.access_token)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    let lists_response: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    let items = lists_response["items"].as_array()
+        .ok_or("Invalid response format: missing items")?;
+
+    let task_lists: Vec<GoogleTaskList> = items.iter()
+        .map(|item| GoogleTaskList {
+            id: item["id"].as_str().unwrap_or("").to_string(),
+            title: item["title"].as_str().unwrap_or("").to_string(),
+            updated: item["updated"].as_str().map(|s| s.to_string()),
+            self_link: item["selfLink"].as_str().map(|s| s.to_string()),
+            etag: item["etag"].as_str().map(|s| s.to_string()),
+            kind: item["kind"].as_str().map(|s| s.to_string()),
+        })
+        .collect();
+
+    println!("✅ [TASKS-API] Found {} task lists", task_lists.len());
+    Ok(task_lists)
+}
+
+/// Get tasks from a specific task list
+#[tauri::command]
+pub async fn get_tasks(
+    account_id: String,
+    task_list_id: String,
+    show_completed: Option<bool>,
+    show_deleted: Option<bool>,
+    max_results: Option<i32>,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
+    db: State<'_, DbPool>,
+) -> Result<TasksResponse, String> {
+
+    println!("📋 [TASKS-API] Getting tasks for list: {} (account: {})", task_list_id, account_id);
+    println!("📋 [TASKS-API] Query params: show_completed={:?}, show_deleted={:?}, max_results={:?}", 
+             show_completed, show_deleted, max_results);
+
+    // Get access token and refresh if needed
+    let tokens = auth_service.validate_and_refresh_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get or refresh tokens: {}", e))?;
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let mut request = client
+        .get(&format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks", task_list_id))
+        .bearer_auth(&tokens.access_token);
+
+    // Add query parameters
+    if let Some(completed) = show_completed {
+        request = request.query(&[("showCompleted", completed.to_string())]);
+    }
+    if let Some(deleted) = show_deleted {
+        request = request.query(&[("showDeleted", deleted.to_string())]);
+    }
+    if let Some(max) = max_results {
+        request = request.query(&[("maxResults", max.to_string())])
+    }
+
+    let response = request.send().await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    let tasks_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    // Load task metadata from local database
+    let db_manager = db.lock().unwrap();
+    let conn = db_manager.get_connection().map_err(|e| format!("Failed to get database connection: {}", e))?;
+    
+    let mut stmt = conn.prepare(
+        "SELECT google_task_id, priority, labels FROM task_metadata WHERE google_list_id = ?1"
+    ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+    
+    let metadata_iter = stmt.query_map([&task_list_id], |row| {
+        Ok((
+            row.get::<_, String>(0)?, // google_task_id
+            row.get::<_, Option<String>>(1)?, // priority
+            row.get::<_, Option<String>>(2)?, // labels
+        ))
+    }).map_err(|e| format!("Failed to query task metadata: {}", e))?;
+    
+    // Create a map of task metadata
+    let mut metadata_map = std::collections::HashMap::new();
+    for result in metadata_iter {
+        if let Ok((google_task_id, priority, labels_json)) = result {
+            let labels: Option<Vec<String>> = labels_json
+                .and_then(|json| serde_json::from_str::<Vec<String>>(&json).ok());
+            
+            println!("📋 [TASKS-API] Loaded metadata for task {}: priority={:?}, labels={:?}", 
+                     google_task_id, priority, labels);
+            
+            metadata_map.insert(
+                google_task_id,
+                TaskMetadata {
+                    priority,
+                    labels,
+                }
+            );
+        }
+    }
+    
+    println!("📋 [TASKS-API] Total metadata entries loaded: {}", metadata_map.len());
+
+    let items = tasks_data["items"].as_array()
+        .map(|arr| arr.iter().map(|item| {
+            let task_id = item["id"].as_str().unwrap_or("").to_string();
+            let metadata = metadata_map.get(&task_id).cloned();
+            
+            GoogleTask {
+                id: task_id,
+                title: item["title"].as_str().unwrap_or("").to_string(),
+                notes: item["notes"].as_str().map(|s| s.to_string()),
+                status: item["status"].as_str().unwrap_or("needsAction").to_string(),
+                due: item["due"].as_str().map(|s| s.to_string()),
+                completed: item["completed"].as_str().map(|s| s.to_string()),
+                updated: item["updated"].as_str().map(|s| s.to_string()),
+                parent: item["parent"].as_str().map(|s| s.to_string()),
+                position: item["position"].as_str().map(|s| s.to_string()),
+                kind: item["kind"].as_str().map(|s| s.to_string()),
+                etag: item["etag"].as_str().map(|s| s.to_string()),
+                self_link: item["selfLink"].as_str().map(|s| s.to_string()),
+                links: None, // TODO: Parse links if needed
+                hidden: item["hidden"].as_bool(),
+                deleted: item["deleted"].as_bool(),
+                metadata,
+            }
+        }).collect())
+        .unwrap_or_else(Vec::new);
+
+    let response = TasksResponse {
+        kind: tasks_data["kind"].as_str().unwrap_or("").to_string(),
+        etag: tasks_data["etag"].as_str().unwrap_or("").to_string(),
+        next_page_token: tasks_data["nextPageToken"].as_str().map(|s| s.to_string()),
+        items,
+    };
+
+    println!("✅ [TASKS-API] Found {} tasks", response.items.len());
+    
+    // Debug: Show first task with metadata
+    if let Some(first_task) = response.items.first() {
+        println!("📋 [TASKS-API] First task example: id={}, title={}, due={:?}, metadata={:?}", 
+                 first_task.id, first_task.title, first_task.due, first_task.metadata);
+    }
+    
+    Ok(response)
+}
+
+/// Create a new task
+#[tauri::command]
+pub async fn create_task(
+    account_id: String,
+    task_list_id: String,
+    task_data: TaskCreateData,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
+    db: State<'_, DbPool>,
+) -> Result<GoogleTask, String> {
+    println!("📋 [TASKS-API] Creating task '{}' in list: {} (account: {})", 
+             task_data.title, task_list_id, account_id);
+    println!("📋 [TASKS-API] Task data: {:?}", task_data);
+    
+    // Validate task list ID
+    if task_list_id.is_empty() {
+        return Err("Task list ID is required".to_string());
+    }
+
+    // Get access token and refresh if needed
+    let tokens = auth_service.validate_and_refresh_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get or refresh tokens: {}", e))?;
+
+    // Prepare the request body - ONLY Google Tasks standard fields
+    let mut body = serde_json::json!({
+        "title": task_data.title,
+        "status": "needsAction"
+    });
+
+    if let Some(notes) = &task_data.notes {
+        body["notes"] = serde_json::Value::String(notes.clone());
+    }
+
+    if let Some(due) = &task_data.due {
+        // Google Tasks expects RFC 3339 format with timezone
+        // Convert from YYYY-MM-DD to RFC 3339
+        let rfc3339_due = if due.len() == 10 {
+            // If it's just a date (YYYY-MM-DD), add time and timezone
+            format!("{}T00:00:00Z", due)
+        } else {
+            due.clone()
+        };
+        println!("📋 [TASKS-API] Setting due date: {} -> {}", due, rfc3339_due);
+        body["due"] = serde_json::Value::String(rfc3339_due);
+    }
+    
+    // DO NOT send metadata to Google - it doesn't support custom fields!
+
+    // Make API call to Google Tasks
+    println!("📋 [TASKS-API] Sending request to Google Tasks API");
+    println!("📋 [TASKS-API] URL: https://www.googleapis.com/tasks/v1/lists/{}/tasks", task_list_id);
+    println!("📋 [TASKS-API] Request body: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+    
+    let client = reqwest::Client::new();
+    let response = client
+        .post(&format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks", task_list_id))
+        .bearer_auth(&tokens.access_token)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+    
+    println!("📋 [TASKS-API] Response status: {}", response.status());
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    let response_text = response.text().await
+        .map_err(|e| format!("Failed to read response text: {}", e))?;
+    
+    println!("📋 [TASKS-API] Google response text: {}", response_text);
+    
+    let response_data: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| format!("Failed to parse response JSON: {} - Response was: {}", e, response_text))?;
+    
+    println!("📋 [TASKS-API] Google response parsed: {:?}", response_data);
+
+    let google_task_id = match response_data["id"].as_str() {
+        Some(id) if !id.is_empty() => id.to_string(),
+        _ => {
+            println!("📋 [TASKS-API] Response data structure: {:#?}", response_data);
+            return Err(format!("Failed to create task: Google didn't return a valid task ID. Response: {}", response_text));
+        }
+    };
+    
+    // Save metadata to local database if provided
+    let mut saved_metadata = None;
+    if let Some(ref metadata) = task_data.metadata {
+        let db_manager = db.lock().unwrap();
+        let conn = db_manager.get_connection().map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let priority = metadata.priority.as_ref();
+        let labels = metadata.labels.as_ref();
+        let labels_json = labels.map(|l| serde_json::to_string(l).unwrap_or_default());
+        
+        println!("📋 [TASKS-API] Saving metadata: task_id={}, priority={:?}, labels={:?}", 
+                 google_task_id, priority, labels_json);
+        
+        conn.execute(
+            "INSERT INTO task_metadata (google_task_id, google_list_id, priority, labels)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(google_task_id) DO UPDATE SET
+                priority = excluded.priority,
+                labels = excluded.labels,
+                updated_at = datetime('now')",
+            (
+                &google_task_id,
+                &task_list_id,
+                &priority,
+                &labels_json
+            )
+        ).map_err(|e| {
+            println!("❌ Failed to save task metadata: {}", e);
+            format!("Failed to save task metadata: {}", e)
+        })?;
+        
+        println!("✅ [TASKS-API] Metadata saved successfully");
+        
+        saved_metadata = Some(metadata.clone());
+    }
+
+    let new_task = GoogleTask {
+        id: google_task_id.clone(),
+        title: response_data["title"].as_str().unwrap_or("").to_string(),
+        notes: response_data["notes"].as_str().map(|s| s.to_string()),
+        status: response_data["status"].as_str().unwrap_or("needsAction").to_string(),
+        due: response_data["due"].as_str().map(|s| s.to_string()),
+        completed: response_data["completed"].as_str().map(|s| s.to_string()),
+        updated: response_data["updated"].as_str().map(|s| s.to_string()),
+        parent: response_data["parent"].as_str().map(|s| s.to_string()),
+        position: response_data["position"].as_str().map(|s| s.to_string()).or(Some("00000000000000000000".to_string())),
+        kind: response_data["kind"].as_str().map(|s| s.to_string()),
+        etag: response_data["etag"].as_str().map(|s| s.to_string()),
+        self_link: response_data["selfLink"].as_str().map(|s| s.to_string()),
+        links: None,
+        hidden: response_data["hidden"].as_bool(),
+        deleted: response_data["deleted"].as_bool(),
+        metadata: saved_metadata,
+    };
+
+    println!("✅ [TASKS-API] Task created successfully: {}", new_task.id);
+    println!("📋 [TASKS-API] Returning task to frontend: {:?}", new_task);
+    Ok(new_task)
+}
+
+/// Update an existing task
+#[tauri::command]
+pub async fn update_task(
+    account_id: String,
+    task_list_id: String,
+    task_id: String,
+    task_data: TaskUpdateData,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
+    db: State<'_, DbPool>,
+) -> Result<GoogleTask, String> {
+    println!("📋 [TASKS-API] Updating task {} in list: {} (account: {})", 
+             task_id, task_list_id, account_id);
+
+    // Get access token and refresh if needed
+    let tokens = auth_service.validate_and_refresh_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get or refresh tokens: {}", e))?;
+
+    // Prepare the request body - only include fields that are being updated
+    let mut body = serde_json::Map::new();
+    
+    if let Some(title) = &task_data.title {
+        body.insert("title".to_string(), serde_json::Value::String(title.clone()));
+    }
+    
+    if let Some(notes) = &task_data.notes {
+        body.insert("notes".to_string(), serde_json::Value::String(notes.clone()));
+    }
+    
+    if let Some(status) = &task_data.status {
+        body.insert("status".to_string(), serde_json::Value::String(status.clone()));
+    }
+    
+    if let Some(due) = &task_data.due {
+        // Google Tasks expects RFC 3339 format with timezone
+        let rfc3339_due = if due.len() == 10 {
+            format!("{}T00:00:00Z", due)
+        } else {
+            due.clone()
+        };
+        println!("📋 [TASKS-API] Updating due date: {} -> {}", due, rfc3339_due);
+        body.insert("due".to_string(), serde_json::Value::String(rfc3339_due));
+    }
+    
+    if let Some(completed) = &task_data.completed {
+        body.insert("completed".to_string(), serde_json::Value::String(completed.clone()));
+    }
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let response = client
+        .patch(&format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks/{}", task_list_id, task_id))
+        .bearer_auth(&tokens.access_token)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    let response_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+    // Update metadata in local database if provided
+    let mut saved_metadata = None;
+    if let Some(ref metadata) = task_data.metadata {
+        let db_manager = db.lock().unwrap();
+        let conn = db_manager.get_connection().map_err(|e| format!("Failed to get database connection: {}", e))?;
+        let labels_json = metadata.labels.as_ref().map(|l| serde_json::to_string(l).unwrap_or_default());
+        
+        println!("📋 [TASKS-API] Updating metadata: task_id={}, priority={:?}, labels={:?}", 
+                 task_id, metadata.priority, labels_json);
+        
+        conn.execute(
+            "INSERT INTO task_metadata (google_task_id, google_list_id, priority, labels)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(google_task_id) DO UPDATE SET
+                priority = excluded.priority,
+                labels = excluded.labels,
+                updated_at = datetime('now')",
+            (
+                &task_id,
+                &task_list_id,
+                &metadata.priority,
+                &labels_json
+            )
+        ).map_err(|e| {
+            println!("❌ Failed to update task metadata: {}", e);
+            format!("Failed to update task metadata: {}", e)
+        })?;
+        
+        println!("✅ [TASKS-API] Metadata updated successfully");
+        
+        saved_metadata = Some(metadata.clone());
+    } else {
+        println!("⚠️ [TASKS-API] No metadata provided in update request for task {}", task_id);
+    }
+
+    let updated_task = GoogleTask {
+        id: response_data["id"].as_str().unwrap_or(&task_id).to_string(),
+        title: response_data["title"].as_str().unwrap_or("").to_string(),
+        notes: response_data["notes"].as_str().map(|s| s.to_string()),
+        status: response_data["status"].as_str().unwrap_or("needsAction").to_string(),
+        due: response_data["due"].as_str().map(|s| s.to_string()),
+        completed: response_data["completed"].as_str().map(|s| s.to_string()),
+        updated: response_data["updated"].as_str().map(|s| s.to_string()),
+        parent: response_data["parent"].as_str().map(|s| s.to_string()),
+        position: response_data["position"].as_str().map(|s| s.to_string()),
+        kind: response_data["kind"].as_str().map(|s| s.to_string()),
+        etag: response_data["etag"].as_str().map(|s| s.to_string()),
+        self_link: response_data["selfLink"].as_str().map(|s| s.to_string()),
+        links: None,
+        hidden: response_data["hidden"].as_bool(),
+        deleted: response_data["deleted"].as_bool(),
+        metadata: saved_metadata,
+    };
+
+    println!("✅ [TASKS-API] Task updated successfully: {}", task_id);
+    Ok(updated_task)
+}
+
+/// Delete a task
+#[tauri::command]
+pub async fn delete_task(
+    account_id: String,
+    task_list_id: String,
+    task_id: String,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
+    db: State<'_, DbPool>,
+) -> Result<(), String> {
+    println!("📋 [TASKS-API] Deleting task {} from list: {} (account: {})", 
+             task_id, task_list_id, account_id);
+
+    // Get access token and refresh if needed
+    let tokens = auth_service.validate_and_refresh_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get or refresh tokens: {}", e))?;
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(&format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks/{}", task_list_id, task_id))
+        .bearer_auth(&tokens.access_token)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    // Delete metadata from local database
+    let db_manager = db.lock().unwrap();
+    let conn = db_manager.get_connection().map_err(|e| format!("Failed to get database connection: {}", e))?;
+    
+    conn.execute(
+        "DELETE FROM task_metadata WHERE google_task_id = ?1",
+        [&task_id]
+    ).map_err(|e| {
+        println!("Failed to delete task metadata: {}", e);
+        format!("Failed to delete task metadata: {}", e)
+    })?;
+
+    println!("✅ [TASKS-API] Task deleted successfully: {}", task_id);
+    Ok(())
+}
+
+// Test serialization command
+#[tauri::command]
+pub async fn test_task_serialization() -> Result<String, String> {
+    let test_task = GoogleTask {
+        id: "test123".to_string(),
+        title: "Test Task".to_string(),
+        notes: Some("Test notes".to_string()),
+        status: "needsAction".to_string(),
+        due: None,
+        completed: None,
+        updated: Some("2025-07-25T22:26:55.677Z".to_string()),
+        parent: None,
+        position: Some("00000000000000000000".to_string()),
+        kind: Some("tasks#task".to_string()),
+        etag: Some("\"test-etag\"".to_string()),
+        self_link: Some("https://test.com".to_string()),
+        links: Some(vec![]),
+        hidden: Some(false),
+        deleted: Some(false),
+        metadata: Some(TaskMetadata {
+            priority: Some("high".to_string()),
+            labels: Some(vec!["work".to_string(), "urgent".to_string()]),
+        }),
+    };
+    
+    match serde_json::to_string(&test_task) {
+        Ok(json) => {
+            println!("✅ Serialization successful: {}", json);
+            Ok(json)
+        }
+        Err(e) => {
+            println!("❌ Serialization failed: {}", e);
+            Err(format!("Serialization error: {}", e))
+        }
+    }
+}
+
+// Additional command handlers for task lists, completion toggle, etc. omitted for brevity
+
+FILE: src-tauri/src/database/schema.rs (Migration v11)
+------------------------------------------------
+// In the run_migrations function, migration v11:
+conn.execute(
+    "CREATE TABLE IF NOT EXISTS task_metadata (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        google_task_id TEXT NOT NULL UNIQUE,
+        google_list_id TEXT NOT NULL,
+        priority TEXT,
+        labels TEXT, -- JSON array stored as text
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )",
+    [],
+)?;
+
+FILE: src/app/pages/TasksAsanaClean.tsx
+----------------------------------------
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Calendar, Search, Filter, MoreHorizontal, Check, ChevronDown, X, Tag } from 'lucide-react';
+import { useKanbanStore, KanbanTask } from '../../stores/useKanbanStore';
+import { asanaTypography } from '../../constants/asanaDesignSystem';
+import { AsanaTaskModal, AsanaKanbanBoard } from '../../components/tasks';
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { useGoogleMailStore } from '../../stores/googleMailStore';
+import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useKanbanGoogleTasksSync } from '../../services/kanbanGoogleTasksSync';
+
+export default function TasksAsanaClean() {
+  const { getCurrentAccount, isAuthenticated } = useGoogleMailStore();
+  const { taskLists, isLoadingTasks, createTask: createGoogleTask, updateTask: updateGoogleTask } = useGoogleTasksStore();
+  const activeAccount = getCurrentAccount();
+
+  // Core state
+  const { columns, moveTask, updateTask, deleteTask, createTask } = useKanbanStore();
+  const { createTask: createGoogleTask } = useGoogleTasksStore();
+  
+  // Configure drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Task management states
+  const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
+  const [activeColumn, setActiveColumn] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: KanbanTask; columnId: string } | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [editingTaskData, setEditingTaskData] = useState<KanbanTask | null>(null);
+  const [taskModalMode, setTaskModalMode] = useState<'create' | 'edit'>('create');
+  const [inlineCreateTaskColumnId, setInlineCreateTaskColumnId] = useState<string | null>(null);
+  const [inlineTaskTitle, setInlineTaskTitle] = useState('');
+  const [inlineTaskTags, setInlineTaskTags] = useState<string[]>([]);
+  const [showInlineTagInput, setShowInlineTagInput] = useState(false);
+  const [newInlineTag, setNewInlineTag] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'dueDate' | 'priority'>('newest');
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+  // Initialize sync
+  useKanbanGoogleTasksSync();
+
+  // Auto-sync on mount and when authentication changes
+  useEffect(() => {
+    const autoSync = async () => {
+      console.log('[DEBUG] Setting up auto-sync, authenticated:', isAuthenticated);
+      
+      if (isAuthenticated && activeAccount) {
+        const { fetchTaskLists, syncAllTasks } = useGoogleTasksStore.getState();
+        
+        console.log('[DEBUG] Fetching task lists...');
+        await fetchTaskLists();
+        console.log('[DEBUG] Task lists fetched, syncing all tasks...');
+        await syncAllTasks();
+        console.log('[DEBUG] Initial sync complete');
+      }
+    };
+
+    autoSync();
+  }, [isAuthenticated, activeAccount?.id]);
+
+  const openCreateTaskModal = (columnId: string) => {
+    // If there's already an inline form open with content, save it first
+    if (inlineCreateTaskColumnId && inlineTaskTitle.trim() && inlineCreateTaskColumnId !== columnId) {
+      handleInlineCreateTask();
+    }
+    
+    setEditingTaskData(null);
+    setTaskModalMode('create');
+    setActiveColumn(columnId);
+    setShowTaskModal(true);
+  };
+
+  const openEditTaskModal = (task: KanbanTask, columnId: string) => {
+    setEditingTaskData(task);
+    setTaskModalMode('edit');
+    setActiveColumn(columnId);
+    setShowTaskModal(true);
+  };
+
+  const handleInlineAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && newInlineTag.trim()) {
+      e.preventDefault();
+      if (!inlineTaskTags.includes(newInlineTag.trim())) {
+        setInlineTaskTags([...inlineTaskTags, newInlineTag.trim()]);
+      }
+      setNewInlineTag('');
+    }
+  };
+
+  const removeInlineTag = (tagToRemove: string) => {
+    setInlineTaskTags(inlineTaskTags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleInlineCreateTask = async () => {
+    if (!inlineTaskTitle.trim() || !inlineCreateTaskColumnId) return;
+    
+    // Create in Google Tasks first if connected
+    let googleTaskId: string | undefined;
+    if (activeAccount && isAuthenticated) {
+      console.log('[DEBUG] Available columns:', columns.map(c => ({ id: c.id, title: c.title })));
+      const column = columns.find(c => c.id === columnId);
+      if (column) {
+        console.log('[DEBUG] Creating task in Google Tasks:', { 
+          columnId, 
+          columnTitle: column.title,
+          taskTitle: inlineTaskTitle.trim(),
+          googleTaskListId: columnId // Note: columnId IS the Google Task List ID
+        });
+        
+        // The createGoogleTask expects (taskListId, taskData)
+        try {
+          const googleTask = await createGoogleTask(columnId, {
+            title: inlineTaskTitle.trim(),
+            notes: '',
+            due: undefined,
+            priority: 'normal', // TODO: Add priority selector to inline create
+            labels: inlineTaskTags // Pass the actual tags!
+          });
+          
+          if (googleTask) {
+            googleTaskId = googleTask.id;
+            console.log('[DEBUG] Created Google Task with ID:', googleTaskId);
+          } else {
+            console.error('[DEBUG] Failed to create Google Task - no task returned');
+          }
+        } catch (error) {
+          console.error('[DEBUG] Error creating Google Task:', error);
+        }
+      }
+    }
+    
+    // Create the task in Kanban store with Google Task ID
+    const newTask = await createTask(columnId, {
+      title: inlineTaskTitle.trim(),
+      notes: '',
+      due: '',
+      metadata: {
+        priority: 'normal',
+        labels: inlineTaskTags,
+        subtasks: [],
+        googleTaskId: googleTaskId,
+        lastGoogleSync: new Date().toISOString(),
+      },
+    });
+    
+    console.log('[DEBUG] Created Kanban task:', { 
+      id: newTask.id, 
+      googleTaskId: newTask.metadata?.googleTaskId 
+    });
+    
+    // Reset inline create
+    setInlineTaskTitle('');
+    setInlineTaskTags([]);
+    setShowInlineTagInput(false);
+    setInlineCreateTaskColumnId(null);
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Header Section */}
+      <div className="bg-white border-b px-6 py-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 style={asanaTypography.h1}>Tasks</h1>
+          
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500"
+                style={asanaTypography.body}
+              />
+            </div>
+            
+            {/* Filter */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+              >
+                <Filter size={16} />
+                <span style={asanaTypography.body}>Filter</span>
+              </button>
+              
+              {showFilterMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                  {/* Filter options here */}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-6">
+          <button
+            className="pb-3 border-b-2 border-blue-600"
+            style={{ ...asanaTypography.body, color: '#1967D2' }}
+          >
+            All Tasks
+          </button>
+          <button
+            className="pb-3 border-b-2 border-transparent hover:border-gray-300"
+            style={asanaTypography.body}
+          >
+            My Tasks
+          </button>
+          <button
+            className="pb-3 border-b-2 border-transparent hover:border-gray-300"
+            style={asanaTypography.body}
+          >
+            Completed
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {!isAuthenticated ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4">
+              <h2 style={asanaTypography.h2}>Connect Google Tasks</h2>
+              <p style={asanaTypography.body}>Sign in with Google to sync your tasks</p>
+            </div>
+          </div>
+        ) : (
+          <AsanaKanbanBoard
+            columns={columns}
+            draggedTask={draggedTask}
+            setDraggedTask={setDraggedTask}
+            handleInlineCreateTask={handleInlineCreateTask}
+            inlineTaskTitle={inlineTaskTitle}
+            setInlineTaskTitle={setInlineTaskTitle}
+            inlineTaskTags={inlineTaskTags}
+            setInlineTaskTags={setInlineTaskTags}
+            showInlineTagInput={showInlineTagInput}
+            setShowInlineTagInput={setShowInlineTagInput}
+            newInlineTag={newInlineTag}
+            setNewInlineTag={setNewInlineTag}
+            handleInlineAddTag={handleInlineAddTag}
+            removeInlineTag={removeInlineTag}
+            contextMenu={contextMenu}
+            setContextMenu={setContextMenu}
+            openEditTaskModal={openEditTaskModal}
+            inlineCreateTaskColumnId={inlineCreateTaskColumnId}
+            setInlineCreateTaskColumnId={setInlineCreateTaskColumnId}
+            openCreateTaskModal={openCreateTaskModal}
+            selectedListId={selectedListId}
+            sortBy={sortBy}
+            onEditTask={(task, columnId) => openEditTaskModal(task, columnId)}
+          />
+        )}
+      </div>
+
+      {/* Task Modal */}
+      {showTaskModal && editingTaskData && activeColumn && (
+        <AsanaTaskModal
+          isOpen={showTaskModal}
+          task={editingTaskData}
+          columnId={activeColumn}
+          mode={taskModalMode}
+          onClose={() => {
+            setShowTaskModal(false);
+            setEditingTaskData(null);
+          }}
+          onSubmit={async (taskData) => {
+            try {
+              if (taskModalMode === 'create' && activeColumn) {
+                // Create in Google Tasks first
+                let googleTaskId: string | undefined;
+                if (activeAccount && isAuthenticated) {
+                  const googleTask = await createGoogleTask(activeColumn, {
+                    title: taskData.title || '',
+                    notes: taskData.notes || '',
+                    due: taskData.due,
+                    priority: taskData.metadata?.priority || 'normal',
+                    labels: taskData.metadata?.labels || []
+                  });
+                  
+                  if (googleTask) {
+                    googleTaskId = googleTask.id;
+                    console.log('[DEBUG] Created Google Task from modal with ID:', googleTaskId);
+                  }
+                }
+                
+                // Create in Kanban store with Google Task ID
+                await createTask(activeColumn, {
+                  title: taskData.title || '',
+                  notes: taskData.notes || '',
+                  due: taskData.due || '',
+                  metadata: {
+                    labels: taskData.metadata?.labels || [],
+                    priority: taskData.metadata?.priority || 'normal',
+                    subtasks: taskData.metadata?.subtasks || [],
+                    recurring: taskData.metadata?.recurring,
+                    googleTaskId: googleTaskId,
+                    lastGoogleSync: new Date().toISOString(),
+                  },
+                });
+              } else if (taskModalMode === 'edit' && activeColumn) {
+                // Update existing task
+                await updateTask(activeColumn, taskData.id!, taskData);
+                
+                // Also update in Google Tasks if connected
+                if (taskData.metadata?.googleTaskId && activeAccount && isAuthenticated) {
+                  const { updateTask: updateGoogleTask } = useGoogleTasksStore.getState();
+                  try {
+                    await updateGoogleTask(activeColumn, taskData.metadata.googleTaskId, {
+                      title: taskData.title,
+                      notes: taskData.notes,
+                      status: taskData.status,
+                      due: taskData.due,
+                      metadata: {
+                        priority: taskData.metadata?.priority || 'normal',
+                        labels: taskData.metadata?.labels || []
+                      }
+                    });
+                    console.log('[DEBUG] Updated Google Task with metadata:', {
+                      googleTaskId: taskData.metadata.googleTaskId,
+                      priority: taskData.metadata?.priority,
+                      labels: taskData.metadata?.labels
+                    });
+                  } catch (error) {
+                    console.error('Failed to update Google Task:', error);
+                    // Don't show error to user - local update succeeded
+                  }
+                }
+              }
+              setShowTaskModal(false);
+              setEditingTaskData(null);
+            } catch (error) {
+              console.error('Failed to save task:', error);
+              alert('Failed to save task. Please try again.');
+            }
+          }}
+          onDelete={async () => {
+            if (editingTaskData && activeColumn) {
+              try {
+                // Delete from local store first
+                await deleteTask(activeColumn, editingTaskData.id);
+                setShowTaskModal(false);
+                setEditingTaskData(null);
+                
+                // Then delete from Google Tasks if connected
+                if (editingTaskData.metadata?.googleTaskId && activeAccount && isAuthenticated) {
+                  const { deleteTask: deleteGoogleTask, syncAllTasks } = useGoogleTasksStore.getState();
+                  try {
+                    await deleteGoogleTask(activeColumn, editingTaskData.metadata.googleTaskId);
+                    // Don't sync immediately - let the periodic sync handle it
+                  } catch (error) {
+                    console.error('Failed to delete from Google Tasks:', error);
+                    // Re-add to local store if Google deletion failed
+                    await createTask(activeColumn, editingTaskData);
+                    alert('Failed to delete task from Google Tasks. The task has been restored.');
+                  }
+                }
+              } catch (error) {
+                console.error('Failed to delete task:', error);
+                alert('Failed to delete task. Please try again.');
+              }
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+FILE: src/components/tasks/AsanaTaskModal.tsx
+---------------------------------------------
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Tag, Plus, Trash2, CheckCircle2, Circle, Clock } from 'lucide-react';
+import { KanbanTask } from '../../stores/useKanbanStore';
+import { asanaTypography, priorityConfig } from '../../constants/asanaDesignSystem';
+
+interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+interface AsanaTaskModalProps {
+  isOpen: boolean;
+  task: KanbanTask | null;
+  columnId: string;
+  mode: 'create' | 'edit';
+  onClose: () => void;
+  onSubmit: (task: KanbanTask) => void;
+  onDelete?: () => void;
+}
+
+export const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
+  isOpen,
+  task,
+  columnId,
+  mode,
+  onClose,
+  onSubmit,
+  onDelete,
+}) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    notes: '',
+    due: '',
+    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+    labels: [] as string[],
+    subtasks: [] as Subtask[],
+  });
+
+  const [newLabel, setNewLabel] = useState('');
+  const [newSubtask, setNewSubtask] = useState('');
+
+  useEffect(() => {
+    if (task) {
+      setFormData({
+        title: task.title || '',
+        notes: task.notes || '',
+        due: task.due ? task.due.split('T')[0] : '',
+        priority: task.metadata?.priority || 'normal',
+        labels: task.metadata?.labels || [],
+        subtasks: task.metadata?.subtasks || [],
+      });
+    } else {
+      setFormData({
+        title: '',
+        notes: '',
+        due: '',
+        priority: 'normal',
+        labels: [],
+        subtasks: [],
+      });
+    }
+  }, [task, isOpen]);
+
+  const addLabel = () => {
+    if (newLabel.trim() && !formData.labels.includes(newLabel.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        labels: [...prev.labels, newLabel.trim()]
+      }));
+      setNewLabel('');
+    }
+  };
+
+  const removeLabel = (label: string) => {
+    setFormData(prev => ({
+      ...prev,
+      labels: prev.labels.filter(l => l !== label)
+    }));
+  };
+
+  const addSubtask = () => {
+    if (newSubtask.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        subtasks: [...prev.subtasks, {
+          id: Date.now().toString(),
+          title: newSubtask.trim(),
+          completed: false,
+        }]
+      }));
+      setNewSubtask('');
+    }
+  };
+
+  const toggleSubtask = (subtaskId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      subtasks: prev.subtasks.map(st =>
+        st.id === subtaskId ? { ...st, completed: !st.completed } : st
+      )
+    }));
+  };
+
+  const removeSubtask = (subtaskId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      subtasks: prev.subtasks.filter(st => st.id !== subtaskId)
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      ...task,
+      title: formData.title,
+      notes: formData.notes,
+      due: formData.due ? formData.due : undefined,
+      metadata: {
+        priority: formData.priority,
+        labels: formData.labels,
+        subtasks: formData.subtasks,
+      },
+    });
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white rounded-2xl shadow-2xl">
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 style={asanaTypography.h1}>
+                {mode === 'create' ? 'Create Task' : 'Edit Task'}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Title */}
+            <div>
+              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
+                Task Title *
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl border transition-all"
+                style={{ 
+                  ...asanaTypography.body,
+                  backgroundColor: '#F6F7F8',
+                  borderColor: 'transparent',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.backgroundColor = '#FFFFFF';
+                  e.currentTarget.style.borderColor = '#D1D5DB';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F6F7F8';
+                  e.currentTarget.style.borderColor = 'transparent';
+                }}
+                placeholder="Enter task title..."
+                required
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
+                Description
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl border transition-all resize-none"
+                style={{ 
+                  ...asanaTypography.body,
+                  backgroundColor: '#F6F7F8',
+                  borderColor: 'transparent',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.backgroundColor = '#FFFFFF';
+                  e.currentTarget.style.borderColor = '#D1D5DB';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F6F7F8';
+                  e.currentTarget.style.borderColor = 'transparent';
+                }}
+                placeholder="Add a description..."
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              {/* Due Date */}
+              <div>
+                <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.due}
+                  onChange={(e) => setFormData(prev => ({ ...prev, due: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl border transition-all"
+                  style={{ 
+                    ...asanaTypography.body,
+                    backgroundColor: '#F6F7F8',
+                    borderColor: 'transparent',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                    e.currentTarget.style.borderColor = '#D1D5DB';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
+                  Priority
+                </label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent' }))}
+                  className="w-full px-4 py-3 rounded-xl border transition-all cursor-pointer"
+                  style={{ 
+                    ...asanaTypography.body,
+                    backgroundColor: '#F6F7F8',
+                    borderColor: 'transparent',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                    e.currentTarget.style.borderColor = '#D1D5DB';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Labels */}
+            <div>
+              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
+                Labels
+              </label>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLabel())}
+                    className="flex-1 px-4 py-2 rounded-xl border transition-all"
+                    style={{ 
+                      ...asanaTypography.body,
+                      backgroundColor: '#F6F7F8',
+                      borderColor: 'transparent',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      e.currentTarget.style.borderColor = '#D1D5DB';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F6F7F8';
+                      e.currentTarget.style.borderColor = 'transparent';
+                    }}
+                    placeholder="Add a label..."
+                  />
+                  <button
+                    type="button"
+                    onClick={addLabel}
+                    className="px-4 py-2 rounded-xl transition-colors"
+                    style={{ 
+                      backgroundColor: '#6C47FF',
+                      color: 'white'
+                    }}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+                
+                {formData.labels.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.labels.map((label) => (
+                      <span
+                        key={label}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full"
+                        style={{ 
+                          ...asanaTypography.small,
+                          backgroundColor: '#E8E5FF',
+                          color: '#6C47FF'
+                        }}
+                      >
+                        {label}
+                        <button
+                          type="button"
+                          onClick={() => removeLabel(label)}
+                          className="hover:bg-purple-200 rounded-full p-0.5"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Subtasks */}
+            <div>
+              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
+                Subtasks
+              </label>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSubtask}
+                    onChange={(e) => setNewSubtask(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
+                    className="flex-1 px-4 py-2 rounded-xl border transition-all"
+                    style={{ 
+                      ...asanaTypography.body,
+                      backgroundColor: '#F6F7F8',
+                      borderColor: 'transparent',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      e.currentTarget.style.borderColor = '#D1D5DB';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F6F7F8';
+                      e.currentTarget.style.borderColor = 'transparent';
+                    }}
+                    placeholder="Add a subtask..."
+                  />
+                  <button
+                    type="button"
+                    onClick={addSubtask}
+                    className="px-4 py-2 rounded-xl transition-colors"
+                    style={{ 
+                      backgroundColor: '#6C47FF',
+                      color: 'white'
+                    }}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+                
+                {formData.subtasks.length > 0 && (
+                  <div className="space-y-2">
+                    {formData.subtasks.map((subtask) => (
+                      <div
+                        key={subtask.id}
+                        className="flex items-center gap-3 p-3 rounded-xl"
+                        style={{ backgroundColor: '#F6F7F8' }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleSubtask(subtask.id)}
+                          className="flex-shrink-0"
+                        >
+                          {subtask.completed ? (
+                            <CheckCircle2 size={20} style={{ color: '#14A085' }} />
+                          ) : (
+                            <Circle size={20} style={{ color: '#9CA6AF' }} />
+                          )}
+                        </button>
+                        <span
+                          style={{
+                            ...asanaTypography.body,
+                            textDecoration: subtask.completed ? 'line-through' : 'none',
+                            color: subtask.completed ? '#9CA6AF' : '#1D1E20',
+                            flex: 1
+                          }}
+                        >
+                          {subtask.title}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeSubtask(subtask.id)}
+                          className="p-1 hover:bg-gray-200 rounded"
+                        >
+                          <Trash2 size={16} style={{ color: '#9CA6AF' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between px-6 py-4 border-t" style={{ backgroundColor: '#F6F7F8' }}>
+            <div className="flex gap-3">
+              {mode === 'edit' && onDelete && (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
+                  style={{ 
+                    ...asanaTypography.body,
+                    backgroundColor: '#FFF1F0',
+                    color: '#FF5757'
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Delete Task
+                </button>
+              )}
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl transition-colors"
+                style={{ 
+                  ...asanaTypography.body,
+                  backgroundColor: 'white',
+                  color: '#6B6F76',
+                  border: '1px solid #E1E3E6'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 rounded-xl transition-colors"
+                style={{ 
+                  ...asanaTypography.body,
+                  backgroundColor: '#6C47FF',
+                  color: 'white'
+                }}
+              >
+                {mode === 'create' ? 'Create Task' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+FILE: src/components/tasks/DraggableTaskCard.tsx
+------------------------------------------------
+import React from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Calendar, CheckCircle2, Tag, Clock, MoreHorizontal } from 'lucide-react';
+import { KanbanTask } from '../../stores/useKanbanStore';
+import { asanaTypography, priorityConfig } from '../../constants/asanaDesignSystem';
+
+interface DraggableTaskCardProps {
+  task: KanbanTask;
+  columnId: string;
+  onEdit: () => void;
+  onContextMenu: (e: React.MouseEvent, task: KanbanTask, columnId: string) => void;
+}
+
+export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
+  task,
+  columnId,
+  onEdit,
+  onContextMenu,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: task.id,
+    data: {
+      task,
+      columnId,
+    }
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onContextMenu(e, task, columnId);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent drag when clicking, only edit on actual click
+    if (e.defaultPrevented) return;
+    onEdit();
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="bg-white p-4 rounded-xl border cursor-move hover:shadow-md transition-all group"
+      onContextMenu={handleContextMenu}
+      onClick={handleClick}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-2">
+        <h3 
+          style={{ 
+            ...asanaTypography.subtitle,
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
+            maxWidth: 'calc(100% - 28px)'
+          }}
+        >
+          {task.title}
+        </h3>
+        <button
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleContextMenu(e);
+          }}
+        >
+          <MoreHorizontal size={16} style={{ color: '#9CA6AF' }} />
+        </button>
+      </div>
+
+      {/* Labels and Priority */}
+      {(task.metadata?.labels?.length > 0 || task.metadata?.priority) && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {task.metadata?.labels?.map((label) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{ 
+                ...asanaTypography.label,
+                backgroundColor: '#E8E5FF',
+                color: '#6C47FF',
+                fontSize: '11px',
+                textTransform: 'none'
+              }}
+            >
+              <Tag size={10} />
+              {label}
+            </span>
+          ))}
+          {task.metadata?.priority && task.metadata.priority !== 'normal' && (
+            <span
+              className="inline-flex items-center px-2 py-0.5 rounded-full"
+              style={{ 
+                ...asanaTypography.label,
+                fontSize: '11px',
+                textTransform: 'none',
+                backgroundColor: priorityConfig[task.metadata.priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
+                color: priorityConfig[task.metadata.priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
+              }}
+            >
+              {/* Capitalize first letter of priority */}
+              {(priorityConfig[task.metadata.priority as keyof typeof priorityConfig]?.label || task.metadata.priority).charAt(0).toUpperCase() + 
+                (priorityConfig[task.metadata.priority as keyof typeof priorityConfig]?.label || task.metadata.priority).slice(1).toLowerCase() + ' priority'
+              }
+            </span>
+          )}
+        </div>
+      )}
+      
+      {/* Description/Notes */}
+      {task.notes && (
+        <p 
+          style={{ 
+            ...asanaTypography.body,
+            marginBottom: '12px',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word'
+          }}
+        >
+          {task.notes}
+        </p>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-3 pt-3" 
+           style={{ borderTop: '1px solid #F1F2F3' }}>
+        <div className="flex items-center gap-3">
+          {/* Due date */}
+          {task.due && (
+            <div className="flex items-center gap-1.5">
+              <Calendar size={14} style={{ color: '#9CA6AF' }} />
+              <span style={asanaTypography.small}>
+                {new Date(task.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          )}
+
+          {/* Subtasks */}
+          {task.metadata?.subtasks && task.metadata.subtasks.length > 0 && (
+            <div className="flex items-center gap-1">
+              <CheckCircle2 size={14} style={{ color: '#14A085' }} />
+              <span style={asanaTypography.small}>
+                {task.metadata.subtasks.filter(st => st.completed).length}/{task.metadata.subtasks.length}
+              </span>
+            </div>
+          )}
+
+          {/* Recurring */}
+          {task.metadata?.recurring?.enabled && (
+            <Clock size={14} style={{ color: '#9CA6AF' }} />
+          )}
+        </div>
+
+        {/* Google sync indicator */}
+        {task.metadata?.googleTaskId && (
+          <div 
+            className="w-2 h-2 rounded-full" 
+            style={{ backgroundColor: '#14A085' }}
+            title="Synced with Google Tasks"
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+FILE: src/stores/googleTasksStore.ts
+------------------------------------
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import { GoogleAccount, GoogleTask, GoogleTaskList } from '../types/google';
+import { googleTasksService } from '../services/google/googleTasksService';
+import { logger } from '../utils/logger';
+import { useGoogleMailStore } from './googleMailStore';
+
+interface TaskCreateData {
+  title: string;
+  notes?: string;
+  due?: string;
+  parent?: string;
+  previous?: string;
+  priority?: string;
+  labels?: string[];
+}
+
+interface GoogleTasksState {
+  isAuthenticated: boolean;
+  isHydrated: boolean;
+  taskLists: GoogleTaskList[];
+  tasks: Record<string, GoogleTask[]>; // taskListId -> tasks
+  isLoading: boolean;
+  isLoadingTasks: Record<string, boolean>; // taskListId -> loading state
+  error: string | null;
+  lastSyncAt: Date | null;
+}
+
+interface GoogleTasksActions {
+  // Helper to get current account
+  getCurrentAccount: () => GoogleAccount | null;
+  
+  // Authentication
+  setAuthenticated: (authenticated: boolean) => void;
+  
+  // Task list management
+  fetchTaskLists: () => Promise<void>;
+  setTaskLists: (lists: GoogleTaskList[]) => void;
+  fetchTasks: (taskListId: string, accountId?: string) => Promise<void>;
+  syncAllTasks: () => Promise<void>;
+  
+  // Task management
+  createTask: (taskListId: string, taskData: TaskCreateData) => Promise<GoogleTask | void>;
+  updateTask: (taskListId: string, taskId: string, updates: Partial<GoogleTask>) => Promise<void>;
+  deleteTask: (taskListId: string, taskId: string) => Promise<void>;
+  moveTask: (taskId: string, fromListId: string, toListId: string, position?: string) => Promise<void>;
+  toggleTaskComplete: (taskListId: string, taskId: string, completed: boolean) => Promise<void>;
+  
+  // Task list management
+  createTaskList: (title: string) => Promise<void>;
+  updateTaskList: (taskListId: string, title: string) => Promise<void>;
+  deleteTaskList: (taskListId: string) => Promise<void>;
+  
+  // Utility
+  clearError: () => void;
+  getTaskList: (taskListId: string) => GoogleTaskList | undefined;
+  getTask: (taskListId: string, taskId: string) => GoogleTask | undefined;
+}
+
+type GoogleTasksStore = GoogleTasksState & GoogleTasksActions;
+
+const initialState: GoogleTasksState = {
+  isAuthenticated: false,
+  isHydrated: false,
+  taskLists: [],
+  tasks: {},
+  isLoading: false,
+  isLoadingTasks: {},
+  error: null,
+  lastSyncAt: null,
+};
+
+export const useGoogleTasksStore = create<GoogleTasksStore>()(
+  devtools(
+    persist(
+      immer((set, get) => ({
+        ...initialState,
+
+        // Helper to get current account
+        getCurrentAccount: (): GoogleAccount | null => {
+          // Try to get from mail store first (where accounts are properly loaded from backend)
+          const mailStore = useGoogleMailStore.getState();
+          const currentAccount = mailStore.getCurrentAccount();
+          
+          if (currentAccount) {
+            logger.debug('[GOOGLE-TASKS] Using account from mail store:', currentAccount.email);
+            return currentAccount;
+          }
+          
+          logger.warn('[GOOGLE-TASKS] No current account found');
+          return null;
+        },
+
+        setAuthenticated: (authenticated) => {
+          set((state) => {
+            state.isAuthenticated = authenticated;
+          });
+        },
+
+        fetchTaskLists: async () => {
+          const account = get().getCurrentAccount();
+          if (!account) {
+            logger.warn('[GOOGLE-TASKS] Cannot fetch task lists - no account');
+            return;
+          }
+
+          set((state) => {
+            state.isLoading = true;
+            state.error = null;
+          });
+
+          try {
+            logger.info('[GOOGLE-TASKS] Fetching task lists for:', account.email);
+            const response = await googleTasksService.getTaskLists(account);
+            
+            if (response.success && response.data) {
+              get().setTaskLists(response.data);
+            } else {
+              throw new Error(response.error?.message || 'Failed to fetch task lists');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to fetch task lists:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to fetch task lists';
+            });
+          } finally {
+            set((state) => {
+              state.isLoading = false;
+            });
+          }
+        },
+
+        setTaskLists: (lists: GoogleTaskList[]) => {
+          logger.info('[GOOGLE-TASKS] Setting task lists:', lists.length);
+          console.log('[GOOGLE-TASKS] Task lists received:', lists);
+          set((state) => {
+            state.taskLists = lists;
+            state.lastSyncAt = new Date();
+          });
+        },
+
+        fetchTasks: async (taskListId: string, accountId?: string) => {
+          let account = get().getCurrentAccount();
+          
+          // If accountId is provided, try to find that specific account
+          if (accountId) {
+            const mailStore = useGoogleMailStore.getState();
+            const specificAccount = mailStore.accounts.find(a => a.id === accountId);
+            if (specificAccount) {
+              account = specificAccount;
+            }
+          }
+          
+          if (!account) {
+            logger.warn('[GOOGLE-TASKS] Cannot fetch tasks - no account');
+            return;
+          }
+
+          set((state) => {
+            state.isLoadingTasks[taskListId] = true;
+            state.error = null;
+          });
+
+          try {
+            logger.info(`[GOOGLE-TASKS] Fetching tasks for list: ${taskListId}`);
+            const response = await googleTasksService.getTasks(
+              account,
+              taskListId,
+              true, // showCompleted
+              false, // showDeleted
+              100 // maxResults
+            );
+            
+            if (response.success && response.data) {
+              set((state) => {
+                state.tasks[taskListId] = response.data!.items || [];
+                state.lastSyncAt = new Date();
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to fetch tasks');
+            }
+          } catch (error) {
+            console.error(`❌ [GOOGLE-TASKS] Failed to fetch tasks for list ${taskListId}:`, error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to fetch tasks';
+            });
+          } finally {
+            set((state) => {
+              state.isLoadingTasks[taskListId] = false;
+            });
+          }
+        },
+
+        syncAllTasks: async () => {
+          logger.info('[GOOGLE-TASKS] Syncing all task lists');
+          const taskLists = get().taskLists;
+          
+          // Fetch tasks for all lists in parallel
+          await Promise.all(
+            taskLists.map(list => get().fetchTasks(list.id))
+          );
+        },
+
+        // Task management
+        createTask: async (taskListId: string, taskData: TaskCreateData) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.debug(`[GOOGLE-TASKS] Creating task in list ${taskListId}:`, taskData.title);
+            console.log('[GOOGLE-TASKS-STORE] Creating task with data:', {
+              taskListId,
+              taskData,
+              account: account.email
+            });
+            
+            const response = await googleTasksService.createTask(account, taskListId, {
+              title: taskData.title,
+              notes: taskData.notes,
+              due: taskData.due,
+              metadata: taskData.priority || taskData.labels ? {
+                priority: taskData.priority,
+                labels: taskData.labels
+              } : undefined
+            });
+            
+            console.log('[GOOGLE-TASKS-STORE] Create task response:', response);
+
+            if (response.success && response.data) {
+              // Add metadata to the response since Google doesn't store it
+              const taskWithMetadata = {
+                ...response.data!,
+                metadata: taskData.priority || taskData.labels ? {
+                  priority: taskData.priority,
+                  labels: taskData.labels
+                } : undefined
+              };
+              
+              set((state) => {
+                if (!state.tasks[taskListId]) {
+                  state.tasks[taskListId] = [];
+                }
+                state.tasks[taskListId].push(taskWithMetadata);
+              });
+              
+              // Return the created task
+              return taskWithMetadata;
+            } else {
+              throw new Error(response.error?.message || 'Failed to create task');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to create task:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to create task';
+            });
+          }
+        },
+
+        updateTask: async (taskListId: string, taskId: string, updates: Partial<GoogleTask>) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.debug(`[GOOGLE-TASKS] Updating task ${taskId} in list ${taskListId}`);
+            const response = await googleTasksService.updateTask(account, taskListId, taskId, {
+              title: updates.title,
+              notes: updates.notes,
+              status: updates.status,
+              due: updates.due,
+              metadata: updates.metadata
+            });
+
+            if (response.success && response.data) {
+              set((state) => {
+                const tasks = state.tasks[taskListId] || [];
+                const index = tasks.findIndex(t => t.id === taskId);
+                if (index !== -1) {
+                  // Preserve local metadata when updating from Google response
+                  const existingMetadata = state.tasks[taskListId][index].metadata;
+                  state.tasks[taskListId][index] = {
+                    ...response.data!,
+                    metadata: existingMetadata || response.data!.metadata
+                  };
+                }
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to update task');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to update task:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to update task';
+            });
+          }
+        },
+
+        deleteTask: async (taskListId: string, taskId: string) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.info(`[GOOGLE-TASKS] Deleting task ${taskId} from list ${taskListId}`);
+            const response = await googleTasksService.deleteTask(account, taskListId, taskId);
+
+            if (response.success) {
+              set((state) => {
+                const tasks = state.tasks[taskListId] || [];
+                state.tasks[taskListId] = tasks.filter(t => t.id !== taskId);
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to delete task');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to delete task:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to delete task';
+            });
+          }
+        },
+
+        moveTask: async (taskId: string, fromListId: string, toListId: string, position?: string) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.debug(`[GOOGLE-TASKS] Moving task ${taskId} from ${fromListId} to ${toListId}`);
+            
+            // If moving between lists, we need to:
+            // 1. Create task in new list
+            // 2. Delete from old list
+            if (fromListId !== toListId) {
+              const task = get().getTask(fromListId, taskId);
+              if (!task) return;
+
+              // Create in new list
+              await get().createTask(toListId, {
+                title: task.title,
+                notes: task.notes || '',
+                due: task.due,
+                priority: task.metadata?.priority,
+                labels: task.metadata?.labels
+              });
+
+              // Delete from old list
+              await get().deleteTask(fromListId, taskId);
+            } else {
+              // Just reorder within same list
+              const response = await googleTasksService.moveTask(account, {
+                taskId,
+                taskListId: fromListId,
+                previous: position
+              });
+
+              if (!response.success) {
+                throw new Error(response.error?.message || 'Failed to move task');
+              }
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to move task:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to move task';
+            });
+          }
+        },
+
+        toggleTaskComplete: async (taskListId: string, taskId: string, completed: boolean) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.debug(`[GOOGLE-TASKS] Toggling task ${taskId} completion to ${completed}`);
+            const response = await googleTasksService.markTaskCompleted(
+              account,
+              taskListId,
+              taskId,
+              completed
+            );
+
+            if (response.success && response.data) {
+              set((state) => {
+                const tasks = state.tasks[taskListId] || [];
+                const index = tasks.findIndex(t => t.id === taskId);
+                if (index !== -1) {
+                  state.tasks[taskListId][index] = response.data!;
+                }
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to update task');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to toggle task completion:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to update task';
+            });
+          }
+        },
+
+        // Task list management
+        createTaskList: async (title: string) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.debug(`[GOOGLE-TASKS] Creating task list: ${title}`);
+            const response = await googleTasksService.createTaskList(account, title);
+
+            if (response.success && response.data) {
+              set((state) => {
+                state.taskLists.push(response.data!);
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to create task list');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to create task list:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to create task list';
+            });
+          }
+        },
+
+        updateTaskList: async (taskListId: string, title: string) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.debug(`[GOOGLE-TASKS] Updating task list ${taskListId}: ${title}`);
+            const response = await googleTasksService.updateTaskList(account, taskListId, title);
+
+            if (response.success && response.data) {
+              set((state) => {
+                const index = state.taskLists.findIndex(list => list.id === taskListId);
+                if (index !== -1) {
+                  state.taskLists[index] = response.data!;
+                }
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to update task list');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to update task list:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to update task list';
+            });
+          }
+        },
+
+        deleteTaskList: async (taskListId: string) => {
+          const account = get().getCurrentAccount();
+          if (!account) return;
+
+          try {
+            logger.debug(`[GOOGLE-TASKS] Deleting task list ${taskListId}`);
+            const response = await googleTasksService.deleteTaskList(account, taskListId);
+
+            if (response.success) {
+              set((state) => {
+                state.taskLists = state.taskLists.filter(list => list.id !== taskListId);
+                delete state.tasks[taskListId];
+              });
+            } else {
+              throw new Error(response.error?.message || 'Failed to delete task list');
+            }
+          } catch (error) {
+            console.error('❌ [GOOGLE-TASKS] Failed to delete task list:', error);
+            set((state) => {
+              state.error = error instanceof Error ? error.message : 'Failed to delete task list';
+            });
+          }
+        },
+
+        // Utility
+        clearError: () => set((state) => { state.error = null; }),
+        
+        getTaskList: (taskListId: string) => {
+          return get().taskLists.find(list => list.id === taskListId);
+        },
+        
+        getTask: (taskListId: string, taskId: string) => {
+          const tasks = get().tasks[taskListId] || [];
+          return tasks.find(t => t.id === taskId);
+        },
+      })),
+      {
+        name: 'google-tasks-store',
+        onRehydrateStorage: () => (state) => {
+          if (state) {
+            state.isHydrated = true;
+            logger.info('[GOOGLE-TASKS] Store hydrated from localStorage');
+          }
+        },
+      }
+    ),
+    {
+      name: 'GoogleTasksStore',
+    }
+  )
+);
+
+FILE: src/services/google/googleTasksService.ts
+-----------------------------------------------
+import { invoke } from '@tauri-apps/api/core';
+import { 
+  GoogleAccount, 
+  GoogleTask, 
+  GoogleTaskList, 
+  TaskMoveRequest, 
+  ApiResponse, 
+  PaginatedResponse,
+  GoogleApiError 
+} from '../../types/google';
+
+// Always use real Tauri invoke - no mock data
+const apiInvoke = invoke;
+
+class GoogleTasksService {
+  private async handleApiError(error: any): Promise<GoogleApiError> {
+    console.error('Google Tasks API Error:', error);
+    return {
+      code: error.code || 500,
+      message: error.message || 'An error occurred',
+      status: error.status || 'INTERNAL_ERROR'
+    };
+  }
+
+  async getTaskLists(account: GoogleAccount): Promise<ApiResponse<GoogleTaskList[]>> {
+    try {
+      const response = await apiInvoke('get_task_lists', {
+        accountId: account.id,
+      });
+      
+      return {
+        success: true,
+        data: response as GoogleTaskList[]
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: await this.handleApiError(error)
+      };
+    }
+  }
+
+  async getTasks(
+    account: GoogleAccount,
+    taskListId: string,
+    showCompleted: boolean = false,
+    showDeleted: boolean = false,
+    maxResults: number = 100
+  ): Promise<ApiResponse<PaginatedResponse<GoogleTask>>> {
+    try {
+      const response = await apiInvoke('get_tasks', {
+        accountId: account.id,
+        taskListId,
+        showCompleted,
+        showDeleted,
+        maxResults,
+      });
+
+      return {
+        success: true,
+        data: response as PaginatedResponse<GoogleTask>
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: await this.handleApiError(error)
+      };
+    }
+  }
+
+  async createTask(
+    account: GoogleAccount,
+    taskListId: string,
+    taskData: {
+      title: string;
+      notes?: string;
+      due?: string;
+      parent?: string;
+      previous?: string;
+      metadata?: {
+        priority?: string;
+        labels?: string[];
+      };
+    }
+  ): Promise<ApiResponse<GoogleTask>> {
+    try {
+      // Only send standard Google Tasks fields, NOT metadata
+      console.log('[GOOGLE-TASKS-SERVICE] Calling create_task with:', {
+        accountId: account.id,
+        taskListId,
+        taskData: {
+          title: taskData.title,
+          notes: taskData.notes,
+          due: taskData.due,
+          parent: taskData.parent,
+          previous: taskData.previous,
+          metadata: taskData.metadata
+        }
+      });
+      
+      let response;
+      try {
+        response = await apiInvoke('create_task', {
+          accountId: account.id,
+          taskListId,
+          taskData: {
+            title: taskData.title,
+            notes: taskData.notes,
+            due: taskData.due,
+            parent: taskData.parent,
+            previous: taskData.previous,
+            // metadata is stored locally only!
+            metadata: taskData.metadata
+          },
+        });
+      } catch (invokeError: any) {
+        console.error('[GOOGLE-TASKS-SERVICE] Tauri invoke error:', invokeError);
+        // If it's a string error from Rust, it won't be JSON
+        if (typeof invokeError === 'string') {
+          throw new Error(invokeError);
+        }
+        throw invokeError;
+      }
+      
+      console.log('[GOOGLE-TASKS-SERVICE] create_task response:', response);
+
+      return {
+        success: true,
+        data: response as GoogleTask
+      };
+    } catch (error) {
+      console.error('[GOOGLE-TASKS-SERVICE] create_task error:', error);
+      return {
+        success: false,
+        error: await this.handleApiError(error)
+      };
+    }
+  }
+
+  async updateTask(
+    account: GoogleAccount,
+    taskListId: string,
+    taskId: string,
+    taskData: {
+      title?: string;
+      notes?: string;
+      status?: 'needsAction' | 'completed';
+      due?: string;
+      completed?: string;
+      metadata?: {
+        priority?: string;
+        labels?: string[];
+      };
+    }
+  ): Promise<ApiResponse<GoogleTask>> {
+    try {
+      // Only send standard Google Tasks fields, NOT metadata
+      const response = await apiInvoke('update_task', {
+        accountId: account.id,
+        taskListId,
+        taskId,
+        taskData: {
+          title: taskData.title,
+          notes: taskData.notes,
+          status: taskData.status,
+          due: taskData.due,
+          completed: taskData.completed,
+          // metadata is stored locally only!
+          metadata: taskData.metadata
+        },
+      });
+
+      return {
+        success: true,
+        data: response as GoogleTask
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: await this.handleApiError(error)
+      };
+    }
+  }
+
+  async deleteTask(
+    account: GoogleAccount,
+    taskListId: string,
+    taskId: string
+  ): Promise<ApiResponse<void>> {
+    try {
+      console.log('[GOOGLE-TASKS-SERVICE] Deleting task:', {
+        accountId: account.id,
+        taskListId,
+        taskId,
+      });
+      
+      await apiInvoke('delete_task', {
+        accountId: account.id,
+        taskListId,
+        taskId,
+      });
+
+      console.log('[GOOGLE-TASKS-SERVICE] Task deleted successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('[GOOGLE-TASKS-SERVICE] Failed to delete task:', error);
+      return {
+        success: false,
+        error: await this.handleApiError(error)
+      };
+    }
+  }
+
+  // Additional methods omitted for brevity
+}
+
+export const googleTasksService = new GoogleTasksService();
+
+FILE: src/services/kanbanGoogleTasksSync.ts
+--------------------------------------------
+import { useEffect } from 'react';
+import { useKanbanStore } from '../stores/useKanbanStore';
+import { useGoogleTasksStore } from '../stores/googleTasksStore';
+import { GoogleTask, GoogleTaskList } from '../types/google';
+import { logger } from '../utils/logger';
+
+// Key snippets showing metadata sync:
+private googleToKanbanTask(googleTask: GoogleTask): Partial<KanbanTask> {
+  return {
+    title: googleTask.title,
+    notes: googleTask.notes || '',
+    due: googleTask.due || '',
+    status: googleTask.status === 'completed' ? 'completed' : 'active',
+    updated: googleTask.updated || new Date().toISOString(),
+    metadata: {
+      labels: googleTask.metadata?.labels || [],
+      priority: (googleTask.metadata?.priority as 'low' | 'normal' | 'high' | 'urgent') || 'normal',
+      subtasks: [],
+      googleTaskId: googleTask.id,
+      lastGoogleSync: new Date().toISOString()
+    }
+  };
+}
+
+// In syncGoogleToKanban method:
+if (!existingKanbanTask) {
+  // Create new Kanban task
+  try {
+    const newTask = await kanbanStore.createTask(column.id, {
+      ...this.googleToKanbanTask(googleTask),
+      metadata: {
+        labels: googleTask.metadata?.labels || [],
+        priority: (googleTask.metadata?.priority as 'low' | 'normal' | 'high' | 'urgent') || 'normal',
+        subtasks: [],
+        googleTaskId: googleTask.id,
+        lastGoogleSync: new Date().toISOString()
+      }
+    });
+    this.syncedTaskIds.add(googleTask.id);
+    kanbanTasksToKeep.add(newTask.id);
+    logger.debug(`[SYNC] Created Kanban task from Google: ${googleTask.title}`);
+  } catch (error) {
+    logger.error(`[SYNC] Failed to create Kanban task:`, error);
+  }
+}
+
+FILE: src/types/google.ts
+-------------------------
+// Key type definitions:
+export interface TaskMetadata {
+  priority?: string;
+  labels?: string[];
+}
+
+export interface GoogleTask {
+  id: string;
+  title: string;
+  notes?: string;
+  status: string;
+  due?: string;
+  completed?: string;
+  updated?: string;
+  parent?: string;
+  position?: string;
+  kind?: string;
+  etag?: string;
+  selfLink?: string;
+  links?: TaskLink[];
+  hidden?: boolean;
+  deleted?: boolean;
+  metadata?: TaskMetadata;
+}
+
+=================================================================================
+TESTING APPROACH
+=================================================================================
+To test if the system is working:
+
+1. Create a task with:
+   - Title: "Test Task"
+   - Due date: Tomorrow
+   - Priority: High
+   - Labels: ["work", "urgent"]
+
+2. Check backend console for:
+   - "Saving metadata: task_id=..., priority=Some("high"), labels=..."
+   - "Metadata saved successfully"
+
+3. Refresh the page
+
+4. Check backend console for:
+   - "Loaded metadata for task ...: priority=Some("high"), labels=..."
+   - "First task example: ... metadata=Some(...)"
+
+5. Verify in UI:
+   - Task shows with due date
+   - Priority badge shows "High priority"
+   - Labels show "work" and "urgent"
+
+=================================================================================
+DIAGNOSTIC QUESTIONS
+=================================================================================
+1. Are tasks being created successfully in Google? (Check Google Tasks web)
+2. Do the backend logs show metadata being saved to SQLite?
+3. Do the backend logs show metadata being loaded when fetching tasks?
+4. Does the frontend receive tasks with metadata populated?
+5. Are due dates showing in the correct RFC 3339 format in backend logs?
+
+=================================================================================
+POTENTIAL ISSUES TO INVESTIGATE
+=================================================================================
+1. SQLite table might not be created (check if migration v11 ran)
+2. Database connection issues preventing metadata save/load
+3. Serialization still failing despite serde attributes
+4. Frontend not preserving metadata when syncing
+5. Sync service overwriting local metadata with empty Google response

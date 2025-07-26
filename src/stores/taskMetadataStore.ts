@@ -21,7 +21,7 @@ export interface TaskMetadata {
 }
 
 interface TaskMetadataStore {
-  metadata: Map<string, TaskMetadata>;
+  metadata: Record<string, TaskMetadata>;
   
   // Actions
   setTaskMetadata: (taskId: string, metadata: Partial<TaskMetadata>) => void;
@@ -37,12 +37,11 @@ interface TaskMetadataStore {
 export const useTaskMetadataStore = create<TaskMetadataStore>()(
   persist(
     (set, get) => ({
-      metadata: new Map(),
+      metadata: {},
       
       setTaskMetadata: (taskId: string, updates: Partial<TaskMetadata>) => {
         set(state => {
-          const newMetadata = new Map(state.metadata);
-          const existing = newMetadata.get(taskId);
+          const existing = state.metadata[taskId];
           
           const updatedMetadata: TaskMetadata = {
             taskId,
@@ -58,27 +57,29 @@ export const useTaskMetadataStore = create<TaskMetadataStore>()(
             lastUpdated: Date.now()
           };
           
-          newMetadata.set(taskId, updatedMetadata);
-          
-          return { metadata: newMetadata };
+          return { 
+            metadata: {
+              ...state.metadata,
+              [taskId]: updatedMetadata
+            }
+          };
         });
       },
       
       getTaskMetadata: (taskId: string) => {
-        const metadata = get().metadata.get(taskId);
-        return metadata || null;
+        return get().metadata[taskId] || null;
       },
       
       deleteTaskMetadata: (taskId: string) => {
         set(state => {
-          const newMetadata = new Map(state.metadata);
-          newMetadata.delete(taskId);
+          const newMetadata = { ...state.metadata };
+          delete newMetadata[taskId];
           return { metadata: newMetadata };
         });
       },
       
       clearAllMetadata: () => {
-        set({ metadata: new Map() });
+        set({ metadata: {} });
       },
       
       importFromNotesField: (taskId: string, notes: string) => {
@@ -119,65 +120,7 @@ export const useTaskMetadataStore = create<TaskMetadataStore>()(
     }),
     {
       name: 'task-metadata-store',
-      // Custom storage for Map serialization with safety checks
-      storage: {
-        getItem: (name) => {
-          // Check if localStorage is available
-          if (typeof localStorage === 'undefined') {
-            console.warn('localStorage not available, returning null');
-            return null;
-          }
-          
-          try {
-            const str = localStorage.getItem(name);
-            if (!str) return null;
-            const data = JSON.parse(str);
-            return {
-              ...data,
-              state: {
-                ...data.state,
-                metadata: new Map(data.state.metadata || [])
-              }
-            };
-          } catch (error) {
-            console.error('Error reading from localStorage:', error);
-            return null;
-          }
-        },
-        setItem: (name, value) => {
-          // Check if localStorage is available
-          if (typeof localStorage === 'undefined') {
-            console.warn('localStorage not available, skipping save');
-            return;
-          }
-          
-          try {
-            const serialized = {
-              ...value,
-              state: {
-                ...value.state,
-                metadata: Array.from(value.state.metadata.entries())
-              }
-            };
-            localStorage.setItem(name, JSON.stringify(serialized));
-          } catch (error) {
-            console.error('Error writing to localStorage:', error);
-          }
-        },
-        removeItem: (name) => {
-          // Check if localStorage is available
-          if (typeof localStorage === 'undefined') {
-            console.warn('localStorage not available, skipping remove');
-            return;
-          }
-          
-          try {
-            localStorage.removeItem(name);
-          } catch (error) {
-            console.error('Error removing from localStorage:', error);
-          }
-        },
-      },
+      // Now using default storage since we have plain objects
     }
   )
 ); 

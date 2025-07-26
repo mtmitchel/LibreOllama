@@ -25,12 +25,6 @@ export function useTextSelection(options: UseTextSelectionOptions = {}) {
 
   const getSelectionData = useCallback((): TextSelection | null => {
     const sel = window.getSelection();
-    console.log('getSelectionData check:', { 
-      hasSelection: !!sel, 
-      rangeCount: sel?.rangeCount,
-      text: sel?.toString(),
-      minLength 
-    });
     
     if (!sel || sel.rangeCount === 0) {
       return null;
@@ -38,7 +32,6 @@ export function useTextSelection(options: UseTextSelectionOptions = {}) {
 
     const text = sel.toString().trim();
     if (text.length < minLength) {
-      console.log('Text too short:', text.length, 'min:', minLength);
       return null;
     }
 
@@ -93,19 +86,6 @@ export function useTextSelection(options: UseTextSelectionOptions = {}) {
       width: rect.width,
       height: rect.height
     };
-    
-    console.log('Valid selection found:', { 
-      text, 
-      originalRect: {
-        top: rect.top,
-        left: rect.left,
-        right: rect.right,
-        bottom: rect.bottom,
-        width: rect.width,
-        height: rect.height
-      },
-      staticRect 
-    });
 
     return {
       text,

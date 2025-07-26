@@ -3,6 +3,8 @@
 // Import command modules
 mod commands;
 mod database;
+mod models;
+mod db;
 
 // Import foundation modules
 mod errors;
@@ -284,6 +286,12 @@ pub fn run() {
             update_task_list,
             delete_task_list,
             move_task,
+            // Task metadata commands - temporarily disabled due to SQLx migration
+            // get_task_metadata,
+            // create_task_metadata,
+            // update_task_metadata,
+            // delete_task_metadata,
+            // get_all_labels,
             // Calendar commands
             get_calendars,
             get_calendar_events,
