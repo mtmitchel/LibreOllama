@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 import { logger } from '../core/lib/logger';
 
 export interface TaskMetadata {
@@ -76,21 +76,36 @@ interface KanbanStore {
 }
 
 const useKanbanStore = create<KanbanStore>()(
-  devtools((set, get) => {
-
-
-    return {
+  devtools(
+    persist(
+      (set, get) => ({
       columns: [],
       isSyncing: false,
       isInitialized: false,
       error: undefined,
 
       async initialize() {
-        if (get().isInitialized) return;
+        const state = get();
+        if (state.isInitialized) return;
         
-        // Don't create default columns - let Google Tasks sync handle it
-        // Just mark as initialized with empty columns
-        set({ columns: [], isInitialized: true });
+        // Check if we have old hardcoded columns
+        const hasHardcodedColumns = state.columns.some(
+          c => c.id === 'todo' || c.id === 'in-progress' || c.id === 'done'
+        );
+        
+        if (hasHardcodedColumns) {
+          // Clear old hardcoded columns to let Google Tasks take over
+          console.log('[KANBAN] Clearing old hardcoded columns');
+          set({ columns: [], isInitialized: true });
+        } else if (state.columns.length === 0) {
+          // Only create default columns if no Google sync available
+          // This will be replaced by Google Task lists when sync runs
+          console.log('[KANBAN] No columns found, waiting for Google sync');
+          set({ columns: [], isInitialized: true });
+        } else {
+          // Just mark as initialized if columns already exist (from localStorage)
+          set({ isInitialized: true });
+        }
       },
 
       addColumn(id, title) {
@@ -233,8 +248,16 @@ const useKanbanStore = create<KanbanStore>()(
         
         logger.debug('[KANBAN] All data cleared successfully');
       }
-    };
-  })
+    }),
+      {
+        name: 'kanban-store', // localStorage key
+        partialize: (state) => ({ 
+          columns: state.columns,
+          isInitialized: state.isInitialized 
+        }), // Only persist columns and initialization state
+      }
+    )
+  )
 );
 
 export { useKanbanStore };

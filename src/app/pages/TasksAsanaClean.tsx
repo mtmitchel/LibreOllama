@@ -631,8 +631,14 @@ export default function TasksAsanaClean() {
     deleteTaskList,
   } = useGoogleTasksStore();
   
-  const { columns, moveTask, updateTask, deleteTask } = useKanbanStore();
+  const { columns, moveTask, updateTask, deleteTask, initialize: initializeKanban } = useKanbanStore();
   const { createTask: createGoogleTask } = useGoogleTasksStore();
+  
+  // DIAGNOSTIC: Check what store is driving the UI
+  // console.log('=== KANBAN STORE DEBUG ===');
+  // console.log('Columns from useKanbanStore:', columns);
+  // console.log('Sample task:', columns[0]?.tasks[0]);
+  // console.log('Does task have metadata property?', columns[0]?.tasks[0]?.metadata);
   
   // Configure drag sensors
   const sensors = useSensors(
@@ -720,11 +726,12 @@ export default function TasksAsanaClean() {
     }
   }, [showSortMenu, contextMenu]);
 
-  // Clear header
+  // Clear header and initialize Kanban store
   useEffect(() => {
     clearHeaderProps();
+    initializeKanban(); // Initialize kanban store with default columns
     return () => clearHeaderProps();
-  }, [clearHeaderProps]);
+  }, [clearHeaderProps, initializeKanban]);
 
   // Auto-authenticate
   useEffect(() => {
@@ -733,18 +740,28 @@ export default function TasksAsanaClean() {
     }
   }, [activeAccount, isAuthenticated, isHydrated, authenticate]);
 
-  // Setup auto-sync
+  // Setup Google Tasks sync
   useEffect(() => {
     if (isAuthenticated && isHydrated) {
-      setupAutoSync();
       const performInitialSync = async () => {
         try {
+          // console.log('=== INITIAL SYNC STARTING ===');
+          
+          // First fetch task lists from Google
           await fetchTaskLists();
-          await syncAllTasks();
+          
+          // Setup column mappings (won't clear existing data now)
           await kanbanGoogleSync.setupColumnMappings();
+          
+          // Fetch all tasks from Google
+          await syncAllTasks();
+          
+          // Sync between Google and Kanban stores
           await kanbanGoogleSync.syncAll();
+          
+          // console.log('=== INITIAL SYNC COMPLETE ===');
         } catch (error) {
-          // Initial sync failed
+          console.error('Initial sync failed:', error);
         }
       };
       performInitialSync();
@@ -767,9 +784,11 @@ export default function TasksAsanaClean() {
   const handleSync = async () => {
     setIsSyncing(true);
     try {
+      // console.log('=== MANUAL SYNC STARTING ===');
       await fetchTaskLists();
       await syncAllTasks();
       await kanbanGoogleSync.syncAll();
+      // console.log('=== MANUAL SYNC COMPLETE ===');
     } catch (error) {
       console.error('Sync failed:', error);
     } finally {
@@ -829,23 +848,30 @@ export default function TasksAsanaClean() {
   };
 
   const openCreateTaskModal = (columnId: string) => {
-    setEditingTaskData({
+    // console.log('=== OPENING CREATE TASK MODAL ===');
+    console.log('Column ID:', columnId);
+    
+    const newTaskData = {
       id: `temp-${Date.now()}`,
       title: '',
       notes: '',
       due: '',
-      status: 'needsAction',
+      status: 'needsAction' as const,
       position: '',
       updated: new Date().toISOString(),
       metadata: {
         labels: [],
-        priority: 'normal',
+        priority: 'normal' as const,
         subtasks: []
       }
-    });
+    };
+    
+    console.log('Setting task data:', newTaskData);
+    setEditingTaskData(newTaskData);
     setTaskModalMode('create');
     setActiveColumn(columnId);
     setShowTaskModal(true);
+    console.log('Modal should be visible now');
   };
 
   const openEditTaskModal = (task: KanbanTask, columnId: string) => {
@@ -1053,6 +1079,7 @@ export default function TasksAsanaClean() {
               contextMenu={contextMenu}
               setContextMenu={setContextMenu}
               openEditTaskModal={openEditTaskModal}
+              openCreateTaskModal={openCreateTaskModal}
             />
             <DragOverlay>
               {activeTask && (
@@ -1188,6 +1215,11 @@ export default function TasksAsanaClean() {
       )}
 
       {/* Task Modal */}
+      {/* console.log('=== MODAL RENDER CHECK ===', {
+        showTaskModal,
+        editingTaskData,
+        shouldRender: showTaskModal && editingTaskData
+      })} */}
       {showTaskModal && editingTaskData && (
         <AsanaTaskModal
           isOpen={showTaskModal}
@@ -1200,28 +1232,61 @@ export default function TasksAsanaClean() {
           }}
           onSubmit={async (taskData) => {
             try {
+              // console.log('=== TASK MODAL SUBMIT ===');
+              console.log('Mode:', taskModalMode);
+              console.log('Active Column:', activeColumn);
+              console.log('Task Data:', taskData);
+              
               if (taskModalMode === 'create' && activeColumn) {
-                // Create new task
-                const newTask: KanbanTask = {
-                  ...taskData,
-                  id: `task-${Date.now()}`,
-                  position: `${Date.now()}`,
-                  updated: new Date().toISOString()
-                };
+                // Check if we have a Google Task List mapping
+                const googleTaskListId = kanbanGoogleSync.getGoogleListId(activeColumn);
                 
-                // Find the column and create the task
-                const column = columns.find(c => c.id === activeColumn);
-                if (column) {
-                  await createGoogleTask(activeColumn, {
-                    title: newTask.title,
-                    notes: newTask.notes,
-                    due: newTask.due,
-                    // Google Tasks doesn't support metadata, but we can store it locally
+                if (googleTaskListId && isAuthenticated) {
+                  // Create in Google Tasks first
+                  console.log('Creating task in Google Tasks list:', googleTaskListId);
+                  
+                  const googleTask = await createGoogleTask(googleTaskListId, {
+                    title: taskData.title || 'New Task',
+                    notes: taskData.notes || '',
+                    due: taskData.due ? new Date(taskData.due + 'T00:00:00Z').toISOString() : undefined,
                   });
+                  
+                  // Save metadata separately
+                  if (taskData.metadata && googleTask) {
+                    const { setTaskMetadata } = useTaskMetadataStore.getState();
+                    setTaskMetadata(googleTask.id, taskData.metadata);
+                  }
+                  
+                  // Sync to get the new task in Kanban
+                  await kanbanGoogleSync.syncAll();
+                } else {
+                  // Fallback to local creation if no Google mapping
+                  console.log('No Google mapping, creating locally');
+                  const { createTask } = useKanbanStore.getState();
+                  
+                  const newTask = await createTask(activeColumn, {
+                    title: taskData.title || 'New Task',
+                    notes: taskData.notes || '',
+                    due: taskData.due,
+                    status: 'needsAction' as const,
+                    metadata: taskData.metadata
+                  });
+                  
+                  if (taskData.metadata && newTask) {
+                    const { setTaskMetadata } = useTaskMetadataStore.getState();
+                    setTaskMetadata(newTask.id, taskData.metadata);
+                  }
                 }
-              } else if (taskModalMode === 'edit' && activeColumn) {
+              } else if (taskModalMode === 'edit' && activeColumn && taskData.id) {
                 // Update existing task
                 await updateTask(taskData.id, activeColumn, taskData);
+                
+                // Update metadata
+                if (taskData.metadata) {
+                  const { setTaskMetadata } = useTaskMetadataStore.getState();
+                  const googleTaskId = taskData.metadata?.googleTaskId || taskData.id;
+                  setTaskMetadata(googleTaskId, taskData.metadata);
+                }
               }
               setShowTaskModal(false);
               setEditingTaskData(null);
@@ -1251,6 +1316,7 @@ interface AsanaKanbanBoardProps {
   contextMenu: { x: number; y: number; task: KanbanTask; columnId: string } | null;
   setContextMenu: (menu: { x: number; y: number; task: KanbanTask; columnId: string } | null) => void;
   openEditTaskModal?: (task: KanbanTask, columnId: string) => void;
+  openCreateTaskModal?: (columnId: string) => void;
 }
 
 const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({ 
@@ -1260,9 +1326,11 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
   activeTask,
   contextMenu,
   setContextMenu,
-  openEditTaskModal
+  openEditTaskModal,
+  openCreateTaskModal
 }) => {
   const { columns, updateTask, deleteTask } = useKanbanStore();
+  const { isAuthenticated } = useGoogleTasksStore();
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   
@@ -1274,8 +1342,32 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
   }));
 
   const handleDeleteTask = async (taskId: string, columnId: string) => {
+    // console.log('=== DELETE TASK DEBUG ===');
+    console.log('Task ID:', taskId);
+    console.log('Column ID:', columnId);
+    
     try {
-      await deleteTask(taskId, columnId);
+      // First delete from Kanban store
+      await deleteTask(columnId, taskId);
+      
+      // Check if this task has a Google Task ID
+      const task = columns.find(c => c.id === columnId)?.tasks.find(t => t.id === taskId);
+      const googleTaskId = task?.metadata?.googleTaskId;
+      
+      if (googleTaskId && isAuthenticated) {
+        // Delete from Google Tasks
+        const googleTaskListId = kanbanGoogleSync.getGoogleListId(columnId);
+        if (googleTaskListId) {
+          console.log('Deleting from Google Tasks:', googleTaskId);
+          const { deleteTask: deleteGoogleTask } = useGoogleTasksStore.getState();
+          await deleteGoogleTask(googleTaskListId, googleTaskId);
+        }
+      }
+      
+      // Also delete metadata
+      const { deleteTaskMetadata } = useTaskMetadataStore.getState();
+      deleteTaskMetadata(googleTaskId || taskId);
+      
       setContextMenu(null);
     } catch (error) {
       console.error('Failed to delete task:', error);
@@ -1284,14 +1376,15 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
 
   const handleUpdatePriority = async (task: KanbanTask, columnId: string, priority: 'low' | 'normal' | 'high' | 'urgent') => {
     try {
-      // Update priority in metadata store
+      // Update priority in metadata store - use Google Task ID
+      const googleTaskId = task.metadata?.googleTaskId || task.id;
       const setTaskMetadata = useTaskMetadataStore.getState().setTaskMetadata;
-      const currentMetadata = useTaskMetadataStore.getState().getTaskMetadata(task.id) || {
+      const currentMetadata = useTaskMetadataStore.getState().getTaskMetadata(googleTaskId) || {
         labels: [],
         priority: 'normal',
         subtasks: []
       };
-      setTaskMetadata(task.id, {
+      setTaskMetadata(googleTaskId, {
         ...currentMetadata,
         priority
       });
@@ -1320,6 +1413,7 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
               editingTitle={editingTitle}
               setEditingTitle={setEditingTitle}
               onEditTask={openEditTaskModal}
+              onCreateTask={openCreateTaskModal}
             />
           ))}
         </div>
@@ -1357,7 +1451,7 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
             >
               <Flag size={14} style={{ color: priorityConfig[priority]?.textColor || '#6B6F76' }} />
               {priorityConfig[priority]?.label || priority}
-              {useTaskMetadataStore.getState().getTaskMetadata(contextMenu.task.id)?.priority === priority && ' ✓'}
+              {useTaskMetadataStore.getState().getTaskMetadata(contextMenu.task.metadata?.googleTaskId || contextMenu.task.id)?.priority === priority && ' ✓'}
             </button>
           ))}
           
@@ -1390,6 +1484,7 @@ interface DroppableColumnProps {
   editingTitle: string;
   setEditingTitle: (title: string) => void;
   onEditTask?: (task: KanbanTask, columnId: string) => void;
+  onCreateTask?: (columnId: string) => void;
 }
 
 const DroppableColumn: React.FC<DroppableColumnProps> = ({
@@ -1404,7 +1499,8 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
   setEditingTask,
   editingTitle,
   setEditingTitle,
-  onEditTask
+  onEditTask,
+  onCreateTask
 }) => {
   const { setNodeRef } = useDroppable({
     id: `column-${column.id}`,
@@ -1578,7 +1674,16 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
             e.currentTarget.style.backgroundColor = 'transparent';
             e.currentTarget.style.borderColor = '#DDD';
           }}
-          onClick={() => openCreateTaskModal(column.id)}
+          onClick={() => {
+            // console.log('=== ADD TASK BUTTON CLICKED ===');
+            console.log('Column ID:', column.id);
+            console.log('onCreateTask function:', onCreateTask);
+            if (onCreateTask) {
+              onCreateTask(column.id);
+            } else {
+              console.error('onCreateTask prop is not defined!');
+            }
+          }}
         >
           <Plus size={16} />
           Add task
@@ -1626,12 +1731,22 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
     id: task.id,
   });
   
-  // Get metadata from store
-  const metadata = useTaskMetadataStore(state => state.getTaskMetadata(task.id)) || {
+  // Get metadata from store - use Google Task ID if available
+  const googleTaskId = task.metadata?.googleTaskId || task.id;
+  const metadata = useTaskMetadataStore(state => state.getTaskMetadata(googleTaskId)) || {
     labels: [],
     priority: 'normal' as const,
     subtasks: []
   };
+  
+  // DIAGNOSTIC: Check metadata resolution
+  console.log('=== TASK CARD RENDER ===');
+  console.log('Kanban Task ID:', task.id);
+  console.log('Google Task ID:', googleTaskId);
+  console.log('Task object:', task);
+  console.log('Task has metadata property?', task.metadata);
+  console.log('Metadata from store using Google ID:', metadata);
+  console.log('All metadata in store:', useTaskMetadataStore.getState().metadata);
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,

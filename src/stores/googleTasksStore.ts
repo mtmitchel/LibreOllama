@@ -385,7 +385,8 @@ export const useGoogleTasksStore = create<GoogleTasksStore>()(
                 delete state.tasks[taskListId];
               });
             } else {
-              throw new Error(response.error?.message || 'Failed to delete task list');
+              console.error('Delete failed. Response:', response);
+              throw new Error(response.error?.message || response.error || 'Failed to delete task list');
             }
           } catch (error) {
             console.error('❌ [GOOGLE-TASKS] Failed to delete task list:', error);

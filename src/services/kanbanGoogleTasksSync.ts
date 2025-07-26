@@ -1,5 +1,6 @@
 import { useKanbanStore } from '../stores/useKanbanStore';
 import { useGoogleTasksStore } from '../stores/googleTasksStore';
+import { useTaskMetadataStore } from '../stores/taskMetadataStore';
 import { GoogleTask, GoogleTaskList } from '../types/google';
 import { KanbanTask, KanbanColumn } from '../stores/useKanbanStore';
 import { logger } from '../core/lib/logger';
@@ -39,31 +40,92 @@ class KanbanGoogleTasksSync {
       return;
     }
 
-    // Clear existing mappings and columns
+    // Clear existing mappings but preserve columns with tasks
     this.syncMappings = [];
     
-    // Clear existing hardcoded columns
-    kanbanStore.clearAllData();
+    // Don't clear all data - preserve existing tasks
+    // kanbanStore.clearAllData(); // REMOVED - this was destroying everything!
 
+    // Get existing columns to preserve
+    const existingColumns = kanbanStore.columns;
+    const existingColumnIds = new Set(existingColumns.map(c => c.id));
+    
+    // Check for old hardcoded columns with tasks that need migration
+    const oldColumns = existingColumns.filter(
+      c => (c.id === 'todo' || c.id === 'in-progress' || c.id === 'done') && c.tasks.length > 0
+    );
+    
+    if (oldColumns.length > 0) {
+      logger.info('[SYNC] Found old columns with tasks, will migrate to first Google list');
+    }
+    
     // Create Kanban columns for each Google Task list
     for (const taskList of googleStore.taskLists) {
-      // Create a safe column ID from the task list title
-      const columnId = taskList.id || taskList.title.toLowerCase().replace(/\s+/g, '-');
+      // Use Google Task List ID as column ID for consistent mapping
+      const columnId = taskList.id;
       
-      // Add column to Kanban board
-      kanbanStore.addColumn(columnId, taskList.title);
+      // Only add column if it doesn't already exist
+      if (!existingColumnIds.has(columnId)) {
+        kanbanStore.addColumn(columnId, taskList.title);
+        logger.info(`[SYNC] Created Kanban column "${taskList.title}" for Google Task list`);
+      } else {
+        logger.info(`[SYNC] Column already exists for "${taskList.title}"`);
+      }
       
-      // Create mapping
+      // Always create mapping
       this.syncMappings.push({
         kanbanColumnId: columnId,
         googleTaskListId: taskList.id
       });
-      
-      logger.info(`[SYNC] Created Kanban column "${taskList.title}" for Google Task list`);
     }
 
     this.saveMappings();
     logger.info('[SYNC] Column mappings established:', this.syncMappings);
+    
+    // Migrate tasks from old hardcoded columns to first Google list
+    if (oldColumns.length > 0 && googleStore.taskLists.length > 0) {
+      const firstGoogleList = googleStore.taskLists[0];
+      const firstColumnId = firstGoogleList.id;
+      
+      for (const oldColumn of oldColumns) {
+        logger.info(`[SYNC] Migrating ${oldColumn.tasks.length} tasks from old column "${oldColumn.id}" to Google list "${firstGoogleList.title}"`);
+        
+        // Move tasks to the first Google column
+        for (const task of oldColumn.tasks) {
+          // Create in Google Tasks
+          try {
+            const googleTask = await googleStore.createTask(firstGoogleList.id, {
+              title: task.title,
+              notes: task.notes,
+              due: task.due,
+              status: task.status
+            });
+            
+            // Update task with Google ID
+            if (googleTask) {
+              task.metadata = {
+                ...task.metadata,
+                googleTaskId: googleTask.id
+              };
+              
+              // Preserve metadata
+              if (task.metadata) {
+                const { setTaskMetadata } = useTaskMetadataStore.getState();
+                setTaskMetadata(googleTask.id, task.metadata);
+              }
+            }
+          } catch (error) {
+            logger.error('[SYNC] Failed to migrate task to Google:', error);
+          }
+        }
+        
+        // Remove the old column
+        kanbanStore.columns = kanbanStore.columns.filter(c => c.id !== oldColumn.id);
+      }
+      
+      // Force a sync to get the migrated tasks
+      await this.syncAll();
+    }
   }
 
   // Convert Kanban task to Google Task format
@@ -163,14 +225,21 @@ class KanbanGoogleTasksSync {
       if (!existingKanbanTask) {
         // Create in Kanban with Google Task ID reference
         try {
+          console.log('=== SYNC: CREATING NEW TASK ===');
+          console.log('Google Task ID:', googleTask.id);
+          
+          // Get metadata from separate store
+          const metadataFromStore = useTaskMetadataStore.getState().getTaskMetadata(googleTask.id);
+          console.log('Metadata from store:', metadataFromStore);
+          
           const newTask = await kanbanStore.createTask(column.id, {
             title: googleTask.title,
             notes: googleTask.notes,
             due: googleTask.due,
             metadata: {
-              labels: [],
-              priority: 'normal' as const,
-              subtasks: [],
+              labels: metadataFromStore?.labels || [],
+              priority: metadataFromStore?.priority || 'normal' as const,
+              subtasks: metadataFromStore?.subtasks || [],
               googleTaskId: googleTask.id,
               lastGoogleSync: new Date().toISOString()
             }
@@ -187,12 +256,19 @@ class KanbanGoogleTasksSync {
         
         // Update if Google Task is newer
         if (new Date(googleTask.updated) > new Date(existingKanbanTask.updated)) {
+          console.log('=== SYNC: UPDATING EXISTING TASK ===');
+          console.log('Google Task ID:', googleTask.id);
+          
+          // Get metadata from separate store
+          const metadataFromStore = useTaskMetadataStore.getState().getTaskMetadata(googleTask.id);
+          console.log('Metadata from store:', metadataFromStore);
+          
           await kanbanStore.updateTask(column.id, existingKanbanTask.id, {
             ...this.googleToKanbanTask(googleTask),
             metadata: {
-              labels: existingKanbanTask.metadata?.labels || [],
-              priority: existingKanbanTask.metadata?.priority || 'normal',
-              subtasks: existingKanbanTask.metadata?.subtasks || [],
+              labels: metadataFromStore?.labels || existingKanbanTask.metadata?.labels || [],
+              priority: metadataFromStore?.priority || existingKanbanTask.metadata?.priority || 'normal',
+              subtasks: metadataFromStore?.subtasks || existingKanbanTask.metadata?.subtasks || [],
               recurring: existingKanbanTask.metadata?.recurring,
               googleTaskId: googleTask.id,
               lastGoogleSync: new Date().toISOString()

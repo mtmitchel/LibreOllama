@@ -40,6 +40,10 @@ export const useTaskMetadataStore = create<TaskMetadataStore>()(
       metadata: {},
       
       setTaskMetadata: (taskId: string, updates: Partial<TaskMetadata>) => {
+        console.log('=== SETTING METADATA ===');
+        console.log('Task ID:', taskId);
+        console.log('Updates:', updates);
+        
         set(state => {
           const existing = state.metadata[taskId];
           
@@ -64,6 +68,9 @@ export const useTaskMetadataStore = create<TaskMetadataStore>()(
             }
           };
         });
+        
+        console.log('New metadata state:', get().metadata);
+        console.log('Metadata for this task:', get().metadata[taskId]);
       },
       
       getTaskMetadata: (taskId: string) => {
