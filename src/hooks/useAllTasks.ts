@@ -1,23 +1,35 @@
 import { useQueries } from '@tanstack/react-query';
-import { useGoogleTasksStoreV2 } from '../stores/useGoogleTasksStoreV2';
+import { useUnifiedTaskStore } from '../stores/unifiedTaskStore';
 import * as api from '../api/googleTasksApi';
 
 /**
  * Hook that loads tasks for all task lists using useQueries
  */
 export function useAllTasks() {
-  const taskLists = useGoogleTasksStoreV2(state => state.taskLists);
-  const setTasks = useGoogleTasksStoreV2(state => state.setTasks);
+  const { columns, batchUpdateFromGoogle } = useUnifiedTaskStore();
   
   const taskQueries = useQueries({
-    queries: taskLists.map(list => ({
-      queryKey: ['tasks', 'tasks', list.id],
+    queries: columns.filter(col => col.googleTaskListId).map(column => ({
+      queryKey: ['tasks', 'tasks', column.googleTaskListId],
       queryFn: async () => {
-        const tasks = await api.listTasks(list.id!);
-        setTasks(list.id!, tasks);
+        const tasks = await api.listTasks(column.googleTaskListId!);
+        // Update unified store with tasks
+        const updates = tasks.map(task => ({
+          googleTaskId: task.id!,
+          googleTaskListId: column.googleTaskListId!,
+          data: {
+            title: task.title || '',
+            notes: task.notes,
+            due: task.due,
+            status: task.status as 'needsAction' | 'completed',
+            position: task.position || '0',
+            updated: task.updated || new Date().toISOString(),
+          },
+        }));
+        batchUpdateFromGoogle(updates);
         return tasks;
       },
-      enabled: !!list.id,
+      enabled: !!column.googleTaskListId,
       staleTime: 2 * 60 * 1000, // 2 minutes
     })),
   });

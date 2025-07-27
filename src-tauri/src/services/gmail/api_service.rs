@@ -333,7 +333,7 @@ impl GmailApiService {
                 message: format!("No tokens found for account_id: {}", account_id),
             })?;
 
-        let endpoint = format!("users/{}/labels", account_id);
+        let endpoint = "users/me/labels";
 
         let list_response = self
             .make_api_request::<serde_json::Value>(account_id, &endpoint).await?;

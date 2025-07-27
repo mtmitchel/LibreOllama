@@ -9,7 +9,7 @@ interface CreateTaskModalProps {
     title: string; 
     notes?: string; 
     due?: string;
-    metadata?: import('../../stores/useKanbanStore').TaskMetadata;
+    metadata?: import('../../stores/unifiedTaskStore.types').TaskMetadata;
   }) => Promise<void>;
   columnTitle: string;
 }
@@ -25,7 +25,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({
     notes: '',
     due: '',
   });
-  const [metadata, setMetadata] = useState<import('../../stores/useKanbanStore').TaskMetadata>({
+  const [metadata, setMetadata] = useState<import('../../stores/unifiedTaskStore.types').TaskMetadata>({
     labels: [],
     priority: 'normal' as const,
     subtasks: [],

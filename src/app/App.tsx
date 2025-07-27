@@ -69,12 +69,6 @@ export default function App() {
     initializeSettings();
   }, [initializeSettings]);
 
-  // Load test utilities in development
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      import('../tests/integration/auth-persistence-test').catch(console.error);
-    }
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

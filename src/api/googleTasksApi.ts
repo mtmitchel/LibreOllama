@@ -146,3 +146,19 @@ export async function deleteTaskList(tasklistId: string): Promise<void> {
     tasklist: tasklistId
   });
 }
+
+// Export as namespace for easier importing
+export const googleTasksApi = {
+  initGapiClient,
+  listTaskLists,
+  listTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  moveTask,
+  createTaskList,
+  updateTaskList,
+  deleteTaskList,
+  getTaskLists: listTaskLists,
+  getTasks: listTasks,
+};

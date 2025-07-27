@@ -56,6 +56,27 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+fn get_google_client_id() -> Result<String, String> {
+    match ConfigManager::new() {
+        Ok(config) => {
+            let client_id = config.oauth().client_id.clone();
+            if client_id.is_empty() {
+                // In development mode, try to get from environment variable
+                if let Ok(env_client_id) = std::env::var("GMAIL_CLIENT_ID") {
+                    if !env_client_id.is_empty() {
+                        return Ok(env_client_id);
+                    }
+                }
+                Err("Google Client ID not configured. Please set GMAIL_CLIENT_ID environment variable.".to_string())
+            } else {
+                Ok(client_id)
+            }
+        }
+        Err(e) => Err(format!("Failed to load configuration: {}", e))
+    }
+}
+
 /// Initialize database and return success status
 async fn init_database_system() -> Result<(), String> {
     println!("🔧 [BACKEND-DEBUG] Starting database initialization...");
@@ -249,6 +270,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            get_google_client_id,
             database_health_check,
             // Gmail commands
             start_gmail_oauth_with_callback,

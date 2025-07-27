@@ -541,7 +541,7 @@ export function MailSidebar({ isOpen = true, onToggle }: MailSidebarProps) {
                     );
                   })
                 ) : (
-                  <div className="p-3">
+                  <div className="flex items-center justify-center p-6">
                     <Text size="sm" variant="secondary">
                       {isAuthenticated ? 'Loading labels...' : 'No labels yet'}
                     </Text>

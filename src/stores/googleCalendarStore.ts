@@ -101,6 +101,10 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           logger.debug('[GOOGLE-CALENDAR] Authenticating account:', account.email);
           set((state) => {
             state.isAuthenticated = true;
+            // Clear any stale data from previous account
+            state.calendars = [];
+            state.events = [];
+            state.error = null;
           });
           
           // The account should already be added to settings store by the Settings page
@@ -172,14 +176,20 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
             const defaultTimeMin = timeMin || new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString();
             const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 6, 0).toISOString();
             
-            // First, get all calendars if we haven't already
+            // Always fetch calendars for the current account to ensure we have the right list
+            await get().fetchCalendars(account.id);
+            
+            // Ensure we have at least the primary calendar if the calendar list is empty
             if (get().calendars.length === 0) {
-              await get().fetchCalendars();
+              logger.info('[GOOGLE-CALENDAR] No calendars found, adding primary calendar as fallback');
+              set((state) => {
+                state.calendars = [{ id: 'primary', summary: 'Primary' }];
+              });
             }
             
             // Fetch events from all calendars
             const allEvents: GoogleCalendarEvent[] = [];
-            const calendars = get().calendars.length > 0 ? get().calendars : [{ id: 'primary' }];
+            const calendars = get().calendars;
             
             for (const calendar of calendars) {
               try {

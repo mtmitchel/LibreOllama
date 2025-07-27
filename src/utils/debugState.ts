@@ -1,29 +1,28 @@
-import { useGoogleTasksStore } from '../stores/googleTasksStore';
-import { useKanbanStore } from '../stores/useKanbanStore';
+import { useUnifiedTaskStore } from '../stores/unifiedTaskStore';
 
 export const debugStoreState = () => {
   if (process.env.NODE_ENV === 'development') {
-    const googleStore = useGoogleTasksStore.getState();
-    const kanbanStore = useKanbanStore.getState();
+    const unifiedStore = useUnifiedTaskStore.getState();
     
     console.group('🔍 Store State Debug');
-    console.log('GoogleTasksStore:', {
-      taskListsCount: googleStore.taskLists.length,
-      tasksPerList: Object.entries(googleStore.tasks).map(([listId, tasks]) => ({
-        listId,
-        taskCount: tasks.length,
-        tasksWithMetadata: tasks.filter(t => t.metadata).length
-      }))
-    });
-    
-    console.log('KanbanStore:', {
-      columnsCount: kanbanStore.columns.length,
-      tasksPerColumn: kanbanStore.columns.map(col => ({
-        columnId: col.id,
+    console.log('UnifiedTaskStore:', {
+      columnsCount: unifiedStore.columns.length,
+      totalTasks: unifiedStore.tasks.length,
+      columns: unifiedStore.columns.map(col => ({
+        id: col.id,
         title: col.title,
-        taskCount: col.tasks.length,
-        tasksWithMetadata: col.tasks.filter(t => t.metadata).length
-      }))
+        taskCount: unifiedStore.getTasksByColumn(col.id).length,
+        googleTaskListId: col.googleTaskListId
+      })),
+      tasksByStatus: {
+        synced: unifiedStore.tasks.filter(t => t.syncState === 'synced').length,
+        pendingCreate: unifiedStore.tasks.filter(t => t.syncState === 'pending_create').length,
+        pendingUpdate: unifiedStore.tasks.filter(t => t.syncState === 'pending_update').length,
+        pendingDelete: unifiedStore.tasks.filter(t => t.syncState === 'pending_delete').length,
+        error: unifiedStore.tasks.filter(t => t.syncState === 'error').length
+      },
+      syncEnabled: unifiedStore.syncEnabled,
+      isInitialized: unifiedStore.isInitialized
     });
     console.groupEnd();
   }

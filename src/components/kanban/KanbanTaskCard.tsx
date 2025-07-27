@@ -1,6 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { useKanbanStore, KanbanTask } from '../../stores/useKanbanStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
+import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
+
+type KanbanTask = UnifiedTask;
 import { EditTaskModal } from './EditTaskModal';
 import { Button, ContextMenu, ConfirmDialog } from '../ui';
 import { Calendar, CheckSquare, Square, MoreHorizontal, User, Tag, Edit2, Trash2, Copy, CheckCircle2 } from 'lucide-react';
@@ -17,7 +20,11 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   columnId,
   isDragging = false,
 }) => {
-  const { updateTask, deleteTask, toggleComplete } = useKanbanStore();
+  const { updateTask, deleteTask } = useUnifiedTaskStore();
+  
+  const toggleComplete = async (columnId: string, taskId: string, completed: boolean) => {
+    await updateTask(taskId, { status: completed ? 'completed' : 'needsAction' });
+  };
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -55,12 +62,12 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
     due?: string;
   }) => {
     try {
-      await updateTask(columnId, task.id, updates);
+      await updateTask(task.id, updates);
       setIsEditModalOpen(false);
     } catch (error) {
       // Failed to update task
     }
-  }, [updateTask, columnId, task.id]);
+  }, [updateTask, task.id]);
 
   // Handle task deletion
   const handleDeleteTask = useCallback(async () => {
@@ -69,13 +76,13 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   
   const confirmDelete = useCallback(async () => {
     try {
-      await deleteTask(columnId, task.id);
+      await deleteTask(task.id);
       setIsEditModalOpen(false);
       setShowDeleteConfirm(false);
     } catch (error) {
       // Failed to delete task
     }
-  }, [deleteTask, columnId, task.id]);
+  }, [deleteTask, task.id]);
 
   // Handle card click
   const handleCardClick = useCallback((e: React.MouseEvent) => {
@@ -107,7 +114,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
             label: 'Duplicate task',
             icon: <Copy size={14} />,
             onClick: async () => {
-              const { createTask } = useKanbanStore.getState();
+              const { createTask } = useUnifiedTaskStore.getState();
               await createTask(columnId, {
                 title: `${task.title} (copy)`,
                 notes: task.notes,

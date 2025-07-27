@@ -5,7 +5,7 @@ import { AIOutputModalPro } from './AIOutputModalPro';
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useNotesStore } from '../../features/notes/store';
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { LLMProviderManager, type LLMMessage } from '../../services/llmProviders';
 import { useSettingsStore } from '../../stores/settingsStore';
 
@@ -45,7 +45,7 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   // Store references for AI actions
   const chatStore = useChatStore();
   const notesStore = useNotesStore();
-  const tasksStore = useGoogleTasksStore();
+  const tasksStore = useUnifiedTaskStore();
 
   // Handle keyboard shortcut (Cmd/Ctrl + J)
   useEffect(() => {

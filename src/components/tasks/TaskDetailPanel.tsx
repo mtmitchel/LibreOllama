@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Badge } from '../ui/badge';
 import type { tasks_v1 } from '../../api/googleTasksApi';
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
-import { useTaskMetadataStore } from '../../stores/taskMetadataStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { cn } from '../../lib/utils';
 
 interface TaskDetailPanelProps {
@@ -26,16 +25,22 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
   onClose,
   allLabels,
 }) => {
-  const updateTask = useGoogleTasksStore(state => state.updateTask);
-  const deleteTask = useGoogleTasksStore(state => state.deleteTask);
-  const toggleTaskComplete = useGoogleTasksStore(state => state.toggleTaskComplete);
+  const { updateTask, deleteTask, tasks, getTaskByGoogleId } = useUnifiedTaskStore();
   
-  const metadata = useTaskMetadataStore(state => state.getTaskMetadata(task.id!)) || {
-    labels: [],
-    priority: 'normal' as const,
-    subtasks: []
+  // Get the unified task - try by Google ID first, then local ID
+  const unifiedTask = getTaskByGoogleId(task.id!) || tasks[task.id!];
+  const taskId = unifiedTask?.id || task.id!;
+  
+  const metadata = {
+    labels: unifiedTask?.labels || [],
+    priority: unifiedTask?.priority || 'normal' as const,
+    subtasks: unifiedTask?.attachments?.filter(a => a.type === 'subtask').map(a => ({
+      id: a.name,
+      title: a.name,
+      completed: a.url === 'completed',
+      due: ''
+    })) || []
   };
-  const setTaskMetadata = useTaskMetadataStore(state => state.setTaskMetadata);
   
   const [title, setTitle] = useState(task.title || '');
   const [notes, setNotes] = useState(task.notes || '');
@@ -52,7 +57,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
   const handleSave = async () => {
     try {
       console.log('Saving task with date:', dueDate);
-      await updateTask(taskListId, task.id!, {
+      updateTask(taskId, {
         title,
         notes,
         due: dueDate ? new Date(dueDate + 'T00:00:00Z').toISOString() : undefined,
@@ -65,7 +70,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
   
   const handleDelete = async () => {
     try {
-      await deleteTask(taskListId, task.id!);
+      deleteTask(taskId);
       onClose();
     } catch (error) {
       console.error('Failed to delete task:', error);
@@ -74,9 +79,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
   
   const handleAddLabel = () => {
     if (newLabel.trim()) {
-      console.log('Adding label:', newLabel.trim(), 'to task:', task.id);
-      setTaskMetadata(task.id!, {
-        ...metadata,
+      console.log('Adding label:', newLabel.trim(), 'to task:', taskId);
+      updateTask(taskId, {
         labels: [...metadata.labels, newLabel.trim()]
       });
       setNewLabel('');
@@ -85,13 +89,12 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
   
   const handleAddSubtask = () => {
     if (newSubtask.trim()) {
-      setTaskMetadata(task.id!, {
-        ...metadata,
-        subtasks: [...(metadata.subtasks || []), {
-          id: Date.now().toString(),
-          title: newSubtask.trim(),
-          completed: false,
-          due: ''
+      const currentAttachments = unifiedTask?.attachments || [];
+      updateTask(taskId, {
+        attachments: [...currentAttachments, {
+          name: newSubtask.trim(),
+          url: 'pending',
+          type: 'subtask'
         }]
       });
       setNewSubtask('');
@@ -100,7 +103,9 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
   
   const handleToggleComplete = async () => {
     try {
-      await toggleTaskComplete(taskListId, task.id!, task.status !== 'completed');
+      updateTask(taskId, {
+        status: task.status === 'completed' ? 'needsAction' : 'completed'
+      });
     } catch (error) {
       console.error('Failed to toggle task:', error);
     }
@@ -170,8 +175,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
             <Select
               value={metadata.priority}
               onValueChange={(value) => {
-                setTaskMetadata(task.id!, {
-                  ...metadata,
+                updateTask(taskId, {
                   priority: value as 'low' | 'normal' | 'high' | 'urgent'
                 });
               }}
@@ -201,8 +205,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                   variant="secondary"
                   className="cursor-pointer"
                   onClick={() => {
-                    setTaskMetadata(task.id!, {
-                      ...metadata,
+                    updateTask(taskId, {
                       labels: metadata.labels.filter(l => l !== label)
                     });
                   }}
@@ -256,10 +259,12 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                     type="checkbox"
                     checked={subtask.completed}
                     onChange={(e) => {
-                      setTaskMetadata(task.id!, {
-                        ...metadata,
-                        subtasks: (metadata.subtasks || []).map(st => 
-                          st.id === subtask.id ? { ...st, completed: e.target.checked } : st
+                      const attachments = unifiedTask?.attachments || [];
+                      updateTask(taskId, {
+                        attachments: attachments.map(a => 
+                          a.type === 'subtask' && a.name === subtask.title
+                            ? { ...a, url: e.target.checked ? 'completed' : 'pending' }
+                            : a
                         )
                       });
                     }}
@@ -275,9 +280,11 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      setTaskMetadata(task.id!, {
-                        ...metadata,
-                        subtasks: (metadata.subtasks || []).filter(st => st.id !== subtask.id)
+                      const attachments = unifiedTask?.attachments || [];
+                      updateTask(taskId, {
+                        attachments: attachments.filter(a => 
+                          !(a.type === 'subtask' && a.name === subtask.title)
+                        )
                       });
                     }}
                   >

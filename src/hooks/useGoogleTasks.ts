@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/googleTasksApi';
-import { useGoogleTasksStoreV2 } from '../stores/useGoogleTasksStoreV2';
-import { useTaskMetadataStore } from '../stores/useTaskMetadataStore';
+import { useUnifiedTaskStore } from '../stores/unifiedTaskStore';
 import type { tasks_v1 } from '../api/googleTasksApi';
 
 // Query keys
@@ -14,13 +13,17 @@ const taskKeys = {
 
 // Hook for fetching task lists
 export function useTaskLists() {
-  const setTaskLists = useGoogleTasksStoreV2(state => state.setTaskLists);
+  const { addColumn, updateColumn } = useUnifiedTaskStore();
   
   return useQuery({
     queryKey: taskKeys.lists(),
     queryFn: async () => {
       const lists = await api.listTaskLists();
-      setTaskLists(lists);
+      // Update unified store columns
+      lists.forEach(list => {
+        addColumn(list.id, list.title, list.id);
+        updateColumn(list.id, { googleTaskListId: list.id });
+      });
       return lists;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -29,13 +32,26 @@ export function useTaskLists() {
 
 // Hook for fetching tasks in a list
 export function useTasks(tasklistId: string) {
-  const setTasks = useGoogleTasksStoreV2(state => state.setTasks);
+  const { batchUpdateFromGoogle } = useUnifiedTaskStore();
   
   return useQuery({
     queryKey: taskKeys.tasks(tasklistId),
     queryFn: async () => {
       const tasks = await api.listTasks(tasklistId);
-      setTasks(tasklistId, tasks);
+      // Update unified store with tasks
+      const updates = tasks.map(task => ({
+        googleTaskId: task.id!,
+        googleTaskListId: tasklistId,
+        data: {
+          title: task.title || '',
+          notes: task.notes,
+          due: task.due,
+          status: task.status as 'needsAction' | 'completed',
+          position: task.position || '0',
+          updated: task.updated || new Date().toISOString(),
+        },
+      }));
+      batchUpdateFromGoogle(updates);
       return tasks;
     },
     enabled: !!tasklistId,
@@ -46,7 +62,7 @@ export function useTasks(tasklistId: string) {
 // Hook for creating a task
 export function useCreateTask() {
   const queryClient = useQueryClient();
-  const addTask = useGoogleTasksStoreV2(state => state.addTask);
+  const { createTask, markTaskSynced } = useUnifiedTaskStore();
   
   return useMutation({
     mutationFn: async ({ tasklistId, task }: { tasklistId: string; task: tasks_v1.Schema$Task }) => {
@@ -54,7 +70,17 @@ export function useCreateTask() {
       return { tasklistId, task: createdTask };
     },
     onSuccess: ({ tasklistId, task }) => {
-      addTask(tasklistId, task);
+      if (task.id) {
+        // Create in unified store and mark as synced
+        const taskId = createTask({
+          columnId: tasklistId,
+          title: task.title || '',
+          notes: task.notes,
+          due: task.due,
+          googleTaskListId: tasklistId,
+        });
+        markTaskSynced(taskId, task.id, tasklistId);
+      }
       queryClient.invalidateQueries({ queryKey: taskKeys.tasks(tasklistId) });
     },
   });
@@ -63,7 +89,7 @@ export function useCreateTask() {
 // Hook for updating a task
 export function useUpdateTask() {
   const queryClient = useQueryClient();
-  const updateTask = useGoogleTasksStoreV2(state => state.updateTask);
+  const { getTaskByGoogleId, updateTask } = useUnifiedTaskStore();
   
   return useMutation({
     mutationFn: async ({ 
@@ -79,7 +105,17 @@ export function useUpdateTask() {
       return { tasklistId, taskId, task: updatedTask };
     },
     onSuccess: ({ tasklistId, taskId, task }) => {
-      updateTask(tasklistId, taskId, task);
+      // Update in unified store
+      const unifiedTask = getTaskByGoogleId(taskId);
+      if (unifiedTask) {
+        updateTask(unifiedTask.id, {
+          title: task.title || unifiedTask.title,
+          notes: task.notes,
+          due: task.due,
+          status: task.status as 'needsAction' | 'completed',
+          updated: task.updated || new Date().toISOString(),
+        });
+      }
       queryClient.invalidateQueries({ queryKey: taskKeys.tasks(tasklistId) });
     },
   });
@@ -88,8 +124,7 @@ export function useUpdateTask() {
 // Hook for deleting a task
 export function useDeleteTask() {
   const queryClient = useQueryClient();
-  const removeTask = useGoogleTasksStoreV2(state => state.removeTask);
-  const removeMetadata = useTaskMetadataStore(state => state.removeMetadata);
+  const { getTaskByGoogleId, deleteTask } = useUnifiedTaskStore();
   
   return useMutation({
     mutationFn: async ({ tasklistId, taskId }: { tasklistId: string; taskId: string }) => {
@@ -97,8 +132,11 @@ export function useDeleteTask() {
       return { tasklistId, taskId };
     },
     onSuccess: ({ tasklistId, taskId }) => {
-      removeTask(tasklistId, taskId);
-      removeMetadata(taskId);
+      // Delete from unified store
+      const unifiedTask = getTaskByGoogleId(taskId);
+      if (unifiedTask) {
+        deleteTask(unifiedTask.id);
+      }
       queryClient.invalidateQueries({ queryKey: taskKeys.tasks(tasklistId) });
     },
   });
@@ -107,7 +145,6 @@ export function useDeleteTask() {
 // Hook for moving a task
 export function useMoveTask() {
   const queryClient = useQueryClient();
-  const updateTask = useGoogleTasksStoreV2(state => state.updateTask);
   
   return useMutation({
     mutationFn: async ({ 
@@ -177,24 +214,46 @@ export function useDeleteTaskList() {
 
 // Combined hook for task with metadata
 export function useTaskWithMetadata(tasklistId: string, taskId: string) {
-  // Use more specific selectors to avoid unnecessary re-renders
-  const task = useGoogleTasksStoreV2(state => 
-    state.tasks[tasklistId]?.find(t => t.id === taskId)
-  );
+  const { getTaskByGoogleId } = useUnifiedTaskStore();
   
-  const metadata = useTaskMetadataStore(state => state.metadata[taskId]);
+  const unifiedTask = getTaskByGoogleId(taskId);
   
   return {
-    task,
-    metadata: metadata || { labels: [], priority: 'normal' as const },
-    isLoading: !task && !!taskId,
+    task: unifiedTask ? {
+      id: unifiedTask.googleTaskId || unifiedTask.id,
+      title: unifiedTask.title,
+      notes: unifiedTask.notes,
+      due: unifiedTask.due,
+      status: unifiedTask.status,
+      position: unifiedTask.position,
+      updated: unifiedTask.updated,
+    } : undefined,
+    metadata: {
+      labels: unifiedTask?.labels || [],
+      priority: unifiedTask?.priority || 'normal' as const,
+    },
+    isLoading: !unifiedTask && !!taskId,
   };
 }
 
 // Hook for updating task metadata
 export function useUpdateTaskMetadata() {
-  const setTaskMetadata = useTaskMetadataStore(state => state.setTaskMetadata);
-  const getTaskMetadata = useTaskMetadataStore(state => state.getTaskMetadata);
+  const { getTaskByGoogleId, updateTask } = useUnifiedTaskStore();
+  
+  const setTaskMetadata = (googleTaskId: string, metadata: { labels?: string[]; priority?: 'low' | 'normal' | 'high' | 'urgent' }) => {
+    const task = getTaskByGoogleId(googleTaskId);
+    if (task) {
+      updateTask(task.id, metadata);
+    }
+  };
+  
+  const getTaskMetadata = (googleTaskId: string) => {
+    const task = getTaskByGoogleId(googleTaskId);
+    return task ? {
+      labels: task.labels || [],
+      priority: task.priority || 'normal' as const,
+    } : undefined;
+  };
   
   return {
     updateMetadata: setTaskMetadata,
@@ -205,12 +264,11 @@ export function useUpdateTaskMetadata() {
 
 // Hook to get all unique labels
 export function useAllLabels() {
-  // Get all labels from metadata
-  const metadata = useTaskMetadataStore(state => state.metadata);
+  const { tasks } = useUnifiedTaskStore();
   
   const labelSet = new Set<string>();
-  Object.values(metadata).forEach((meta) => {
-    meta.labels?.forEach(label => labelSet.add(label));
+  Object.values(tasks).forEach((task) => {
+    task.labels?.forEach(label => labelSet.add(label));
   });
   
   return Array.from(labelSet).sort();

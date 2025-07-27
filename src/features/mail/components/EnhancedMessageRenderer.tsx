@@ -4,6 +4,7 @@ import { Text, Button } from '../../../components/ui';
 import { ParsedEmail, EmailAddress } from '../types';
 import 'highlight.js/styles/github.css';
 import { logger } from '../../../core/lib/logger';
+import { sanitizeEmailHtml, sanitizePlainText, extractQuotedContent } from '../utils/secureSanitizer';
 
 interface EnhancedMessageRendererProps {
   message: ParsedEmail;
@@ -113,11 +114,18 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
   // Process and sanitize content
   useEffect(() => {
     if (contentType === 'html') {
-      const { sanitized, warnings } = sanitizeHtmlContent(content, enableImageLoading);
-      setProcessedContent(sanitized);
-      setSecurityWarnings(warnings);
+      const result = sanitizeEmailHtml(content, {
+        allowImages: enableImageLoading,
+        allowExternalLinks: true,
+        allowStyles: false, // Block styles for security
+        allowTables: true,
+      });
+      setProcessedContent(result.sanitized);
+      setSecurityWarnings(result.warnings);
     } else {
-      setProcessedContent(content);
+      // Sanitize plain text and convert to safe HTML
+      const sanitized = sanitizePlainText(content);
+      setProcessedContent(sanitized);
       setSecurityWarnings([]);
     }
   }, [content, contentType, enableImageLoading]);
@@ -176,69 +184,7 @@ function MessageContent({ content, contentType, enableImageLoading, enableLinkPr
   );
 }
 
-// HTML sanitization function
-function sanitizeHtmlContent(html: string, enableImages: boolean): { sanitized: string; warnings: string[] } {
-  const warnings: string[] = [];
-  let sanitized = html;
-
-  // Remove potentially dangerous elements
-  const dangerousElements = ['script', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'button'];
-  dangerousElements.forEach(tag => {
-    const regex = new RegExp(`<${tag}[^>]*>.*?<\/${tag}>`, 'gsi');
-    if (regex.test(sanitized)) {
-      warnings.push(`Removed potentially unsafe ${tag} elements`);
-      sanitized = sanitized.replace(regex, '');
-    }
-  });
-
-  // Handle images
-  if (!enableImages) {
-    const imgRegex = /<img[^>]*>/gi;
-    if (imgRegex.test(sanitized)) {
-      warnings.push('External images blocked for security');
-      sanitized = sanitized.replace(imgRegex, '<div class="blocked-image" style="background: var(--bg-secondary); border: 1px dashed var(--border-default); padding: 8px; text-align: center; color: var(--text-secondary); font-size: 12px;">🖼️ Image blocked</div>');
-    }
-  } else {
-    // Add security attributes to images
-    sanitized = sanitized.replace(/<img([^>]*)>/gi, '<img$1 referrerpolicy="no-referrer" loading="lazy">');
-  }
-
-  // Add security attributes to links
-  sanitized = sanitized.replace(/<a([^>]*?)href="([^"]*)"([^>]*?)>/gi, 
-    '<a$1href="$2"$3 target="_blank" rel="noopener noreferrer" class="external-link">');
-
-  // Remove javascript: and data: URLs
-  const jsRegex = /(href|src)="(javascript:|data:)/gi;
-  if (jsRegex.test(sanitized)) {
-    warnings.push('Removed potentially malicious URLs');
-    sanitized = sanitized.replace(jsRegex, '$1="#blocked"');
-  }
-
-  return { sanitized, warnings };
-}
-
-// Extract quoted text from message content
-function extractQuotedText(content: string): { main: string; quoted: string | null } {
-  // Common quoted text patterns (using [\s\S] instead of 's' flag for ES compatibility)
-  const patterns = [
-    /^(.*?)(\n\s*On .* wrote:\s*\n[\s\S]*)/,
-    /^(.*?)(\n\s*-----Original Message-----[\s\S]*)/,
-    /^(.*?)(\n\s*From:.*\nSent:.*\nTo:.*\nSubject:.*\n[\s\S]*)/,
-    /^(.*?)(\n\s*>[\s\S]*)/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = content.match(pattern);
-    if (match) {
-      return {
-        main: match[1].trim(),
-        quoted: match[2].trim()
-      };
-    }
-  }
-
-  return { main: content, quoted: null };
-}
+// Use the secure sanitizer's extractQuotedContent function instead
 
 export function EnhancedMessageRenderer({ 
   message, 
@@ -275,8 +221,8 @@ export function EnhancedMessageRenderer({
 
   // Extract quoted text
   const { main, quoted } = useMemo(() => {
-    if (contentType === 'text' && !showSource) {
-      return extractQuotedText(content);
+    if (!showSource) {
+      return extractQuotedContent(content);
     }
     return { main: content, quoted: null };
   }, [content, contentType, showSource]);

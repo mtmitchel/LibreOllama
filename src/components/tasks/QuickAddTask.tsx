@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../ui/badge';
 import { useCreateTask } from '../../hooks/useGoogleTasks';
 import { useUpdateTaskMetadata } from '../../hooks/useGoogleTasks';
-import type { TaskMetadata } from '../../stores/useTaskMetadataStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 
 interface QuickAddTaskProps {
   taskListId: string;
@@ -21,12 +21,12 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState<TaskMetadata['priority']>('normal');
+  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [labels, setLabels] = useState<string[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
   const createTask = useCreateTask();
-  const { setMetadata } = useUpdateTaskMetadata();
+  const { createTask: createUnifiedTask } = useUnifiedTaskStore();
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -40,6 +40,16 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
     
     if (!title.trim()) return;
     
+    // Create in unified store first
+    const taskId = createUnifiedTask({
+      columnId: taskListId,
+      title: title.trim(),
+      due: dueDate ? new Date(dueDate).toISOString() : undefined,
+      labels,
+      priority,
+    });
+    
+    // Then sync with Google
     const result = await createTask.mutateAsync({
       tasklistId: taskListId,
       task: {
@@ -48,14 +58,6 @@ export const QuickAddTask: React.FC<QuickAddTaskProps> = ({
         status: 'needsAction',
       },
     });
-    
-    // Set metadata if any
-    if (result.task.id && (labels.length > 0 || priority !== 'normal')) {
-      setMetadata(result.task.id, {
-        labels,
-        priority,
-      });
-    }
     
     // Reset form
     setTitle('');

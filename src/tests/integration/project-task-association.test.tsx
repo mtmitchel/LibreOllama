@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useKanbanStore } from '../../stores/useKanbanStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 
 // Mock Tauri commands
 vi.mock('@tauri-apps/api/core', () => ({
@@ -9,13 +9,14 @@ vi.mock('@tauri-apps/api/core', () => ({
 describe.skip('Project-Task Association Integration (Not yet implemented)', () => {
   beforeEach(() => {
     // Reset stores before each test using store-first pattern
-    const store = useKanbanStore.getState();
-    store.clearAllData();
+    const store = useUnifiedTaskStore.getState();
+    store.tasks = [];
+    store.columns = [];
   });
 
   it('should assign a task to a project', async () => {
     // ✅ BEST PRACTICE: Direct store testing from Canvas model
-    const store = useKanbanStore.getState();
+    const store = useUnifiedTaskStore.getState();
 
     // Create a task directly through store
     const createdTask = await store.createTask('todo', {
@@ -47,7 +48,7 @@ describe.skip('Project-Task Association Integration (Not yet implemented)', () =
 
   it('should remove a task from a project', async () => {
     // ✅ BEST PRACTICE: Direct store testing from Canvas model
-    const store = useKanbanStore.getState();
+    const store = useUnifiedTaskStore.getState();
 
     // Create task
     const createdTask = await store.createTask('todo', {
@@ -82,7 +83,7 @@ describe.skip('Project-Task Association Integration (Not yet implemented)', () =
 
   it('should get tasks by project', async () => {
     // ✅ BEST PRACTICE: Direct store testing from Canvas model
-    const store = useKanbanStore.getState();
+    const store = useUnifiedTaskStore.getState();
 
     // Create multiple tasks
     const task1 = await store.createTask('todo', {
@@ -123,7 +124,7 @@ describe.skip('Project-Task Association Integration (Not yet implemented)', () =
 
   it('should get unassigned tasks', async () => {
     // ✅ BEST PRACTICE: Direct store testing from Canvas model
-    const store = useKanbanStore.getState();
+    const store = useUnifiedTaskStore.getState();
 
     // Create multiple tasks
     const task1 = await store.createTask('todo', {
@@ -157,7 +158,7 @@ describe.skip('Project-Task Association Integration (Not yet implemented)', () =
 
   it('should calculate project task counts correctly', async () => {
     // ✅ BEST PRACTICE: Direct store testing from Canvas model
-    const store = useKanbanStore.getState();
+    const store = useUnifiedTaskStore.getState();
 
     // Create multiple tasks
     const task1 = await store.createTask('todo', {

@@ -13,7 +13,8 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Stores
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
+import type { UnifiedTask, TaskColumn } from '../../stores/unifiedTaskStore.types';
 import type { GoogleAccount, GoogleTask, GoogleTaskList } from '../../types/google';
 
 // Test utilities
@@ -52,7 +53,7 @@ const createMockGoogleTask = (overrides = {}): GoogleTask => ({
   ...overrides
 });
 
-describe('Google Tasks Store Integration Tests', () => {
+describe('Unified Task Store Integration Tests', () => {
   let mockAccount: GoogleAccount;
 
   beforeEach(() => {
@@ -61,8 +62,13 @@ describe('Google Tasks Store Integration Tests', () => {
     // Setup Tauri mocks
     setupTauriMocks();
     
-    // Reset store to clean state
-    useGoogleTasksStore.getState().signOut();
+    // Reset store to clean state - clear all tasks and columns
+    const store = useUnifiedTaskStore.getState();
+    // Delete all columns (which also deletes their tasks)
+    const columnIds = [...store.columns.map(c => c.id)];
+    columnIds.forEach(id => store.deleteColumn(id));
+    // Clear any sync errors
+    store.clearSyncErrors();
     
     // Mock successful Google Tasks API responses
     mockTauriInvoke.mockImplementation((command: string, args?: any) => {
@@ -130,138 +136,122 @@ describe('Google Tasks Store Integration Tests', () => {
   });
 
   describe('Store State Management', () => {
-    it('should handle authentication state correctly', () => {
-      // Test direct state updates
-      useGoogleTasksStore.setState({ isAuthenticated: true });
-      expect(useGoogleTasksStore.getState().isAuthenticated).toBe(true);
+    it('should handle initialization state correctly', () => {
+      // Test initial state
+      const store = useUnifiedTaskStore.getState();
+      expect(store.isSyncing).toBe(false);
+      expect(store.columns.length).toBe(0);
 
-      // Test sign out
-      useGoogleTasksStore.getState().signOut();
-      expect(useGoogleTasksStore.getState().isAuthenticated).toBe(false);
-      expect(useGoogleTasksStore.getState().taskLists).toEqual([]);
-      expect(useGoogleTasksStore.getState().tasks).toEqual({});
+      // Test clearing data
+      const columnIds = [...store.columns.map(c => c.id)];
+      columnIds.forEach(id => store.deleteColumn(id));
+      expect(Object.keys(store.tasks).length).toBe(0);
+      expect(store.columns.length).toBe(0);
     });
 
-    it('should handle task lists state updates', () => {
-      const mockTaskLists = [
-        createMockTaskList({ id: 'list-1', title: 'Work Tasks' }),
-        createMockTaskList({ id: 'list-2', title: 'Personal Tasks' })
-      ];
-
-      useGoogleTasksStore.setState({ taskLists: mockTaskLists });
-      const store = useGoogleTasksStore.getState();
+    it('should handle columns state updates', () => {
+      const store = useUnifiedTaskStore.getState();
       
-      expect(store.taskLists).toEqual(mockTaskLists);
-      expect(store.taskLists.length).toBe(2);
-      expect(store.taskLists[0].title).toBe('Work Tasks');
-      expect(store.taskLists[1].title).toBe('Personal Tasks');
+      // Create columns
+      store.addColumn('col-1', 'Work Tasks');
+      store.addColumn('col-2', 'Personal Tasks');
+      
+      expect(store.columns.length).toBe(2);
+      expect(store.columns[0].title).toBe('Work Tasks');
+      expect(store.columns[1].title).toBe('Personal Tasks');
     });
 
     it('should handle tasks state updates', () => {
-      const mockTasks = [
-        createMockGoogleTask({ 
-          id: 'task-1',
-          title: 'Review PR #123',
-          notes: 'Check code quality and tests'
-        }),
-        createMockGoogleTask({ 
-          id: 'task-2',
-          title: 'Update documentation',
-          status: 'completed'
-        })
-      ];
-
-      useGoogleTasksStore.setState({ 
-        tasks: { 'list-1': mockTasks } 
+      const store = useUnifiedTaskStore.getState();
+      
+      // Create a column first
+      store.addColumn('work-col', 'Work Tasks');
+      const columnId = 'work-col';
+      
+      // Create tasks
+      store.createTask({
+        title: 'Review PR #123',
+        notes: 'Check code quality and tests',
+        columnId,
       });
       
-      const store = useGoogleTasksStore.getState();
-      expect(store.tasks['list-1']).toEqual(mockTasks);
-      expect(store.tasks['list-1'].length).toBe(2);
-      expect(store.tasks['list-1'][0].title).toBe('Review PR #123');
-      expect(store.tasks['list-1'][1].title).toBe('Update documentation');
-    });
-
-    it('should handle loading states correctly', () => {
-      // Test loading state
-      useGoogleTasksStore.setState({ isLoading: true });
-      expect(useGoogleTasksStore.getState().isLoading).toBe(true);
-
-      // Test task-specific loading states
-      useGoogleTasksStore.setState({ 
-        isLoadingTasks: { 'list-1': true, 'list-2': false } 
+      store.createTask({
+        title: 'Update documentation',
+        columnId,
+        status: 'completed',
       });
       
-      const store = useGoogleTasksStore.getState();
-      expect(store.isLoadingTasks['list-1']).toBe(true);
-      expect(store.isLoadingTasks['list-2']).toBe(false);
+      const columnTasks = store.getTasksByColumn(columnId);
+      expect(columnTasks.length).toBe(2);
+      expect(columnTasks[0].title).toBe('Review PR #123');
+      expect(columnTasks[1].title).toBe('Update documentation');
     });
 
-    it('should handle error states correctly', () => {
-      // Test error setting
-      useGoogleTasksStore.setState({ error: 'Test error message' });
-      expect(useGoogleTasksStore.getState().error).toBe('Test error message');
+    it('should handle initialization states correctly', () => {
+      const store = useUnifiedTaskStore.getState();
+      
+      // Test initialization
+      expect(store.isInitialized).toBe(false);
+      
+      // Create some data
+      store.createColumn({ title: 'Test', position: 0 });
+      
+      // Verify we have data
+      expect(store.columns.length).toBeGreaterThan(0);
+    });
 
-      // Test error clearing
-      useGoogleTasksStore.getState().clearError();
-      expect(useGoogleTasksStore.getState().error).toBeNull();
+    it('should handle sync states correctly', () => {
+      const store = useUnifiedTaskStore.getState();
+      
+      // Test sync state
+      store.setSyncing(true);
+      expect(store.isSyncing).toBe(true);
+      
+      store.setSyncing(false);
+      expect(store.isSyncing).toBe(false);
     });
   });
 
-  describe('Task List Operations', () => {
-    it('should handle task list creation workflow', () => {
-      // Simulate creating a new task list
-      const newTaskList = createMockTaskList({
-        id: 'new-list-1',
-        title: 'Shopping List'
-      });
-
-      // Test adding task list to store
-      const currentTaskLists = useGoogleTasksStore.getState().taskLists;
-      useGoogleTasksStore.setState({ 
-        taskLists: [...currentTaskLists, newTaskList] 
-      });
+  describe('Column Operations', () => {
+    it('should handle column creation workflow', () => {
+      const store = useUnifiedTaskStore.getState();
       
-      const updatedStore = useGoogleTasksStore.getState();
-      expect(updatedStore.taskLists.length).toBe(1);
-      expect(updatedStore.taskLists[0].title).toBe('Shopping List');
+      // Create a new column
+      store.addColumn('shopping-list', 'Shopping List');
+      
+      expect(store.columns.length).toBe(1);
+      expect(store.columns[0].title).toBe('Shopping List');
     });
 
-    it('should handle task list updates', () => {
-      // Add initial task list
-      const originalTaskList = createMockTaskList({
-        id: 'list-to-update',
-        title: 'Original Title'
-      });
+    it('should handle column updates', () => {
+      const store = useUnifiedTaskStore.getState();
       
-      useGoogleTasksStore.setState({ taskLists: [originalTaskList] });
+      // Add initial column
+      store.addColumn('test-col', 'Original Title');
+      const columnId = 'test-col';
       
-      // Update the task list
-      const updatedTaskList = { ...originalTaskList, title: 'Updated Title' };
-      useGoogleTasksStore.setState({ taskLists: [updatedTaskList] });
+      // Update the column
+      store.updateColumn(columnId, { title: 'Updated Title' });
       
-      const store = useGoogleTasksStore.getState();
-      expect(store.taskLists[0].title).toBe('Updated Title');
-      expect(store.taskLists[0].id).toBe('list-to-update');
+      expect(store.columns[0].title).toBe('Updated Title');
+      expect(store.columns[0].id).toBe(columnId);
     });
 
-    it('should handle task list deletion', () => {
-      // Add multiple task lists
-      const taskLists = [
-        createMockTaskList({ id: 'list-1', title: 'Keep This' }),
-        createMockTaskList({ id: 'list-2', title: 'Delete This' })
-      ];
+    it('should handle column deletion', () => {
+      const store = useUnifiedTaskStore.getState();
       
-      useGoogleTasksStore.setState({ taskLists });
-      expect(useGoogleTasksStore.getState().taskLists.length).toBe(2);
+      // Add multiple columns
+      store.addColumn('keep-col', 'Keep This');
+      store.addColumn('delete-col', 'Delete This');
       
-      // Remove one task list
-      const filteredLists = taskLists.filter(list => list.id !== 'list-2');
-      useGoogleTasksStore.setState({ taskLists: filteredLists });
+      expect(store.columns.length).toBe(2);
+      const deleteId = 'delete-col';
       
-      const store = useGoogleTasksStore.getState();
-      expect(store.taskLists.length).toBe(1);
-      expect(store.taskLists[0].title).toBe('Keep This');
+      // Remove one column
+      store.deleteColumn(deleteId);
+      
+      expect(store.columns.length).toBe(1);
+      expect(store.columns[0].title).toBe('Keep This');
     });
   });
 

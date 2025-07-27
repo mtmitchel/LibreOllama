@@ -11,12 +11,14 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
-import { useKanbanStore, KanbanTask } from "../../stores/useKanbanStore";
+import { useUnifiedTaskStore } from "../../stores/unifiedTaskStore";
+import type { UnifiedTask } from "../../stores/unifiedTaskStore.types";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanTaskCard } from "./KanbanTaskCard";
 import { Button, Card } from "../ui";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useGoogleTasksStore } from "../../stores/googleTasksStore";
+
+type KanbanTask = UnifiedTask;
 
 interface KanbanBoardProps {
   className?: string;
@@ -32,14 +34,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onRenameList 
 }) => {
   const {
-    columns,
-    initialize,
-    isInitialized,
-    isSyncing,
-    error,
+    columns: taskColumns,
     moveTask,
-    clearError,
-  } = useKanbanStore();
+    isSyncing,
+    getTasksByColumn,
+  } = useUnifiedTaskStore();
+  
+  // Transform columns to old format
+  const columns = taskColumns.map(col => ({
+    id: col.id,
+    title: col.title,
+    tasks: getTasksByColumn(col.id),
+    isLoading: false,
+    error: undefined,
+  }));
+  
+  const isInitialized = true;
+  const error = null;
+  const clearError = () => {};
+  const initialize = () => {};
 
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [activeColumn, setActiveColumn] = useState<string | null>(null);

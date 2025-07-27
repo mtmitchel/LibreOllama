@@ -12,7 +12,7 @@ import { WidgetErrorBoundary } from "../../features/dashboard/components/WidgetE
 import { WidgetSkeleton } from "../../features/dashboard/components/WidgetSkeleton";
 import { LoadingState, FloatingActionButton } from "../../components/ui";
 import { Settings2 } from 'lucide-react';
-import './dashboard.css';
+import './styles/dashboard.css';
 import Masonry from 'react-masonry-css';
 
 // Widget configuration

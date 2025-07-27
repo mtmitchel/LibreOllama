@@ -65,7 +65,7 @@ pub struct OAuthConfig {
 
 // Removed unused start_gmail_oauth function - not registered in Tauri handler
 
-/// Start OAuth flow with automatic callback handling
+/// Start OAuth flow with automatic callback handling for Desktop applications
 #[tauri::command]
 pub async fn start_gmail_oauth_with_callback(
     auth_service: State<'_, Arc<GmailAuthService>>,
@@ -74,16 +74,29 @@ pub async fn start_gmail_oauth_with_callback(
     use std::thread;
     use std::time::Duration;
     use std::collections::HashMap;
+    use std::net::TcpListener;
     
-    // Start a temporary HTTP server on localhost:8080
+    // For desktop apps, we use a dynamic port on localhost
+    // Find an available port
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .map_err(|e| format!("Failed to bind to any port: {}", e))?;
+    
+    let port = listener.local_addr()
+        .map_err(|e| format!("Failed to get local address: {}", e))?
+        .port();
+    
+    // Desktop apps use the loopback redirect
+    let redirect_uri = format!("http://localhost:{}", port);
+    
+    println!("[OAuth] Using dynamic redirect URI: {}", redirect_uri);
+    
+    // Start a temporary HTTP server on the dynamic port
     let result = Arc::new(Mutex::new(None));
     let result_clone = result.clone();
     
     let server_handle = thread::spawn(move || {
         use std::io::prelude::*;
-        use std::net::TcpListener;
         
-        let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
         listener.set_nonblocking(true).unwrap();
         
         for _ in 0..300 { // 30 second timeout (100ms * 300)
@@ -92,7 +105,8 @@ pub async fn start_gmail_oauth_with_callback(
                 if let Ok(_) = stream.read(&mut buffer) {
                     let request = String::from_utf8_lossy(&buffer[..]);
                     if let Some(line) = request.lines().next() {
-                        if line.contains("GET /auth/callback") {
+                        // For desktop apps, accept any GET request with code parameter
+                        if line.starts_with("GET ") && line.contains("code=") {
                             // Extract code from URL
                             if let Some(query_start) = line.find("?") {
                                 if let Some(query_end) = line.find(" HTTP/") {
@@ -105,11 +119,13 @@ pub async fn start_gmail_oauth_with_callback(
                                         })
                                         .collect();
                                     
-                                    if let (Some(code), Some(state)) = (params.get("code"), params.get("state")) {
-                                        *result_clone.lock().unwrap() = Some((code.to_string(), state.to_string()));
+                                    if let Some(code) = params.get("code") {
+                                        // For desktop apps, state is optional
+                                        let state = params.get("state").map(|s| s.to_string()).unwrap_or_default();
+                                        *result_clone.lock().unwrap() = Some((code.to_string(), state));
                                         
-                                        // Send success response
-                                        let response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Authentication successful!</h1><p>You can close this window.</p></body></html>";
+                                        // Send success response with auto-close script
+                                        let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><head><title>Success</title></head><body><h1>Authentication successful!</h1><p>You can close this window.</p><script>window.close();</script></body></html>";
                                         let _ = stream.write(response.as_bytes());
                                         break;
                                     }
@@ -123,11 +139,14 @@ pub async fn start_gmail_oauth_with_callback(
         }
     });
     
-    // Start OAuth flow
+    // Start OAuth flow with dynamic redirect URI
+    println!("[OAuth] Starting authorization with redirect URI: {}", redirect_uri);
     let auth_request = auth_service
-        .start_authorization(Some("http://localhost:8080/auth/callback".to_string()))
+        .start_authorization(Some(redirect_uri.clone()))
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to start OAuth flow: {}", e))?;
+    
+    println!("[OAuth] Opening browser with auth URL: {}", auth_request.auth_url);
     
     // Open browser
     if let Err(e) = open::that(&auth_request.auth_url) {
@@ -135,16 +154,21 @@ pub async fn start_gmail_oauth_with_callback(
     }
     
     // Wait for callback
-    server_handle.join().map_err(|_| "Server thread failed")?;
+    println!("[OAuth] Waiting for callback from browser...");
+    server_handle.join().map_err(|_| "OAuth callback server thread failed")?;
     
     let (code, state) = result.lock().unwrap().take()
-        .ok_or("OAuth callback timeout or failed")?;
+        .ok_or("OAuth callback timeout - no authorization code received. Please ensure you completed the authentication in your browser.")?;
     
-    // Complete OAuth flow
+    println!("[OAuth] Received authorization code, exchanging for tokens...");
+    
+    // Complete OAuth flow with the same redirect URI
     let token_response = auth_service
-        .complete_authorization(code, state, Some("http://localhost:8080/auth/callback".to_string()))
+        .complete_authorization(code, state, Some(redirect_uri))
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to exchange authorization code for tokens: {}", e))?;
+    
+    println!("[OAuth] Successfully obtained access tokens");
     
     Ok(TokenResponse {
         access_token: token_response.access_token,

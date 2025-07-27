@@ -185,7 +185,7 @@ export function EnhancedMessageList({
   // Loading state
   if (isLoadingMessages && messages.length === 0) {
     return (
-      <div className={`flex h-64 flex-col items-center justify-center ${className}`}>
+      <div className={`flex h-full flex-col items-center justify-center ${className}`}>
         <RefreshCw size={32} className="mb-4 animate-spin text-accent-primary" />
         <Text size="sm" variant="secondary">Loading messages...</Text>
       </div>

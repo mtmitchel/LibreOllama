@@ -1,6 +1,13 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { useKanbanStore, KanbanColumn as KanbanColumnType } from '../../stores/useKanbanStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
+import type { TaskColumn } from '../../stores/unifiedTaskStore.types';
+
+type KanbanColumnType = TaskColumn & {
+  tasks: any[];
+  isLoading?: boolean;
+  error?: string;
+};
 import { KanbanTaskCard } from './KanbanTaskCard';
 import { CreateTaskModal } from './CreateTaskModal';
 import { Card, Button } from '../ui';
@@ -23,7 +30,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onDelete,
   onRename
 }) => {
-  const { createTask } = useKanbanStore();
+  const { createTask } = useUnifiedTaskStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);

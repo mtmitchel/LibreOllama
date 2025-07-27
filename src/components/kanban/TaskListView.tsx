@@ -1,5 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useKanbanStore, KanbanTask } from '../../stores/useKanbanStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
+import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
+
+type KanbanTask = UnifiedTask;
 import { EditTaskModal } from './EditTaskModal';
 import { CreateTaskModal } from './CreateTaskModal';
 import { Card, Button, Input } from '../ui';
@@ -27,9 +30,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     columns,
     updateTask,
     deleteTask,
-    toggleComplete,
     createTask,
-  } = useKanbanStore();
+    getTasksByColumn,
+  } = useUnifiedTaskStore();
+  
+  const toggleComplete = (columnId: string, taskId: string, completed: boolean) => {
+    updateTask(taskId, { status: completed ? 'completed' : 'needsAction' });
+  };
 
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('');
@@ -50,7 +57,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   const allTasks = columns
     .filter(column => selectedListId === 'all' || column.id === selectedListId)
     .flatMap(column => 
-      column.tasks.map(task => ({ ...task, columnId: column.id, columnTitle: column.title }))
+      getTasksByColumn(column.id).map(task => ({ ...task, columnId: column.id, columnTitle: column.title }))
     );
 
   // Filter and sort tasks
@@ -61,7 +68,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         const query = searchQuery.toLowerCase();
         const matchesTitle = task.title.toLowerCase().includes(query);
         const matchesNotes = task.notes?.toLowerCase().includes(query);
-        const matchesTags = task.metadata?.labels?.some(label => 
+        const matchesTags = task.labels?.some(label => 
           label.toLowerCase().includes(query)
         );
         if (!matchesTitle && !matchesNotes && !matchesTags) return false;
@@ -116,7 +123,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     if (!selectedTask || !selectedColumnId) return;
 
     try {
-      await updateTask(selectedColumnId, selectedTask.id, updates);
+      await updateTask(selectedTask.id, updates);
       setIsEditModalOpen(false);
     } catch (error) {
       // Failed to update task
@@ -128,7 +135,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     if (!selectedTask || !selectedColumnId) return;
 
     try {
-      await deleteTask(selectedColumnId, selectedTask.id);
+      await deleteTask(selectedTask.id);
       setIsEditModalOpen(false);
     } catch (error) {
       // Failed to delete task

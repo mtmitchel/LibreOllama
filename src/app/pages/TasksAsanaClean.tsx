@@ -1,18 +1,19 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo, memo } from 'react';
 import { KanbanBoard } from '../../components/kanban';
 import { TaskListView } from '../../components/kanban/TaskListView';
 import { useHeader } from '../contexts/HeaderContext';
 import { Button } from '../../components/ui';
+import './styles/TasksAsanaClean.css';
 import { 
   LayoutGrid, List, RefreshCw, Plus, Search, X, ArrowUpDown, ChevronDown, 
   GripVertical, Calendar, Type, MoreHorizontal, CheckCircle2, MessageSquare, Circle,
   Edit, Edit2, Trash2, Copy, Tag, Clock, Flag
 } from 'lucide-react';
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
+import { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
-import { kanbanGoogleSync, setupAutoSync } from '../../services/kanbanGoogleTasksSync';
-import { useKanbanStore, KanbanTask } from '../../stores/useKanbanStore';
-import { useTaskMetadataStore } from '../../stores/taskMetadataStore';
+import { realtimeSync } from '../../services/realtimeSync';
+import { googleTasksService } from '../../services/google/googleTasksService';
 import {
   DndContext,
   DragOverlay,
@@ -28,6 +29,9 @@ import {
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
 type ViewMode = 'kanban' | 'list';
+
+// Adapter type to maintain compatibility
+type KanbanTask = UnifiedTask;
 
 // Asana-style typography
 const asanaTypography = {
@@ -114,7 +118,7 @@ interface AsanaTaskModalProps {
   columnId: string;
   mode: 'create' | 'edit';
   onClose: () => void;
-  onSubmit: (data: Partial<KanbanTask>) => void;
+  onSubmit: (data: Partial<KanbanTask>, metadata: { labels: string[], priority: string }) => void;
   onDelete?: () => void;
 }
 
@@ -145,9 +149,9 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
         title: task.title || '',
         notes: task.notes || '',
         due: task.due ? task.due.split('T')[0] : '',
-        priority: task.metadata?.priority || 'normal',
-        labels: task.metadata?.labels || [],
-        subtasks: task.metadata?.subtasks || [],
+        priority: task.priority || 'normal',
+        labels: task.labels || [],
+        subtasks: task.attachments?.filter(a => a.type === 'subtask') || [],
       });
     } else {
       setFormData({
@@ -210,17 +214,26 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
+    
+    // Convert date picker value to proper ISO string  
+    const formattedDue = formData.due 
+      ? new Date(formData.due + 'T00:00:00').toISOString()
+      : undefined;
+      
+    const taskData: Partial<KanbanTask> = {
       ...task,
       title: formData.title,
       notes: formData.notes,
-      due: formData.due ? formData.due : undefined,
-      metadata: {
-        priority: formData.priority,
-        labels: formData.labels,
-        subtasks: formData.subtasks,
-      },
-    });
+      due: formattedDue,
+    };
+
+    const metadata = {
+      priority: formData.priority,
+      labels: formData.labels,
+      subtasks: formData.subtasks,
+    };
+
+    onSubmit(taskData, metadata);
     onClose();
   };
 
@@ -253,21 +266,8 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border transition-all"
-                style={{ 
-                  ...asanaTypography.body,
-                  backgroundColor: '#F6F7F8',
-                  borderColor: 'transparent',
-                  outline: 'none'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF';
-                  e.currentTarget.style.borderColor = '#D1D5DB';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F6F7F8';
-                  e.currentTarget.style.borderColor = 'transparent';
-                }}
+                className="task-modal-input"
+                style={asanaTypography.body}
                 placeholder="Enter task title..."
                 required
               />
@@ -281,22 +281,8 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border transition-all resize-none"
-                style={{ 
-                  ...asanaTypography.body,
-                  backgroundColor: '#F6F7F8',
-                  borderColor: 'transparent',
-                  outline: 'none',
-                  minHeight: '100px'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF';
-                  e.currentTarget.style.borderColor = '#D1D5DB';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F6F7F8';
-                  e.currentTarget.style.borderColor = 'transparent';
-                }}
+                className="task-modal-textarea"
+                style={asanaTypography.body}
                 placeholder="Add a description..."
                 rows={3}
               />
@@ -312,21 +298,8 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
                   type="date"
                   value={formData.due}
                   onChange={(e) => setFormData(prev => ({ ...prev, due: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border transition-all"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
-                    borderColor: 'transparent',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
+                  className="task-modal-input"
+                  style={asanaTypography.body}
                 />
               </div>
 
@@ -338,21 +311,8 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
                 <select
                   value={formData.priority}
                   onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent' }))}
-                  className="w-full px-4 py-3 rounded-xl border transition-all cursor-pointer"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
-                    borderColor: 'transparent',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
+                  className="task-modal-select"
+                  style={asanaTypography.body}
                 >
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
@@ -374,21 +334,8 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLabel())}
-                    className="flex-1 px-4 py-2 rounded-xl border transition-all"
-                    style={{ 
-                      ...asanaTypography.body,
-                      backgroundColor: '#F6F7F8',
-                      borderColor: 'transparent',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      e.currentTarget.style.borderColor = '#D1D5DB';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F6F7F8';
-                      e.currentTarget.style.borderColor = 'transparent';
-                    }}
+                    className="task-modal-input flex-1"
+                    style={asanaTypography.body}
                     placeholder="Add a label..."
                   />
                   <button
@@ -619,26 +566,79 @@ export default function TasksAsanaClean() {
   const [editingTaskData, setEditingTaskData] = useState<KanbanTask | null>(null);
   const [taskModalMode, setTaskModalMode] = useState<'create' | 'edit'>('create');
   
+  // Google auth state from settings
   const activeAccount = useActiveGoogleAccount();
+  const isAuthenticated = !!activeAccount;
+  const isHydrated = true; // Unified store is always hydrated
+  
+  // Google Tasks API operations
+  const fetchTaskLists = async () => {
+    if (!activeAccount) return [];
+    const response = await googleTasksService.getTaskLists(activeAccount as any);
+    return response.success ? response.data || [] : [];
+  };
+  
+  const syncAllTasks = async () => {
+    await realtimeSync.syncNow();
+  };
+  
+  const createTaskList = async (title: string) => {
+    if (!activeAccount) throw new Error('No active account');
+    const response = await googleTasksService.createTaskList(activeAccount as any, title);
+    if (!response.success) throw new Error(response.error?.message || 'Failed to create task list');
+    return response.data;
+  };
+  
+  const updateTaskList = async (listId: string, title: string) => {
+    if (!activeAccount) throw new Error('No active account');
+    const response = await googleTasksService.updateTaskList(activeAccount as any, listId, title);
+    if (!response.success) throw new Error(response.error?.message || 'Failed to update task list');
+    return response.data;
+  };
+  
+  const deleteTaskList = async (listId: string) => {
+    if (!activeAccount) throw new Error('No active account');
+    const response = await googleTasksService.deleteTaskList(activeAccount as any, listId);
+    if (!response.success) throw new Error(response.error?.message || 'Failed to delete task list');
+    return response.data;
+  };
+  
+  // Get data from unified store
   const {
-    isAuthenticated,
-    isHydrated,
-    authenticate,
-    fetchTaskLists,
-    syncAllTasks,
-    createTaskList,
-    updateTaskList,
-    deleteTaskList,
-  } = useGoogleTasksStore();
+    columns,
+    getTasksByColumn,
+    createTask,
+    updateTask: updateUnifiedTask,
+    deleteTask: deleteUnifiedTask,
+    moveTask: moveUnifiedTask,
+  } = useUnifiedTaskStore();
   
-  const { columns, moveTask, updateTask, deleteTask, initialize: initializeKanban } = useKanbanStore();
-  const { createTask: createGoogleTask } = useGoogleTasksStore();
-  
-  // DIAGNOSTIC: Check what store is driving the UI
-  // console.log('=== KANBAN STORE DEBUG ===');
-  // console.log('Columns from useKanbanStore:', columns);
-  // console.log('Sample task:', columns[0]?.tasks[0]);
-  // console.log('Does task have metadata property?', columns[0]?.tasks[0]?.metadata);
+  // Transform columns to old format for compatibility
+  const kanbanColumns = useMemo(() => {
+    console.log('[TasksAsanaClean] Building kanban columns:', {
+      columnsCount: columns.length,
+      columns: columns.map(c => ({ 
+        id: c.id, 
+        title: c.title, 
+        googleTaskListId: c.googleTaskListId,
+        taskIdsCount: c.taskIds?.length || 0 
+      }))
+    });
+    
+    const result = columns.map(column => {
+      const tasks = getTasksByColumn(column.id);
+      console.log(`[TasksAsanaClean] Column "${column.title}" has ${tasks.length} tasks`);
+      return {
+        id: column.id,
+        title: column.title,
+        tasks,
+        isLoading: false,
+        error: undefined,
+      };
+    });
+    
+    return result;
+  }, [columns, getTasksByColumn]);
   
   // Configure drag sensors
   const sensors = useSensors(
@@ -685,7 +685,7 @@ export default function TasksAsanaClean() {
       if (overId.startsWith("column-")) {
         targetColumnId = overId.replace("column-", "");
       } else {
-        const targetColumn = columns.find((col) =>
+        const targetColumn = kanbanColumns.find((col) =>
           col.tasks.some((task) => task.id === overId)
         );
         if (!targetColumn) return;
@@ -694,13 +694,13 @@ export default function TasksAsanaClean() {
 
       if (activeColumn !== targetColumnId) {
         try {
-          await moveTask(taskId, activeColumn, targetColumnId);
+          await moveUnifiedTask(taskId, targetColumnId);
         } catch (error) {
           console.error('Failed to move task:', error);
         }
       }
     },
-    [activeColumn, columns, moveTask]
+    [activeColumn, columns, moveUnifiedTask]
   );
 
   // Handle drag cancel
@@ -726,47 +726,36 @@ export default function TasksAsanaClean() {
     }
   }, [showSortMenu, contextMenu]);
 
-  // Clear header and initialize Kanban store
+  // Clear header on mount
   useEffect(() => {
     clearHeaderProps();
-    initializeKanban(); // Initialize kanban store with default columns
+    
+    // Initialize sync service
+    realtimeSync.initialize().catch(console.error);
+    
     return () => clearHeaderProps();
-  }, [clearHeaderProps, initializeKanban]);
+  }, [clearHeaderProps]);
 
-  // Auto-authenticate
+  // Auto-sync when account changes
   useEffect(() => {
-    if (activeAccount && !isAuthenticated && isHydrated) {
-      authenticate(activeAccount as any);
+    if (activeAccount) {
+      // Trigger initial sync to load all task data
+      handleSync();
     }
-  }, [activeAccount, isAuthenticated, isHydrated, authenticate]);
+  }, [activeAccount]);
+  
+  // Debug: Log current state
+  useEffect(() => {
+    console.log('[TasksAsanaClean] Current state:', {
+      activeAccount: activeAccount?.email,
+      isAuthenticated,
+      columns: columns.length,
+      columnTitles: columns.map(c => c.title),
+      totalTasks: Object.keys(useUnifiedTaskStore.getState().tasks).length
+    });
+  }, [activeAccount, isAuthenticated, columns]);
 
-  // Setup Google Tasks sync
-  useEffect(() => {
-    if (isAuthenticated && isHydrated) {
-      const performInitialSync = async () => {
-        try {
-          // console.log('=== INITIAL SYNC STARTING ===');
-          
-          // First fetch task lists from Google
-          await fetchTaskLists();
-          
-          // Setup column mappings (won't clear existing data now)
-          await kanbanGoogleSync.setupColumnMappings();
-          
-          // Fetch all tasks from Google
-          await syncAllTasks();
-          
-          // Sync between Google and Kanban stores
-          await kanbanGoogleSync.syncAll();
-          
-          // console.log('=== INITIAL SYNC COMPLETE ===');
-        } catch (error) {
-          console.error('Initial sync failed:', error);
-        }
-      };
-      performInitialSync();
-    }
-  }, [isAuthenticated, isHydrated, fetchTaskLists, syncAllTasks]);
+  // Setup Google Tasks sync is now handled by realtimeSync service
 
   // Persist view mode
   useEffect(() => {
@@ -785,9 +774,7 @@ export default function TasksAsanaClean() {
     setIsSyncing(true);
     try {
       // console.log('=== MANUAL SYNC STARTING ===');
-      await fetchTaskLists();
-      await syncAllTasks();
-      await kanbanGoogleSync.syncAll();
+      await realtimeSync.performSync();
       // console.log('=== MANUAL SYNC COMPLETE ===');
     } catch (error) {
       console.error('Sync failed:', error);
@@ -805,11 +792,8 @@ export default function TasksAsanaClean() {
       setNewListTitle("");
       setShowNewListDialog(false);
       
-      // Sync everything to ensure tasks don't disappear
-      await fetchTaskLists();
-      await syncAllTasks();
-      await kanbanGoogleSync.setupColumnMappings();
-      await kanbanGoogleSync.syncAll();
+      // Sync with unified store
+      await realtimeSync.performSync();
     } catch (error) {
       console.error('Failed to create task list:', error);
       alert('Failed to create task list. Please try again.');
@@ -821,8 +805,7 @@ export default function TasksAsanaClean() {
   const handleRenameList = async (listId: string, newTitle: string) => {
     try {
       await updateTaskList(listId, newTitle);
-      await fetchTaskLists();
-      await kanbanGoogleSync.setupColumnMappings();
+      await realtimeSync.performSync();
     } catch (error) {
       console.error('Failed to rename task list:', error);
     }
@@ -832,8 +815,7 @@ export default function TasksAsanaClean() {
     if (listToDelete) {
       try {
         await deleteTaskList(listToDelete.id);
-        await fetchTaskLists();
-        await kanbanGoogleSync.setupColumnMappings();
+        await realtimeSync.performSync();
         setShowDeleteListDialog(false);
         setListToDelete(null);
       } catch (error) {
@@ -848,8 +830,6 @@ export default function TasksAsanaClean() {
   };
 
   const openCreateTaskModal = (columnId: string) => {
-    // console.log('=== OPENING CREATE TASK MODAL ===');
-    console.log('Column ID:', columnId);
     
     const newTaskData = {
       id: `temp-${Date.now()}`,
@@ -1230,63 +1210,28 @@ export default function TasksAsanaClean() {
             setShowTaskModal(false);
             setEditingTaskData(null);
           }}
-          onSubmit={async (taskData) => {
+          onSubmit={async (taskData, metadata) => {
             try {
-              // console.log('=== TASK MODAL SUBMIT ===');
-              console.log('Mode:', taskModalMode);
-              console.log('Active Column:', activeColumn);
-              console.log('Task Data:', taskData);
-              
               if (taskModalMode === 'create' && activeColumn) {
-                // Check if we have a Google Task List mapping
-                const googleTaskListId = kanbanGoogleSync.getGoogleListId(activeColumn);
-                
-                if (googleTaskListId && isAuthenticated) {
-                  // Create in Google Tasks first
-                  console.log('Creating task in Google Tasks list:', googleTaskListId);
-                  
-                  const googleTask = await createGoogleTask(googleTaskListId, {
-                    title: taskData.title || 'New Task',
-                    notes: taskData.notes || '',
-                    due: taskData.due ? new Date(taskData.due + 'T00:00:00Z').toISOString() : undefined,
-                  });
-                  
-                  // Save metadata separately
-                  if (taskData.metadata && googleTask) {
-                    const { setTaskMetadata } = useTaskMetadataStore.getState();
-                    setTaskMetadata(googleTask.id, taskData.metadata);
-                  }
-                  
-                  // Sync to get the new task in Kanban
-                  await kanbanGoogleSync.syncAll();
-                } else {
-                  // Fallback to local creation if no Google mapping
-                  console.log('No Google mapping, creating locally');
-                  const { createTask } = useKanbanStore.getState();
-                  
-                  const newTask = await createTask(activeColumn, {
-                    title: taskData.title || 'New Task',
-                    notes: taskData.notes || '',
-                    due: taskData.due,
-                    status: 'needsAction' as const,
-                    metadata: taskData.metadata
-                  });
-                  
-                  if (taskData.metadata && newTask) {
-                    const { setTaskMetadata } = useTaskMetadataStore.getState();
-                    setTaskMetadata(newTask.id, taskData.metadata);
-                  }
-                }
+                // Create task with unified store
+                const taskId = createTask({
+                  columnId: activeColumn,
+                  title: taskData.title || 'New Task',
+                  notes: taskData.notes || '',
+                  due: taskData.due,
+                  labels: metadata.labels || [],
+                  priority: metadata.priority || 'normal',
+                });
               } else if (taskModalMode === 'edit' && activeColumn && taskData.id) {
-                // Update existing task
-                await updateTask(taskData.id, activeColumn, taskData);
-                
-                // Update metadata
-                if (taskData.metadata) {
-                  const { setTaskMetadata } = useTaskMetadataStore.getState();
-                  const googleTaskId = taskData.metadata?.googleTaskId || taskData.id;
-                  setTaskMetadata(googleTaskId, taskData.metadata);
-                }
+                // Update task with unified store
+                updateUnifiedTask(taskData.id, {
+                  title: taskData.title,
+                  notes: taskData.notes || '',
+                  due: taskData.due,
+                  status: taskData.status || 'needsAction',
+                  labels: metadata.labels || [],
+                  priority: metadata.priority || 'normal',
+                });
               }
               setShowTaskModal(false);
               setEditingTaskData(null);
@@ -1296,7 +1241,7 @@ export default function TasksAsanaClean() {
           }}
           onDelete={async () => {
             if (editingTaskData && activeColumn) {
-              await deleteTask(editingTaskData.id, activeColumn);
+              deleteUnifiedTask(editingTaskData.id);
               setShowTaskModal(false);
               setEditingTaskData(null);
             }
@@ -1329,45 +1274,35 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
   openEditTaskModal,
   openCreateTaskModal
 }) => {
-  const { columns, updateTask, deleteTask } = useKanbanStore();
-  const { isAuthenticated } = useGoogleTasksStore();
+  const { columns, getTasksByColumn, updateTask: updateUnifiedTask, deleteTask: deleteUnifiedTask } = useUnifiedTaskStore();
+  const activeAccount = useActiveGoogleAccount();
+  const isAuthenticated = !!activeAccount;
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   
+  // Transform columns to old format
+  const kanbanColumns = useMemo(() => {
+    return columns.map(column => ({
+      id: column.id,
+      title: column.title,
+      tasks: getTasksByColumn(column.id),
+      isLoading: false,
+      error: undefined,
+    }));
+  }, [columns, getTasksByColumn]);
+  
   const columnColors = ['#E362F8', '#F8DF72', '#7DA7F9', '#4ECBC4', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A'];
   
-  const dynamicColumns = columns.map((column, index) => ({
-    ...column,
-    color: columnColors[index % columnColors.length]
-  }));
+  const dynamicColumns = useMemo(() => 
+    kanbanColumns.map((column, index) => ({
+      ...column,
+      color: columnColors[index % columnColors.length]
+    })), [kanbanColumns]);
 
   const handleDeleteTask = async (taskId: string, columnId: string) => {
-    // console.log('=== DELETE TASK DEBUG ===');
-    console.log('Task ID:', taskId);
-    console.log('Column ID:', columnId);
-    
     try {
-      // First delete from Kanban store
-      await deleteTask(columnId, taskId);
-      
-      // Check if this task has a Google Task ID
-      const task = columns.find(c => c.id === columnId)?.tasks.find(t => t.id === taskId);
-      const googleTaskId = task?.metadata?.googleTaskId;
-      
-      if (googleTaskId && isAuthenticated) {
-        // Delete from Google Tasks
-        const googleTaskListId = kanbanGoogleSync.getGoogleListId(columnId);
-        if (googleTaskListId) {
-          console.log('Deleting from Google Tasks:', googleTaskId);
-          const { deleteTask: deleteGoogleTask } = useGoogleTasksStore.getState();
-          await deleteGoogleTask(googleTaskListId, googleTaskId);
-        }
-      }
-      
-      // Also delete metadata
-      const { deleteTaskMetadata } = useTaskMetadataStore.getState();
-      deleteTaskMetadata(googleTaskId || taskId);
-      
+      // Delete using unified store
+      deleteUnifiedTask(taskId);
       setContextMenu(null);
     } catch (error) {
       console.error('Failed to delete task:', error);
@@ -1376,18 +1311,8 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
 
   const handleUpdatePriority = async (task: KanbanTask, columnId: string, priority: 'low' | 'normal' | 'high' | 'urgent') => {
     try {
-      // Update priority in metadata store - use Google Task ID
-      const googleTaskId = task.metadata?.googleTaskId || task.id;
-      const setTaskMetadata = useTaskMetadataStore.getState().setTaskMetadata;
-      const currentMetadata = useTaskMetadataStore.getState().getTaskMetadata(googleTaskId) || {
-        labels: [],
-        priority: 'normal',
-        subtasks: []
-      };
-      setTaskMetadata(googleTaskId, {
-        ...currentMetadata,
-        priority
-      });
+      // Update priority using unified store
+      updateUnifiedTask(task.id, { priority });
       setContextMenu(null);
     } catch (error) {
       console.error('Failed to update priority:', error);
@@ -1451,9 +1376,52 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
             >
               <Flag size={14} style={{ color: priorityConfig[priority]?.textColor || '#6B6F76' }} />
               {priorityConfig[priority]?.label || priority}
-              {useTaskMetadataStore.getState().getTaskMetadata(contextMenu.task.metadata?.googleTaskId || contextMenu.task.id)?.priority === priority && ' ✓'}
+              {contextMenu.task.priority === priority && ' ✓'}
             </button>
           ))}
+          
+          <div className="border-t border-gray-100 my-1" />
+          
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+            onClick={() => {
+              const newStatus = contextMenu.task.status === 'completed' ? 'needsAction' : 'completed';
+              updateUnifiedTask(contextMenu.task.id, { status: newStatus });
+              setContextMenu(null);
+            }}
+          >
+            {contextMenu.task.status === 'completed' ? (
+              <>
+                <Circle size={14} />
+                Mark as Incomplete
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={14} />
+                Mark as Complete
+              </>
+            )}
+          </button>
+          
+          <button
+            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+            onClick={() => {
+              // Copy task
+              const { createTask } = useUnifiedTaskStore.getState();
+              createTask({
+                columnId: contextMenu.columnId,
+                title: `${contextMenu.task.title} (copy)`,
+                notes: contextMenu.task.notes,
+                due: contextMenu.task.due,
+                labels: contextMenu.task.labels,
+                priority: contextMenu.task.priority
+              });
+              setContextMenu(null);
+            }}
+          >
+            <Copy size={14} />
+            Duplicate Task
+          </button>
           
           <div className="border-t border-gray-100 my-1" />
           
@@ -1487,7 +1455,7 @@ interface DroppableColumnProps {
   onCreateTask?: (columnId: string) => void;
 }
 
-const DroppableColumn: React.FC<DroppableColumnProps> = ({
+const DroppableColumn = memo<DroppableColumnProps>(({
   column,
   searchQuery,
   onDeleteList,
@@ -1523,13 +1491,12 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
     }
   }, [showColumnMenu]);
 
-  const { updateTask } = useKanbanStore();
+  const { updateTask: updateUnifiedTask } = useUnifiedTaskStore();
 
   const handleSaveEdit = async (task: KanbanTask) => {
     if (editingTitle.trim() && editingTitle !== task.title) {
       try {
-        await updateTask(task.id, column.id, {
-          ...task,
+        updateUnifiedTask(task.id, {
           title: editingTitle.trim()
         });
       } catch (error) {
@@ -1637,7 +1604,7 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
           .filter((task: KanbanTask) => !searchQuery || 
             task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             task.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            task.metadata?.labels?.some(label => label.toLowerCase().includes(searchQuery.toLowerCase()))
+            task.labels?.some(label => label.toLowerCase().includes(searchQuery.toLowerCase()))
           )
           .map((task: KanbanTask) => (
             <DraggableTaskCard
@@ -1675,9 +1642,6 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
             e.currentTarget.style.borderColor = '#DDD';
           }}
           onClick={() => {
-            // console.log('=== ADD TASK BUTTON CLICKED ===');
-            console.log('Column ID:', column.id);
-            console.log('onCreateTask function:', onCreateTask);
             if (onCreateTask) {
               onCreateTask(column.id);
             } else {
@@ -1691,7 +1655,7 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
       </div>
     </div>
   );
-};
+});
 
 // Draggable Task Card Component
 interface DraggableTaskCardProps {
@@ -1708,7 +1672,7 @@ interface DraggableTaskCardProps {
   onEditTask?: (task: KanbanTask, columnId: string) => void;
 }
 
-const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
+const DraggableTaskCard = memo<DraggableTaskCardProps>(({
   task,
   columnId,
   isActive,
@@ -1731,22 +1695,12 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
     id: task.id,
   });
   
-  // Get metadata from store - use Google Task ID if available
-  const googleTaskId = task.metadata?.googleTaskId || task.id;
-  const metadata = useTaskMetadataStore(state => state.getTaskMetadata(googleTaskId)) || {
-    labels: [],
-    priority: 'normal' as const,
-    subtasks: []
+  // Metadata is now part of the task object in unified store
+  const metadata = {
+    labels: task.labels || [],
+    priority: task.priority || 'normal' as const,
+    subtasks: task.attachments || [] // Using attachments field for subtasks
   };
-  
-  // DIAGNOSTIC: Check metadata resolution
-  console.log('=== TASK CARD RENDER ===');
-  console.log('Kanban Task ID:', task.id);
-  console.log('Google Task ID:', googleTaskId);
-  console.log('Task object:', task);
-  console.log('Task has metadata property?', task.metadata);
-  console.log('Metadata from store using Google ID:', metadata);
-  console.log('All metadata in store:', useTaskMetadataStore.getState().metadata);
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -1801,18 +1755,26 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       }}
     >
       {/* Priority indicator */}
-      {metadata.priority && metadata.priority !== 'normal' && (
+      {task.priority && task.priority !== 'normal' && (
         <div className="mb-3">
           <span 
             className="px-3 py-1 rounded-lg inline-block"
             style={{ 
               ...asanaTypography.label,
-              backgroundColor: priorityConfig[metadata.priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
-              color: priorityConfig[metadata.priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
+              backgroundColor: priorityConfig[task.priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
+              color: priorityConfig[task.priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
             }}
           >
-            {priorityConfig[metadata.priority as keyof typeof priorityConfig]?.label || metadata.priority} Priority
+            {priorityConfig[task.priority as keyof typeof priorityConfig]?.label || task.priority} Priority
           </span>
+        </div>
+      )}
+      
+      {/* Syncing indicator for temporary tasks */}
+      {!task.googleTaskId && task.id.startsWith('temp-') && (
+        <div className="flex items-center gap-1 mb-2">
+          <RefreshCw size={12} className="animate-spin" style={{ color: '#9CA6AF' }} />
+          <span style={{ ...asanaTypography.small, color: '#9CA6AF' }}>Syncing...</span>
         </div>
       )}
       
@@ -1867,9 +1829,9 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       )}
 
       {/* Labels */}
-      {metadata.labels && metadata.labels.length > 0 && (
+      {task.labels && task.labels.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {metadata.labels.map((label: string) => (
+          {task.labels.map((label: string) => (
             <span
               key={label}
               className="px-2.5 py-1 rounded-lg"
@@ -1894,17 +1856,21 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
             <div className="flex items-center gap-1.5">
               <Calendar size={14} style={{ color: '#9CA6AF' }} />
               <span style={asanaTypography.small}>
-                {new Date(task.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {new Date(task.due).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  year: new Date(task.due).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                })}
               </span>
             </div>
           )}
 
           {/* Subtasks */}
-          {metadata.subtasks && metadata.subtasks.length > 0 && (
+          {task.attachments && task.attachments.length > 0 && (
             <div className="flex items-center gap-1">
               <CheckCircle2 size={14} style={{ color: '#14A085' }} />
               <span style={asanaTypography.small}>
-                {metadata.subtasks.filter((st: any) => st.completed).length}/{metadata.subtasks.length}
+                {task.attachments.filter((st: any) => st.type === 'completed').length}/{task.attachments.length}
               </span>
             </div>
           )}
@@ -1919,4 +1885,4 @@ const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       </div>
     </div>
   );
-};
+});

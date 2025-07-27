@@ -4,9 +4,60 @@ import { immer } from 'zustand/middleware/immer';
 import { useMailStore } from '../features/mail/stores/mailStore';
 import { logger } from '../core/lib/logger';
 import { useGoogleCalendarStore } from './googleCalendarStore';
-import { useGoogleTasksStore } from './googleTasksStore';
+// Google Tasks now managed through unified task store
 import { LLMProviderManager, type LLMProvider, LLMModel } from '../services/llmProviders';
 import { invoke } from '@tauri-apps/api/core';
+
+// Forward declaration for type
+interface GoogleAccountSettings {
+  id: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  isActive: boolean;
+  connectedAt: string;
+  scopes: string[];
+  services: {
+    gmail: boolean;
+    calendar: boolean;
+    tasks: boolean;
+  };
+}
+
+// Helper function to load Google accounts from secure storage
+async function loadGoogleAccountsFromSecureStorage(): Promise<GoogleAccountSettings[]> {
+  try {
+    // Use a default user ID for now - in production, this should come from user authentication
+    const userId = 'default_user';
+    const storedAccounts = await invoke('get_gmail_accounts_secure', { userId }) as Array<{
+      id: string;
+      email: string;
+      name: string;
+      picture?: string;
+      scopes?: string[];
+      connected_at?: string;
+      is_active?: boolean;
+    }>;
+    
+    return storedAccounts.map(account => ({
+      id: account.id,
+      email: account.email,
+      name: account.name || account.email,
+      picture: account.picture,
+      isActive: account.is_active || false,
+      connectedAt: account.connected_at || new Date().toISOString(),
+      scopes: account.scopes || [],
+      services: {
+        gmail: true,
+        calendar: true,
+        tasks: true,
+      }
+    }));
+  } catch (error) {
+    logger.error('[Settings] Failed to load accounts from secure storage', error);
+    return [];
+  }
+}
 
 // Settings interfaces
 export interface GeneralSettings {
@@ -304,7 +355,14 @@ export const useSettingsStore = create<SettingsStore>()(
           try {
             const { refreshAccount } = useMailStore.getState();
             const { fetchCalendars, fetchEvents } = useGoogleCalendarStore.getState();
-            const { fetchTaskLists, syncAllTasks } = useGoogleTasksStore.getState();
+            // Tasks sync is now handled through unified store and realtime sync
+            const fetchTaskLists = async () => {
+              console.log('[Settings] Task lists fetched through unified store');
+            };
+            const syncAllTasks = async () => {
+              const { realtimeSync } = await import('../services/realtimeSync');
+              await realtimeSync.syncNow();
+            };
 
             // Find the account to ensure it exists
             const account = get().integrations.googleAccounts.find(acc => acc.id === accountId);
@@ -510,7 +568,12 @@ export const useSettingsStore = create<SettingsStore>()(
         general: state.general,
         appearance: state.appearance,
         ollama: state.ollama,
-        integrations: state.integrations,
+        integrations: {
+          // Don't persist googleAccounts - they contain sensitive data
+          // These will be rehydrated from secure storage on startup
+          apiKeys: state.integrations.apiKeys,
+          enabledModels: state.integrations.enabledModels,
+        },
         notifications: state.notifications,
         editor: state.editor,
         aiWriting: state.aiWriting,
@@ -521,6 +584,26 @@ export const useSettingsStore = create<SettingsStore>()(
           state.isLoading = false;
           state.error = null;
           state.isInitialized = true;
+          
+          // Ensure googleAccounts is initialized as empty array
+          if (!state.integrations.googleAccounts) {
+            state.integrations.googleAccounts = [];
+          }
+          
+          // Load Google accounts from secure storage after rehydration
+          loadGoogleAccountsFromSecureStorage().then(accounts => {
+            if (accounts && accounts.length > 0) {
+              useSettingsStore.setState(s => ({
+                integrations: {
+                  ...s.integrations,
+                  googleAccounts: accounts
+                }
+              }));
+              logger.info('[Settings] Loaded Google accounts from secure storage', { count: accounts.length });
+            }
+          }).catch(error => {
+            logger.error('[Settings] Failed to load Google accounts from secure storage', error);
+          });
         }
       },
     }

@@ -13,8 +13,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw
 import { Button, Card, Text, Heading, Input } from '../../components/ui';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
-import { useTaskMetadataStore } from '../../stores/taskMetadataStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { useHeader } from '../contexts/HeaderContext';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -22,7 +21,7 @@ import interactionPlugin, { Draggable, DropArg } from '@fullcalendar/interaction
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { devLog } from '../../utils/devLog';
 import type { GoogleTask } from '../../types/google';
-import './calendar.css';
+import './styles/calendar.css';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
 
@@ -212,10 +211,16 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Convert date picker value to proper ISO string
+    const formattedDue = formData.due 
+      ? new Date(formData.due + 'T00:00:00').toISOString()
+      : undefined;
+      
     onSubmit({
       title: formData.title,
       notes: formData.notes,
-      due: formData.due ? formData.due : undefined,
+      due: formattedDue,  // Use formatted date
       metadata: {
         priority: formData.priority,
         labels: formData.labels,
@@ -707,8 +712,9 @@ const AsanaTaskItem: React.FC<{
   onSchedule: () => void;
   onContextMenu: (e: React.MouseEvent, task: GoogleTask) => void;
 }> = ({ task, onToggle, onEdit, onDuplicate, onDelete, onSchedule, onContextMenu }) => {
-  const metadata = useTaskMetadataStore(state => state.getTaskMetadata(task.id));
-  const priority = metadata?.priority || 'normal';
+  const { getTaskByGoogleId, tasks } = useUnifiedTaskStore();
+  const unifiedTask = getTaskByGoogleId(task.id) || tasks[task.id];
+  const priority = unifiedTask?.priority || 'normal';
   
   return (
     <div 
@@ -834,21 +840,119 @@ export default function CalendarAsanaStyle() {
   const [taskToDelete, setTaskToDelete] = useState<GoogleTask | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: GoogleTask; listId: string } | null>(null);
 
-  const {
-    taskLists,
-    tasks: googleTasks,
-    isLoading: isTasksLoading,
-    error: tasksError,
-    fetchTaskLists,
-    createTask: createGoogleTask,
-    updateTask: updateGoogleTask,
-    deleteTask: deleteGoogleTask,
-    toggleTaskComplete,
-    authenticate: authenticateTasks,
-    isAuthenticated: isTasksAuthenticated,
-    isHydrated: isTasksHydrated,
-    syncAllTasks,
-  } = useGoogleTasksStore();
+  // Get data from unified task store
+  const unifiedStore = useUnifiedTaskStore();
+  const taskLists = unifiedStore.columns;
+  const allTasks = Object.values(unifiedStore.tasks);
+  const isTasksLoading = unifiedStore.isSyncing;
+  const tasksError = null; // Unified store doesn't expose error state directly
+  
+  // Create adapter functions for compatibility
+  const fetchTaskLists = useCallback(async () => {
+    // Columns are already loaded in unified store
+    return unifiedStore.columns;
+  }, [unifiedStore.columns]);
+  
+  const createGoogleTask = useCallback(async (listId: string, task: Partial<GoogleTask>) => {
+    return unifiedStore.createTask({
+      title: task.title || 'New Task',
+      notes: task.notes || '',
+      columnId: listId,
+      due: task.due,
+      metadata: {
+        priority: 'normal' as const,
+        labels: [],
+        subtasks: [],
+      }
+    });
+  }, [unifiedStore]);
+  
+  const updateGoogleTask = useCallback(async (taskId: string, updates: Partial<GoogleTask>) => {
+    const task = allTasks.find(t => t.googleTaskId === taskId || t.id === taskId);
+    if (task) {
+      return unifiedStore.updateTask(task.id, {
+        title: updates.title,
+        notes: updates.notes,
+        due: updates.due,
+        status: updates.status,
+      });
+    }
+  }, [unifiedStore, allTasks]);
+  
+  const deleteGoogleTask = useCallback(async (taskId: string, listId: string) => {
+    const task = allTasks.find(t => t.googleTaskId === taskId || t.id === taskId);
+    if (task) {
+      return unifiedStore.deleteTask(task.id);
+    }
+  }, [unifiedStore, allTasks]);
+  
+  const toggleTaskComplete = useCallback(async (taskId: string) => {
+    const task = allTasks.find(t => t.googleTaskId === taskId || t.id === taskId);
+    if (task) {
+      const newStatus = task.status === 'completed' ? 'needsAction' : 'completed';
+      return unifiedStore.updateTask(task.id, { status: newStatus });
+    }
+  }, [unifiedStore, allTasks]);
+  
+  const authenticateTasks = useCallback(async (account: any) => {
+    // Authentication is handled at app level now
+    return Promise.resolve();
+  }, []);
+  
+  const isTasksAuthenticated = true; // Authentication is handled at app level
+  const isTasksHydrated = unifiedStore.columns.length > 0; // Consider hydrated if we have columns
+  
+  const syncAllTasks = useCallback(async () => {
+    // Sync is automatic in unified store
+    return Promise.resolve();
+  }, []);
+  
+  // Transform unified tasks to google tasks format for calendar
+  const googleTasks = useMemo(() => {
+    const tasksByList: Record<string, GoogleTask[]> = {};
+    const taskIdOccurrences = new Map<string, number>();
+    
+    // Remove verbose logging
+    
+    taskLists.forEach(list => {
+      tasksByList[list.id] = allTasks
+        .filter(task => task.columnId === list.id)
+        .map((task) => {
+          // Use the original task ID without modification to ensure consistency
+          const taskId = task.googleTaskId || task.id;
+          
+          // Track how many times we see each task ID
+          const count = (taskIdOccurrences.get(taskId) || 0) + 1;
+          taskIdOccurrences.set(taskId, count);
+          // Track duplicates silently
+          
+          return {
+            id: taskId,
+            title: task.title,
+            notes: task.notes || '',
+            status: task.status || 'needsAction',
+            due: task.due,
+            completed: task.completedAt,
+            updated: task.updatedAt,
+            position: task.position.toString(),
+            selfLink: '',
+            etag: '',
+          } as GoogleTask;
+        });
+    });
+    
+    // Log duplicate task IDs
+    const duplicates = Array.from(taskIdOccurrences.entries())
+      .filter(([id, count]) => count > 1)
+      .map(([id, count]) => ({ id, count }));
+    
+    // Only warn about duplicates if there are many
+    if (duplicates.length > 10) {
+      console.warn(`[CalendarAsanaStyle] Found ${duplicates.length} duplicate task IDs`);
+    }
+    
+    return tasksByList;
+  }, [taskLists, allTasks]);
 
   const { 
     events: calendarEvents, 
@@ -922,12 +1026,31 @@ export default function CalendarAsanaStyle() {
     setCurrentViewTitle(calendarApi.view.title);
   };
 
-  // Create combined events from calendar events and tasks
+  // Create combined events from calendar events and tasks with deduplication
   const fullCalendarEvents = useMemo(() => {
     const events: any[] = [];
+    const eventTitlesAndDates = new Set<string>();
+    const usedEventIds = new Set<string>(); // Track all event IDs to ensure uniqueness
+    const seenTaskIds = new Set<string>();
+    const addedTaskKeys = new Set<string>(); // Track tasks by content, not just ID
 
-    // Add calendar events
+    // Add calendar events first
     calendarEvents.forEach(event => {
+      // Normalize date to YYYY-MM-DD format for consistent comparison
+      const eventDate = event.start?.dateTime || event.start?.date;
+      let normalizedDate = '';
+      try {
+        normalizedDate = eventDate ? new Date(eventDate).toISOString().split('T')[0] : '';
+      } catch (e) {
+        // Silently handle date parsing errors
+        normalizedDate = eventDate ? String(eventDate).split('T')[0] || '' : '';
+      }
+      const eventKey = `${(event.summary || 'untitled').toLowerCase()}_${normalizedDate}`;
+      eventTitlesAndDates.add(eventKey);
+      
+      // Track calendar event IDs
+      usedEventIds.add(event.id);
+      
       events.push({
         id: event.id,
         title: event.summary || 'Untitled Event',
@@ -945,27 +1068,87 @@ export default function CalendarAsanaStyle() {
         },
       });
     });
-
-    // Add tasks if enabled
+    
+    // Add tasks if enabled, but skip if a calendar event with same title and date exists
     if (showTasksInCalendar) {
+      
       Object.entries(googleTasks).forEach(([listId, tasks]) => {
         tasks.forEach(task => {
           if (task.due) {
-            events.push({
-              id: `task-${task.id}`,
-              title: task.title,
-              start: task.due,
-              allDay: true,
-              backgroundColor: task.status === 'completed' ? '#E8F5F3' : '#FFF6E6',
-              borderColor: task.status === 'completed' ? '#14A085' : '#E68900',
-              extendedProps: {
-                type: 'task',
-                taskData: task,
-                listId: listId,
-              },
-            });
+            // Normalize task date to YYYY-MM-DD format for consistent comparison
+            let normalizedTaskDate = '';
+            try {
+              normalizedTaskDate = new Date(task.due).toISOString().split('T')[0];
+            } catch (e) {
+              // Silently handle date parsing errors
+              normalizedTaskDate = String(task.due).split('T')[0] || '';
+            }
+            const taskKey = `${(task.title || 'untitled').toLowerCase()}_${normalizedTaskDate}`;
+            
+            // Create a unique key combining task ID and list ID to handle duplicates across lists
+            const uniqueTaskKey = `${task.id}_${listId}`;
+            
+            // Remove verbose logging to reduce console spam
+            
+            // Skip this task if:
+            // 1. A calendar event with the same title and date already exists
+            // 2. We've already added a task with the same content (title + date)
+            // 3. We've already processed this specific task+list combination
+            if (!eventTitlesAndDates.has(taskKey) && !addedTaskKeys.has(taskKey) && !seenTaskIds.has(uniqueTaskKey)) {
+              seenTaskIds.add(uniqueTaskKey);
+              addedTaskKeys.add(taskKey); // Prevent duplicate tasks with same title/date
+              
+              // Remove verbose logging to reduce console spam
+              
+              // Generate a unique event ID and ensure it's not already used
+              let eventId = `task-${task.id}-${listId}`;
+              let counter = 0;
+              while (usedEventIds.has(eventId)) {
+                counter++;
+                eventId = `task-${task.id}-${listId}-${counter}`;
+              }
+              usedEventIds.add(eventId);
+              
+              events.push({
+                id: eventId,
+                title: task.title,
+                start: task.due,
+                allDay: true,
+                backgroundColor: task.status === 'completed' ? '#E8F5F3' : '#FFF6E6',
+                borderColor: task.status === 'completed' ? '#14A085' : '#E68900',
+                extendedProps: {
+                  type: 'task',
+                  taskData: task,
+                  listId: listId,
+                },
+              });
+            }
           }
         });
+      });
+    }
+    
+    // Check for any duplicate IDs in the final events array
+    const finalEventIds = new Set<string>();
+    const duplicateIds = [];
+    events.forEach(event => {
+      if (finalEventIds.has(event.id)) {
+        duplicateIds.push(event.id);
+      }
+      finalEventIds.add(event.id);
+    });
+    
+    if (duplicateIds.length > 0) {
+      console.error('[Calendar] CRITICAL: Duplicate event IDs found:', duplicateIds);
+    }
+    
+    // Only log summary if tasks are shown to reduce console spam
+    if (showTasksInCalendar && seenTaskIds.size > 0) {
+      console.log('[Calendar] Event generation complete:', {
+        totalEvents: events.length,
+        calendarEvents: calendarEvents.length,
+        tasksProcessed: seenTaskIds.size,
+        uniqueEventIds: usedEventIds.size
       });
     }
 
@@ -1541,9 +1724,12 @@ export default function CalendarAsanaStyle() {
               key={priority}
               className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
               onClick={() => {
-                // Update task priority in metadata store
-                const setTaskMetadata = useTaskMetadataStore.getState().setTaskMetadata;
-                setTaskMetadata(contextMenu.task.id, { priority });
+                // Update task priority in unified store
+                const { updateTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
+                const unifiedTask = getTaskByGoogleId(contextMenu.task.id);
+                if (unifiedTask) {
+                  updateTask(unifiedTask.id, { priority });
+                }
                 setContextMenu(null);
               }}
             >

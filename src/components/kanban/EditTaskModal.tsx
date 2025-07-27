@@ -1,5 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { KanbanTask, TaskMetadata } from '../../stores/useKanbanStore';
+import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
+
+type KanbanTask = UnifiedTask;
+interface TaskMetadata {
+  labels?: string[];
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+}
 import { Card, Button, Input } from '../ui';
 import { X, Calendar, Tag, AlertCircle, Trash2, Plus, Minus, CheckSquare, Square, RotateCcw } from 'lucide-react';
 

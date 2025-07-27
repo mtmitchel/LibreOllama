@@ -410,10 +410,18 @@ export class GmailAuthService {
   }
 
   /**
+   * Validate access token for a specific account
+   */
+  async validateAccessToken(accountId?: string): Promise<TokenValidation> {
+    const tokens = await this.getStoredTokens(accountId);
+    return this.validateTokens(tokens || undefined);
+  }
+
+  /**
    * Revoke tokens with Google
    */
-  async revokeTokens(tokens?: GmailTokens): Promise<void> {
-    const tokensToRevoke = tokens || await this.getStoredTokens();
+  async revokeTokens(accountId?: string): Promise<void> {
+    const tokensToRevoke = await this.getStoredTokens(accountId);
     if (!tokensToRevoke) return;
 
     try {

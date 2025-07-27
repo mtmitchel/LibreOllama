@@ -14,7 +14,7 @@ import { Button, Card, Text, Heading, Input } from '../../components/ui';
 import { ContextMenu } from '../../components/ui/ContextMenu';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { useHeader } from '../contexts/HeaderContext';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -22,7 +22,9 @@ import interactionPlugin, { Draggable, DropArg } from '@fullcalendar/interaction
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { devLog } from '../../utils/devLog';
 import type { GoogleTask } from '../../types/google';
-import './calendar.css';
+import { googleTasksApi } from '../../api/googleTasksApi';
+import { realtimeSync } from '../../services/realtimeSync';
+import './styles/calendar.css';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
 
@@ -675,24 +677,79 @@ export default function Calendar() {
   const [editingEvent, setEditingEvent] = useState<EventApi | null>(null);
   const [currentViewTitle, setCurrentViewTitle] = useState<string>('Calendar');
   const [editingTask, setEditingTask] = useState<GoogleTask | null>(null);
+  
+  // Separate state for calendar and task events to prevent duplication
+  const [calendarEventItems, setCalendarEventItems] = useState<any[]>([]);
+  const [taskEventItems, setTaskEventItems] = useState<any[]>([]);
   const [showDeleteTaskDialog, setShowDeleteTaskDialog] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<GoogleTask | null>(null);
 
+  // Unified task store
   const {
-    taskLists,
-    tasks: googleTasks,
-    isLoading: isTasksLoading,
-    error: tasksError,
-    fetchTaskLists,
-    createTask: createGoogleTask,
-    updateTask: updateGoogleTask,
-    deleteTask: deleteGoogleTask,
-    toggleTaskComplete,
-    authenticate: authenticateTasks,
-    isAuthenticated: isTasksAuthenticated,
-    isHydrated: isTasksHydrated,
-    syncAllTasks,
-  } = useGoogleTasksStore();
+    columns: taskLists,
+    getTasksByColumn,
+    createTask: createUnifiedTask,
+    updateTask: updateUnifiedTask,
+    deleteTask: deleteUnifiedTask,
+    isSyncing: isTasksLoading,
+  } = useUnifiedTaskStore();
+  
+  // Google auth from settings
+  const activeAccount = useActiveGoogleAccount();
+  const isTasksAuthenticated = !!activeAccount;
+  const isTasksHydrated = true;
+  const tasksError = null;
+  
+  // Google Tasks API operations
+  const fetchTaskLists = async () => {
+    const lists = await googleTasksApi.getTaskLists();
+    return lists || [];
+  };
+  
+  const createGoogleTask = async (listId: string, task: Partial<GoogleTask>) => {
+    const taskId = createUnifiedTask({
+      columnId: listId,
+      title: task.title || '',
+      notes: task.notes,
+      due: task.due,
+      googleTaskListId: listId,
+    });
+    return { id: taskId, ...task };
+  };
+  
+  const updateGoogleTask = async (listId: string, taskId: string, updates: Partial<GoogleTask>) => {
+    updateUnifiedTask(taskId, updates);
+    return { id: taskId, ...updates };
+  };
+  
+  const deleteGoogleTask = async (listId: string, taskId: string) => {
+    deleteUnifiedTask(taskId);
+  };
+  
+  const toggleTaskComplete = async (listId: string, taskId: string, completed: boolean) => {
+    updateUnifiedTask(taskId, { status: completed ? 'completed' : 'needsAction' });
+  };
+  
+  const syncAllTasks = async () => {
+    await realtimeSync.syncNow();
+  };
+  
+  // Transform unified tasks to Google format
+  const googleTasks: Record<string, GoogleTask[]> = {};
+  taskLists.forEach(list => {
+    googleTasks[list.id] = getTasksByColumn(list.id).map(task => ({
+      id: task.googleTaskId || task.id,
+      title: task.title,
+      notes: task.notes,
+      due: task.due,
+      status: task.status,
+      position: task.position,
+      updated: task.updated,
+      etag: '',
+      kind: 'tasks#task',
+      selfLink: '',
+    }));
+  });
 
   const { 
     events: calendarEvents, 
@@ -703,13 +760,13 @@ export default function Calendar() {
     isAuthenticated: isCalendarAuthenticated,
   } = useGoogleCalendarStore();
 
-  const activeAccount = useActiveGoogleAccount();
-
   useEffect(() => {
-    if (activeAccount && !isTasksAuthenticated && isTasksHydrated) {
-      authenticateTasks(activeAccount as any);
+    if (activeAccount) {
+      // Sync tasks when account becomes active
+      fetchTaskLists().catch(console.error);
+      syncAllTasks().catch(console.error);
     }
-  }, [activeAccount, isTasksAuthenticated, isTasksHydrated, authenticateTasks]);
+  }, [activeAccount]);
 
   useEffect(() => {
     if (isTasksAuthenticated && taskLists.length === 0) {
@@ -769,8 +826,8 @@ export default function Calendar() {
 
   const filteredTasks = getFilteredTasks();
 
-  const fullCalendarEvents = useMemo(() => {
-    // Convert Google Calendar events to FullCalendar format
+  // Update calendar events only when calendar data changes
+  useEffect(() => {
     const calendarEventsFormatted = (calendarEvents || []).map(event => ({
       id: event.id,
       title: event.summary,
@@ -784,8 +841,11 @@ export default function Calendar() {
         type: 'event',
       }
     }));
-  
-    // Convert tasks with due dates to calendar events
+    setCalendarEventItems(calendarEventsFormatted);
+  }, [calendarEvents]);
+
+  // Update task events only when tasks or visibility changes
+  useEffect(() => {
     const taskEventsFormatted = showTasksInCalendar ? 
       filteredTasks
         .filter(task => task.due) // Show all tasks with due dates
@@ -804,9 +864,13 @@ export default function Calendar() {
             taskData: task,
           }
         })) : [];
+    setTaskEventItems(taskEventsFormatted);
+  }, [filteredTasks, showTasksInCalendar]);
 
-    return [...calendarEventsFormatted, ...taskEventsFormatted];
-  }, [calendarEvents, showTasksInCalendar, filteredTasks]);
+  // Combine both event sources
+  const fullCalendarEvents = useMemo(() => {
+    return [...calendarEventItems, ...taskEventItems];
+  }, [calendarEventItems, taskEventItems]);
 
 
   const goToToday = () => calendarRef.current?.getApi().today();

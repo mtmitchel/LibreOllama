@@ -1,6 +1,6 @@
 import React from 'react';
 import { useProjectStore } from '../stores/projectStore';
-import { useKanbanStore } from '../../../stores/useKanbanStore';
+import { useUnifiedTaskStore } from '../../../stores/unifiedTaskStore';
 import { Button } from '../../../components/ui';
 
 interface TaskProjectAssociationProps {

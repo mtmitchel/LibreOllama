@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { invoke } from '@tauri-apps/api/core';
-import type { KanbanTask } from '../../../stores/useKanbanStore';
+import type { UnifiedTask as KanbanTask } from '../../../stores/unifiedTaskStore.types';
 
 // Types that match the UI component interfaces and backend API
 export interface Project {

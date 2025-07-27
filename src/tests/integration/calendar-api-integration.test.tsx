@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useGoogleCalendarStore } from '@/stores/googleCalendarStore';
-import { useGoogleTasksStore } from '@/stores/googleTasksStore';
+import { useUnifiedTaskStore } from '@/stores/unifiedTaskStore';
 
 describe('Calendar API Integration Tests', () => {
   beforeEach(() => {
@@ -26,16 +26,11 @@ describe('Calendar API Integration Tests', () => {
       isHydrated: true
     });
 
-    useGoogleTasksStore.setState({
-      tasks: {},
-      taskLists: [],
-      isLoading: false,
-      isLoadingTasks: {},
-      error: null,
-      isAuthenticated: false,
-      lastSyncAt: null,
-      isHydrated: true
-    });
+    // Clear unified task store
+    const taskStore = useUnifiedTaskStore.getState();
+    const columnIds = [...taskStore.columns.map(c => c.id)];
+    columnIds.forEach(id => taskStore.deleteColumn(id));
+    taskStore.clearSyncErrors();
   });
 
   describe('🗓️ Calendar Store Operations', () => {

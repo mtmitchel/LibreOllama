@@ -682,77 +682,67 @@ const useMailStore = create<EnhancedMailStore>()(
               state.accountData[targetAccountId].unreadMessages = convertedMessages.filter(msg => !msg.isRead).length;
               state.accountData[targetAccountId].lastSyncAt = new Date();
 
-              // Use labels first as they're more reliable than resultSizeEstimate
+              // Use the fresh API response first as it's the most up-to-date
               let totalMessages = 0;
               const accountData = state.accountData[targetAccountId];
-              
-              // Primary: Use label's messagesTotal (most accurate)
-              const currentLabel = labelId || 'INBOX';
-              const targetLabel = accountData.labels.find(label => label.id === currentLabel);
-              
-              logger.debug(`[MAIL_STORE] All labels for account ${targetAccountId}:`, JSON.stringify(accountData.labels, null, 2));
-              logger.debug(`[MAIL_STORE] Searching for label: ${currentLabel}, Found:`, targetLabel);
-
               let totalUnreadMessages = 0;
+              let targetLabel: any = null; // Declare targetLabel at the outer scope
               
-              if (targetLabel && typeof targetLabel.messagesTotal === 'number' && targetLabel.messagesTotal > 0) {
-                totalMessages = targetLabel.messagesTotal;
-                // Use threadsUnread instead of messagesUnread for conversation count
-                totalUnreadMessages = targetLabel.threadsUnread || 0;
-                logger.debug(`[MAIL_STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread conversations: ${totalUnreadMessages}`);
-                logger.debug(`[MAIL_STORE] Label details:`, {
-                  labelId: targetLabel.id,
-                  labelName: targetLabel.name,
-                  messagesTotal: targetLabel.messagesTotal,
-                  messagesUnread: targetLabel.messagesUnread,
-                  threadsTotal: targetLabel.threadsTotal,
-                  threadsUnread: targetLabel.threadsUnread
-                });
-              } else if (result.result_size_estimate && result.result_size_estimate > 0) {
-                // Secondary: Use API's result_size_estimate (often inaccurate)
+              // Primary: Use API's result_size_estimate from fresh response
+              if (result.result_size_estimate && result.result_size_estimate > 0) {
                 totalMessages = result.result_size_estimate;
-                // For unread count when we don't have label data, count unread in current results
-                totalUnreadMessages = convertProcessedGmailMessages(result.messages, targetAccountId).filter(msg => !msg.isRead).length;
-                logger.debug(`[MAIL_STORE] Set totalMessages from API resultSizeEstimate: ${totalMessages}`);
+                logger.debug(`[MAIL_STORE] Set totalMessages from fresh API resultSizeEstimate: ${totalMessages}`);
               } else {
-                // Last resort: estimate based on current data (likely wrong)
-                totalMessages = pageToken ? 
-                  Math.max(result.messages.length, state.messagesLoadedSoFar + result.messages.length) :
-                  result.messages.length;
+                // Fallback: Use label's messagesTotal (might be stale)
+                const currentLabel = labelId || 'INBOX';
+                targetLabel = accountData.labels.find(label => label.id === currentLabel);
+                
+                logger.debug(`[MAIL_STORE] All labels for account ${targetAccountId}:`, JSON.stringify(accountData.labels, null, 2));
+                logger.debug(`[MAIL_STORE] Searching for label: ${currentLabel}, Found:`, targetLabel);
+                
+                if (targetLabel && typeof targetLabel.messagesTotal === 'number' && targetLabel.messagesTotal > 0) {
+                  totalMessages = targetLabel.messagesTotal;
+                  // Use threadsUnread instead of messagesUnread for conversation count
+                  totalUnreadMessages = targetLabel.threadsUnread || 0;
+                  logger.debug(`[MAIL_STORE] Set totalMessages from ${currentLabel} label: ${totalMessages}, unread conversations: ${totalUnreadMessages}`);
+                  logger.debug(`[MAIL_STORE] Label details:`, {
+                    labelId: targetLabel.id,
+                    labelName: targetLabel.name,
+                    messagesTotal: targetLabel.messagesTotal,
+                    messagesUnread: targetLabel.messagesUnread,
+                    threadsTotal: targetLabel.threadsTotal,
+                    threadsUnread: targetLabel.threadsUnread
+                  });
+                } else {
+                  // Last resort: estimate based on current data
+                  totalMessages = pageToken ? 
+                    Math.max(result.messages.length, state.messagesLoadedSoFar + result.messages.length) :
+                    result.messages.length;
+                  logger.debug(`[MAIL_STORE] Set totalMessages from estimation fallback: ${totalMessages}`);
+                }
+              }
+              
+              // Count unread in current results if we don't have label data
+              if (totalUnreadMessages === 0) {
                 totalUnreadMessages = convertProcessedGmailMessages(result.messages, targetAccountId).filter(msg => !msg.isRead).length;
-                logger.debug(`[MAIL_STORE] Set totalMessages from estimation fallback: ${totalMessages}`);
               }
               
               state.accountData[targetAccountId].totalMessages = totalMessages;
               state.isLoadingMessages = false;
               
-              // Update pagination state for token-based pagination
-              state.nextPageToken = result.next_page_token;
-              
-                        // Handle token-based navigation
-          if (pageToken) {
-              if (state.isNavigatingBackwards) {
-                  // We've just navigated back, so remove the token that led to the *previous* (now current) page.
-                  // The current state of pageTokens is for the page we are on.
-                  state.pageTokens.pop();
-              } else {
-                  // We are moving forward. Store the token for the page we are now on.
-                  if (!state.pageTokens.includes(pageToken)) {
-                      state.pageTokens.push(pageToken);
-                  }
-              }
-          } else {
-              // First page - reset everything
-              state.pageTokens = [];
-              state.messagesLoadedSoFar = 0; // Reset to 0 for first page
-          }
-          // Don't recalculate messagesLoadedSoFar here - it's managed by nextPage/prevPage methods
-
-              // Set totalMessages from account data (which now gets it from API result_size_estimate)
-              // Make sure we have a valid number
+              // Update basic state - pagination is managed by nextPage/prevPage
               state.totalMessages = totalMessages;
               state.totalUnreadMessages = totalUnreadMessages;
               state.nextPageToken = result.next_page_token;
+              
+              // Only reset pagination on first page (no pageToken)
+              if (!pageToken) {
+                  // First page - reset pagination tracking
+                  state.pageTokens = [];
+                  state.messagesLoadedSoFar = 0;
+              }
+              // DO NOT manipulate pageTokens or messagesLoadedSoFar here for subsequent pages
+              // This is handled by nextPage/prevPage to avoid race conditions
               
               logger.debug(`📄 [MAIL_STORE] *** FETCH COMPLETE ***`, {
                 messagesLoadedSoFar: state.messagesLoadedSoFar,

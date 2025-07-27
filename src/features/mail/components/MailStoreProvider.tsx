@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { initializeMailStore, useMailStore } from '../stores/mailStore';
 import { initializeGoogleCalendarStore } from '../../../stores/googleCalendarStore';
-import { initializeGoogleTasksStore } from '../../../stores/googleTasksStore';
+// Tasks are now managed through unified task store
 import { gmailAutoSync } from '../../../services/gmailAutoSync';
 import { googleCalendarAutoSync } from '../../../services/googleCalendarAutoSync';
 import { logger } from '../../../core/lib/logger';
@@ -24,7 +24,7 @@ export function MailStoreProvider({ children }: MailStoreProviderProps) {
         await Promise.all([
           initializeMailStore(),
           initializeGoogleCalendarStore(),
-          initializeGoogleTasksStore()
+          // Tasks initialization handled by unified store
         ]);
         if (mounted) {
           setIsInitialized(true);

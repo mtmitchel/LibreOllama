@@ -20,7 +20,7 @@ import { Card, Button, Input, Heading, Text, Checkbox } from '../../components/u
 import { useHeader } from '../contexts/HeaderContext';
 import { GoogleAuthModal } from '../../features/google/components/GoogleAuthModal';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
-import { useGoogleTasksStore } from '../../stores/googleTasksStore';
+// Google Tasks now managed through unified task store
 import { useMailStore } from '../../features/mail/stores/mailStore';
 import { 
   useGeneralSettings, 
@@ -172,6 +172,45 @@ const Settings: React.FC = () => {
   const refreshGoogleAccount = useRefreshGoogleAccount();
   const setApiKey = useSetApiKey();
   const fetchAvailableModels = useChatStore(state => state.fetchAvailableModels);
+  
+  // Debug function to check database and clean test accounts
+  const debugAndCleanDatabase = async () => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      
+      // Check database state
+      const dbState = await invoke('debug_gmail_secure_table');
+      console.log('[DEBUG] Database state:', dbState);
+      
+      // Check token expiration
+      const tokenInfo = await invoke('debug_gmail_token_expiration');
+      console.log('[DEBUG] Token expiration:', tokenInfo);
+      
+      // Remove test user if found
+      const testAccount = accounts.find(acc => acc.email === 'test@gmail.com' || acc.name === 'Test User');
+      if (testAccount) {
+        console.log('[DEBUG] Found test account, removing:', testAccount);
+        await removeGoogleAccount(testAccount.id);
+        
+        // Also clean from Gmail store
+        const gmailAccounts = mailStore.accounts;
+        const testGmailAccount = gmailAccounts.find(acc => acc.email === 'test@gmail.com');
+        if (testGmailAccount) {
+          await mailStore.removeAccount(testGmailAccount.id);
+        }
+      }
+      
+      // Refresh remaining accounts
+      for (const account of accounts) {
+        if (account.email !== 'test@gmail.com') {
+          console.log('[DEBUG] Refreshing account:', account.email);
+          await refreshGoogleAccount(account.id);
+        }
+      }
+    } catch (error) {
+      console.error('[DEBUG] Failed to check/clean database:', error);
+    }
+  };
 
   const [providerModels, setProviderModels] = useState<Record<string, { id: string, name: string, description?: string }[]>>({});
   const [selectedModels, setSelectedModels] = useState<Record<string, string[]>>({});
@@ -183,7 +222,10 @@ const Settings: React.FC = () => {
   
   // Google service stores for authentication
   const { authenticate: authenticateCalendar } = useGoogleCalendarStore();
-  const { authenticate: authenticateTasks } = useGoogleTasksStore();
+  // Tasks authentication is now handled through settings store
+  const authenticateTasks = async () => {
+    console.log('[Settings] Tasks auth handled through Google account management');
+  };
   const { addAccount: addGmailAccount } = useMailStore();
   
   // Google accounts from settings store
@@ -793,6 +835,19 @@ const Settings: React.FC = () => {
                     ))}
                   </div>
                 )}
+                
+                {/* Debug button - only show in development */}
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={debugAndCleanDatabase}
+                    className="w-full"
+                  >
+                    <RefreshCw size={16} className="mr-2" />
+                    Debug & Clean Accounts
+                  </Button>
+                </div>
               </Card>
               
               <div className="space-y-4">

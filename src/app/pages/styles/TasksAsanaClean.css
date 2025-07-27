@@ -1,0 +1,93 @@
+/* Task Modal Form Styles */
+.task-modal-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  background-color: #F6F7F8;
+  font-size: 14px;
+  color: #151B26;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.task-modal-input:focus {
+  background-color: #FFFFFF;
+  border-color: #D1D5DB;
+}
+
+.task-modal-input:hover:not(:focus) {
+  background-color: #EDEFF1;
+}
+
+/* Date input specific styles */
+.task-modal-input[type="date"] {
+  cursor: pointer;
+  -webkit-appearance: none;
+  position: relative;
+}
+
+.task-modal-input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.task-modal-input[type="date"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+/* Select dropdown styles */
+.task-modal-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  background-color: #F6F7F8;
+  font-size: 14px;
+  color: #151B26;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+  padding-right: 2.5rem;
+}
+
+.task-modal-select:focus {
+  background-color: #FFFFFF;
+  border-color: #D1D5DB;
+}
+
+.task-modal-select:hover:not(:focus) {
+  background-color: #EDEFF1;
+}
+
+/* Textarea styles */
+.task-modal-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  background-color: #F6F7F8;
+  font-size: 14px;
+  color: #151B26;
+  outline: none;
+  resize: none;
+  min-height: 100px;
+  transition: all 0.2s ease;
+}
+
+.task-modal-textarea:focus {
+  background-color: #FFFFFF;
+  border-color: #D1D5DB;
+}
+
+.task-modal-textarea:hover:not(:focus) {
+  background-color: #EDEFF1;
+}

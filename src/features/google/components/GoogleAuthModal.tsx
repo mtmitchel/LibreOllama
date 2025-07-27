@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { Card, Button, Text, Heading } from '../../../components/ui';
+import { getSecureAuthHandler } from '../services/SecureAuthHandler';
+import { logger } from '../../../core/lib/logger';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
@@ -52,31 +54,6 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     }
   }, [isOpen]);
 
-  // Listen for OAuth callback events from Tauri backend
-  useEffect(() => {
-    let unlistenFn: UnlistenFn | null = null;
-
-    if (isOpen && authStep === 'browser') {
-      const setupListener = async () => {
-        try {
-          unlistenFn = await listen('oauth_callback', (event) => {
-            console.log('🔔 OAuth callback received:', event.payload);
-            setAuthStep('processing');
-          });
-        } catch (error) {
-          console.error('Failed to setup OAuth callback listener:', error);
-        }
-      };
-
-      setupListener();
-    }
-
-    return () => {
-      if (unlistenFn) {
-        unlistenFn();
-      }
-    };
-  }, [isOpen, authStep]);
 
   const handleGoogleAuth = async () => {
     setIsLoading(true);
@@ -84,71 +61,49 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
     setError(null);
 
     try {
-      console.log('🔐 [GOOGLE] Starting fully automated OAuth flow...');
+      logger.info('[GoogleAuthModal] Starting secure OAuth 2.0 PKCE flow');
       
-      // Single step: Complete OAuth flow automatically
-      const tokenResponse = await invoke('start_gmail_oauth_with_callback') as { 
-        access_token: string; 
-        refresh_token: string; 
-        expires_in: number;
-        token_type: string;
-      };
-
-      console.log('🎯 [GOOGLE] Tokens received automatically!');
+      // Show browser state while backend handles OAuth
+      // The backend will open the browser and wait for the callback
+      
+      // Use the secure authentication handler with PKCE flow
+      const authHandler = getSecureAuthHandler();
+      
+      // This call will block until the OAuth flow is complete
+      const accountData = await authHandler.authenticateUser();
+      
+      logger.info('[GoogleAuthModal] Authentication successful', { 
+        accountId: accountData.accountId,
+        email: accountData.email 
+      });
+      
+      // Transition to processing, then success
       setAuthStep('processing');
       
-      // Get user information and store account
-      const userInfo = await invoke('get_gmail_user_info', {
-        accessToken: tokenResponse.access_token
-      }) as {
-        id: string;
-        email: string;
-        name: string;
-        picture?: string;
-      };
-
-      console.log('👤 [GOOGLE] User info retrieved:', userInfo);
-
-      // Store tokens securely using the user ID directly (not prefixed)
-      // This matches what Gmail services expect for account lookup
-      const accountId = userInfo.id;
-      await invoke('store_gmail_tokens_secure', {
-        accountId,
-        tokens: {
-          access_token: tokenResponse.access_token,
-          refresh_token: tokenResponse.refresh_token,
-          expires_in: tokenResponse.expires_in.toString(),
-          token_type: tokenResponse.token_type,
-          expires_at: (Date.now() + (tokenResponse.expires_in * 1000)).toString()
-        },
-        userInfo
-      });
-
-      console.log('💾 [GOOGLE] Account stored successfully');
-      setAuthStep('success');
-
-      // Create account data for parent component
-      const accountData = {
-        id: userInfo.id,
-        email: userInfo.email,
-        name: userInfo.name,
-        picture: userInfo.picture || ''
-      };
-
-      // Notify parent component of successful authentication
-      if (onSuccess) {
-        onSuccess(accountData);
-      }
-
-      // Auto-close modal after brief success display
+      // Give a moment for the processing state to show
       setTimeout(() => {
-        onClose();
-      }, 2000);
+        setAuthStep('success');
+        
+        // Notify parent component of successful authentication
+        if (onSuccess) {
+          onSuccess({
+            id: accountData.accountId,
+            email: accountData.email,
+            name: accountData.name,
+            picture: accountData.picture
+          });
+        }
+
+        // Auto-close modal after brief success display
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      }, 1500);
 
       setIsLoading(false);
 
     } catch (err) {
-      console.error('❌ [GOOGLE] Authentication failed:', err);
+      logger.error('[GoogleAuthModal] Authentication failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
       setError(errorMessage);
       setAuthStep('error');
@@ -241,15 +196,29 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
         return (
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
-              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-yellow-100">
-                <svg className="size-8 animate-spin text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-blue-100">
+                <svg className="size-8 animate-spin text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </div>
-              <Heading level={3} className="mb-2">Processing Authentication</Heading>
-              <Text variant="secondary" size="sm">
-                Setting up your Google account connection...
+              <Heading level={3} className="mb-2">Finalizing Authentication</Heading>
+              <Text variant="secondary" size="sm" className="mb-4">
+                We received your authorization. Setting up your account...
               </Text>
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                  <div className="size-2 rounded-full bg-blue-500 animate-pulse"></div>
+                  <Text size="sm">Exchanging authorization code</Text>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                  <div className="size-2 rounded-full bg-blue-500 animate-pulse animation-delay-150"></div>
+                  <Text size="sm">Fetching account details</Text>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted">
+                  <div className="size-2 rounded-full bg-blue-500 animate-pulse animation-delay-300"></div>
+                  <Text size="sm">Securing your credentials</Text>
+                </div>
+              </div>
             </div>
           </Card>
         );
@@ -259,13 +228,36 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
           <Card className="w-full max-w-lg">
             <div className="p-6 text-center">
               <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
-                <svg className="size-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="size-8 text-green-600 animate-scale-check" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <Heading level={3} className="mb-2">Authentication Successful!</Heading>
-              <Text variant="secondary" size="sm">
-                Your Google account has been connected successfully. This window will close automatically.
+              <Heading level={3} className="mb-2">Account Connected!</Heading>
+              <Text variant="secondary" size="sm" className="mb-4">
+                Your Google account has been successfully linked.
+              </Text>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-success">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <Text size="sm">Gmail access granted</Text>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-success">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <Text size="sm">Calendar access granted</Text>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-success">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <Text size="sm">Tasks access granted</Text>
+                </div>
+              </div>
+              <Text size="xs" variant="secondary">
+                Closing in a moment...
               </Text>
             </div>
           </Card>

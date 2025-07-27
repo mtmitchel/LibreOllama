@@ -35,7 +35,8 @@
       "Bash(cargo build)",
       "Bash(mkdir:*)",
       "Bash(git checkout:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }

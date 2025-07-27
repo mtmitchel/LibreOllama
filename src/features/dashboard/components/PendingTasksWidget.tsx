@@ -2,11 +2,15 @@ import React, { useMemo } from 'react';
 import { Card, Heading, Text, Button } from '../../../components/ui';
 import { DropdownMenu } from '../../../components/ui/DropdownMenu';
 import { MoreHorizontal, CheckSquare, Plus, Calendar } from 'lucide-react';
-import { useKanbanStore } from '../../../stores/useKanbanStore';
+import { useUnifiedTaskStore } from '../../../stores/unifiedTaskStore';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 
 export const PendingTasksWidget: React.FC = () => {
-  const { columns, toggleComplete } = useKanbanStore();
+  const { columns, getTasksByColumn, updateTask } = useUnifiedTaskStore();
+  
+  const toggleComplete = (columnId: string, taskId: string, completed: boolean) => {
+    updateTask(taskId, { status: completed ? 'completed' : 'needsAction' });
+  };
 
   // Memoize the pending tasks calculation to prevent re-render loops
   const pendingTasks = useMemo(() => {
@@ -17,7 +21,7 @@ export const PendingTasksWidget: React.FC = () => {
     try {
       // Get all tasks from all columns
       const allTasks = columns.flatMap(column => 
-        column.tasks.map(task => ({
+        getTasksByColumn(column.id).map(task => ({
           ...task,
           columnId: column.id,
           completed: task.status === 'completed'
@@ -35,9 +39,9 @@ export const PendingTasksWidget: React.FC = () => {
           if (!a.due && b.due) return 1;
           
           // If no due dates, sort by priority
-          const priorityOrder = { high: 3, medium: 2, low: 1 };
-          const aPriority = a.metadata?.priority || 'normal';
-          const bPriority = b.metadata?.priority || 'normal';
+          const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
+          const aPriority = a.priority || 'normal';
+          const bPriority = b.priority || 'normal';
           return (priorityOrder[bPriority as keyof typeof priorityOrder] || 0) - (priorityOrder[aPriority as keyof typeof priorityOrder] || 0);
         })
         .slice(0, 5); // Show max 5 tasks
