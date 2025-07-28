@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { devtools, persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { 
+import type { 
   UnifiedTask, 
   UnifiedTaskState, 
   CreateTaskInput, 
@@ -11,6 +11,7 @@ import {
   TaskSyncState 
 } from './unifiedTaskStore.types';
 import { logger } from '../core/lib/logger';
+import { realtimeSync } from '../services/realtimeSync';
 
 interface UnifiedTaskActions {
   // Task CRUD operations
@@ -35,6 +36,7 @@ interface UnifiedTaskActions {
   addColumn: (id: string, title: string, googleTaskListId?: string) => void;
   updateColumn: (columnId: string, updates: Partial<TaskColumn>) => void;
   deleteColumn: (columnId: string) => void;
+  purgeTasksByIds: (taskIds: string[]) => void; // For remote deletions
   
   // Query helpers
   getTasksByColumn: (columnId: string) => UnifiedTask[];
@@ -45,12 +47,6 @@ interface UnifiedTaskActions {
   setSyncing: (isSyncing: boolean) => void;
   clearSyncErrors: () => void;
   
-  // Migration helpers
-  importFromLegacyStores: (data: {
-    kanbanTasks: any[];
-    googleTasks: any[];
-    metadata: any;
-  }) => void;
 }
 
 type UnifiedTaskStore = UnifiedTaskState & UnifiedTaskActions;
@@ -71,6 +67,11 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
         createTask: (input) => {
           const taskId = generateTaskId();
           const now = new Date().toISOString();
+
+          // Get the column to correctly assign googleTaskListId at creation time
+          const state = get();
+          const column = state.columns.find(c => c.id === input.columnId);
+          const googleTaskListId = column?.googleTaskListId;
           
           const newTask: UnifiedTask = {
             id: taskId,
@@ -84,8 +85,9 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             due: input.due,
             columnId: input.columnId,
             syncState: 'pending_create',
-            lastLocalUpdate: now,
-            googleTaskListId: input.googleTaskListId,
+            lastLocalUpdate: now,            
+            googleTaskListId: googleTaskListId, // Set from the column
+            lastSyncTime: undefined,
           };
           
           set(state => {
@@ -98,7 +100,23 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             }
           });
           
-          logger.info('[UnifiedStore] Created task', { taskId, title: input.title });
+          logger.info('[UnifiedStore] Created task', { 
+            taskId, 
+            title: input.title, 
+            googleTaskListId: newTask.googleTaskListId,
+            syncState: newTask.syncState,
+            columnId: input.columnId,
+            columnGoogleTaskListId: column?.googleTaskListId
+          });
+          
+          // Reliably trigger a sync if this task is meant for Google.
+          if (newTask.googleTaskListId) {
+            logger.info('[UnifiedStore] Triggering sync for task with googleTaskListId:', newTask.googleTaskListId);
+            realtimeSync.requestSync();
+          } else {
+            logger.warn('[UnifiedStore] Task created without googleTaskListId, sync will not be triggered');
+          }
+          
           return taskId;
         },
         
@@ -140,6 +158,12 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           });
           
           logger.debug('[UnifiedStore] Updated task', { taskId, updates });
+
+          // Trigger sync if the task was modified and needs it
+          const task = get().tasks[taskId];
+          if (task?.syncState === 'pending_update') {
+            realtimeSync.requestSync();
+          }
         },
         
         // Delete a task (optimistic with sync)
@@ -151,13 +175,10 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               return;
             }
             
-            // Removed verbose logging
-            
             if (task.googleTaskId) {
               // Mark for deletion instead of immediate removal
               task.syncState = 'pending_delete';
               task.optimisticDelete = true;
-              // Mark for deletion
             } else {
               // No Google ID, safe to delete immediately
               // Delete local-only task
@@ -171,7 +192,12 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             }
           });
           
-          logger.info('[UnifiedStore] Deleted task', { taskId });
+          // Trigger sync if a task was marked for deletion
+          const task = get().tasks[taskId];
+          // Task will still exist if it was marked for deletion
+          if (task?.syncState === 'pending_delete') {
+            realtimeSync.requestSync();
+          }
         },
         
         // Move task between columns or reorder
@@ -206,6 +232,9 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           });
           
           logger.debug('[UnifiedStore] Moved task', { taskId, targetColumnId, targetIndex });
+
+          // Moving a task always requires a sync
+          realtimeSync.requestSync();
         },
         
         // Mark task as synced with Google
@@ -219,6 +248,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             task.syncState = 'synced';
             task.lastSyncError = undefined;
             delete task.previousState;
+            task.lastSyncTime = new Date().toISOString();
             
             // Clear any sync errors
             delete state.syncErrors[taskId];
@@ -233,6 +263,12 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             const task = state.tasks[taskId];
             if (!task) return;
             
+            // If it was a failed deletion, make it visible again so the user knows.
+            if (task.optimisticDelete) {
+              task.optimisticDelete = false;
+              logger.warn('[UnifiedStore] Rolling back optimistic delete due to sync error', { taskId });
+            }
+
             task.syncState = 'error';
             task.lastSyncError = error;
             state.syncErrors[taskId] = error;
@@ -270,11 +306,20 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               );
               
               if (existingTask) {
-                // Update existing task
-                // Update existing task
+                // Update existing task - but preserve pending state if task is waiting to sync
+                const shouldPreservePendingState = existingTask.syncState === 'pending_create' || 
+                                                  existingTask.syncState === 'pending_update' ||
+                                                  existingTask.syncState === 'pending_delete';
+                
                 Object.assign(existingTask, update.data);
-                existingTask.syncState = 'synced';
+                
+                // Only mark as synced if it wasn't pending
+                if (!shouldPreservePendingState) {
+                  existingTask.syncState = 'synced';
+                }
+                
                 existingTask.updated = update.data.updated || new Date().toISOString();
+                existingTask.lastSyncTime = new Date().toISOString();
                 updated++;
               } else {
                 // Create new task from Google - use Google ID as primary ID
@@ -291,13 +336,14 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 );
                 
                 if (column) {
-                  // Use Google ID as the primary ID to avoid temporary local IDs
-                  const taskId = update.googleTaskId;
+                  // FIX: Generate a stable local ID, per architecture design
+                  const taskId = generateTaskId();
                   const newTask: UnifiedTask = {
-                    id: taskId,  // Use Google ID as primary ID
+                    id: taskId,  // Use new stable local ID
                     googleTaskId: update.googleTaskId,
                     googleTaskListId: update.googleTaskListId,
                     columnId: column.id,
+                    lastSyncTime: new Date().toISOString(),
                     syncState: 'synced',
                     labels: [],
                     priority: 'normal',
@@ -309,14 +355,25 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                   };
                   
                   state.tasks[taskId] = newTask;
-                  column.taskIds.push(taskId);
+                  
+                  // Ensure taskId is added to column's taskIds array
+                  if (!column.taskIds.includes(taskId)) {
+                    column.taskIds.push(taskId);
+                    logger.debug(`[UnifiedStore] Added task ${taskId} to column ${column.id} (${column.title})`);
+                  }
                   created++;
                   
                   // Verify task was actually created
-                  logger.info(`[UnifiedStore] Task created: ${newTask.title} in column ${column.title}`);
+                  logger.info(`[UnifiedStore] Task created: "${newTask.title}" in column "${column.title}" (${column.id})`);
                 } else {
                   skipped++;
-                  logger.warn(`[UnifiedStore] No column found for googleTaskListId: ${update.googleTaskListId}`);
+                  logger.error(`[UnifiedStore] CRITICAL: No column found for googleTaskListId: ${update.googleTaskListId}`, {
+                    availableColumns: state.columns.map(c => ({
+                      id: c.id,
+                      title: c.title,
+                      googleTaskListId: c.googleTaskListId
+                    }))
+                  });
                 }
               }
             }
@@ -344,7 +401,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             state.columns.push(newColumn);
           });
           
-          logger.debug('[UnifiedStore] Added column', { id, title });
+          logger.debug('[UnifiedStore] Added column', { id, title, googleTaskListId });
         },
         
         updateColumn: (columnId, updates) => {
@@ -352,6 +409,9 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             const column = state.columns.find(c => c.id === columnId);
             if (column) {
               Object.assign(column, updates);
+              logger.debug('[UnifiedStore] Updated column', { columnId, updates });
+            } else {
+              logger.warn('[UnifiedStore] Column not found for update', { columnId, updates });
             }
           });
         },
@@ -372,6 +432,34 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           logger.debug('[UnifiedStore] Deleted column', { columnId });
         },
         
+        // New action to handle tasks deleted on Google's side
+        purgeTasksByIds: (taskIds: string[]) => {
+          set(state => {
+            const tasksToDelete = new Set(taskIds);
+            const columnsToUpdate: Record<string, boolean> = {};
+
+            // Identify which columns are affected
+            taskIds.forEach(id => {
+              const task = state.tasks[id];
+              if (task) {
+                columnsToUpdate[task.columnId] = true;
+              }
+            });
+
+            // Remove the tasks from the main tasks object
+            state.tasks = Object.fromEntries(
+              Object.entries(state.tasks).filter(([id]) => !tasksToDelete.has(id))
+            );
+
+            // Clean up taskIds from the affected columns
+            state.columns.forEach(column => {
+              if (columnsToUpdate[column.id]) {
+                column.taskIds = column.taskIds.filter(id => !tasksToDelete.has(id));
+              }
+            });
+          });
+        },
+
         // Query helpers
         getTasksByColumn: (columnId) => {
           const state = get();
@@ -388,6 +476,12 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           const missingTaskIds: string[] = [];
           const deletedTaskIds: string[] = [];
           
+          logger.debug(`[UnifiedStore] Getting tasks for column ${columnId} (${column.title})`, {
+            taskIdsInColumn: allTaskIds.length,
+            taskIds: allTaskIds.slice(0, 5), // Show first 5 for debugging
+            totalTasksInStore: Object.keys(state.tasks).length
+          });
+          
           const tasks = column.taskIds
             .map(id => {
               const task = state.tasks[id];
@@ -402,6 +496,11 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             .filter(task => task && !task.optimisticDelete);
           
           // Return filtered tasks
+          logger.debug(`[UnifiedStore] Returning ${tasks.length} tasks for column ${columnId}`, {
+            missingTaskIds: missingTaskIds.length,
+            deletedTaskIds: deletedTaskIds.length,
+            finalTaskCount: tasks.length
+          });
           
           return tasks;
         },
@@ -413,9 +512,23 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
         
         getPendingTasks: () => {
           const state = get();
-          return Object.values(state.tasks).filter(
+          const allTasks = Object.values(state.tasks);
+          const pendingTasks = allTasks.filter(
             t => t.syncState !== 'synced' && t.syncState !== 'error'
           );
+          
+          logger.debug('[UnifiedStore] getPendingTasks called', {
+            totalTasks: allTasks.length,
+            pendingTasks: pendingTasks.length,
+            taskStates: allTasks.map(t => ({
+              id: t.id,
+              title: t.title,
+              syncState: t.syncState,
+              googleTaskListId: t.googleTaskListId
+            }))
+          });
+          
+          return pendingTasks;
         },
         
         // Sync state management
@@ -438,66 +551,6 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               }
             });
           });
-        },
-        
-        // Sync with Google Tasks
-        syncWithGoogle: async () => {
-          const state = get();
-          logger.info('[UnifiedStore] Starting Google sync');
-          
-          // TODO: Implement actual Google sync
-          // For now, just trigger the realtime sync service
-          const { default: RealtimeSync } = await import('../services/realtimeSync');
-          const syncService = new RealtimeSync();
-          await syncService.syncNow();
-        },
-        
-        // Legacy migration helper
-        importFromLegacyStores: (data) => {
-          set(state => {
-            // Clear existing data
-            state.tasks = {};
-            state.columns = [];
-            
-            // Import columns from Kanban
-            data.kanbanTasks.forEach(kanbanColumn => {
-              const column: TaskColumn = {
-                id: kanbanColumn.id,
-                title: kanbanColumn.title,
-                googleTaskListId: kanbanColumn.googleTaskListId,
-                taskIds: [],
-              };
-              state.columns.push(column);
-              
-              // Import tasks
-              kanbanColumn.tasks.forEach((kanbanTask: any) => {
-                const taskId = generateTaskId();
-                const metadata = data.metadata[kanbanTask.googleTaskId || kanbanTask.id] || {};
-                
-                const task: UnifiedTask = {
-                  id: taskId,
-                  googleTaskId: kanbanTask.googleTaskId,
-                  googleTaskListId: column.googleTaskListId,
-                  title: kanbanTask.title,
-                  notes: kanbanTask.notes || '',
-                  due: kanbanTask.due,
-                  status: kanbanTask.status || 'needsAction',
-                  updated: kanbanTask.updated || new Date().toISOString(),
-                  position: kanbanTask.position || '0',
-                  labels: metadata.labels || [],
-                  priority: metadata.priority || 'normal',
-                  attachments: metadata.attachments,
-                  columnId: column.id,
-                  syncState: kanbanTask.googleTaskId ? 'synced' : 'pending_create',
-                };
-                
-                state.tasks[taskId] = task;
-                column.taskIds.push(taskId);
-              });
-            });
-          });
-          
-          logger.info('[UnifiedStore] Imported from legacy stores');
         },
       })),
       {

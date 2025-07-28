@@ -253,20 +253,21 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       // Extract task title from text (first line or first 50 chars)
       const title = text.split('\n')[0].substring(0, 50);
       
-      // Get the first task list or create a default one
-      const taskLists = tasksStore.taskLists;
-      const taskListId = taskLists.length > 0 ? taskLists[0].id : null;
+      // Get the first column or fail gracefully
+      const columns = tasksStore.columns;
+      const firstColumn = columns.length > 0 ? columns[0] : null;
       
-      if (!taskListId) {
-        // Create a default task list if none exists
-        await tasksStore.createTaskList('My Tasks');
+      if (!firstColumn) {
+        console.error('No task columns available. Please create a task list first.');
         return;
       }
       
       // Create task with the selected text as description
-      await tasksStore.createTask(taskListId, {
+      tasksStore.createTask({
         title,
-        notes: text
+        notes: text,
+        columnId: firstColumn.id,
+        googleTaskListId: firstColumn.googleTaskListId
       });
       
       // Show success feedback (could be a toast in future)

@@ -153,11 +153,19 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
       // Create in the first column by default
       const firstColumn = columns[0];
       if (firstColumn) {
-        await createTask(firstColumn.id, data);
+        createTask({
+          title: data.title,
+          notes: data.notes,
+          due: data.due,
+          columnId: firstColumn.id,
+          googleTaskListId: firstColumn.googleTaskListId,
+          labels: data.metadata?.labels || [],
+          priority: data.metadata?.priority || 'normal'
+        });
         setIsCreateModalOpen(false);
       }
     } catch (error) {
-      // Failed to create task
+      console.error('Failed to create task:', error);
     }
   }, [createTask, columns]);
 

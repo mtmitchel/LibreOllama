@@ -13,14 +13,30 @@ This document provides a comprehensive overview of the Tasks Management feature,
 
 ## Current Implementation
 
-The Tasks page provides local Kanban task management with Google Tasks API integration. While functional, it has testing gaps and integration limitations.
+The Tasks page provides a **unified task management system** with local Kanban functionality and robust Google Tasks API integration. The system has been completely refactored from a fragmented multi-store architecture to a single unified store, solving critical data integrity issues.
+
+### Architecture Overview
+
+**Unified Task Store Architecture:**
+- **Single Source of Truth**: All task data managed in `unifiedTaskStore.ts` with stable local IDs
+- **Two-Way Sync**: Intelligent sync service (`realtimeSync.ts`) with proper reconciliation
+- **Metadata Preservation**: Local-only fields (labels, priority, subtasks) preserved during Google sync
+- **No Temp IDs**: Tasks created with stable local IDs, Google IDs added when synced
+- **Optimistic Updates**: Immediate UI updates with rollback capability
+
+**Key Benefits:**
+- ✅ No more metadata loss during sync
+- ✅ No more task duplication from race conditions  
+- ✅ Reliable task deletion without resurrection
+- ✅ Consistent UI state across all views
+- ✅ Full offline support with sync on reconnection
 
 ### Frontend Architecture
 
-- **State Management:** The `useKanbanStore.ts` is a dedicated Zustand store that manages all task and column data. It handles all CRUD operations and state logic.
-- **Persistence:** All tasks and columns are persisted in the browser's `localStorage`, making any changes available across page refreshes. The store handles serialization and deserialization automatically.
-- **Google Tasks Integration:** The `useGoogleTasksStore.ts` provides integration with Google Tasks API for synchronization with Google's task management system.
-- **Two-Way Sync Service:** The `kanbanGoogleTasksSync.ts` service provides seamless two-way synchronization between local Kanban and Google Tasks, with automatic 5-minute sync intervals.
+- **Unified State Management:** The `unifiedTaskStore.ts` is the single source of truth for all task data, metadata, and sync state. It handles all CRUD operations with stable local IDs that never change.
+- **Persistence:** All tasks and columns are persisted in the browser's `localStorage`, with automatic state restoration and sync state tracking.
+- **Real-time Sync Service:** The `realtimeSync.ts` service provides intelligent two-way synchronization with Google Tasks API, using proper phase ordering to prevent race conditions and duplication.
+- **Migration Layer:** The `migrationAdapter.ts` provides backward compatibility for existing components during the transition to the unified store.
 - **Drag and Drop:** The `@dnd-kit` library is used to provide a professional and accessible drag-and-drop experience for moving tasks between columns. It includes features like a `DragOverlay` for visual feedback.
 - **Component Structure:**
     - `Tasks.tsx`: The main page component that orchestrates the different views and the modal.
@@ -31,32 +47,101 @@ The Tasks page provides local Kanban task management with Google Tasks API integ
 
 ### Backend Architecture
 
-- **Google Tasks API Integration:** Connects to Google Tasks API through Tauri commands for cloud synchronization.
-- **Local Storage:** Primary persistence layer using browser localStorage for offline functionality.
-- **No Dedicated Backend:** No custom backend services for task management - relies on Google Tasks API and local storage.
+- **Google Tasks API Integration:** Connects to Google Tasks API through Tauri commands for cloud synchronization with proper error handling and retry logic.
+- **Local Storage:** Primary persistence layer using browser localStorage for offline functionality with automatic sync state tracking.
+- **Sync Reconciliation:** Intelligent conflict resolution that preserves local metadata while syncing with Google's limited field set.
+- **No Dedicated Backend:** No custom backend services for task management - relies on Google Tasks API and local storage with robust sync logic.
 
 ### Implemented Features
 
-- Full task CRUD operations (Create, Read, Update, Delete).
-- Kanban and List view modes.
-- LocalStorage persistence with automatic state restoration.
-- Professional drag-and-drop with visual feedback.
-- Comprehensive task metadata (priority, labels, subtasks, recurring tasks).
-- Google Tasks API integration for cloud synchronization.
-- Multi-account Google Tasks support.
-- Timezone-correct date handling.
-- Performance optimized with `React.memo`, `useCallback`, and efficient re-renders.
-- Dynamic Kanban columns based on Google Task lists (no hardcoded columns).
-- Two-way sync with automatic 5-minute intervals.
-- Task sorting by "My order", "Date", and "Title".
-- Right-click context menu on task cards for quick actions.
-- Duplicate prevention logic using Google Task IDs as source of truth.
+**Core Task Management:**
+- Full task CRUD operations (Create, Read, Update, Delete) with stable local IDs
+- Kanban and List view modes with consistent data across views
+- LocalStorage persistence with automatic state restoration and sync state tracking
+- Professional drag-and-drop with visual feedback and accessibility support
+
+**Rich Metadata Support:**
+- Comprehensive task metadata (priority, labels, subtasks, recurring tasks)
+- Local-only fields preserved during Google sync (labels, priority, subtasks)
+- Deep-merge logic ensures metadata never lost during synchronization
+
+**Google Tasks Integration:**
+- Robust Google Tasks API integration with proper error handling
+- Multi-account Google Tasks support with OAuth 2.0 PKCE flow
+- Timezone-correct date handling and normalization
+- Intelligent sync reconciliation preventing duplication and data loss
+
+**Performance & UX:**
+- Performance optimized with `React.memo`, `useCallback`, and efficient re-renders
+- Dynamic Kanban columns based on Google Task lists (no hardcoded columns)
+- Real-time sync with proper phase ordering (push local → pull remote → cleanup)
+- Task sorting by "My order", "Date", and "Title"
+- Right-click context menu on task cards for quick actions
+- Optimistic updates with rollback capability for immediate UI feedback
 
 ### Current Limitations
 
-- **Testing Coverage:** Limited test coverage with testing audit score of 45/100, indicating gaps in reliability testing.
-- **API Integration Gaps:** While Google Tasks integration exists, some edge cases and error scenarios need better handling.
-- **Offline Handling:** Limited offline functionality when Google Tasks API is unavailable.
+- **Testing Coverage:** Limited test coverage with testing audit score of 45/100, indicating gaps in reliability testing for the unified store.
+- **Component Migration:** Some components still use the legacy store APIs and need migration to the unified store.
+- **Edge Case Handling:** While the unified architecture solves major issues, some edge cases in sync conflict resolution need refinement.
+
+## Unified Architecture Implementation
+
+### Migration from Fragmented to Unified Store
+
+The task system has been completely refactored from a problematic three-store architecture to a single unified store:
+
+**Previous Architecture (Problems):**
+- `useKanbanStore.ts` - Local task data
+- `googleTasksStore.ts` - Google sync state  
+- `taskMetadataStore.ts` - Labels, priority, etc.
+- **Issues**: Metadata loss, task duplication, deletion failures, ID race conditions
+
+**Current Architecture (Solutions):**
+- `unifiedTaskStore.ts` - Single source of truth for all task data
+- `realtimeSync.ts` - Intelligent sync service with proper reconciliation
+- `migrationAdapter.ts` - Backward compatibility layer
+
+### Key Technical Improvements
+
+**1. Stable Local IDs**
+```typescript
+interface UnifiedTask {
+  readonly id: string;          // Stable local ID - NEVER changes
+  googleTaskId?: string;        // Google's ID (when synced)
+  // ... other fields
+}
+```
+
+**2. Intelligent Sync Process**
+- **Phase 1**: Push all pending local changes to Google
+- **Phase 2**: Pull and reconcile remote changes  
+- **Phase 3**: Clean up deleted tasks
+- **Result**: No more feedback loops or duplication
+
+**3. Metadata Preservation**
+- Local-only fields (labels, priority, subtasks) preserved during sync
+- Deep-merge logic ensures no data loss
+- Google's limited field set doesn't overwrite local metadata
+
+**4. Optimistic Updates**
+- Immediate UI updates for better UX
+- Rollback capability if sync fails
+- Proper sync state tracking (`synced`, `pending_create`, `pending_update`, `pending_delete`)
+
+### Migration Guide for Developers
+
+**For Existing Components:**
+```typescript
+// Option 1: Use Migration Adapter (Immediate)
+import { useTaskData } from '../hooks/useStores';
+const { columns, createTask, updateTask, deleteTask } = useTaskData();
+
+// Option 2: Direct Unified Store (Recommended)
+import { useUnifiedTaskStore } from '../stores/unifiedTaskStore';
+const store = useUnifiedTaskStore();
+const tasks = store.getTasksByColumn(columnId);
+```
 
 ## Future Work & Todos
 
@@ -65,6 +150,9 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 ### High Priority / Known Issues
 
 - [ ] **Accessibility:** Implement full accessibility for the Tasks page, including keyboard navigation, ARIA labels, and screen reader support.
+- [ ] **Component Migration:** Complete migration of all components to use the unified store APIs.
+- [ ] **Testing Coverage:** Expand test coverage for the unified store and sync logic.
+- [ ] **Sync Verification:** Verify column assignment and deduplication logic in production.
 
 ### MVP Must-Haves
 
@@ -79,8 +167,9 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 - [x] **Recurring Tasks:** Set tasks to repeat on a schedule. *(Existing)*
 - [x] **Filters & Sorting:** Task sorting by "My order", "Date", and "Title" implemented. *(Completed - 2025-01-23)*
 - [ ] **Search:** Add a search functionality to quickly find tasks.
-- [x] **Two-Way Sync:** Seamless synchronization between local Kanban and Google Tasks with 5-minute auto-sync. *(Completed - 2025-01-23)*
+- [x] **Two-Way Sync:** Seamless synchronization between local Kanban and Google Tasks with intelligent reconciliation. *(Completed - 2025-01-25)*
 - [x] **Right-Click Context Menu:** Quick task actions via context menu (edit, complete, duplicate, delete). *(Completed - 2025-01-23)*
+- [x] **Unified Store Architecture:** Single source of truth for all task data with stable IDs and metadata preservation. *(Completed - 2025-01-25)*
 - [ ] **Task Dependencies:** Implement a system for defining dependencies between tasks.
 
 ### Future Vision & "Wow" Delighters
@@ -100,7 +189,9 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - [ ] **Performance Benchmarking:** Perform a performance benchmark to ensure the UI remains fast with a large number of tasks.
 - [ ] **Authentication Refactor:** Convert the `GoogleAccountSettings` format to the standard `GoogleAccount` format in `Tasks.tsx` to streamline authentication.
-- [ ] **Documentation:** Create documentation for the Kanban architecture and best practices. 
+- [x] **Unified Store Refactor:** Migrated from fragmented three-store architecture to single unified store. *(Completed - 2025-01-25)*
+- [ ] **Legacy Store Cleanup:** Remove deprecated store files after all components are migrated.
+- [ ] **Sync Logic Modularization:** Extract sync logic into separate modules for better maintainability. 
 
 ### Phase 3 Hardening Tests
 

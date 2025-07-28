@@ -7,6 +7,7 @@ Welcome to the central documentation hub for LibreOllama. This is your starting 
 ### 🎯 For Product Managers & Leadership
 - **[Production Readiness Plan](./PRODUCTION_READINESS.md)** - Complete roadmap with phases, status, and deliverables
 - **[Feature Roadmap](./roadmap/README.md)** - Detailed feature specifications and requirements
+- **[Task System Implementation](./TASK_SYSTEM_UNIFIED_STORE_IMPLEMENTATION.md)** - Unified task management architecture and sync strategy
 
 ### 🎨 For Designers & UI/UX
 - **[Design System](./DESIGN_SYSTEM.md)** - Complete design system with tokens, components, and animations
@@ -25,6 +26,7 @@ Welcome to the central documentation hub for LibreOllama. This is your starting 
 ### System Architecture
 - **[Architecture Guide](./ARCHITECTURE.md)** - System design, patterns, and technical implementation
 - **[Testing Strategy](./TESTING_STRATEGY.md)** - Testing approach, frameworks, and best practices
+- **[Task System Implementation](./TASK_SYSTEM_UNIFIED_STORE_IMPLEMENTATION.md)** - Unified task management with Google Tasks sync
 
 ### Design & User Experience  
 - **[Design System](./DESIGN_SYSTEM.md)** - Colors, typography, components, animations, and accessibility
@@ -47,7 +49,7 @@ The `/roadmap` directory contains detailed specifications for each major feature
 
 - [Canvas System](./roadmap/01_canvas.md) - Visual content creation and manipulation
 - [Gmail Integration](./roadmap/02_gmail_integration.md) - Email client functionality  
-- [Tasks Management](./roadmap/03_tasks_management.md) - Kanban board and Google Tasks sync
+- [Tasks Management](./roadmap/03_tasks_management.md) - Unified Kanban board with Google Tasks sync
 - [Calendar Integration](./roadmap/04_calendar_integration.md) - Google Calendar sync and management
 - [Backend Services](./roadmap/05_backend_services.md) - Rust/Tauri backend architecture
 - [Chat System](./roadmap/06_chat_system.md) - AI chat with multi-provider support

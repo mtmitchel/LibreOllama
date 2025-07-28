@@ -201,29 +201,72 @@ pub async fn create_task(
     account_id: String,
     task_list_id: String,
     task_data: TaskCreateData,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
 ) -> Result<GoogleTask, String> {
     println!("📋 [TASKS-API] Creating task '{}' in list: {} (account: {})", 
              task_data.title, task_list_id, account_id);
 
-    // Generate a mock task ID
-    let task_id = format!("task-{}", chrono::Utc::now().timestamp_millis());
+    // Get access token
+    let tokens = auth_service.get_account_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get tokens: {}", e))?
+        .ok_or("No tokens found for account")?;
+
+    // Build the request body
+    let mut body = serde_json::json!({
+        "title": task_data.title,
+        "status": "needsAction"
+    });
+    
+    if let Some(notes) = &task_data.notes {
+        body["notes"] = serde_json::json!(notes);
+    }
+    if let Some(due) = &task_data.due {
+        body["due"] = serde_json::json!(due);
+    }
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let mut request = client
+        .post(&format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks", task_list_id))
+        .bearer_auth(&tokens.access_token)
+        .json(&body);
+    
+    // Add parent and previous parameters if provided
+    if let Some(parent) = &task_data.parent {
+        request = request.query(&[("parent", parent)]);
+    }
+    if let Some(previous) = &task_data.previous {
+        request = request.query(&[("previous", previous)]);
+    }
+    
+    let response = request.send().await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    let task_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
 
     let new_task = GoogleTask {
-        id: task_id,
-        title: task_data.title,
-        notes: task_data.notes,
-        status: "needsAction".to_string(),
-        due: task_data.due,
-        completed: None,
-        updated: Some(chrono::Utc::now().to_rfc3339()),
-        parent: task_data.parent,
-        position: task_data.previous,
-        kind: Some("tasks#task".to_string()),
-        etag: None,
-        self_link: None,
-        links: None,
-        hidden: Some(false),
-        deleted: Some(false),
+        id: task_data["id"].as_str().unwrap_or("").to_string(),
+        title: task_data["title"].as_str().unwrap_or("").to_string(),
+        notes: task_data["notes"].as_str().map(|s| s.to_string()),
+        status: task_data["status"].as_str().unwrap_or("needsAction").to_string(),
+        due: task_data["due"].as_str().map(|s| s.to_string()),
+        completed: task_data["completed"].as_str().map(|s| s.to_string()),
+        updated: task_data["updated"].as_str().map(|s| s.to_string()),
+        parent: task_data["parent"].as_str().map(|s| s.to_string()),
+        position: task_data["position"].as_str().map(|s| s.to_string()),
+        kind: task_data["kind"].as_str().map(|s| s.to_string()),
+        etag: task_data["etag"].as_str().map(|s| s.to_string()),
+        self_link: task_data["selfLink"].as_str().map(|s| s.to_string()),
+        links: None, // We'll skip parsing links for now
+        hidden: task_data["hidden"].as_bool(),
+        deleted: task_data["deleted"].as_bool(),
     };
 
     println!("✅ [TASKS-API] Task created successfully: {}", new_task.id);
@@ -237,27 +280,70 @@ pub async fn update_task(
     task_list_id: String,
     task_id: String,
     task_data: TaskUpdateData,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
 ) -> Result<GoogleTask, String> {
     println!("📋 [TASKS-API] Updating task {} in list: {} (account: {})", 
              task_id, task_list_id, account_id);
 
-    // Create a mock updated task
+    // Get access token
+    let tokens = auth_service.get_account_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get tokens: {}", e))?
+        .ok_or("No tokens found for account")?;
+
+    // Build the request body with only the fields that are being updated
+    let mut body = serde_json::json!({});
+    
+    if let Some(title) = &task_data.title {
+        body["title"] = serde_json::json!(title);
+    }
+    if let Some(notes) = &task_data.notes {
+        body["notes"] = serde_json::json!(notes);
+    }
+    if let Some(status) = &task_data.status {
+        body["status"] = serde_json::json!(status);
+    }
+    if let Some(due) = &task_data.due {
+        body["due"] = serde_json::json!(due);
+    }
+    if let Some(completed) = &task_data.completed {
+        body["completed"] = serde_json::json!(completed);
+    }
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let response = client
+        .patch(&format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks/{}", task_list_id, task_id))
+        .bearer_auth(&tokens.access_token)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    let task_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
     let updated_task = GoogleTask {
-        id: task_id.clone(),
-        title: task_data.title.unwrap_or_else(|| "Updated Task".to_string()),
-        notes: task_data.notes,
-        status: task_data.status.unwrap_or_else(|| "needsAction".to_string()),
-        due: task_data.due,
-        completed: task_data.completed,
-        updated: Some(chrono::Utc::now().to_rfc3339()),
-        parent: None,
-        position: None,
-        kind: Some("tasks#task".to_string()),
-        etag: None,
-        self_link: None,
+        id: task_data["id"].as_str().unwrap_or("").to_string(),
+        title: task_data["title"].as_str().unwrap_or("").to_string(),
+        notes: task_data["notes"].as_str().map(|s| s.to_string()),
+        status: task_data["status"].as_str().unwrap_or("needsAction").to_string(),
+        due: task_data["due"].as_str().map(|s| s.to_string()),
+        completed: task_data["completed"].as_str().map(|s| s.to_string()),
+        updated: task_data["updated"].as_str().map(|s| s.to_string()),
+        parent: task_data["parent"].as_str().map(|s| s.to_string()),
+        position: task_data["position"].as_str().map(|s| s.to_string()),
+        kind: task_data["kind"].as_str().map(|s| s.to_string()),
+        etag: task_data["etag"].as_str().map(|s| s.to_string()),
+        self_link: task_data["selfLink"].as_str().map(|s| s.to_string()),
         links: None,
-        hidden: Some(false),
-        deleted: Some(false),
+        hidden: task_data["hidden"].as_bool(),
+        deleted: task_data["deleted"].as_bool(),
     };
 
     println!("✅ [TASKS-API] Task updated successfully: {}", task_id);
@@ -305,11 +391,31 @@ pub async fn delete_task(
     account_id: String,
     task_list_id: String,
     task_id: String,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
 ) -> Result<(), String> {
     println!("📋 [TASKS-API] Deleting task {} from list: {} (account: {})", 
              task_id, task_list_id, account_id);
 
-    // In a real implementation, this would make an API call to delete the task
+    // Get access token
+    let tokens = auth_service.get_account_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get tokens: {}", e))?
+        .ok_or("No tokens found for account")?;
+
+    // Make API call to Google Tasks
+    let client = reqwest::Client::new();
+    let response = client
+        .delete(&format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks/{}", task_list_id, task_id))
+        .bearer_auth(&tokens.access_token)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
     println!("✅ [TASKS-API] Task deleted successfully: {}", task_id);
     Ok(())
 }

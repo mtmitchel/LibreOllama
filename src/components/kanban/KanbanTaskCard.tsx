@@ -114,12 +114,16 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
             label: 'Duplicate task',
             icon: <Copy size={14} />,
             onClick: async () => {
-              const { createTask } = useUnifiedTaskStore.getState();
-              await createTask(columnId, {
+              const { createTask, columns } = useUnifiedTaskStore.getState();
+              const column = columns.find(c => c.id === columnId);
+              createTask({
                 title: `${task.title} (copy)`,
                 notes: task.notes,
                 due: task.due,
-                metadata: task.metadata
+                columnId: columnId,
+                googleTaskListId: column?.googleTaskListId,
+                labels: task.labels || [],
+                priority: task.priority || 'normal'
               });
             }
           },

@@ -131,12 +131,20 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     due?: string;
   }) => {
     try {
-      await createTask(column.id, data);
+      createTask({
+        title: data.title,
+        notes: data.notes,
+        due: data.due,
+        columnId: column.id,
+        googleTaskListId: column.googleTaskListId
+      });
       setIsCreateModalOpen(false);
+      
+      // The sync will be triggered automatically by the subscription in realtimeSync
     } catch (error) {
-      // Failed to create task
+      console.error('Failed to create task:', error);
     }
-  }, [createTask, column.id]);
+  }, [createTask, column.id, column.googleTaskListId]);
 
   // Handle rename submission
   const handleRenameSubmit = useCallback(async () => {

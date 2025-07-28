@@ -7,7 +7,7 @@ import './styles/TasksAsanaClean.css';
 import { 
   LayoutGrid, List, RefreshCw, Plus, Search, X, ArrowUpDown, ChevronDown, 
   GripVertical, Calendar, Type, MoreHorizontal, CheckCircle2, MessageSquare, Circle,
-  Edit, Edit2, Trash2, Copy, Tag, Clock, Flag
+  Edit, Edit2, Trash2, Copy, Tag, Clock, Flag, RotateCcw
 } from 'lucide-react';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { UnifiedTask } from '../../stores/unifiedTaskStore.types';
@@ -30,8 +30,6 @@ import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
 type ViewMode = 'kanban' | 'list';
 
-// Adapter type to maintain compatibility
-type KanbanTask = UnifiedTask;
 
 // Asana-style typography
 const asanaTypography = {
@@ -114,11 +112,11 @@ interface Subtask {
 // Asana Task Modal Component
 interface AsanaTaskModalProps {
   isOpen: boolean;
-  task: KanbanTask | null;
+  task: UnifiedTask | null;
   columnId: string;
   mode: 'create' | 'edit';
   onClose: () => void;
-  onSubmit: (data: Partial<KanbanTask>, metadata: { labels: string[], priority: string }) => void;
+  onSubmit: (data: Partial<UnifiedTask>, metadata: { labels: string[], priority: string }) => void;
   onDelete?: () => void;
 }
 
@@ -220,7 +218,7 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
       ? new Date(formData.due + 'T00:00:00').toISOString()
       : undefined;
       
-    const taskData: Partial<KanbanTask> = {
+    const taskData: Partial<UnifiedTask> = {
       ...task,
       title: formData.title,
       notes: formData.notes,
@@ -559,11 +557,11 @@ export default function TasksAsanaClean() {
   const [sortBy, setSortBy] = useState<'created' | 'due' | 'title'>('created');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
-  const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
+  const [activeTask, setActiveTask] = useState<UnifiedTask | null>(null);
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: KanbanTask; columnId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: UnifiedTask; columnId: string } | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [editingTaskData, setEditingTaskData] = useState<KanbanTask | null>(null);
+  const [editingTaskData, setEditingTaskData] = useState<UnifiedTask | null>(null);
   const [taskModalMode, setTaskModalMode] = useState<'create' | 'edit'>('create');
   
   // Google auth state from settings
@@ -607,7 +605,7 @@ export default function TasksAsanaClean() {
   const {
     columns,
     getTasksByColumn,
-    createTask,
+    createTask: createUnifiedTask,
     updateTask: updateUnifiedTask,
     deleteTask: deleteUnifiedTask,
     moveTask: moveUnifiedTask,
@@ -627,7 +625,12 @@ export default function TasksAsanaClean() {
     
     const result = columns.map(column => {
       const tasks = getTasksByColumn(column.id);
-      console.log(`[TasksAsanaClean] Column "${column.title}" has ${tasks.length} tasks`);
+      console.log(`[TasksAsanaClean] Column "${column.title}" (ID: ${column.id}, googleTaskListId: ${column.googleTaskListId}) has ${tasks.length} tasks`, {
+        columnId: column.id,
+        googleTaskListId: column.googleTaskListId,
+        taskIds: column.taskIds,
+        tasksReturned: tasks.map(t => ({ id: t.id, title: t.title, googleTaskId: t.googleTaskId }))
+      });
       return {
         id: column.id,
         title: column.title,
@@ -744,16 +747,65 @@ export default function TasksAsanaClean() {
     }
   }, [activeAccount]);
   
-  // Debug: Log current state
+  // Debug: Log current state and provide diagnostic info
   useEffect(() => {
-    console.log('[TasksAsanaClean] Current state:', {
+    const state = useUnifiedTaskStore.getState();
+    const diagnostics = {
       activeAccount: activeAccount?.email,
       isAuthenticated,
-      columns: columns.length,
-      columnTitles: columns.map(c => c.title),
-      totalTasks: Object.keys(useUnifiedTaskStore.getState().tasks).length
-    });
-  }, [activeAccount, isAuthenticated, columns]);
+      columnsCount: columns.length,
+      columns: columns.map(c => ({
+        id: c.id,
+        title: c.title,
+        googleTaskListId: c.googleTaskListId,
+        taskIds: c.taskIds?.length || 0,
+        taskIdsArray: c.taskIds?.slice(0, 3) || [] // Show first 3 task IDs
+      })),
+      totalTasksInStore: Object.keys(state.tasks).length,
+      tasksPerColumn: columns.map(c => ({
+        columnId: c.id,
+        taskCount: getTasksByColumn(c.id).length
+      })),
+      sampleTasks: Object.values(state.tasks).slice(0, 3).map(t => ({
+        id: t.id,
+        title: t.title,
+        columnId: t.columnId,
+        googleTaskId: t.googleTaskId,
+        googleTaskListId: t.googleTaskListId
+      }))
+    };
+    
+    console.log('[TasksAsanaClean] Diagnostic info:', diagnostics);
+    
+    // If we have tasks in store but not showing, log warning
+    if (Object.keys(state.tasks).length > 0 && columns.every(c => getTasksByColumn(c.id).length === 0)) {
+      console.error('[TasksAsanaClean] CRITICAL: Tasks exist in store but not showing in any column!');
+      
+      // Additional debugging for the critical issue
+      console.error('[TasksAsanaClean] DEBUGGING CRITICAL ISSUE:');
+      console.error('- Total tasks in store:', Object.keys(state.tasks).length);
+      console.error('- Columns:', state.columns.map(c => ({
+        id: c.id,
+        title: c.title,
+        googleTaskListId: c.googleTaskListId,
+        taskIdsCount: c.taskIds.length
+      })));
+      console.error('- Sample tasks:', Object.values(state.tasks).slice(0, 5).map(t => ({
+        id: t.id,
+        title: t.title,
+        columnId: t.columnId,
+        googleTaskListId: t.googleTaskListId
+      })));
+      
+      // Check if tasks have columnId that doesn't match any column
+      const tasksWithInvalidColumnId = Object.values(state.tasks).filter(t => 
+        !state.columns.find(c => c.id === t.columnId)
+      );
+      if (tasksWithInvalidColumnId.length > 0) {
+        console.error('- Tasks with invalid columnId:', tasksWithInvalidColumnId.slice(0, 3));
+      }
+    }
+  }, [activeAccount, isAuthenticated, columns, getTasksByColumn]);
 
   // Setup Google Tasks sync is now handled by realtimeSync service
 
@@ -773,11 +825,126 @@ export default function TasksAsanaClean() {
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      // console.log('=== MANUAL SYNC STARTING ===');
-      await realtimeSync.performSync();
-      // console.log('=== MANUAL SYNC COMPLETE ===');
+      console.log('=== MANUAL SYNC STARTING ===');
+      await realtimeSync.syncNow();
+      console.log('=== MANUAL SYNC COMPLETE ===');
+      
+      // Log post-sync state
+      const state = useUnifiedTaskStore.getState();
+      console.log('[TasksAsanaClean] Post-sync state:', {
+        totalTasks: Object.keys(state.tasks).length,
+        columns: state.columns.map(c => ({
+          id: c.id,
+          title: c.title,
+          googleTaskListId: c.googleTaskListId,
+          taskCount: c.taskIds.length,
+          taskIds: c.taskIds,
+          actualTasks: state.getTasksByColumn(c.id).map(t => ({
+            id: t.id,
+            title: t.title,
+            syncState: t.syncState,
+            googleTaskId: t.googleTaskId
+          }))
+        })),
+        allTasks: Object.values(state.tasks).map(t => ({
+          id: t.id,
+          title: t.title,
+          columnId: t.columnId,
+          syncState: t.syncState,
+          googleTaskId: t.googleTaskId
+        }))
+      });
     } catch (error) {
       console.error('Sync failed:', error);
+      alert('Failed to sync tasks. Please check your Google account permissions.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleResetColumns = async () => {
+    if (!confirm('This will clear all existing columns and recreate them from Google Task lists. Continue?')) {
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      console.log('=== RESETTING COLUMNS ===');
+      
+      // Clear all existing columns
+      const state = useUnifiedTaskStore.getState();
+      state.columns.forEach(column => {
+        state.deleteColumn(column.id);
+      });
+      
+      // Trigger a fresh sync
+      await realtimeSync.syncNow();
+      console.log('=== COLUMN RESET COMPLETE ===');
+    } catch (error) {
+      console.error('Column reset failed:', error);
+      alert('Failed to reset columns. Please try again.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleTestSync = async () => {
+    setIsSyncing(true);
+    try {
+      console.log('=== TEST SYNC STARTING ===');
+      
+      // Create a test task
+      const testTaskId = createUnifiedTask({
+        columnId: columns[0]?.id || '',
+        title: `Test Task ${Date.now()}`,
+        notes: 'This is a test task to verify sync',
+        labels: ['test'],
+        priority: 'high',
+      });
+      
+      console.log('Created test task:', testTaskId);
+      
+      // Immediately check the task's sync state
+      const state = useUnifiedTaskStore.getState();
+      const testTask = state.tasks[testTaskId];
+      console.log('Test task immediately after creation:', {
+        id: testTask?.id,
+        title: testTask?.title,
+        syncState: testTask?.syncState,
+        columnId: testTask?.columnId,
+        googleTaskListId: testTask?.googleTaskListId
+      });
+      
+      // Check if there are any pending tasks
+      const pendingTasks = state.getPendingTasks();
+      console.log('Pending tasks after creation:', pendingTasks.length);
+      console.log('Pending tasks details:', pendingTasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        syncState: t.syncState
+      })));
+      
+      // Wait a moment for the subscription to trigger
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Manually trigger sync
+      await realtimeSync.syncNow();
+      
+      console.log('=== TEST SYNC COMPLETE ===');
+      
+      // Check if task was synced
+      const finalState = useUnifiedTaskStore.getState();
+      const finalTestTask = finalState.tasks[testTaskId];
+      console.log('Test task after sync:', {
+        id: finalTestTask?.id,
+        title: finalTestTask?.title,
+        syncState: finalTestTask?.syncState,
+        googleTaskId: finalTestTask?.googleTaskId
+      });
+      
+    } catch (error) {
+      console.error('Test sync failed:', error);
+      alert('Test sync failed. Check console for details.');
     } finally {
       setIsSyncing(false);
     }
@@ -793,7 +960,7 @@ export default function TasksAsanaClean() {
       setShowNewListDialog(false);
       
       // Sync with unified store
-      await realtimeSync.performSync();
+      await realtimeSync.syncNow();
     } catch (error) {
       console.error('Failed to create task list:', error);
       alert('Failed to create task list. Please try again.');
@@ -805,7 +972,7 @@ export default function TasksAsanaClean() {
   const handleRenameList = async (listId: string, newTitle: string) => {
     try {
       await updateTaskList(listId, newTitle);
-      await realtimeSync.performSync();
+      await realtimeSync.syncNow();
     } catch (error) {
       console.error('Failed to rename task list:', error);
     }
@@ -815,7 +982,7 @@ export default function TasksAsanaClean() {
     if (listToDelete) {
       try {
         await deleteTaskList(listToDelete.id);
-        await realtimeSync.performSync();
+        await realtimeSync.syncNow();
         setShowDeleteListDialog(false);
         setListToDelete(null);
       } catch (error) {
@@ -854,7 +1021,7 @@ export default function TasksAsanaClean() {
     console.log('Modal should be visible now');
   };
 
-  const openEditTaskModal = (task: KanbanTask, columnId: string) => {
+  const openEditTaskModal = (task: UnifiedTask, columnId: string) => {
     setEditingTaskData(task);
     setTaskModalMode('edit');
     setActiveColumn(columnId);
@@ -1015,6 +1182,30 @@ export default function TasksAsanaClean() {
           >
             <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleResetColumns}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-3 py-2"
+            title="Reset columns and sync from Google"
+          >
+            <RotateCcw size={16} />
+            <span className="hidden sm:inline">Reset</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleTestSync}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-3 py-2"
+            title="Create a test task to verify sync"
+          >
+            <Plus size={16} />
+            <span className="hidden sm:inline">Test Sync</span>
           </Button>
           
           <div className="flex items-center gap-1 rounded-lg bg-tertiary p-1">
@@ -1214,7 +1405,7 @@ export default function TasksAsanaClean() {
             try {
               if (taskModalMode === 'create' && activeColumn) {
                 // Create task with unified store
-                const taskId = createTask({
+                const taskId = createUnifiedTask({
                   columnId: activeColumn,
                   title: taskData.title || 'New Task',
                   notes: taskData.notes || '',
@@ -1257,10 +1448,10 @@ interface AsanaKanbanBoardProps {
   searchQuery?: string;
   onDeleteList?: (listId: string, listTitle: string) => void;
   onRenameList?: (listId: string, newTitle: string) => void;
-  activeTask: KanbanTask | null;
-  contextMenu: { x: number; y: number; task: KanbanTask; columnId: string } | null;
-  setContextMenu: (menu: { x: number; y: number; task: KanbanTask; columnId: string } | null) => void;
-  openEditTaskModal?: (task: KanbanTask, columnId: string) => void;
+  activeTask: UnifiedTask | null;
+  contextMenu: { x: number; y: number; task: UnifiedTask; columnId: string } | null;
+  setContextMenu: (menu: { x: number; y: number; task: UnifiedTask; columnId: string } | null) => void;
+  openEditTaskModal?: (task: UnifiedTask, columnId: string) => void;
   openCreateTaskModal?: (columnId: string) => void;
 }
 
@@ -1309,7 +1500,7 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
     }
   };
 
-  const handleUpdatePriority = async (task: KanbanTask, columnId: string, priority: 'low' | 'normal' | 'high' | 'urgent') => {
+  const handleUpdatePriority = async (task: UnifiedTask, columnId: string, priority: 'low' | 'normal' | 'high' | 'urgent') => {
     try {
       // Update priority using unified store
       updateUnifiedTask(task.id, { priority });
@@ -1407,14 +1598,16 @@ const AsanaKanbanBoard: React.FC<AsanaKanbanBoardProps> = ({
             className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
             onClick={() => {
               // Copy task
-              const { createTask } = useUnifiedTaskStore.getState();
+              const { createTask, columns } = useUnifiedTaskStore.getState();
+              const column = columns.find(c => c.id === contextMenu.columnId);
               createTask({
                 columnId: contextMenu.columnId,
                 title: `${contextMenu.task.title} (copy)`,
                 notes: contextMenu.task.notes,
                 due: contextMenu.task.due,
                 labels: contextMenu.task.labels,
-                priority: contextMenu.task.priority
+                priority: contextMenu.task.priority,
+                googleTaskListId: column?.googleTaskListId
               });
               setContextMenu(null);
             }}
@@ -1444,14 +1637,14 @@ interface DroppableColumnProps {
   searchQuery?: string;
   onDeleteList?: (listId: string, listTitle: string) => void;
   onRenameList?: (listId: string, newTitle: string) => void;
-  activeTask: KanbanTask | null;
+  activeTask: UnifiedTask | null;
   contextMenu: any;
   setContextMenu: any;
   editingTask: string | null;
   setEditingTask: (id: string | null) => void;
   editingTitle: string;
   setEditingTitle: (title: string) => void;
-  onEditTask?: (task: KanbanTask, columnId: string) => void;
+  onEditTask?: (task: UnifiedTask, columnId: string) => void;
   onCreateTask?: (columnId: string) => void;
 }
 
@@ -1493,7 +1686,7 @@ const DroppableColumn = memo<DroppableColumnProps>(({
 
   const { updateTask: updateUnifiedTask } = useUnifiedTaskStore();
 
-  const handleSaveEdit = async (task: KanbanTask) => {
+  const handleSaveEdit = async (task: UnifiedTask) => {
     if (editingTitle.trim() && editingTitle !== task.title) {
       try {
         updateUnifiedTask(task.id, {
@@ -1601,12 +1794,12 @@ const DroppableColumn = memo<DroppableColumnProps>(({
       {/* Cards */}
       <div className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden pb-4">
         {column.tasks
-          .filter((task: KanbanTask) => !searchQuery || 
+          .filter((task: UnifiedTask) => !searchQuery || 
             task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             task.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             task.labels?.some(label => label.toLowerCase().includes(searchQuery.toLowerCase()))
           )
-          .map((task: KanbanTask) => (
+          .map((task: UnifiedTask) => (
             <DraggableTaskCard
               key={task.id}
               task={task}
@@ -1659,7 +1852,7 @@ const DroppableColumn = memo<DroppableColumnProps>(({
 
 // Draggable Task Card Component
 interface DraggableTaskCardProps {
-  task: KanbanTask;
+  task: UnifiedTask;
   columnId: string;
   isActive: boolean;
   contextMenu: any;
@@ -1668,8 +1861,8 @@ interface DraggableTaskCardProps {
   setEditingTask: (id: string | null) => void;
   editingTitle: string;
   setEditingTitle: (title: string) => void;
-  onSaveEdit: (task: KanbanTask) => void;
-  onEditTask?: (task: KanbanTask, columnId: string) => void;
+  onSaveEdit: (task: UnifiedTask) => void;
+  onEditTask?: (task: UnifiedTask, columnId: string) => void;
 }
 
 const DraggableTaskCard = memo<DraggableTaskCardProps>(({

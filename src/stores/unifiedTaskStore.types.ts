@@ -38,6 +38,9 @@ export interface UnifiedTask {
   // Optimistic updates tracking
   optimisticDelete?: boolean;
   previousState?: Partial<UnifiedTask>; // For rollback on error
+  
+  // Sync tracking
+  lastSyncTime?: string; // When the task was last synced with Google
 }
 
 export interface TaskColumn {
