@@ -1,17 +1,17 @@
 import React from 'react';
-import { Button, Card } from './index';
-import { AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Button } from './index';
+import { X } from 'lucide-react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
   message: string;
   confirmText?: string;
   cancelText?: string;
-  isDestructive?: boolean;
-  isLoading?: boolean;
+  confirmVariant?: 'primary' | 'destructive';
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -22,45 +22,71 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   message,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
-  isDestructive = false,
-  isLoading = false,
+  confirmVariant = 'destructive',
 }) => {
+  const [isLoading, setIsLoading] = React.useState(false);
+  
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 p-4">
-      <Card className="w-full max-w-md">
-        <div className="p-6">
-          <h2 className="mb-4 text-lg font-semibold text-primary">{title}</h2>
-          
-          {isDestructive && (
-            <div className="mb-6 flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 shrink-0 text-red-500" size={20} />
-              <p className="text-text-primary">{message}</p>
-            </div>
-          )}
-          {!isDestructive && (
-            <p className="text-text-primary mb-6">{message}</p>
-          )}
-          
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="secondary"
-              onClick={onClose}
-              disabled={isLoading}
-            >
-              {cancelText}
-            </Button>
-            <Button
-              variant={isDestructive ? 'destructive' : 'primary'}
-              onClick={onConfirm}
-              isLoading={isLoading}
-            >
-              {confirmText}
-            </Button>
-          </div>
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (error) {
+      console.error('Confirm action failed:', error);
+      setIsLoading(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Dialog */}
+      <div className="relative w-full max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-lg p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+        >
+          <X size={20} />
+        </button>
+        
+        {/* Content */}
+        <div className="pr-8">
+          <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+            {title}
+          </h3>
+          <p className="mb-6 text-sm text-neutral-600">
+            {message}
+          </p>
         </div>
-      </Card>
-    </div>
+        
+        {/* Actions */}
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            {cancelText}
+          </Button>
+          <Button
+            variant={confirmVariant}
+            onClick={handleConfirm}
+            isLoading={isLoading}
+            disabled={isLoading}
+          >
+            {confirmText}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };

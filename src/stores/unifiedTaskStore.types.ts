@@ -28,6 +28,12 @@ export interface UnifiedTask {
     url: string;
     type: string;
   }>;
+  recurring?: {
+    enabled: boolean;
+    frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval?: number; // e.g., every 2 weeks
+    endDate?: string; // ISO date string
+  };
   
   // UI & Sync State
   columnId: string;

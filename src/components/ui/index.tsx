@@ -174,13 +174,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   const isDisabled = disabled || isLoading;
   
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    props.onClick?.(e);
+    if (!isDisabled && props.onClick) {
+      e.stopPropagation();
+      props.onClick(e);
+    }
   };
 
   return (
     <button
       ref={ref}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${isLoading ? 'cursor-not-allowed' : ''} ${className}`.trim()}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${isLoading ? 'cursor-not-allowed' : ''} relative z-10 ${className}`.trim()}
+      style={{ pointerEvents: isDisabled ? 'none' : 'auto', ...props.style }}
       disabled={isDisabled}
       aria-disabled={isDisabled}
       aria-label={ariaLabel}
@@ -1119,7 +1123,7 @@ export { ToggleRow, ToggleGroup, ToggleCard } from './ToggleRow';
 export { Tooltip, TooltipTrigger, TruncatedText } from './Tooltip';
 
 // Export the Kanban components
-export { KanbanBoard, KanbanColumn, KanbanTaskCard, CreateTaskModal, EditTaskModal, TaskListView } from '../kanban';
+export { KanbanBoard, KanbanColumn, TaskListView } from '../kanban';
 
 // Export other UI components
 export { ContextMenu } from './ContextMenu';

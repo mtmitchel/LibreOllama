@@ -3,8 +3,7 @@ import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 
 type KanbanTask = UnifiedTask;
-import { EditTaskModal } from './EditTaskModal';
-import { CreateTaskModal } from './CreateTaskModal';
+import { TaskSidebar } from './TaskSidebar';
 import { Card, Button, Input } from '../ui';
 import { Plus, Search, Filter, Calendar, CheckSquare, Square, Tag, MoreHorizontal, RotateCcw, ArrowUpDown, GripVertical, Type, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
@@ -50,7 +49,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const searchQuery = parentSearchQuery || localSearchQuery;
   const [localSelectedListId, setLocalSelectedListId] = useState<string>('all');
@@ -127,15 +125,26 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     title: string;
     notes?: string;
     due?: string;
-    metadata?: any;
+    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    labels?: string[];
+    recurring?: {
+      enabled: boolean;
+      frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+      interval?: number;
+      endDate?: string;
+    };
   }) => {
     if (!selectedTask || !selectedColumnId) return;
 
     try {
-      await updateTask(selectedTask.id, updates);
+      await updateTask(selectedTask.id, {
+        ...updates,
+        recurring: updates.recurring
+      });
       setIsEditModalOpen(false);
     } catch (error) {
       // Failed to update task
+      throw error;
     }
   }, [updateTask, selectedTask, selectedColumnId]);
 
@@ -435,23 +444,16 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         </div>
       </div>
 
-      {/* Edit Task Modal */}
-      {selectedTask && (
-        <EditTaskModal
-          isOpen={isEditModalOpen}
-          task={selectedTask}
-          onClose={() => setIsEditModalOpen(false)}
-          onSubmit={handleUpdateTask}
-          onDelete={handleDeleteTask}
-        />
-      )}
-
-      {/* Create Task Modal */}
-      <CreateTaskModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateTask}
-        columnTitle="New task"
+      {/* Task Sidebar */}
+      <TaskSidebar
+        isOpen={isEditModalOpen}
+        task={isEditModalOpen ? selectedTask : null}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTask(null);
+        }}
+        onSubmit={handleUpdateTask}
+        onDelete={handleDeleteTask}
       />
     </>
   );

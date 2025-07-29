@@ -12,7 +12,7 @@ use dirs::data_dir;
 use rusqlite::{Connection, OpenFlags};
 
 /// Database manager that handles SQLCipher connections
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DatabaseManager {
     db_path: PathBuf,
     _encryption_key: String,

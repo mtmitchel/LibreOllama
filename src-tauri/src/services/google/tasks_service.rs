@@ -1,0 +1,222 @@
+use crate::database::DatabaseManager;
+use crate::errors::{LibreOllamaError, Result};
+use crate::services::gmail::auth_service::GmailAuthService;
+use reqwest::{Client, Method};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+const GOOGLE_TASKS_API_BASE: &str = "https://tasks.googleapis.com/tasks/v1";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoogleTaskList {
+    pub id: String,
+    pub title: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoogleTask {
+    pub id: String,
+    pub title: String,
+    pub notes: Option<String>,
+    pub due: Option<String>,
+    pub status: String,
+    pub position: Option<String>,
+    pub updated: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateTaskInput {
+    pub title: String,
+    pub notes: Option<String>,
+    pub due: Option<String>,
+    pub status: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateTaskInput {
+    pub title: Option<String>,
+    pub notes: Option<String>,
+    pub due: Option<String>,
+    pub status: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GoogleTasksService {
+    client: Client,
+    auth_service: Arc<GmailAuthService>,
+    db_manager: Arc<DatabaseManager>,
+}
+
+impl GoogleTasksService {
+    pub fn new(auth_service: Arc<GmailAuthService>, db_manager: Arc<DatabaseManager>) -> Self {
+        Self {
+            client: Client::new(),
+            auth_service,
+            db_manager,
+        }
+    }
+
+    async fn make_api_request<T>(&self, account_id: &str, endpoint: &str) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+    {
+        let tokens = self
+            .auth_service
+            .validate_and_refresh_tokens(&self.db_manager, account_id)
+            .await?;
+
+        let url = format!("{}/{}", GOOGLE_TASKS_API_BASE, endpoint.trim_start_matches('/'));
+
+        let response = self
+            .client
+            .get(&url)
+            .bearer_auth(tokens.access_token)
+            .send()
+            .await
+            .map_err(|e| LibreOllamaError::Network {
+                message: format!("Google Tasks API request failed: {}", e),
+                url: Some(url.clone()),
+            })?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LibreOllamaError::GoogleTasksApi {
+                message: format!("Google Tasks API error: {}", error_text),
+            });
+        }
+
+        response.json::<T>().await.map_err(|e| LibreOllamaError::Serialization {
+            message: format!("Failed to parse Google Tasks API response: {}", e),
+            data_type: "Google Tasks API Response".to_string(),
+        })
+    }
+
+    pub async fn get_task_lists(&self, account_id: &str) -> Result<Vec<GoogleTaskList>> {
+        #[derive(Deserialize)]
+        struct TaskListsResponse {
+            items: Vec<GoogleTaskList>,
+        }
+
+        let response: TaskListsResponse = self.make_api_request(account_id, "users/@me/lists").await?;
+        Ok(response.items)
+    }
+
+    pub async fn get_tasks(&self, account_id: &str, task_list_id: &str) -> Result<Vec<GoogleTask>> {
+        #[derive(Deserialize)]
+        struct TasksResponse {
+            items: Vec<GoogleTask>,
+        }
+
+        let endpoint = format!("lists/{}/tasks", task_list_id);
+        let response: TasksResponse = self.make_api_request(account_id, &endpoint).await?;
+        Ok(response.items)
+    }
+
+    async fn make_api_request_with_body<T, B>(&self, account_id: &str, endpoint: &str, method: Method, body: Option<B>) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize,
+    {
+        let tokens = self
+            .auth_service
+            .validate_and_refresh_tokens(&self.db_manager, account_id)
+            .await?;
+
+        let url = format!("{}/{}", GOOGLE_TASKS_API_BASE, endpoint.trim_start_matches('/'));
+
+        let mut request = self
+            .client
+            .request(method, &url)
+            .bearer_auth(tokens.access_token)
+            .header("Content-Type", "application/json");
+
+        if let Some(body_data) = body {
+            request = request.json(&body_data);
+        }
+
+        let response = request
+            .send()
+            .await
+            .map_err(|e| LibreOllamaError::Network {
+                message: format!("Google Tasks API request failed: {}", e),
+                url: Some(url.clone()),
+            })?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LibreOllamaError::GoogleTasksApi {
+                message: format!("Google Tasks API error: {}", error_text),
+            });
+        }
+
+        response.json::<T>().await.map_err(|e| LibreOllamaError::Serialization {
+            message: format!("Failed to parse Google Tasks API response: {}", e),
+            data_type: "Google Tasks API Response".to_string(),
+        })
+    }
+
+    pub async fn create_task(&self, account_id: &str, task_list_id: &str, input: CreateTaskInput) -> Result<GoogleTask> {
+        let endpoint = format!("lists/{}/tasks", task_list_id);
+        let body = serde_json::json!({
+            "title": input.title,
+            "notes": input.notes,
+            "due": input.due,
+            "status": input.status.unwrap_or_else(|| "needsAction".to_string())
+        });
+
+        self.make_api_request_with_body(account_id, &endpoint, Method::POST, Some(body)).await
+    }
+
+    pub async fn update_task(&self, account_id: &str, task_list_id: &str, task_id: &str, input: UpdateTaskInput) -> Result<GoogleTask> {
+        let endpoint = format!("lists/{}/tasks/{}", task_list_id, task_id);
+        let body = serde_json::json!({
+            "id": task_id,
+            "title": input.title,
+            "notes": input.notes,
+            "due": input.due,
+            "status": input.status
+        });
+
+        self.make_api_request_with_body(account_id, &endpoint, Method::PATCH, Some(body)).await
+    }
+
+    pub async fn delete_task(&self, account_id: &str, task_list_id: &str, task_id: &str) -> Result<()> {
+        let endpoint = format!("lists/{}/tasks/{}", task_list_id, task_id);
+        
+        let tokens = self
+            .auth_service
+            .validate_and_refresh_tokens(&self.db_manager, account_id)
+            .await?;
+
+        let url = format!("{}/{}", GOOGLE_TASKS_API_BASE, endpoint.trim_start_matches('/'));
+
+        let response = self
+            .client
+            .delete(&url)
+            .bearer_auth(tokens.access_token)
+            .send()
+            .await
+            .map_err(|e| LibreOllamaError::Network {
+                message: format!("Google Tasks API request failed: {}", e),
+                url: Some(url.clone()),
+            })?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LibreOllamaError::GoogleTasksApi {
+                message: format!("Google Tasks API error: {}", error_text),
+            });
+        }
+
+        Ok(())
+    }
+
+    pub async fn update_task_list(&self, account_id: &str, task_list_id: &str, new_title: String) -> Result<GoogleTaskList> {
+        let endpoint = format!("users/@me/lists/{}", task_list_id);
+        let body = serde_json::json!({
+            "title": new_title
+        });
+
+        self.make_api_request_with_body(account_id, &endpoint, Method::PATCH, Some(body)).await
+    }
+}

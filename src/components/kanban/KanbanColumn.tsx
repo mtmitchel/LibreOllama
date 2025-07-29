@@ -8,9 +8,9 @@ type KanbanColumnType = TaskColumn & {
   isLoading?: boolean;
   error?: string;
 };
-import { KanbanTaskCard } from './KanbanTaskCard';
-import { CreateTaskModal } from './CreateTaskModal';
-import { Card, Button } from '../ui';
+import { UnifiedTaskCard } from '../tasks/UnifiedTaskCard';
+import { InlineTaskCreator } from './InlineTaskCreator';
+import { Card, ConfirmDialog } from '../ui';
 import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3 } from 'lucide-react';
 
 interface KanbanColumnProps {
@@ -31,11 +31,12 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onRename
 }) => {
   const { createTask } = useUnifiedTaskStore();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showInlineCreator, setShowInlineCreator] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(column.title);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ taskId: string; title: string } | null>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const optionsMenuRef = useRef<HTMLDivElement>(null);
   
@@ -67,9 +68,20 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     }
   }, [showSortMenu, showOptionsMenu]);
 
-  // Debug modal state changes
+  // Close inline creator when clicking outside
   React.useEffect(() => {
-    }, [isCreateModalOpen, column.id]);
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showInlineCreator && !target.closest('.inline-task-creator')) {
+        setShowInlineCreator(false);
+      }
+    };
+    
+    if (showInlineCreator) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showInlineCreator]);
 
   // Set up droppable
   const { isOver, setNodeRef } = useDroppable({
@@ -129,20 +141,25 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     title: string;
     notes?: string;
     due?: string;
+    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    labels?: string[];
   }) => {
     try {
-      createTask({
+      await createTask({
         title: data.title,
         notes: data.notes,
         due: data.due,
         columnId: column.id,
-        googleTaskListId: column.googleTaskListId
+        googleTaskListId: column.googleTaskListId,
+        priority: data.priority || 'normal',
+        labels: data.labels || []
       });
-      setIsCreateModalOpen(false);
+      setShowInlineCreator(false);
       
       // The sync will be triggered automatically by the subscription in realtimeSync
     } catch (error) {
       console.error('Failed to create task:', error);
+      throw error; // Re-throw to let InlineTaskCreator handle it
     }
   }, [createTask, column.id, column.googleTaskListId]);
 
@@ -170,12 +187,12 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       <div 
         ref={setNodeRef}
         className={`flex h-full flex-col ${className} ${
-          isOver ? 'bg-accent-soft ring-2 ring-primary ring-opacity-50' : ''
+          isOver ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
         }`}
       >
-        <Card className="flex h-full flex-col shadow-sm">
+        <div className="flex h-full flex-col overflow-hidden">
         {/* Column Header */}
-        <div className="border-border-default flex items-center justify-between border-b bg-tertiary px-3 py-2.5">
+        <div className="h-10 rounded-md bg-neutral-50 border border-neutral-100 px-3 py-0 flex items-center justify-between">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             {isRenaming ? (
               <input
@@ -190,39 +207,39 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                     handleRenameCancel();
                   }
                 }}
-                className="border-border-default focus:ring-primary/20 min-w-0 flex-1 rounded border bg-card px-2 py-1 text-sm font-semibold text-primary focus:border-primary focus:outline-none focus:ring-2"
+                className="min-w-0 flex-1 rounded border border-neutral-300 bg-white px-2 py-0.5 text-sm font-medium text-neutral-900 focus:border-blue-500 focus:outline-none"
+                aria-label="List name"
                 autoFocus
               />
             ) : (
               <>
-                <h3 className="truncate text-sm font-semibold text-primary">{column.title}</h3>
-                <span className="shrink-0 rounded-full bg-card px-2.5 py-1 text-xs font-medium text-secondary shadow-sm">
-                  {sortedTasks.length}{searchQuery && ` / ${column.tasks.length}`}
-                </span>
+                <h3 className="truncate text-sm font-medium text-neutral-900">{column.title}</h3>
+                <span className="text-[12px] text-neutral-500 ml-1 align-baseline">{sortedTasks.length}</span>
               </>
             )}
           </div>
           <div className="flex items-center gap-0.5">
             <div className="relative" ref={sortMenuRef}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 text-xs font-medium hover:bg-card"
+              <button
+                className="flex size-6 items-center justify-center rounded text-neutral-600 transition-colors hover:bg-neutral-200"
                 title="Sort tasks"
+                aria-label="Sort tasks"
+                aria-expanded={showSortMenu}
+                aria-haspopup="menu"
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
                 <ArrowUpDown size={12} />
-              </Button>
+              </button>
               
               {showSortMenu && (
-                <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-card shadow-lg">
+                <div className="absolute right-0 top-full z-[9998] mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg" role="menu" aria-label="Sort options">
                   <button
                     onClick={() => {
                       setSortBy('order');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-tertiary ${
-                      sortBy === 'order' ? 'bg-accent-soft' : ''
+                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50 ${
+                      sortBy === 'order' ? 'bg-neutral-100' : ''
                     }`}
                   >
                     <GripVertical size={14} className="mr-2" />
@@ -233,8 +250,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                       setSortBy('date');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary ${
-                      sortBy === 'date' ? 'bg-accent-soft' : ''
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
+                      sortBy === 'date' ? 'bg-neutral-100' : ''
                     }`}
                   >
                     <Calendar size={14} className="mr-2" />
@@ -245,8 +262,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                       setSortBy('title');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-tertiary ${
-                      sortBy === 'title' ? 'bg-accent-soft' : ''
+                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
+                      sortBy === 'title' ? 'bg-neutral-100' : ''
                     }`}
                   >
                     <Type size={14} className="mr-2" />
@@ -256,36 +273,40 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               )}
             </div>
             
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="size-7 hover:bg-card"
+            <button
+              onClick={() => setShowInlineCreator(true)}
+              className="flex size-6 items-center justify-center rounded text-neutral-600 transition-colors hover:bg-neutral-200"
               title="Add task"
+              aria-label="Add new task"
             >
-              <Plus size={16} />
-            </Button>
+              <Plus size={14} />
+            </button>
             
             <div className="relative" ref={optionsMenuRef}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 hover:bg-card"
+              <button
+                className="flex size-6 items-center justify-center rounded text-neutral-600 transition-colors hover:bg-neutral-200 cursor-pointer relative z-10"
+                style={{ pointerEvents: 'auto' }}
                 title="List options"
-                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                aria-label="List options menu"
+                aria-expanded={showOptionsMenu}
+                aria-haspopup="menu"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptionsMenu(!showOptionsMenu);
+                }}
               >
-                <MoreHorizontal size={16} />
-              </Button>
+                <MoreHorizontal size={14} />
+              </button>
               
               {showOptionsMenu && (
-                <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-card shadow-lg">
+                <div className="absolute right-0 top-full z-[9999] mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg" role="menu" aria-label="List options">
                   {onRename && (
                     <button
                       onClick={() => {
                         setIsRenaming(true);
                         setShowOptionsMenu(false);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-tertiary"
+                      className="flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50"
                     >
                       <Edit3 size={14} className="mr-2" />
                       Rename list
@@ -297,7 +318,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                         setShowOptionsMenu(false);
                         onDelete(column.id);
                       }}
-                      className="flex w-full items-center px-3 py-2 text-sm text-red-600 last:rounded-b-lg hover:bg-red-50 hover:bg-tertiary"
+                      className="flex w-full items-center px-3 py-2 text-sm text-red-600 last:rounded-b-lg hover:bg-red-50"
                     >
                       <Trash2 size={14} className="mr-2" />
                       Delete list
@@ -310,7 +331,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </div>
 
         {/* Column Content */}
-        <div className="min-h-40 flex-1 space-y-2 overflow-y-auto p-2.5">
+        <div className="min-h-40 flex-1 bg-neutral-50 border border-neutral-100 rounded-xl p-3 overflow-y-auto">
+          <div className="space-y-2">
           {column.isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="size-6 animate-spin rounded-full border-b-2 border-primary"></div>
@@ -339,33 +361,98 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 </>
               ) : (
                 <>
-                  <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-tertiary opacity-60">
-                    <Plus size={20} className="text-secondary" />
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-gray-100">
+                    <Plus size={20} className="text-gray-400" />
                   </div>
-                  <p className="mb-1 text-sm font-medium text-primary">No tasks yet</p>
-                  <p className="max-w-32 text-xs text-muted">Drop tasks here or click the + button to create your first task</p>
+                  <p className="mb-1 text-sm font-medium text-gray-900">No tasks yet</p>
+                  <p className="max-w-32 text-xs text-gray-500">Drop tasks here or click "Add task" to create your first task</p>
                 </>
               )}
             </div>
           ) : (
             sortedTasks.map((task) => (
-              <KanbanTaskCard
+              <UnifiedTaskCard
                 key={task.id}
                 task={task}
                 columnId={column.id}
+                onToggle={() => {
+                  const { updateTask } = useUnifiedTaskStore.getState();
+                  updateTask(task.id, { 
+                    status: task.status === 'completed' ? 'needsAction' : 'completed' 
+                  });
+                }}
+                onEdit={() => {
+                  // For now, we'll just log - you can implement a modal or inline editor
+                  console.log('Edit task:', task);
+                }}
+                onDelete={() => {
+                  setDeleteConfirm({ taskId: task.id, title: task.title });
+                }}
+                onDuplicate={() => {
+                  const { createTask } = useUnifiedTaskStore.getState();
+                  createTask({
+                    title: `${task.title} (copy)`,
+                    notes: task.notes,
+                    due: task.due,
+                    columnId: task.columnId,
+                    priority: task.priority,
+                    labels: task.labels
+                  });
+                }}
               />
             ))
           )}
+          
+          {/* Inline Creator - inside column scroll */}
+          {showInlineCreator && (
+            <div className="mt-2">
+              <InlineTaskCreator
+                columnId={column.id}
+                onSubmit={handleCreateTask}
+                onCancel={() => setShowInlineCreator(false)}
+              />
+            </div>
+          )}
+          
+          {/* Add task link - always visible */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowInlineCreator(true);
+            }}
+            className="mt-1.5 text-left text-[13px] text-neutral-600 hover:text-neutral-800 hover:underline px-2 py-1.5 w-full cursor-pointer relative z-10"
+            style={{ pointerEvents: 'auto' }}
+          >
+            + Add task
+          </button>
+          </div>
         </div>
-        </Card>
+      </div>
       </div>
 
-      {/* Create Task Modal */}
-      <CreateTaskModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateTask}
-        columnTitle={column.title}
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={async () => {
+          if (deleteConfirm) {
+            console.log('Deleting task:', deleteConfirm);
+            try {
+              const { deleteTask } = useUnifiedTaskStore.getState();
+              await deleteTask(deleteConfirm.taskId);
+              console.log('Task deleted successfully');
+              setDeleteConfirm(null);
+            } catch (error) {
+              console.error('Failed to delete task:', error);
+              // TODO: Show error notification
+            }
+          }
+        }}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${deleteConfirm?.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmVariant="destructive"
       />
     </>
   );

@@ -1,4 +1,5 @@
 pub mod gmail;
+pub mod google;
 
 // Main export from gmail module
 // Gmail services are managed directly in lib.rs

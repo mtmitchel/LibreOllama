@@ -36,7 +36,9 @@
       "Bash(mkdir:*)",
       "Bash(git checkout:*)",
       "Bash(git add:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(claude mcp add:*)"
     ],
     "deny": []
   }

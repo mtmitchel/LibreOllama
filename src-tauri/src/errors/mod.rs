@@ -22,6 +22,9 @@ pub enum LibreOllamaError {
     #[error("Gmail API error: {message}")]
     GmailApi { message: String, status_code: Option<u16> },
 
+    #[error("Google Tasks API error: {message}")]
+    GoogleTasksApi { message: String },
+
     #[error("Gmail token error: {message}")]
     GmailToken { message: String, token_type: String },
 

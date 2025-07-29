@@ -115,6 +115,7 @@ struct PendingAuthorization {
 /// 
 /// This service provides a unified interface for all Gmail authentication operations,
 /// consolidating OAuth2 flow, secure token storage, and account management.
+#[derive(Debug, Clone)]
 pub struct GmailAuthService {
     config: AuthConfig,
     pending_authorizations: Arc<RwLock<HashMap<String, PendingAuthorization>>>,

@@ -15,8 +15,9 @@ export const TaskProjectAssociation: React.FC<TaskProjectAssociationProps> = ({
   onAssociationChange
 }) => {
   const { projects, fetchProjects } = useProjectStore();
-  // TODO: These methods don't exist yet in useKanbanStore
-  // const { assignTaskToProject, removeTaskFromProject } = useKanbanStore();
+  // Note: Project associations are currently handled through the onAssociationChange callback
+  // The parent component is responsible for persisting project associations
+  // Future enhancement: Add projectId field to UnifiedTask type and implement in unifiedTaskStore
 
   React.useEffect(() => {
     if (projects.length === 0) {
@@ -29,13 +30,9 @@ export const TaskProjectAssociation: React.FC<TaskProjectAssociationProps> = ({
     
     if (selectedProjectId === '') {
       // Remove task from project
-      // TODO: removeTaskFromProject not implemented yet
-      // removeTaskFromProject(taskId);
       onAssociationChange?.(null);
     } else {
       // Assign task to project
-      // TODO: assignTaskToProject not implemented yet
-      // assignTaskToProject(taskId, selectedProjectId);
       onAssociationChange?.(selectedProjectId);
     }
   };
@@ -69,10 +66,10 @@ interface ProjectTasksListProps {
 }
 
 export const ProjectTasksList: React.FC<ProjectTasksListProps> = ({ projectId }) => {
-  // TODO: getTasksByProject not implemented yet in useKanbanStore
-  // const { getTasksByProject } = useKanbanStore();
-  // const tasks = getTasksByProject(projectId);
-  const tasks: any[] = []; // Temporary placeholder
+  // Note: Task-project associations are not yet implemented in the unified task system
+  // This component is a placeholder for future functionality
+  // Future enhancement: Add projectId field to UnifiedTask type and implement filtering in unifiedTaskStore
+  const tasks: any[] = []; // Placeholder - will be populated when project associations are implemented
   const total = tasks.length;
   const completed = tasks.filter((task: any) => task.status === 'completed').length;
 

@@ -110,7 +110,7 @@ pub async fn create_project(
     description: String,
     color: String,
     user_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<String, String> {
     let db_manager_clone = db_manager.inner().clone();
     let project_id = tokio::task::spawn_blocking(move || {
@@ -127,7 +127,7 @@ pub async fn create_project(
 #[tauri::command]
 pub async fn get_projects(
     user_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<ProjectApi>, String> {
     let db_manager_clone = db_manager.inner().clone();
     let projects = tokio::task::spawn_blocking(move || {
@@ -146,7 +146,7 @@ pub async fn get_projects(
 #[tauri::command]
 pub async fn get_project(
     project_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Option<ProjectApi>, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     
@@ -171,7 +171,7 @@ pub async fn update_project(
     status: Option<String>,
     progress: Option<i32>,
     priority: Option<String>,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     
@@ -192,7 +192,7 @@ pub async fn update_project(
 #[tauri::command]
 pub async fn delete_project(
     project_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     
@@ -217,7 +217,7 @@ pub async fn create_project_goal(
     project_id: String,
     title: String,
     priority: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<String, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     
@@ -236,7 +236,7 @@ pub async fn create_project_goal(
 #[tauri::command]
 pub async fn get_project_goals(
     project_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<ProjectGoalApi>, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     
@@ -261,7 +261,7 @@ pub async fn update_project_goal(
     description: Option<String>,
     completed: Option<bool>,
     priority: Option<String>,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let goal_id: i32 = goal_id.parse().map_err(|_| "Invalid goal ID")?;
     
@@ -282,7 +282,7 @@ pub async fn update_project_goal(
 #[tauri::command]
 pub async fn delete_project_goal(
     goal_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let goal_id: i32 = goal_id.parse().map_err(|_| "Invalid goal ID")?;
     
@@ -311,7 +311,7 @@ pub async fn create_project_asset(
     uploaded_by: String,
     size: Option<i64>,
     metadata: Option<String>,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<String, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     
@@ -332,7 +332,7 @@ pub async fn create_project_asset(
 #[tauri::command]
 pub async fn get_project_assets(
     project_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<ProjectAssetApi>, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     
@@ -353,7 +353,7 @@ pub async fn get_project_assets(
 #[tauri::command]
 pub async fn delete_project_asset(
     asset_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let asset_id: i32 = asset_id.parse().map_err(|_| "Invalid asset ID")?;
     
@@ -376,7 +376,7 @@ pub async fn delete_project_asset(
 #[tauri::command]
 pub async fn get_project_stats(
     project_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<serde_json::Value, String> {
     let project_id: i32 = project_id.parse().map_err(|_| "Invalid project ID")?;
     

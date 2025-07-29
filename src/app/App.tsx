@@ -9,7 +9,6 @@ import Sidebar from '../components/navigation/Sidebar';
 import { CommandPalette } from '../components/CommandPalette';
 import { TextSelectionDetector } from '../components/ai/TextSelectionDetector';
 import { useCommandPalette } from '../core/hooks/useCommandPalette';
-import { StagewiseToolbar } from '@stagewise/toolbar-react';
 import { useInitializeSettings } from '../stores/settingsStore';
 import { MailStoreProvider } from '../features/mail/components/MailStoreProvider';
 import { queryClient } from '../config/queryClient';
@@ -95,12 +94,6 @@ export default function App() {
               </div>
               
               <CommandPalette isOpen={isOpen} onClose={close} />
-            
-            <StagewiseToolbar
-              config={{
-                plugins: [],
-              }}
-            />
               </div>
             </TextSelectionDetector>
           </MailStoreProvider>

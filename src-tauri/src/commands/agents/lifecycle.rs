@@ -97,7 +97,7 @@ impl From<DbAgentExecution> for AgentExecution {
 #[tauri::command]
 pub async fn create_agent(
     request: CreateAgentRequest,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Agent, String> {
     let parameters = serde_json::json!({"model": request.model});
     
@@ -167,7 +167,7 @@ pub async fn get_agents(db_manager: State<'_, crate::database::DatabaseManager>)
 #[tauri::command]
 pub async fn get_agent(
     agent_id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Agent, String> {
     let agent_id_int = agent_id.parse().map_err(|_| "Invalid agent ID".to_string())?;
     let db_manager_clone = db_manager.inner().clone();
@@ -188,7 +188,7 @@ pub async fn get_agent(
 pub async fn update_agent(
     agent_id: String,
     request: UpdateAgentRequest,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Agent, String> {
     let agent_id_int = agent_id.parse().map_err(|_| "Invalid agent ID".to_string())?;
     let db_manager_clone = db_manager.inner().clone();
@@ -254,7 +254,7 @@ pub async fn update_agent(
 #[tauri::command]
 pub async fn delete_agent(
     agent_id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let agent_id_int = agent_id.parse().map_err(|_| "Invalid agent ID".to_string())?;
     
@@ -286,7 +286,7 @@ pub async fn delete_agent(
 pub async fn execute_agent(
     agent_id: String,
     input: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<AgentExecution, String> {
     let agent_id_int = agent_id.parse().map_err(|_| "Invalid agent ID".to_string())?;
     let db_manager_clone = db_manager.inner().clone();
@@ -321,7 +321,7 @@ pub async fn execute_agent(
 #[tauri::command]
 pub async fn get_agent_executions(
     agent_id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, std::sync::Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<AgentExecution>, String> {
     let agent_id_int = agent_id.parse().map_err(|_| "Invalid agent ID".to_string())?;
     let db_manager_clone = db_manager.inner().clone();

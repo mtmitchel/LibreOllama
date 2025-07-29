@@ -1,6 +1,6 @@
 export { KanbanBoard } from './KanbanBoard';
 export { KanbanColumn } from './KanbanColumn';
-export { KanbanTaskCard } from './KanbanTaskCard';
-export { CreateTaskModal } from './CreateTaskModal';
-export { EditTaskModal } from './EditTaskModal';
+
+export { InlineTaskCreator } from './InlineTaskCreator';
+export { TaskSidebar } from './TaskSidebar';
 export { TaskListView } from './TaskListView';

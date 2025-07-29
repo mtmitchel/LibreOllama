@@ -96,22 +96,22 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           className="fixed z-50"
           style={{ left: position.x, top: position.y }}
         >
-          <Card className="!bg-bg-primary min-w-[180px] p-1 shadow-lg" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          <div className="min-w-[220px] rounded-[12px] border border-neutral-200 bg-white shadow-lg p-1">
             {items.map((item, index) => (
               item.separator ? (
-                <div key={index} className="bg-border-default my-1 h-px" />
+                <div key={index} className="my-1 h-px bg-neutral-100" />
               ) : (
                 <button
                   key={index}
                   onClick={() => handleItemClick(item)}
                   disabled={item.disabled}
-                  className={`flex w-full items-center gap-2 rounded px-3 py-2 text-sm transition-colors ${
+                  className={`h-8 px-2.5 rounded-[8px] flex items-center gap-2.5 text-[13px] text-neutral-800 w-full transition-colors ${
                     item.disabled
                       ? 'cursor-not-allowed opacity-50'
                       : item.destructive
-                      ? 'hover:bg-error hover:text-white'
-                      : 'hover:bg-tertiary'
-                  } ${item.destructive ? 'text-error' : 'text-primary'}`}
+                      ? 'text-red-600 hover:bg-red-50'
+                      : 'hover:bg-neutral-50'
+                  }`}
                 >
                   {item.icon && (
                     <span className="shrink-0">{item.icon}</span>
@@ -120,7 +120,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                 </button>
               )
             ))}
-          </Card>
+          </div>
         </div>,
         document.body
       )}

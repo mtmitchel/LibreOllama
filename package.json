@@ -106,7 +106,6 @@
     "@ladle/react": "^5.0.3",
     "@modelcontextprotocol/server-filesystem": "^2025.7.1",
     "@rollup/rollup-win32-x64-msvc": "^4.44.1",
-    "@stagewise/toolbar-react": "^0.5.2",
     "@tauri-apps/cli": "^2.5.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

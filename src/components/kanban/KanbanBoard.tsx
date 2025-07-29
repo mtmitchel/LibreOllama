@@ -14,7 +14,7 @@ import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { useUnifiedTaskStore } from "../../stores/unifiedTaskStore";
 import type { UnifiedTask } from "../../stores/unifiedTaskStore.types";
 import { KanbanColumn } from "./KanbanColumn";
-import { KanbanTaskCard } from "./KanbanTaskCard";
+import { UnifiedTaskCard } from "../tasks/UnifiedTaskCard";
 import { Button, Card } from "../ui";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 
@@ -129,12 +129,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
 
       // Only move if dropping in a different column
+      console.log('Drag end:', { taskId, activeColumn, targetColumnId });
       if (activeColumn !== targetColumnId) {
+        console.log('Moving task between columns...');
         try {
-          await moveTask(taskId, activeColumn, targetColumnId);
+          await moveTask(taskId, targetColumnId);
+          console.log('Move task completed');
         } catch (error) {
-          // Failed to move task
+          console.error('Failed to move task:', error);
+          alert(`Failed to move task: ${error}`);
         }
+      } else {
+        console.log('Same column, not moving');
       }
     },
     [activeColumn, columns, moveTask]
@@ -187,7 +193,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   return (
-    <div className={`h-full ${className}`}>
+    <div className={`h-full bg-white ${className}`}>
       {/* Kanban Board */}
       <DndContext
         sensors={sensors}
@@ -198,27 +204,45 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragCancel={handleDragCancel}
         modifiers={[restrictToWindowEdges]}
       >
-        <div className="flex h-full gap-4 overflow-x-auto pb-4">
+        <div className="flex h-full gap-6 overflow-x-auto px-6 py-6">
           {columns.map((column) => (
             <KanbanColumn
               key={column.id}
               column={column}
-              className="min-w-80 flex-1"
+              className="w-[340px] flex-shrink-0"
               searchQuery={searchQuery}
               onDelete={onDeleteList}
               onRename={onRenameList}
             />
           ))}
+          
+          {/* Add section button */}
+          <button
+            className="h-10 px-4 text-[13px] text-neutral-600 hover:text-neutral-800 hover:underline whitespace-nowrap flex items-center gap-1 cursor-pointer relative z-10"
+            style={{ pointerEvents: 'auto' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              // TODO: Implement add section functionality
+              console.log('Add section clicked');
+              alert('Add section functionality not yet implemented');
+            }}
+          >
+            <Plus size={16} />
+            <span>Add section</span>
+          </button>
         </div>
 
         {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
             <div className="rotate-2 scale-105 opacity-95 shadow-2xl">
-              <KanbanTaskCard
+              <UnifiedTaskCard
                 task={activeTask}
-                isDragging={true}
                 columnId={activeColumn || ""}
+                onToggle={() => {}}
+                onEdit={() => {}}
+                onDelete={() => {}}
+                onDuplicate={() => {}}
               />
             </div>
           ) : null}

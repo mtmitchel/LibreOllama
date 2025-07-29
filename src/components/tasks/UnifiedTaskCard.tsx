@@ -1,6 +1,7 @@
-import React from 'react';
-import { Button } from '../ui';
-import { Calendar, CheckSquare, MoreHorizontal, Flag, Tag, RotateCcw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useDraggable } from '@dnd-kit/core';
+import { Button, ContextMenu } from '../ui';
+import { Calendar, CheckSquare, MoreHorizontal, Flag, Tag, RotateCcw, Edit3, Copy, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 
@@ -15,6 +16,7 @@ const parseTaskDate = (dateStr: string): Date => {
 
 interface UnifiedTaskCardProps {
   task: UnifiedTask;
+  columnId: string;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -25,6 +27,7 @@ interface UnifiedTaskCardProps {
 
 export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
   task,
+  columnId,
   onToggle,
   onEdit,
   onDelete,
@@ -32,8 +35,38 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
   variant = 'default',
   showMetadata = true,
 }) => {
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const optionsMenuRef = useRef<HTMLDivElement>(null);
+  
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: task.id,
+    data: {
+      type: 'task',
+      task,
+      columnId,
+    },
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
+
   const isCompleted = task.status === 'completed';
   const isOverdue = task.due && parseTaskDate(task.due) < new Date() && !isCompleted;
+  
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target as Node)) {
+        setShowOptionsMenu(false);
+      }
+    };
+    
+    if (showOptionsMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showOptionsMenu]);
   
   // Priority colors
   const priorityColors = {
@@ -45,24 +78,53 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
 
   const priority = task.priority || 'normal';
   const priorityStyle = priorityColors[priority as keyof typeof priorityColors] || priorityColors.normal;
+  
+  // Context menu items
+  const contextMenuItems = [
+    {
+      label: 'Edit',
+      icon: <Edit3 size={14} />,
+      onClick: onEdit
+    },
+    {
+      label: 'Duplicate',
+      icon: <Copy size={14} />,
+      onClick: onDuplicate
+    },
+    { separator: true },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={14} />,
+      onClick: onDelete,
+      destructive: true
+    }
+  ];
 
   return (
     <div
-      className={`
-        border-border-default hover:shadow-primary/5 hover:border-border-hover group relative cursor-pointer rounded-lg border
-        bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg
-        ${isCompleted ? 'bg-tertiary/30 opacity-75' : ''}
-        ${isOverdue ? 'shadow-error/5 border-l-4 border-l-error' : ''}
-        ${variant === 'compact' ? 'p-2.5' : 'p-3.5'}
-      `}
-      onClick={(e) => {
-        const target = e.target as HTMLElement;
-        const isInteractive = target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button');
-        if (!isInteractive) {
-          onEdit();
-        }
-      }}
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
     >
+      <ContextMenu items={contextMenuItems}>
+        <div
+          className={`
+          border-border-default hover:shadow-primary/5 hover:border-border-hover group relative cursor-pointer rounded-lg border
+          bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg
+          ${isCompleted ? 'bg-tertiary/30 opacity-75' : ''}
+          ${isOverdue ? 'shadow-error/5 border-l-4 border-l-error' : ''}
+          ${isDragging ? 'opacity-50' : ''}
+          ${variant === 'compact' ? 'p-2.5' : 'p-3.5'}
+        `}
+        onClick={(e) => {
+          const target = e.target as HTMLElement;
+          const isInteractive = target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button');
+          if (!isInteractive) {
+            onEdit();
+          }
+        }}
+      >
       {/* Task Header */}
       <div className={`flex items-start justify-between gap-2.5 ${variant === 'compact' ? 'mb-2' : 'mb-2.5'}`}>
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
@@ -96,18 +158,59 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
         </div>
 
         {/* More Options */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6 shrink-0 opacity-0 hover:bg-tertiary group-hover:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          title="Edit task"
-        >
-          <MoreHorizontal size={12} />
-        </Button>
+        <div className="relative" ref={optionsMenuRef}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 shrink-0 opacity-0 hover:bg-tertiary group-hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowOptionsMenu(!showOptionsMenu);
+            }}
+            title="Task options"
+          >
+            <MoreHorizontal size={12} />
+          </Button>
+          
+          {showOptionsMenu && (
+            <div className="absolute right-0 top-full z-[9999] mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptionsMenu(false);
+                  onEdit();
+                }}
+                className="flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50"
+              >
+                <Edit3 size={14} className="mr-2" />
+                Edit
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptionsMenu(false);
+                  onDuplicate();
+                }}
+                className="flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50"
+              >
+                <Copy size={14} className="mr-2" />
+                Duplicate
+              </button>
+              <div className="my-1 h-px bg-gray-100" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptionsMenu(false);
+                  onDelete();
+                }}
+                className="flex w-full items-center px-3 py-2 text-sm text-red-600 last:rounded-b-lg hover:bg-red-50"
+              >
+                <Trash2 size={14} className="mr-2" />
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Task Notes - Filter out URLs */}
@@ -188,6 +291,8 @@ export const UnifiedTaskCard: React.FC<UnifiedTaskCardProps> = ({
           )}
         </div>
       )}
+        </div>
+      </ContextMenu>
     </div>
   );
 };
