@@ -141,9 +141,6 @@
 /* OVERFLOW PREVENTION FIXES */
 /* Prevent overflow in month view events */
 .fc-daygrid-event {
-  overflow: hidden !important;
-  white-space: nowrap !important;
-  text-overflow: ellipsis !important;
   max-width: 100% !important;
 }
 
@@ -289,8 +286,6 @@
 
 .fc .fc-daygrid-event .fc-event-title {
   color: #ffffff !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap !important;
   flex: 1 !important;
 }

@@ -130,6 +130,17 @@ class GoogleTasksService {
     }
   }
 
+  /**
+   * Move a task within the same list or to a different position.
+   * 
+   * IMPORTANT: Google Tasks API does NOT support moving tasks between different lists.
+   * The move endpoint only works for repositioning within the same list.
+   * To move a task between lists, you must:
+   * 1. Create a new task in the target list
+   * 2. Delete the original task from the source list
+   * 
+   * @deprecated for cross-list moves - use create + delete pattern instead
+   */
   async moveTask(
     account: GoogleAccount,
     taskIdOrRequest: string | TaskMoveRequest,
@@ -158,10 +169,8 @@ class GoogleTasksService {
         accountId: account.id,
         taskListId: request.taskListId,
         taskId: request.taskId,
-        options: {
-          parent: request.parent,
-          previous: request.previous,
-        }
+        parent: request.parent,
+        previous: request.previous,
       });
        
       return {

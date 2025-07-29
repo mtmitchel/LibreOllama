@@ -59,7 +59,7 @@ export default function Mail() {
 
 
           {/* Message List */}
-          <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div className="relative flex min-h-0 flex-1 overflow-hidden">
             <EnhancedMessageList />
           </div>
           

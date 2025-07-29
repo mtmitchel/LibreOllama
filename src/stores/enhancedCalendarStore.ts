@@ -28,7 +28,6 @@ export interface CalendarUIState {
   // View state
   view: CalendarView;
   currentViewTitle: string;
-  showTaskPanel: boolean;
   showTasksInCalendar: boolean;
   
   // Modal state
@@ -61,7 +60,6 @@ export interface CalendarActions {
   // View actions
   setView: (view: CalendarView) => void;
   setCurrentViewTitle: (title: string) => void;
-  toggleTaskPanel: () => void;
   toggleTasksInCalendar: () => void;
   
   // Modal actions
@@ -120,7 +118,6 @@ export const useEnhancedCalendarStore = create<CalendarStore>()(
       // Initial state
       view: 'dayGridMonth',
       currentViewTitle: 'Calendar',
-      showTaskPanel: true,
       showTasksInCalendar: true,
       showEventModal: false,
       showScheduleModal: false,
@@ -150,12 +147,6 @@ export const useEnhancedCalendarStore = create<CalendarStore>()(
       setCurrentViewTitle: (title) => {
         set(state => {
           state.currentViewTitle = title;
-        });
-      },
-      
-      toggleTaskPanel: () => {
-        set(state => {
-          state.showTaskPanel = !state.showTaskPanel;
         });
       },
       

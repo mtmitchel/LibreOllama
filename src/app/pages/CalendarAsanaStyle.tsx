@@ -212,9 +212,10 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Convert date picker value to proper ISO string
+    // Convert date picker value to RFC 3339 format at midnight UTC
+    // Google Tasks expects dates to be at midnight UTC for all-day tasks
     const formattedDue = formData.due 
-      ? new Date(formData.due + 'T00:00:00').toISOString()
+      ? `${formData.due}T00:00:00.000Z`
       : undefined;
       
     onSubmit({
@@ -811,9 +812,7 @@ export default function CalendarAsanaStyle() {
   const navigate = useNavigate();
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const calendarRef = useRef<FullCalendar>(null);
-  const taskPanelRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<CalendarView>('dayGridMonth');
-  const [showTaskPanel, setShowTaskPanel] = useState(true);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -1441,162 +1440,6 @@ export default function CalendarAsanaStyle() {
           </div>
         </div>
 
-        {/* Tasks Sidebar */}
-        {showTaskPanel && (
-          <div className="w-80 border-l bg-white flex flex-col h-full" style={{ borderColor: '#E8E8E9' }}>
-            <div className="p-6 pb-4">
-              <h2 style={asanaTypography.h2}>Tasks</h2>
-              
-              {/* List Filter */}
-              <div className="mt-4">
-                <select
-                  value={selectedColumnId}
-                  onChange={(e) => setSelectedColumnId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl cursor-pointer"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
-                    border: '1px solid transparent',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
-                >
-                  <option value="all">All lists</option>
-                  {taskLists.map(list => (
-                    <option key={list.id} value={list.id}>{list.title}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Tasks List */}
-            <div ref={taskPanelRef} className="flex-1 overflow-y-auto px-6 pb-6" style={{ maxHeight: 'calc(100% - 120px)' }}>
-              {Object.entries(googleTasks).map(([listId, tasks]) => {
-                if (selectedColumnId !== 'all' && selectedColumnId !== listId) return null;
-                
-                const incompleteTasks = tasks.filter(t => t.status !== 'completed');
-                const completedTasks = tasks.filter(t => t.status === 'completed');
-                
-                return (
-                  <div key={listId} className="mb-6">
-                    {incompleteTasks.map(task => (
-                      <AsanaTaskItem
-                        key={task.id}
-                        task={task}
-                        onToggle={() => toggleTaskComplete(listId, task.id)}
-                        onEdit={() => {
-                          setEditingTask(task);
-                          setShowTaskModal(true);
-                        }}
-                        onDuplicate={() => {
-                          createGoogleTask(listId, {
-                            title: `${task.title} (Copy)`,
-                            notes: task.notes,
-                            due: task.due,
-                          });
-                        }}
-                        onDelete={() => {
-                          setTaskToDelete(task);
-                          setShowDeleteTaskDialog(true);
-                        }}
-                        onSchedule={() => {
-                          setSelectedTaskForScheduling(task);
-                          setSelectedScheduleDate(new Date());
-                          setShowScheduleModal(true);
-                        }}
-                        onContextMenu={(e, task) => {
-                          setContextMenu({
-                            x: e.clientX,
-                            y: e.clientY,
-                            task,
-                            listId
-                          });
-                        }}
-                      />
-                    ))}
-                    
-                    {completedTasks.length > 0 && (
-                      <details className="mt-4">
-                        <summary style={{ ...asanaTypography.small, cursor: 'pointer', marginBottom: '8px' }}>
-                          Completed ({completedTasks.length})
-                        </summary>
-                        {completedTasks.map(task => (
-                          <AsanaTaskItem
-                            key={task.id}
-                            task={task}
-                            onToggle={() => toggleTaskComplete(listId, task.id)}
-                            onEdit={() => {
-                              setEditingTask(task);
-                              setShowTaskModal(true);
-                            }}
-                            onDuplicate={() => {
-                              createGoogleTask(listId, {
-                                title: `${task.title} (Copy)`,
-                                notes: task.notes,
-                                due: task.due,
-                              });
-                            }}
-                            onDelete={() => {
-                              setTaskToDelete(task);
-                              setShowDeleteTaskDialog(true);
-                            }}
-                            onSchedule={() => {
-                              setSelectedTaskForScheduling(task);
-                              setSelectedScheduleDate(new Date());
-                              setShowScheduleModal(true);
-                            }}
-                            onContextMenu={(e, task) => {
-                              setContextMenu({
-                                x: e.clientX,
-                                y: e.clientY,
-                                task,
-                                listId
-                              });
-                            }}
-                          />
-                        ))}
-                      </details>
-                    )}
-                  </div>
-                );
-              })}
-              
-              {/* Add Task Button */}
-              <button
-                onClick={() => {
-                  setEditingTask(null);
-                  setShowTaskModal(true);
-                }}
-                className="w-full p-3 rounded-xl transition-all flex items-center justify-center gap-2 mt-4"
-                style={{ 
-                  backgroundColor: 'transparent',
-                  border: '2px dashed #DDD',
-                  fontSize: '14px',
-                  color: '#6B6F76',
-                  fontWeight: 500
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F6F7F8';
-                  e.currentTarget.style.borderColor = '#C7CBCF';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = '#DDD';
-                }}
-              >
-                <Plus size={16} />
-                Add task
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Task Modal */}

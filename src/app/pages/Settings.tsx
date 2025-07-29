@@ -41,6 +41,7 @@ import {
 } from '../../stores/settingsStore';
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { type LLMProvider } from '../../services/llmProviders';
+import { useSearchParams } from 'react-router-dom';
 
 // Design system aligned Toggle Switch Component
 interface ToggleSwitchProps {
@@ -149,8 +150,17 @@ const UserAvatar = ({ src, alt }: { src?: string, alt: string }) => {
 
 const Settings: React.FC = () => {
   const { setHeaderProps, clearHeaderProps } = useHeader();
+  const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState('general');
   const [showGoogleAuthModal, setShowGoogleAuthModal] = useState(false);
+  
+  // Handle URL parameters for direct navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'account') {
+      setActiveSection('account');
+    }
+  }, [searchParams]);
   
   // Settings from global store
   const generalSettings = useGeneralSettings();
@@ -182,6 +192,10 @@ const Settings: React.FC = () => {
       const dbState = await invoke('debug_gmail_secure_table');
       console.log('[DEBUG] Database state:', dbState);
       
+      // List all accounts in database
+      const allAccounts = await invoke('debug_list_all_gmail_accounts');
+      console.log('[DEBUG] All accounts in database:', allAccounts);
+      
       // Check token expiration
       const tokenInfo = await invoke('debug_gmail_token_expiration');
       console.log('[DEBUG] Token expiration:', tokenInfo);
@@ -193,10 +207,9 @@ const Settings: React.FC = () => {
         await removeGoogleAccount(testAccount.id);
         
         // Also clean from Gmail store
-        const gmailAccounts = mailStore.accounts;
         const testGmailAccount = gmailAccounts.find(acc => acc.email === 'test@gmail.com');
         if (testGmailAccount) {
-          await mailStore.removeAccount(testGmailAccount.id);
+          await removeGmailAccount(testGmailAccount.id);
         }
       }
       
@@ -226,7 +239,7 @@ const Settings: React.FC = () => {
   const authenticateTasks = async () => {
     console.log('[Settings] Tasks auth handled through Google account management');
   };
-  const { addAccount: addGmailAccount } = useMailStore();
+  const { addAccount: addGmailAccount, accounts: gmailAccounts, removeAccount: removeGmailAccount } = useMailStore();
   
   // Google accounts from settings store
   const accounts = integrationSettings.googleAccounts;
@@ -767,215 +780,119 @@ const Settings: React.FC = () => {
           <div className="h-full p-6">
             <div className="mb-6">
               <Heading level={1}>Integrations</Heading>
-              <Text variant="muted">Connect to external services and manage API keys.</Text>
+              <Text variant="muted">Configure API keys for cloud-based language model providers. Some providers require a Base URL.</Text>
             </div>
-            <div className="flex flex-col gap-8">
-              <Card className="p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <Heading level={2}>Google Accounts</Heading>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2 focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    onClick={() => setShowGoogleAuthModal(true)}
-                  >
-                    <LinkIcon size={16} /> Add Account
-                  </Button>
-                </div>
-                <Text variant="muted" size="sm" className="mb-4">
-                  Manage your Google accounts for Gmail, Calendar, and Tasks integration.
-                </Text>
-                
-                {accounts.length === 0 ? (
-                  <div className="border-border-default flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-8 text-center">
-                    <Text weight="medium" className="mb-2">No Google accounts connected</Text>
-                    <Text variant="muted" size="sm">
-                      Connect a Google account to sync your Gmail, Calendar, and Tasks.
-                    </Text>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {accounts.map((account) => (
-                      <div key={account.id} className="border-border-default flex items-center justify-between rounded-lg border p-4">
-                        <div className="flex items-center gap-3">
-                          <UserAvatar src={account.picture} alt={account.name || account.email} />
-                          <div>
-                            <Text weight="medium">{account.name || account.email}</Text>
-                            <Text variant="muted" size="sm">{account.email}</Text>
-                          </div>
-                          {activeAccount?.id === account.id && (
-                            <div className="ml-3 flex items-center gap-1 rounded-full bg-success-ghost px-2 py-1 text-success">
-                              <Check size={12} />
-                              <Text size="xs">Active</Text>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {activeAccount?.id !== account.id && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => setActiveGoogleAccount(account.id)}
-                              className="focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            >
-                              Set Active
-                            </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => removeGoogleAccount(account.id)}
-                            className="size-8 text-muted hover:bg-error-ghost hover:text-error focus:ring-2 focus:ring-error focus:ring-offset-2"
-                            title="Remove Account"
-                          >
-                            <X size={16} />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Debug button - only show in development */}
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={debugAndCleanDatabase}
-                    className="w-full"
-                  >
-                    <RefreshCw size={16} className="mr-2" />
-                    Debug & Clean Accounts
-                  </Button>
-                </div>
-              </Card>
-              
-              <div className="space-y-4">
-                <Heading level={2}>LLM Providers</Heading>
-                <Text variant="muted" size="sm">
-                  Configure API keys for cloud-based language model providers. Some providers require a Base URL.
-                </Text>
-              </div>
+            <div className="flex flex-col gap-6">
+                {[
+                  {
+                    key: 'openai' as keyof typeof integrationSettings.apiKeys,
+                    label: 'OpenAI',
+                    description: 'Access GPT models (GPT-4, GPT-3.5-turbo, etc.)',
+                    placeholder: 'sk-...',
+                    baseUrlPlaceholder: 'https://api.openai.com/v1',
+                    website: 'https://platform.openai.com/api-keys'
+                  },
+                  {
+                    key: 'anthropic' as keyof typeof integrationSettings.apiKeys,
+                    label: 'Anthropic',
+                    description: 'Access Claude models (Claude-3, Claude-2, etc.)',
+                    placeholder: 'sk-ant-...',
+                    baseUrlPlaceholder: 'https://api.anthropic.com/v1',
+                    website: 'https://console.anthropic.com/'
+                  },
+                  {
+                    key: 'openrouter' as keyof typeof integrationSettings.apiKeys,
+                    label: 'OpenRouter',
+                    description: 'Access many models through a single API (GPT, Claude, Llama, etc.)',
+                    placeholder: 'sk-or-...',
+                    baseUrlPlaceholder: 'https://openrouter.ai/api/v1',
+                    website: 'https://openrouter.ai/keys'
+                  },
+                  {
+                    key: 'deepseek' as keyof typeof integrationSettings.apiKeys,
+                    label: 'DeepSeek',
+                    description: 'Access DeepSeek models',
+                    placeholder: 'sk-...',
+                    baseUrlPlaceholder: 'https://api.deepseek.com/v1',
+                    website: 'https://platform.deepseek.com/api_keys'
+                  },
+                  {
+                    key: 'mistral' as keyof typeof integrationSettings.apiKeys,
+                    label: 'Mistral AI',
+                    description: 'Access Mistral models (Mistral-7B, Mixtral, etc.)',
+                    placeholder: 'sk-...',
+                    baseUrlPlaceholder: 'https://api.mistral.ai/v1',
+                    website: 'https://console.mistral.ai/'
+                  },
+                  {
+                    key: 'gemini' as keyof typeof integrationSettings.apiKeys,
+                    label: 'Google Gemini',
+                    description: 'Access Google\'s Gemini models',
+                    placeholder: 'AIza...',
+                    baseUrlPlaceholder: 'https://generativelanguage.googleapis.com/v1beta',
+                    website: 'https://makersuite.google.com/app/apikey'
+                  }
+                ].map((provider) => {
+                  const config = integrationSettings.apiKeys[provider.key];
+                  const currentValue = config?.key || '';
+                  const baseUrl = config?.baseUrl || '';
+                  const maskedValue = currentValue ? '••••••••••••••••' : '';
+                  
+                  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const newKey = formData.get(`${provider.key}-api-key`) as string;
+                    const newBaseUrl = formData.get(`${provider.key}-base-url`) as string;
 
-              <div className="flex flex-col gap-6">
-                  {[
-                    {
-                      key: 'openai' as keyof typeof integrationSettings.apiKeys,
-                      label: 'OpenAI',
-                      description: 'Access GPT models (GPT-4, GPT-3.5-turbo, etc.)',
-                      placeholder: 'sk-...',
-                      baseUrlPlaceholder: 'https://api.openai.com/v1',
-                      website: 'https://platform.openai.com/api-keys'
-                    },
-                    {
-                      key: 'anthropic' as keyof typeof integrationSettings.apiKeys,
-                      label: 'Anthropic',
-                      description: 'Access Claude models (Claude-3, Claude-2, etc.)',
-                      placeholder: 'sk-ant-...',
-                      baseUrlPlaceholder: 'https://api.anthropic.com/v1',
-                      website: 'https://console.anthropic.com/'
-                    },
-                    {
-                      key: 'openrouter' as keyof typeof integrationSettings.apiKeys,
-                      label: 'OpenRouter',
-                      description: 'Access many models through a single API (GPT, Claude, Llama, etc.)',
-                      placeholder: 'sk-or-...',
-                      baseUrlPlaceholder: 'https://openrouter.ai/api/v1',
-                      website: 'https://openrouter.ai/keys'
-                    },
-                    {
-                      key: 'deepseek' as keyof typeof integrationSettings.apiKeys,
-                      label: 'DeepSeek',
-                      description: 'Access DeepSeek models',
-                      placeholder: 'sk-...',
-                      baseUrlPlaceholder: 'https://api.deepseek.com/v1',
-                      website: 'https://platform.deepseek.com/api_keys'
-                    },
-                    {
-                      key: 'mistral' as keyof typeof integrationSettings.apiKeys,
-                      label: 'Mistral AI',
-                      description: 'Access Mistral models (Mistral-7B, Mixtral, etc.)',
-                      placeholder: 'sk-...',
-                      baseUrlPlaceholder: 'https://api.mistral.ai/v1',
-                      website: 'https://console.mistral.ai/'
-                    },
-                    {
-                      key: 'gemini' as keyof typeof integrationSettings.apiKeys,
-                      label: 'Google Gemini',
-                      description: 'Access Google\'s Gemini models',
-                      placeholder: 'AIza...',
-                      baseUrlPlaceholder: 'https://generativelanguage.googleapis.com/v1beta',
-                      website: 'https://makersuite.google.com/app/apikey'
+                    setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
+                    try {
+                      // If the input is masked and unchanged, keep the existing key; otherwise use the new key
+                      const keyToSave = (newKey === maskedValue && currentValue) ? currentValue : newKey;
+                      await setApiKey(provider.key, keyToSave, newBaseUrl);
+                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: true, error: null } }));
+                      setTimeout(() => setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } })), 3000);
+                    } catch (error) {
+                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to save' } }));
                     }
-                  ].map((provider) => {
-                    const config = integrationSettings.apiKeys[provider.key];
-                    const currentValue = config?.key || '';
-                    const baseUrl = config?.baseUrl || '';
-                    const maskedValue = currentValue ? '••••••••••••••••' : '';
-                    
-                    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-                      e.preventDefault();
-                      const formData = new FormData(e.currentTarget);
-                      const newKey = formData.get(`${provider.key}-api-key`) as string;
-                      const newBaseUrl = formData.get(`${provider.key}-base-url`) as string;
-
-                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
-                      try {
-                        // If the input is masked and unchanged, keep the existing key; otherwise use the new key
-                        const keyToSave = (newKey === maskedValue && currentValue) ? currentValue : newKey;
-                        await setApiKey(provider.key, keyToSave, newBaseUrl);
-                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: true, error: null } }));
-                        setTimeout(() => setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } })), 3000);
-                      } catch (error) {
-                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to save' } }));
+                  };
+                  
+                  const handleClear = async () => {
+                    setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
+                    try {
+                      await setApiKey(provider.key, '');
+                      // Manually clear inputs
+                      const form = document.getElementById(`${provider.key}-form`) as HTMLFormElement;
+                      if (form) {
+                        const keyInput = form.querySelector(`input[name="${provider.key}-api-key"]`) as HTMLInputElement;
+                        const urlInput = form.querySelector(`input[name="${provider.key}-base-url"]`) as HTMLInputElement;
+                        if (keyInput) keyInput.value = '';
+                        if (urlInput) urlInput.value = '';
                       }
-                    };
-                    
-                    const handleClear = async () => {
-                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: true, success: false, error: null } }));
-                      try {
-                        await setApiKey(provider.key, '');
-                        // Manually clear inputs
-                        const form = document.getElementById(`${provider.key}-form`) as HTMLFormElement;
-                        if(form) {
-                            (form.elements.namedItem(`${provider.key}-api-key`) as HTMLInputElement).value = '';
-                            (form.elements.namedItem(`${provider.key}-base-url`) as HTMLInputElement).value = '';
-                        }
-                        setProviderModels(prev => ({...prev, [provider.key]: []}));
-                        setSelectedModels(prev => ({...prev, [provider.key]: []}));
-                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } }));
-                      } catch (error) {
-                        setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to clear' } }));
-                      }
-                    };
+                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: true, error: null } }));
+                      setTimeout(() => setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: null } })), 3000);
+                    } catch (error) {
+                      setApiOperations(prev => ({ ...prev, [provider.key]: { saving: false, success: false, error: error instanceof Error ? error.message : 'Failed to clear' } }));
+                    }
+                  };
 
-                    return (
-                      <Card key={provider.key} className="p-0">
-                        <div className="p-6">
-                           <div className="flex items-start justify-between">
-                            <div>
-                              <Heading level={3} className="flex items-center gap-2">
-                                {provider.label}
-                                {currentValue && (
-                                  <div className="flex items-center gap-1 rounded-full bg-success-ghost px-2 py-1 text-success">
-                                    <Check size={12} />
-                                    <Text size="xs">Configured</Text>
-                                  </div>
-                                )}
-                              </Heading>
-                              <Text variant="muted" size="sm">{provider.description}</Text>
-                            </div>
-                            <a 
-                              href={provider.website} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="focus:ring-accent-primary inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border-none bg-transparent px-3 py-2 font-sans text-xs font-medium leading-none text-primary no-underline transition-all duration-150 hover:bg-tertiary hover:text-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary active:scale-95 active:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Get API key <LinkIcon size={12} className="ml-1" />
-                            </a>
-                          </div>
-                        
-                          <form id={`${provider.key}-form`} onSubmit={handleSave} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  return (
+                    <Card key={provider.key} className="p-6">
+                      <div className="mb-4 flex items-center justify-between">
+                        <div>
+                          <Heading level={2}>{provider.label}</Heading>
+                          <Text variant="muted" size="sm">{provider.description}</Text>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(provider.website, '_blank')}
+                        >
+                          <LinkIcon size={16} className="mr-2" />
+                          Get API key
+                        </Button>
+                      </div>
+                      
+                      <form id={`${provider.key}-form`} onSubmit={handleSave} className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
                                 <label htmlFor={`${provider.key}-api-key`} className="text-sm font-medium">API Key</label>
                                 <Input
@@ -1008,7 +925,6 @@ const Settings: React.FC = () => {
                               </Button>
                             </div>
                           </form>
-                        </div>
                         
                         {currentValue && (
                           <div className="border-border-default bg-background-secondary border-t p-6">
@@ -1059,7 +975,6 @@ const Settings: React.FC = () => {
                       </Card>
                     );
                   })}
-              </div>
               
               <div className="border-border-primary bg-background-secondary mt-4 rounded-md border p-4">
                 <h4 className="font-semibold">Local Models (Ollama)</h4>
@@ -1068,6 +983,108 @@ const Settings: React.FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+        );
+      case 'account':
+        return (
+          <div className="h-full p-6">
+            <Card className="p-6">
+              <div className="mb-6">
+                <Heading level={1}>Account</Heading>
+                <Text variant="muted">Manage your Google accounts and authentication settings.</Text>
+              </div>
+              
+              <div className="flex flex-col gap-8">
+                <Card className="p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <Heading level={2}>Google Accounts</Heading>
+                      <Text variant="muted" size="sm">
+                        Manage your Google accounts for Gmail, Calendar, and Tasks integration.
+                      </Text>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowGoogleAuthModal(true)}
+                    >
+                      <LinkIcon size={16} className="mr-2" />
+                      Add Account
+                    </Button>
+                  </div>
+                  
+                  {accounts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <User size={48} className="mb-4 text-muted opacity-50" />
+                      <Heading level={3} className="mb-2">No Google Account Connected</Heading>
+                      <Text variant="muted" className="mb-4">
+                        Connect a Google account to sync your Gmail, Calendar, and Tasks.
+                      </Text>
+                      <Button onClick={() => setShowGoogleAuthModal(true)}>
+                        <LinkIcon size={16} className="mr-2" />
+                        Connect Google Account
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {accounts.map((account) => (
+                        <div
+                          key={account.id}
+                          className="border-border-default flex items-center justify-between rounded-lg border bg-background-secondary p-4"
+                        >
+                          <div className="flex items-center gap-3">
+                            <UserAvatar src={account.picture} alt={account.name || account.email} />
+                            <div>
+                              <Text weight="medium">{account.name || account.email}</Text>
+                              <Text variant="muted" size="sm">{account.email}</Text>
+                              {account.isActive && (
+                                <div className="mt-1 flex items-center gap-1">
+                                  <div className="size-2 rounded-full bg-success" />
+                                  <Text size="xs" className="text-success">Active</Text>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!account.isActive && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setActiveGoogleAccount(account.id)}
+                              >
+                                Set Active
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeGoogleAccount(account.id)}
+                              className="text-error hover:text-error"
+                            >
+                              <X size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {accounts.length > 0 && (
+                    <div className="mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={debugAndCleanDatabase}
+                        className="w-full"
+                      >
+                        <RefreshCw size={16} className="mr-2" />
+                        Debug & Clean Accounts
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              </div>
+            </Card>
           </div>
         );
       case 'appearance':
@@ -1177,11 +1194,39 @@ const Settings: React.FC = () => {
     }
   };
 
+  // Mail has its own header, so we don't need the unified header
   useEffect(() => {
-    // Clear header as Settings doesn't need a contextual header
     clearHeaderProps();
     return () => clearHeaderProps();
   }, [clearHeaderProps]);
+
+  // Auto-cleanup test accounts on mount
+  useEffect(() => {
+    const cleanupTestAccounts = async () => {
+      try {
+        // Remove test user if found
+        const testAccount = accounts.find(acc => acc.email === 'test@gmail.com' || acc.name === 'Test User');
+        if (testAccount) {
+          console.log('[Settings] Found test account, removing:', testAccount);
+          await removeGoogleAccount(testAccount.id);
+          
+          // Also clean from Gmail store
+          const testGmailAccount = gmailAccounts.find(acc => acc.email === 'test@gmail.com');
+          if (testGmailAccount) {
+            await removeGmailAccount(testGmailAccount.id);
+          }
+        }
+      } catch (error) {
+        console.error('[Settings] Failed to cleanup test accounts:', error);
+      }
+    };
+
+    if (accounts.length > 0) {
+      cleanupTestAccounts();
+    }
+  }, [accounts, removeGoogleAccount, gmailAccounts, removeGmailAccount]);
+
+  // Auth initialization is now handled by MailStoreProvider
 
   return (
     <div className="flex h-full gap-6 bg-content p-6 lg:gap-8 lg:p-8">

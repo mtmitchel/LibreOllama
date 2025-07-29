@@ -8,7 +8,8 @@ import {
   EventDropArg,
   EventApi
 } from '@fullcalendar/core';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, Search, ListChecks, CheckCircle, ChevronDown, Edit2, Copy, Trash2, CheckSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, Search, ListChecks, CheckCircle, ChevronDown, Edit2, Copy, Trash2, CheckSquare, CheckCircle2, Circle, MoreHorizontal, User, Tag } from 'lucide-react';
+import { format } from 'date-fns';
 
 import { Button, Card, Text, Heading, Input } from '../../components/ui';
 import { ContextMenu } from '../../components/ui/ContextMenu';
@@ -22,8 +23,10 @@ import interactionPlugin, { Draggable, DropArg } from '@fullcalendar/interaction
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { devLog } from '../../utils/devLog';
 import type { GoogleTask } from '../../types/google';
+import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import { googleTasksApi } from '../../api/googleTasksApi';
 import { realtimeSync } from '../../services/realtimeSync';
+import { UnifiedTaskCard } from '../../components/tasks/UnifiedTaskCard';
 import './styles/calendar.css';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
@@ -44,10 +47,10 @@ interface Recurring {
 
 // Google Calendar authentication now handled centrally in Settings
 
-// Simple Task Modal Component for Google Tasks
+// Simple Task Modal Component for Unified Tasks
 const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
   isOpen: boolean;
-  task?: GoogleTask | null;
+  task?: UnifiedTask | null;
   onClose: () => void;
   onSubmit: (data: { title: string; notes?: string; due?: string; metadata?: {
     priority: 'low' | 'normal' | 'high' | 'urgent';
@@ -79,9 +82,13 @@ const SimpleTaskModal = ({ isOpen, task, onClose, onSubmit, onDelete }: {
         title: task.title,
         notes: task.notes || '',
         due: task.due ? task.due.split('T')[0] : '',
-        priority: 'normal', // Google Tasks don't have priority, default to normal
-        labels: [],
-        subtasks: [],
+        priority: task.priority || 'normal',
+        labels: task.labels || [],
+        subtasks: task.attachments?.filter(a => a.type === 'subtask').map(a => ({
+          id: a.name,
+          title: a.name,
+          completed: a.url === 'completed'
+        })) || [],
         recurringEnabled: false,
         recurringFrequency: 'daily',
         recurringInterval: 1,
@@ -419,7 +426,7 @@ const ScheduleTaskModal = ({
   onSchedule 
 }: {
   isOpen: boolean;
-  task: GoogleTask | null;
+  task: UnifiedTask | null;
   selectedDate: Date | null;
   onClose: () => void;
   onSchedule: (data: { 
@@ -647,18 +654,17 @@ function renderEventContent(eventInfo: EventContentArg) {
   );
 }
 
+
 export default function Calendar() {
   const navigate = useNavigate();
       const { setHeaderProps, clearHeaderProps } = useHeader();
   const calendarRef = useRef<FullCalendar>(null);
-  const taskPanelRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<CalendarView>('dayGridMonth');
-  const [showTaskPanel, setShowTaskPanel] = useState(true);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
-  const [selectedTaskForScheduling, setSelectedTaskForScheduling] = useState<GoogleTask | null>(null);
+  const [selectedTaskForScheduling, setSelectedTaskForScheduling] = useState<UnifiedTask | null>(null);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -676,13 +682,13 @@ export default function Calendar() {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventApi | null>(null);
   const [currentViewTitle, setCurrentViewTitle] = useState<string>('Calendar');
-  const [editingTask, setEditingTask] = useState<GoogleTask | null>(null);
+  const [editingTask, setEditingTask] = useState<UnifiedTask | null>(null);
   
   // Separate state for calendar and task events to prevent duplication
   const [calendarEventItems, setCalendarEventItems] = useState<any[]>([]);
   const [taskEventItems, setTaskEventItems] = useState<any[]>([]);
   const [showDeleteTaskDialog, setShowDeleteTaskDialog] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState<GoogleTask | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<UnifiedTask | null>(null);
 
   // Unified task store
   const {
@@ -734,21 +740,10 @@ export default function Calendar() {
     await realtimeSync.syncNow();
   };
   
-  // Transform unified tasks to Google format
-  const googleTasks: Record<string, GoogleTask[]> = {};
+  // Transform unified tasks to use in UI
+  const googleTasks: Record<string, UnifiedTask[]> = {};
   taskLists.forEach(list => {
-    googleTasks[list.id] = getTasksByColumn(list.id).map(task => ({
-      id: task.googleTaskId || task.id,
-      title: task.title,
-      notes: task.notes,
-      due: task.due,
-      status: task.status,
-      position: task.position,
-      updated: task.updated,
-      etag: '',
-      kind: 'tasks#task',
-      selfLink: '',
-    }));
+    googleTasks[list.id] = getTasksByColumn(list.id);
   });
 
   const { 
@@ -777,29 +772,6 @@ export default function Calendar() {
     }
   }, [isTasksAuthenticated, taskLists.length, fetchTaskLists]);
   
-  useEffect(() => {
-    if (taskPanelRef.current) {
-      new Draggable(taskPanelRef.current, {
-        itemSelector: '.draggable-task',
-        eventData: function(eventEl) {
-          const taskJson = eventEl.getAttribute('data-task');
-          if (taskJson) {
-              const task: GoogleTask = JSON.parse(taskJson);
-              return {
-                  title: task.title,
-                  duration: '01:00',
-                  extendedProps: {
-                      taskId: task.id,
-                      taskData: task,
-                      type: 'task'
-                  }
-              };
-          }
-          return {};
-        }
-      });
-    }
-  }, []);
 
 
 
@@ -813,15 +785,15 @@ export default function Calendar() {
     }
   }, [activeAccount, fetchCalendarEvents]);
 
-  // Get filtered tasks based on selected task list
+  // Get filtered tasks based on selected task list - USE UNIFIED STORE DATA
   const getFilteredTasks = () => {
-    const tasks = selectedColumnId === 'all'
-      ? Object.values(googleTasks).flat()
-      : googleTasks[selectedColumnId] || [];
-    
-    // Deduplicate tasks by ID to prevent key errors
-    const uniqueTasks = Array.from(new Map(tasks.map(task => [task.id, task])).values());
-    return uniqueTasks;
+    if (selectedColumnId === 'all') {
+      // Get all tasks from all columns
+      return taskLists.flatMap(list => getTasksByColumn(list.id));
+    } else {
+      // Get tasks from specific column
+      return getTasksByColumn(selectedColumnId);
+    }
   };
 
   const filteredTasks = getFilteredTasks();
@@ -897,28 +869,68 @@ export default function Calendar() {
 
   const handleTaskDrop = async (info: DropArg) => {
     if (info.draggedEl.getAttribute('data-task')) {
-      const task: GoogleTask = JSON.parse(info.draggedEl.getAttribute('data-task') || '{}');
+      const task: UnifiedTask = JSON.parse(info.draggedEl.getAttribute('data-task') || '{}');
       
-      // Find which task list this task belongs to
-      const taskListId = Object.keys(googleTasks).find(listId => 
-        googleTasks[listId].some(t => t.id === task.id)
-      );
+      // Prevent the default behavior of creating a modal
+      info.draggedEl.style.display = 'none';
       
-      if (taskListId) {
-        try {
-          // Update the task with the new due date
-          const updatedTask = {
-            ...task,
-            due: info.date.toISOString()
-          };
-          
-          await updateGoogleTask(taskListId, task.id, updatedTask);
-          
-          // The calendar will automatically refresh since we're watching the googleTasks state
-        } catch (err) {
-          console.error('Failed to update task due date:', err);
-          setError('Failed to update task. Please try again.');
+      // Calculate event time based on where it was dropped
+      const dropDate = info.date;
+      const isAllDay = info.allDay;
+      
+      let startTime: Date;
+      let endTime: Date;
+      
+      if (isAllDay) {
+        // Dropped on all-day area
+        startTime = new Date(dropDate);
+        startTime.setHours(9, 0, 0, 0); // Default to 9 AM
+        endTime = new Date(dropDate);
+        endTime.setHours(10, 0, 0, 0); // Default 1 hour duration
+      } else {
+        // Dropped on a specific time
+        startTime = new Date(dropDate);
+        endTime = new Date(dropDate);
+        endTime.setHours(startTime.getHours() + 1); // Default 1 hour duration
+      }
+      
+      try {
+        // Create a calendar event for this task
+        const event = {
+          title: task.title,
+          start: startTime.toISOString(),
+          end: endTime.toISOString(),
+          description: task.notes || '',
+          extendedProps: {
+            taskId: task.id,
+            type: 'task-event',
+            taskData: task
+          }
+        };
+        
+        // Add the event to the calendar
+        const calendarApi = calendarRef.current?.getApi();
+        if (calendarApi) {
+          calendarApi.addEvent(event);
         }
+        
+        // Optionally, also update the task's due date
+        const taskListId = Object.keys(googleTasks).find(listId => 
+          googleTasks[listId].some(t => t.id === task.id)
+        );
+        
+        if (taskListId) {
+          await updateGoogleTask(taskListId, task.id, {
+            ...task,
+            due: startTime.toISOString()
+          });
+        }
+      } catch (err) {
+        console.error('Failed to create event from task:', err);
+        setError('Failed to schedule task. Please try again.');
+      } finally {
+        // Show the dragged element again
+        info.draggedEl.style.display = '';
       }
     }
   };
@@ -1032,7 +1044,7 @@ export default function Calendar() {
     
     // Handle task events differently
     if (event.extendedProps.type === 'task') {
-      const taskData = event.extendedProps.taskData as GoogleTask;
+      const taskData = event.extendedProps.taskData as UnifiedTask;
       setSelectedTaskForScheduling(taskData);
       setSelectedScheduleDate(new Date(event.start!));
       setShowScheduleModal(true);
@@ -1068,6 +1080,32 @@ export default function Calendar() {
       console.error('Failed to update event position:', err);
       setError('Failed to update event. Please try again.');
       dropInfo.revert();
+    }
+  };
+
+  const handleEventResize = async (resizeInfo: any) => {
+    const { event } = resizeInfo;
+    try {
+      // Check if this is a task-based event
+      if (event.extendedProps.type === 'task-event') {
+        // For task events, just update the calendar display
+        // The task itself remains unchanged in Google Tasks
+        console.log('Task event resized:', event.title, 'New duration:', event.end.getTime() - event.start.getTime());
+      } else {
+        // For regular calendar events, update in Google Calendar
+        const eventData = {
+          summary: event.title,
+          description: event.extendedProps.description,
+          location: event.extendedProps.location,
+          start: { dateTime: event.start!.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+          end: { dateTime: event.end!.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+        };
+        await updateCalendarEvent(event.id!, eventData);
+      }
+    } catch (err) {
+      console.error('Failed to resize event:', err);
+      setError('Failed to resize event. Please try again.');
+      resizeInfo.revert();
     }
   };
 
@@ -1134,16 +1172,16 @@ export default function Calendar() {
     }
   };
 
-  // Handle task duplicate
-  const handleDuplicateTask = async (task: GoogleTask) => {
+  const handleDuplicateTask = async (task: UnifiedTask) => {
     try {
+      // Find which task list this task belongs to
       const taskListId = Object.keys(googleTasks).find(listId => 
         googleTasks[listId].some(t => t.id === task.id)
       );
       
       if (taskListId) {
         await createGoogleTask(taskListId, {
-          title: `${task.title} (Copy)`,
+          title: `${task.title} (copy)`,
           notes: task.notes,
           due: task.due,
         });
@@ -1153,6 +1191,8 @@ export default function Calendar() {
       setError('Failed to duplicate task. Please try again.');
     }
   };
+
+
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -1493,6 +1533,7 @@ export default function Calendar() {
                 select={handleDateSelect}
                 eventClick={handleEventClick}
                 eventDrop={handleEventDrop}
+                eventResize={handleEventResize}
                 drop={handleTaskDrop}
                 datesSet={(dateInfo) => {
                   setCurrentViewTitle(dateInfo.view.title);
@@ -1570,199 +1611,8 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Task Side Panel */}
-        {showTaskPanel && (
-          <div className="w-80 shrink-0">
-            <div className="border-border-primary flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
-              {/* Tasks Header */}
-              <div className="border-border-primary flex items-center justify-between border-b p-4">
-                <div className="flex items-center gap-2">
-                  <ListChecks size={18} className="text-accent-primary" />
-                  <Heading level={3} className="text-md text-text-primary font-semibold">
-                    Tasks
-                  </Heading>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => setShowTaskPanel(false)}
-                  className="size-8"
-                >
-                  <X size={16} />
-                </Button>
-              </div>
-              
-              {/* Task List Selector and New Task Button */}
-              <div className="border-border-primary bg-bg-secondary/30 space-y-3 border-b p-4">
-                <div className="relative">
-                  <select
-                    value={selectedColumnId}
-                    onChange={(e) => setSelectedColumnId(e.target.value)}
-                    className="border-border-primary bg-bg-card text-text-primary focus:ring-accent-primary/20 w-full appearance-none rounded-lg border p-3 pr-10 font-medium transition-colors focus:border-accent-primary focus:ring-2"
-                  >
-                    <option value="all">All Tasks</option>
-                    {taskLists.map(taskList => (
-                      <option key={taskList.id} value={taskList.id}>{taskList.title}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="text-text-muted pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
-                </div>
-                <Button 
-                  variant="primary" 
-                  size="sm" 
-                  onClick={handleCreateTask}
-                  className="w-full font-medium shadow-sm"
-                >
-                  <Plus size={16} className="mr-2" />
-                  New task
-                </Button>
-              </div>
-              
-              {/* Task List */}
-              <div ref={taskPanelRef} className="flex-1 space-y-2 overflow-y-auto p-4">
-              {isTasksLoading ? (
-                <div className="py-8 text-center">
-                  <div className="mx-auto mb-2 size-6 animate-spin rounded-full border-2 border-accent-primary border-t-transparent"></div>
-                  <Text size="sm" variant="muted">Loading tasks...</Text>
-                </div>
-              ) : tasksError ? (
-                <div className="py-8 text-center">
-                  <Text size="sm" className="text-status-error">Failed to load tasks</Text>
-                  <Text size="xs" variant="muted" className="mt-1">{tasksError}</Text>
-                </div>
-              ) : (
-                <>
-                  {filteredTasks.map(task => {
-                    const isOverdue = task.due && new Date(task.due) < new Date() && task.status !== 'completed';
-                    const taskListId = Object.keys(googleTasks).find(listId => 
-                      googleTasks[listId].some(t => t.id === task.id)
-                    );
-                    
-                    return (
-                      <ContextMenu
-                        key={task.id}
-                        items={[
-                          {
-                            label: 'Edit task',
-                            icon: <Edit2 size={14} />,
-                            onClick: () => {
-                              setEditingTask(task);
-                              setShowTaskModal(true);
-                            }
-                          },
-                          {
-                            label: task.status === 'completed' ? 'Mark as incomplete' : 'Mark as complete',
-                            icon: <CheckCircle size={14} />,
-                            onClick: async () => {
-                              if (taskListId) {
-                                await toggleTaskComplete(taskListId, task.id, task.status !== 'completed');
-                              }
-                            }
-                          },
-                          {
-                            separator: true
-                          },
-                          {
-                            label: 'Duplicate task',
-                            icon: <Copy size={14} />,
-                            onClick: () => handleDuplicateTask(task)
-                          },
-                          {
-                            separator: true
-                          },
-                          {
-                            label: 'Delete task',
-                            icon: <Trash2 size={14} />,
-                            onClick: () => {
-                              setTaskToDelete(task);
-                              setShowDeleteTaskDialog(true);
-                            },
-                            destructive: true
-                          }
-                        ]}
-                      >
-                        <Card 
-                          className={`draggable-task bg-bg-card border-border-primary group cursor-grab rounded-lg border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-primary hover:shadow-md${
-                            isOverdue ? 'border-l-status-error border-l-4' : 'border-l-4 border-l-transparent'
-                          } ${task.status === 'completed' ? 'opacity-60' : ''}`}
-                          data-task={JSON.stringify(task)}
-                          onClick={(e) => {
-                            // Don't open edit modal if clicking on checkbox
-                            if ((e.target as HTMLElement).closest('button[data-checkbox]')) {
-                              return;
-                            }
-                            setEditingTask(task);
-                            setShowTaskModal(true);
-                          }}
-                        >
-                          <div className="flex gap-3">
-                            {/* Completion Checkbox */}
-                            <button
-                              data-checkbox
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (taskListId) {
-                                  await toggleTaskComplete(taskListId, task.id, task.status !== 'completed');
-                                }
-                              }}
-                              className={`
-                                mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border-2 transition-colors
-                                duration-200
-                                ${task.status === 'completed' 
-                                  ? 'border-success bg-success text-white' 
-                                  : 'border-border-default hover:border-success'
-                                }
-                              `}
-                              title={task.status === 'completed' ? 'Mark as incomplete' : 'Mark as complete'}
-                            >
-                              {task.status === 'completed' && <CheckSquare size={12} />}
-                            </button>
-                            
-                            {/* Task Content */}
-                            <div className="flex-1">
-                              <Text size="sm" weight="medium" className={`text-text-primary ${task.status === 'completed' ? 'line-through' : ''}`}>
-                                {task.title}
-                              </Text>
-                              {task.due && (
-                                  <Text size="xs" className={`mt-1 ${
-                                    isOverdue ? 'text-status-error' : 'text-text-muted'
-                                  }`}>
-                                    Due: {new Date(task.due).toLocaleDateString()}
-                                  </Text>
-                                )}
-                            </div>
-                          </div>
-                        </Card>
-                      </ContextMenu>
-                    );
-                  })}
-                  {filteredTasks.length === 0 && (
-                    <div className="px-4 py-8 text-center">
-                      <div className="bg-bg-tertiary mx-auto mb-3 flex size-12 items-center justify-center rounded-full">
-                        <ListChecks size={24} className="text-text-muted" />
-                      </div>
-                      <Text size="sm" weight="medium" className="text-text-primary">No tasks found</Text>
-                      <Text size="xs" variant="muted" className="mt-1">
-                        {selectedColumnId === 'all' ? 'Create a task to get started.' : `No tasks in this list.`}
-                      </Text>
-                    </div>
-                  )}
-                </>
-              )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
       
-      {!showTaskPanel && (
-        <Button 
-          className="fixed bottom-6 right-6 z-40"
-          onClick={() => setShowTaskPanel(true)}
-        >
-          <ListChecks className="mr-2" /> Show tasks
-        </Button>
-      )}
 
       {/* Event Creation/Editing Modal */}
       {showEventModal && (

@@ -358,20 +358,79 @@ class RealtimeSync {
     
     logger.debug(`[RealtimeSync] Updating task in Google: ${task.title}`);
     
-    const response = await googleTasksService.updateTask(
-      { id: useSettingsStore.getState().integrations.googleAccounts.find(acc => acc.isActive)?.id } as any,
-      task.googleTaskListId,
-      task.googleTaskId,
-      {
-        title: task.title,
-        notes: task.notes,
-        due: task.due,
-        status: task.status,
-      }
-    );
+    const activeAccount = useSettingsStore.getState().integrations.googleAccounts.find(acc => acc.isActive);
+    if (!activeAccount) {
+      throw new Error('No active Google account');
+    }
     
-    if (!response.success) {
-      throw new Error(response.error?.message || 'Failed to update task');
+    // Check if this is a move between lists by checking previous state
+    const taskPreviousState = task.previousState;
+    if (taskPreviousState && taskPreviousState.googleTaskListId && 
+        taskPreviousState.googleTaskListId !== task.googleTaskListId) {
+      // Google Tasks API doesn't support moving tasks between lists
+      // We must delete from source list and recreate in target list
+      logger.info(`[RealtimeSync] Moving task between lists using delete-recreate: ${taskPreviousState.googleTaskListId} -> ${task.googleTaskListId}`);
+      
+      // 1. Create new task in target list
+      const createResponse = await googleTasksService.createTask(
+        { id: activeAccount.id } as any,
+        task.googleTaskListId,
+        {
+          title: task.title,
+          notes: task.notes,
+          due: task.due,
+          status: task.status,
+        }
+      );
+      
+      if (!createResponse.success || !createResponse.data) {
+        throw new Error(createResponse.error?.message || 'Failed to create task in target list');
+      }
+      
+      const newGoogleTask = createResponse.data;
+      logger.info(`[RealtimeSync] Created task in target list with new ID: ${newGoogleTask.id}`);
+      
+      // 2. Delete task from source list
+      const deleteResponse = await googleTasksService.deleteTask(
+        { id: activeAccount.id } as any,
+        taskPreviousState.googleTaskListId,
+        task.googleTaskId
+      );
+      
+      if (!deleteResponse.success) {
+        // Try to clean up - delete the newly created task
+        logger.error(`[RealtimeSync] Failed to delete source task, attempting cleanup`);
+        await googleTasksService.deleteTask(
+          { id: activeAccount.id } as any,
+          task.googleTaskListId,
+          newGoogleTask.id
+        );
+        throw new Error(deleteResponse.error?.message || 'Failed to delete task from source list');
+      }
+      
+      // 3. Update local task with new Google Task ID
+      const storeState = useUnifiedTaskStore.getState();
+      storeState.markTaskSynced(task.id, newGoogleTask.id, task.googleTaskListId);
+      logger.info(`[RealtimeSync] Successfully moved task between lists`);
+      
+      return; // Exit early, we've handled the sync
+    } else {
+      // Normal update
+      const response = await googleTasksService.updateTask(
+        { id: activeAccount.id } as any,
+        task.googleTaskListId,
+        task.googleTaskId,
+        {
+          title: task.title,
+          notes: task.notes,
+          due: task.due,
+          status: task.status,
+        }
+      );
+      
+      if (!response.success) {
+        throw new Error(response.error?.message || 'Failed to update task');
+      }
     }
     
     const storeState = useUnifiedTaskStore.getState();

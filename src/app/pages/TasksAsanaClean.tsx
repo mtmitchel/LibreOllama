@@ -14,6 +14,7 @@ import { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { realtimeSync } from '../../services/realtimeSync';
 import { googleTasksService } from '../../services/google/googleTasksService';
+import { UnifiedTaskCard } from '../../components/tasks/UnifiedTaskCard';
 import {
   DndContext,
   DragOverlay,
@@ -213,9 +214,10 @@ const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Convert date picker value to proper ISO string  
+    // Convert date picker value to RFC 3339 format at midnight UTC
+    // Google Tasks expects dates to be at midnight UTC for all-day tasks
     const formattedDue = formData.due 
-      ? new Date(formData.due + 'T00:00:00').toISOString()
+      ? `${formData.due}T00:00:00.000Z`
       : undefined;
       
     const taskData: Partial<UnifiedTask> = {
@@ -658,16 +660,20 @@ export default function TasksAsanaClean() {
       const { active } = event;
       const taskId = active.id as string;
 
-      for (const column of columns) {
+      console.log('[DragStart] Starting drag for task:', taskId);
+
+      // Use kanbanColumns instead of columns
+      for (const column of kanbanColumns) {
         const task = column.tasks.find((t) => t.id === taskId);
         if (task) {
+          console.log('[DragStart] Found task:', { id: task.id, title: task.title, columnId: column.id });
           setActiveTask(task);
           setActiveColumn(column.id);
           break;
         }
       }
     },
-    [columns]
+    [kanbanColumns]
   );
 
   // Handle drag end
@@ -675,10 +681,20 @@ export default function TasksAsanaClean() {
     async (event: DragEndEvent) => {
       const { active, over } = event;
 
+      console.log('[DragEnd] Event:', { 
+        activeId: active.id, 
+        overId: over?.id, 
+        activeColumn,
+        over
+      });
+
       setActiveTask(null);
       setActiveColumn(null);
 
-      if (!over || !activeColumn) return;
+      if (!over) {
+        console.log('[DragEnd] No drop target found');
+        return;
+      }
 
       const taskId = active.id as string;
       const overId = over.id as string;
@@ -687,23 +703,64 @@ export default function TasksAsanaClean() {
 
       if (overId.startsWith("column-")) {
         targetColumnId = overId.replace("column-", "");
+        console.log('[DragEnd] Dropped on column:', targetColumnId);
       } else {
         const targetColumn = kanbanColumns.find((col) =>
           col.tasks.some((task) => task.id === overId)
         );
-        if (!targetColumn) return;
+        if (!targetColumn) {
+          console.log('[DragEnd] Could not find target column for task:', overId);
+          return;
+        }
         targetColumnId = targetColumn.id;
+        console.log('[DragEnd] Dropped on task, target column:', targetColumnId);
       }
 
-      if (activeColumn !== targetColumnId) {
+      // Find the source column from the task
+      const task = kanbanColumns.flatMap(col => col.tasks).find(t => t.id === taskId);
+      if (!task) {
+        console.error('[DragEnd] Task not found:', taskId);
+        return;
+      }
+      
+      // Find which column currently contains this task
+      const sourceColumn = kanbanColumns.find(col => 
+        col.tasks.some(t => t.id === taskId)
+      );
+      const sourceColumnId = sourceColumn?.id || task.columnId;
+
+      console.log('[DragEnd] Move details:', {
+        taskId,
+        taskTitle: task.title,
+        sourceColumnId,
+        sourceColumnTitle: sourceColumn?.title,
+        targetColumnId,
+        targetColumnTitle: kanbanColumns.find(c => c.id === targetColumnId)?.title,
+        isDifferentColumn: sourceColumnId !== targetColumnId,
+        kanbanColumns: kanbanColumns.map(c => ({ id: c.id, title: c.title, taskCount: c.tasks.length }))
+      });
+      
+      if (!sourceColumnId) {
+        console.error('[DragEnd] Source column not found');
+        return;
+      }
+      
+      if (sourceColumnId === targetColumnId) {
+        console.log('[DragEnd] Same column - no move needed');
+        return;
+      }
+
+      if (targetColumnId) {
         try {
+          console.log('[DragEnd] Moving task...');
           await moveUnifiedTask(taskId, targetColumnId);
+          console.log('[DragEnd] Task moved successfully');
         } catch (error) {
-          console.error('Failed to move task:', error);
+          console.error('[DragEnd] Failed to move task:', error);
         }
       }
     },
-    [activeColumn, columns, moveUnifiedTask]
+    [kanbanColumns, moveUnifiedTask]
   );
 
   // Handle drag cancel
@@ -1850,7 +1907,7 @@ const DroppableColumn = memo<DroppableColumnProps>(({
   );
 });
 
-// Draggable Task Card Component
+// Draggable Task Card Component Wrapper
 interface DraggableTaskCardProps {
   task: UnifiedTask;
   columnId: string;
@@ -1888,12 +1945,7 @@ const DraggableTaskCard = memo<DraggableTaskCardProps>(({
     id: task.id,
   });
   
-  // Metadata is now part of the task object in unified store
-  const metadata = {
-    labels: task.labels || [],
-    priority: task.priority || 'normal' as const,
-    subtasks: task.attachments || [] // Using attachments field for subtasks
-  };
+  const { updateTask: updateUnifiedTask, deleteTask: deleteUnifiedTask, createTask } = useUnifiedTaskStore();
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -1909,6 +1961,39 @@ const DraggableTaskCard = memo<DraggableTaskCardProps>(({
     });
   };
 
+  const handleToggle = async () => {
+    await updateUnifiedTask(task.id, { status: task.status === 'completed' ? 'needsAction' : 'completed' });
+  };
+
+  const handleEdit = () => {
+    if (onEditTask) {
+      onEditTask(task, columnId);
+    }
+  };
+
+  const handleDelete = () => {
+    setContextMenu({
+      x: 0,
+      y: 0,
+      task,
+      columnId
+    });
+  };
+
+  const handleDuplicate = async () => {
+    const { columns } = useUnifiedTaskStore.getState();
+    const column = columns.find(c => c.id === columnId);
+    createTask({
+      columnId: columnId,
+      title: `${task.title} (copy)`,
+      notes: task.notes,
+      due: task.due,
+      labels: task.labels,
+      priority: task.priority,
+      googleTaskListId: column?.googleTaskListId
+    });
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -1916,166 +2001,17 @@ const DraggableTaskCard = memo<DraggableTaskCardProps>(({
       {...listeners}
       {...attributes}
       onContextMenu={handleContextMenu}
-      onClick={(e) => {
-        // Only open edit modal if not dragging and not clicking on input or button elements
-        const target = e.target as HTMLElement;
-        const isInteractive = target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button');
-        if (!isDragging && onEditTask && !isInteractive) {
-          onEditTask(task, columnId);
-        }
-      }}
-      className={`p-5 bg-white cursor-pointer transition-all ${
-        isDragging ? 'opacity-50' : ''
-      }`}
-      style={{ 
-        borderRadius: '18px',
-        boxShadow: isDragging ? '0 8px 32px rgba(50, 50, 93, 0.25)' : '0 2px 8px rgba(50, 50, 93, 0.08)',
-        border: 'none',
-        transition: 'box-shadow 0.18s, transform 0.12s',
-        ...(style || {})
-      }}
-      onMouseEnter={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.boxShadow = '0 6px 24px rgba(50, 50, 93, 0.13)';
-          e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(50, 50, 93, 0.08)';
-          e.currentTarget.style.transform = 'translateY(0) scale(1)';
-        }
-      }}
+      className={`${isDragging ? 'opacity-50' : ''}`}
     >
-      {/* Priority indicator */}
-      {task.priority && task.priority !== 'normal' && (
-        <div className="mb-3">
-          <span 
-            className="px-3 py-1 rounded-lg inline-block"
-            style={{ 
-              ...asanaTypography.label,
-              backgroundColor: priorityConfig[task.priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
-              color: priorityConfig[task.priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
-            }}
-          >
-            {priorityConfig[task.priority as keyof typeof priorityConfig]?.label || task.priority} Priority
-          </span>
-        </div>
-      )}
-      
-      {/* Syncing indicator for temporary tasks */}
-      {!task.googleTaskId && task.id.startsWith('temp-') && (
-        <div className="flex items-center gap-1 mb-2">
-          <RefreshCw size={12} className="animate-spin" style={{ color: '#9CA6AF' }} />
-          <span style={{ ...asanaTypography.small, color: '#9CA6AF' }}>Syncing...</span>
-        </div>
-      )}
-      
-      {/* Title */}
-      {editingTask === task.id ? (
-        <input
-          type="text"
-          value={editingTitle}
-          onChange={(e) => setEditingTitle(e.target.value)}
-          onBlur={() => onSaveEdit(task)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onSaveEdit(task);
-            } else if (e.key === 'Escape') {
-              setEditingTask(null);
-              setEditingTitle('');
-            }
-          }}
-          className="w-full px-2 py-1 border border-gray-300 rounded"
-          style={asanaTypography.h3}
-          autoFocus
-        />
-      ) : (
-        <h4 
-          style={{ 
-            ...asanaTypography.h3, 
-            marginBottom: '8px',
-            wordBreak: 'break-word',
-            overflowWrap: 'break-word'
-          }}
-          onDoubleClick={() => {
-            setEditingTask(task.id);
-            setEditingTitle(task.title);
-          }}
-        >
-          {task.title}
-        </h4>
-      )}
-      
-      {/* Description/Notes */}
-      {task.notes && (
-        <p 
-          style={{ 
-            ...asanaTypography.body,
-            marginBottom: '12px',
-            wordBreak: 'break-word',
-            overflowWrap: 'break-word'
-          }}
-        >
-          {task.notes}
-        </p>
-      )}
-
-      {/* Labels */}
-      {task.labels && task.labels.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {task.labels.map((label: string) => (
-            <span
-              key={label}
-              className="px-2.5 py-1 rounded-lg"
-              style={{ 
-                ...asanaTypography.label,
-                backgroundColor: '#EDF1F5',
-                color: '#796EFF'
-              }}
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-3 pt-3" 
-           style={{ borderTop: '1px solid #F1F2F3' }}>
-        <div className="flex items-center gap-3">
-          {/* Due date */}
-          {task.due && (
-            <div className="flex items-center gap-1.5">
-              <Calendar size={14} style={{ color: '#9CA6AF' }} />
-              <span style={asanaTypography.small}>
-                {new Date(task.due).toLocaleDateString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric',
-                  year: new Date(task.due).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                })}
-              </span>
-            </div>
-          )}
-
-          {/* Subtasks */}
-          {task.attachments && task.attachments.length > 0 && (
-            <div className="flex items-center gap-1">
-              <CheckCircle2 size={14} style={{ color: '#14A085' }} />
-              <span style={asanaTypography.small}>
-                {task.attachments.filter((st: any) => st.type === 'completed').length}/{task.attachments.length}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Status icon */}
-        {task.status === 'completed' ? (
-          <CheckCircle2 size={16} style={{ color: '#14A085' }} />
-        ) : (
-          <Circle size={16} style={{ color: '#DDD' }} />
-        )}
-      </div>
+      <UnifiedTaskCard
+        task={task}
+        onToggle={handleToggle}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
+        variant="default"
+        showMetadata={true}
+      />
     </div>
   );
 });

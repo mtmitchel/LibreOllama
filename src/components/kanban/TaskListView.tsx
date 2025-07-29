@@ -9,6 +9,15 @@ import { Card, Button, Input } from '../ui';
 import { Plus, Search, Filter, Calendar, CheckSquare, Square, Tag, MoreHorizontal, RotateCcw, ArrowUpDown, GripVertical, Type, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
+// Helper to parse Google Tasks date (midnight UTC) for display
+const parseTaskDate = (dateStr: string): Date => {
+  // Google Tasks stores dates as YYYY-MM-DDT00:00:00.000Z
+  // We parse just the date part to avoid timezone shifts
+  const datePart = dateStr.split('T')[0];
+  // Create date at noon to avoid any timezone edge cases
+  return new Date(datePart + 'T12:00:00');
+};
+
 interface TaskListViewProps {
   className?: string;
   searchQuery?: string;
@@ -281,7 +290,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
             <div className="space-y-2">
               {filteredTasks.map((task) => {
                 const isCompleted = task.status === 'completed';
-                const isOverdue = task.due && new Date(task.due) < new Date() && !isCompleted;
+                const isOverdue = task.due && parseTaskDate(task.due) < new Date() && !isCompleted;
                 const completedSubtasks = task.metadata?.subtasks?.filter(st => st.completed).length || 0;
                 const totalSubtasks = task.metadata?.subtasks?.length || 0;
 
@@ -366,7 +375,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                                 isOverdue ? 'text-error' : 'text-secondary'
                               }`}>
                                 <Calendar size={12} />
-                                <span>{format(new Date(task.due), 'MMM d, yyyy')}</span>
+                                <span>{format(parseTaskDate(task.due), 'MMM d, yyyy')}</span>
                               </div>
                             )}
 

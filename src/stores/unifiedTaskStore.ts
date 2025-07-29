@@ -211,6 +211,9 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             
             if (!sourceColumn || !targetColumn) return;
             
+            // Store previous state for sync to detect column/list changes
+            task.previousState = { ...task };
+            
             // Remove from source
             sourceColumn.taskIds = sourceColumn.taskIds.filter(id => id !== taskId);
             
@@ -311,7 +314,38 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                                                   existingTask.syncState === 'pending_update' ||
                                                   existingTask.syncState === 'pending_delete';
                 
-                Object.assign(existingTask, update.data);
+                // Check if task has moved to a different list
+                if (existingTask.googleTaskListId !== update.googleTaskListId) {
+                  logger.info(`[UnifiedStore] Task moved from list ${existingTask.googleTaskListId} to ${update.googleTaskListId}`);
+                  
+                  // Find the new column for this task
+                  const newColumn = state.columns.find(c => c.googleTaskListId === update.googleTaskListId);
+                  const oldColumn = state.columns.find(c => c.id === existingTask.columnId);
+                  
+                  if (newColumn && oldColumn) {
+                    // Remove from old column
+                    oldColumn.taskIds = oldColumn.taskIds.filter(id => id !== existingTask.id);
+                    
+                    // Add to new column
+                    if (!newColumn.taskIds.includes(existingTask.id)) {
+                      newColumn.taskIds.push(existingTask.id);
+                    }
+                    
+                    // Update task's column references
+                    existingTask.columnId = newColumn.id;
+                    existingTask.googleTaskListId = update.googleTaskListId;
+                    
+                    logger.info(`[UnifiedStore] Moved task "${existingTask.title}" from "${oldColumn.title}" to "${newColumn.title}"`);
+                  }
+                }
+                
+                // Only update Google-specific fields, preserve custom metadata
+                existingTask.title = update.data.title || existingTask.title;
+                existingTask.notes = update.data.notes;
+                existingTask.due = update.data.due;
+                existingTask.status = update.data.status || existingTask.status;
+                existingTask.position = update.data.position || existingTask.position;
+                // Preserve labels, priority, attachments, and other custom fields
                 
                 // Only mark as synced if it wasn't pending
                 if (!shouldPreservePendingState) {

@@ -350,7 +350,13 @@ pub async fn update_task(
     Ok(updated_task)
 }
 
-/// Move a task to a different list or position
+/// Move a task within the same list to a different position
+/// 
+/// IMPORTANT: Google Tasks API does NOT support moving tasks between different lists.
+/// This endpoint only works for repositioning within the same list.
+/// To move a task between lists, you must:
+/// 1. Create a new task in the target list
+/// 2. Delete the original task from the source list
 #[tauri::command]
 pub async fn move_task(
     account_id: String,
@@ -358,27 +364,67 @@ pub async fn move_task(
     task_id: String,
     parent: Option<String>,
     previous: Option<String>,
+    auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
 ) -> Result<GoogleTask, String> {
     println!("📋 [TASKS-API] Moving task {} to list: {} (account: {})", 
              task_id, task_list_id, account_id);
 
-    // Create a mock moved task
+    // Get access token
+    let tokens = auth_service.get_account_tokens(&account_id).await
+        .map_err(|e| format!("Failed to get tokens: {}", e))?
+        .ok_or("No tokens found for account")?;
+
+    // Make API call to Google Tasks Move endpoint
+    let client = reqwest::Client::new();
+    let mut url = format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks/{}/move", 
+                         task_list_id, task_id);
+    
+    // Add query parameters for parent and previous if provided
+    let mut query_params = Vec::new();
+    if let Some(p) = &parent {
+        query_params.push(format!("parent={}", p));
+    }
+    if let Some(prev) = &previous {
+        query_params.push(format!("previous={}", prev));
+    }
+    
+    if !query_params.is_empty() {
+        url.push_str("?");
+        url.push_str(&query_params.join("&"));
+    }
+    
+    let response = client
+        .post(&url)
+        .bearer_auth(&tokens.access_token)
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!("Tasks API failed: {} - {}", status, error_text));
+    }
+
+    let task_data: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+
     let moved_task = GoogleTask {
-        id: task_id.clone(),
-        title: "Moved Task".to_string(),
-        notes: None,
-        status: "needsAction".to_string(),
-        due: None,
-        completed: None,
-        updated: Some(chrono::Utc::now().to_rfc3339()),
-        parent,
-        position: previous,
-        kind: Some("tasks#task".to_string()),
-        etag: None,
-        self_link: None,
+        id: task_data["id"].as_str().unwrap_or("").to_string(),
+        title: task_data["title"].as_str().unwrap_or("").to_string(),
+        notes: task_data["notes"].as_str().map(|s| s.to_string()),
+        status: task_data["status"].as_str().unwrap_or("needsAction").to_string(),
+        due: task_data["due"].as_str().map(|s| s.to_string()),
+        completed: task_data["completed"].as_str().map(|s| s.to_string()),
+        updated: task_data["updated"].as_str().map(|s| s.to_string()),
+        parent: task_data["parent"].as_str().map(|s| s.to_string()),
+        position: task_data["position"].as_str().map(|s| s.to_string()),
+        kind: task_data["kind"].as_str().map(|s| s.to_string()),
+        etag: task_data["etag"].as_str().map(|s| s.to_string()),
+        self_link: task_data["selfLink"].as_str().map(|s| s.to_string()),
         links: None,
-        hidden: Some(false),
-        deleted: Some(false),
+        hidden: task_data["hidden"].as_bool(),
+        deleted: task_data["deleted"].as_bool(),
     };
 
     println!("✅ [TASKS-API] Task moved successfully: {}", task_id);

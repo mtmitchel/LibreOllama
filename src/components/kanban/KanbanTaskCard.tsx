@@ -9,6 +9,15 @@ import { Button, ContextMenu, ConfirmDialog } from '../ui';
 import { Calendar, CheckSquare, Square, MoreHorizontal, User, Tag, Edit2, Trash2, Copy, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 
+// Helper to parse Google Tasks date (midnight UTC) for display
+const parseTaskDate = (dateStr: string): Date => {
+  // Google Tasks stores dates as YYYY-MM-DDT00:00:00.000Z
+  // We parse just the date part to avoid timezone shifts
+  const datePart = dateStr.split('T')[0];
+  // Create date at noon to avoid any timezone edge cases
+  return new Date(datePart + 'T12:00:00');
+};
+
 interface KanbanTaskCardProps {
   task: KanbanTask;
   columnId: string;
@@ -94,7 +103,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   }, []);
 
   const isCompleted = task.status === 'completed';
-  const isOverdue = task.due && new Date(task.due) < new Date() && !isCompleted;
+  const isOverdue = task.due && parseTaskDate(task.due) < new Date() && !isCompleted;
 
   return (
     <>
@@ -170,7 +179,7 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
             {/* Task Title */}
             <h4 className={`
-              min-w-0 flex-1 text-sm font-medium leading-snug
+              min-w-0 flex-1 text-sm font-medium leading-snug truncate
               ${isCompleted ? 'text-muted line-through' : 'text-primary'}
             `}>
               {task.title}
@@ -213,11 +222,11 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                 }
               `}>
                 <Calendar size={10} />
-                <span>{format(new Date(task.due), 'MMM d')}</span>
+                <span>{format(parseTaskDate(task.due), 'MMM d')}</span>
               </div>
             )}
 
-            {/* Priority Indicator */}
+                        {/* Priority Indicator */}
             {task.metadata?.priority && task.metadata.priority !== 'normal' && (
               <div className={`
                 rounded-full border px-2.5 py-1.5 text-xs font-medium
@@ -225,9 +234,9 @@ export const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                 ${task.metadata.priority === 'urgent' ? 'border-error/20 bg-error-ghost text-error' : ''}
                 ${task.metadata.priority === 'low' ? 'border-border-default bg-tertiary text-muted' : ''}
               `}>
-                {task.metadata.priority}
-              </div>
-            )}
+              {task.metadata.priority}
+            </div>
+          )}
 
             {/* Recurring Indicator */}
             {task.metadata?.recurring?.enabled && (

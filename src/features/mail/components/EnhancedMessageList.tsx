@@ -185,7 +185,7 @@ export function EnhancedMessageList({
   // Loading state
   if (isLoadingMessages && messages.length === 0) {
     return (
-      <div className={`flex h-full flex-col items-center justify-center ${className}`}>
+      <div className={`absolute inset-0 flex flex-col items-center justify-center ${className}`}>
         <RefreshCw size={32} className="mb-4 animate-spin text-accent-primary" />
         <Text size="sm" variant="secondary">Loading messages...</Text>
       </div>
@@ -199,16 +199,10 @@ export function EnhancedMessageList({
                        error.toLowerCase().includes('no refresh token');
     
     return (
-      <div className={`flex h-64 flex-col items-center justify-center ${className}`}>
+      <div className={`absolute inset-0 flex flex-col items-center justify-center ${className}`}>
         <AlertCircle size={32} className="mb-4 text-error" />
         <Text size="lg" weight="medium" className="mb-2">
           {isAuthError ? 'Connection expired' : 'Unable to load messages'}
-        </Text>
-        <Text size="sm" variant="secondary" className="mb-4 max-w-md text-center">
-          {isAuthError 
-            ? 'Your Gmail connection needs to be refreshed. Please reconnect your account to continue.'
-            : 'We encountered an issue loading your messages. Please try again.'
-          }
         </Text>
         <div className="flex gap-2">
           {isAuthError ? (
@@ -216,7 +210,7 @@ export function EnhancedMessageList({
               variant="primary" 
               onClick={() => {
                 // Open settings to reconnect account
-                window.location.href = '/settings?tab=accounts';
+                window.location.href = '/settings?tab=account';
               }}
             >
               Reconnect account
