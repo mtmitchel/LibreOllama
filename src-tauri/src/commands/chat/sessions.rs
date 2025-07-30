@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc, TimeZone};
 use anyhow::Context;
+use std::sync::Arc;
 
 // Import database modules
 use crate::database::{ChatSession as DbChatSession, ChatMessage as DbChatMessage};
@@ -68,7 +69,7 @@ impl From<DbChatMessage> for ChatMessageApi {
 #[tauri::command]
 pub async fn create_session(
     title: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<String, String> {
     let db_manager_clone = db_manager.inner().clone();
     let session_id = tokio::task::spawn_blocking(move || {
@@ -84,7 +85,7 @@ pub async fn create_session(
 
 #[tauri::command]
 pub async fn get_sessions(
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<ChatSessionApi>, String> {
     let db_manager_clone = db_manager.inner().clone();
     let db_sessions = tokio::task::spawn_blocking(move || {
@@ -120,7 +121,7 @@ pub async fn send_message(
     session_id_str: String,
     content: String,
     role: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<ChatMessageApi, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
 
@@ -166,7 +167,7 @@ pub async fn send_message(
 #[tauri::command]
 pub async fn get_session_messages(
     session_id_str: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<ChatMessageApi>, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
     
@@ -187,7 +188,7 @@ pub async fn get_session_messages(
 
 #[tauri::command]
 pub async fn get_database_stats(
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<serde_json::Value, String> {
     let db_manager_clone = db_manager.inner().clone();
     let sessions = tokio::task::spawn_blocking(move || {
@@ -226,7 +227,7 @@ pub async fn get_database_stats(
 #[tauri::command]
 pub async fn delete_session_v4(
     session_id_str: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
     
@@ -245,7 +246,7 @@ pub async fn delete_session_v4(
 #[tauri::command]
 pub async fn delete_session(
     session_id: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let session_id_int: i32 = session_id.parse().map_err(|_| "Invalid session ID format".to_string())?;
     
@@ -279,7 +280,7 @@ pub async fn delete_session(
 pub async fn update_session_title(
     session_id_str: String,
     new_title: String,
-    db_manager: tauri::State<'_, crate::database::DatabaseManager>,
+    db_manager: tauri::State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<bool, String> {
     let session_id: i32 = session_id_str.parse().map_err(|_| "Invalid session ID format".to_string())?;
     

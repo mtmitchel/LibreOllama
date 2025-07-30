@@ -180,6 +180,42 @@ pub fn run() {
             commands::calendar::create_calendar_event,
             commands::calendar::update_calendar_event,
             commands::calendar::delete_calendar_event,
+            // Chat commands
+            commands::chat::create_session,
+            commands::chat::get_sessions,
+            commands::chat::send_message,
+            commands::chat::get_session_messages,
+            commands::chat::get_database_stats,
+            commands::chat::delete_session,
+            commands::chat::delete_session_v4,
+            commands::chat::update_session_title,
+            // Text processing commands
+            commands::text_processing::clean_text,
+            // Ollama commands
+            commands::ollama::ollama_health_check,
+            commands::ollama::ollama_get_status,
+            commands::ollama::ollama_start_sidecar,
+            commands::ollama::ollama_stop_sidecar,
+            commands::ollama::ollama_list_models,
+            commands::ollama::ollama_get_model_info,
+            commands::ollama::ollama_delete_model,
+            commands::ollama::ollama_pull_model,
+            commands::ollama::ollama_chat,
+            commands::ollama::ollama_chat_stream,
+            commands::ollama::ollama_generate,
+            // LLM commands
+            commands::llm::llm_chat_openai,
+            commands::llm::llm_list_openai_models,
+            commands::llm::llm_chat_anthropic,
+            commands::llm::llm_list_anthropic_models,
+            commands::llm::llm_chat_openrouter,
+            commands::llm::llm_list_openrouter_models,
+            commands::llm::llm_chat_deepseek,
+            commands::llm::llm_list_deepseek_models,
+            commands::llm::llm_chat_mistral,
+            commands::llm::llm_list_mistral_models,
+            commands::llm::llm_chat_gemini,
+            commands::llm::llm_list_gemini_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
