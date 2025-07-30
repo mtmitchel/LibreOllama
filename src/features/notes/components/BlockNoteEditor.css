@@ -87,4 +87,96 @@
 .ProseMirror-selectednode {
   outline: none !important;
   box-shadow: none !important;
-} 
+}
+
+/* Hyperlink styles */
+.blocknote-editor-container a,
+.ProseMirror a,
+.bn-inline-content[data-content-type="link"] {
+  color: #3b82f6 !important; /* Light blue */
+  text-decoration: underline !important;
+  cursor: pointer !important;
+}
+
+.blocknote-editor-container a:hover,
+.ProseMirror a:hover,
+.bn-inline-content[data-content-type="link"]:hover {
+  color: #2563eb !important; /* Darker blue on hover */
+  text-decoration: underline !important;
+}
+
+/* Dark mode hyperlink styles */
+.dark .blocknote-editor-container a,
+.dark .ProseMirror a,
+.dark .bn-inline-content[data-content-type="link"] {
+  color: #60a5fa !important; /* Light blue for dark mode */
+}
+
+.dark .blocknote-editor-container a:hover,
+.dark .ProseMirror a:hover,
+.dark .bn-inline-content[data-content-type="link"]:hover {
+  color: #93bbfc !important; /* Lighter blue on hover in dark mode */
+}
+
+/* Text alignment styles */
+.bn-block[data-text-alignment="left"] {
+  text-align: left !important;
+}
+
+.bn-block[data-text-alignment="center"] {
+  text-align: center !important;
+}
+
+.bn-block[data-text-alignment="right"] {
+  text-align: right !important;
+}
+
+.bn-block[data-text-alignment="justify"] {
+  text-align: justify !important;
+}
+
+/* Image alignment - using margin auto instead of flex to avoid cursor issues */
+.bn-block[data-content-type="image"][data-text-alignment="center"] img {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.bn-block[data-content-type="image"][data-text-alignment="right"] img {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+/* Ensure the image container doesn't interfere with cursor positioning */
+.bn-block[data-content-type="image"] {
+  text-align: inherit !important;
+}
+
+/* Fix cursor positioning around images */
+.bn-block[data-content-type="image"] .bn-visual-media {
+  position: relative !important;
+}
+
+/* Ensure proper cursor behavior after images */
+.bn-block[data-content-type="image"] + .bn-block {
+  clear: both !important;
+}
+
+/* Table alignment - using margin auto instead of flex to avoid cursor issues */
+.bn-block[data-content-type="table"][data-text-alignment="center"] .bn-table-container {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: table !important;
+}
+
+.bn-block[data-content-type="table"][data-text-alignment="right"] .bn-table-container {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  display: table !important;
+}
+
+/* Ensure the table block doesn't interfere with cursor positioning */
+.bn-block[data-content-type="table"] {
+  text-align: inherit !important;
+}

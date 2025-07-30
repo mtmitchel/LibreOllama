@@ -266,12 +266,13 @@ const Settings: React.FC = () => {
     });
   }, [getEnabledModels]);
 
-  // Fetch available models when accessing agents-and-models section
+  // Fetch available models when accessing agents-and-models section or agents-and-models-2 (AI Writing)
   useEffect(() => {
-    if (activeSection === 'agents-and-models' && chatStore.availableModels.length === 0) {
+    if (activeSection === 'agents-and-models' || activeSection === 'agents-and-models-2') {
+      // Always fetch all models when entering these sections
       fetchAvailableModels();
     }
-  }, [activeSection, fetchAvailableModels, chatStore.availableModels.length]);
+  }, [activeSection, fetchAvailableModels]);
 
   const handleGoogleAuth = async (account: { id: string; email: string; name: string; picture: string }) => {
     // Add account to settings store with comprehensive information
@@ -615,11 +616,11 @@ const Settings: React.FC = () => {
                       <select
                         id="ai-provider"
                         value={aiWritingSettings.defaultProvider}
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const newProvider = e.target.value as LLMProvider;
-                          updateAIWritingSettings({ defaultProvider: newProvider });
-                          // Fetch models for the new provider
-                          chatStore.fetchAvailableModels(newProvider);
+                          updateAIWritingSettings({ defaultProvider: newProvider, defaultModel: null });
+                          // Fetch all models first, then filter by provider
+                          await chatStore.fetchAvailableModels();
                         }}
                         className="w-full px-3 py-2 text-sm bg-surface border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-colors"
                       >
@@ -666,6 +667,8 @@ const Settings: React.FC = () => {
                          chatStore.availableModels.filter((model: any) => model.provider === aiWritingSettings.defaultProvider).length === 0 && (
                           <option disabled>No models available for {aiWritingSettings.defaultProvider}</option>
                         )}
+                        {console.log('[AI Writing] Available models for', aiWritingSettings.defaultProvider + ':', 
+                          chatStore.availableModels.filter((model: any) => model.provider === aiWritingSettings.defaultProvider))}
                       </select>
                       {!chatStore.isLoadingModels && 
                        aiWritingSettings.defaultProvider === 'ollama' &&

@@ -5,13 +5,6 @@ import {
   Copy,
   Scissors,
   Clipboard,
-  Type,
-  Bold,
-  Italic,
-  Underline,
-  Link,
-  Image,
-  Table,
   Sparkles,
   RefreshCw,
   FileText,
@@ -22,11 +15,7 @@ import {
   Key,
   MessageSquare,
   ChevronRight,
-  Search,
-  Printer,
-  Code,
-  Quote,
-  ListOrdered
+  Search
 } from 'lucide-react';
 import { cn } from '../../../core/lib/utils';
 
@@ -36,8 +25,9 @@ interface BrowserLikeContextMenuProps {
   position: { top: number; left: number };
   editor: BlockNoteEditor;
   onAIAction: (action: string, customQuestion?: string) => void;
-  onFormatAction: (action: string) => void;
-  onInsertAction: (action: string) => void;
+  onCut?: () => void;
+  onCopy?: () => void;
+  onPaste?: () => void;
 }
 
 interface MenuItem {
@@ -52,6 +42,10 @@ interface MenuItem {
 }
 
 const submenuScrollbarStyles = `
+  .submenu-scrollbar {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   .submenu-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
@@ -71,6 +65,12 @@ const submenuScrollbarStyles = `
   .dark .submenu-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #6b7280;
   }
+  /* Prevent rendering artifacts */
+  .context-menu-container * {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
 `;
 
 export function BrowserLikeContextMenu({ 
@@ -79,9 +79,11 @@ export function BrowserLikeContextMenu({
   position, 
   editor, 
   onAIAction,
-  onFormatAction,
-  onInsertAction
+  onCut,
+  onCopy,
+  onPaste
 }: BrowserLikeContextMenuProps) {
+  console.log('BrowserLikeContextMenu rendered, onAIAction:', typeof onAIAction);
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
@@ -93,62 +95,41 @@ export function BrowserLikeContextMenu({
 
   // AI Writing Tools submenu items
   const aiWritingTools: MenuItem[] = [
-    { id: 'rewrite-header', label: 'Rewrite', separator: true },
-    { id: 'rewrite-professional', label: 'Professional tone', icon: <RefreshCw size={14} />, action: () => onAIAction('rewrite-professional') },
-    { id: 'rewrite-friendly', label: 'Friendly tone', icon: <RefreshCw size={14} />, action: () => onAIAction('rewrite-friendly') },
+    { id: 'rewrite-professional', label: 'Professional tone', icon: <RefreshCw size={14} />, action: () => {
+      console.log('Professional tone clicked');
+      onAIAction('rewrite-professional');
+    }},
+    { id: 'rewrite-friendly', label: 'Friendly tone', icon: <RefreshCw size={14} />, action: () => {
+      console.log('Friendly tone clicked');
+      onAIAction('rewrite-friendly');
+    }},
     { id: 'rewrite-concise', label: 'Make concise', icon: <RefreshCw size={14} />, action: () => onAIAction('rewrite-concise') },
     { id: 'rewrite-expanded', label: 'Expand', icon: <RefreshCw size={14} />, action: () => onAIAction('rewrite-expanded') },
-    { separator: true },
-    { id: 'transform-header', label: 'Transform', separator: true },
+    { id: 'separator-1', separator: true },
     { id: 'proofread', label: 'Proofread', icon: <CheckCircle size={14} />, action: () => onAIAction('proofread') },
     { id: 'summarize', label: 'Summarize', icon: <FileText size={14} />, action: () => onAIAction('summarize') },
     { id: 'translate', label: 'Translate...', icon: <Languages size={14} />, action: () => onAIAction('translate') },
     { id: 'explain', label: 'Explain', icon: <Lightbulb size={14} />, action: () => onAIAction('explain') },
-    { separator: true },
-    { id: 'format-header', label: 'Format', separator: true },
+    { id: 'separator-2', separator: true },
     { id: 'create-list', label: 'Create list', icon: <List size={14} />, action: () => onAIAction('create-list') },
     { id: 'key-points', label: 'Extract key points', icon: <Key size={14} />, action: () => onAIAction('key-points') },
-    { separator: true },
+    { id: 'separator-3', separator: true },
     { id: 'ask-ai', label: 'Ask AI...', icon: <MessageSquare size={14} />, action: () => onAIAction('ask-custom') }
   ];
 
-  // Formatting submenu items
-  const formattingTools: MenuItem[] = [
-    { id: 'bold', label: 'Bold', icon: <Bold size={14} />, shortcut: 'Ctrl+B', action: () => onFormatAction('bold') },
-    { id: 'italic', label: 'Italic', icon: <Italic size={14} />, shortcut: 'Ctrl+I', action: () => onFormatAction('italic') },
-    { id: 'underline', label: 'Underline', icon: <Underline size={14} />, shortcut: 'Ctrl+U', action: () => onFormatAction('underline') },
-    { separator: true },
-    { id: 'code', label: 'Code', icon: <Code size={14} />, action: () => onFormatAction('code') },
-    { id: 'quote', label: 'Quote', icon: <Quote size={14} />, action: () => onFormatAction('quote') },
-    { separator: true },
-    { id: 'bullet-list', label: 'Bullet list', icon: <List size={14} />, action: () => onFormatAction('bulletListItem') },
-    { id: 'numbered-list', label: 'Numbered list', icon: <ListOrdered size={14} />, action: () => onFormatAction('numberedListItem') }
-  ];
-
-  // Insert submenu items
-  const insertTools: MenuItem[] = [
-    { id: 'link', label: 'Link...', icon: <Link size={14} />, shortcut: 'Ctrl+K', action: () => onInsertAction('link') },
-    { id: 'image', label: 'Image...', icon: <Image size={14} />, action: () => onInsertAction('image') },
-    { id: 'table', label: 'Table', icon: <Table size={14} />, action: () => onInsertAction('table') }
-  ];
-
-  // Main menu items
+  // Main menu items - simplified for basic operations and writing tools
   const menuItems: MenuItem[] = [
-    { id: 'cut', label: 'Cut', icon: <Scissors size={14} />, shortcut: 'Ctrl+X', disabled: !hasSelection, action: () => document.execCommand('cut') },
-    { id: 'copy', label: 'Copy', icon: <Copy size={14} />, shortcut: 'Ctrl+C', disabled: !hasSelection, action: () => document.execCommand('copy') },
-    { id: 'paste', label: 'Paste', icon: <Clipboard size={14} />, shortcut: 'Ctrl+V', action: () => document.execCommand('paste') },
-    { separator: true },
+    { id: 'cut', label: 'Cut', icon: <Scissors size={14} />, shortcut: 'Ctrl+X', disabled: !hasSelection, action: onCut },
+    { id: 'copy', label: 'Copy', icon: <Copy size={14} />, shortcut: 'Ctrl+C', disabled: !hasSelection, action: onCopy },
+    { id: 'paste', label: 'Paste', icon: <Clipboard size={14} />, shortcut: 'Ctrl+V', action: onPaste },
+    { id: 'separator-1', separator: true },
     { id: 'writing-tools', label: 'Writing tools', icon: <Sparkles size={14} />, submenu: aiWritingTools, disabled: !hasSelection },
-    { id: 'format', label: 'Format', icon: <Type size={14} />, submenu: formattingTools },
-    { id: 'insert', label: 'Insert', icon: <Image size={14} />, submenu: insertTools },
-    { separator: true },
+    { id: 'separator-2', separator: true },
     { id: 'search', label: 'Search with Google...', icon: <Search size={14} />, disabled: !hasSelection, action: () => {
       if (selectedText) {
         window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedText)}`, '_blank');
       }
-    }},
-    { separator: true },
-    { id: 'print', label: 'Print...', icon: <Printer size={14} />, shortcut: 'Ctrl+P', action: () => window.print() }
+    }}
   ];
 
   // Handle submenu hover
@@ -161,9 +142,20 @@ export function BrowserLikeContextMenu({
 
     if (item.submenu) {
       const rect = event.currentTarget.getBoundingClientRect();
+      const submenuWidth = 200; // Approximate width
+      const viewportWidth = window.innerWidth;
+      
+      // Calculate position with viewport boundary check
+      let left = rect.right - 8; // Small overlap
+      
+      // If submenu would go off-screen, position it to the left of the menu
+      if (left + submenuWidth > viewportWidth - 10) {
+        left = rect.left - submenuWidth + 8;
+      }
+      
       setSubmenuPosition({
         top: rect.top,
-        left: rect.right - 8 // Small overlap
+        left: left
       });
       setActiveSubmenu(item.id);
     } else if (activeSubmenu) {
@@ -199,7 +191,13 @@ export function BrowserLikeContextMenu({
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        menuRef.current && 
+        !menuRef.current.contains(event.target as Node) &&
+        submenuRef.current &&
+        !submenuRef.current.contains(event.target as Node)
+      ) {
+        console.log('Clicking outside menu, closing');
         onClose();
       }
     };
@@ -237,16 +235,8 @@ export function BrowserLikeContextMenu({
 
   const renderMenuItem = (item: MenuItem, isSubmenu = false) => {
     if (item.separator) {
-      if (item.label) {
-        // Section header
-        return (
-          <div key={item.id} className="bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-            {item.label}
-          </div>
-        );
-      }
-      // Separator line
-      return <div key={`separator-${item.id}`} className="mx-2 my-1 h-px bg-gray-200 dark:bg-gray-700" />;
+      // Separator line only - don't log these
+      return <div key={item.id} className="mx-2 my-1 h-px bg-gray-200 dark:bg-gray-700" />;
     }
 
     return (
@@ -259,11 +249,34 @@ export function BrowserLikeContextMenu({
             : "hover:bg-blue-50 dark:hover:bg-gray-800",
           !isSubmenu && item.submenu && "pr-8"
         )}
+        onMouseDown={(e) => {
+          console.log('Mouse down on:', item.label, 'disabled:', item.disabled, 'has action:', !!item.action);
+        }}
         onClick={(e) => {
-          if (!item.disabled && item.action) {
-            e.stopPropagation();
-            item.action();
-            onClose();
+          console.log('Click event on:', item.label);
+          e.preventDefault();
+          e.stopPropagation();
+          if (!item.disabled) {
+            // Don't close menu if item has submenu
+            if (item.submenu) {
+              console.log('Menu item with submenu clicked:', item.label);
+              // Submenu is shown on hover, so just prevent closing
+              return;
+            }
+            // Only execute action and close for items without submenu
+            if (item.action) {
+              console.log('Menu item clicked:', item.label, 'isSubmenu:', isSubmenu);
+              // Execute action first, then close after a small delay
+              item.action();
+              if (!isSubmenu) {
+                setTimeout(() => {
+                  onClose();
+                }, 50);
+              } else {
+                // For submenu items, close immediately
+                onClose();
+              }
+            }
           }
         }}
         onMouseEnter={(e) => {
@@ -304,7 +317,7 @@ export function BrowserLikeContextMenu({
       {/* Main menu */}
       <div
         ref={menuRef}
-        className="fixed z-[100] animate-in fade-in slide-in-from-top-2 duration-200"
+        className="context-menu-container fixed z-[100] animate-in fade-in slide-in-from-top-2 duration-200"
         style={{
           top: `${position.top}px`,
           left: `${position.left}px`,
@@ -321,6 +334,7 @@ export function BrowserLikeContextMenu({
       {/* Submenu */}
       {activeSubmenu && (
         <>
+          {console.log('Rendering submenu for:', activeSubmenu)}
           {/* Invisible hover bridge */}
           <div
             className="fixed"
@@ -338,27 +352,44 @@ export function BrowserLikeContextMenu({
           <div
             className="fixed z-[101]"
             style={{
-              top: `${Math.max(8, Math.min(submenuPosition.top, window.innerHeight - 400))}px`,
+              top: `${submenuPosition.top}px`,
               left: `${submenuPosition.left}px`,
             }}
             ref={submenuRef}
             onMouseEnter={handleSubmenuEnter}
             onMouseLeave={handleSubmenuLeave}
+            onClick={(e) => {
+              console.log('Submenu container clicked');
+              // Don't stop propagation - let clicks reach menu items
+            }}
           >
-            <div 
-              className="submenu-scrollbar min-w-[200px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900"
-              style={{
-                maxHeight: `${window.innerHeight - 32}px`,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                // Force hardware acceleration to prevent artifacts
-                transform: 'translateZ(0)',
-                willChange: 'transform',
-              }}
-            >
-              {menuItems
-                .find(item => item.id === activeSubmenu)
-                ?.submenu?.map(item => renderMenuItem(item, true))}
+            <div className="rounded-lg shadow-lg" style={{ overflow: 'hidden' }}>
+              <div 
+                className="submenu-scrollbar min-w-[200px] border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+                style={{
+                  position: 'relative',
+                  borderRadius: 'inherit',
+                }}
+              >
+                <div 
+                  className="py-1"
+                  style={{
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    maxHeight: `${Math.min(400, window.innerHeight - submenuPosition.top - 20)}px`,
+                    minHeight: '40px',
+                  }}
+                >
+                  {menuItems
+                    .find(item => item.id === activeSubmenu)
+                    ?.submenu?.map((item, index) => {
+                      if (!item.separator) {
+                        console.log('Rendering submenu item:', item.label, 'has action:', !!item.action);
+                      }
+                      return renderMenuItem(item, true);
+                    })}
+                </div>
+              </div>
             </div>
           </div>
         </>

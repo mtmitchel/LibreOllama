@@ -40,7 +40,9 @@ interface AIOutputModalProProps {
   output: string;
   isLoading?: boolean;
   onReplace: (text: string) => void;
-  onRegenerate: (options?: any) => void;
+  onCopy?: () => void;
+  onInsert?: () => void;
+  onRegenerate?: (options?: any) => void;
   action: AIAction;
   originalText: string;
   usedModel?: string;
@@ -85,12 +87,15 @@ export function AIOutputModalPro({
   output, 
   isLoading = false,
   onReplace,
+  onCopy,
+  onInsert,
   onRegenerate,
   action,
   originalText,
   usedModel,
   usedProvider
 }: AIOutputModalProProps) {
+  console.log('AIOutputModalPro render, isOpen:', isOpen, 'action:', action, 'isLoading:', isLoading);
   const backdropRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const [copiedFeedback, setCopiedFeedback] = useState(false);
@@ -101,6 +106,7 @@ export function AIOutputModalPro({
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTranslatedLanguage, setCurrentTranslatedLanguage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [askAIQuestion, setAskAIQuestion] = useState('');
   
   // Reset processing state when output changes
   useEffect(() => {
@@ -168,7 +174,13 @@ export function AIOutputModalPro({
     if (isProcessing) return;
     
     try {
-      await navigator.clipboard.writeText(isEditing ? editedOutput : output);
+      if (onCopy) {
+        // Use custom copy handler if provided
+        onCopy();
+      } else {
+        // Default copy behavior
+        await navigator.clipboard.writeText(isEditing ? editedOutput : output);
+      }
       setCopiedFeedback(true);
       setTimeout(() => setCopiedFeedback(false), 2000);
     } catch (error) {
@@ -210,7 +222,7 @@ export function AIOutputModalPro({
         const language = LANGUAGES.find(l => l.value === targetLanguage)?.label || 'Spanish';
         console.log('Regenerating translation for language:', language);
         setCurrentTranslatedLanguage(targetLanguage);
-        onRegenerate({ language });
+        onRegenerate && onRegenerate({ language });
       } else {
         onRegenerate();
       }
@@ -255,109 +267,173 @@ export function AIOutputModalPro({
     <div
       ref={backdropRef}
       className={cn(
-        "fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm",
-        isOpen ? "animate-in fade-in duration-200" : "opacity-0 pointer-events-none"
+        "fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-md",
+        isOpen ? "animate-in fade-in duration-300" : "opacity-0 pointer-events-none"
       )}
       style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
     >
       <div 
         ref={modalRef}
         className={cn(
-          "relative w-full max-w-2xl max-h-[80vh] flex flex-col m-4",
-          isOpen ? "animate-in fade-in zoom-in-95 duration-200" : "opacity-0 scale-95"
+          "relative w-full max-w-3xl max-h-[85vh] flex flex-col m-4",
+          isOpen ? "animate-in fade-in slide-in-from-bottom-5 duration-300" : "opacity-0 translate-y-4"
         )}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <Card className="relative overflow-hidden flex flex-col h-full">
+        <Card className="relative overflow-hidden flex flex-col h-full shadow-2xl bg-surface/95 backdrop-blur-xl border border-border-subtle">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className={cn("p-1.5 rounded-md bg-surface-hover", actionConfig?.color || 'text-blue-600')}>
-                {actionConfig?.icon && React.isValidElement(actionConfig.icon) 
-                  ? React.cloneElement(actionConfig.icon as React.ReactElement, { size: 16 })
-                  : <Type size={16} />
-                }
+          <div className="bg-gradient-to-r from-surface to-surface-hover/50 border-b border-border-subtle">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "p-2 rounded-lg bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm shadow-sm",
+                  actionConfig?.color || 'text-blue-600'
+                )}>
+                  {actionConfig?.icon && React.isValidElement(actionConfig.icon) 
+                    ? React.cloneElement(actionConfig.icon as React.ReactElement, { size: 20 })
+                    : <Type size={20} />
+                  }
+                </div>
+                <div>
+                  <Heading level={3} className="text-lg font-semibold">{actionConfig?.title || 'AI Writing'}</Heading>
+                  {usedModel && usedProvider && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="secondary" className="text-xs">
+                        <Sparkles size={10} className="mr-1" />
+                        {usedProvider} · {usedModel}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <Heading level={4} className="text-base">{actionConfig?.title || 'AI Writing'}</Heading>
-                {usedModel && usedProvider && (
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Badge variant="secondary">
-                      <Settings size={12} className="mr-1" />
-                      {usedProvider} · {usedModel}
-                    </Badge>
-                  </div>
-                )}
-              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleForceClose}
+                onMouseDown={handleForceClose}
+                className="hover:bg-surface-hover rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </Button>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleForceClose}
-              onMouseDown={handleForceClose}
-              className="hover:bg-hover"
-            >
-              <X size={20} />
-            </Button>
           </div>
 
           {/* Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {/* Action-specific options */}
-            {action === 'translate' && !isLoading && (
-              <div className="flex items-center gap-3 p-3 bg-surface rounded-lg border border-border-subtle">
-                <Languages size={18} className="text-tertiary" />
-                <Text size="sm" variant="secondary">
-                  {currentTranslatedLanguage === targetLanguage ? 'Translated to:' : 'Translate to:'}
-                </Text>
-                <select
-                  value={targetLanguage}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    const newValue = e.target.value;
-                    setTargetLanguage(newValue);
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                  }}
-                  disabled={isLoading || isProcessing}
-                  className="flex-1 px-3 py-1.5 text-sm bg-surface border border-border-subtle rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {LANGUAGES.map(lang => (
-                    <option key={lang.value} value={lang.value}>
-                      {lang.flag} {lang.label}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleRegenerateWithLanguage}
-                  onMouseDown={(e) => e.preventDefault()}
-                  disabled={isLoading || isProcessing}
-                  className="gap-2"
-                >
-                  <RefreshCw size={14} className={cn((isLoading || isProcessing) && "animate-spin")} />
-                  Retranslate
-                </Button>
+            {action === 'translate' && (
+              <div className="bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                    <Languages size={20} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <Text size="sm" weight="medium" className="mb-1">
+                      {output && currentTranslatedLanguage === targetLanguage 
+                        ? 'Translated to' 
+                        : 'Select target language'}
+                    </Text>
+                    <select
+                      value={targetLanguage}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        const newValue = e.target.value;
+                        setTargetLanguage(newValue);
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onFocus={(e) => {
+                        e.stopPropagation();
+                      }}
+                      disabled={isLoading || isProcessing}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                    >
+                      {LANGUAGES.map(lang => (
+                        <option key={lang.value} value={lang.value}>
+                          {lang.flag} {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={output ? "secondary" : "primary"}
+                    onClick={handleRegenerateWithLanguage}
+                    onMouseDown={(e) => e.preventDefault()}
+                    disabled={isLoading || isProcessing}
+                    className="gap-2 whitespace-nowrap"
+                  >
+                    <RefreshCw size={14} className={cn((isLoading || isProcessing) && "animate-spin")} />
+                    {output ? 'Retranslate' : 'Translate'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Ask AI input */}
+            {(action === 'ask-ai' || action === 'ask-custom') && (
+              <div className="bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200/50 dark:border-purple-800/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                    <MessageSquare size={20} className="text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <Text size="sm" weight="medium" className="mb-2">
+                      What would you like to ask about this text?
+                    </Text>
+                    <input
+                      type="text"
+                      value={askAIQuestion}
+                      onChange={(e) => setAskAIQuestion(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && askAIQuestion.trim() && !isProcessing) {
+                          e.preventDefault();
+                          const question = askAIQuestion.trim();
+                          setIsProcessing(true);
+                          onRegenerate && onRegenerate({ question });
+                        }
+                      }}
+                      placeholder="Enter your question..."
+                      disabled={isLoading || isProcessing}
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      autoFocus
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={output ? "secondary" : "primary"}
+                    onClick={() => {
+                      if (askAIQuestion.trim() && !isProcessing) {
+                        const question = askAIQuestion.trim();
+                        setIsProcessing(true);
+                        onRegenerate && onRegenerate({ question });
+                      }
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    disabled={isLoading || isProcessing || !askAIQuestion.trim()}
+                    className="gap-2 whitespace-nowrap"
+                  >
+                    <Sparkles size={14} className={cn(isProcessing && "animate-pulse")} />
+                    {output ? 'Ask Again' : 'Ask'}
+                  </Button>
+                </div>
               </div>
             )}
 
             {/* Original text reference */}
             <details className="group">
-              <summary className="flex items-center gap-2 cursor-pointer text-sm text-secondary hover:text-primary transition-colors">
+              <summary className="flex items-center gap-2 cursor-pointer text-sm text-secondary hover:text-primary transition-colors p-2 rounded-lg hover:bg-surface-hover">
                 <ChevronDown size={16} className="group-open:rotate-180 transition-transform" />
-                Original text ({originalText.length} characters)
+                <span className="font-medium">Original text</span>
+                <span className="text-xs text-tertiary">({originalText.length} characters)</span>
               </summary>
-              <div className="mt-2 p-3 text-sm text-tertiary bg-surface rounded-md max-h-32 overflow-y-auto">
+              <div className="mt-2 p-4 text-sm text-secondary bg-surface-hover/50 rounded-lg border border-border-subtle max-h-32 overflow-y-auto font-mono">
                 {originalText}
               </div>
             </details>
@@ -365,23 +441,24 @@ export function AIOutputModalPro({
             {/* Output display */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Text size="sm" weight="semibold" variant="secondary">AI Response</Text>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-accent-primary" />
+                  <Text size="sm" weight="semibold">AI Response</Text>
+                </div>
                 {!isLoading && (
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-3 text-xs text-tertiary">
-                      <span>{metrics.words} words</span>
-                      <span>·</span>
-                      <span>{metrics.chars} chars</span>
-                      <span>·</span>
-                      <span>{metrics.sentences} sentences</span>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-surface-hover/50 rounded-full text-xs">
+                      <span className="text-secondary">{metrics.words} words</span>
+                      <span className="text-tertiary">•</span>
+                      <span className="text-secondary">{metrics.chars} chars</span>
                       {metrics.wordDiff !== 0 && (
                         <>
-                          <span>·</span>
+                          <span className="text-tertiary">•</span>
                           <span className={cn(
                             "font-medium",
-                            metrics.wordDiff > 0 ? "text-green-600" : "text-red-600"
+                            metrics.wordDiff > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                           )}>
-                            {metrics.wordDiff > 0 ? '+' : ''}{metrics.wordDiff} words ({metrics.percentChange > 0 ? '+' : ''}{metrics.percentChange}%)
+                            {metrics.wordDiff > 0 ? '+' : ''}{metrics.wordDiff} ({metrics.percentChange > 0 ? '+' : ''}{metrics.percentChange}%)
                           </span>
                         </>
                       )}
@@ -397,7 +474,7 @@ export function AIOutputModalPro({
                         }}
                         onMouseDown={(e) => e.preventDefault()}
                         disabled={isProcessing}
-                        className="gap-1 -mr-2"
+                        className="gap-1.5 hover:bg-surface-hover"
                       >
                         <Edit3 size={14} />
                         Edit
@@ -408,31 +485,54 @@ export function AIOutputModalPro({
               </div>
 
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
                   <div className="relative">
-                    <Loader2 className="h-8 w-8 animate-spin text-accent-primary" />
-                    <Sparkles className="h-4 w-4 absolute -top-1 -right-1 text-accent-primary animate-pulse" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full blur-xl opacity-20 animate-pulse" />
+                    <Loader2 className="h-10 w-10 animate-spin text-accent-primary relative z-10" />
+                    <Sparkles className="h-5 w-5 absolute -top-2 -right-2 text-accent-primary animate-pulse" />
                   </div>
-                  <Text variant="secondary" size="sm">Generating AI response...</Text>
+                  <div className="text-center">
+                    <Text variant="secondary" size="sm" className="animate-pulse">
+                      Generating AI response...
+                    </Text>
+                    <Text variant="tertiary" size="xs" className="mt-1">
+                      Using {action === 'translate' ? 'translation model' : 'writing assistant'}
+                    </Text>
+                  </div>
                 </div>
               ) : isEditing ? (
                 <textarea
                   value={editedOutput}
                   onChange={(e) => setEditedOutput(e.target.value)}
-                  className="w-full min-h-[200px] p-4 bg-surface rounded-lg border border-border-subtle focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary resize-y text-sm font-mono"
+                  className="w-full min-h-[250px] p-4 bg-surface border-2 border-border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary resize-y text-sm font-mono transition-all"
                   autoFocus
+                  placeholder="Edit the AI response..."
                 />
-              ) : (
-                <div className="bg-surface rounded-lg border border-border-subtle p-4">
-                  <MarkdownRenderer content={output} className="text-sm" />
+              ) : output ? (
+                <div className="bg-gradient-to-br from-surface to-surface-hover/30 rounded-lg border border-border-subtle p-6 shadow-inner">
+                  <MarkdownRenderer content={output} className="text-sm leading-relaxed" />
                 </div>
-              )}
+              ) : action === 'translate' ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
+                    <Languages size={32} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <Text variant="secondary">Select a language and click "Translate" to begin</Text>
+                </div>
+              ) : (action === 'ask-ai' || action === 'ask-custom') && !output ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="p-4 bg-purple-100 dark:bg-purple-900/30 rounded-full mb-4">
+                    <MessageSquare size={32} className="text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <Text variant="secondary">Enter your question above to get AI insights</Text>
+                </div>
+              ) : null}
             </div>
 
           </div>
 
           {/* Footer Actions */}
-          <div className="border-t border-border-subtle px-4 py-3">
+          <div className="bg-gradient-to-t from-surface-hover/50 to-surface border-t border-border-subtle px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Button
@@ -441,12 +541,12 @@ export function AIOutputModalPro({
                   onClick={handleCopy}
                   onMouseDown={(e) => e.preventDefault()}
                   disabled={isLoading || (!output && !editedOutput) || isProcessing}
-                  className="gap-2"
+                  className="gap-2 hover:bg-surface-hover transition-all"
                 >
                   {copiedFeedback ? (
                     <>
-                      <Check size={16} />
-                      Copied!
+                      <Check size={16} className="text-green-600" />
+                      <span className="text-green-600">Copied!</span>
                     </>
                   ) : (
                     <>
@@ -473,23 +573,24 @@ export function AIOutputModalPro({
                     }
                   }}
                   onMouseDown={(e) => e.preventDefault()}
-                  disabled={isLoading || isProcessing}
-                  className="gap-2"
+                  disabled={isLoading || isProcessing || (action === 'translate' && !output)}
+                  className="gap-2 hover:bg-surface-hover transition-all"
                 >
                   <RefreshCw size={16} className={cn((isLoading || isProcessing) && "animate-spin")} />
                   Regenerate
                 </Button>
+                <div className="h-6 w-px bg-border-subtle" />
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleExport}
                   onMouseDown={(e) => e.preventDefault()}
                   disabled={isLoading || (!output && !editedOutput) || isProcessing}
-                  className="gap-2"
+                  className="gap-2 hover:bg-surface-hover transition-all"
                   title="Export as text file"
                 >
                   <Download size={16} />
-                  Export
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               </div>
               <div className="flex items-center gap-2">
@@ -532,6 +633,25 @@ export function AIOutputModalPro({
                 >
                   Cancel
                 </Button>
+                {onInsert && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (onInsert) {
+                        onInsert();
+                      }
+                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    disabled={isLoading || (!output && !editedOutput) || isProcessing}
+                    className="gap-2"
+                  >
+                    <Download size={16} />
+                    Insert
+                  </Button>
+                )}
                 <Button
                   variant="primary"
                   size="sm"
@@ -541,7 +661,7 @@ export function AIOutputModalPro({
                   className="gap-2"
                 >
                   <ArrowLeftRight size={16} />
-                  Replace Text
+                  Replace
                 </Button>
               </div>
             </div>
