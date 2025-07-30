@@ -45,7 +45,6 @@ export const TopBar = () => {
             >
               <Search size={14} className="text-tertiary opacity-60" />
               <span className="text-xs text-secondary">Search</span>
-              <kbd className="ml-8 rounded bg-tertiary px-2 py-0.5 font-mono text-xs text-tertiary">⌘K</kbd>
             </button>
           </div>
         )}

@@ -57,6 +57,9 @@ class RealtimeSync {
       }
 
       const remoteData = await invoke('get_all_task_data', { accountId: activeAccount.id });
+      
+      logger.debug('[RealtimeSync] Raw backend response:', remoteData);
+      
       const { tasks: taskData, columns } = remoteData as { 
         tasks: Record<string, {
           id: string;
@@ -68,8 +71,8 @@ class RealtimeSync {
           status: string;
           updated: string;
           position: string;
-          priority: string;
-          labels: string[];
+          priority?: string;
+          labels?: string[];
           column_id: string;
         }>, 
         columns: any[] 
@@ -77,7 +80,25 @@ class RealtimeSync {
 
       // Convert backend format to UnifiedTask format
       const tasks: Record<string, UnifiedTask> = {};
+      
+      // First, log a sample task to see the actual structure
+      const sampleTaskId = Object.keys(taskData)[0];
+      if (sampleTaskId) {
+        logger.debug('[RealtimeSync] Sample task from backend:', taskData[sampleTaskId]);
+      }
+      
+      // Check if any tasks have priority set
+      const tasksWithPriority = Object.values(taskData).filter(t => t.priority && t.priority !== 'normal');
+      logger.debug('[RealtimeSync] Tasks with priority:', tasksWithPriority.length);
+      if (tasksWithPriority.length > 0) {
+        logger.debug('[RealtimeSync] Sample task with priority:', tasksWithPriority[0]);
+      }
+      
       for (const [id, task] of Object.entries(taskData)) {
+        // Handle potential undefined or null values
+        const priority = task.priority || 'normal';
+        const labels = Array.isArray(task.labels) ? task.labels : [];
+        
         tasks[id] = {
           id: task.id,
           googleTaskId: task.google_task_id,
@@ -88,11 +109,22 @@ class RealtimeSync {
           status: task.status as 'needsAction' | 'completed',
           updated: task.updated,
           position: task.position,
-          labels: task.labels,
-          priority: task.priority as 'low' | 'normal' | 'high' | 'urgent',
+          labels: labels,
+          priority: priority as 'low' | 'normal' | 'high' | 'urgent',
           columnId: task.column_id,
           syncState: 'synced',
         };
+        
+        // Log tasks with metadata
+        if (labels.length > 0 || priority !== 'normal') {
+          logger.debug('[RealtimeSync] Task with metadata', {
+            id: task.id,
+            title: task.title,
+            labels: labels,
+            priority: priority,
+            rawTask: task // Log the raw task to see what we're getting
+          });
+        }
       }
 
       useUnifiedTaskStore.getState().setTasks(tasks);

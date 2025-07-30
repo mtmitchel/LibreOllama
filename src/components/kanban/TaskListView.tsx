@@ -343,13 +343,16 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                               <span className="rounded-full bg-tertiary px-2 py-1 text-xs text-secondary">
                                 {task.columnTitle}
                               </span>
-                              {task.metadata?.priority && task.metadata.priority !== 'normal' && (
-                                <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                  task.metadata.priority === 'high' ? 'bg-warning-ghost text-warning' :
-                                  task.metadata.priority === 'urgent' ? 'bg-error-ghost text-error' :
-                                  'bg-tertiary text-muted'
-                                }`}>
-                                  {task.metadata.priority}
+                              {task.priority && task.priority !== 'normal' && (
+                                <span style={{
+                                  fontSize: '11px',
+                                  fontWeight: 500,
+                                  padding: '2px 8px',
+                                  borderRadius: '12px',
+                                  backgroundColor: task.priority === 'high' ? 'var(--amber-50)' : task.priority === 'urgent' ? 'var(--red-50)' : 'var(--bg-secondary)',
+                                  color: task.priority === 'high' ? 'var(--amber-600)' : task.priority === 'urgent' ? 'var(--red-600)' : 'var(--text-secondary)'
+                                }}>
+                                  {task.priority === 'urgent' ? 'Urgent' : task.priority === 'high' ? 'High' : 'Low'}
                                 </span>
                               )}
                             </div>
@@ -380,11 +383,11 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                           <div className="flex items-center gap-3 text-xs">
                             {/* Due Date */}
                             {task.due && (
-                              <div className={`flex items-center gap-1 ${
-                                isOverdue ? 'text-error' : 'text-secondary'
-                              }`}>
+                              <div className="flex items-center gap-1" style={{
+                                color: isOverdue ? 'var(--red-600)' : 'var(--text-secondary)'
+                              }}>
                                 <Calendar size={12} />
-                                <span>{format(parseTaskDate(task.due), 'MMM d, yyyy')}</span>
+                                <span>{format(parseTaskDate(task.due), 'MMM d')}</span>
                               </div>
                             )}
 
@@ -417,19 +420,33 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                         </div>
 
                         {/* Labels Preview */}
-                        {task.metadata?.labels && task.metadata.labels.length > 0 && (
+                        {task.labels && task.labels.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
-                            {task.metadata.labels.slice(0, 3).map((label, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent-primary"
-                              >
-                                {label}
-                              </span>
-                            ))}
-                            {task.metadata.labels.length > 3 && (
+                            {task.labels.slice(0, 3).map((label, index) => {
+                              // Assign colors based on label content for consistency
+                              const colors = ['red', 'blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray'];
+                              // Simple hash based on label text
+                              let hash = 0;
+                              for (let i = 0; i < label.length; i++) {
+                                hash = ((hash << 5) - hash) + label.charCodeAt(i);
+                                hash = hash & hash; // Convert to 32bit integer
+                              }
+                              const colorIndex = Math.abs(hash) % colors.length;
+                              const colorClass = `label-${colors[colorIndex]}`;
+                              
+                              return (
+                                <span
+                                  key={index}
+                                  className={`label ${colorClass}`}
+                                  style={{ fontSize: '11px', padding: '2px 8px' }}
+                                >
+                                  {label}
+                                </span>
+                              );
+                            })}
+                            {task.labels.length > 3 && (
                               <span className="inline-flex items-center rounded-full bg-tertiary px-2 py-0.5 text-xs font-medium text-secondary">
-                                +{task.metadata.labels.length - 3}
+                                +{task.labels.length - 3}
                               </span>
                             )}
                           </div>

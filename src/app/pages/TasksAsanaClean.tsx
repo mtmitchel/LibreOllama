@@ -1,22 +1,30 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { KanbanBoard } from '../../components/kanban';
 import { TaskListView } from '../../components/kanban/TaskListView';
+import { TaskSidePanel } from '../../components/tasks';
 import { useHeader } from '../contexts/HeaderContext';
 import { Button } from '../../components/ui';
 import './styles/TasksAsanaClean.css';
+import '../../styles/asana-tokens.css';
+import '../../styles/asana-design-system.css';
 import { 
   LayoutGrid, List, RefreshCw, Plus, Search, X, ArrowUpDown, ChevronDown, 
-  GripVertical, Calendar, Type, RotateCcw
+  GripVertical, Calendar, Type, RotateCcw, Filter, MoreHorizontal
 } from 'lucide-react';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { realtimeSync } from '../../services/realtimeSync';
+import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
+import '../../tests/persistence-test';
 
 type ViewMode = 'kanban' | 'list';
 
 export default function TasksAsanaClean() {
   const { clearHeaderProps } = useHeader();
-  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('tasks-view-mode') as ViewMode;
+    return saved === 'list' || saved === 'kanban' ? saved : 'kanban';
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewListDialog, setShowNewListDialog] = useState(false);
@@ -28,11 +36,13 @@ export default function TasksAsanaClean() {
   const [sortBy, setSortBy] = useState<'created' | 'due' | 'title'>('created');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const [selectedTask, setSelectedTask] = useState<UnifiedTask | null>(null);
+  const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
 
   const activeAccount = useActiveGoogleAccount();
   const isAuthenticated = !!activeAccount;
 
-  const { columns, createTask, deleteColumn, updateColumn } = useUnifiedTaskStore();
+  const { columns, createTask, deleteColumn, updateColumn, updateTask, deleteTask, tasks } = useUnifiedTaskStore();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,16 +69,21 @@ export default function TasksAsanaClean() {
     }
   }, [activeAccount]);
 
-  useEffect(() => {
-    const savedViewMode = localStorage.getItem('tasks-view-mode') as ViewMode;
-    if (savedViewMode && (savedViewMode === 'kanban' || savedViewMode === 'list')) {
-      setViewMode(savedViewMode);
-    }
-  }, []);
+  // Remove this useEffect as it's redundant and might be causing issues
+  // The initial state already handles localStorage
 
   const handleViewModeChange = (mode: ViewMode) => {
+    console.log('Changing view mode to:', mode);
     setViewMode(mode);
     localStorage.setItem('tasks-view-mode', mode);
+  };
+
+  const handleEditTask = (taskId: string) => {
+    const task = tasks[taskId];
+    if (task) {
+      setSelectedTask(task);
+      setIsTaskPanelOpen(true);
+    }
   };
 
   const handleSync = async () => {
@@ -139,113 +154,157 @@ export default function TasksAsanaClean() {
   };
 
   return (
-    <div className="flex h-full flex-col" style={{ backgroundColor: '#FAFBFC' }}>
-      {/* Header Controls */}
-      <div className="flex items-center justify-between px-8 py-4" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9' }}>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              if (!isAuthenticated) {
-                alert('Please connect your Google account in Settings to create task lists.');
-                return;
-              }
-              setShowNewListDialog(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2"
-            disabled={!isAuthenticated}
-          >
-            <Plus size={16} />
-            New List
-          </Button>
+    <>
+      {/* Header - matching UnifiedHeader style */}
+      <header className="flex items-center justify-between px-8 py-4" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9' }}>
+        {/* Left side - View toggle and title */}
+        <div className="flex items-center gap-4">
+          {/* View toggle buttons */}
+          <div className="flex items-center bg-secondary rounded-lg" style={{ 
+            padding: '2px', 
+            backgroundColor: '#F6F7F8'
+          }}>
+            <button
+              type="button"
+              onClick={() => {
+                handleViewModeChange('kanban');
+              }}
+              style={{ 
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: viewMode === 'kanban' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'kanban' ? '#151B26' : '#6B6F76',
+                fontSize: '14px', 
+                fontWeight: 500, 
+                cursor: 'pointer',
+                transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none'
+              }}
+            >
+              <LayoutGrid size={16} />
+              <span>Board</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleViewModeChange('list');
+              }}
+              style={{ 
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: viewMode === 'list' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'list' ? '#151B26' : '#6B6F76',
+                fontSize: '14px', 
+                fontWeight: 500, 
+                cursor: 'pointer',
+                transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none'
+              }}
+            >
+              <List size={16} />
+              <span>List</span>
+            </button>
+          </div>
           
-          {isSyncing && (
-            <div className="flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-sm text-muted">
-              <RefreshCw size={14} className="animate-spin" />
-              <span>Syncing tasks...</span>
-            </div>
-          )}
+          {/* Page title */}
+          <h1 className="text-xl font-semibold" style={{ color: '#151B26' }}>Tasks</h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
-            <input
-              type="search"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 rounded-md outline-none transition-all"
-              style={{ 
-                fontSize: '14px',
-                backgroundColor: '#F6F7F8',
-                border: '1px solid transparent',
-                width: '240px'
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-                e.currentTarget.style.borderColor = '#D1D5DB';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.backgroundColor = '#F6F7F8';
-                e.currentTarget.style.borderColor = 'transparent';
-              }}
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 size-6 -translate-y-1/2"
-                onClick={() => setSearchQuery('')}
-              >
-                <X size={12} />
-              </Button>
-            )}
-          </div>
+        {/* Center - Search */}
+        <div className="relative max-w-md flex-1 mx-6">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+          <input
+            type="search"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-2 rounded-xl outline-none transition-all w-full"
+            style={{ 
+              fontSize: '14px',
+              backgroundColor: '#F6F7F8',
+              border: '1px solid transparent'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = '#FFFFFF';
+              e.currentTarget.style.borderColor = '#D1D5DB';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = '#F6F7F8';
+              e.currentTarget.style.borderColor = 'transparent';
+            }}
+          />
+          {searchQuery && (
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 transition-colors"
+              onClick={() => setSearchQuery('')}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        
+        {/* Right side controls */}
+        <div className="flex items-center gap-2">
           
           {/* List View Controls */}
           {viewMode === 'list' && (
             <>
-              <span className="rounded-full bg-card px-3 py-1.5 text-sm font-medium text-secondary">
-                {columns.flatMap(c => c.taskIds).length} tasks
-              </span>
-              
               <div className="relative">
                 <select
                   value={selectedListId}
                   onChange={(e) => setSelectedListId(e.target.value)}
-                  className="border-border-default focus:ring-primary/20 h-8 cursor-pointer appearance-none rounded-lg border bg-card pl-3 pr-8 text-sm text-primary transition-colors focus:border-primary focus:outline-none focus:ring-2"
+                  className="h-8 cursor-pointer appearance-none rounded-lg border pl-3 pr-8 text-sm transition-colors"
+                  style={{
+                    backgroundColor: '#F6F7F8',
+                    borderColor: 'transparent',
+                    color: '#151B26'
+                  }}
                 >
                   <option value="all">All lists</option>
                   {columns.map(column => (
                     <option key={column.id} value={column.id}>{column.title}</option>
                   ))}
                 </select>
-                <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-secondary" />
+                <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" style={{ color: '#6B6F76' }} />
               </div>
               
               <div className="relative" ref={sortMenuRef}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex h-8 items-center gap-2 px-3 hover:bg-tertiary"
+                <button
+                  className="flex h-8 items-center gap-2 px-3 rounded-lg transition-colors"
                   onClick={() => setShowSortMenu(!showSortMenu)}
+                  style={{
+                    backgroundColor: '#F6F7F8',
+                    color: '#6B6F76',
+                    fontSize: '14px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#E8E9EA';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                  }}
                 >
                   <ArrowUpDown size={14} />
-                  <span className="text-sm">Sort</span>
-                </Button>
+                  <span>Sort</span>
+                </button>
                 
                 {showSortMenu && (
-                  <div className="border-border-default absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-card shadow-lg">
+                  <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border bg-white shadow-lg" style={{ borderColor: '#E8E8E9' }}>
                     <button
                       onClick={() => {
                         setSortBy('created');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-tertiary ${
-                        sortBy === 'created' ? 'bg-accent-soft' : ''
+                      className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50 ${
+                        sortBy === 'created' ? 'bg-gray-100' : ''
                       }`}
                     >
                       <GripVertical size={14} className="mr-2" />
@@ -256,8 +315,8 @@ export default function TasksAsanaClean() {
                         setSortBy('due');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-tertiary ${
-                        sortBy === 'due' ? 'bg-accent-soft' : ''
+                      className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
+                        sortBy === 'due' ? 'bg-gray-100' : ''
                       }`}
                     >
                       <Calendar size={14} className="mr-2" />
@@ -268,8 +327,8 @@ export default function TasksAsanaClean() {
                         setSortBy('title');
                         setShowSortMenu(false);
                       }}
-                      className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-tertiary ${
-                        sortBy === 'title' ? 'bg-accent-soft' : ''
+                      className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
+                        sortBy === 'title' ? 'bg-gray-100' : ''
                       }`}
                     >
                       <Type size={14} className="mr-2" />
@@ -281,48 +340,112 @@ export default function TasksAsanaClean() {
             </>
           )}
           
-          <Button
-            variant="ghost"
-            size="sm"
+          {/* Filter Button */}
+          <button 
+            className="px-4 py-2 text-sm rounded-xl flex items-center gap-2 transition-colors"
+            style={{
+              backgroundColor: '#F6F7F8',
+              color: '#6B6F76',
+              fontWeight: 500
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#E8E9EA';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F6F7F8';
+            }}
+          >
+            <Filter size={16} />
+            Filter
+          </button>
+          
+          <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="flex items-center gap-2 px-3 py-2"
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-xl transition-colors"
+            style={{
+              backgroundColor: '#F6F7F8',
+              color: '#6B6F76',
+              fontWeight: 500
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#E8E9EA';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F6F7F8';
+            }}
           >
             <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
-          </Button>
+          </button>
           
-          <div className="flex items-center gap-1 rounded-lg bg-tertiary p-1">
-            <Button
-              variant={viewMode === 'kanban' ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => handleViewModeChange('kanban')}
-              className="flex items-center gap-2 px-3 py-2"
-            >
-              <LayoutGrid size={16} />
-              <span className="hidden sm:inline">Kanban</span>
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => handleViewModeChange('list')}
-              className="flex items-center gap-2 px-3 py-2"
-            >
-              <List size={16} />
-              <span className="hidden sm:inline">List</span>
-            </Button>
-          </div>
+          {/* Debug buttons - remove in production */}
+          {false && (
+            <>
+              <button
+                onClick={() => (window as any).testPersistence()}
+                className="text-xs px-2 py-1 rounded"
+                style={{ backgroundColor: '#F6F7F8' }}
+              >
+                Debug
+              </button>
+              <button
+                onClick={() => (window as any).testCreateTaskWithPriority()}
+                className="text-xs px-2 py-1 rounded"
+                style={{ backgroundColor: '#F6F7F8' }}
+              >
+                Test Priority
+              </button>
+            </>
+          )}
+          
+          {/* Primary action button */}
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={() => {
+              if (!isAuthenticated) {
+                alert('Please connect your Google account in Settings to create task lists.');
+                return;
+              }
+              // TODO: This should create a task, not a list
+              setShowNewListDialog(true);
+            }}
+            disabled={!isAuthenticated}
+            style={{
+              backgroundColor: '#796EFF',
+              color: '#FFFFFF',
+              padding: '8px 16px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Plus size={16} />
+            Add task
+          </Button>
         </div>
-      </div>
+      </header>
 
-      {/* View Content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Main Content */}
+      <div className="flex h-full flex-col bg-sidebar">
+        {/* View Content */}
+        <div className="flex-1 overflow-hidden" style={{ 
+        marginRight: isTaskPanelOpen ? '500px' : '0',
+        transition: 'margin-right 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+      }}>
+        {console.log('Current view mode:', viewMode)}
         {viewMode === 'kanban' ? (
           <KanbanBoard
             className="h-full"
             searchQuery={searchQuery}
             onDeleteList={openDeleteListDialog}
             onRenameList={handleRenameList}
+            onEditTask={handleEditTask}
+            selectedTaskId={selectedTask?.id}
           />
         ) : (
           <TaskListView 
@@ -331,7 +454,7 @@ export default function TasksAsanaClean() {
             showHeader={false}
             selectedListId={selectedListId}
             sortBy={sortBy}
-            onEditTask={() => {}}
+            onEditTask={handleEditTask}
           />
         )}
       </div>
@@ -440,6 +563,25 @@ export default function TasksAsanaClean() {
           </div>
         </div>
       )}
-    </div>
+
+      {/* Task Side Panel */}
+      {isTaskPanelOpen && (
+        <TaskSidePanel
+          task={selectedTask}
+          isOpen={isTaskPanelOpen}
+          onClose={() => {
+            setIsTaskPanelOpen(false);
+            setSelectedTask(null);
+          }}
+          onUpdate={updateTask}
+          onDelete={async (taskId) => {
+            await deleteTask(taskId);
+            setIsTaskPanelOpen(false);
+            setSelectedTask(null);
+          }}
+        />
+      )}
+      </div>
+    </>
   );
 }

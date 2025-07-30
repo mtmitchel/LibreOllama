@@ -1,4 +1,5 @@
-export { AsanaTaskModal } from './AsanaTaskModal';
-export { AsanaKanbanBoard } from './AsanaKanbanBoard';
-export { DraggableTaskCard } from './DraggableTaskCard';
-export { DroppableColumn } from './DroppableColumn';
+export { QuickAddTask } from './QuickAddTask';
+export { TaskDetailPanel } from './TaskDetailPanel';
+export { TaskSidePanel } from './TaskSidePanel';
+export { UnifiedTaskCard } from './UnifiedTaskCard';
+export { LabelColorPicker } from './LabelColorPicker';

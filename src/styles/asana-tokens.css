@@ -1,0 +1,60 @@
+:root {
+  /* Layout */
+  --header-h: 56px;
+  --header-x: clamp(16px, 2vw, 24px);
+  --column-width: 340px;
+  --column-gap: 24px;
+  --drawer-width: 500px;
+  
+  /* Spacing */
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-card: 12px;
+  --radius-section: 10px;
+  --radius-pill: 999px;
+  
+  /* Colors */
+  --surface-1: #f7f8f9;
+  --surface-2: #edf0f2;
+  --surface-subtle: #f9fafb;
+  --border-1: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.12);
+  --brand-500: #4573d2;
+  
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-drag: 0 6px 16px rgba(0, 0, 0, 0.12);
+  
+  /* Typography */
+  --text-base: 14px;
+  --text-sm: 12px;
+  --text-lg: 15px;
+  --line-height-base: 1.5;
+  --line-height-tight: 1.4;
+  
+  /* Status colors */
+  --red-50: #fef2f2;
+  --red-600: #dc2626;
+  --amber-50: #fffbeb;
+  --amber-600: #d97706;
+  --gray-50: #f9fafb;
+  --gray-600: #4b5563;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-1: #1a1d21;
+    --surface-2: #26292e;
+    --surface-subtle: #0f1114;
+    --border-1: rgba(255, 255, 255, 0.12);
+    --border-hover: rgba(255, 255, 255, 0.16);
+  }
+}

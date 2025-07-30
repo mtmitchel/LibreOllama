@@ -36,6 +36,26 @@ type UnifiedTaskStore = UnifiedTaskState & UnifiedTaskActions;
 
 const generateTaskId = () => `local-task-${uuidv4()}`;
 
+// Helper to migrate old string labels to new format
+const migrateLabelFormat = (labels: any): Array<{ name: string; color: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray' }> => {
+  if (!labels) return [];
+  if (Array.isArray(labels)) {
+    return labels.map((label, index) => {
+      if (typeof label === 'string') {
+        // Migrate from string to object with color based on index
+        const colors: Array<'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray'> = 
+          ['blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray', 'red'];
+        return {
+          name: label,
+          color: colors[index % colors.length]
+        };
+      }
+      return label;
+    });
+  }
+  return [];
+};
+
 export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
   devtools(
     persist(
@@ -68,7 +88,7 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             updated: now,
             position: '0',
             labels: input.labels || [],
-            priority: input.priority || 'normal',
+            priority: input.priority || 'low',
             notes: input.notes || '',
             due: input.due,
             columnId: input.columnId,
@@ -84,6 +104,13 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             }
           });
           
+          logger.debug('[UnifiedStore] Creating task with metadata', {
+            tempId,
+            title: input.title,
+            priority: newTask.priority,
+            labels: newTask.labels
+          });
+          
           try {
             // Create in Google Tasks via backend
             const response = await invoke<{
@@ -94,8 +121,8 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
               status: string;
               position?: string;
               updated?: string;
-              priority: string;
-              labels: string[];
+              priority?: string;
+              labels?: string[];
             }>('create_google_task', {
               request: {
                 account_id: activeAccount.id,
@@ -117,7 +144,16 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 task.googleTaskId = response.id;
                 task.updated = response.updated || now;
                 task.position = response.position || '0';
+                // Preserve the local metadata - backend may not return these
+                task.priority = response.priority || task.priority || 'normal';
+                task.labels = response.labels || task.labels || [];
                 state.tasks[response.id] = task;
+                
+                logger.debug('[UnifiedStore] Task after create response', {
+                  id: task.id,
+                  priority: task.priority,
+                  labels: task.labels
+                });
                 
                 // Update column taskIds
                 const column = state.columns.find(c => c.id === input.columnId);
@@ -558,7 +594,53 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
 
         setTasks: (tasks) => {
           set(state => {
-            state.tasks = tasks;
+            // Merge incoming tasks with existing ones, preserving local metadata
+            const mergedTasks: Record<string, UnifiedTask> = {};
+            
+            // First, add all incoming tasks
+            for (const [id, incomingTask] of Object.entries(tasks)) {
+              const existingTask = state.tasks[id];
+              
+              if (existingTask) {
+                // Merge: preserve local-only fields if they exist
+                mergedTasks[id] = {
+                  ...incomingTask,
+                  // Preserve local metadata if incoming doesn't have it, and migrate format
+                  labels: incomingTask.labels?.length ? migrateLabelFormat(incomingTask.labels) : migrateLabelFormat(existingTask.labels),
+                  // Only override priority if incoming has a non-normal value
+                  // Otherwise, keep existing priority
+                  priority: (incomingTask.priority && incomingTask.priority !== 'normal') 
+                    ? incomingTask.priority 
+                    : existingTask.priority || 'normal',
+                  recurring: incomingTask.recurring || existingTask.recurring,
+                  metadata: incomingTask.metadata || existingTask.metadata,
+                };
+                
+                // Log if priority changed
+                if (existingTask.priority !== mergedTasks[id].priority) {
+                  logger.debug('[UnifiedStore] Priority changed during merge', {
+                    id: id,
+                    title: incomingTask.title,
+                    oldPriority: existingTask.priority,
+                    newPriority: mergedTasks[id].priority,
+                    incomingPriority: incomingTask.priority
+                  });
+                }
+              } else {
+                // New task, use as-is
+                mergedTasks[id] = incomingTask;
+              }
+            }
+            
+            // Note: We don't preserve tasks that aren't in the incoming set
+            // as they may have been deleted on another device
+            state.tasks = mergedTasks;
+            
+            logger.debug('[UnifiedStore] Merged tasks', { 
+              incoming: Object.keys(tasks).length,
+              existing: Object.keys(state.tasks).length,
+              merged: Object.keys(mergedTasks).length 
+            });
           });
         },
 

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Calendar, Flag, Tag, RotateCcw } from 'lucide-react';
-import { format } from 'date-fns';
+import { Calendar, Flag } from 'lucide-react';
+import '../../styles/asana-design-system.css';
 
 interface InlineTaskCreatorProps {
   columnId: string;
@@ -21,9 +21,6 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [due, setDue] = useState('');
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
-  const [labels, setLabels] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -50,118 +47,108 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
 
   const handleSubmit = useCallback(async () => {
     if (!title.trim() || isSubmitting) return;
-
+    
     setIsSubmitting(true);
     try {
-      await onSubmit({
+      await onSubmit({ 
         title: title.trim(),
-        due: due || undefined,
-        priority: priority !== 'normal' ? priority : undefined,
-        labels: labels.length > 0 ? labels : undefined,
       });
-      // Keep composer open and clear input (Asana behavior)
       setTitle('');
-      setDue('');
-      setPriority('normal');
-      setLabels([]);
-      titleInputRef.current?.focus();
+      setIsExpanded(false);
     } catch (error) {
-      // Error handling
+      console.error('Failed to create task:', error);
     } finally {
       setIsSubmitting(false);
     }
-  }, [title, due, priority, labels, isSubmitting, onSubmit]);
+  }, [title, isSubmitting, onSubmit]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
-    } else if (e.key === 'Escape' && !title.trim()) {
+    } else if (e.key === 'Escape') {
+      setTitle('');
       onCancel();
     }
-  }, [handleSubmit, onCancel, title]);
+  }, [handleSubmit, onCancel]);
 
   return (
     <div 
       ref={containerRef}
-      className="rounded-[10px] border border-neutral-200 bg-white p-2.5 inline-task-creator"
+      className="asana-card inline-task-creator"
+      style={{ marginBottom: '6px' }}
     >
-      <div className="">
+      <div className="flex items-center gap-2">
+        {/* Checkbox placeholder */}
+        <div className="asana-checkbox" style={{ width: '18px', height: '18px' }} />
         
-        <div className="">
-          {/* Title input */}
-          <input
-            ref={titleInputRef}
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsExpanded(true)}
-            placeholder="Write a task name"
-            aria-label="Task name"
-            className="w-full border-0 p-0 text-[14px] leading-[20px] text-neutral-900 placeholder-neutral-500 outline-none"
-            disabled={isSubmitting}
-          />
-          
-          {/* Expanded controls */}
-          {isExpanded && (
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              {/* Due date */}
-              <button
-                type="button"
-                onClick={() => {
-                  // In a real implementation, this would open a date picker
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  setDue(tomorrow.toISOString().split('T')[0]);
-                }}
-                className={`h-7 px-2.5 rounded-full border text-[12px] transition-colors flex items-center gap-1 ${
-                  due 
-                    ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100' 
-                    : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
-                }`}
-                aria-label="Set due date"
-              >
-                <Calendar size={11} />
-                {due ? format(new Date(due), 'MMM d') : 'Due date'}
-              </button>
-              
-              {/* Priority pill */}
-              <button
-                type="button"
-                className={`h-7 px-2.5 rounded-full border text-[12px] transition-colors flex items-center gap-1 ${
-                  priority !== 'normal'
-                    ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
-                    : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
-                }`}
-              >
-                <Flag size={11} />
-                {priority === 'normal' ? 'Priority' : priority.charAt(0).toUpperCase() + priority.slice(1)}
-              </button>
-              
-              {/* Labels pill */}
-              <button
-                type="button"
-                className="h-7 px-2.5 rounded-full border border-neutral-200 text-[12px] text-neutral-600 hover:bg-neutral-50 transition-colors flex items-center gap-1"
-              >
-                <Tag size={11} />
-                <span>Labels</span>
-              </button>
-              
-              {/* Recurring pill */}
-              <button
-                type="button"
-                className="h-7 px-2.5 rounded-full border border-neutral-200 text-[12px] text-neutral-600 hover:bg-neutral-50 transition-colors flex items-center gap-1"
-              >
-                <RotateCcw size={11} />
-                <span>Recurring</span>
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Title input */}
+        <input
+          ref={titleInputRef}
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsExpanded(true)}
+          placeholder="Write a task name"
+          aria-label="Task name"
+          className="flex-1 border-0 p-0 outline-none bg-transparent"
+          style={{ 
+            fontSize: 'var(--asana-font-size-base)',
+            color: 'var(--asana-text-primary)',
+            lineHeight: 'var(--asana-line-height-tight)'
+          }}
+          disabled={isSubmitting}
+        />
       </div>
       
-      {/* Action buttons - hidden for cleaner look */}
+      {/* Expanded controls */}
+      {isExpanded && (
+        <div className="mt-2 flex items-center justify-between pl-6">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!title.trim() || isSubmitting}
+              className={`h-7 px-3 rounded-md text-[12px] font-medium transition-all
+                ${title.trim() && !isSubmitting
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              aria-label="Create task"
+            >
+              {isSubmitting ? 'Creating...' : 'Add task'}
+            </button>
+            
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-7 px-3 rounded-md text-[12px] text-gray-600 hover:bg-gray-100 transition-colors"
+              disabled={isSubmitting}
+              aria-label="Cancel"
+            >
+              Cancel
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Set due date"
+            >
+              <Calendar size={16} />
+            </button>
+            <button
+              type="button"
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Set priority"
+            >
+              <Flag size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

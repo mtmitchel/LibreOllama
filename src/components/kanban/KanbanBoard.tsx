@@ -17,6 +17,9 @@ import { KanbanColumn } from "./KanbanColumn";
 import { UnifiedTaskCard } from "../tasks/UnifiedTaskCard";
 import { Button, Card } from "../ui";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import '../../styles/asana-design-system.css';
+import { createTaskList } from "../../api/googleTasksApi";
+import { realtimeSync } from "../../services/realtimeSync";
 
 type KanbanTask = UnifiedTask;
 
@@ -25,13 +28,17 @@ interface KanbanBoardProps {
   searchQuery?: string;
   onDeleteList?: (listId: string) => void;
   onRenameList?: (listId: string, newTitle: string) => void;
+  onEditTask?: (taskId: string) => void;
+  selectedTaskId?: string;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
   className = "", 
   searchQuery,
   onDeleteList,
-  onRenameList 
+  onRenameList,
+  onEditTask,
+  selectedTaskId 
 }) => {
   const {
     columns: taskColumns,
@@ -56,6 +63,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [newColumnTitle, setNewColumnTitle] = useState('');
+  const [isCreatingList, setIsCreatingList] = useState(false);
 
   // Configure drag sensors
   const sensors = useSensors(
@@ -161,6 +171,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   }, [initialize]);
 
+  const handleCreateList = async (title: string) => {
+    if (!title.trim() || isCreatingList) return;
+    
+    setIsCreatingList(true);
+    try {
+      // Create the list in Google Tasks
+      const newList = await createTaskList(title.trim());
+      
+      // If successful, sync to get the new list
+      await realtimeSync.syncNow();
+      
+      setNewColumnTitle('');
+      setIsAddingColumn(false);
+    } catch (error) {
+      console.error('Failed to create task list:', error);
+      alert('Failed to create task list. Please check your Google account permissions.');
+    } finally {
+      setIsCreatingList(false);
+    }
+  };
+
 
   if (error) {
     return (
@@ -193,8 +224,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   return (
-    <div className={`h-full bg-white ${className}`}>
+    <div className={`h-full flex flex-col bg-sidebar ${className}`}>
+
       {/* Kanban Board */}
+      <div className="flex-1 overflow-hidden">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -204,38 +237,133 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragCancel={handleDragCancel}
         modifiers={[restrictToWindowEdges]}
       >
-        <div className="flex h-full gap-6 overflow-x-auto px-6 py-6">
+        <div className="h-full overflow-x-auto overflow-y-hidden asana-board-scroll" 
+          style={{ 
+            display: 'flex',
+            padding: '24px',
+            gap: '20px',
+            alignItems: 'flex-start'
+          }}
+        >
           {columns.map((column) => (
             <KanbanColumn
               key={column.id}
               column={column}
-              className="w-[340px] flex-shrink-0"
+              className=""
               searchQuery={searchQuery}
               onDelete={onDeleteList}
               onRename={onRenameList}
+              onEditTask={onEditTask}
+              selectedTaskId={selectedTaskId}
             />
           ))}
           
           {/* Add section button */}
-          <button
-            className="h-10 px-4 text-[13px] text-neutral-600 hover:text-neutral-800 hover:underline whitespace-nowrap flex items-center gap-1 cursor-pointer relative z-10"
-            style={{ pointerEvents: 'auto' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              // TODO: Implement add section functionality
-              console.log('Add section clicked');
-              alert('Add section functionality not yet implemented');
-            }}
-          >
-            <Plus size={16} />
-            <span>Add section</span>
-          </button>
+          <div style={{ 
+            minWidth: '200px',
+            paddingTop: '4px'
+          }}>
+            {isAddingColumn ? (
+              <div className="asana-column" style={{ padding: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="List name"
+                  value={newColumnTitle}
+                  onChange={(e) => setNewColumnTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateList(newColumnTitle);
+                    } else if (e.key === 'Escape') {
+                      setNewColumnTitle('');
+                      setIsAddingColumn(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    handleCreateList(newColumnTitle);
+                  }}
+                  className="asana-input"
+                  style={{ 
+                    width: '100%',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    padding: '8px 12px',
+                    marginBottom: '8px'
+                  }}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleCreateList(newColumnTitle)}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#F06A6A',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNewColumnTitle('');
+                      setIsAddingColumn(false);
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: 'transparent',
+                      color: '#6B6F76',
+                      border: '1px solid #E6E6E6',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="whitespace-nowrap flex items-center gap-2 cursor-pointer"
+                style={{ 
+                  fontSize: '14px',
+                  color: '#6B6F76',
+                  padding: '12px 16px',
+                  backgroundColor: 'transparent',
+                  border: '2px dashed rgba(0, 0, 0, 0.08)',
+                  borderRadius: '8px',
+                  width: '100%',
+                  transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontWeight: 500
+                }}
+                onClick={() => setIsAddingColumn(true)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.02)';
+                  e.currentTarget.style.color = '#1E1E1F';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#6B6F76';
+                }}
+              >
+                <Plus size={18} strokeWidth={2} />
+                <span>Add list</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <div className="rotate-2 scale-105 opacity-95 shadow-2xl">
+            <div style={{ transform: 'rotate(2deg) scale(1.05)', opacity: 0.95 }}>
               <UnifiedTaskCard
                 task={activeTask}
                 columnId={activeColumn || ""}
@@ -248,6 +376,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           ) : null}
         </DragOverlay>
       </DndContext>
+      </div>
 
       {/* Empty State */}
       {columns.length === 0 && (

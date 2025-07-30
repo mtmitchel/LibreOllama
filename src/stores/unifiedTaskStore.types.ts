@@ -21,7 +21,10 @@ export interface UnifiedTask {
   parent?: string; // For subtasks
   
   // Custom Metadata (not in Google)
-  labels: string[];
+  labels: Array<{
+    name: string;
+    color: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray';
+  }>;
   priority: 'low' | 'normal' | 'high' | 'urgent';
   attachments?: Array<{
     name: string;
@@ -73,7 +76,10 @@ export interface UnifiedTaskState {
 export interface CreateTaskInput {
   title: string;
   columnId: string;
-  labels?: string[];
+  labels?: Array<{
+    name: string;
+    color: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'pink' | 'teal' | 'yellow' | 'cyan' | 'gray';
+  }>;
   priority?: UnifiedTask['priority'];
   notes?: string;
   due?: string;

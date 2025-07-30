@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import type { TaskColumn } from '../../stores/unifiedTaskStore.types';
+import '../../styles/asana-design-system.css';
 
 type KanbanColumnType = TaskColumn & {
   tasks: any[];
@@ -11,7 +12,7 @@ type KanbanColumnType = TaskColumn & {
 import { UnifiedTaskCard } from '../tasks/UnifiedTaskCard';
 import { InlineTaskCreator } from './InlineTaskCreator';
 import { Card, ConfirmDialog } from '../ui';
-import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3 } from 'lucide-react';
+import { Plus, MoreHorizontal, ArrowUpDown, Calendar, Type, GripVertical, Trash2, Edit3, Flag } from 'lucide-react';
 
 interface KanbanColumnProps {
   column: KanbanColumnType;
@@ -19,16 +20,21 @@ interface KanbanColumnProps {
   searchQuery?: string;
   onDelete?: (columnId: string) => void;
   onRename?: (columnId: string, newTitle: string) => void;
+  onEditTask?: (taskId: string) => void;
+  selectedTaskId?: string;
+  style?: React.CSSProperties;
 }
 
-type SortOption = 'order' | 'date' | 'title';
+type SortOption = 'order' | 'date' | 'title' | 'priority';
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({ 
   column, 
   className = '',
   searchQuery = '',
   onDelete,
-  onRename
+  onRename,
+  onEditTask,
+  selectedTaskId
 }) => {
   const { createTask } = useUnifiedTaskStore();
   const [showInlineCreator, setShowInlineCreator] = useState(false);
@@ -131,6 +137,15 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         // Sort alphabetically by title
         return tasks.sort((a, b) => a.title.localeCompare(b.title));
       
+      case 'priority':
+        // Sort by priority (urgent first, then high, normal, low)
+        const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+        return tasks.sort((a, b) => {
+          const aPriority = priorityOrder[a.priority || 'normal'];
+          const bPriority = priorityOrder[b.priority || 'normal'];
+          return aPriority - bPriority;
+        });
+      
       default:
         return tasks;
     }
@@ -186,14 +201,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     <>
       <div 
         ref={setNodeRef}
-        className={`flex h-full flex-col ${className} ${
-          isOver ? 'ring-2 ring-blue-400 ring-opacity-50' : ''
+        className={`asana-column flex h-full flex-col ${className} ${
+          isOver ? 'ring-2 ring-blue-400 ring-opacity-30' : ''
         }`}
       >
         <div className="flex h-full flex-col overflow-hidden">
         {/* Column Header */}
-        <div className="h-10 rounded-md bg-neutral-50 border border-neutral-100 px-3 py-0 flex items-center justify-between">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             {isRenaming ? (
               <input
                 type="text"
@@ -207,39 +222,54 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                     handleRenameCancel();
                   }
                 }}
-                className="min-w-0 flex-1 rounded border border-neutral-300 bg-white px-2 py-0.5 text-sm font-medium text-neutral-900 focus:border-blue-500 focus:outline-none"
+                className="asana-input min-w-0 flex-1"
                 aria-label="List name"
                 autoFocus
               />
             ) : (
               <>
-                <h3 className="truncate text-sm font-medium text-neutral-900">{column.title}</h3>
-                <span className="text-[12px] text-neutral-500 ml-1 align-baseline">{sortedTasks.length}</span>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1E1E1F', margin: 0, letterSpacing: '-0.01em' }}>{column.title}</h3>
+                <span style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 500, 
+                  color: '#6B6F76',
+                  backgroundColor: '#F3F4F6',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}>{sortedTasks.length}</span>
               </>
             )}
           </div>
           <div className="flex items-center gap-0.5">
             <div className="relative" ref={sortMenuRef}>
               <button
-                className="flex size-6 items-center justify-center rounded text-neutral-600 transition-colors hover:bg-neutral-200"
+                className="asana-button-ghost flex size-7 items-center justify-center" 
+                style={{ padding: '4px', minWidth: 'auto' }}
                 title="Sort tasks"
                 aria-label="Sort tasks"
                 aria-expanded={showSortMenu}
                 aria-haspopup="menu"
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
-                <ArrowUpDown size={12} />
+                <ArrowUpDown size={14} />
               </button>
               
               {showSortMenu && (
-                <div className="absolute right-0 top-full z-[9998] mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg" role="menu" aria-label="Sort options">
+                <div className="absolute right-0 top-full z-[9998] mt-1 w-48 bg-white rounded-lg" 
+                  style={{ 
+                    boxShadow: 'var(--asana-shadow-overlay)', 
+                    border: '1px solid var(--asana-border-default)' 
+                  }} 
+                  role="menu" 
+                  aria-label="Sort options"
+                >
                   <button
                     onClick={() => {
                       setSortBy('order');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg hover:bg-gray-50 ${
-                      sortBy === 'order' ? 'bg-neutral-100' : ''
+                    className={`flex w-full items-center px-3 py-2 text-sm first:rounded-t-lg transition-colors ${
+                      sortBy === 'order' ? 'bg-gray-50' : 'hover:bg-gray-50'
                     }`}
                   >
                     <GripVertical size={14} className="mr-2" />
@@ -262,30 +292,34 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                       setSortBy('title');
                       setShowSortMenu(false);
                     }}
-                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
+                    className={`flex w-full items-center px-3 py-2 text-sm hover:bg-gray-50 ${
                       sortBy === 'title' ? 'bg-neutral-100' : ''
                     }`}
                   >
                     <Type size={14} className="mr-2" />
                     Title
                   </button>
+                  <button
+                    onClick={() => {
+                      setSortBy('priority');
+                      setShowSortMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-2 text-sm last:rounded-b-lg hover:bg-gray-50 ${
+                      sortBy === 'priority' ? 'bg-neutral-100' : ''
+                    }`}
+                  >
+                    <Flag size={14} className="mr-2" />
+                    Priority
+                  </button>
                 </div>
               )}
             </div>
             
-            <button
-              onClick={() => setShowInlineCreator(true)}
-              className="flex size-6 items-center justify-center rounded text-neutral-600 transition-colors hover:bg-neutral-200"
-              title="Add task"
-              aria-label="Add new task"
-            >
-              <Plus size={14} />
-            </button>
             
             <div className="relative" ref={optionsMenuRef}>
               <button
-                className="flex size-6 items-center justify-center rounded text-neutral-600 transition-colors hover:bg-neutral-200 cursor-pointer relative z-10"
-                style={{ pointerEvents: 'auto' }}
+                className="asana-button-ghost flex size-7 items-center justify-center cursor-pointer relative z-10"
+                style={{ padding: '4px', minWidth: 'auto', pointerEvents: 'auto' }}
                 title="List options"
                 aria-label="List options menu"
                 aria-expanded={showOptionsMenu}
@@ -299,7 +333,14 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               </button>
               
               {showOptionsMenu && (
-                <div className="absolute right-0 top-full z-[9999] mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg" role="menu" aria-label="List options">
+                <div className="absolute right-0 top-full z-[9999] mt-1 w-48 bg-white rounded-lg" 
+                  style={{ 
+                    boxShadow: 'var(--asana-shadow-overlay)', 
+                    border: '1px solid var(--asana-border-default)' 
+                  }}
+                  role="menu" 
+                  aria-label="List options"
+                >
                   {onRename && (
                     <button
                       onClick={() => {
@@ -331,8 +372,52 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </div>
 
         {/* Column Content */}
-        <div className="min-h-40 flex-1 bg-neutral-50 border border-neutral-100 rounded-xl p-3 overflow-y-auto">
-          <div className="space-y-2">
+        <div className="flex-1 overflow-y-auto asana-scrollbar" style={{ padding: '0 4px', minHeight: '160px' }}>
+          <div style={{ padding: '2px' }}>
+          
+          {/* Add task button - at the top */}
+          {!showInlineCreator && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowInlineCreator(true);
+              }}
+              className="flex items-center gap-2 w-full cursor-pointer relative z-10 mb-2 rounded-lg transition-all"
+              style={{ 
+                fontSize: '14px',
+                color: '#6B6F76',
+                padding: '8px 12px',
+                pointerEvents: 'auto',
+                backgroundColor: 'transparent',
+                border: '1px dashed rgba(0, 0, 0, 0.08)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#1E1E1F';
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
+                e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#6B6F76';
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
+              }}
+            >
+              <div className="asana-checkbox" style={{ width: '18px', height: '18px' }} />
+              <span>Add task</span>
+            </button>
+          )}
+          
+          {/* Inline Creator - at the top */}
+          {showInlineCreator && (
+            <div className="mb-2">
+              <InlineTaskCreator
+                columnId={column.id}
+                onSubmit={handleCreateTask}
+                onCancel={() => setShowInlineCreator(false)}
+              />
+            </div>
+          )}
+          
           {column.isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="size-6 animate-spin rounded-full border-b-2 border-primary"></div>
@@ -360,13 +445,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   <p className="max-w-48 text-xs text-muted">No tasks match your search in this list</p>
                 </>
               ) : (
-                <>
-                  <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-gray-100">
-                    <Plus size={20} className="text-gray-400" />
-                  </div>
-                  <p className="mb-1 text-sm font-medium text-gray-900">No tasks yet</p>
-                  <p className="max-w-32 text-xs text-gray-500">Drop tasks here or click "Add task" to create your first task</p>
-                </>
+                <></>
               )}
             </div>
           ) : (
@@ -375,6 +454,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 key={task.id}
                 task={task}
                 columnId={column.id}
+                isSelected={task.id === selectedTaskId}
                 onToggle={() => {
                   const { updateTask } = useUnifiedTaskStore.getState();
                   updateTask(task.id, { 
@@ -382,8 +462,9 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   });
                 }}
                 onEdit={() => {
-                  // For now, we'll just log - you can implement a modal or inline editor
-                  console.log('Edit task:', task);
+                  if (onEditTask) {
+                    onEditTask(task.id);
+                  }
                 }}
                 onDelete={() => {
                   setDeleteConfirm({ taskId: task.id, title: task.title });
@@ -402,29 +483,6 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               />
             ))
           )}
-          
-          {/* Inline Creator - inside column scroll */}
-          {showInlineCreator && (
-            <div className="mt-2">
-              <InlineTaskCreator
-                columnId={column.id}
-                onSubmit={handleCreateTask}
-                onCancel={() => setShowInlineCreator(false)}
-              />
-            </div>
-          )}
-          
-          {/* Add task link - always visible */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowInlineCreator(true);
-            }}
-            className="mt-1.5 text-left text-[13px] text-neutral-600 hover:text-neutral-800 hover:underline px-2 py-1.5 w-full cursor-pointer relative z-10"
-            style={{ pointerEvents: 'auto' }}
-          >
-            + Add task
-          </button>
           </div>
         </div>
       </div>

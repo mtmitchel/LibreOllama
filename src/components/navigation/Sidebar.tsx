@@ -87,8 +87,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     >
       {/* Header */}
       <div 
-        className={`flex h-16 items-center ${isOpen ? 'justify-between gap-4 border-b px-4' : 'justify-center px-1'}`}
+        className={`flex items-center ${isOpen ? 'justify-between gap-4 border-b px-4' : 'justify-center px-1'}`}
         style={{ 
+          height: '56px',
           borderBottom: isOpen ? '1px solid var(--border-primary)' : 'none',
           background: 'var(--header-bg)'
         }}
@@ -165,9 +166,6 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                   e.target.style.boxShadow = 'none';
                 }}
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border bg-surface px-1.5 py-0.5 text-xs text-tertiary">
-                ⌘K
-              </kbd>
             </div>
           </div>
 

@@ -89,7 +89,7 @@ export default function App() {
                 <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
               </nav>
               
-              <div id="main-content" className="min-w-0 flex-1">
+              <div id="main-content" className="min-w-0 flex-1 flex flex-col">
                 <AppContent isSidebarOpen={isSidebarOpen} />
               </div>
               
