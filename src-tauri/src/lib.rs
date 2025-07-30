@@ -216,6 +216,16 @@ pub fn run() {
             commands::llm::llm_list_mistral_models,
             commands::llm::llm_chat_gemini,
             commands::llm::llm_list_gemini_models,
+            // Notes commands
+            commands::notes::get_notes,
+            commands::notes::create_note,
+            commands::notes::update_note,
+            commands::notes::delete_note,
+            // Folders commands
+            commands::folders::get_folders,
+            commands::folders::create_folder,
+            commands::folders::update_folder,
+            commands::folders::delete_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

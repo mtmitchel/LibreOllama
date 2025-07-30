@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::{command, State};
+use std::sync::Arc;
 use crate::database::models::Folder;
 use crate::database::operations;
 
@@ -47,7 +48,7 @@ pub struct UpdateFolderRequest {
 
 #[command]
 pub async fn get_folders(
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<FolderResponse>, String> {
     let db_manager_clone = db_manager.inner().clone();
     let folders = tokio::task::spawn_blocking(move || {
@@ -68,7 +69,7 @@ pub async fn create_folder(
     parent_id: Option<i32>,
     color: Option<String>,
     user_id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<FolderResponse, String> {
     let db_manager_clone = db_manager.inner().clone();
     let folder = tokio::task::spawn_blocking(move || {
@@ -92,7 +93,7 @@ pub async fn create_folder(
 pub async fn update_folder(
     id: String,
     folder: UpdateFolderRequest,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<FolderResponse, String> {
     let folder_id: i32 = id.parse().map_err(|_| "Invalid folder ID")?;
     
@@ -117,7 +118,7 @@ pub async fn update_folder(
 #[command]
 pub async fn delete_folder(
     id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<(), String> {
     let folder_id: i32 = id.parse().map_err(|_| "Invalid folder ID")?;
     

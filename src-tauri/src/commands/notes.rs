@@ -1,6 +1,7 @@
 //! Notes commands
 use serde::{Deserialize, Serialize};
 use tauri::{command, State};
+use std::sync::Arc;
 use crate::database::models::Note;
 use crate::database::operations;
 
@@ -36,7 +37,7 @@ pub struct UpdateNoteRequest {
 
 #[command]
 pub async fn get_notes(
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<Vec<NoteResponse>, String> {
     let db_manager_clone = db_manager.inner().clone();
     let notes = tokio::task::spawn_blocking(move || {
@@ -56,7 +57,7 @@ pub async fn create_note(
     content: String,
     folder_id: Option<i32>,
     user_id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<NoteResponse, String> {
     let db_manager_clone = db_manager.inner().clone();
     let created_note = tokio::task::spawn_blocking(move || {
@@ -74,7 +75,7 @@ pub async fn create_note(
 pub async fn update_note(
     id: String,
     note: UpdateNoteRequest,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<NoteResponse, String> {
     let note_id = id.parse().map_err(|_| "Invalid note ID".to_string())?;
     let db_manager_clone = db_manager.inner().clone();
@@ -92,7 +93,7 @@ pub async fn update_note(
 #[command]
 pub async fn delete_note(
     id: String,
-    db_manager: State<'_, crate::database::DatabaseManager>,
+    db_manager: State<'_, Arc<crate::database::DatabaseManager>>,
 ) -> Result<(), String> {
     let note_id = id.parse().map_err(|_| "Invalid note ID".to_string())?;
     let db_manager_clone = db_manager.inner().clone();
