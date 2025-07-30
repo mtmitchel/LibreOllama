@@ -34,20 +34,24 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       .replace(/`([^`]+)`/g, '<code class="bg-surface px-1.5 py-0.5 rounded text-sm">$1</code>')
       // Line breaks
       .replace(/\n\n/g, '</p><p class="mb-3">')
-      // Bullet lists
-      .replace(/^• (.+)$/gm, '<li class="ml-4 mb-1">$1</li>')
+      // Bullet lists - handle various bullet formats and mark them
+      .replace(/^\s*[•·▪▫◦‣⁃]\s+(.+)$/gm, '<li data-bullet="true" class="ml-4 mb-1">$1</li>')
+      // Also handle asterisk or dash bullets
+      .replace(/^\s*[\*\-]\s+(.+)$/gm, '<li data-bullet="true" class="ml-4 mb-1">$1</li>')
       // Numbered lists
-      .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 mb-1">$1</li>');
+      .replace(/^\s*\d+\.\s+(.+)$/gm, '<li data-numbered="true" class="ml-4 mb-1">$1</li>');
 
     // Wrap in paragraph tags
     html = '<p class="mb-3">' + html + '</p>';
 
     // Wrap consecutive list items in ul/ol tags
     html = html.replace(/(<li[^>]*>.*?<\/li>\s*)+/g, (match) => {
-      if (match.includes('•')) {
-        return '<ul class="list-disc list-inside mb-3">' + match + '</ul>';
+      if (match.includes('data-bullet="true"')) {
+        return '<ul class="list-disc list-inside mb-3">' + match.replace(/data-bullet="true"\s*/g, '') + '</ul>';
+      } else if (match.includes('data-numbered="true"')) {
+        return '<ol class="list-decimal list-inside mb-3">' + match.replace(/data-numbered="true"\s*/g, '') + '</ol>';
       }
-      return '<ol class="list-decimal list-inside mb-3">' + match + '</ol>';
+      return match;
     });
 
     return html;

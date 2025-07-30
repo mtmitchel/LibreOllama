@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Card } from '../ui';
 import { 
@@ -67,12 +67,13 @@ const menuItems: MenuItem[] = [
   { id: 'ask-ai', label: 'Ask AI anything...', icon: <MessageSquare size={16} className="text-purple-500" />, category: 'create' },
 ];
 
-export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingToolsMenuProps) {
+function AIWritingToolsMenuComponent({ selection, onClose, onAction }: AIWritingToolsMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isPositioned, setIsPositioned] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [aiQuestion, setAiQuestion] = useState('');
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const calculatePosition = useCallback(() => {
     if (!selection.rect || !menuRef.current) {
@@ -81,17 +82,8 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
 
     const { rect } = selection;
     
-    console.log('AIWritingToolsMenu positioning (calculatePosition):', { 
-      rectValues: rect,
-      rectExpanded: JSON.stringify(rect, null, 2),
-      text: selection.text,
-      rectType: typeof rect,
-      rectKeys: Object.keys(rect)
-    });
-    
     // If rect is empty/invalid, don't position the menu
     if (rect.width === 0 && rect.height === 0 && rect.left === 0 && rect.top === 0) {
-      console.log('Rect is empty, not positioning menu');
       return;
     }
     
@@ -125,22 +117,29 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
     if (top < padding) {
       top = padding;
     }
-
-    console.log('Final position:', { top, left, menuHeight, menuWidth, windowHeight: window.innerHeight });
     
     setPosition({ top, left });
     setIsPositioned(true);
   }, [selection.rect]);
 
   useLayoutEffect(() => {
-    setIsPositioned(false); // Reset positioning state
-    
-    // Use setTimeout to ensure the menu is fully rendered before positioning
-    const timer = setTimeout(() => {
+    if (!menuRef.current) return;
+
+    // Initial position calculation
+    calculatePosition();
+
+    // Set up ResizeObserver to handle dynamic size changes
+    resizeObserverRef.current = new ResizeObserver(() => {
       calculatePosition();
-    }, 0);
-    
-    return () => clearTimeout(timer);
+    });
+
+    resizeObserverRef.current.observe(menuRef.current);
+
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+      }
+    };
   }, [calculatePosition, activeCategory]); // Recalculate when activeCategory changes
 
   useEffect(() => {
@@ -192,8 +191,6 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
           onClick={() => {
             const newCategory = activeCategory === 'rewrite' ? null : 'rewrite';
             setActiveCategory(newCategory);
-            // Recalculate position after category change with a small delay
-            setTimeout(() => calculatePosition(), 10);
           }}
         >
           <RefreshCw size={16} className="text-purple-500" />
@@ -278,3 +275,5 @@ export function AIWritingToolsMenu({ selection, onClose, onAction }: AIWritingTo
     document.body
   );
 }
+
+export const AIWritingToolsMenu = memo(AIWritingToolsMenuComponent);

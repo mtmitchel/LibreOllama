@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Card, Heading } from '../ui';
 import { Copy, RefreshCw, ArrowLeftRight, X, Loader2 } from 'lucide-react';
@@ -14,7 +14,7 @@ interface AIOutputModalProps {
   onRegenerate: () => void;
 }
 
-export function AIOutputModal({ 
+function AIOutputModalComponent({ 
   isOpen, 
   onClose, 
   prompt, 
@@ -117,7 +117,7 @@ export function AIOutputModal({
                     </div>
                   ) : (
                     <div className="bg-surface rounded-md p-4 min-h-[120px]">
-                      <p className="text-sm whitespace-pre-wrap">{output}</p>
+                      <pre className="text-sm whitespace-pre-wrap font-sans">{output}</pre>
                     </div>
                   )}
                 </div>
@@ -175,3 +175,5 @@ export function AIOutputModal({
     document.body
   );
 }
+
+export const AIOutputModal = memo(AIOutputModalComponent);

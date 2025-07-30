@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useTextSelection } from '../../core/hooks/useTextSelection';
 import { AIWritingToolsMenu, type AIAction } from './AIWritingToolsMenu';
 import { AIOutputModalPro } from './AIOutputModalPro';
@@ -8,11 +8,32 @@ import { useNotesStore } from '../../features/notes/store';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { LLMProviderManager, type LLMMessage } from '../../services/llmProviders';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { aiResponseCache } from '../../services/aiResponseCache';
+import { getPromptTemplate, MODEL_SPECIFIC_SYSTEM_PROMPTS } from '../../services/aiPromptTemplates';
 
 interface TextSelectionDetectorProps {
   children: React.ReactNode;
   disabled?: boolean;
 }
+
+// Pre-define system prompts to avoid runtime generation
+const SYSTEM_PROMPTS: Record<AIAction, string> = {
+  'explain': 'You are a text processor. Your ONLY job is to explain text in simple terms. Output ONLY the explanation, nothing else.',
+  'translate': 'You are a translator. Your ONLY job is to translate text. Output ONLY the translation, nothing else.',
+  'summarize': 'You are a summarizer. Your ONLY job is to create a 2-3 sentence summary. Output ONLY the summary, nothing else.',
+  'proofread': 'You are a proofreader. Your ONLY job is to correct errors. Output ONLY the corrected text, nothing else.',
+  'create-list': 'You are a list formatter. Your ONLY job is to convert text into a bulleted list. Start each line with "• ". Output ONLY bullet points, one per line. NO paragraphs. NO explanations.',
+  'key-points': 'You are a key point extractor. Your ONLY job is to extract key points as a bulleted list. Start each line with "• ". Output ONLY bullet points, one per line. NO paragraphs. NO explanations.',
+  'rewrite-professional': 'You are a professional writer. Your ONLY job is to rewrite text formally. Output ONLY the rewritten text, nothing else.',
+  'rewrite-friendly': 'You are a casual writer. Your ONLY job is to rewrite text in a friendly tone. Output ONLY the rewritten text, nothing else.',
+  'rewrite-concise': 'You are a concise writer. Your ONLY job is to shorten text. Output ONLY the shortened text, nothing else.',
+  'rewrite-expanded': 'You are an elaborate writer. Your ONLY job is to expand text with more detail. Output ONLY the expanded text, nothing else.',
+  'create-task': '',
+  'create-note': '',
+  'ask-ai': ''
+};
+
+const DEFAULT_SYSTEM_PROMPT = 'Return ONLY the processed text without any explanations, introductions, or commentary. Do not include phrases like "Here is", "This is", or any other preamble.';
 
 export function TextSelectionDetector({ children, disabled = false }: TextSelectionDetectorProps) {
   const navigate = useNavigate();
@@ -29,8 +50,18 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     usedProvider?: string;
   }>({ prompt: '', output: '', isLoading: false, action: 'rewrite-professional', originalText: '' });
   
+  // Pre-initialize provider manager
+  const providerManagerRef = useRef<LLMProviderManager | null>(null);
+  
   // Disable on Notes page since BlockNote has its own integrated menu
   const isNotesPage = location.pathname === '/notes';
+  
+  // Initialize provider manager on mount
+  useEffect(() => {
+    const settingsState = useSettingsStore.getState();
+    const apiKeys = settingsState.integrations.apiKeys;
+    providerManagerRef.current = LLMProviderManager.getInstance(apiKeys);
+  }, []);
   
   const { selection, clearSelection, replaceSelection } = useTextSelection({
     onSelectionChange: useCallback((sel) => {
@@ -71,36 +102,36 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     // For now, we'll implement basic actions and integrate with chat for AI processing
     switch (action) {
       case 'rewrite-professional':
-        await processWithAI(`Rewrite the following text in a professional tone: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'rewrite-friendly':
-        await processWithAI(`Rewrite the following text in a friendly, casual tone: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'rewrite-concise':
-        await processWithAI(`Rewrite the following text to be more concise: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'rewrite-expanded':
-        await processWithAI(`Expand on the following text with more detail: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'proofread':
-        await processWithAI(`Proofread and correct any grammar or spelling errors in: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'summarize':
-        await processWithAI(`Summarize the following text in 2-3 sentences: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'translate':
         // Default to Spanish, but the modal will allow language selection
-        await processWithAI(`Translate the following text to Spanish: "${text}"`, action, { originalText: text });
+        await processWithAI(text, action, { originalText: text, language: 'Spanish' });
         break;
       
       case 'explain':
-        await processWithAI(`Explain the following text in simple terms: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'create-task':
@@ -115,12 +146,12 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       
       case 'create-list':
         // Create a bulleted list from the selected text
-        await processWithAI(`Convert the following text into a bulleted list: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'key-points':
         // Extract key points from the selected text
-        await processWithAI(`Extract the key points from the following text: "${text}"`, action);
+        await processWithAI(text, action);
         break;
       
       case 'ask-ai':
@@ -131,14 +162,22 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   }, []);
 
 
-  const processWithAI = useCallback(async (prompt: string, action: AIAction, options?: any) => {
+  const processWithAI = useCallback(async (text: string, action: AIAction, options?: any) => {
     
     try {
-      // Store original text if we have a selection
-      const originalText = selection?.text || modalData.originalText || '';
+      // Store original text
+      const originalText = text;
       
-      // Update modal to show loading state
-      setModalData(prev => ({ ...prev, prompt, isLoading: true, action, originalText }));
+      // Update modal with all data in a single state update
+      setModalData({
+        prompt: '', // Will be set after we determine the model
+        output: '',
+        isLoading: true,
+        action,
+        originalText,
+        usedModel: undefined,
+        usedProvider: undefined
+      });
       setShowModal(true);
       
       // Get AI writing settings and chat settings
@@ -150,53 +189,43 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       let provider = aiWritingSettings.defaultProvider || chatStore.selectedProvider;
       let model = aiWritingSettings.defaultModel || chatStore.selectedModel;
       
-      
       // Ensure we have valid provider and model
       if (!provider || !model) {
         throw new Error('No AI provider or model configured. Please configure AI settings.');
       }
       
-      // Modify prompt based on options (e.g., for translation)
-      let finalPrompt = prompt;
-      if (action === 'translate' && options?.language) {
-        finalPrompt = prompt.replace('Spanish', options.language);
+      // Check cache first
+      const cachedResponse = aiResponseCache.get(originalText, action, model, provider);
+      if (cachedResponse) {
+        const prompt = getPromptTemplate(action, model || 'default', originalText, options);
+        setModalData({
+          prompt,
+          output: cachedResponse,
+          isLoading: false,
+          action,
+          originalText,
+          usedModel: model,
+          usedProvider: provider
+        });
+        return;
       }
-
-      // Prepare messages for LLM with action-specific system prompts
-      let systemPrompt = 'Return ONLY the processed text without any explanations, introductions, or commentary. Do not include phrases like "Here is", "This is", or any other preamble.';
       
-      // Action-specific system prompts
-      switch (action) {
-        case 'explain':
-          systemPrompt = 'Explain the given text in simple, easy-to-understand terms. Return ONLY the explanation without any preamble.';
-          break;
-        case 'translate':
-          systemPrompt = 'Translate the given text accurately. Return ONLY the translation without any explanations.';
-          break;
-        case 'summarize':
-          systemPrompt = 'Provide a concise summary. Return ONLY the summary text without any introductory phrases.';
-          break;
-        case 'proofread':
-          systemPrompt = 'Correct any errors. Return ONLY the corrected text without explanations.';
-          break;
-        case 'create-list':
-          systemPrompt = 'Convert to a bulleted list. Return ONLY the list without any preamble.';
-          break;
-        case 'key-points':
-          systemPrompt = 'Extract key points as a bulleted list. Return ONLY the list without introductions.';
-          break;
-        case 'rewrite-professional':
-          systemPrompt = 'Rewrite in a professional tone. Return ONLY the rewritten text without any preamble like "Here\'s a professional rewrite:".';
-          break;
-        case 'rewrite-friendly':
-          systemPrompt = 'Rewrite in a friendly tone. Return ONLY the rewritten text without introductory phrases.';
-          break;
-        case 'rewrite-concise':
-          systemPrompt = 'Rewrite to be more concise. Return ONLY the shortened text without explanations like "Here\'s a more concise version:".';
-          break;
-        case 'rewrite-expanded':
-          systemPrompt = 'Expand with more detail. Return ONLY the expanded text without introductory phrases.';
-          break;
+      // Generate model-specific prompt
+      const prompt = getPromptTemplate(action, model || 'default', originalText, options);
+      
+      // Update modal with the generated prompt
+      setModalData(prev => ({ ...prev, prompt }));
+      
+      // Use model-specific system prompt
+      let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+      if (model?.toLowerCase().includes('gemma')) {
+        if (action === 'create-list' || action === 'key-points') {
+          systemPrompt = MODEL_SPECIFIC_SYSTEM_PROMPTS['gemma-list'];
+        } else {
+          systemPrompt = MODEL_SPECIFIC_SYSTEM_PROMPTS['gemma-default'];
+        }
+      } else {
+        systemPrompt = SYSTEM_PROMPTS[action] || DEFAULT_SYSTEM_PROMPT;
       }
       
       const messages: LLMMessage[] = [
@@ -206,16 +235,18 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
         },
         {
           role: 'user',
-          content: finalPrompt
+          content: prompt
         }
       ];
 
-      // Get the provider manager and make the call
-      const settingsState = useSettingsStore.getState();
-      const apiKeys = settingsState.integrations.apiKeys;
+      // Use pre-initialized provider manager
+      if (!providerManagerRef.current) {
+        const settingsState = useSettingsStore.getState();
+        const apiKeys = settingsState.integrations.apiKeys;
+        providerManagerRef.current = LLMProviderManager.getInstance(apiKeys);
+      }
       
-      const providerManager = LLMProviderManager.getInstance(apiKeys);
-      const llmProvider = providerManager.getProvider(provider);
+      const llmProvider = providerManagerRef.current.getProvider(provider);
       
       if (!llmProvider) {
         throw new Error(`Provider ${provider} not found`);
@@ -226,7 +257,27 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
       }
 
       // Make the AI call
-      const response = await llmProvider.chat(messages, model || undefined);
+      let response = await llmProvider.chat(messages, model || undefined);
+      
+      // Post-process response for list actions to ensure proper formatting
+      if (action === 'create-list' || action === 'key-points') {
+        console.log('Raw AI response for list action:', response);
+        
+        // If the response doesn't look like a list, try to convert it
+        if (!response.includes('•') && !response.includes('-') && !response.includes('*')) {
+          console.log('Response does not contain list markers, converting...');
+          // Split by sentences or periods and convert to bullet points
+          const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
+          response = sentences.map(s => `• ${s.trim()}`).join('\n');
+        }
+        // Ensure consistent bullet format
+        response = response.replace(/^[-*]\s*/gm, '• ').replace(/^\d+\.\s*/gm, '• ');
+        
+        console.log('Processed list response:', response);
+      }
+      
+      // Cache the response
+      aiResponseCache.set(originalText, action, response, model, provider);
       
       // Update modal with the AI response
       setModalData(prev => ({ 
@@ -324,16 +375,19 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
           throw new Error('No AI provider or model configured.');
         }
         
-        // Update prompt for translation with new language
-        let prompt = modalData.prompt;
-        if (modalData.action === 'translate' && options?.language) {
-          prompt = `Translate the following text to ${options.language}: "${modalData.originalText}"`;
-        }
+        // Generate model-specific prompt
+        const prompt = getPromptTemplate(modalData.action, model || 'default', modalData.originalText, options);
         
-        // Get system prompt
-        let systemPrompt = 'Return ONLY the processed text without any explanations, introductions, or commentary.';
-        if (modalData.action === 'translate') {
-          systemPrompt = 'Translate the given text accurately. Return ONLY the translation without any explanations.';
+        // Use model-specific system prompt
+        let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+        if (model?.toLowerCase().includes('gemma')) {
+          if (modalData.action === 'create-list' || modalData.action === 'key-points') {
+            systemPrompt = MODEL_SPECIFIC_SYSTEM_PROMPTS['gemma-list'];
+          } else {
+            systemPrompt = MODEL_SPECIFIC_SYSTEM_PROMPTS['gemma-default'];
+          }
+        } else {
+          systemPrompt = SYSTEM_PROMPTS[modalData.action] || DEFAULT_SYSTEM_PROMPT;
         }
         
         const messages: LLMMessage[] = [
@@ -341,17 +395,35 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
           { role: 'user', content: prompt }
         ];
         
-        // Make the API call
-        const settingsState = useSettingsStore.getState();
-        const apiKeys = settingsState.integrations.apiKeys;
-        const providerManager = LLMProviderManager.getInstance(apiKeys);
-        const llmProvider = providerManager.getProvider(provider);
+        // Use pre-initialized provider manager
+        if (!providerManagerRef.current) {
+          const settingsState = useSettingsStore.getState();
+          const apiKeys = settingsState.integrations.apiKeys;
+          providerManagerRef.current = LLMProviderManager.getInstance(apiKeys);
+        }
+        
+        const llmProvider = providerManagerRef.current.getProvider(provider);
         
         if (!llmProvider || !llmProvider.isConfigured()) {
           throw new Error(`Provider ${provider} is not configured.`);
         }
         
-        const response = await llmProvider.chat(messages, model || undefined);
+        let response = await llmProvider.chat(messages, model || undefined);
+        
+        // Post-process response for list actions to ensure proper formatting
+        if (modalData.action === 'create-list' || modalData.action === 'key-points') {
+          // If the response doesn't look like a list, try to convert it
+          if (!response.includes('•') && !response.includes('-') && !response.includes('*')) {
+            // Split by sentences or periods and convert to bullet points
+            const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            response = sentences.map(s => `• ${s.trim()}`).join('\n');
+          }
+          // Ensure consistent bullet format
+          response = response.replace(/^[-*]\s*/gm, '• ').replace(/^\d+\.\s*/gm, '• ');
+        }
+        
+        // Cache the regenerated response
+        aiResponseCache.set(modalData.originalText, modalData.action, response, model, provider);
         
         // Update modal state without closing it
         setModalData(prev => ({ 

@@ -510,7 +510,35 @@ export function AIOutputModalPro({
                 />
               ) : output ? (
                 <div className="bg-gradient-to-br from-surface to-surface-hover/30 rounded-lg border border-border-subtle p-6 shadow-inner">
-                  <MarkdownRenderer content={output} className="text-sm leading-relaxed" />
+                  {(action === 'create-list' || action === 'key-points') ? (
+                    // Special rendering for list actions
+                    <div className="text-sm leading-relaxed">
+                      {output.split('\n').filter(line => line.trim()).map((line, index) => {
+                        // Check indentation level by counting leading spaces/tabs
+                        const indentMatch = line.match(/^(\s*)/);
+                        const indentLevel = indentMatch ? Math.floor(indentMatch[1].length / 4) : 0;
+                        
+                        // Remove any existing bullet characters and trim
+                        const cleanLine = line.replace(/^\s*[•·▪▫◦‣⁃\*\-]\s*/, '').trim();
+                        if (!cleanLine) return null;
+                        
+                        return (
+                          <div 
+                            key={index} 
+                            className="flex items-start mb-1"
+                            style={{ paddingLeft: `${indentLevel * 1.5}rem` }}
+                          >
+                            <span className={`mr-2 ${indentLevel > 0 ? 'text-secondary' : 'text-accent-primary'}`}>
+                              {indentLevel > 0 ? '◦' : '•'}
+                            </span>
+                            <span className="flex-1">{cleanLine}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <MarkdownRenderer content={output} className="text-sm leading-relaxed" />
+                  )}
                 </div>
               ) : action === 'translate' ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">

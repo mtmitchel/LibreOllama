@@ -191,20 +191,32 @@ export function BrowserLikeContextMenu({
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuRef.current && 
-        !menuRef.current.contains(event.target as Node) &&
-        submenuRef.current &&
-        !submenuRef.current.contains(event.target as Node)
-      ) {
+      // Check if click is outside menu
+      const isOutsideMenu = menuRef.current && !menuRef.current.contains(event.target as Node);
+      // Check if click is outside submenu (or submenu doesn't exist)
+      const isOutsideSubmenu = !submenuRef.current || !submenuRef.current.contains(event.target as Node);
+      
+      if (isOutsideMenu && isOutsideSubmenu) {
         console.log('Clicking outside menu, closing');
+        // Clear any pending timeouts
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current);
+        }
+        setActiveSubmenu(null);
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      // Small delay to prevent immediate close on open
+      const timer = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside, true);
+      }, 10);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('mousedown', handleClickOutside, true);
+      };
     }
   }, [isOpen, onClose]);
 
@@ -256,27 +268,36 @@ export function BrowserLikeContextMenu({
           console.log('Click event on:', item.label);
           e.preventDefault();
           e.stopPropagation();
-          if (!item.disabled) {
-            // Don't close menu if item has submenu
-            if (item.submenu) {
-              console.log('Menu item with submenu clicked:', item.label);
-              // Submenu is shown on hover, so just prevent closing
-              return;
+          
+          if (item.disabled) {
+            return;
+          }
+          
+          // Don't close menu if item has submenu
+          if (item.submenu) {
+            console.log('Menu item with submenu clicked:', item.label);
+            // Toggle submenu visibility
+            if (activeSubmenu === item.id) {
+              setActiveSubmenu(null);
             }
-            // Only execute action and close for items without submenu
-            if (item.action) {
-              console.log('Menu item clicked:', item.label, 'isSubmenu:', isSubmenu);
-              // Execute action first, then close after a small delay
-              item.action();
-              if (!isSubmenu) {
-                setTimeout(() => {
-                  onClose();
-                }, 50);
-              } else {
-                // For submenu items, close immediately
-                onClose();
-              }
+            return;
+          }
+          
+          // Execute action for items without submenu
+          if (item.action) {
+            console.log('Menu item clicked:', item.label, 'isSubmenu:', isSubmenu);
+            
+            // Clear any pending timeouts first
+            if (closeTimeoutRef.current) {
+              clearTimeout(closeTimeoutRef.current);
             }
+            
+            // Execute action
+            item.action();
+            
+            // Always close the menu after action
+            setActiveSubmenu(null);
+            onClose();
           }
         }}
         onMouseEnter={(e) => {
