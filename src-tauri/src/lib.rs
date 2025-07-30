@@ -174,6 +174,12 @@ pub fn run() {
             update_google_task,
             delete_google_task,
             update_google_task_list,
+            // Calendar commands
+            commands::calendar::get_calendars,
+            commands::calendar::get_calendar_events,
+            commands::calendar::create_calendar_event,
+            commands::calendar::update_calendar_event,
+            commands::calendar::delete_calendar_event,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

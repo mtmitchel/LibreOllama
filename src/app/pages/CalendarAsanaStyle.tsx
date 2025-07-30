@@ -978,6 +978,48 @@ export default function CalendarAsanaStyle() {
     return () => clearHeaderProps();
   }, [clearHeaderProps]);
 
+  // Fetch calendar events when the component mounts or active account changes
+  useEffect(() => {
+    const loadCalendarData = async () => {
+      if (activeAccount) {
+        console.log('[Calendar] Active account detected:', activeAccount.email);
+        console.log('[Calendar] isCalendarAuthenticated:', isCalendarAuthenticated);
+        
+        // Ensure calendar store is authenticated
+        if (!isCalendarAuthenticated) {
+          console.log('[Calendar] Authenticating calendar store...');
+          const { authenticate } = useGoogleCalendarStore.getState();
+          authenticate({
+            id: activeAccount.id,
+            email: activeAccount.email,
+            name: activeAccount.displayName || activeAccount.email,
+            picture: activeAccount.avatar || '',
+            accessToken: '', // Token is handled by backend
+            refreshToken: '', // Token is handled by backend
+            tokenExpiry: new Date()
+          });
+        }
+        
+        // Always fetch calendars first to ensure we have the right list for current account
+        try {
+          console.log('[Calendar] Fetching calendar list...');
+          const { fetchCalendars } = useGoogleCalendarStore.getState();
+          await fetchCalendars(activeAccount.id);
+          
+          // Now fetch events
+          console.log('[Calendar] Fetching calendar events...');
+          await fetchCalendarEvents();
+          console.log('[Calendar] Events fetched successfully');
+        } catch (error) {
+          console.error('[Calendar] Failed to fetch calendar data:', error);
+          setError('Failed to load calendar events. Please try refreshing.');
+        }
+      }
+    };
+    
+    loadCalendarData();
+  }, [activeAccount, isCalendarAuthenticated]); // Re-run when account or auth state changes
+
   // Close context menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
