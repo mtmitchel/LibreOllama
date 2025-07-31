@@ -103,4 +103,86 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 - **Concurrent message dispatch:** simulate 50 rapid user + agent messages and ensure store order consistency and no dropped updates.
 - **Cold-boot persistence:** open a conversation, reload app, verify messages and scroll position restored.
-- **Accessibility audit:** ensure screen-reader labels for message bubbles and input, plus keyboard shortcuts work (Up arrow to edit last message, etc.). 
+- **Accessibility audit:** ensure screen-reader labels for message bubbles and input, plus keyboard shortcuts work (Up arrow to edit last message, etc.).
+
+## AI Writing Tools Integration
+
+### Current Implementation Status
+
+**Status**: ✅ Core functionality implemented and production-ready
+
+The AI Writing Tools feature has been successfully integrated across LibreOllama with sophisticated capabilities:
+
+**What's Working**:
+- ✅ Context-aware AI writing menu across all text inputs (except Notes page)
+- ✅ 13 AI writing actions (rewrite, translate, summarize, etc.)
+- ✅ Direct LLM integration with multiple providers (OpenAI, Anthropic, Ollama, etc.)
+- ✅ Sophisticated output modal with markdown rendering and editing capabilities
+- ✅ Language selection for translations with retranslate functionality
+- ✅ AI Writing settings in Settings page for default model selection
+- ✅ Text replacement with full selection range preservation
+- ✅ Clean LLM responses without preamble text
+- ✅ Proper modal state management with reliable closing behavior
+
+### Technical Architecture
+
+**Components**:
+- `TextSelectionDetector` - Cross-module text selection detection
+- `AIWritingToolsMenu` - Context menu with positioning logic
+- `AIOutputModalPro` - Advanced output modal with native event listeners
+- Direct LLM API integration bypassing chat conversation system
+- Zustand store integration for settings persistence
+
+**File Locations**:
+- Components: `src/components/ai/`
+- LLM providers: `src/services/llm/`
+- Settings integration: `src/app/pages/Settings.tsx`
+- BlockNote integration: `src/features/notes/components/BlockNotePopover.tsx`
+
+### AI Writing Contexts Inventory
+
+**52+ Writing Contexts Identified** across LibreOllama:
+
+**Canvas Module**:
+- Text elements with real-time assistance
+- Rich text with segment-based formatting
+- Sticky notes with auto-categorization
+- Table cells with data-aware suggestions
+- Shape text with context-aware fitting
+- Connector labels with semantic detection
+- Section titles with auto-generation
+
+**Email Module**:
+- Rich text email composition
+- Subject line optimization
+- Recipient intelligence
+- Reply/forward context awareness
+
+**Task Management**:
+- Task titles and descriptions
+- Natural language task creation
+- Priority and metadata extraction
+
+**Notes System**:
+- BlockNote editor integration
+- Slash command AI actions
+- Context-aware formatting
+
+### Future AI Writing Enhancements
+
+**Near-term Improvements**:
+- [ ] Side-by-side diff view for changes
+- [ ] Recent outputs history
+- [ ] Custom prompt templates
+- [ ] Batch processing for multiple selections
+- [ ] Auto-detect source language for translation
+- [ ] Industry/domain-specific rewrites
+- [ ] Length preferences for summarization
+
+**Advanced Features**:
+- [ ] Cross-module context awareness
+- [ ] Canvas spatial intelligence
+- [ ] Workflow automation with AI
+- [ ] Smart templates based on usage patterns
+- [ ] Multi-language comparison for translations
+- [ ] Contextual suggestions based on document type 

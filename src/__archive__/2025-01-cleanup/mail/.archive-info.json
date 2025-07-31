@@ -1,0 +1,36 @@
+{
+  "archiveDate": "2025-01-31",
+  "feature": "mail",
+  "items": [
+    {
+      "fileName": "GmailSecurityMigration.tsx",
+      "originalPath": "src/features/mail/components/GmailSecurityMigration.tsx",
+      "lastModified": "2025-07-15",
+      "fileSize": "6.5KB",
+      "reason": "Not imported anywhere in codebase",
+      "checkedFor": ["direct imports", "dynamic imports", "lazy loading"],
+      "potentialUse": "OAuth migration UI component - may be useful for future auth security updates",
+      "action": "Archived"
+    },
+    {
+      "fileName": "EnhancedRecipientInput.tsx",
+      "originalPath": "src/features/mail/components/EnhancedRecipientInput.tsx",
+      "lastModified": "2025-07-15",
+      "fileSize": "12.2KB",
+      "reason": "Not imported anywhere in codebase",
+      "checkedFor": ["direct imports", "component usage"],
+      "potentialUse": "Advanced recipient input with autocomplete - could enhance compose modal",
+      "action": "Archived"
+    },
+    {
+      "fileName": "EnhancedRichTextEditor.tsx",
+      "originalPath": "src/features/mail/components/EnhancedRichTextEditor.tsx",
+      "lastModified": "2025-07-15",
+      "fileSize": "12.5KB",
+      "reason": "Not imported anywhere in codebase",
+      "checkedFor": ["direct imports", "component usage"],
+      "potentialUse": "Rich text editor for email composition - feature-complete implementation",
+      "action": "Archived"
+    }
+  ]
+}

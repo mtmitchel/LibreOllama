@@ -108,5 +108,15 @@ The application features a well-implemented design system with good component co
 
 ## Future Work & Todos
 
+### Post-MVP Enhancements
+
+- [ ] **Advanced Theming:** User-customizable themes beyond dark/light mode
+- [ ] **Component Variations:** Additional component variants for specialized use cases
+- [ ] **Micro-animation Library:** Expanded animation presets for common interactions
+- [ ] **Responsive Design Improvements:** Enhanced mobile and tablet experiences
+
 ### Technical Debt & Refactoring
-- [ ] **Top Bar Integration:** Fully integrate the command palette and user menu in `TopBar.tsx`. 
+- [ ] **Top Bar Integration:** Fully integrate the command palette and user menu in `TopBar.tsx`
+- [ ] **Component Performance:** Optimize heavy components for better rendering performance
+- [ ] **Accessibility Audit:** Comprehensive accessibility testing and improvements
+- [ ] **Design Token Expansion:** Additional semantic tokens for complex UI states 

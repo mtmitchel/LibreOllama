@@ -163,6 +163,32 @@ export const useNotesStore = create<NotesStore>()(
 );
 ```
 
+## Security Architecture
+
+### OAuth 2.0 with PKCE Authentication
+- **Implementation**: OAuth 2.0 with PKCE flow for all Google integrations
+- **Token Storage**: OS keyring via Tauri secure storage (never in browser storage)
+- **Automatic Refresh**: Tokens refreshed 10 minutes before expiry
+- **Session Management**: Non-sensitive session data only in localStorage
+
+### XSS Protection
+- **Email Sanitization**: Industrial-strength HTML sanitization using DOMPurify
+- **URL Validation**: Blocks dangerous URL schemes (javascript:, data:, vbscript:, file:)
+- **Content Security**: External links open with `rel="noopener noreferrer"`
+- **Style Blocking**: Configurable inline style blocking for email content
+
+### State Management Security
+- **Secure Stores**: Sensitive data excluded from localStorage persistence
+- **Partialize Pattern**: Zustand stores use partialize to exclude sensitive fields
+- **Backend Rehydration**: Secure data fetched from backend on app startup
+
+### Best Practices
+1. **Never store sensitive data in localStorage** - Use secure storage APIs
+2. **Always use DOMPurify for HTML sanitization** - Never use regex-based sanitization
+3. **Implement PKCE for all OAuth flows** - Essential for desktop applications
+4. **Automatic token refresh** - Prevent unexpected logouts
+5. **Validate all user input** - Especially email addresses and URLs
+
 ## Testing Strategy
 
 **Last Updated**: January 2025  

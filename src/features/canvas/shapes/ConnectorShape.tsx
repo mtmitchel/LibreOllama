@@ -1,3 +1,13 @@
+/**
+ * ConnectorShape - Full-featured connector element for main canvas rendering
+ * 
+ * This component integrates with the general element system and provides:
+ * - Full transformation support via Konva Transformer
+ * - Integration with the unified element system
+ * - Complex interaction handling for general use
+ * 
+ * For optimized connector-only rendering, see components/ConnectorShape.tsx
+ */
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { Group, Line, Arrow, Circle, Transformer } from 'react-konva';
 import Konva from 'konva';

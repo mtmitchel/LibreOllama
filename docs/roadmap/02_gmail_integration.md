@@ -33,10 +33,31 @@ The Gmail integration connects directly to the Google API, providing real email 
 
 ### Implemented Features
 
-- Secure OAuth2 authentication and multi-account management.
-- Fetching, displaying, and parsing of email messages.
-- Basic email operations (reply, forward, delete).
-- Rate limiting and robust error handling on the backend.
+**Authentication & Security:**
+- ✅ Secure OAuth2 authentication with PKCE flow
+- ✅ Multi-account management with account switching
+- ✅ Token storage in OS keyring (secure)
+- ✅ Automatic token refresh mechanism
+- ✅ XSS protection with DOMPurify sanitization
+
+**Core Email Functionality:**
+- ✅ Fetching, displaying, and parsing of email messages
+- ✅ Threaded conversation view with expand/collapse
+- ✅ Basic email operations (compose, reply, forward, delete)
+- ✅ Rich text email composition with TipTap editor
+- ✅ Full attachment support (upload, download, preview)
+- ✅ Advanced search with Gmail-style operators
+- ✅ Label management (create, edit, delete, apply)
+- ✅ Rate limiting and robust error handling
+
+**UI Components:**
+- ✅ Unified inbox with message list
+- ✅ Compose modal with rich text editor
+- ✅ Attachment preview modal (images, videos, PDFs)
+- ✅ Context menu for message actions
+- ✅ Search bar with suggestions and filters
+- ✅ Label picker and management UI
+- ✅ Security warnings for suspicious attachments
 
 ## Future Work & Todos
 
@@ -44,11 +65,11 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### High Priority / Known Issues
 
-- [ ] **Bugfix:** Resolve 5 failing backend tests:
+- [ ] **Bugfix:** Resolve failing backend tests:
   - OAuth configuration test (missing `oauth.client_id` environment variable)
-  - Gmail scopes configuration test (expected 5 scopes but found 8)
-  - Database schema tests (missing `agent_executions` table - affects 3 tests)
-- [ ] **Code Quality:** Address 136 compiler warnings in backend Rust code (unused functions and dead code)
+  - Gmail scopes configuration test (expected scopes mismatch)
+  - Database schema tests (some tables may be missing)
+- [ ] **Code Quality:** Address compiler warnings in backend Rust code (unused functions and dead code)
 - [ ] **Setup:** Finalize and document the required environment variable configuration for OAuth (`.env` file)
 
 ### MVP Must-Haves

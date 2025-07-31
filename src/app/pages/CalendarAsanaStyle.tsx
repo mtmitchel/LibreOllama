@@ -21,7 +21,7 @@ import interactionPlugin, { Draggable, DropArg } from '@fullcalendar/interaction
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { devLog } from '../../utils/devLog';
 import type { GoogleTask } from '../../types/google';
-import './styles/calendar.css';
+import './styles/calendar-asana.css';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
 

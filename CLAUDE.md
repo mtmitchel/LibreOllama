@@ -8,15 +8,21 @@ LibreOllama is a Tauri-based desktop application with React 19, TypeScript, and 
 
 **📋 Key Documentation**:
 - **docs/PROJECT_STATUS.md** - Current implementation status (READ FIRST for project overview)
-- **docs/IMPLEMENTATION_GUIDE.md** - Development patterns and architecture guidelines
-- **docs/TECHNICAL_DEBT.md** - Known issues and improvement plans
-- **docs/README.md** - Documentation index and guidelines
+- **docs/ARCHITECTURE.md** - Technical implementation patterns, system design, and security
+- **docs/TESTING_STRATEGY.md** - Comprehensive testing approach and best practices
+- **docs/README.md** - Documentation hub with organized links to all resources
 
 **🚨 Documentation Guidelines**:
 - **DO NOT create new documentation files** unless absolutely necessary
 - **Always check if information can fit into existing documents first**
 - **Consolidate rather than fragment** - enhance existing docs instead
-- **Read docs/README.md** for complete documentation guidelines
+- **Read docs/README.md** for complete documentation structure
+
+**📁 Documentation Organization**:
+- **Core Docs**: Architecture, Design System, Testing Strategy, UX Audit, Roadmap
+- **Feature Roadmaps**: In `docs/roadmap/` - one file per major feature
+- **Archives**: Historical/outdated docs in `docs/_archive/` for reference
+- **Root Directory**: Keep minimal - README, LICENSE, CHANGELOG, CLAUDE.md only
 
 ## Development Commands
 

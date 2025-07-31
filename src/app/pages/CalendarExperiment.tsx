@@ -35,7 +35,7 @@ import { realtimeSync } from '../../services/realtimeSync';
 import { KanbanColumn } from '../../components/kanban/KanbanColumn';
 import { UnifiedTaskCard } from '../../components/tasks/UnifiedTaskCard';
 import { InlineTaskCreator } from '../../components/kanban/InlineTaskCreator';
-import './styles/calendar.css';
+import './styles/calendar-experiment.css';
 import './styles/calendar-asana.css'; // Asana style design
 import '../../styles/asana-tokens.css';
 import '../../styles/asana-design-system.css';

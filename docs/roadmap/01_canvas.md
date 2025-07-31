@@ -34,10 +34,35 @@ The canvas is a core feature of the application, built using React Konva and a s
 
 ### Implemented Features
 
-- Core tools: Pen, Text, Sticky Notes, Sections, Connectors.
-- Selection and transformation of elements.
-- Undo/redo functionality via the `useCanvasHistory` hook.
-- A layer management system.
+**Core Tools:**
+- ✅ Selection & Pan tools
+- ✅ Text tool with rich text editing
+- ✅ Sticky Notes with color picker
+- ✅ Table tool with cell editing
+- ✅ Image upload and placement
+- ✅ Drawing tools: Pen, Marker, Highlighter
+- ✅ Eraser tool for drawing strokes
+- ✅ Shape tools: Rectangle, Circle, Triangle (via dropdown)
+- ✅ Connector tool with multiple styles (arrow, elbow, straight)
+- ❌ Section tool (temporarily disabled in toolbar)
+
+**Core Functionality:**
+- ✅ Selection and multi-selection with Shift+click
+- ✅ Transformation (move, resize, rotate) of elements
+- ✅ Undo/redo functionality with history management
+- ✅ Layer management system (Background, Main, Connector, UI layers)
+- ✅ Viewport controls (pan, zoom in/out)
+- ✅ Copy/paste functionality
+- ✅ Delete elements
+- ✅ Group/ungroup elements
+- ✅ Grid display toggle
+- ✅ Snap to grid functionality
+
+**Performance Optimizations:**
+- ✅ Viewport culling for rendering only visible elements
+- ✅ React.memo on heavy components
+- ✅ Granular selectors to minimize re-renders
+- ✅ Modularized store architecture for better performance
 
 ## Future Work & Todos
 
@@ -51,9 +76,10 @@ This roadmap is aligned with the **Single-User MVP Strategy**, focusing on core 
 
 ### MVP Must-Haves
 
-- [x] **Core Tools:** Pen, text, shape creation (rectangles/ovals), sticky notes. *(Existing)*
-- [x] **Connectors:** Straight arrow connectors. *(Existing)*
-- [x] **Undo/Redo:** Standard undo/redo functionality. *(Existing)*
+- [x] **Core Tools:** Pen, text, shape creation (rectangles/circles/triangles), sticky notes. *(Completed)*
+- [x] **Connectors:** Multiple connector styles (arrow, elbow, straight). *(Completed)*
+- [x] **Undo/Redo:** Standard undo/redo functionality with history management. *(Completed)*
+- [x] **Basic Persistence:** Save canvas state to JSON file. *(Completed)*
 
 ### Post-MVP Enhancements
 

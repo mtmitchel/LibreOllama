@@ -38,8 +38,17 @@
       "Bash(git add:*)",
       "Bash(touch:*)",
       "mcp__sequential-thinking__sequentialthinking",
-      "Bash(claude mcp add:*)"
+      "Bash(claude mcp add:*)",
+      "Bash(move:*)"
     ],
     "deny": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "ref-mcp",
+    "semgrep",
+    "exa-search",
+    "playwright-mcp"
+  ]
 }

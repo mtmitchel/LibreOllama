@@ -21,22 +21,23 @@ The Notes feature has comprehensive backend services and a rich frontend UI, but
 
 ### Frontend Architecture
 
-- **Editor Engine:** Complete **Tiptap** implementation (`TiptapEditor.tsx`) with rich text editing capabilities.
+- **Editor Engine:** Complete **BlockNote** implementation with rich block-based editing capabilities.
 - **Component Structure:** Full component suite in `src/features/notes/components/`:
-    - `BlockEditor.tsx`: Main editor component with block-based architecture
-    - `NotesEditor.tsx`: Notes editor with title editing, status management, and Tiptap integration
-    - `FolderTree.tsx`: Hierarchical folder navigation component
-    - `NotesSidebar.tsx`: Sidebar for folder and note navigation
-    - `TiptapFixedToolbar.tsx`: Fixed toolbar with formatting options
-    - `TiptapSlashCommand.tsx`: Slash command menu for quick formatting
-    - `NotesEmptyState.tsx`: Empty state component
-    - `TiptapContextMenu.tsx`: Context menu for editor operations
-    - `TiptapSlashExtension.tsx`: Slash command extension system
-    - `CustomTable.ts`: Table functionality integration
-    - `LinkDialog.tsx`: Link insertion dialog
-    - `Sidebar.tsx`: Main sidebar with search and folder management
-- **Mock Data Usage:** Frontend uses mock data and is **not connected to backend services**.
-- **Type Definitions:** Complete TypeScript definitions for Notes, Folders, and Blocks.
+    - `BlockNoteEditor.tsx`: Main BlockNote editor component with rich text editing
+    - `NotesPage.tsx`: Main notes page with folder navigation and editor integration
+    - `Sidebar.tsx`: Sidebar with folder tree, search, and note management
+    - `FormattingToolbar.tsx`: Rich text formatting toolbar
+    - `CustomFormattingToolbar.tsx`: Enhanced formatting options
+    - `CustomSlashMenu.tsx`: Slash command menu for quick block insertion
+    - `BrowserLikeContextMenu.tsx`: Context menu for editor operations
+    - `BlockNotePopover.tsx`: AI writing tools integration popover
+    - `ImageUploadModal.tsx`: Image upload functionality
+    - `LinkModal.tsx`: Link insertion and editing
+    - `AlignmentMenu.tsx`: Text alignment options
+    - `ContextualToolbar.tsx`: Context-aware toolbar
+    - `NotesContextSidebar.tsx`: Contextual sidebar for notes
+- **State Management:** Uses Zustand store (`notes/store.ts`) for note and folder state
+- **Backend Integration:** Partial integration with backend services via `notesService.ts`
 
 ### Backend Architecture
 
@@ -48,44 +49,35 @@ The Notes feature has comprehensive backend services and a rich frontend UI, but
     - `folder_operations.rs`: Hierarchical folder management with recursive operations
 - **Database Models:** Complete models for Notes and Folders with proper relationships.
 
-### Implemented Backend Features (Unused)
+### Implemented Features
 
-- Rich text editor with Tiptap (slash commands, toolbar, block-based editing)
-- Complete backend API with database persistence
-- Search functionality (backend implemented)
-- Hierarchical folder structure (backend implemented)
-- Full CRUD operations for notes and folders (backend ready)
+**Frontend (BlockNote Editor):**
+- ✅ Rich block-based editor with BlockNote
+- ✅ Slash commands for quick block insertion
+- ✅ Formatting toolbar with rich text options
+- ✅ Context menus and alignment tools
+- ✅ Image upload with modal interface
+- ✅ Link insertion and editing
+- ✅ AI writing tools integration via popover
+- ✅ Hierarchical folder navigation
+- ✅ Note and folder state management with Zustand
+- ✅ Basic backend integration for notes CRUD
 
-### Implemented Frontend Features (Mock Data Only)
+**Backend (Complete Implementation):**
+- ✅ Full CRUD operations for notes and folders
+- ✅ Hierarchical folder management
+- ✅ Search functionality with content indexing
+- ✅ Tag management system
+- ✅ Database persistence with SQLite
+- ✅ Complete Tauri command interface
 
-- Rich text editor with Tiptap interface
-- Note creation and editing UI (not persisted)
-- Folder navigation UI (not functional)
-- Search interface (not connected to backend)
+### Current Implementation Gaps
 
-### Missing Components Documentation
-
-**Editor Enhancement Components:**
-- `TiptapContextMenu.tsx` - Context menu for editor with formatting options
-- `TiptapSlashExtension.tsx` - Slash command extension for quick formatting
-- `CustomTable.ts` - Table functionality for the editor
-- `LinkDialog.tsx` - Link insertion dialog component
-
-**Sidebar & Navigation Components:**
-- `Sidebar.tsx` - Notes sidebar with folder tree and search functionality
-- `FolderTree.tsx` - Hierarchical folder navigation component
-- `NotesSidebar.tsx` - Sidebar for folder and note navigation
-- `NotesEmptyState.tsx` - Empty state component for notes
-
-**Editor Components:**
-- `TiptapEditor.tsx` - Main Tiptap editor component with rich functionality
-- `TiptapFixedToolbar.tsx` - Fixed toolbar with formatting options
-- `TiptapSlashCommand.tsx` - Slash command menu implementation
-- `BlockEditor.tsx` - Block-based editor component
-- `NotesEditor.tsx` - Notes editor with title editing and status management
-
-**Service Integration:**
-- `notesService.ts` - Frontend service layer for notes operations
+- **Search Integration:** Frontend search UI exists but not fully connected to backend search
+- **Folder Operations:** Some folder CRUD operations still use mock implementations
+- **Auto-save:** No automatic saving of note content during editing
+- **Error Handling:** Limited error handling for failed operations
+- **Loading States:** Missing loading indicators during async operations
 
 ## Future Work & Todos
 
@@ -103,13 +95,14 @@ This roadmap is aligned with the **Single-User MVP Strategy**.
 
 ### MVP Must-Haves
 
-- [x] **Tiptap Block Editor:** A rich-text, block-based editor. *(Existing)*
-- [x] **Backend Services:** Complete backend implementation with database persistence. *(Existing)*
-- [ ] **Folder Tree CRUD:** Connect frontend folder operations to backend services.
-- [ ] **Note CRUD:** Implement create/read/update/delete for notes, including editor integration and backend persistence.
-- [ ] **Search Functionality:** Implement search UI connected to backend search.
-- [ ] **Root-level Notes:** Allow creating and viewing notes without assigning to a folder (default root level).
-- [ ] **Folder Hierarchy & Note Nesting:** Support nested folders and allow users to organize notes hierarchically within any folder.
+- [x] **BlockNote Editor:** Rich-text, block-based editor with slash commands. *(Completed)*
+- [x] **Backend Services:** Complete backend implementation with database persistence. *(Completed)*
+- [x] **Note CRUD:** Basic create/read/update/delete for notes with backend integration. *(Completed)*
+- [x] **Folder Hierarchy:** Hierarchical folder structure with navigation. *(Completed)*
+- [x] **AI Writing Tools:** Integration with AI writing tools via popover. *(Completed)*
+- [ ] **Complete Search Integration:** Fully connect frontend search to backend search API.
+- [ ] **Auto-save Implementation:** Add automatic saving during note editing.
+- [ ] **Complete Folder CRUD:** Replace remaining mock folder operations with backend calls.
 
 ### Post-MVP Enhancements
 

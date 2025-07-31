@@ -15,9 +15,9 @@ Welcome to the central documentation hub for LibreOllama. This is your starting 
 - **[Component Explorer](https://storybook.js.org/)** - Run `npm run ladle` for interactive component gallery
 
 ### 👩‍💻 For Developers & Engineers
-- **[Architecture Guide](./ARCHITECTURE.md)** - Technical implementation patterns and system design
+- **[Architecture Guide](./ARCHITECTURE.md)** - Technical implementation patterns, system design, and security
 - **[Testing Strategy](./TESTING_STRATEGY.md)** - Comprehensive testing approach and best practices
-- **[Development Setup](./guides/getting-started.md)** - Quick start guide for new contributors
+- **[Project Status](./PROJECT_STATUS.md)** - Current implementation status and development guidelines
 
 ---
 
@@ -36,10 +36,10 @@ Welcome to the central documentation hub for LibreOllama. This is your starting 
 - **[Production Readiness](./PRODUCTION_READINESS.md)** - Complete project roadmap with 3 phases
 - **[Feature Roadmap](./roadmap/)** - Individual feature specifications and requirements
 
-### Development Guides
-- **[Getting Started](./guides/getting-started.md)** - New developer onboarding
-- **[Development Setup](./guides/development-setup.md)** - Detailed environment configuration
-- **[Deployment Guide](./guides/deployment.md)** - Production deployment instructions
+### Development Resources
+- **[Project Status](./PROJECT_STATUS.md)** - Implementation status and development guidelines
+- **[Roadmap Directory](./roadmap/)** - Feature-specific implementation guides
+- **[Claude.md](../CLAUDE.md)** - AI assistant guidance and project conventions
 
 ---
 
@@ -65,9 +65,9 @@ The `/roadmap` directory contains detailed specifications for each major feature
 ## Development Workflow
 
 ### Getting Started
-1. Read [Getting Started Guide](./guides/getting-started.md)
-2. Set up development environment with [Development Setup](./guides/development-setup.md)
-3. Review [Architecture Guide](./ARCHITECTURE.md) for patterns and conventions
+1. Review [Project Status](./PROJECT_STATUS.md) for current implementation
+2. Read [Architecture Guide](./ARCHITECTURE.md) for patterns and conventions
+3. Check [Claude.md](../CLAUDE.md) for project-specific guidelines
 4. Explore components with `npm run ladle`
 
 ### Contributing

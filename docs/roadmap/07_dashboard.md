@@ -14,23 +14,24 @@ The Dashboard serves as a home page, providing an at-a-glance view of various pa
 
 - **Widget System:** The core of the dashboard is a widget system. The components are located in `src/features/dashboard/components/`.
 - **Existing Widgets:**
-    - `WelcomeWidget.tsx`: A simple welcome message.
     - `AgentStatusWidget.tsx`: Displays the status of different agents (limited integration).
     - `ProjectProgressWidget.tsx`: Shows the progress of various projects (uses mock data).
     - `QuickActionsWidget.tsx`: Quick action buttons for common tasks.
     - `TodaysFocusWidget.tsx`: Focus items and priorities for today (mock data).
     - `UpcomingEventsWidget.tsx`: Upcoming calendar events (limited integration).
     - `PendingTasksWidget.tsx`: Pending tasks from the Kanban system (basic integration).
+    - `FocusEventsWidget.tsx`: Focus events widget (functional).
+    - `MailWidget.tsx`: Email inbox widget showing recent messages.
+    - `RecentActivityWidget.tsx`: Recent activity across the application.
 - **Layout:** The dashboard uses a flexible grid layout to arrange the widgets.
 - **State Management:** Currently, state is managed within individual widgets, with varying levels of real data integration.
 
 ### Widget Integration Status
 
-**Implemented Widgets (Not Listed in Original Roadmap):**
-- `QuickActionsWidget.tsx` - Quick action buttons for common tasks (functional)
-- `TodaysFocusWidget.tsx` - Focus items and priorities for today (mock data)
-- `UpcomingEventsWidget.tsx` - Upcoming calendar events (limited calendar integration)
-- `PendingTasksWidget.tsx` - Pending tasks from Kanban (basic store integration)
+**Additional Widgets (Not Listed in Original Roadmap):**
+- `FocusEventsWidget.tsx` - Focus events widget (functional)
+- `MailWidget.tsx` - Email inbox widget with recent messages integration
+- `RecentActivityWidget.tsx` - Recent activity feed across all modules
 - `WidgetSkeleton.tsx` - Loading skeleton states for widgets
 - `WidgetErrorBoundary.tsx` - Error boundaries for widget error handling
 
@@ -53,11 +54,20 @@ The Dashboard serves as a home page, providing an at-a-glance view of various pa
 
 ### Implemented Features
 
-- A functional widget system framework.
-- Six operational widgets providing basic information.
-- A clean, responsive layout with grid system.
-- Loading states and error boundaries for widgets.
-- Basic integration with some data stores (Kanban, limited Calendar/Tasks).
+- ✅ Functional widget system framework with error boundaries
+- ✅ Nine operational widgets providing diverse information:
+  - Agent status monitoring
+  - Project progress tracking
+  - Quick action buttons
+  - Today's focus items
+  - Upcoming calendar events
+  - Pending tasks from Kanban
+  - Focus events widget
+  - Mail inbox preview
+  - Recent activity feed
+- ✅ Clean, responsive layout with flexible grid system
+- ✅ Loading skeleton states for improved UX
+- ✅ Basic integration with multiple data stores (Tasks, Calendar, Mail, Projects)
 
 ## Future Work & Todos
 

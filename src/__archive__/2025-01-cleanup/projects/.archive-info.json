@@ -1,0 +1,27 @@
+{
+  "archiveDate": "2025-01-31",
+  "feature": "projects",
+  "items": [
+    {
+      "fileName": "ProjectSidebar.tsx",
+      "originalPath": "src/features/projects/components/ProjectSidebar.tsx",
+      "lastModified": "2025-01-30",
+      "fileSize": "Medium",
+      "reason": "Not imported anywhere in codebase",
+      "checkedFor": ["direct imports", "component usage"],
+      "potentialUse": "Sidebar component for project details and actions",
+      "notes": "Different from ProjectsSidebar which is actively used",
+      "action": "Archived"
+    },
+    {
+      "fileName": "TaskProjectAssociation.tsx",
+      "originalPath": "src/features/projects/components/TaskProjectAssociation.tsx",
+      "lastModified": "2025-01-30",
+      "fileSize": "Small",
+      "reason": "Not imported anywhere in codebase",
+      "checkedFor": ["direct imports", "component usage"],
+      "potentialUse": "UI component for associating tasks with projects",
+      "action": "Archived"
+    }
+  ]
+}
