@@ -3,6 +3,99 @@
 /* Import Asana design system */
 @import '../../../styles/asana-design-system.css';
 
+/* ===== FullCalendar Event Styling ===== */
+/* Base event styles */
+.fc-event {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Ensure events have block display */
+.fc-daygrid-event {
+  display: block !important;
+  margin-bottom: 1px;
+}
+
+/* Multi-day event specific */
+.fc-daygrid-block-event {
+  border: none;
+  border-radius: 3px;
+}
+
+.fc-daygrid-block-event .fc-event-main {
+  padding: 1px 3px;
+}
+
+/* Task event styles */
+.fc-event-task {
+  background-color: #FFF3E0 !important;
+  border-color: #FFB74D !important;
+  color: #E65100 !important;
+}
+
+/* Remove time from all-day events */
+.fc-daygrid-event .fc-event-time {
+  display: none;
+}
+
+/* True multi-day event specific styling */
+.fc-multi-day-event {
+  background-color: #d8d0ff !important;
+  border-color: #c7bbff !important;
+  color: #4a3f99 !important;
+  font-weight: 500 !important;
+}
+
+/* CRITICAL: Force multi-day events to span */
+.fc-daygrid-event-harness-abs {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+/* Ensure proper stacking context */
+.fc-daygrid-day-events {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Multi-day event harness needs to be positioned */
+.fc-daygrid-event-harness {
+  position: relative !important;
+}
+
+/* Ensure multi-day events have proper z-index */
+.fc-daygrid-event-harness:has(.fc-multi-day-event) {
+  z-index: 2 !important;
+}
+
+/* Event hover state */
+.fc-event:hover {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+/* More events link styling */
+.fc-daygrid-more-link {
+  color: #796EFF !important;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.fc-popover {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E8E8E9 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 8px !important;
+}
+
+.fc-popover-header {
+  background-color: #F6F7F8 !important;
+  border-bottom: 1px solid #E8E8E9 !important;
+  padding: 8px 12px !important;
+  font-weight: 600 !important;
+}
+
 /* ===== Calendar Container ===== */
 .cal-asana-container {
   background: var(--asana-bg-canvas);

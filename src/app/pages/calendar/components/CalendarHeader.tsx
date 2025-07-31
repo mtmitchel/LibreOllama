@@ -76,7 +76,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </button>
         </div>
         
-        <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1E1E1F' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 500, color: '#444' }}>
           {currentViewTitle}
         </h2>
       </div>

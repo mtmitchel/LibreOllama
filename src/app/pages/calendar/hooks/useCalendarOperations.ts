@@ -5,6 +5,7 @@ import { GoogleCalendarEvent, GoogleTask, GoogleTaskList } from '../../../../typ
 import { useActiveGoogleAccount } from '../../../../stores/settingsStore';
 import { CalendarEvent } from '../types';
 import { realtimeSync } from '../../../../services/realtimeSync';
+import { addDays, format } from 'date-fns';
 
 export const useCalendarOperations = () => {
   const {
@@ -31,26 +32,80 @@ export const useCalendarOperations = () => {
     
     // Add calendar events
     calendarEvents.forEach(event => {
-      events.push({
+      const isAllDay = !event.start?.dateTime;
+      const isRecurringInstance = event.id.includes('_') || !!event.recurringEventId;
+      let startDate = event.start?.dateTime || event.start?.date || '';
+      let endDate = event.end?.dateTime || event.end?.date || '';
+      
+      // Check if this is a true multi-day event vs recurring instance
+      const isTrueMultiDay = isAllDay && 
+        event.start?.date && 
+        event.end?.date && 
+        event.start.date !== event.end.date && 
+        !isRecurringInstance;
+      
+      // Debug logging - enhanced
+      if (event.summary?.includes('Staying at Bo') || event.summary?.includes('Reds') || event.summary?.includes('Diamondbacks')) {
+        console.log(`🔍 [DEBUG] Event "${event.summary}":`, {
+          id: event.id,
+          isRecurringInstance,
+          isTrueMultiDay,
+          originalStart: event.start,
+          originalEnd: event.end,
+          processedStart: startDate,
+          processedEnd: endDate,
+          recurrence: event.recurrence,
+          recurringEventId: event.recurringEventId
+        });
+      }
+      
+      // CRITICAL FIX: Add one day to end date for all-day events
+      // FullCalendar treats end dates as exclusive for all-day events
+      if (isAllDay && endDate && event.start?.date && event.end?.date) {
+        // Only add a day if this is a date-only format (YYYY-MM-DD)
+        if (endDate.length === 10 && !endDate.includes('T')) {
+          const adjustedEnd = addDays(new Date(endDate), 1);
+          endDate = format(adjustedEnd, 'yyyy-MM-dd');
+          
+          if (isTrueMultiDay) {
+            console.log(`📅 True multi-day event "${event.summary}": ${event.start.date} to ${event.end.date} (adjusted to ${endDate})`);
+          }
+        }
+      }
+      
+      // CRITICAL: Ensure dates are in ISO format for FullCalendar
+      // For all-day events, FullCalendar expects YYYY-MM-DD format
+      if (isAllDay && startDate && startDate.includes('T')) {
+        startDate = startDate.split('T')[0];
+      }
+      if (isAllDay && endDate && endDate.includes('T')) {
+        endDate = endDate.split('T')[0];
+      }
+      
+      const processedEvent = {
         ...event,
         id: event.id,
         title: event.summary || 'Untitled Event',
-        start: event.start?.dateTime || event.start?.date || '',
-        end: event.end?.dateTime || event.end?.date || '',
-        allDay: !event.start?.dateTime,
-        backgroundColor: '#796EFF',
-        borderColor: '#796EFF',
-        textColor: '#FFFFFF',
+        start: startDate,
+        end: endDate,
+        allDay: isAllDay,
+        backgroundColor: isTrueMultiDay ? '#d8d0ff' : '#796EFF',
+        borderColor: isTrueMultiDay ? '#c7bbff' : '#796EFF',
+        textColor: isTrueMultiDay ? '#4a3f99' : '#FFFFFF',
+        // Remove display property - let FullCalendar handle it naturally
         extendedProps: {
           ...event,
-          type: 'event' as const,
+          type: isTrueMultiDay ? 'multiday' : (isRecurringInstance ? 'recurring_instance' : 'event') as const,
+          isRecurring: isRecurringInstance,
+          isTrueMultiDay,
           description: event.description,
           location: event.location,
           attendees: event.attendees,
           calendarId: event.calendarId,
           calendarName: event.calendarName
         }
-      });
+      };
+      events.push(processedEvent);
     });
     
     // Add unified tasks with due dates

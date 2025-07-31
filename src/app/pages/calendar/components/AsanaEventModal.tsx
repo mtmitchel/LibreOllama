@@ -2,6 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, MapPin, Users, Link, FileText, Trash2 } from 'lucide-react';
 import { AsanaEventModalProps } from '../types';
 
+// Asana-style typography
+const asanaTypography = {
+  h1: {
+    fontSize: '24px',
+    fontWeight: 600,
+    letterSpacing: '-0.01em',
+    lineHeight: 1.3,
+    color: '#151B26'
+  },
+  h2: {
+    fontSize: '16px',
+    fontWeight: 600,
+    letterSpacing: '0',
+    lineHeight: 1.4,
+    color: '#151B26'
+  },
+  body: {
+    fontSize: '14px',
+    fontWeight: 400,
+    lineHeight: 1.6,
+    letterSpacing: '0',
+    color: '#6B6F76'
+  },
+  label: {
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.08em',
+    color: '#6B6F76'
+  }
+};
+
 export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({ 
   isOpen, 
   onClose,
@@ -46,7 +77,13 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
   }, [event]);
 
   const handleSubmit = () => {
+    if (!title.trim()) {
+      alert('Please enter a title for the event');
+      return;
+    }
+
     const eventData: any = {
+      title: title,  // Add title field
       summary: title,
       location,
       description,
@@ -59,12 +96,15 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
 
     if (allDay) {
       eventData.start = { date: startDate };
+      // IMPORTANT: Do NOT add a day here - the backend expects the actual end date
+      // The transformation happens in useCalendarOperations for FullCalendar display
       eventData.end = { date: endDate };
     } else {
       eventData.start = { dateTime: `${startDate}T${startTime}:00` };
       eventData.end = { dateTime: `${endDate}T${endTime}:00` };
     }
 
+    console.log('📅 [AsanaEventModal] Submitting event:', eventData);
     onSave(eventData);
     onClose();
   };
@@ -72,36 +112,75 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="cal-modal-overlay">
-      <div className="cal-modal" style={{ maxHeight: '90vh', overflow: 'auto' }}>
-        <div className="cal-modal-header">
-          <h2 className="cal-modal-title">{event ? 'Edit Event' : 'New Event'}</h2>
-          <button onClick={onClose} className="cal-modal-close">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }}>
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white rounded-2xl shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E8E8E9' }}>
+          <h2 style={asanaTypography.h1}>
+            {event ? 'Edit event' : 'New event'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
 
-        <div className="cal-modal-content">
-          <div className="cal-form-group">
+        {/* Content */}
+        <div className="p-6 space-y-5">
+          {/* Title */}
+          <div>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Add title"
-              className="cal-input cal-input-title"
+              className="w-full px-4 py-3 rounded-xl border transition-all text-lg font-medium"
+              style={{ 
+                backgroundColor: '#F6F7F8',
+                borderColor: 'transparent',
+                outline: 'none',
+                fontSize: '18px',
+                fontWeight: 500,
+                color: '#151B26'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                e.currentTarget.style.borderColor = '#796EFF';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                e.currentTarget.style.borderColor = 'transparent';
+              }}
               autoFocus
             />
           </div>
 
-          <div className="cal-form-group">
-            <label className="cal-label">
-              <Calendar size={16} />
+          {/* Calendar Selection */}
+          <div>
+            <label style={{ ...asanaTypography.label, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Calendar size={14} />
               Calendar
             </label>
             <select 
               value={selectedCalendar} 
               onChange={(e) => setSelectedCalendar(e.target.value)}
-              className="cal-select"
+              className="w-full px-4 py-3 rounded-xl border transition-all cursor-pointer"
+              style={{ 
+                ...asanaTypography.body,
+                backgroundColor: '#F6F7F8',
+                borderColor: 'transparent',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                e.currentTarget.style.borderColor = '#796EFF';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                e.currentTarget.style.borderColor = 'transparent';
+              }}
             >
               {calendars.map(cal => (
                 <option key={cal.id} value={cal.id}>{cal.summary}</option>
@@ -109,62 +188,130 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
             </select>
           </div>
 
-          <div className="cal-form-group">
-            <label className="cal-label">
-              <Clock size={16} />
-              Date & Time
+          {/* Date & Time */}
+          <div>
+            <label style={{ ...asanaTypography.label, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Clock size={14} />
+              Date and time
             </label>
-            <div className="cal-checkbox-group">
-              <label className="cal-checkbox-label">
+            
+            {/* All Day Checkbox */}
+            <div className="mb-4">
+              <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={allDay}
                   onChange={(e) => setAllDay(e.target.checked)}
-                  className="cal-checkbox"
+                  className="w-4 h-4 rounded border-2 border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                All day
+                <span style={asanaTypography.body}>All day</span>
               </label>
             </div>
-            <div className="cal-date-time-group">
-              <div className="cal-date-time-row">
+
+            {/* Date/Time Inputs */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="cal-input"
+                  className="flex-1 px-4 py-3 rounded-xl border transition-all"
+                  style={{ 
+                    ...asanaTypography.body,
+                    backgroundColor: '#F6F7F8',
+                    borderColor: 'transparent',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                    e.currentTarget.style.borderColor = '#796EFF';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
                 />
                 {!allDay && (
                   <input
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="cal-input"
+                    className="px-4 py-3 rounded-xl border transition-all"
+                    style={{ 
+                      ...asanaTypography.body,
+                      backgroundColor: '#F6F7F8',
+                      borderColor: 'transparent',
+                      outline: 'none',
+                      width: '140px'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      e.currentTarget.style.borderColor = '#796EFF';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F6F7F8';
+                      e.currentTarget.style.borderColor = 'transparent';
+                    }}
                   />
                 )}
               </div>
-              <span className="cal-date-separator">to</span>
-              <div className="cal-date-time-row">
+              
+              <div className="flex items-center">
+                <span style={{ ...asanaTypography.body, color: '#9CA6AF', minWidth: '30px' }}>to</span>
+              </div>
+              
+              <div className="flex items-center gap-3">
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="cal-input"
+                  className="flex-1 px-4 py-3 rounded-xl border transition-all"
+                  style={{ 
+                    ...asanaTypography.body,
+                    backgroundColor: '#F6F7F8',
+                    borderColor: 'transparent',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                    e.currentTarget.style.borderColor = '#796EFF';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F6F7F8';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
                 />
                 {!allDay && (
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="cal-input"
+                    className="px-4 py-3 rounded-xl border transition-all"
+                    style={{ 
+                      ...asanaTypography.body,
+                      backgroundColor: '#F6F7F8',
+                      borderColor: 'transparent',
+                      outline: 'none',
+                      width: '140px'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FFFFFF';
+                      e.currentTarget.style.borderColor = '#796EFF';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F6F7F8';
+                      e.currentTarget.style.borderColor = 'transparent';
+                    }}
                   />
                 )}
               </div>
             </div>
           </div>
 
-          <div className="cal-form-group">
-            <label className="cal-label">
-              <MapPin size={16} />
+          {/* Location */}
+          <div>
+            <label style={{ ...asanaTypography.label, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <MapPin size={14} />
               Location
             </label>
             <input
@@ -172,40 +319,115 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Add location"
-              className="cal-input"
+              className="w-full px-4 py-3 rounded-xl border transition-all"
+              style={{ 
+                ...asanaTypography.body,
+                backgroundColor: '#F6F7F8',
+                borderColor: 'transparent',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                e.currentTarget.style.borderColor = '#796EFF';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                e.currentTarget.style.borderColor = 'transparent';
+              }}
             />
           </div>
 
-          <div className="cal-form-group">
-            <label className="cal-label">
-              <FileText size={16} />
+          {/* Description */}
+          <div>
+            <label style={{ ...asanaTypography.label, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <FileText size={14} />
               Description
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add description"
-              className="cal-textarea"
+              className="w-full px-4 py-3 rounded-xl border transition-all resize-none"
+              style={{ 
+                ...asanaTypography.body,
+                backgroundColor: '#F6F7F8',
+                borderColor: 'transparent',
+                outline: 'none',
+                minHeight: '100px'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                e.currentTarget.style.borderColor = '#796EFF';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.backgroundColor = '#F6F7F8';
+                e.currentTarget.style.borderColor = 'transparent';
+              }}
               rows={3}
             />
           </div>
         </div>
 
-        <div className="cal-modal-footer">
-          <div className="cal-modal-actions-left">
+        {/* Footer */}
+        <div className="flex items-center justify-between p-6" style={{ borderTop: '1px solid #E8E8E9' }}>
+          <div>
             {event && onDelete && (
-              <button onClick={() => onDelete(event.id)} className="cal-button cal-button-danger">
+              <button
+                onClick={() => onDelete(event.id)}
+                className="px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
+                style={{ 
+                  color: '#D32F2F'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#FFE5E5';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
                 <Trash2 size={16} />
                 Delete
               </button>
             )}
           </div>
-          <div className="cal-modal-actions">
-            <button onClick={onClose} className="cal-button cal-button-secondary">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl transition-colors"
+              style={{ 
+                ...asanaTypography.body,
+                backgroundColor: '#F6F7F8',
+                color: '#6B6F76',
+                fontWeight: 500
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#E8E9EA';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#F6F7F8';
+              }}
+            >
               Cancel
             </button>
-            <button onClick={handleSubmit} className="cal-button cal-button-primary">
-              {event ? 'Save' : 'Create'}
+            <button
+              onClick={handleSubmit}
+              className="px-5 py-2.5 rounded-xl transition-all"
+              style={{ 
+                ...asanaTypography.body,
+                backgroundColor: '#796EFF',
+                color: '#FFFFFF',
+                fontWeight: 500
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#6B5FE6';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#796EFF';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              {event ? 'Save changes' : 'Create event'}
             </button>
           </div>
         </div>
