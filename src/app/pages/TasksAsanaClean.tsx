@@ -434,7 +434,7 @@ export default function TasksAsanaClean() {
       <div className="flex h-full flex-col bg-sidebar">
         {/* View Content */}
         <div className="flex-1 overflow-hidden" style={{ 
-        marginRight: isTaskPanelOpen ? '500px' : '0',
+        marginRight: isTaskPanelOpen ? '512px' : '0', // 480px panel + 32px gap
         transition: 'margin-right 300ms cubic-bezier(0.4, 0, 0.2, 1)'
       }}>
         {console.log('Current view mode:', viewMode)}
@@ -446,6 +446,7 @@ export default function TasksAsanaClean() {
             onRenameList={handleRenameList}
             onEditTask={handleEditTask}
             selectedTaskId={selectedTask?.id}
+            isSidePanelOpen={isTaskPanelOpen}
           />
         ) : (
           <TaskListView 

@@ -30,6 +30,7 @@ interface KanbanBoardProps {
   onRenameList?: (listId: string, newTitle: string) => void;
   onEditTask?: (taskId: string) => void;
   selectedTaskId?: string;
+  isSidePanelOpen?: boolean;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
@@ -38,7 +39,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDeleteList,
   onRenameList,
   onEditTask,
-  selectedTaskId 
+  selectedTaskId,
+  isSidePanelOpen = false
 }) => {
   const {
     columns: taskColumns,
@@ -258,12 +260,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             />
           ))}
           
-          {/* Add section button */}
-          <div style={{ 
-            minWidth: '200px',
-            paddingTop: '4px'
-          }}>
-            {isAddingColumn ? (
+          {/* Add section button - hidden when side panel is open */}
+          {!isSidePanelOpen && (
+            <div style={{ 
+              minWidth: '200px',
+              paddingTop: '4px'
+            }}>
+              {isAddingColumn ? (
               <div className="asana-column" style={{ padding: '16px' }}>
                 <input
                   type="text"
@@ -357,7 +360,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <span>Add list</span>
               </button>
             )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Drag Overlay */}

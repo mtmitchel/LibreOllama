@@ -122,36 +122,32 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed left-0 right-0 bg-black/20 transition-opacity z-40 ${
+        className={`fixed inset-0 bg-black/20 transition-opacity z-40 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        style={{
-          top: '56px',
-          bottom: 0
-        }}
         onClick={onClose}
       />
 
       {/* Side Panel */}
       <div
-        className={`fixed right-0 bg-white shadow-xl transform transition-transform duration-300 ${
+        className={`fixed transform transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ 
-          width: '500px',
-          top: '56px',
-          bottom: 0,
+          width: '480px',
+          top: '96px', // Pixel-perfect alignment with column headers
+          right: '32px', // More padding from edge
+          bottom: '32px',
           zIndex: 50,
-          boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.1)'
         }}
       >
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Task Details</h2>
+        <div className="h-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden flex flex-col">
+          {/* Header - with reduced height to align content */}
+          <div className="flex items-center justify-between px-6 py-2 border-b border-gray-200" style={{ minHeight: '48px' }}>
+            <h2 className="text-base font-semibold text-gray-900">Task details</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
               aria-label="Close panel"
               style={{
                 backgroundColor: 'transparent',
@@ -162,12 +158,12 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                 justifyContent: 'center'
               }}
             >
-              <X size={24} color="#6B6F76" strokeWidth={2} />
+              <X size={20} color="#6B6F76" strokeWidth={2} />
             </button>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {/* Title Section */}
             <div className="px-6 pt-2 pb-4">
               <input
@@ -185,7 +181,7 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
             <div className="px-6 py-4">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                 <Calendar size={16} />
-                Due Date
+                Due date
               </label>
               <div className="relative">
                 <input
@@ -267,36 +263,33 @@ export const TaskSidePanel: React.FC<TaskSidePanelProps> = ({
                   </span>
                 ))}
               </div>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newLabel}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddLabel();
-                      }
-                    }}
-                    placeholder="Add a label"
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddLabel}
-                  >
-                    <Plus size={16} />
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">Color:</span>
-                  <LabelColorPicker
-                    selectedColor={newLabelColor}
-                    onColorSelect={setNewLabelColor}
-                  />
-                </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddLabel();
+                    }
+                  }}
+                  placeholder="Add a label"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                />
+                <LabelColorPicker
+                  selectedColor={newLabelColor}
+                  onColorSelect={setNewLabelColor}
+                  compact={true}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddLabel}
+                  className="px-2"
+                >
+                  <Plus size={16} />
+                </Button>
               </div>
             </div>
 

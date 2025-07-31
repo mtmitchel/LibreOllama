@@ -1,0 +1,723 @@
+/* Calendar Page - Asana Style Design System */
+
+/* Import Asana design system */
+@import '../../../styles/asana-design-system.css';
+
+/* ===== Calendar Container ===== */
+.cal-asana-container {
+  background: var(--asana-bg-canvas);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Header Section ===== */
+.cal-asana-header {
+  background: var(--asana-bg-primary);
+  border-bottom: 1px solid var(--asana-border-subtle);
+  padding: var(--asana-spacing-2xl) var(--asana-spacing-4xl);
+}
+
+.cal-asana-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--asana-spacing-3xl);
+}
+
+.cal-asana-title {
+  font-size: var(--asana-font-size-xl);
+  font-weight: var(--asana-font-weight-semibold);
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+/* ===== View Controls ===== */
+.cal-asana-view-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--asana-spacing-md);
+  background: var(--asana-bg-input);
+  padding: var(--asana-spacing-xs);
+  border-radius: var(--asana-radius-md);
+}
+
+.cal-asana-view-btn {
+  padding: var(--asana-spacing-sm) var(--asana-spacing-lg);
+  border: none;
+  background: transparent;
+  color: var(--asana-text-secondary);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  border-radius: var(--asana-radius-sm);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  white-space: nowrap;
+}
+
+.cal-asana-view-btn:hover {
+  color: var(--asana-text-primary);
+  background: var(--asana-bg-hover);
+}
+
+.cal-asana-view-btn.active {
+  background: var(--asana-bg-primary);
+  color: var(--asana-brand-coral);
+  box-shadow: var(--asana-shadow-card);
+}
+
+.cal-asana-today-btn {
+  padding: var(--asana-spacing-sm) var(--asana-spacing-xl);
+  border: 1px solid var(--asana-border-default);
+  background: var(--asana-bg-primary);
+  color: var(--asana-text-primary);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  border-radius: var(--asana-radius-md);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  margin-right: var(--asana-spacing-md);
+}
+
+.cal-asana-today-btn:hover {
+  background: var(--asana-bg-hover);
+  border-color: var(--asana-border-hover);
+}
+
+/* ===== Search Input ===== */
+.cal-asana-search-container {
+  position: relative;
+  width: 260px;
+}
+
+.cal-asana-search {
+  width: 100%;
+  padding: var(--asana-spacing-md) var(--asana-spacing-lg);
+  padding-left: 36px;
+  border: 1px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-md);
+  background: var(--asana-bg-primary);
+  color: var(--asana-text-primary);
+  font-size: var(--asana-font-size-sm);
+  transition: all var(--asana-transition-fast);
+  outline: none;
+}
+
+.cal-asana-search:hover {
+  border-color: var(--asana-border-hover);
+}
+
+.cal-asana-search:focus {
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.cal-asana-search-icon {
+  position: absolute;
+  left: var(--asana-spacing-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--asana-text-muted);
+  pointer-events: none;
+}
+
+/* ===== Main Content Area ===== */
+.cal-asana-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cal-asana-calendar-wrapper {
+  flex: 1;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cal-asana-grid {
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: var(--asana-shadow-card);
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+/* FullCalendar height fix */
+.cal-asana-grid .fc {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cal-asana-grid .fc-view-harness {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cal-asana-grid .fc-daygrid {
+  flex: 1;
+}
+
+/* ===== Calendar Cells ===== */
+.fc-daygrid-day {
+  transition: all var(--asana-transition-fast);
+}
+
+.fc-daygrid-day:hover {
+  background: var(--asana-bg-hover);
+}
+
+.fc-day-today {
+  background: rgba(99, 102, 241, 0.05) !important;
+}
+
+.fc-day-today .fc-daygrid-day-number {
+  background: var(--asana-brand-coral);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--asana-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--asana-font-weight-semibold);
+  margin: var(--asana-spacing-xs);
+}
+
+/* ===== Events ===== */
+.cal-asana-event {
+  padding: var(--asana-spacing-xs) var(--asana-spacing-sm);
+  border-radius: var(--asana-radius-sm);
+  font-size: var(--asana-font-size-xs);
+  transition: all var(--asana-transition-fast);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none !important;
+}
+
+.cal-asana-event:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--asana-shadow-card-hover);
+}
+
+/* ===== Task Sidebar ===== */
+.cal-asana-sidebar {
+  width: 320px;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  margin-left: 0;
+  border-left: 1px solid #E8E8E9;
+}
+
+.cal-asana-sidebar-content {
+  background: #FAFBFC;
+  border-radius: 0;
+  box-shadow: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cal-asana-sidebar-header {
+  padding: 16px 16px 12px;
+  margin-bottom: 0;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E4E4E7;
+}
+
+.cal-asana-sidebar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #18181B;
+  margin: 0 0 4px 0;
+}
+
+.cal-asana-sidebar-subtitle {
+  font-size: 13px;
+  color: #71717A;
+  margin: 0 0 12px 0;
+}
+
+/* List selector dropdown */
+.cal-asana-list-selector {
+  position: relative;
+  margin-bottom: var(--asana-spacing-2xl);
+}
+
+.cal-asana-list-dropdown {
+  width: 100%;
+  padding: var(--asana-spacing-md) var(--asana-spacing-lg);
+  padding-right: 36px;
+  border: 1px solid var(--asana-border-default);
+  border-radius: var(--asana-radius-md);
+  background: var(--asana-bg-primary);
+  color: var(--asana-text-primary);
+  font-size: var(--asana-font-size-sm);
+  font-weight: var(--asana-font-weight-medium);
+  cursor: pointer;
+  appearance: none;
+  transition: all var(--asana-transition-fast);
+  outline: none;
+}
+
+.cal-asana-list-dropdown:hover {
+  border-color: var(--asana-border-hover);
+}
+
+.cal-asana-list-dropdown:focus {
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.cal-asana-dropdown-icon {
+  position: absolute;
+  right: var(--asana-spacing-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--asana-text-muted);
+  pointer-events: none;
+}
+
+/* ===== Task Sections ===== */
+.cal-asana-task-section {
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.cal-asana-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: #F0F1F3;
+  border-top: 1px solid #E4E4E7;
+  border-bottom: 1px solid #E4E4E7;
+}
+
+.cal-asana-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #52525B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cal-asana-section-count {
+  font-size: 12px;
+  color: #71717A;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+/* ===== Task Cards ===== */
+.cal-draggable-task {
+  cursor: grab;
+}
+
+.cal-draggable-task:active {
+  cursor: grabbing;
+}
+
+/* Sidebar tasks container */
+.cal-asana-sidebar-tasks {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: var(--asana-spacing-3xl);
+}
+
+.cal-asana-all-tasks {
+  padding: 0 var(--asana-spacing-2xl);
+}
+
+/* Empty state */
+.cal-asana-empty-state {
+  text-align: center;
+  padding: var(--asana-spacing-4xl) var(--asana-spacing-2xl);
+  color: var(--asana-text-muted);
+}
+
+.cal-asana-empty-state p {
+  margin: 0 0 var(--asana-spacing-sm) 0;
+}
+
+.cal-asana-empty-state p:last-child {
+  font-size: var(--asana-font-size-sm);
+  color: var(--asana-text-secondary);
+}
+
+/* Priority indicators */
+.cal-asana-priority-indicator {
+  width: 3px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--asana-radius-md) 0 0 var(--asana-radius-md);
+}
+
+.cal-asana-priority-urgent {
+  background: var(--asana-priority-urgent-text);
+}
+
+.cal-asana-priority-high {
+  background: var(--asana-priority-high-text);
+}
+
+.cal-asana-priority-normal {
+  display: none;
+}
+
+.cal-asana-priority-low {
+  background: var(--asana-priority-low-text);
+}
+
+/* ===== Modal ===== */
+.cal-asana-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn var(--asana-transition-base);
+}
+
+.cal-asana-modal {
+  background: var(--asana-bg-primary);
+  border-radius: var(--asana-radius-lg);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 480px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideUp var(--asana-transition-base);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.cal-asana-modal-header {
+  padding: var(--asana-spacing-2xl) var(--asana-spacing-3xl);
+  border-bottom: 1px solid var(--asana-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cal-asana-modal-title {
+  font-size: 18px;
+  font-weight: var(--asana-font-weight-semibold);
+  color: var(--asana-text-primary);
+  margin: 0;
+}
+
+.cal-asana-modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--asana-radius-md);
+  transition: all var(--asana-transition-fast);
+  cursor: pointer;
+  color: var(--asana-text-muted);
+}
+
+.cal-asana-modal-close:hover {
+  background: var(--asana-bg-hover);
+  color: var(--asana-text-primary);
+}
+
+.cal-asana-modal-body {
+  padding: var(--asana-spacing-3xl);
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.cal-asana-modal-footer {
+  padding: var(--asana-spacing-2xl) var(--asana-spacing-3xl);
+  border-top: 1px solid var(--asana-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--asana-spacing-md);
+}
+
+/* ===== Form Elements ===== */
+.cal-asana-form-group {
+  margin-bottom: var(--asana-spacing-2xl);
+}
+
+.cal-asana-label {
+  display: block;
+  font-size: 13px;
+  font-weight: var(--asana-font-weight-medium);
+  color: var(--asana-text-primary);
+  margin-bottom: 6px;
+}
+
+.cal-asana-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--asana-border-default);
+  border-radius: 6px;
+  background: var(--asana-bg-primary);
+  color: var(--asana-text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: all var(--asana-transition-fast);
+  outline: none;
+}
+
+.cal-asana-input::placeholder {
+  color: var(--asana-text-muted);
+}
+
+.cal-asana-input:hover {
+  border-color: var(--asana-border-hover);
+}
+
+.cal-asana-input:focus {
+  border-color: var(--asana-border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Style date and time inputs */
+.cal-asana-input[type="date"],
+.cal-asana-input[type="time"] {
+  font-family: inherit;
+  min-width: auto;
+}
+
+.cal-asana-input[type="date"] {
+  width: auto;
+}
+
+.cal-asana-input[type="time"] {
+  width: 100px;
+}
+
+/* Hide native calendar/time icons for cleaner look */
+.cal-asana-input[type="date"]::-webkit-calendar-picker-indicator,
+.cal-asana-input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+  position: absolute;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+}
+
+.cal-asana-input[type="date"]:hover::-webkit-calendar-picker-indicator,
+.cal-asana-input[type="time"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+}
+
+.cal-asana-input[type="date"]:focus::-webkit-calendar-picker-indicator,
+.cal-asana-input[type="time"]:focus::-webkit-calendar-picker-indicator {
+  opacity: 0.7;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--asana-border-default);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--asana-brand-coral);
+  border-color: var(--asana-brand-coral);
+}
+
+.cal-asana-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.cal-asana-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2352525b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--asana-spacing-lg) center;
+  padding-right: 36px;
+}
+
+/* ===== Buttons ===== */
+.cal-asana-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: var(--asana-font-weight-medium);
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.cal-asana-btn-primary {
+  background: var(--asana-brand-coral);
+  color: white;
+}
+
+.cal-asana-btn-primary:hover {
+  background: #5A4FDB;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cal-asana-btn-secondary {
+  background: transparent;
+  color: var(--asana-text-primary);
+  border: 1px solid var(--asana-border-default);
+}
+
+.cal-asana-btn-secondary:hover {
+  background: var(--asana-bg-hover);
+  border-color: var(--asana-border-hover);
+}
+
+.cal-asana-btn-ghost {
+  background: transparent;
+  color: var(--asana-text-secondary);
+  padding: var(--asana-spacing-sm) var(--asana-spacing-lg);
+}
+
+.cal-asana-btn-ghost:hover {
+  background: var(--asana-bg-hover);
+  color: var(--asana-text-primary);
+}
+
+.cal-asana-btn-danger {
+  background: transparent;
+  color: var(--asana-status-blocked);
+}
+
+.cal-asana-btn-danger:hover {
+  background: var(--asana-priority-urgent-bg);
+}
+
+/* ===== Loading State ===== */
+.cal-asana-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--asana-text-secondary);
+}
+
+.cal-asana-loading-spinner {
+  animation: spin 1s linear infinite;
+  margin-right: var(--asana-spacing-md);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Responsive adjustments ===== */
+@media (max-width: 1024px) {
+  .cal-asana-sidebar {
+    width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cal-asana-header {
+    padding: var(--asana-spacing-lg) var(--asana-spacing-2xl);
+  }
+  
+  .cal-asana-search-container {
+    display: none;
+  }
+  
+  .cal-asana-sidebar {
+    position: fixed;
+    right: -320px;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    transition: right var(--asana-transition-base);
+  }
+  
+  .cal-asana-sidebar.open {
+    right: 0;
+  }
+}
+
+/* ===== Sidebar Column Styles ===== */
+.cal-sidebar-column {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.cal-sidebar-column .asana-column {
+  min-width: auto !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.cal-sidebar-column .asana-kanban-card {
+  cursor: move;
+}
+
+.cal-sidebar-column .asana-kanban-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Make draggable tasks in sidebar */
+.cal-draggable-task {
+  cursor: move;
+}
+
+.cal-draggable-task .asana-kanban-card {
+  transition: all 0.2s ease;
+}
+
+.cal-draggable-task:active .asana-kanban-card {
+  transform: scale(0.98);
+  opacity: 0.8;
+}

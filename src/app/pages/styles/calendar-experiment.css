@@ -1,0 +1,444 @@
+/* Calendar Page - Design System Experiment
+   Synthesizing glass-morphic effects from Canvas and smooth transitions from Tasks */
+
+/* ===== Enhanced Design Tokens ===== */
+:root {
+  /* Glass Effect Variables */
+  --cal-glass-bg: rgba(255, 255, 255, 0.7);
+  --cal-glass-bg-dark: rgba(30, 30, 30, 0.7);
+  --cal-glass-border: rgba(255, 255, 255, 0.2);
+  --cal-glass-blur: blur(10px);
+  --cal-glass-blur-heavy: blur(20px);
+  
+  /* Floating Elements */
+  --cal-floating-bg: rgba(255, 255, 255, 0.95);
+  --cal-floating-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --cal-toolbar-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  
+  /* Enhanced Form Controls */
+  --cal-input-bg: #F6F7F8;
+  --cal-input-bg-hover: #EDEFF1;
+  --cal-input-bg-focus: #FFFFFF;
+  --cal-input-border-focus: rgba(99, 102, 241, 0.4);
+  
+  /* Transitions */
+  --cal-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --cal-transition-smooth: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --cal-transition-glass: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme overrides */
+.dark {
+  --cal-glass-bg: rgba(30, 30, 30, 0.7);
+  --cal-glass-border: rgba(255, 255, 255, 0.1);
+  --cal-floating-bg: rgba(20, 20, 20, 0.95);
+  --cal-input-bg: #1F2937;
+  --cal-input-bg-hover: #374151;
+  --cal-input-bg-focus: #111827;
+}
+
+/* ===== Floating View Controls ===== */
+.cal-view-controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.375rem;
+  background: var(--cal-glass-bg);
+  backdrop-filter: var(--cal-glass-blur);
+  -webkit-backdrop-filter: var(--cal-glass-blur);
+  border: 1px solid var(--cal-glass-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--cal-toolbar-shadow);
+  transition: all var(--cal-transition-glass);
+  z-index: 10;
+}
+
+.cal-view-controls:hover {
+  box-shadow: var(--cal-floating-shadow);
+  transform: translateY(-1px);
+}
+
+.cal-view-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all var(--cal-transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.cal-view-btn:hover {
+  color: var(--text-primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.cal-view-btn.active {
+  color: white;
+  background: var(--accent-primary);
+}
+
+.cal-view-btn.active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
+  pointer-events: none;
+}
+
+/* ===== Enhanced Calendar Grid ===== */
+.cal-grid-enhanced {
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.cal-cell {
+  position: relative;
+  transition: all var(--cal-transition-fast);
+  border: 1px solid var(--border-subtle);
+}
+
+.cal-cell:hover {
+  background: var(--state-hover);
+  border-color: var(--border-secondary);
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.cal-cell.today {
+  background: var(--cal-glass-bg);
+  backdrop-filter: blur(4px);
+  border: 2px solid var(--accent-primary);
+}
+
+.cal-cell.weekend {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.dark .cal-cell.weekend {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ===== Task Cards with Glass Effect ===== */
+.cal-task-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  cursor: grab;
+  transition: all var(--cal-transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.cal-task-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--cal-glass-bg);
+  opacity: 0;
+  transition: opacity var(--cal-transition-smooth);
+  pointer-events: none;
+}
+
+.cal-task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--cal-toolbar-shadow);
+  border-color: var(--border-primary);
+}
+
+.cal-task-card:hover::before {
+  opacity: 1;
+}
+
+.cal-task-card.dragging {
+  cursor: grabbing;
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.cal-task-priority {
+  width: 4px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 0.75rem 0 0 0.75rem;
+  transition: width var(--cal-transition-fast);
+}
+
+.cal-task-card:hover .cal-task-priority {
+  width: 6px;
+}
+
+.cal-task-priority.high {
+  background: var(--status-error);
+}
+
+.cal-task-priority.medium {
+  background: var(--status-warning);
+}
+
+.cal-task-priority.low {
+  background: var(--status-success);
+}
+
+/* ===== Enhanced Event Cards ===== */
+.cal-event {
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  transition: all var(--cal-transition-fast);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.cal-event::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0;
+  transition: opacity var(--cal-transition-smooth);
+  pointer-events: none;
+}
+
+.cal-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.cal-event:hover::after {
+  opacity: 1;
+}
+
+.cal-event:active {
+  transform: scale(0.98);
+}
+
+/* Multi-day events */
+.cal-event-multi {
+  border-radius: 0.375rem 0 0 0.375rem;
+}
+
+.cal-event-multi-end {
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.cal-event-multi-middle {
+  border-radius: 0;
+}
+
+/* ===== Glass Modal System ===== */
+.cal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  opacity: 0;
+  animation: fadeIn var(--cal-transition-glass) forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.cal-modal {
+  background: var(--cal-floating-bg);
+  backdrop-filter: var(--cal-glass-blur-heavy);
+  -webkit-backdrop-filter: var(--cal-glass-blur-heavy);
+  border: 1px solid var(--cal-glass-border);
+  border-radius: 1rem;
+  box-shadow: var(--cal-floating-shadow);
+  max-width: 32rem;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  transform: scale(0.9);
+  opacity: 0;
+  animation: slideIn var(--cal-transition-glass) 100ms forwards;
+}
+
+@keyframes slideIn {
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===== Enhanced Form Inputs ===== */
+.cal-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--cal-input-bg);
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--cal-transition-smooth);
+}
+
+.cal-input:hover {
+  background: var(--cal-input-bg-hover);
+}
+
+.cal-input:focus {
+  background: var(--cal-input-bg-focus);
+  border-color: var(--cal-input-border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.cal-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ===== Floating Search Bar ===== */
+.cal-search-container {
+  position: relative;
+  width: 100%;
+  max-width: 24rem;
+}
+
+.cal-search {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  background: var(--cal-glass-bg);
+  backdrop-filter: var(--cal-glass-blur);
+  -webkit-backdrop-filter: var(--cal-glass-blur);
+  border: 1px solid var(--cal-glass-border);
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--cal-transition-smooth);
+}
+
+.cal-search:focus {
+  background: var(--cal-floating-bg);
+  border-color: var(--cal-input-border-focus);
+  box-shadow: var(--cal-toolbar-shadow);
+}
+
+.cal-search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--cal-transition-fast);
+}
+
+.cal-search:focus ~ .cal-search-icon {
+  color: var(--accent-primary);
+}
+
+/* ===== Today Button Enhancement ===== */
+.cal-today-btn {
+  padding: 0.5rem 1.25rem;
+  background: var(--cal-glass-bg);
+  backdrop-filter: var(--cal-glass-blur);
+  -webkit-backdrop-filter: var(--cal-glass-blur);
+  border: 1px solid var(--accent-primary);
+  border-radius: 0.5rem;
+  color: var(--accent-primary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--cal-transition-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.cal-today-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-primary);
+  opacity: 0;
+  transition: opacity var(--cal-transition-smooth);
+}
+
+.cal-today-btn:hover {
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.cal-today-btn:hover::before {
+  opacity: 1;
+}
+
+.cal-today-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== Task Sidebar Glass Sections ===== */
+.cal-sidebar-section {
+  margin-bottom: 1.5rem;
+}
+
+.cal-sidebar-header {
+  padding: 0.75rem 1rem;
+  background: var(--cal-glass-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--cal-glass-border);
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all var(--cal-transition-smooth);
+}
+
+.cal-sidebar-header:hover {
+  background: var(--cal-floating-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.cal-sidebar-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cal-sidebar-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* ===== Animation Utilities ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

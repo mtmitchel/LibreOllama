@@ -22,6 +22,7 @@ import Notes from './pages/Notes';
 import CanvasPage from './pages/Canvas';
 import Calendar from './pages/Calendar';
 import CalendarAsanaStyle from './pages/CalendarAsanaStyle';
+import CalendarExperiment from './pages/CalendarExperiment';
 import Tasks from './pages/TasksAsanaClean';
 // import TasksOld from './pages/TasksAsanaClean';
 // import TasksRedesigned from './pages/TasksRedesigned';
@@ -49,6 +50,7 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
         <Route path="/canvas" element={<CanvasPage />} />
         <Route path="/calendar" element={<CalendarAsanaStyle />} />
         <Route path="/calendar-old" element={<Calendar />} />
+        <Route path="/calendar-experiment" element={<CalendarExperiment />} />
         <Route path="/tasks" element={<Tasks />} />
         {/* <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
         <Route path="/tasks-asana" element={<TasksAsanaStyle />} /> */}
