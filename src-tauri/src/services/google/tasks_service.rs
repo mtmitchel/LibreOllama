@@ -94,22 +94,67 @@ impl GoogleTasksService {
     pub async fn get_task_lists(&self, account_id: &str) -> Result<Vec<GoogleTaskList>> {
         #[derive(Deserialize)]
         struct TaskListsResponse {
-            items: Vec<GoogleTaskList>,
+            items: Option<Vec<GoogleTaskList>>,
+            #[serde(rename = "nextPageToken")]
+            next_page_token: Option<String>,
         }
 
-        let response: TaskListsResponse = self.make_api_request(account_id, "users/@me/lists").await?;
-        Ok(response.items)
+        let mut all_lists = Vec::new();
+        let mut page_token: Option<String> = None;
+
+        loop {
+            let mut endpoint = "users/@me/lists?maxResults=100".to_string();
+            if let Some(token) = &page_token {
+                endpoint.push_str(&format!("&pageToken={}", token));
+            }
+
+            let response: TaskListsResponse = self.make_api_request(account_id, &endpoint).await?;
+            
+            if let Some(lists) = response.items {
+                all_lists.extend(lists);
+            }
+
+            if response.next_page_token.is_none() {
+                break;
+            }
+            
+            page_token = response.next_page_token;
+        }
+
+        Ok(all_lists)
     }
 
     pub async fn get_tasks(&self, account_id: &str, task_list_id: &str) -> Result<Vec<GoogleTask>> {
         #[derive(Deserialize)]
         struct TasksResponse {
-            items: Vec<GoogleTask>,
+            items: Option<Vec<GoogleTask>>,
+            #[serde(rename = "nextPageToken")]
+            next_page_token: Option<String>,
         }
 
-        let endpoint = format!("lists/{}/tasks", task_list_id);
-        let response: TasksResponse = self.make_api_request(account_id, &endpoint).await?;
-        Ok(response.items)
+        let mut all_tasks = Vec::new();
+        let mut page_token: Option<String> = None;
+
+        loop {
+            let mut endpoint = format!("lists/{}/tasks?maxResults=100", task_list_id);
+            if let Some(token) = &page_token {
+                endpoint.push_str(&format!("&pageToken={}", token));
+            }
+
+            let response: TasksResponse = self.make_api_request(account_id, &endpoint).await?;
+            
+            if let Some(tasks) = response.items {
+                all_tasks.extend(tasks);
+            }
+
+            if response.next_page_token.is_none() {
+                break;
+            }
+            
+            page_token = response.next_page_token;
+        }
+
+        Ok(all_tasks)
     }
 
     async fn make_api_request_with_body<T, B>(&self, account_id: &str, endpoint: &str, method: Method, body: Option<B>) -> Result<T>

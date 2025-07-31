@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
+import { format, parseISO } from 'date-fns';
 import { 
   EventContentArg, 
   DateSelectArg, 
@@ -8,12 +9,19 @@ import {
   EventDropArg,
   EventApi
 } from '@fullcalendar/core';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, Search, ListChecks, CheckCircle, ChevronDown, Edit2, Copy, Trash2, CheckSquare, Circle, CheckCircle2, Flag } from 'lucide-react';
+import { 
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, X, RefreshCw, 
+  Search, ListChecks, CheckCircle, ChevronDown, Edit2, Copy, Trash2, 
+  CheckSquare, Circle, CheckCircle2, Flag, ArrowUpDown, MoreHorizontal,
+  User, Tag, Clock, MapPin, Users, FileText, Calendar, Sidebar
+} from 'lucide-react';
 
 import { Button, Card, Text, Heading, Input } from '../../components/ui';
+import { ContextMenu } from '../../components/ui/ContextMenu';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
 import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
+import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
 import { useHeader } from '../contexts/HeaderContext';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -21,792 +29,31 @@ import interactionPlugin, { Draggable, DropArg } from '@fullcalendar/interaction
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { devLog } from '../../utils/devLog';
 import type { GoogleTask } from '../../types/google';
+import { googleTasksApi } from '../../api/googleTasksApi';
+import { realtimeSync } from '../../services/realtimeSync';
+import { KanbanColumn } from '../../components/kanban/KanbanColumn';
+import { UnifiedTaskCard } from '../../components/tasks/UnifiedTaskCard';
+import { InlineTaskCreator } from '../../components/kanban/InlineTaskCreator';
 import './styles/calendar-asana.css';
+import './styles/calendar-experiment.css';
+
+// Import extracted components
+import { CalendarHeader } from './calendar/components/CalendarHeader';
+import { CalendarTaskSidebar } from './calendar/components/CalendarTaskSidebar';
+import { CalendarEventContent } from './calendar/components/CalendarEventContent';
+import { AsanaEventModal } from './calendar/components/AsanaEventModal';
+import { AsanaDatePicker } from './calendar/components/AsanaDatePicker';
+import { AsanaViewControls } from './calendar/components/AsanaViewControls';
+import { AsanaSearchBar } from './calendar/components/AsanaSearchBar';
+import { AsanaTaskItem } from './calendar/components/AsanaTaskItem';
+import { TaskContextMenu } from './calendar/components/TaskContextMenu';
+import { AsanaTaskModal } from './calendar/components/AsanaTaskModal';
+import type { CalendarEvent, CalendarContextMenu } from './calendar/types';
+import { asanaTypography, priorityConfig } from './calendar/config';
+import { useCalendarOperations } from './calendar/hooks/useCalendarOperations';
 
 type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
 
-// Subtask interface
-interface Subtask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-// Asana-style typography
-const asanaTypography = {
-  fontFamily: "var(--font-sans)",
-  h1: {
-    fontSize: '24px',
-    fontWeight: 600,
-    letterSpacing: '-0.01em',
-    lineHeight: 1.3,
-    color: '#151B26'
-  },
-  h2: {
-    fontSize: '16px',
-    fontWeight: 600,
-    letterSpacing: '0',
-    lineHeight: 1.4,
-    color: '#151B26'
-  },
-  h3: {
-    fontSize: '14px',
-    fontWeight: 600,
-    letterSpacing: '0',
-    lineHeight: 1.5,
-    color: '#151B26'
-  },
-  body: {
-    fontSize: '14px',
-    fontWeight: 400,
-    lineHeight: 1.6,
-    letterSpacing: '0',
-    color: '#6B6F76'
-  },
-  small: {
-    fontSize: '12px',
-    fontWeight: 400,
-    lineHeight: 1.5,
-    letterSpacing: '0',
-    color: '#9CA6AF'
-  },
-  label: {
-    fontSize: '11px',
-    fontWeight: 600,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase' as const,
-    color: '#6B6F76'
-  }
-};
-
-// Asana-style pastel colors
-const priorityConfig = {
-  urgent: {
-    bgColor: '#FFE5E5',
-    textColor: '#D32F2F',
-    label: 'Urgent'
-  },
-  high: { 
-    bgColor: '#FFEEF0',
-    textColor: '#E85D75',
-    label: 'High'
-  },
-  medium: { 
-    bgColor: '#FFF6E6',
-    textColor: '#E68900',
-    label: 'Medium'
-  },
-  low: { 
-    bgColor: '#E8F5F3',
-    textColor: '#14A085',
-    label: 'Low'
-  }
-};
-
-// Asana-style Task Modal Component
-interface AsanaTaskModalProps {
-  isOpen: boolean;
-  task?: GoogleTask | null;
-  onClose: () => void;
-  onSubmit: (data: { 
-    title: string; 
-    notes?: string; 
-    due?: string; 
-    metadata?: {
-      priority: 'low' | 'normal' | 'high' | 'urgent';
-      labels: string[];
-      subtasks: Subtask[];
-    }
-  }) => void;
-  onDelete?: () => void;
-}
-
-const AsanaTaskModal: React.FC<AsanaTaskModalProps> = ({ 
-  isOpen, 
-  task, 
-  onClose, 
-  onSubmit, 
-  onDelete 
-}) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    notes: '',
-    due: '',
-    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
-    labels: [] as string[],
-    subtasks: [] as Subtask[],
-  });
-
-  const [newLabel, setNewLabel] = useState('');
-  const [newSubtask, setNewSubtask] = useState('');
-
-  useEffect(() => {
-    if (task) {
-      setFormData({
-        title: task.title,
-        notes: task.notes || '',
-        due: task.due ? task.due.split('T')[0] : '',
-        priority: 'normal', // Google Tasks don't have priority, default to normal
-        labels: [],
-        subtasks: [],
-      });
-    } else {
-      setFormData({
-        title: '',
-        notes: '',
-        due: '',
-        priority: 'normal',
-        labels: [],
-        subtasks: [],
-      });
-    }
-  }, [task, isOpen]);
-
-  const addLabel = () => {
-    if (newLabel.trim() && !formData.labels.includes(newLabel.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        labels: [...prev.labels, newLabel.trim()]
-      }));
-      setNewLabel('');
-    }
-  };
-
-  const removeLabel = (labelToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      labels: prev.labels.filter(label => label !== labelToRemove)
-    }));
-  };
-
-  const addSubtask = () => {
-    if (newSubtask.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        subtasks: [...prev.subtasks, {
-          id: `subtask-${Date.now()}`,
-          title: newSubtask.trim(),
-          completed: false,
-        }]
-      }));
-      setNewSubtask('');
-    }
-  };
-
-  const toggleSubtask = (subtaskId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      subtasks: prev.subtasks.map(st => 
-        st.id === subtaskId ? { ...st, completed: !st.completed } : st
-      )
-    }));
-  };
-
-  const removeSubtask = (subtaskId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      subtasks: prev.subtasks.filter(st => st.id !== subtaskId)
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Convert date picker value to RFC 3339 format at midnight UTC
-    // Google Tasks expects dates to be at midnight UTC for all-day tasks
-    const formattedDue = formData.due 
-      ? `${formData.due}T00:00:00.000Z`
-      : undefined;
-      
-    onSubmit({
-      title: formData.title,
-      notes: formData.notes,
-      due: formattedDue,  // Use formatted date
-      metadata: {
-        priority: formData.priority,
-        labels: formData.labels,
-        subtasks: formData.subtasks,
-      },
-    });
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white rounded-2xl shadow-2xl">
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 style={asanaTypography.h1}>
-                {task ? 'Edit Task' : 'Create Task'}
-              </h2>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            {/* Title */}
-            <div>
-              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
-                Title
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border transition-all"
-                style={{ 
-                  ...asanaTypography.body,
-                  backgroundColor: '#F6F7F8',
-                  borderColor: 'transparent',
-                  outline: 'none'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF';
-                  e.currentTarget.style.borderColor = '#D1D5DB';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F6F7F8';
-                  e.currentTarget.style.borderColor = 'transparent';
-                }}
-                placeholder="Enter task title..."
-                required
-              />
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
-                Notes
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl border transition-all resize-none"
-                style={{ 
-                  ...asanaTypography.body,
-                  backgroundColor: '#F6F7F8',
-                  borderColor: 'transparent',
-                  outline: 'none',
-                  minHeight: '100px'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF';
-                  e.currentTarget.style.borderColor = '#D1D5DB';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F6F7F8';
-                  e.currentTarget.style.borderColor = 'transparent';
-                }}
-                placeholder="Add a description..."
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-5">
-              {/* Due Date */}
-              <div>
-                <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.due}
-                  onChange={(e) => setFormData(prev => ({ ...prev, due: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl border transition-all"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
-                    borderColor: 'transparent',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
-                />
-              </div>
-
-              {/* Priority */}
-              <div>
-                <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
-                  Priority
-                </label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent' }))}
-                  className="w-full px-4 py-3 rounded-xl border transition-all cursor-pointer"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
-                    borderColor: 'transparent',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
-                >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Labels */}
-            <div>
-              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
-                Labels
-              </label>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newLabel}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLabel())}
-                    className="flex-1 px-4 py-2 rounded-xl border transition-all"
-                    style={{ 
-                      ...asanaTypography.body,
-                      backgroundColor: '#F6F7F8',
-                      borderColor: 'transparent',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      e.currentTarget.style.borderColor = '#D1D5DB';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F6F7F8';
-                      e.currentTarget.style.borderColor = 'transparent';
-                    }}
-                    placeholder="Add a label..."
-                  />
-                  <button
-                    type="button"
-                    onClick={addLabel}
-                    className="px-4 py-2 rounded-xl transition-colors"
-                    style={{ 
-                      backgroundColor: '#E8F5F3',
-                      color: '#14A085'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#D0EDE9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#E8F5F3';
-                    }}
-                  >
-                    <Plus size={18} />
-                  </button>
-                </div>
-                {formData.labels.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.labels.map(label => (
-                      <span
-                        key={label}
-                        className="px-3 py-1.5 rounded-lg inline-flex items-center gap-2 transition-all"
-                        style={{ 
-                          ...asanaTypography.small,
-                          backgroundColor: '#EDF1F5',
-                          color: '#796EFF'
-                        }}
-                      >
-                        {label}
-                        <button
-                          type="button"
-                          onClick={() => removeLabel(label)}
-                          className="hover:text-red-500 transition-colors"
-                        >
-                          <X size={14} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Subtasks */}
-            <div>
-              <label style={{ ...asanaTypography.label, display: 'block', marginBottom: '6px' }}>
-                Subtasks
-              </label>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSubtask}
-                    onChange={(e) => setNewSubtask(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
-                    className="flex-1 px-4 py-2 rounded-xl border transition-all"
-                    style={{ 
-                      ...asanaTypography.body,
-                      backgroundColor: '#F6F7F8',
-                      borderColor: 'transparent',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF';
-                      e.currentTarget.style.borderColor = '#D1D5DB';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F6F7F8';
-                      e.currentTarget.style.borderColor = 'transparent';
-                    }}
-                    placeholder="Add a subtask..."
-                  />
-                  <button
-                    type="button"
-                    onClick={addSubtask}
-                    className="px-4 py-2 rounded-xl transition-colors"
-                    style={{ 
-                      backgroundColor: '#E8F5F3',
-                      color: '#14A085'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#D0EDE9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#E8F5F3';
-                    }}
-                  >
-                    <Plus size={18} />
-                  </button>
-                </div>
-                {formData.subtasks.length > 0 && (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {formData.subtasks.map(subtask => (
-                      <div
-                        key={subtask.id}
-                        className="flex items-center gap-3 p-3 rounded-xl transition-all"
-                        style={{ backgroundColor: '#F9FAFB' }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => toggleSubtask(subtask.id)}
-                          className="flex-shrink-0"
-                        >
-                          {subtask.completed ? (
-                            <CheckCircle2 size={20} style={{ color: '#14A085' }} />
-                          ) : (
-                            <Circle size={20} style={{ color: '#DDD' }} />
-                          )}
-                        </button>
-                        <span 
-                          className="flex-1"
-                          style={{ 
-                            ...asanaTypography.body,
-                            textDecoration: subtask.completed ? 'line-through' : 'none',
-                            color: subtask.completed ? '#9CA3AF' : '#151B26'
-                          }}
-                        >
-                          {subtask.title}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeSubtask(subtask.id)}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors"
-                        >
-                          <X size={16} style={{ color: '#9CA3AF' }} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between p-6" style={{ borderTop: '1px solid #E8E8E9' }}>
-            <div>
-              {task && onDelete && (
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  className="px-4 py-2 rounded-xl transition-colors flex items-center gap-2"
-                  style={{ 
-                    color: '#D32F2F'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFE5E5';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <Trash2 size={16} />
-                  Delete
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 rounded-xl transition-colors"
-                style={{ 
-                  ...asanaTypography.body,
-                  backgroundColor: '#F6F7F8',
-                  color: '#6B6F76',
-                  fontWeight: 500
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#E8E9EA';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F6F7F8';
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl transition-all"
-                style={{ 
-                  ...asanaTypography.body,
-                  backgroundColor: '#796EFF',
-                  color: '#FFFFFF',
-                  fontWeight: 500
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#6B5FE6';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#796EFF';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                {task ? 'Save Changes' : 'Create Task'}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Clean event rendering function with Asana style
-function renderEventContent(eventInfo: EventContentArg) {
-  const { event, timeText, view } = eventInfo;
-  const isTask = event.extendedProps.type === 'task';
-  const isCompleted = isTask && event.extendedProps.taskData?.status === 'completed';
-  const isTimeGridView = view.type === 'timeGridWeek' || view.type === 'timeGridDay';
-  const calendarName = event.extendedProps.calendarName;
-
-  // For time grid views
-  if (isTimeGridView) {
-    return (
-      <div className="fc-event-main" style={{ overflow: 'hidden', maxWidth: '100%', padding: '4px 8px' }}>
-        {timeText && (
-          <div className="fc-event-time" style={{ ...asanaTypography.small, color: '#ffffff', marginBottom: '2px' }}>
-            {timeText}
-          </div>
-        )}
-        <div className="fc-event-title" style={{ 
-          ...asanaTypography.body,
-          color: '#ffffff', 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
-          whiteSpace: 'nowrap',
-          fontWeight: 500
-        }}>
-          {event.title}
-          {calendarName && calendarName !== 'primary' && (
-            <span style={{ ...asanaTypography.small, opacity: 0.8, marginLeft: '4px' }}>
-              ({calendarName})
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Month view with Asana style
-  const indicator = isTask ? (
-    isCompleted ? (
-      <CheckCircle2 size={14} style={{ color: '#14A085', marginRight: '6px', flexShrink: 0 }} />
-    ) : (
-      <Circle size={14} style={{ color: '#DDD', marginRight: '6px', flexShrink: 0 }} />
-    )
-  ) : (
-    <div 
-      className="size-2 shrink-0 rounded-full" 
-      style={{ 
-        marginRight: '6px', 
-        backgroundColor: '#796EFF' 
-      }} 
-    />
-  );
-
-  return (
-    <div className="fc-event-main-frame" style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      overflow: 'hidden', 
-      maxWidth: '100%',
-      padding: '2px 8px'
-    }}>
-      {indicator}
-      <div className="fc-event-title-container" style={{ 
-        flex: '1 1 auto', 
-        minWidth: '0', 
-        overflow: 'hidden' 
-      }}>
-        <div className="fc-event-title" style={{ 
-          ...asanaTypography.small,
-          color: isTask ? '#151B26' : '#ffffff',
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
-          whiteSpace: 'nowrap',
-          textDecoration: isCompleted ? 'line-through' : 'none',
-          fontWeight: 500
-        }}>
-          {event.title}
-          {calendarName && calendarName !== 'primary' && (
-            <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: '4px' }}>
-              ({calendarName})
-            </span>
-          )}
-        </div>
-      </div>
-      {timeText && (
-        <div className="fc-event-time" style={{ 
-          ...asanaTypography.small,
-          color: isTask ? '#6B6F76' : '#ffffff',
-          marginLeft: '4px',
-          flexShrink: 0
-        }}>
-          {timeText}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Task Item Component with Asana styling
-const AsanaTaskItem: React.FC<{
-  task: GoogleTask;
-  onToggle: () => void;
-  onEdit: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  onSchedule: () => void;
-  onContextMenu: (e: React.MouseEvent, task: GoogleTask) => void;
-}> = ({ task, onToggle, onEdit, onDuplicate, onDelete, onSchedule, onContextMenu }) => {
-  const { getTaskByGoogleId, tasks } = useUnifiedTaskStore();
-  const unifiedTask = getTaskByGoogleId(task.id) || tasks[task.id];
-  const priority = unifiedTask?.priority || 'normal';
-  
-  return (
-    <div 
-      className="draggable-task p-4 rounded-xl bg-white transition-all cursor-pointer"
-      style={{ 
-        borderRadius: '12px',
-        boxShadow: '0 1px 3px rgba(50, 50, 93, 0.05)',
-        border: '1px solid #E8E8E9',
-        marginBottom: '8px'
-      }}
-      data-task={JSON.stringify(task)}
-      onClick={(e) => {
-        // Open edit modal on click (unless clicking on checkbox or button)
-        const target = e.target as HTMLElement;
-        if (!target.closest('button') && !target.closest('input')) {
-          onEdit();
-        }
-      }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onContextMenu(e, task);
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(50, 50, 93, 0.1)';
-        e.currentTarget.style.transform = 'translateY(-1px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(50, 50, 93, 0.05)';
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
-    >
-      <div className="flex items-start gap-3">
-        <button
-          onClick={onToggle}
-          className="flex-shrink-0 mt-0.5"
-        >
-          {task.status === 'completed' ? (
-            <CheckCircle2 size={18} style={{ color: '#14A085' }} />
-          ) : (
-            <Circle size={18} style={{ color: '#DDD' }} />
-          )}
-        </button>
-        
-        <div className="flex-1 min-w-0">
-          <h4 
-            style={{ 
-              ...asanaTypography.body,
-              fontWeight: 500,
-              textDecoration: task.status === 'completed' ? 'line-through' : 'none',
-              color: task.status === 'completed' ? '#9CA3AF' : '#151B26'
-            }}
-          >
-            {task.title}
-          </h4>
-          
-          {task.notes && (
-            <p style={{ ...asanaTypography.small, marginTop: '4px' }}>
-              {task.notes}
-            </p>
-          )}
-          
-          <div className="flex items-center gap-2 mt-2">
-            {task.due && (
-              <div className="flex items-center gap-1.5">
-                <CalendarIcon size={12} style={{ color: '#9CA6AF' }} />
-                <span style={asanaTypography.small}>
-                  {new Date(task.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              </div>
-            )}
-            
-            {priority !== 'normal' && (
-              <div 
-                className="flex items-center gap-1 px-2 py-0.5 rounded-full"
-                style={{ 
-                  backgroundColor: priorityConfig[priority as keyof typeof priorityConfig]?.bgColor || '#F3F4F6',
-                  color: priorityConfig[priority as keyof typeof priorityConfig]?.textColor || '#6B6F76'
-                }}
-              >
-                <Flag size={10} />
-                <span style={{ fontSize: '11px', fontWeight: 500 }}>
-                  {priorityConfig[priority as keyof typeof priorityConfig]?.label || priority}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default function CalendarAsanaStyle() {
   const navigate = useNavigate();
@@ -814,442 +61,133 @@ export default function CalendarAsanaStyle() {
   const calendarRef = useRef<FullCalendar>(null);
   const [view, setView] = useState<CalendarView>('dayGridMonth');
   const [showEventModal, setShowEventModal] = useState(false);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedDateInfo, setSelectedDateInfo] = useState<DateSelectArg | null>(null);
-  const [selectedTaskForScheduling, setSelectedTaskForScheduling] = useState<GoogleTask | null>(null);
-  const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | null>(null);
   const [selectedColumnId, setSelectedColumnId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showTasksInCalendar, setShowTasksInCalendar] = useState(true);
-  const [eventForm, setEventForm] = useState({
-    title: '',
-    description: '',
-    location: '',
-    startTime: '',
-    endTime: '',
-  });
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<EventApi | null>(null);
   const [currentViewTitle, setCurrentViewTitle] = useState<string>('Calendar');
   const [editingTask, setEditingTask] = useState<GoogleTask | null>(null);
   const [showDeleteTaskDialog, setShowDeleteTaskDialog] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<GoogleTask | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: GoogleTask; listId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<CalendarContextMenu | null>(null);
+  
+  // Tasks Sidebar state
+  const [showTasksSidebar, setShowTasksSidebar] = useState(true);
+  const [selectedTaskListId, setSelectedTaskListId] = useState<string>('all');
+  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const [showInlineCreator, setShowInlineCreator] = useState(false);
 
-  // Get data from unified task store
-  const unifiedStore = useUnifiedTaskStore();
-  const taskLists = unifiedStore.columns;
-  const allTasks = Object.values(unifiedStore.tasks);
-  const isTasksLoading = unifiedStore.isSyncing;
-  const tasksError = null; // Unified store doesn't expose error state directly
-  
-  // Create adapter functions for compatibility
-  const fetchTaskLists = useCallback(async () => {
-    // Columns are already loaded in unified store
-    return unifiedStore.columns;
-  }, [unifiedStore.columns]);
-  
-  const createGoogleTask = useCallback(async (listId: string, task: Partial<GoogleTask>) => {
-    return unifiedStore.createTask({
-      title: task.title || 'New Task',
-      notes: task.notes || '',
-      columnId: listId,
-      due: task.due,
-      metadata: {
-        priority: 'normal' as const,
-        labels: [],
-        subtasks: [],
-      }
-    });
-  }, [unifiedStore]);
-  
-  const updateGoogleTask = useCallback(async (taskId: string, updates: Partial<GoogleTask>) => {
-    const task = allTasks.find(t => t.googleTaskId === taskId || t.id === taskId);
-    if (task) {
-      return unifiedStore.updateTask(task.id, {
-        title: updates.title,
-        notes: updates.notes,
-        due: updates.due,
-        status: updates.status,
-      });
-    }
-  }, [unifiedStore, allTasks]);
-  
-  const deleteGoogleTask = useCallback(async (taskId: string, listId: string) => {
-    const task = allTasks.find(t => t.googleTaskId === taskId || t.id === taskId);
-    if (task) {
-      return unifiedStore.deleteTask(task.id);
-    }
-  }, [unifiedStore, allTasks]);
-  
-  const toggleTaskComplete = useCallback(async (taskId: string) => {
-    const task = allTasks.find(t => t.googleTaskId === taskId || t.id === taskId);
-    if (task) {
-      const newStatus = task.status === 'completed' ? 'needsAction' : 'completed';
-      return unifiedStore.updateTask(task.id, { status: newStatus });
-    }
-  }, [unifiedStore, allTasks]);
-  
-  const authenticateTasks = useCallback(async (account: any) => {
-    // Authentication is handled at app level now
-    return Promise.resolve();
-  }, []);
-  
-  const isTasksAuthenticated = true; // Authentication is handled at app level
-  const isTasksHydrated = unifiedStore.columns.length > 0; // Consider hydrated if we have columns
-  
-  const syncAllTasks = useCallback(async () => {
-    // Sync is automatic in unified store
-    return Promise.resolve();
-  }, []);
-  
-  // Transform unified tasks to google tasks format for calendar
-  const googleTasks = useMemo(() => {
-    const tasksByList: Record<string, GoogleTask[]> = {};
-    const taskIdOccurrences = new Map<string, number>();
-    
-    // Remove verbose logging
-    
-    taskLists.forEach(list => {
-      tasksByList[list.id] = allTasks
-        .filter(task => task.columnId === list.id)
-        .map((task) => {
-          // Use the original task ID without modification to ensure consistency
-          const taskId = task.googleTaskId || task.id;
-          
-          // Track how many times we see each task ID
-          const count = (taskIdOccurrences.get(taskId) || 0) + 1;
-          taskIdOccurrences.set(taskId, count);
-          // Track duplicates silently
-          
-          return {
-            id: taskId,
-            title: task.title,
-            notes: task.notes || '',
-            status: task.status || 'needsAction',
-            due: task.due,
-            completed: task.completedAt,
-            updated: task.updatedAt,
-            position: task.position.toString(),
-            selfLink: '',
-            etag: '',
-          } as GoogleTask;
-        });
-    });
-    
-    // Log duplicate task IDs
-    const duplicates = Array.from(taskIdOccurrences.entries())
-      .filter(([id, count]) => count > 1)
-      .map(([id, count]) => ({ id, count }));
-    
-    // Only warn about duplicates if there are many
-    if (duplicates.length > 10) {
-      console.warn(`[CalendarAsanaStyle] Found ${duplicates.length} duplicate task IDs`);
-    }
-    
-    return tasksByList;
-  }, [taskLists, allTasks]);
-
-  const { 
-    events: calendarEvents, 
-    fetchEvents: fetchCalendarEvents,
-    createEvent: createCalendarEvent,
-    updateEvent: updateCalendarEvent,
-    deleteEvent: deleteCalendarEvent,
-    isAuthenticated: isCalendarAuthenticated,
-  } = useGoogleCalendarStore();
+  // Use the calendar operations hook
+  const {
+    calendars,
+    taskLists,
+    googleTasks,
+    calendarEventsWithTasks,
+    isLoading,
+    error: operationsError,
+    isAuthenticated,
+    fetchCalendarEvents,
+    createCalendarEvent,
+    updateCalendarEvent,
+    deleteCalendarEvent,
+    createGoogleTask,
+    updateGoogleTask,
+    deleteGoogleTask,
+    toggleGoogleTask,
+    syncAllTasks,
+    refreshData
+  } = useCalendarOperations();
 
   const activeAccount = useActiveGoogleAccount();
 
-  // Similar useEffects and handlers from original Calendar component...
-  // (I'll include the key ones for brevity)
-
-  useEffect(() => {
-    if (activeAccount && !isTasksAuthenticated && isTasksHydrated) {
-      authenticateTasks(activeAccount as any);
-    }
-  }, [activeAccount, isTasksAuthenticated, isTasksHydrated, authenticateTasks]);
-
+  // Clear header props on unmount
   useEffect(() => {
     clearHeaderProps();
     return () => clearHeaderProps();
   }, [clearHeaderProps]);
 
-  // Fetch calendar events when the component mounts or active account changes
+  // Load calendar data when component mounts
   useEffect(() => {
-    const loadCalendarData = async () => {
-      if (activeAccount) {
-        console.log('[Calendar] Active account detected:', activeAccount.email);
-        console.log('[Calendar] isCalendarAuthenticated:', isCalendarAuthenticated);
-        
-        // Ensure calendar store is authenticated
-        if (!isCalendarAuthenticated) {
-          console.log('[Calendar] Authenticating calendar store...');
-          const { authenticate } = useGoogleCalendarStore.getState();
-          authenticate({
-            id: activeAccount.id,
-            email: activeAccount.email,
-            name: activeAccount.displayName || activeAccount.email,
-            picture: activeAccount.avatar || '',
-            accessToken: '', // Token is handled by backend
-            refreshToken: '', // Token is handled by backend
-            tokenExpiry: new Date()
-          });
-        }
-        
-        // Always fetch calendars first to ensure we have the right list for current account
-        try {
-          console.log('[Calendar] Fetching calendar list...');
-          const { fetchCalendars } = useGoogleCalendarStore.getState();
-          await fetchCalendars(activeAccount.id);
-          
-          // Now fetch events
-          console.log('[Calendar] Fetching calendar events...');
-          await fetchCalendarEvents();
-          console.log('[Calendar] Events fetched successfully');
-        } catch (error) {
-          console.error('[Calendar] Failed to fetch calendar data:', error);
-          setError('Failed to load calendar events. Please try refreshing.');
-        }
-      }
-    };
-    
-    loadCalendarData();
-  }, [activeAccount, isCalendarAuthenticated]); // Re-run when account or auth state changes
+    console.log('Calendar data loading effect:', { activeAccount, isAuthenticated, taskLists: taskLists.length, googleTasks: Object.keys(googleTasks).length });
+    if (activeAccount && isAuthenticated) {
+      fetchCalendarEvents();
+      syncAllTasks();
+    }
+  }, [activeAccount, isAuthenticated, fetchCalendarEvents, syncAllTasks]);
 
-  // Close context menu when clicking outside
+
+  // Calendar navigation
+  const navigateCalendar = useCallback((action: 'prev' | 'next' | 'today') => {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+
+    switch (action) {
+      case 'prev':
+        api.prev();
+        break;
+      case 'next':
+        api.next();
+        break;
+      case 'today':
+        api.today();
+        break;
+    }
+    
+    setCurrentCalendarDate(api.getDate());
+  }, []);
+
+  const goToToday = () => navigateCalendar('today');
+
+  const changeView = (newView: CalendarView) => {
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      api.changeView(newView);
+      setView(newView);
+    }
+  };
+
+  // Filter events based on search
+  const filteredCalendarEvents = useMemo(() => {
+    if (!searchQuery) return calendarEventsWithTasks;
+    
+    const query = searchQuery.toLowerCase();
+    return calendarEventsWithTasks.filter(event => 
+      event.title.toLowerCase().includes(query) ||
+      event.extendedProps?.description?.toLowerCase().includes(query) ||
+      event.extendedProps?.location?.toLowerCase().includes(query)
+    );
+  }, [calendarEventsWithTasks, searchQuery]);
+
+  // Handle context menu click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (contextMenu && !(event.target as Element).closest('.context-menu')) {
+      if (contextMenu) {
         setContextMenu(null);
       }
     };
-    
+
     if (contextMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [contextMenu]);
 
-  const goToToday = () => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi.today();
-      updateViewTitle(calendarApi);
-    }
-  };
-
-  const navigateCalendar = (direction: 'prev' | 'next') => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      if (direction === 'prev') {
-        calendarApi.prev();
-      } else {
-        calendarApi.next();
-      }
-      updateViewTitle(calendarApi);
-    }
-  };
-
-  const changeView = (newView: CalendarView) => {
-    setView(newView);
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi.changeView(newView);
-      updateViewTitle(calendarApi);
-    }
-  };
-
-  const updateViewTitle = (calendarApi: any) => {
-    setCurrentViewTitle(calendarApi.view.title);
-  };
-
-  // Create combined events from calendar events and tasks with deduplication
-  const fullCalendarEvents = useMemo(() => {
-    const events: any[] = [];
-    const eventTitlesAndDates = new Set<string>();
-    const usedEventIds = new Set<string>(); // Track all event IDs to ensure uniqueness
-    const seenTaskIds = new Set<string>();
-    const addedTaskKeys = new Set<string>(); // Track tasks by content, not just ID
-
-    // Add calendar events first
-    calendarEvents.forEach(event => {
-      // Normalize date to YYYY-MM-DD format for consistent comparison
-      const eventDate = event.start?.dateTime || event.start?.date;
-      let normalizedDate = '';
-      try {
-        normalizedDate = eventDate ? new Date(eventDate).toISOString().split('T')[0] : '';
-      } catch (e) {
-        // Silently handle date parsing errors
-        normalizedDate = eventDate ? String(eventDate).split('T')[0] || '' : '';
-      }
-      const eventKey = `${(event.summary || 'untitled').toLowerCase()}_${normalizedDate}`;
-      eventTitlesAndDates.add(eventKey);
-      
-      // Track calendar event IDs
-      usedEventIds.add(event.id);
-      
-      events.push({
-        id: event.id,
-        title: event.summary || 'Untitled Event',
-        start: event.start?.dateTime || event.start?.date,
-        end: event.end?.dateTime || event.end?.date,
-        allDay: !event.start?.dateTime,
-        backgroundColor: '#796EFF',
-        borderColor: '#796EFF',
-        extendedProps: {
-          type: 'calendar',
-          eventData: event,
-          description: event.description,
-          location: event.location,
-          calendarName: event.organizer?.displayName || 'primary',
-        },
-      });
-    });
-    
-    // Add tasks if enabled, but skip if a calendar event with same title and date exists
-    if (showTasksInCalendar) {
-      
-      Object.entries(googleTasks).forEach(([listId, tasks]) => {
-        tasks.forEach(task => {
-          if (task.due) {
-            // Normalize task date to YYYY-MM-DD format for consistent comparison
-            let normalizedTaskDate = '';
-            try {
-              normalizedTaskDate = new Date(task.due).toISOString().split('T')[0];
-            } catch (e) {
-              // Silently handle date parsing errors
-              normalizedTaskDate = String(task.due).split('T')[0] || '';
-            }
-            const taskKey = `${(task.title || 'untitled').toLowerCase()}_${normalizedTaskDate}`;
-            
-            // Create a unique key combining task ID and list ID to handle duplicates across lists
-            const uniqueTaskKey = `${task.id}_${listId}`;
-            
-            // Remove verbose logging to reduce console spam
-            
-            // Skip this task if:
-            // 1. A calendar event with the same title and date already exists
-            // 2. We've already added a task with the same content (title + date)
-            // 3. We've already processed this specific task+list combination
-            if (!eventTitlesAndDates.has(taskKey) && !addedTaskKeys.has(taskKey) && !seenTaskIds.has(uniqueTaskKey)) {
-              seenTaskIds.add(uniqueTaskKey);
-              addedTaskKeys.add(taskKey); // Prevent duplicate tasks with same title/date
-              
-              // Remove verbose logging to reduce console spam
-              
-              // Generate a unique event ID and ensure it's not already used
-              let eventId = `task-${task.id}-${listId}`;
-              let counter = 0;
-              while (usedEventIds.has(eventId)) {
-                counter++;
-                eventId = `task-${task.id}-${listId}-${counter}`;
-              }
-              usedEventIds.add(eventId);
-              
-              events.push({
-                id: eventId,
-                title: task.title,
-                start: task.due,
-                allDay: true,
-                backgroundColor: task.status === 'completed' ? '#E8F5F3' : '#FFF6E6',
-                borderColor: task.status === 'completed' ? '#14A085' : '#E68900',
-                extendedProps: {
-                  type: 'task',
-                  taskData: task,
-                  listId: listId,
-                },
-              });
-            }
-          }
-        });
-      });
-    }
-    
-    // Check for any duplicate IDs in the final events array
-    const finalEventIds = new Set<string>();
-    const duplicateIds = [];
-    events.forEach(event => {
-      if (finalEventIds.has(event.id)) {
-        duplicateIds.push(event.id);
-      }
-      finalEventIds.add(event.id);
-    });
-    
-    if (duplicateIds.length > 0) {
-      console.error('[Calendar] CRITICAL: Duplicate event IDs found:', duplicateIds);
-    }
-    
-    // Only log summary if tasks are shown to reduce console spam
-    if (showTasksInCalendar && seenTaskIds.size > 0) {
-      console.log('[Calendar] Event generation complete:', {
-        totalEvents: events.length,
-        calendarEvents: calendarEvents.length,
-        tasksProcessed: seenTaskIds.size,
-        uniqueEventIds: usedEventIds.size
-      });
-    }
-
-    return events;
-  }, [calendarEvents, googleTasks, showTasksInCalendar]);
-
-  // Filter events by search query
-  const filteredCalendarEvents = useMemo(() => {
-    if (!searchQuery) return fullCalendarEvents;
-    
-    const query = searchQuery.toLowerCase();
-    return fullCalendarEvents.filter(event => 
-      event.title.toLowerCase().includes(query) ||
-      ((event.extendedProps as any).description && ((event.extendedProps as any).description as string).toLowerCase().includes(query)) ||
-      ((event.extendedProps as any).location && ((event.extendedProps as any).location as string).toLowerCase().includes(query))
-    );
-  }, [fullCalendarEvents, searchQuery]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    setError(null);
-    try {
-      await Promise.all([
-        fetchCalendarEvents(),
-        fetchTaskLists(),
-        syncAllTasks()
-      ]);
-    } catch (err) {
-      console.error('Failed to refresh calendar data:', err);
-      setError('Failed to refresh calendar data. Please try again.');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [fetchCalendarEvents, fetchTaskLists, syncAllTasks]);
-
-  if (!activeAccount || (!isCalendarAuthenticated && !isTasksAuthenticated)) {
+  if (!activeAccount || !isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center" style={{ backgroundColor: '#FAFBFC' }}>
         <div className="text-center">
-          <h2 style={asanaTypography.h1}>No Google Account Connected</h2>
-          <p style={{ ...asanaTypography.body, marginTop: '8px', marginBottom: '24px' }}>
-            Please connect a Google account in Settings to view your calendar and tasks.
+          <h2 className="mb-4 text-2xl font-semibold text-gray-800">
+            Connect Your Google Account
+          </h2>
+          <p className="mb-6 text-gray-600">
+            Please connect your Google account to view your calendar and tasks.
           </p>
           <button
             onClick={() => navigate('/settings')}
-            className="px-6 py-3 rounded-xl transition-all"
-            style={{ 
-              ...asanaTypography.body,
-              backgroundColor: '#796EFF',
-              color: '#FFFFFF',
-              fontWeight: 500
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#6B5FE6';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#796EFF';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
+            className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
           >
             Go to Settings
           </button>
@@ -1260,229 +198,144 @@ export default function CalendarAsanaStyle() {
 
   return (
     <>
-      <div className="flex h-full" style={{ backgroundColor: '#FAFBFC' }}>
-        {/* Main Calendar Area */}
-        <div className="flex h-full min-w-0 flex-1 flex-col">
-          <div className="flex h-full flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-8 py-4" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9' }}>
-              {/* Left side - Navigation and Title */}
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={goToToday}
-                  className="px-4 py-2 rounded-xl transition-colors"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
-                    color: '#151B26',
-                    fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#E8E9EA';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
-                  }}
-                >
-                  Today
-                </button>
-                
-                <div className="flex items-center">
-                  <button 
-                    onClick={() => navigateCalendar('prev')}
-                    className="p-2 rounded-l-xl transition-colors"
-                    style={{ 
-                      backgroundColor: '#F6F7F8',
-                      borderRight: '1px solid #E8E8E9'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#E8E9EA';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    }}
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button 
-                    onClick={() => navigateCalendar('next')}
-                    className="p-2 rounded-r-xl transition-colors"
-                    style={{ 
-                      backgroundColor: '#F6F7F8'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#E8E9EA';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    }}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-                
-                <h1 style={asanaTypography.h1}>
-                  {currentViewTitle}
-                </h1>
-              </div>
+      <div className="flex h-full flex-col" style={{ backgroundColor: '#FAFBFC' }}>
+        {/* Header */}
+        <CalendarHeader 
+          currentDate={currentCalendarDate}
+          currentViewTitle={currentViewTitle}
+          view={view}
+          showTasksSidebar={showTasksSidebar}
+          onNavigate={navigateCalendar}
+          onDateSelect={(date) => {
+            setCurrentCalendarDate(date);
+            const api = calendarRef.current?.getApi();
+            if (api) {
+              api.gotoDate(date);
+            }
+          }}
+          onViewChange={changeView}
+          onToggleTasksSidebar={() => setShowTasksSidebar(!showTasksSidebar)}
+          onNewEvent={() => {
+            setSelectedEvent(null);
+            setShowEventModal(true);
+          }}
+        />
 
-              {/* Center - Search */}
-              <div className="relative max-w-md flex-1 mx-6">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
-                <input
-                  type="search"
-                  placeholder="Search events..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 rounded-xl outline-none transition-all w-full"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#F6F7F8',
-                    border: '1px solid transparent'
+      {/* Main Content Area - Calendar and Sidebar */}
+      <div className="flex flex-1 gap-6 bg-primary p-6 min-h-0">
+        {/* Calendar Section */}
+        <div className="border-primary flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="cal-asana-calendar-wrapper flex-1 overflow-hidden" style={{ paddingRight: '0' }}>
+            <div className="cal-asana-grid h-full">
+                <FullCalendar
+                  ref={calendarRef}
+                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                  initialView={view}
+                  headerToolbar={false}
+                  events={filteredCalendarEvents}
+                  eventContent={(arg) => <CalendarEventContent arg={arg} />}
+                  editable={true}
+                  selectable={true}
+                  selectMirror={true}
+                  dayMaxEvents={true}
+                  weekends={true}
+                  nowIndicator={true}
+                  height="100%"
+                  eventClassNames="cal-asana-event"
+                  dayCellClassNames={(arg) => {
+                    const classes = ['cal-cell'];
+                    if (arg.isToday) classes.push('today');
+                    if (arg.dow === 0 || arg.dow === 6) classes.push('weekend');
+                    return classes;
                   }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                    e.currentTarget.style.borderColor = '#D1D5DB';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F6F7F8';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-
-              {/* Right side - View toggles and actions */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 p-1 rounded-xl" style={{ backgroundColor: '#F6F7F8' }}>
-                  <button
-                    onClick={() => changeView('dayGridMonth')}
-                    className="px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ 
-                      ...asanaTypography.small,
-                      backgroundColor: view === 'dayGridMonth' ? '#FFFFFF' : 'transparent',
-                      color: view === 'dayGridMonth' ? '#151B26' : '#6B6F76',
-                      fontWeight: 500,
-                      boxShadow: view === 'dayGridMonth' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    viewClassNames="cal-grid-enhanced"
+                    select={(info) => {
+                      setSelectedDateInfo(info);
+                      setShowEventModal(true);
                     }}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => changeView('timeGridWeek')}
-                    className="px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ 
-                      ...asanaTypography.small,
-                      backgroundColor: view === 'timeGridWeek' ? '#FFFFFF' : 'transparent',
-                      color: view === 'timeGridWeek' ? '#151B26' : '#6B6F76',
-                      fontWeight: 500,
-                      boxShadow: view === 'timeGridWeek' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    eventClick={(info) => {
+                      // Handle event click
+                      console.log('Event clicked:', info.event);
                     }}
-                  >
-                    Week
-                  </button>
-                  <button
-                    onClick={() => changeView('timeGridDay')}
-                    className="px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ 
-                      ...asanaTypography.small,
-                      backgroundColor: view === 'timeGridDay' ? '#FFFFFF' : 'transparent',
-                      color: view === 'timeGridDay' ? '#151B26' : '#6B6F76',
-                      fontWeight: 500,
-                      boxShadow: view === 'timeGridDay' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    datesSet={(dateInfo) => {
+                      setCurrentViewTitle(dateInfo.view.title);
                     }}
-                  >
-                    Day
-                  </button>
-                </div>
-                
-                <button
-                  onClick={() => setShowTasksInCalendar(!showTasksInCalendar)}
-                  className="p-2 rounded-xl transition-colors"
-                  style={{ 
-                    backgroundColor: showTasksInCalendar ? '#E8F5F3' : '#F6F7F8',
-                    color: showTasksInCalendar ? '#14A085' : '#6B6F76'
-                  }}
-                  title={showTasksInCalendar ? 'Hide tasks' : 'Show tasks'}
-                >
-                  <ListChecks size={18} />
-                </button>
-                
-                <button 
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="p-2 rounded-xl transition-colors"
-                  style={{ 
-                    backgroundColor: '#F6F7F8',
-                    color: '#6B6F76'
-                  }}
-                  title="Refresh"
-                >
-                  <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-                </button>
-                
-                <div className="w-px h-6" style={{ backgroundColor: '#E8E8E9' }} />
-                
-                <button 
-                  onClick={() => { setEditingEvent(null); setShowEventModal(true); }}
-                  className="px-4 py-2 rounded-xl transition-all flex items-center gap-2"
-                  style={{ 
-                    ...asanaTypography.body,
-                    backgroundColor: '#796EFF',
-                    color: '#FFFFFF',
-                    fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#6B5FE6';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#796EFF';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <Plus size={16} />
-                  New event
-                </button>
-              </div>
-            </div>
-
-            {/* Calendar Container */}
-            <div className="flex-1 p-6 overflow-hidden">
-              <div className="h-full bg-white rounded-xl" style={{ border: '1px solid #E8E8E9' }}>
-                <div className="calendar-wrapper h-full p-4">
-                  <FullCalendar
-                    ref={calendarRef}
-                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                    initialView={view}
-                    headerToolbar={false}
-                    events={filteredCalendarEvents}
-                    eventContent={renderEventContent}
-                    editable={true}
-                    selectable={true}
-                    selectMirror={true}
-                    dayMaxEvents={3}
-                    weekends={true}
-                    nowIndicator={true}
-                    height="100%"
-                    eventClassNames="asana-calendar-event"
-                    dayCellClassNames="asana-calendar-day"
-                    viewClassNames="asana-calendar-view"
                   />
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
+        {/* Task Sidebar */}
+        {showTasksSidebar && (
+          <CalendarTaskSidebar 
+            taskLists={taskLists}
+            googleTasks={googleTasks}
+            selectedTaskListId={selectedTaskListId}
+            showInlineCreator={showInlineCreator}
+            onTaskListChange={setSelectedTaskListId}
+            onTaskClick={(task) => {
+              setEditingTask(task);
+              setShowTaskModal(true);
+            }}
+            onTaskComplete={async (listId, taskId, completed) => {
+              const task = googleTasks[listId]?.find(t => t.id === taskId);
+              if (task) {
+                await updateGoogleTask(listId, taskId, { ...task, status: completed ? 'completed' : 'needsAction' });
+              }
+            }}
+            onTaskCreate={async (listId, data) => {
+              await createGoogleTask(listId, data);
+              await syncAllTasks();
+            }}
+            onShowInlineCreator={setShowInlineCreator}
+            onContextMenu={(e, task) => {
+              const listId = Object.keys(googleTasks).find(id => 
+                googleTasks[id].some(t => t.id === task.id)
+              ) || selectedTaskListId;
+              setContextMenu({ x: e.clientX, y: e.clientY, task, listId });
+            }}
+          />
+        )}
       </div>
+
+      {/* Event Modal */}
+      <AsanaEventModal
+        isOpen={showEventModal}
+        onClose={() => {
+          setShowEventModal(false);
+          setSelectedEvent(null);
+        }}
+        event={selectedEvent}
+        onSave={async (eventData) => {
+          try {
+            if (eventData.id) {
+              await updateCalendarEvent(eventData.id, eventData);
+            } else {
+              await createCalendarEvent({
+                summary: eventData.title,
+                description: eventData.description,
+                start: { dateTime: eventData.start },
+                end: { dateTime: eventData.end },
+                calendarId: eventData.calendarId,
+                location: eventData.location,
+                attendees: eventData.attendees.map((email: string) => ({ email }))
+              });
+            }
+            await fetchCalendarEvents();
+          } catch (error) {
+            console.error('Failed to save event:', error);
+          }
+        }}
+        onDelete={async (eventId) => {
+          try {
+            await deleteCalendarEvent(eventId);
+            await fetchCalendarEvents();
+          } catch (error) {
+            console.error('Failed to delete event:', error);
+          }
+        }}
+        calendars={calendars}
+      />
 
       {/* Task Modal */}
       {showTaskModal && (
@@ -1495,7 +348,7 @@ export default function CalendarAsanaStyle() {
           }}
           onSubmit={async (data) => {
             try {
-              const listId = selectedColumnId === 'all' ? taskLists[0]?.id : selectedColumnId;
+              const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
               if (!listId) return;
               
               if (editingTask) {
@@ -1552,92 +405,36 @@ export default function CalendarAsanaStyle() {
       )}
 
       {/* Context Menu */}
-      {contextMenu && (
-        <div
-          className="context-menu fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-2"
-          style={{
-            left: contextMenu.x,
-            top: contextMenu.y,
-            minWidth: '180px'
-          }}
-        >
-          <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-            onClick={() => {
-              setEditingTask(contextMenu.task);
-              setShowTaskModal(true);
-              setContextMenu(null);
-            }}
-          >
-            <Edit2 size={14} />
-            Edit Task
-          </button>
-          
-          <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-            onClick={() => {
-              setSelectedTaskForScheduling(contextMenu.task);
-              setSelectedScheduleDate(new Date());
-              setShowScheduleModal(true);
-              setContextMenu(null);
-            }}
-          >
-            <CalendarIcon size={14} />
-            Schedule
-          </button>
-          
-          <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-            onClick={() => {
-              createGoogleTask(contextMenu.listId, {
-                title: `${contextMenu.task.title} (Copy)`,
-                notes: contextMenu.task.notes,
-                due: contextMenu.task.due,
-              });
-              setContextMenu(null);
-            }}
-          >
-            <Copy size={14} />
-            Duplicate
-          </button>
-          
-          <div className="border-t border-gray-100 my-1" />
-          
-          <div className="px-4 py-1 text-xs text-gray-500 font-medium">Priority</div>
-          {(['urgent', 'high', 'medium', 'low'] as const).map(priority => (
-            <button
-              key={priority}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-              onClick={() => {
-                // Update task priority in unified store
-                const { updateTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
-                const unifiedTask = getTaskByGoogleId(contextMenu.task.id);
-                if (unifiedTask) {
-                  updateTask(unifiedTask.id, { priority });
-                }
-                setContextMenu(null);
-              }}
-            >
-              <Flag size={14} style={{ color: priorityConfig[priority]?.textColor || '#6B6F76' }} />
-              {priorityConfig[priority]?.label || priority}
-            </button>
-          ))}
-          
-          <div className="border-t border-gray-100 my-1" />
-          
-          <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-red-600"
-            onClick={() => {
-              setTaskToDelete(contextMenu.task);
-              setShowDeleteTaskDialog(true);
-              setContextMenu(null);
-            }}
-          >
-            <Trash2 size={14} />
-            Delete Task
-          </button>
-        </div>
-      )}
+      <TaskContextMenu
+        contextMenu={contextMenu}
+        onEdit={(task) => {
+          setEditingTask(task);
+          setShowTaskModal(true);
+        }}
+        onSchedule={(task) => {
+          console.log('Schedule task:', task);
+        }}
+        onDuplicate={async (task) => {
+          const listId = contextMenu?.listId || selectedTaskListId;
+          await createGoogleTask(listId, {
+            title: `${task.title} (Copy)`,
+            notes: task.notes,
+            due: task.due,
+          });
+        }}
+        onUpdatePriority={(task, priority) => {
+          const { updateTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
+          const unifiedTask = getTaskByGoogleId(task.id);
+          if (unifiedTask) {
+            updateTask(unifiedTask.id, { priority });
+          }
+        }}
+        onDelete={(task) => {
+          setTaskToDelete(task);
+          setShowDeleteTaskDialog(true);
+        }}
+        onClose={() => setContextMenu(null)}
+      />
 
       {/* Add custom styles for calendar */}
       <style>{`
@@ -1657,26 +454,111 @@ export default function CalendarAsanaStyle() {
         .fc-day-number {
           color: #151B26;
           font-weight: 500;
+          font-size: 14px;
+          padding: 8px !important;
+        }
+        
+        .fc-daygrid-day-frame {
+          padding: 0 !important;
+        }
+        
+        .fc-daygrid-day-top {
+          display: flex;
+          justify-content: flex-start;
+          padding: 4px 8px;
+        }
+        
+        .fc-daygrid-event {
+          margin: 2px 4px;
+          border: none;
           font-size: 13px;
+        }
+        
+        .fc-event {
+          cursor: pointer;
+          transition: transform 0.15s ease;
+        }
+        
+        .fc-event:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fc-event-time {
+          font-weight: 400;
+          opacity: 0.8;
+        }
+        
+        .fc-event-title {
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .fc-h-event {
+          border: none;
+          background-color: #796EFF;
+        }
+        
+        .fc-daygrid-event-harness {
+          margin-top: 1px;
         }
         
         .fc-col-header-cell {
-          background-color: #F9FAFB;
+          background-color: #FAFBFC;
           border-color: #E8E8E9 !important;
-          font-weight: 600;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #6B6F76;
           padding: 12px 0;
         }
         
-        .asana-calendar-event {
-          border-radius: 8px !important;
-          border: none !important;
+        .fc-col-header-cell-cushion {
+          color: #6B6F76;
+          font-weight: 600;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        
+        .fc-scrollgrid,
+        .fc-scrollgrid-section > td {
+          border-color: #E8E8E9 !important;
+        }
+        
+        .fc-daygrid-body {
+          border-color: #E8E8E9 !important;
+        }
+        
+        .fc-more-link {
+          color: #796EFF;
+          font-weight: 500;
+          font-size: 12px;
+        }
+        
+        .fc-daygrid-day.fc-day-other {
+          background-color: #FAFBFC;
+        }
+        
+        .fc-daygrid-day-events {
+          margin-top: 4px;
+        }
+        
+        .fc-popover {
+          border-color: #E8E8E9;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .fc-popover-header {
+          background-color: #F6F7F8;
+          border-color: #E8E8E9;
+          padding: 8px 12px;
+          font-weight: 600;
+          color: #151B26;
+        }
+        
+        .cal-event {
+          border-radius: 6px;
+          padding: 4px 8px;
           font-size: 13px;
-          margin: 2px;
-          padding: 0;
+          line-height: 1.3;
           overflow: hidden;
         }
         
@@ -1713,7 +595,21 @@ export default function CalendarAsanaStyle() {
         .fc-theme-standard th {
           border-color: #E8E8E9 !important;
         }
+        
+        /* Ensure calendar fits in viewport */
+        .cal-asana-grid .fc {
+          height: 100% !important;
+        }
+        
+        .cal-asana-grid .fc-view-harness {
+          height: 100% !important;
+        }
+        
+        .cal-asana-grid .fc-daygrid {
+          height: 100% !important;
+        }
       `}</style>
+    </div>
     </>
   );
 }
