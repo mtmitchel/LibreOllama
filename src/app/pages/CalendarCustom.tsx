@@ -87,19 +87,6 @@ export default function CalendarCustom() {
   
   // Filter events based on search and convert dates
   const filteredEvents = useMemo(() => {
-    // Debug incoming events
-    console.log('🔍 CalendarCustom receiving events from hook:', {
-      total: calendarEventsWithTasks.length,
-      sample: calendarEventsWithTasks.slice(0, 2).map(e => ({
-        id: e.id,
-        title: e.title,
-        allDay: e.allDay,
-        start: e.start,
-        end: e.end,
-        type: typeof e.start
-      }))
-    });
-    
     // DON'T convert dates - they should already be Date objects from the hook
     // Just pass them through as-is to preserve the allDay flag
     const eventsWithDates = calendarEventsWithTasks;
@@ -347,14 +334,21 @@ export default function CalendarCustom() {
             try {
               if (selectedEvent?.id) {
                 await updateCalendarEvent(selectedEvent.id, eventData);
+                alert('Event updated successfully!');
               } else {
                 await createCalendarEvent(eventData);
+                alert('Event created successfully!');
               }
-              await fetchCalendarEvents();
+              // Force a complete refresh of all calendar data
+              await refreshData();
               setShowEventModal(false);
               setSelectedEvent(null);
             } catch (error) {
               console.error('Failed to save event:', error);
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              alert('Failed to save event: ' + errorMessage);
+              // Log the full error details for debugging
+              console.log('Event data that failed:', eventData);
             }
           }}
           onDelete={async (eventId) => {

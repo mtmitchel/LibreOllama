@@ -238,22 +238,37 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
         },
 
         // Event management
-        createEvent: async (eventData: CalendarEventCreateRequest) => {
+        createEvent: async (eventData: any) => {
           const account = get().getCurrentAccount();
-          if (!account) return;
+          if (!account) {
+            throw new Error('No authenticated account found');
+          }
 
           try {
-            logger.debug('[GOOGLE-CALENDAR] Creating event:', eventData.summary);
+            // Extract calendarId from eventData and remove it before sending to backend
+            const calendarId = eventData.calendarId || get().currentCalendarId;
+            const { calendarId: _, ...backendEventData } = eventData;
+            
             const response = await googleCalendarService.createEvent(
               account, 
-              eventData, 
-              get().currentCalendarId
+              backendEventData, 
+              calendarId
             );
 
             if (response.success && response.data) {
+              // Add the new event to the store immediately for instant UI feedback
               set((state) => {
-                state.events.unshift(response.data!);
+                const newEvent = {
+                  ...response.data!,
+                  calendarId,
+                  calendarName: state.calendars.find(cal => cal.id === calendarId)?.summary || 'Primary'
+                };
+                state.events.unshift(newEvent);
+                state.error = null;
               });
+              
+              // Refresh events to ensure consistency with server
+              setTimeout(() => get().fetchEvents(), 500);
             } else {
               throw new Error(response.error?.message || 'Failed to create event');
             }
@@ -262,6 +277,7 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
             set((state) => {
               state.error = error instanceof Error ? error.message : 'Failed to create event';
             });
+            throw error; // Re-throw so the UI can handle it
           }
         },
 

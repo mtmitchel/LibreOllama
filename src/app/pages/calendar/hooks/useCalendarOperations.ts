@@ -71,13 +71,8 @@ export const useCalendarOperations = () => {
           return { isAllDay: true, reason: 'explicit allDay property (no dateTime)' };
         }
         
-        // Log malformed events
-        console.warn('⚠️ Malformed event detected:', {
-          id: event.id,
-          summary: event.summary,
-          start: event.start,
-          end: event.end
-        });
+        // Log malformed events for debugging
+        // console.warn('⚠️ Malformed event detected:', { id: event.id, summary: event.summary });
         
         // Default to all-day for safety
         return { isAllDay: true, reason: 'malformed event' };
@@ -88,19 +83,6 @@ export const useCalendarOperations = () => {
       let startDate = event.start?.dateTime || event.start?.date || '';
       let endDate = event.end?.dateTime || event.end?.date || '';
       
-      // ONLY log baseball games to reduce console spam
-      if (event.summary?.includes('Dodgers (5) @ Reds (2)')) {
-        console.log('🏈 DODGERS GAME DEBUG:');
-        console.log('  Title:', event.summary);
-        console.log('  Classification isAllDay:', isAllDay);
-        console.log('  Classification reason:', reason);
-        console.log('  Has dateTime:', !!(event.start?.dateTime && event.end?.dateTime));
-        console.log('  Start dateTime:', event.start?.dateTime);
-        console.log('  End dateTime:', event.end?.dateTime);
-        console.log('  Start date:', event.start?.date);
-        console.log('  End date:', event.end?.date);
-        console.log('  Original allDay flag:', event.allDay);
-      }
       
       // Safe date parsing with validation
       const parseEventDate = (dateString: string, isAllDayEvent: boolean = false): Date => {
@@ -146,13 +128,10 @@ export const useCalendarOperations = () => {
           endDate = event.end?.dateTime ? parseEventDate(event.end.dateTime, false) : startDate;
           
           // Validate timed event dates
+          // Check for potential timezone parsing issues
           if (startDate.getHours() === 0 && startDate.getMinutes() === 0 && 
               endDate.getHours() === 0 && endDate.getMinutes() === 0) {
-            console.warn('⚠️ Timed event parsed as midnight:', {
-              title: event.summary,
-              originalStart: event.start.dateTime,
-              parsedStart: startDate.toISOString()
-            });
+            // console.warn('⚠️ Timed event parsed as midnight:', { title: event.summary });
           }
         } else {
           console.error('Timed event missing dateTime:', event);
@@ -166,21 +145,6 @@ export const useCalendarOperations = () => {
         event.end?.date && 
         event.start.date !== event.end.date && 
         !isRecurringInstance;
-      
-      // Debug logging - enhanced
-      if (event.summary?.includes('Staying at Bo') || event.summary?.includes('Reds') || event.summary?.includes('Diamondbacks')) {
-        console.log(`🔍 [DEBUG] Event "${event.summary}":`, {
-          id: event.id,
-          isRecurringInstance,
-          isTrueMultiDay,
-          originalStart: event.start,
-          originalEnd: event.end,
-          processedStart: startDate,
-          processedEnd: endDate,
-          recurrence: event.recurrence,
-          recurringEventId: event.recurringEventId
-        });
-      }
       
       // No need to adjust end date anymore since we're handling timezone correctly above
       
@@ -230,19 +194,7 @@ export const useCalendarOperations = () => {
           return;
         }
         
-        // Debug logging for Aug/Sep tasks
         const month = taskDueDate.getMonth() + 1;
-        if (month === 8 || month === 9) {
-          console.log('🔍 Processing Aug/Sep task:', {
-            id: task.id,
-            title: task.title,
-            originalDue: task.due,
-            parsedDate: taskDueDate,
-            isValidDate: !isNaN(taskDueDate.getTime()),
-            month: month,
-            year: taskDueDate.getFullYear()
-          });
-        }
         
         // Parse task due date as local date to avoid UTC timezone issues
         let taskDate: Date;
@@ -290,24 +242,6 @@ export const useCalendarOperations = () => {
       }
     } as CalendarEvent);
     
-    // Debug final events
-    console.log('🔍 Final events array:', events);
-    console.log('🔍 Task events only:', events.filter(event => event.extendedProps?.type === 'task'));
-    console.log('🔍 Timed events (allDay=false):', events.filter(event => !event.allDay).map(e => ({
-      id: e.id,
-      title: e.title,
-      allDay: e.allDay,
-      start: e.start,
-      end: e.end,
-      originalStart: e.extendedProps?.originalStart
-    })));
-    console.log('🔍 All-day events (allDay=true):', events.filter(event => event.allDay).map(e => ({
-      id: e.id,
-      title: e.title,
-      allDay: e.allDay,
-      type: e.extendedProps?.type
-    })));
-    
     return events;
   }, [calendarEvents, unifiedTasks]);
 
@@ -315,11 +249,8 @@ export const useCalendarOperations = () => {
   const syncAllTasks = useCallback(async () => {
     if (!activeAccount) return;
     
-    console.log('🔄 [TASKS] Starting task sync...');
-    
     try {
       await realtimeSync.syncNow();
-      console.log('✅ [TASKS] Tasks synced successfully');
     } catch (error) {
       console.error('❌ [TASKS] Failed to sync tasks:', error);
     }
@@ -353,9 +284,7 @@ export const useCalendarOperations = () => {
     console.log('Remove attachment not implemented yet', taskId, attachmentId);
   }, []);
 
-  // Debug task lists
-  console.log('🔍 Task lists (columns):', columns);
-  console.log('🔍 Active account:', activeAccount);
+  // Task lists and active account are available for debugging if needed
 
   return {
     // Data

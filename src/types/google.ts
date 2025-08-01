@@ -135,17 +135,21 @@ export interface CalendarEventCreateRequest {
   summary: string;
   description?: string;
   start: {
-    dateTime: string;
-    timeZone: string;
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
   };
   end: {
-    dateTime: string;
-    timeZone: string;
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
   };
   location?: string;
   attendees?: Array<{
     email: string;
   }>;
+  recurrence?: string[];
+  calendarId?: string;
 }
 
 export interface ScheduleTaskModalData {

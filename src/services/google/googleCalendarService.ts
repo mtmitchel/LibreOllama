@@ -51,7 +51,7 @@ class GoogleCalendarService {
 
   async createEvent(
     account: GoogleAccount,
-    eventData: CalendarEventCreateRequest,
+    eventData: any, // GoogleCalendarEvent format expected by backend
     calendarId: string = 'primary'
   ): Promise<ApiResponse<GoogleCalendarEvent>> {
     try {

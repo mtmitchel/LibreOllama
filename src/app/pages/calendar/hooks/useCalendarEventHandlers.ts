@@ -247,55 +247,8 @@ export function useCalendarEventHandlers({ state, createGoogleTask, syncAllTasks
     }
   }, [state.contextMenu, setContextMenu]);
 
-  // Prevent browser context menu on calendar area
-  useEffect(() => {
-    const handleContextMenuPrevention = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      
-      // Allow context menu in task sidebar
-      if (target.closest('.calendar-task-sidebar') || target.closest('.context-menu')) {
-        return;
-      }
-      
-      // Prevent browser context menu on calendar area
-      if (target.closest('.rbc-calendar') || 
-          target.closest('.calendar-container') ||
-          target.closest('.rbc-month-view') ||
-          target.closest('.rbc-time-view') ||
-          target.closest('.rbc-agenda-view') ||
-          target.closest('.rbc-time-grid') ||
-          target.closest('.rbc-day-slot') ||
-          target.closest('.rbc-event') ||
-          target.closest('.rbc-event-content') ||
-          target.closest('.rbc-event-label') ||
-          target.closest('.rbc-header') ||
-          target.closest('.rbc-row') ||
-          target.closest('.rbc-date-cell')) {
-        event.preventDefault();
-        event.stopPropagation();
-        return false;
-      }
-    };
-
-    const calendarContainer = calendarContainerRef.current;
-    if (calendarContainer) {
-      const handleContainerContextMenu = (e: MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      };
-      
-      calendarContainer.addEventListener('contextmenu', handleContainerContextMenu);
-      
-      return () => {
-        calendarContainer.removeEventListener('contextmenu', handleContainerContextMenu);
-        document.removeEventListener('contextmenu', handleContextMenuPrevention);
-      };
-    }
-
-    document.addEventListener('contextmenu', handleContextMenuPrevention);
-    return () => document.removeEventListener('contextmenu', handleContextMenuPrevention);
-  }, [calendarContainerRef]);
+  // Note: Context menu prevention has been removed to restore right-click functionality
+  // If you need custom context menus in the future, implement them without preventing the default
 
   return {
     navigateCalendar,

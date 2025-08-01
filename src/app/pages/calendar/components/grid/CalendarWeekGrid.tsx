@@ -46,12 +46,6 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
     const weekStart = startOfDay(weekDates[0]);
     const weekEnd = endOfDay(weekDates[weekDates.length - 1]);
     
-    // Debug incoming events - reduced logging
-    console.log('📊 CalendarWeekGrid received events:', {
-      total: events.length,
-      allDayCount: events.filter(e => e.allDay).length,
-      timedCount: events.filter(e => !e.allDay).length
-    });
     
     // Separate events by type - only process events in current week
     events.forEach(event => {

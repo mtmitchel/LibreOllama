@@ -34,6 +34,7 @@ pub struct GoogleCalendar {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoogleCalendarEvent {
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub id: String,
     pub summary: Option<String>,
     pub description: Option<String>,
@@ -393,23 +394,88 @@ pub async fn create_calendar_event(
     println!("  - End: {:?}", api_event.end);
     println!("  - Recurrence: {:?}", api_event.recurrence);
     
+    // Debug: Print the actual JSON being sent
+    match serde_json::to_string_pretty(&api_event) {
+        Ok(json) => println!("📋 [CALENDAR-API] JSON payload:\n{}", json),
+        Err(e) => println!("❌ [CALENDAR-API] Failed to serialize event: {}", e),
+    }
+    
     // Ensure no recurrence is set for multi-day events
     if api_event.recurrence.is_some() {
         println!("⚠️ [CALENDAR-API] WARNING: Recurrence field is set! This will create recurring events!");
     }
 
+    // Convert to JSON and manually remove the id field if empty
+    let mut json_value = serde_json::to_value(&api_event)
+        .map_err(|e| format!("Failed to convert to JSON: {}", e))?;
+    
+    // Remove null fields and empty id field from JSON
+    if let Some(obj) = json_value.as_object_mut() {
+        // Remove id field if it's empty
+        if let Some(id_value) = obj.get("id") {
+            if id_value.as_str() == Some("") {
+                obj.remove("id");
+                println!("🔧 [CALENDAR-API] Removed empty id field from request");
+            }
+        }
+        
+        // Remove all null fields
+        let null_keys: Vec<String> = obj.iter()
+            .filter(|(_, v)| v.is_null())
+            .map(|(k, _)| k.clone())
+            .collect();
+        
+        let null_count = null_keys.len();
+        
+        for key in null_keys {
+            obj.remove(&key);
+        }
+        
+        // Also clean up nested objects (start and end)
+        if let Some(start_obj) = obj.get_mut("start").and_then(|v| v.as_object_mut()) {
+            let start_null_keys: Vec<String> = start_obj.iter()
+                .filter(|(_, v)| v.is_null())
+                .map(|(k, _)| k.clone())
+                .collect();
+            for key in start_null_keys {
+                start_obj.remove(&key);
+            }
+        }
+        
+        if let Some(end_obj) = obj.get_mut("end").and_then(|v| v.as_object_mut()) {
+            let end_null_keys: Vec<String> = end_obj.iter()
+                .filter(|(_, v)| v.is_null())
+                .map(|(k, _)| k.clone())
+                .collect();
+            for key in end_null_keys {
+                end_obj.remove(&key);
+            }
+        }
+        
+        println!("🔧 [CALENDAR-API] Removed {} null fields from request", null_count);
+    }
+    
     // Make API call to Google Calendar
     let client = reqwest::Client::new();
     let response = client
         .post(format!("https://www.googleapis.com/calendar/v3/calendars/{}/events", calendar_id))
         .bearer_auth(&tokens.access_token)
-        .json(&api_event)
+        .json(&json_value)
         .send()
         .await
         .map_err(|e| format!("API request failed: {}", e))?;
 
     if !response.status().is_success() {
+        let status = response.status();
         let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        
+        // Log the final JSON that was sent
+        println!("❌ [CALENDAR-API] Request failed with status: {}", status);
+        println!("❌ [CALENDAR-API] Error response: {}", error_text);
+        if let Ok(final_json) = serde_json::to_string_pretty(&json_value) {
+            println!("❌ [CALENDAR-API] Final JSON sent to Google:\n{}", final_json);
+        }
+        
         return Err(format!("Failed to create event: {}", error_text));
     }
 
