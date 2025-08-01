@@ -17,7 +17,7 @@ The Calendar page provides comprehensive calendar functionality with Google Cale
 
 ### Frontend Architecture
 
-- **Calendar View:** The `Calendar.tsx` page uses the `FullCalendar` library to display events with Day, Week, and Month view switching.
+- **Calendar View:** The `Calendar.tsx` page uses the `React Big Calendar` library to display events with Day, Week, and Month view switching.
 - **Event Management:** Full CRUD operations for calendar events (create, read, update, delete) with Google Calendar API integration.
 - **Task Integration:** A sidebar that displays tasks from Google Tasks with filtering, creation capabilities, and drag-and-drop scheduling.
 - **State Management:** Uses `useGoogleCalendarStore` for calendar events and `useGoogleTasksStore` for tasks with real API integration.

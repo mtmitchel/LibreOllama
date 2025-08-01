@@ -28,6 +28,10 @@ export const useCalendarOperations = () => {
 
   // Combine calendar events and tasks into a unified event list
   const calendarEventsWithTasks = useMemo(() => {
+    // Debug input data
+    console.log('🔍 DEBUG: All unified tasks:', Object.values(unifiedTasks));
+    console.log('🔍 DEBUG: Tasks with due dates:', Object.values(unifiedTasks).filter(task => task.due));
+    
     const events: CalendarEvent[] = [];
     
     // Add calendar events
@@ -111,23 +115,73 @@ export const useCalendarOperations = () => {
     // Add unified tasks with due dates
     Object.values(unifiedTasks).forEach(task => {
       if (task.due) {
+        const isCompleted = task.status === 'completed';
+        const taskDueDate = new Date(task.due);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        // Skip old completed tasks (older than 30 days)
+        if (isCompleted && taskDueDate < thirtyDaysAgo) {
+          return;
+        }
+        
+        // Debug logging for Aug/Sep tasks
+        const month = taskDueDate.getMonth() + 1;
+        if (month === 8 || month === 9) {
+          console.log('🔍 Processing Aug/Sep task:', {
+            id: task.id,
+            title: task.title,
+            originalDue: task.due,
+            parsedDate: taskDueDate,
+            isValidDate: !isNaN(taskDueDate.getTime()),
+            month: month,
+            year: taskDueDate.getFullYear()
+          });
+        }
+        
         events.push({
           id: `task-${task.id}`,
           title: task.title,
-          start: task.due,
+          start: new Date(task.due), // Convert to Date object
+          end: new Date(task.due),   // Add required end date
           allDay: true,
-          backgroundColor: task.status === 'completed' ? '#E0E0E0' : '#FFF3E0',
-          borderColor: task.status === 'completed' ? '#BDBDBD' : '#FFB74D',
-          textColor: task.status === 'completed' ? '#757575' : '#E65100',
+          backgroundColor: isCompleted ? '#F5F5F5' : '#FFF3E0',
+          borderColor: isCompleted ? '#E0E0E0' : '#FFB74D',
+          textColor: isCompleted ? '#9E9E9E' : '#E65100',
           extendedProps: {
             type: 'task' as const,
             taskId: task.id,
             taskData: task,
-            listId: task.columnId
+            listId: task.columnId,
+            isCompleted: isCompleted
           }
         } as CalendarEvent);
       }
     });
+    
+    // Add test event to verify calendar works
+    events.push({
+      id: 'test-aug-2025',
+      title: 'TEST: August Event',
+      start: new Date(2025, 7, 15), // August 15, 2025
+      end: new Date(2025, 7, 15),
+      allDay: true,
+      backgroundColor: '#FF0000',
+      borderColor: '#FF0000',
+      textColor: '#FFFFFF',
+      extendedProps: {
+        type: 'test' as const
+      }
+    } as CalendarEvent);
+    
+    // Debug final events
+    console.log('🔍 Final events array:', events);
+    console.log('🔍 Task events only:', events.filter(event => event.extendedProps?.type === 'task'));
+    console.log('🔍 Aug/Sep events:', events.filter(event => {
+      const eventDate = new Date(event.start);
+      const month = eventDate.getMonth() + 1;
+      return month === 8 || month === 9;
+    }));
     
     return events;
   }, [calendarEvents, unifiedTasks]);

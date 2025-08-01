@@ -32,6 +32,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     { name: 'Notes', path: '/notes', icon: FileText },
     { name: 'Canvas', path: '/canvas', icon: Image },
     { name: 'Calendar', path: '/calendar', icon: Calendar },
+    { name: 'Calendar Big', path: '/calendar-big', icon: Calendar },
     { name: 'Tasks', path: '/tasks', icon: CheckSquare },
     { name: 'Agents', path: '/agents', icon: Users },
   ];

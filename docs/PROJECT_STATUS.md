@@ -103,7 +103,7 @@
 **Status**: Simplified store architecture implemented - Ready for integration
 
 **What's Working**:
-- ✅ Google Calendar integration with FullCalendar
+- ✅ Google Calendar integration with React Big Calendar
 - ✅ Google Tasks Kanban board with drag-and-drop between columns
 - ✅ Real API services (not mock) with TypeScript types
 - ✅ Multi-account support in UI

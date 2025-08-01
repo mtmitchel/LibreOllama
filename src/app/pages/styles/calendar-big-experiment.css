@@ -1,0 +1,447 @@
+/* React Big Calendar Experiment Styles */
+
+.calendar-big-experiment {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #F6F7F8;
+}
+
+/* Header */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E9;
+}
+
+.calendar-header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1E1F21;
+}
+
+.calendar-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.calendar-controls button {
+  padding: 6px 12px;
+  border: 1px solid #E8E8E9;
+  background: #FFFFFF;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #424244;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-controls button:hover {
+  background: #F6F7F8;
+  border-color: #DCDCDD;
+}
+
+.current-date {
+  margin-left: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E1F21;
+}
+
+/* Calendar Container */
+.calendar-container {
+  flex: 1;
+  background: #FFFFFF;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Override React Big Calendar styles to match Asana */
+.rbc-calendar {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  height: 100%;
+  background: #FFFFFF;
+}
+
+/* Month view header */
+.rbc-header {
+  padding: 12px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6D6E6F;
+  text-transform: uppercase;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E9 !important;
+  border-right: 1px solid #E8E8E9 !important;
+}
+
+/* Calendar cells */
+.rbc-day-bg {
+  background: #FFFFFF;
+  border-right: 1px solid #E8E8E9 !important;
+  border-bottom: 1px solid #E8E8E9 !important;
+}
+
+.rbc-day-bg:hover {
+  background: #FAFAFA;
+}
+
+/* Today */
+.rbc-today {
+  background-color: #F3F1FF !important;
+}
+
+/* Date numbers */
+.rbc-date-cell {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #424244;
+}
+
+.rbc-date-cell button {
+  font-size: 14px;
+  font-weight: 500;
+  color: #424244;
+}
+
+.rbc-off-range .rbc-date-cell {
+  color: #B7B8B9;
+}
+
+.rbc-now .rbc-date-cell {
+  color: #796EFF;
+  font-weight: 600;
+}
+
+/* Events */
+.rbc-event {
+  background-color: #796EFF;
+  border: none;
+  border-radius: 3px;
+  color: white;
+  padding: 2px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 1px 2px;
+}
+
+.rbc-event:hover {
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+.rbc-event.rbc-selected {
+  background-color: #5B51E5;
+}
+
+/* Event types with Asana colors */
+.rbc-event-task {
+  background-color: #FFF3E0;
+  color: #E65100;
+  border: 1px solid #FFB74D;
+}
+
+.rbc-event-meeting {
+  background-color: #FFEBEE;
+  color: #C62828;
+  border: 1px solid #EF5350;
+}
+
+.rbc-event-completed {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  border: 1px solid #66BB6A;
+}
+
+/* Toolbar styling */
+.rbc-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E8E8E9;
+}
+
+.rbc-toolbar button {
+  padding: 6px 12px;
+  margin: 0 4px;
+  border: 1px solid #E8E8E9;
+  background: #FFFFFF;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #424244;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rbc-toolbar button:hover {
+  background: #F6F7F8;
+  border-color: #DCDCDD;
+}
+
+.rbc-toolbar button.rbc-active {
+  background: #796EFF;
+  color: white;
+  border-color: #796EFF;
+}
+
+.rbc-toolbar button.rbc-active:hover {
+  background: #5B51E5;
+  border-color: #5B51E5;
+}
+
+.rbc-toolbar-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E1F21;
+}
+
+/* Week/Day view adjustments */
+.rbc-time-view {
+  border: none;
+  background: #FFFFFF;
+}
+
+.rbc-time-header {
+  border-bottom: 1px solid #E8E8E9;
+}
+
+.rbc-time-content {
+  border-top: 1px solid #E8E8E9;
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #F0F0F0;
+}
+
+.rbc-timeslot-group {
+  border-left: 1px solid #E8E8E9;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #F0F0F0;
+}
+
+.rbc-current-time-indicator {
+  background-color: #796EFF;
+  height: 2px;
+}
+
+/* Agenda view */
+.rbc-agenda-view {
+  background: #FFFFFF;
+}
+
+.rbc-agenda-table {
+  border: none;
+}
+
+.rbc-agenda-time-cell {
+  font-size: 13px;
+  color: #6D6E6F;
+  padding: 8px 12px;
+}
+
+.rbc-agenda-event-cell {
+  font-size: 14px;
+  color: #1E1F21;
+  padding: 8px 12px;
+}
+
+/* Event Modal - Asana Style */
+.event-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.event-modal {
+  background: #FFFFFF;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #E8E8E9;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1E1F21;
+}
+
+.modal-header button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #6D6E6F;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.modal-header button:hover {
+  background: #F6F7F8;
+  color: #1E1F21;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-body p {
+  margin: 12px 0;
+  font-size: 14px;
+  color: #424244;
+  line-height: 1.5;
+}
+
+.modal-body strong {
+  color: #1E1F21;
+  font-weight: 600;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #E8E8E9;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-footer button {
+  padding: 8px 16px;
+  border: 1px solid #E8E8E9;
+  background: #FFFFFF;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #424244;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-footer button:hover {
+  background: #F6F7F8;
+  border-color: #DCDCDD;
+}
+
+.modal-footer button:first-child {
+  background: #F85E5E;
+  color: white;
+  border-color: #F85E5E;
+}
+
+.modal-footer button:first-child:hover {
+  background: #E54E4E;
+  border-color: #E54E4E;
+}
+
+/* Comparison Panel */
+.comparison-panel {
+  margin: 24px;
+  padding: 24px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  border: 1px solid #E8E8E9;
+}
+
+.comparison-panel h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E1F21;
+}
+
+.comparison-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.comparison-panel li {
+  padding: 8px 0;
+  font-size: 14px;
+  color: #424244;
+  display: flex;
+  align-items: center;
+}
+
+.comparison-panel li::before {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* Selection */
+.rbc-slot-selecting .rbc-day-bg {
+  background-color: rgba(121, 110, 255, 0.1);
+}
+
+/* Month view events container */
+.rbc-row-segment {
+  padding: 0 2px;
+}
+
+/* Remove default borders */
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view {
+  border: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .calendar-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .calendar-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .rbc-toolbar {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .comparison-panel {
+    margin: 16px;
+    padding: 16px;
+  }
+}

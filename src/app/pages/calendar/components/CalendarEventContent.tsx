@@ -1,6 +1,6 @@
 import React from 'react';
 import { EventContentArg } from '@fullcalendar/core';
-import { Clock, MapPin, Users, BarChart } from 'lucide-react';
+import { Clock, MapPin, Users, BarChart, Check } from 'lucide-react';
 import { CalendarEvent } from '../types';
 import { UnifiedTask } from '../../../../stores/unifiedTaskStore.types';
 import { useUnifiedTaskStore } from '../../../../stores/unifiedTaskStore';
@@ -37,7 +37,8 @@ export const CalendarEventContent: React.FC<{ arg: EventContentArg }> = ({ arg }
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: '2px'
+        gap: '2px',
+        opacity: eventData.isCompleted ? 0.6 : 1
       }}>
         <div className="fc-event-title-container" style={{ flex: 1, minHeight: 0 }}>
           <div 
@@ -45,14 +46,41 @@ export const CalendarEventContent: React.FC<{ arg: EventContentArg }> = ({ arg }
             style={{ 
               fontWeight: 500,
               fontSize: '13px',
-              color: '#222',
+              color: eventData.isCompleted ? '#999' : '#222',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              lineHeight: '1.4'
+              lineHeight: '1.4',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            {event.title}
+            {isTask && (
+              <div style={{
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                border: `1.5px solid ${eventData.isCompleted ? '#6366F1' : '#D4D6DA'}`,
+                backgroundColor: eventData.isCompleted ? '#6366F1' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                {eventData.isCompleted && (
+                  <Check size={9} strokeWidth={3} color="white" />
+                )}
+              </div>
+            )}
+            <span style={{ 
+              textDecoration: eventData.isCompleted ? 'line-through' : 'none',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {event.title}
+            </span>
           </div>
         </div>
         
@@ -118,17 +146,36 @@ export const CalendarEventContent: React.FC<{ arg: EventContentArg }> = ({ arg }
       gap: '4px',
       overflow: 'hidden',
       width: '100%',
-      height: '100%'
+      height: '100%',
+      opacity: eventData.isCompleted ? 0.6 : 1
     }}>
+      {isTask && (
+        <div style={{
+          width: '14px',
+          height: '14px',
+          borderRadius: '50%',
+          border: `1.5px solid ${eventData.isCompleted ? '#6366F1' : '#D4D6DA'}`,
+          backgroundColor: eventData.isCompleted ? '#6366F1' : 'transparent',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          {eventData.isCompleted && (
+            <Check size={9} strokeWidth={3} color="white" />
+          )}
+        </div>
+      )}
       <div style={{ 
         fontWeight: 500, 
         fontSize: '13px',
-        color: '#222',
+        color: eventData.isCompleted ? '#999' : '#222',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
         flex: 1,
-        lineHeight: '1.4'
+        lineHeight: '1.4',
+        textDecoration: eventData.isCompleted ? 'line-through' : 'none'
       }}>
         {event.title}
       </div>

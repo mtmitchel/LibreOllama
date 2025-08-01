@@ -1,3 +1,14 @@
+/**
+ * @deprecated This calendar implementation uses FullCalendar and is being replaced by React Big Calendar.
+ * DO NOT ADD NEW FEATURES OR MODIFICATIONS TO THIS FILE.
+ * 
+ * Use CalendarBigCalendarExperiment.tsx for all new development.
+ * This file will be removed in a future release.
+ * 
+ * Migration in progress: Moving from FullCalendar to React Big Calendar
+ * Reason: Better integration with React ecosystem and more flexible customization
+ */
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
@@ -56,6 +67,16 @@ type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek'
 
 
 export default function CalendarAsanaStyle() {
+  // Deprecation warning
+  useEffect(() => {
+    console.warn(
+      '⚠️ DEPRECATED: CalendarAsanaStyle uses FullCalendar which is being replaced.\n' +
+      '🚨 DO NOT ADD NEW FEATURES TO THIS FILE.\n' +
+      '✅ Use CalendarBigCalendarExperiment.tsx for all new development.\n' +
+      '📅 This component will be removed in a future release.'
+    );
+  }, []);
+
   const navigate = useNavigate();
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const calendarRef = useRef<FullCalendar>(null);
@@ -257,7 +278,25 @@ export default function CalendarAsanaStyle() {
 
   return (
     <>
-      <div className="flex h-full flex-col" style={{ backgroundColor: '#FAFBFC' }}>
+      {/* Deprecation Notice Banner */}
+      <div style={{
+        backgroundColor: '#FF6B6B',
+        color: 'white',
+        padding: '12px 24px',
+        textAlign: 'center',
+        fontWeight: '600',
+        fontSize: '14px',
+        borderBottom: '2px solid #E74C3C',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999
+      }}>
+        ⚠️ DEPRECATED: This calendar uses FullCalendar. Use CalendarBigCalendarExperiment for new development.
+      </div>
+      
+      <div className="flex h-full flex-col" style={{ backgroundColor: '#FAFBFC', marginTop: '50px' }}>
         {/* Header */}
         <CalendarHeader 
           currentDate={currentCalendarDate}

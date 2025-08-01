@@ -171,10 +171,10 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
           try {
             logger.debug('[GOOGLE-CALENDAR] Fetching events for:', account.email);
             
-            // Set default time range if not provided (6 months before and after current date)
+            // Set default time range if not provided (1 year before and after current date)
             const now = new Date();
-            const defaultTimeMin = timeMin || new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString();
-            const defaultTimeMax = timeMax || new Date(now.getFullYear(), now.getMonth() + 6, 0).toISOString();
+            const defaultTimeMin = timeMin || new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString();
+            const defaultTimeMax = timeMax || new Date(now.getFullYear() + 1, now.getMonth(), 0).toISOString();
             
             // Always fetch calendars for the current account to ensure we have the right list
             await get().fetchCalendars(account.id);

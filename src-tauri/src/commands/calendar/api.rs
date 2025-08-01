@@ -192,6 +192,12 @@ pub async fn get_calendars(
     let client = reqwest::Client::new();
     let response = client
         .get("https://www.googleapis.com/calendar/v3/users/me/calendarList")
+        .query(&[
+            ("minAccessRole", "reader"),  // Include all calendars where user has at least read access
+            ("showHidden", "true"),       // Include hidden calendars
+            ("showDeleted", "false"),     // Exclude deleted calendars
+            ("maxResults", "250")         // Get more calendars
+        ])
         .bearer_auth(&tokens.access_token)
         .send()
         .await
@@ -241,10 +247,15 @@ pub async fn get_calendar_events(
     single_events: Option<bool>,
     auth_service: State<'_, Arc<crate::services::gmail::auth_service::GmailAuthService>>,
 ) -> Result<EventsResponse, String> {
-    let time_min = time_min.unwrap_or_else(|| Utc::now().to_rfc3339());
+    let time_min = time_min.unwrap_or_else(|| {
+        Utc::now()
+            .checked_sub_signed(chrono::Duration::days(365))
+            .unwrap_or_else(Utc::now)
+            .to_rfc3339()
+    });
     let time_max = time_max.unwrap_or_else(|| {
         Utc::now()
-            .checked_add_signed(chrono::Duration::days(30))
+            .checked_add_signed(chrono::Duration::days(365))
             .unwrap_or_else(Utc::now)
             .to_rfc3339()
     });

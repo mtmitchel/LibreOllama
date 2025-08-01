@@ -4,6 +4,7 @@ use crate::services::gmail::auth_service::GmailAuthService;
 use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use chrono::Utc;
 
 const GOOGLE_TASKS_API_BASE: &str = "https://tasks.googleapis.com/tasks/v1";
 
@@ -137,6 +138,10 @@ impl GoogleTasksService {
 
         loop {
             let mut endpoint = format!("lists/{}/tasks?maxResults=100", task_list_id);
+            
+            // Include completed tasks to show them faded on calendar
+            endpoint.push_str("&showCompleted=false");
+            
             if let Some(token) = &page_token {
                 endpoint.push_str(&format!("&pageToken={}", token));
             }

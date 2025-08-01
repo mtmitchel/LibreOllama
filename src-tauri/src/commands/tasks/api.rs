@@ -147,8 +147,20 @@ pub async fn get_tasks(
     // Make API call to Google Tasks
     let client = reqwest::Client::new();
     let mut url = format!("https://www.googleapis.com/tasks/v1/lists/{}/tasks", task_list_id);
-    url.push_str(&format!("?showCompleted={}&showDeleted={}&maxResults={}", 
-                         show_completed, show_deleted, max_results));
+    
+    // Add date range parameters to fetch all tasks including future ones
+    let now = chrono::Utc::now();
+    let due_min = now.checked_sub_signed(chrono::Duration::days(365))
+        .unwrap_or(now)
+        .to_rfc3339();
+    let due_max = now.checked_add_signed(chrono::Duration::days(730)) // 2 years
+        .unwrap_or(now)
+        .to_rfc3339();
+    
+    println!("📋 [TASKS-API] Fetching tasks with date range: {} to {}", due_min, due_max);
+    
+    url.push_str(&format!("?showCompleted={}&showDeleted={}&maxResults={}&dueMin={}&dueMax={}", 
+                         show_completed, show_deleted, max_results, due_min, due_max));
 
     let response = client
         .get(&url)
@@ -184,6 +196,26 @@ pub async fn get_tasks(
                 hidden: item["hidden"].as_bool(),
                 deleted: item["deleted"].as_bool(),
             });
+        }
+    }
+
+    println!("✅ [TASKS-API] Retrieved {} tasks", tasks.len());
+    
+    // Log tasks in August 2025
+    let august_tasks: Vec<_> = tasks.iter()
+        .filter(|t| {
+            if let Some(due) = &t.due {
+                due.starts_with("2025-08")
+            } else {
+                false
+            }
+        })
+        .collect();
+    
+    if !august_tasks.is_empty() {
+        println!("🔍 [TASKS-API] Found {} tasks in August 2025:", august_tasks.len());
+        for task in august_tasks.iter().take(3) {
+            println!("  - {} (due: {})", task.title, task.due.as_ref().unwrap_or(&"".to_string()));
         }
     }
 
