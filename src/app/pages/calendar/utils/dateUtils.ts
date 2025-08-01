@@ -30,6 +30,7 @@ import {
   getDaysInMonth,
   setDate
 } from 'date-fns';
+import { CalendarEvent } from '../types/calendar';
 
 // Calendar view types
 export type CalendarView = 'month' | 'week' | 'day' | 'multiday' | 'agenda';
@@ -134,8 +135,114 @@ export function calculateEventPosition(
 
 // Check if event spans multiple days
 export function isMultiDayEvent(start: Date, end: Date): boolean {
-  return !isSameDay(start, end);
+  // Google Calendar uses exclusive end dates for all-day events
+  // A single-day all-day event on Jan 1 has start=Jan1, end=Jan2
+  // A multi-day event from Jan 1-3 has start=Jan1, end=Jan4
+  
+  const startDay = startOfDay(start);
+  const endDay = startOfDay(end);
+  const daysDiff = differenceInDays(endDay, startDay);
+  
+  // For all-day events (times at noon or midnight), check if it's truly multi-day
+  const isAllDayEvent = (
+    (start.getHours() === 12 && start.getMinutes() === 0) || // Noon (our processing)
+    (start.getHours() === 0 && start.getMinutes() === 0)     // Midnight
+  );
+  
+  if (isAllDayEvent) {
+    // Single all-day event has exactly 1 day difference due to exclusive end date
+    return daysDiff > 1;
+  }
+  
+  // For timed events, any difference means multi-day
+  return daysDiff > 0;
 }
+
+// Calculate multi-day event layout positions
+export interface MultiDayEventLayout {
+  eventId: string;
+  row: number;
+  startCol: number;
+  endCol: number;
+  event: CalendarEvent;
+}
+
+export const calculateMultiDayEventLayouts = (
+  events: CalendarEvent[],
+  weekDates: Date[]
+): MultiDayEventLayout[] => {
+  // Filter only multi-day events
+  const multiDayEvents = events.filter(event => 
+    event.allDay && isMultiDayEvent(event.start, event.end)
+  );
+  
+  // Sort by start date, then by duration (longer events first)
+  multiDayEvents.sort((a, b) => {
+    const startDiff = a.start.getTime() - b.start.getTime();
+    if (startDiff !== 0) return startDiff;
+    
+    const durationA = a.end.getTime() - a.start.getTime();
+    const durationB = b.end.getTime() - b.start.getTime();
+    return durationB - durationA;
+  });
+  
+  const layouts: MultiDayEventLayout[] = [];
+  const rows: Array<{ endCol: number }> = [];
+  
+  multiDayEvents.forEach(event => {
+    const eventStart = startOfDay(event.start);
+    const eventEnd = startOfDay(event.end);
+    const weekStart = startOfDay(weekDates[0]);
+    const weekEnd = startOfDay(weekDates[weekDates.length - 1]);
+    
+    // Skip if event is completely outside the current week
+    if (eventEnd < weekStart || eventStart > weekEnd) return;
+    
+    // Find start and end columns within this week
+    let startCol = -1;
+    let endCol = -1;
+    
+    for (let i = 0; i < weekDates.length; i++) {
+      const date = startOfDay(weekDates[i]);
+      if (startCol === -1 && date >= eventStart) {
+        startCol = i;
+      }
+      if (date <= eventEnd) {
+        endCol = i;
+      }
+    }
+    
+    // If event wasn't found in this week, skip it
+    if (startCol === -1 || endCol === -1) return;
+    
+    // Find the first available row
+    let row = 0;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].endCol < startCol) {
+        row = i;
+        break;
+      }
+    }
+    
+    // If no available row found, create a new one
+    if (row === rows.length || (rows[row] && rows[row].endCol >= startCol)) {
+      row = rows.length;
+      rows.push({ endCol: endCol });
+    } else {
+      rows[row].endCol = endCol;
+    }
+    
+    layouts.push({
+      eventId: event.id,
+      row,
+      startCol: startCol,
+      endCol: endCol,
+      event
+    });
+  });
+  
+  return layouts;
+};
 
 // Get event duration in human-readable format
 export function getEventDuration(start: Date, end: Date): string {
@@ -159,10 +266,21 @@ export function formatEventTime(date: Date, allDay: boolean): string {
   return format(date, 'h:mm a');
 }
 
+// Format time range for display
+export function formatEventTimeRange(startDate: Date, endDate: Date): string {
+  const startTime = format(startDate, 'h:mm a');
+  const endTime = format(endDate, 'h:mm a');
+  return `${startTime} - ${endTime}`;
+}
+
 // Get week days for header
 export function getWeekDays(date: Date): Date[] {
   const start = startOfWeek(date);
-  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(start, i);
+    // Ensure we're working with local dates at midnight
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  });
 }
 
 // Check if date falls within working hours
