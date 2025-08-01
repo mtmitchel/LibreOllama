@@ -58,15 +58,15 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="context-menu fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-2"
+      className="context-menu fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-1"
       style={{
         left: position.x,
         top: position.y,
-        minWidth: '180px'
+        minWidth: '160px'
       }}
     >
       <button
-        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
         onClick={() => {
           onEdit(contextMenu.task);
           onClose();
@@ -77,7 +77,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       </button>
       
       <button
-        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
         onClick={() => {
           onSchedule(contextMenu.task);
           onClose();
@@ -88,7 +88,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       </button>
       
       <button
-        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
         onClick={() => {
           onDuplicate(contextMenu.task);
           onClose();
@@ -100,11 +100,11 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       
       <div className="border-t border-gray-100 my-1" />
       
-      <div className="px-4 py-1 text-xs text-gray-500 font-medium">Priority</div>
+      <div className="px-3 py-1 text-xs text-gray-500 font-medium">Priority</div>
       {(['urgent', 'high', 'low'] as const).map(priority => (
         <button
           key={priority}
-          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+          className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
           onClick={() => {
             onUpdatePriority(contextMenu.task, priority);
             onClose();
@@ -121,10 +121,10 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
         </button>
       ))}
       
-      <div className="border-t border-gray-100 my-1" />
+      <div className="border-t border-gray-200 mt-1 pt-1" />
       
       <button
-        className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-red-600"
+        className="w-full px-3 py-1.5 text-left text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
         onClick={() => {
           onDelete(contextMenu.task);
           onClose();

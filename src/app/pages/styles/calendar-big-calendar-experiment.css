@@ -3,6 +3,17 @@
 /* Import Asana design system */
 @import '../../../styles/asana-design-system.css';
 
+/* Define spacing variables to match FullCalendar */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --radius-sm: 4px;
+  --color-border-medium: #e0dcff;
+  --color-bg-hover: #ebe7ff;
+}
+
 /* React Big Calendar Overrides to match FullCalendar exactly */
 .cal-asana-grid .rbc-calendar {
   font-family: var(--asana-font-family);
@@ -10,6 +21,17 @@
   background: transparent;
 }
 
+/* Ensure consistent top spacing for all views */
+.cal-asana-grid {
+  margin-top: 16px;
+}
+
+/* Calendar container fixes for proper scroll behavior */
+.calendar-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
 
 /* Hide default toolbar */
 .cal-asana-grid .rbc-toolbar {
@@ -26,17 +48,17 @@
   user-select: none;
 }
 
-
-/* Month view header */
+/* Month view header - match FullCalendar typography */
 .cal-asana-grid .rbc-header {
   background-color: var(--asana-bg-secondary, #fafafa) !important;
-  border-color: var(--asana-border-subtle) !important;
+  border-color: #e8e8e8 !important;
   padding: var(--asana-spacing-md) 0 !important;
-  font-weight: var(--asana-font-weight-semibold) !important;
-  font-size: var(--asana-font-size-base) !important;
-  color: var(--asana-text-primary) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  color: #151B26 !important;
   text-transform: none !important;
-  letter-spacing: normal !important;
+  letter-spacing: 0 !important;
+  line-height: 1.4 !important;
 }
 
 /* Month view cells */
@@ -64,12 +86,14 @@
   opacity: 0.7;
 }
 
-/* Day numbers */
+/* Day numbers - match FullCalendar typography */
 .cal-asana-grid .rbc-date-cell {
-  font-size: var(--asana-font-size-base) !important;
-  font-weight: var(--asana-font-weight-medium) !important;
-  color: var(--asana-text-primary) !important;
-  padding: var(--asana-spacing-md) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #151B26 !important;
+  padding: var(--space-2) !important;
+  letter-spacing: 0 !important;
+  line-height: 1.4 !important;
 }
 
 .cal-asana-grid .rbc-now .rbc-date-cell,
@@ -87,17 +111,49 @@
   margin: var(--asana-spacing-xs);
 }
 
-/* Events - base styles */
-.cal-asana-grid .rbc-event {
-  background-color: var(--asana-brand-coral) !important;
-  border: none !important;
-  color: white !important;
-  font-size: var(--asana-font-size-sm) !important;
-  padding: 1px 3px !important;
-  border-radius: 3px !important;
+/* Events - normalized card styles for all event types */
+.cal-asana-grid .rbc-event,
+.cal-asana-grid .rbc-allday-event {
+  background-color: #f3f0ff !important;
+  border: 1px solid #e0dcff !important;
+  color: var(--asana-text-primary) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 4px 8px !important;
+  margin: 2px !important;
+  border-radius: 6px !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  line-height: 1.2;
+}
+
+/* Ensure consistent styling for all-day events */
+.cal-asana-grid .rbc-allday-event {
+  display: inline-block !important;
+  position: relative !important;
+}
+
+/* All-day events - single line with overflow handling */
+.cal-asana-grid .rbc-row-segment .rbc-event {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* All-day label styling */
+.cal-asana-grid .rbc-row-bg .rbc-label {
+  background: #FAFBFC !important;
+  padding: 8px 12px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #6B6F76 !important;
 }
 
 /* Task events */
@@ -107,80 +163,391 @@
   color: #E65100 !important;
 }
 
-/* Multi-day events */
+/* Multi-day events - match FullCalendar spanning style */
 .cal-asana-grid .rbc-event.fc-multi-day-event,
 .cal-asana-grid .rbc-event.multi-day-event {
   background-color: #d8d0ff !important;
   border-color: #c7bbff !important;
   color: #4a3f99 !important;
   font-weight: 500 !important;
+  opacity: 0.9 !important;
+  padding: 1px 3px !important;
+  margin: var(--space-1) 0 !important;
 }
 
-/* Event hover states */
+.cal-asana-grid .rbc-event.fc-multi-day-event:hover,
+.cal-asana-grid .rbc-event.multi-day-event:hover {
+  background-color: #cfc5ff !important;
+  border-color: #bfb1ff !important;
+  opacity: 1 !important;
+}
+
+/* Multi-day event segments - ensure continuous appearance */
+.cal-asana-grid .rbc-event-continues-earlier {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.cal-asana-grid .rbc-event-continues-later {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.cal-asana-grid .rbc-event-continues-earlier.rbc-event-continues-later {
+  border-radius: 0 !important;
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  /* Hide sidebar on mobile */
+  .calendar-task-sidebar {
+    display: none;
+  }
+  
+  /* Stack header elements on mobile */
+  .flex.items-center.px-6.py-3 > div {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  /* Hide search on mobile */
+  .cal-asana-search-container {
+    display: none;
+  }
+  
+  /* Make view controls more compact */
+  .cal-asana-view-controls {
+    font-size: 12px;
+  }
+  
+  .cal-asana-view-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  /* Adjust calendar padding */
+  .cal-asana-grid {
+    margin-top: 8px;
+  }
+  
+  /* Smaller event text */
+  .cal-asana-grid .rbc-event {
+    font-size: 11px !important;
+    padding: 2px 4px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even more compact on very small screens */
+  .cal-asana-view-btn span {
+    display: none;
+  }
+  
+  .cal-asana-view-btn::after {
+    content: attr(data-short-label);
+  }
+  
+  /* Single column layout */
+  .flex.flex-1.gap-6 {
+    gap: 0;
+  }
+}
+
+/* Event hover states to match FullCalendar */
 .cal-asana-grid .rbc-event:hover {
-  opacity: 0.8;
-  cursor: pointer;
+  background-color: #ebe7ff !important;
+  border-color: #d4ceff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+  transition: all 0.15s ease-in-out;
 }
 
-/* Show more link */
+.cal-asana-grid .rbc-event:active {
+  background-color: #e8e9ed !important;
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.05s ease;
+}
+
+/* Show more link - fix positioning */
 .cal-asana-grid .rbc-show-more {
   color: var(--asana-brand-coral) !important;
   font-weight: var(--asana-font-weight-medium) !important;
-  font-size: var(--asana-font-size-xs) !important;
+  font-size: 11px !important;
+  display: block;
+  margin-top: 2px;
+  padding: 2px 4px;
+  text-align: left;
+  cursor: pointer;
 }
 
-/* Week/Day view adjustments */
+.cal-asana-grid .rbc-show-more:hover {
+  text-decoration: underline;
+}
+
+/* Ensure more events don't overlap with cell edge */
+.cal-asana-grid .rbc-row-segment {
+  padding-bottom: 2px;
+}
+
+/* ===== Week/Day View Professional Styling ===== */
+
+/* Base time view container */
 .cal-asana-grid .rbc-time-view {
-  border: none !important;
-  background: var(--asana-bg-primary) !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E8E8E9 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
 }
 
+/* Time header (days of week) - ensure grid alignment */
 .cal-asana-grid .rbc-time-header {
-  border-bottom: 1px solid var(--asana-border-subtle) !important;
+  background: #FAFBFC !important;
+  border-bottom: 1px solid #E8E8E9 !important;
 }
 
+.cal-asana-grid .rbc-header {
+  padding: 12px 8px !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  color: #1E1E1F !important;
+  border-right: 1px solid #F0F0F1 !important;
+}
+
+.cal-asana-grid .rbc-header:last-child {
+  border-right: none !important;
+}
+
+/* All-day row styling - minimal changes */
+.cal-asana-grid .rbc-allday-cell {
+  background: #FAFBFC !important;
+  border-right: 1px solid #F0F0F1 !important;
+  border-bottom: 1px solid #E8E8E9 !important;
+  padding: 8px !important;
+  min-height: 48px !important;
+}
+
+.cal-asana-grid .rbc-allday-cell:last-child {
+  border-right: none !important;
+}
+
+/* Ensure all-day section is visible */
+.cal-asana-grid .rbc-allday-header {
+  overflow: visible !important;
+}
+
+/* Make sure all-day events show properly */
+.cal-asana-grid .rbc-allday-header .rbc-row {
+  min-height: 48px !important;
+}
+
+/* Simple all-day section styling without breaking alignment */
+.cal-asana-grid .rbc-row-segment {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* NUCLEAR OPTION - FUCK REACT BIG CALENDAR'S LAYOUT */
+
+/* Override EVERYTHING with absolute positioning */
+.cal-asana-grid .rbc-time-view {
+  position: relative !important;
+}
+
+/* Fix the gutter width absolutely */
+.cal-asana-grid .rbc-time-gutter,
+.cal-asana-grid .rbc-time-header-gutter {
+  position: absolute !important;
+  left: 0 !important;
+  width: 70px !important;
+  z-index: 10 !important;
+}
+
+/* Force all-day and time content to start after gutter */
+.cal-asana-grid .rbc-allday-header,
 .cal-asana-grid .rbc-time-content {
-  border-top: 1px solid var(--asana-border-subtle) !important;
+  margin-left: 70px !important;
+  width: calc(100% - 70px) !important;
 }
 
-.cal-asana-grid .rbc-timeslot-group {
-  border-left: 1px solid var(--asana-border-subtle) !important;
+/* Make all rows use table layout for EXACT alignment */
+.cal-asana-grid .rbc-allday-header .rbc-row,
+.cal-asana-grid .rbc-time-header-content > .rbc-row,
+.cal-asana-grid .rbc-time-content .rbc-time-column {
+  display: table !important;
+  width: 100% !important;
+  table-layout: fixed !important;
 }
 
-.cal-asana-grid .rbc-time-slot {
-  border-top: 1px solid var(--asana-border-subtle) !important;
+/* Make all cells table cells */
+.cal-asana-grid .rbc-allday-cell,
+.cal-asana-grid .rbc-header,
+.cal-asana-grid .rbc-day-slot {
+  display: table-cell !important;
+  width: auto !important;
+  vertical-align: top !important;
+}
+
+/* Fix all-day section height */
+.cal-asana-grid .rbc-allday-header {
+  min-height: 60px !important;
+  overflow: visible !important;
+}
+
+.cal-asana-grid .rbc-allday-cell {
+  padding: 8px !important;
+}
+
+/* Re-add event padding */
+.cal-asana-grid .rbc-event {
+  padding: 4px 8px !important;
 }
 
 /* Time labels */
 .cal-asana-grid .rbc-label {
-  color: var(--asana-text-muted) !important;
-  font-size: var(--asana-font-size-xs) !important;
-  font-weight: var(--asana-font-weight-normal) !important;
-  padding: 0 var(--asana-spacing-md) !important;
+  padding: 0 8px !important;
 }
 
-/* Week/Day view events */
+/* Column borders - consistent for all cells */
+.cal-asana-grid .rbc-day-slot,
+.cal-asana-grid .rbc-allday-cell,
+.cal-asana-grid .rbc-header {
+  border-right: 1px solid #e8e8e9 !important;
+}
+
+/* Time gutter elements */
+.cal-asana-grid .rbc-time-gutter,
+.cal-asana-grid .rbc-time-header-gutter {
+  grid-column: 1 !important;
+  border-right: 1px solid #e8e8e9 !important;
+}
+
+/* Remove scrollbar compensation that causes misalignment */
+.cal-asana-grid .rbc-time-header.rbc-overflowing {
+  margin-right: 0 !important;
+  border-right: none !important;
+}
+
+/* Ensure consistent gutter width - increased for hour label visibility */
+.cal-asana-grid .rbc-time-gutter,
+.cal-asana-grid .rbc-time-header-gutter {
+  width: 70px !important;
+  min-width: 70px !important;
+  max-width: 70px !important;
+  flex: 0 0 70px !important;
+}
+
+/* Time gutter styling - ensure hour labels aren't clipped */
+.cal-asana-grid .rbc-time-gutter {
+  background: #FAFBFC !important;
+  overflow: visible !important;
+}
+
+/* Ensure hour labels have proper spacing */
+.cal-asana-grid .rbc-time-gutter .rbc-label {
+  padding: 0 8px !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* Additional alignment fixes for time header structure */
+.cal-asana-grid .rbc-time-header-content {
+  display: flex !important;
+  flex: 1 !important;
+}
+
+.cal-asana-grid .rbc-time-header .rbc-row {
+  display: flex !important;
+  flex: 1 !important;
+  align-items: stretch !important;
+}
+
+/* Ensure all-day row content aligns with day columns */
+.cal-asana-grid .rbc-allday-header .rbc-row-content {
+  display: flex !important;
+  flex: 1 !important;
+  align-items: stretch !important;
+}
+
+/* Force time slots and all-day cells to use same box model */
+.cal-asana-grid .rbc-time-slot,
+.cal-asana-grid .rbc-day-slot,
+.cal-asana-grid .rbc-allday-cell {
+  box-sizing: border-box !important;
+}
+
+.cal-asana-grid .rbc-label {
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  color: #6B6F76 !important;
+  font-weight: 400 !important;
+}
+
+/* Time slots - subtle improvements only */
+.cal-asana-grid .rbc-timeslot-group {
+  border-bottom: 1px solid #E8E8E9 !important;
+}
+
+/* Alternating backgrounds for better scanning */
+.cal-asana-grid .rbc-timeslot-group:nth-child(even) {
+  background-color: rgba(250, 251, 252, 0.4) !important;
+}
+
+/* Day columns */
+.cal-asana-grid .rbc-day-slot {
+  border-right: 1px solid #F0F0F1 !important;
+}
+
+.cal-asana-grid .rbc-day-slot:last-child {
+  border-right: none !important;
+}
+
+/* Hover state for time slots */
+.cal-asana-grid .rbc-time-slot:hover {
+  background-color: rgba(121, 110, 255, 0.05) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* Current time indicator line */
+.cal-asana-grid .rbc-current-time-indicator {
+  background-color: #796EFF !important;
+  height: 2px !important;
+  z-index: 10 !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+/* Week/Day view events - professional styling */
 .cal-asana-grid .rbc-time-view .rbc-event {
-  border: 1px solid var(--asana-border-default) !important;
-  border-radius: var(--asana-radius-md) !important;
-  background-color: var(--asana-bg-column) !important;
-  color: var(--asana-text-primary) !important;
-  font-size: var(--asana-font-size-base) !important;
-  padding: var(--asana-spacing-md) !important;
-  min-height: 32px !important;
+  /* Use same styling as month view events */
+  background-color: #f3f0ff !important;
+  border: 1px solid #e0dcff !important;
+  color: #1E1E1F !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 4px 8px !important;
+  margin: 2px !important;
+  border-radius: 6px !important;
+  line-height: 1.2 !important;
+  min-height: auto !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .cal-asana-grid .rbc-time-view .rbc-event:hover {
-  background-color: var(--asana-bg-hover) !important;
-  box-shadow: var(--asana-shadow-card-hover);
+  background-color: #ebe7ff !important;
+  border-color: #d4ceff !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
   transform: translateY(-1px);
-  border-color: var(--asana-border-hover) !important;
+  cursor: pointer;
 }
 
-/* Current time indicator */
+/* Current time indicator to match FullCalendar */
 .cal-asana-grid .rbc-current-time-indicator {
-  background-color: var(--asana-brand-coral) !important;
-  height: 1px !important;
+  background-color: #796EFF !important;
+  height: 2px !important;
+  z-index: 5 !important;
 }
 
 /* Agenda view */

@@ -1,0 +1,51 @@
+
+/* In this file, we will override the default styles of react-big-calendar to fix alignment issues. */
+
+/* Fix for the header cells */
+.rbc-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Fix for the time gutter cells */
+.rbc-time-gutter .rbc-timeslot-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-right: 1px solid #ddd;
+}
+
+/* Fix for the day/week view cells */
+.rbc-day-slot .rbc-timeslot-group {
+  border-bottom: 1px solid #ddd;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: none;
+}
+
+.rbc-day-slot .rbc-event,
+.rbc-day-slot .rbc-background-event {
+  border: none;
+  border-left: 1px solid #ddd;
+}
+
+/* Fix for the time column */
+.rbc-time-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.rbc-time-column .rbc-timeslot-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.rbc-time-column .rbc-time-slot {
+  flex: 1;
+}

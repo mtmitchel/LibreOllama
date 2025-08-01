@@ -1,0 +1,79 @@
+
+/*
+ * React Big Calendar Alignment Overrides
+ *
+ * This file contains highly specific and forceful CSS rules to fix alignment
+ * issues in the week and day views of React Big Calendar.
+ * The .cal-asana-grid selector is used to increase specificity.
+ * The !important flag is used to prevent other styles from overriding these fixes.
+ */
+
+/* Ensure consistent box-sizing across all calendar elements. */
+.cal-asana-grid *,
+.cal-asana-grid *::before,
+.cal-asana-grid *::after {
+  box-sizing: border-box !important;
+}
+
+/* Force flexbox layout on headers for vertical and horizontal centering. */
+.cal-asana-grid .rbc-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.5rem !important;
+}
+
+/* Fix the time gutter (left-most column with times) to a static width. */
+.cal-asana-grid .rbc-time-gutter {
+  flex: 0 0 75px !important;
+  min-width: 75px !important;
+}
+
+/* Align text in the time gutter. */
+.cal-asana-grid .rbc-time-slot {
+  text-align: center !important;
+}
+
+/* Core fix: Force the time grid to use CSS table layout.
+ * This is the most reliable method for ensuring columns align perfectly. */
+.cal-asana-grid .rbc-time-view-resources .rbc-time-header-content,
+.cal-asana-grid .rbc-time-view-resources .rbc-time-content {
+  display: table !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+.cal-asana-grid .rbc-time-header-content > .rbc-row,
+.cal-asana-grid .rbc-time-content > .rbc-row {
+  display: table-row !important;
+}
+
+.cal-asana-grid .rbc-time-header-content .rbc-header,
+.cal-asana-grid .rbc-time-content .rbc-day-slot {
+  display: table-cell !important;
+  padding: 0 !important;
+  vertical-align: top !important;
+}
+
+/* Ensure day slot groups have a consistent bottom border. */
+.cal-asana-grid .rbc-day-slot .rbc-timeslot-group {
+  border-bottom: 1px solid #ddd !important;
+  min-height: 40px;
+}
+
+/* Remove conflicting borders from individual time slots. */
+.cal-asana-grid .rbc-day-slot .rbc-time-slot {
+  border-top: none !important;
+}
+
+/* Synchronize the horizontal scroll between the header and the main content. */
+.cal-asana-grid .rbc-time-header,
+.cal-asana-grid .rbc-time-content {
+  overflow: hidden !important;
+}
+
+.cal-asana-grid .rbc-time-header-content,
+.cal-asana-grid .rbc-time-content-body {
+    overflow: auto !important;
+}

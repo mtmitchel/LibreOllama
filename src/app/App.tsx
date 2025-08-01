@@ -23,6 +23,7 @@ import CanvasPage from './pages/Canvas';
 import CalendarAsanaStyle from './pages/CalendarAsanaStyle';
 import CalendarExperiment from './pages/CalendarExperiment';
 import CalendarBigCalendarExperiment from './pages/CalendarBigCalendarExperiment';
+import CalendarCustom from './pages/CalendarCustom';
 import Tasks from './pages/TasksAsanaClean';
 // import TasksOld from './pages/TasksAsanaClean';
 // import TasksRedesigned from './pages/TasksRedesigned';
@@ -49,11 +50,12 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
         <Route path="/notes" element={<Notes />} />
         <Route path="/canvas" element={<CanvasPage />} />
         {/* DEPRECATED: FullCalendar implementations - DO NOT USE */}
-        <Route path="/calendar" element={<CalendarAsanaStyle />} /> {/* @deprecated Use /calendar-big */}
-        <Route path="/calendar-experiment" element={<CalendarExperiment />} /> {/* @deprecated Use /calendar-big */}
+        <Route path="/calendar-old" element={<CalendarAsanaStyle />} /> {/* @deprecated Use /calendar */}
+        <Route path="/calendar-experiment" element={<CalendarExperiment />} /> {/* @deprecated Use /calendar */}
+        <Route path="/calendar-big" element={<CalendarBigCalendarExperiment />} /> {/* @deprecated Use /calendar */}
         
-        {/* ACTIVE DEVELOPMENT: React Big Calendar - USE THIS */}
-        <Route path="/calendar-big" element={<CalendarBigCalendarExperiment />} /> {/* ✅ Current calendar implementation */}
+        {/* ACTIVE DEVELOPMENT: Custom Calendar - USE THIS */}
+        <Route path="/calendar" element={<CalendarCustom />} /> {/* ✅ Current custom calendar implementation */}
         <Route path="/tasks" element={<Tasks />} />
         {/* <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
         <Route path="/tasks-asana" element={<TasksAsanaStyle />} /> */}

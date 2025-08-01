@@ -180,7 +180,10 @@
 /* ===== Search Input ===== */
 .cal-asana-search-container {
   position: relative;
-  width: 260px;
+  width: 320px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .cal-asana-search {

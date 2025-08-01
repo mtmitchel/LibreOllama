@@ -190,20 +190,35 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
 
   return (
     <div className="border-primary flex h-full w-80 shrink-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm calendar-task-sidebar">
-      <div style={{ padding: '24px', overflowY: 'auto', overflowX: 'hidden', height: '100%' }}>
-        <div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
+      <div style={{ 
+        padding: '24px', 
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        <div style={{ 
+          flex: '1',
+          overflowY: 'auto', 
+          overflowX: 'hidden',
+          paddingRight: '8px',
+          marginRight: '-8px'
+        }}>
           {/* Custom header with dropdown */}
           <div style={{ width: '100%' }}>
             <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
-              <div className="flex items-center gap-2">
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1E1E1F', margin: 0 }}>Tasks</h3>
+              <div className="flex items-center gap-2" style={{ alignItems: 'center' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1E1E1F', margin: 0, lineHeight: '24px' }}>Tasks</h3>
                 <span style={{ 
                   fontSize: '14px', 
                   fontWeight: 500, 
                   color: '#6B6F76',
                   backgroundColor: '#F3F4F6',
                   padding: '2px 8px',
-                  borderRadius: '12px'
+                  borderRadius: '12px',
+                  lineHeight: '20px',
+                  display: 'inline-flex',
+                  alignItems: 'center'
                 }}>
                   {displayTasks.length}
                 </span>

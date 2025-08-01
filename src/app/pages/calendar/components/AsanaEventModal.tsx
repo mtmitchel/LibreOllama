@@ -58,8 +58,20 @@ export const AsanaEventModal: React.FC<AsanaEventModalProps> = ({
       setDescription(event.description || '');
       setSelectedCalendar(event.calendarId || 'primary');
       
-      const start = event.start ? new Date(event.start.dateTime || event.start.date) : new Date();
-      const end = event.end ? new Date(event.end.dateTime || event.end.date) : new Date();
+      // Handle both Google Calendar format and our custom format
+      let start: Date;
+      let end: Date;
+      
+      if (event.start instanceof Date) {
+        start = event.start;
+        end = event.end instanceof Date ? event.end : new Date();
+      } else if (event.start?.dateTime || event.start?.date) {
+        start = new Date(event.start.dateTime || event.start.date);
+        end = event.end ? new Date(event.end.dateTime || event.end.date) : new Date();
+      } else {
+        start = new Date();
+        end = new Date();
+      }
       
       setAllDay(!!event.start?.date);
       setStartDate(start.toISOString().split('T')[0]);

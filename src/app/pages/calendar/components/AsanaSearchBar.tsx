@@ -13,7 +13,7 @@ export const AsanaSearchBar: React.FC<AsanaSearchBarProps> = ({
   onChange 
 }) => {
   return (
-    <div className="cal-asana-search-container" style={{ width: '100%', maxWidth: '500px' }}>
+    <div className="cal-asana-search-container" style={{ width: '320px' }}>
       <Search size={16} className="cal-asana-search-icon" />
       <input
         type="text"

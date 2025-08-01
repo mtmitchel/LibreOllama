@@ -54,6 +54,18 @@ export const useCalendarOperations = () => {
       let startDate = event.start?.dateTime || event.start?.date || '';
       let endDate = event.end?.dateTime || event.end?.date || '';
       
+      // Fix timezone issue for all-day events
+      // Google Calendar sends dates in YYYY-MM-DD format which JavaScript interprets as UTC midnight
+      // This can cause the date to appear one day earlier in local timezone
+      if (isAllDay && event.start?.date && event.start.date.length === 10) {
+        // Parse as local date by adding local timezone offset
+        const localStart = new Date(event.start.date + 'T12:00:00');
+        const localEnd = event.end?.date ? new Date(event.end.date + 'T12:00:00') : localStart;
+        
+        startDate = localStart;
+        endDate = localEnd;
+      }
+      
       // Check if this is a true multi-day event vs recurring instance
       const isTrueMultiDay = isAllDay && 
         event.start?.date && 
@@ -76,28 +88,11 @@ export const useCalendarOperations = () => {
         });
       }
       
-      // CRITICAL FIX: Add one day to end date for all-day events
-      // FullCalendar treats end dates as exclusive for all-day events
-      if (isAllDay && endDate && event.start?.date && event.end?.date) {
-        // Only add a day if this is a date-only format (YYYY-MM-DD)
-        if (endDate.length === 10 && !endDate.includes('T')) {
-          const adjustedEnd = addDays(new Date(endDate), 1);
-          endDate = format(adjustedEnd, 'yyyy-MM-dd');
-          
-          if (isTrueMultiDay) {
-            console.log(`📅 True multi-day event "${event.summary}": ${event.start.date} to ${event.end.date} (adjusted to ${endDate})`);
-          }
-        }
-      }
+      // No need to adjust end date anymore since we're handling timezone correctly above
       
-      // CRITICAL: Ensure dates are in ISO format for FullCalendar
-      // For all-day events, FullCalendar expects YYYY-MM-DD format
-      if (isAllDay && startDate && startDate.includes('T')) {
-        startDate = startDate.split('T')[0];
-      }
-      if (isAllDay && endDate && endDate.includes('T')) {
-        endDate = endDate.split('T')[0];
-      }
+      // CRITICAL: Ensure dates are in correct format for our custom calendar
+      // For all-day events from date strings, keep as is
+      // For all-day events from Date objects, they're already handled above
       
       const processedEvent = {
         ...event,

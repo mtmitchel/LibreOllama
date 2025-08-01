@@ -6,9 +6,11 @@ import { useHeader } from '../contexts/HeaderContext';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 import './styles/calendar-asana.css';
 import './styles/calendar-experiment.css';
 import './styles/calendar-big-calendar-experiment.css';
+import '../../styles/calendar-overrides.css';
 
 // Import extracted components
 import { CalendarHeader } from './calendar/components/CalendarHeader';
@@ -61,6 +63,14 @@ export default function CalendarBigCalendarExperiment() {
     createGoogleTask, 
     syncAllTasks 
   });
+
+  // Convert and filter events for React Big Calendar
+  const filteredCalendarEvents = useMemo(() => {
+    const convertedEvents = convertEventsForRBC(calendarEventsWithTasks);
+    return filterEventsBySearch(convertedEvents, state.searchQuery);
+  }, [calendarEventsWithTasks, state.searchQuery]);
+
+  
 
   // Clear header props on unmount
   useEffect(() => {
@@ -138,11 +148,24 @@ export default function CalendarBigCalendarExperiment() {
     return () => clearTimeout(timeoutId);
   }, []); // Empty dependency array - only run once
 
-  // Convert and filter events for React Big Calendar
-  const filteredCalendarEvents = useMemo(() => {
-    const convertedEvents = convertEventsForRBC(calendarEventsWithTasks);
-    return filterEventsBySearch(convertedEvents, state.searchQuery);
-  }, [calendarEventsWithTasks, state.searchQuery]);
+  
+
+  
+
+  // Sync scroll position between header and content
+  useEffect(() => {
+    const header = document.querySelector('.rbc-time-header');
+    const content = document.querySelector('.rbc-time-content');
+    
+    const syncScroll = () => {
+      if (header && content) {
+        header.scrollLeft = content.scrollLeft;
+      }
+    };
+    
+    content?.addEventListener('scroll', syncScroll);
+    return () => content?.removeEventListener('scroll', syncScroll);
+  }, [state.view]);
 
   // Event style getter for React Big Calendar
   const eventStyleGetter = useCallback((event: any) => {
@@ -214,7 +237,7 @@ export default function CalendarBigCalendarExperiment() {
           <div className="cal-asana-calendar-wrapper flex-1" style={{ paddingRight: '0', overflow: 'hidden' }}>
             <div 
               ref={state.calendarContainerRef}
-              className="cal-asana-grid h-full" 
+              className="cal-asana-grid h-full rbc-calendar" 
               style={{ overflow: 'hidden' }}
               onContextMenu={(e) => {
                 e.preventDefault();
