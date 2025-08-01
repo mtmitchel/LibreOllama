@@ -87,12 +87,22 @@ export default function CalendarCustom() {
   
   // Filter events based on search and convert dates
   const filteredEvents = useMemo(() => {
-    // Convert string dates to Date objects
-    const eventsWithDates = calendarEventsWithTasks.map(event => ({
-      ...event,
-      start: typeof event.start === 'string' ? new Date(event.start) : event.start,
-      end: typeof event.end === 'string' ? new Date(event.end) : event.end
-    }));
+    // Debug incoming events
+    console.log('🔍 CalendarCustom receiving events from hook:', {
+      total: calendarEventsWithTasks.length,
+      sample: calendarEventsWithTasks.slice(0, 2).map(e => ({
+        id: e.id,
+        title: e.title,
+        allDay: e.allDay,
+        start: e.start,
+        end: e.end,
+        type: typeof e.start
+      }))
+    });
+    
+    // DON'T convert dates - they should already be Date objects from the hook
+    // Just pass them through as-is to preserve the allDay flag
+    const eventsWithDates = calendarEventsWithTasks;
     
     if (!searchQuery) return eventsWithDates;
     

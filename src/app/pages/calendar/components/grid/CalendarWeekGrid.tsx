@@ -217,102 +217,75 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
         all day
       </div>
       
-      {/* All-day section container */}
-      <div
-        className="sticky z-30 bg-gray-50 border-b border-gray-200"
-        style={{ 
-          gridColumn: '2 / -1',
-          gridRow: '2',
-          height: `${allDayHeight}px`,
-          top: '72px',
-          display: 'grid',
-          gridTemplateColumns: `repeat(${weekDates.length}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${maxAllDayRows + 2}, 26px)`
-        }}
-      >
-        {/* Column separators */}
-        {weekDates.map((_, index) => (
-          index < weekDates.length - 1 && (
-            <div
-              key={`separator-${index}`}
-              className="border-r border-gray-200"
-              style={{
-                gridColumn: index + 1,
-                gridRow: '1 / -1'
-              }}
-            />
-          )
-        ))}
+      {/* All-day section - using same column approach as time grid */}
+      {weekDates.map((date, dayIndex) => {
+        const key = format(date, 'yyyy-MM-dd');
+        const dayAllDayEvents = singleDayAllDayEvents.get(key) || [];
+        const multiDayEventsInColumn = multiDayLayouts.filter(layout => 
+          dayIndex >= layout.startCol && dayIndex <= layout.endCol
+        );
         
-        {/* Multi-day events */}
-        {multiDayLayouts.map(layout => {
-          const spanCols = layout.endCol - layout.startCol + 1;
-          
-          return (
-            <div
-              key={layout.eventId}
-              className="z-10 mx-2 my-1"
-              style={{
-                gridColumn: `${layout.startCol + 1} / span ${spanCols}`,
-                gridRow: layout.row + 1,
-                height: '24px',
-                // Prevent expansion for multi-day events too
-                minWidth: 0,
-                overflow: 'hidden'
-              }}
-            >
-              <CalendarEventCard
-                event={layout.event}
-                view="week"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEventClick?.(layout.event, e);
+        return (
+          <div
+            key={`allday-${date.toString()}`}
+            className={`sticky z-30 bg-gray-50 border-b ${dayIndex < weekDates.length - 1 ? 'border-r' : ''} border-gray-200 relative`}
+            style={{ 
+              gridColumn: `${dayIndex + 2}`,
+              gridRow: '2',
+              height: `${allDayHeight}px`,
+              top: '72px'
+            }}
+          >
+            {/* Multi-day events for this column */}
+            {multiDayEventsInColumn.map(layout => (
+              <div
+                key={layout.eventId}
+                className="absolute"
+                style={{
+                  top: `${layout.row * 26 + 4}px`,
+                  left: layout.startCol === dayIndex ? '8px' : '0px',
+                  right: layout.endCol === dayIndex ? '8px' : '0px',
+                  height: '24px'
                 }}
-                isAllDay
-                isMultiDay
-              />
+              >
+                <CalendarEventCard
+                  event={layout.event}
+                  view="week"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEventClick?.(layout.event, e);
+                  }}
+                  isAllDay
+                  isMultiDay
+                />
+              </div>
+            ))}
+            
+            {/* Single-day events */}
+            <div className="absolute" style={{ top: `${maxAllDayRows * 26 + 8}px`, left: '8px', right: '8px' }}>
+              {dayAllDayEvents.map((event, eventIndex) => (
+                <div
+                  key={event.id}
+                  style={{ 
+                    height: '24px',
+                    marginBottom: '2px'
+                  }}
+                >
+                  <CalendarEventCard
+                    event={event}
+                    view="week"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEventClick?.(event, e);
+                    }}
+                    isAllDay
+                  />
+                </div>
+              ))}
             </div>
-          );
-        })}
-        
-        {/* Single-day all-day events */}
-        {weekDates.map((date, index) => {
-          const key = format(date, 'yyyy-MM-dd');
-          const dayAllDayEvents = singleDayAllDayEvents.get(key) || [];
-          
-          // Debug: Log if this is the day with tasks
-          if (dayAllDayEvents.length > 0) {
-            console.log(`📅 Day ${key} has ${dayAllDayEvents.length} all-day events`);
-          }
-          
-          return dayAllDayEvents.map((event, eventIndex) => (
-            <div
-              key={event.id}
-              className="z-10 mx-2 my-1 calendar-all-day-item"
-              style={{
-                gridColumn: index + 1,
-                gridRow: maxAllDayRows + eventIndex + 2,
-                height: '24px',
-                // CRITICAL: Prevent grid item expansion
-                minWidth: 0,
-                overflow: 'hidden',
-                width: '100%',
-                maxWidth: '100%'
-              }}
-            >
-              <CalendarEventCard
-                event={event}
-                view="week"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEventClick?.(event, e);
-                }}
-                isAllDay
-              />
-            </div>
-          ));
-        })}
-      </div>
+          </div>
+        );
+      })}
       
       {/* Time labels - sticky left */}
       <div 

@@ -38,6 +38,35 @@
   box-sizing: border-box;
 }
 
+/* Fix for grid items expanding beyond their columns */
+.calendar-custom [style*="grid-column"] {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Ensure all-day event cards respect their grid boundaries */
+.calendar-custom .all-day-event-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Force all-day items to respect single column */
+.calendar-all-day-item {
+  contain: layout size;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Ensure the event card inside also respects boundaries */
+.calendar-all-day-item > div {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
 /* Week Grid Specific Alignment */
 .calendar-week-grid {
   --time-column-width: 64px;

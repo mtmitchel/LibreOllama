@@ -41,29 +41,123 @@ export const useCalendarOperations = () => {
 
   // Combine calendar events and tasks into a unified event list
   const calendarEventsWithTasks = useMemo(() => {
-    // Debug input data
-    console.log('🔍 DEBUG: All unified tasks:', Object.values(unifiedTasks));
-    console.log('🔍 DEBUG: Tasks with due dates:', Object.values(unifiedTasks).filter(task => task.due));
     
     const events: CalendarEvent[] = [];
     
     // Add calendar events
     calendarEvents.forEach(event => {
-      const isAllDay = !event.start?.dateTime;
+      // Enhanced event classification to handle edge cases
+      const classifyEvent = () => {
+        // PRIORITY: Check for dateTime presence first (Google API can have inconsistent allDay flags)
+        const hasStartDateTime = event.start?.dateTime && 
+                                event.start.dateTime.trim() !== '';
+        const hasEndDateTime = event.end?.dateTime && 
+                              event.end.dateTime.trim() !== '';
+        
+        // If event has dateTime, it's definitely a timed event regardless of allDay flag
+        if (hasStartDateTime && hasEndDateTime) {
+          return { isAllDay: false, reason: 'has valid dateTime (overrides allDay flag)' };
+        }
+        
+        // Check for date-only format (all-day events)
+        const hasDateOnly = event.start?.date && !hasStartDateTime;
+        
+        if (hasDateOnly) {
+          return { isAllDay: true, reason: 'date-only format' };
+        }
+        
+        // Check for explicit all-day marker (only if no dateTime present)
+        if (event.allDay === true) {
+          return { isAllDay: true, reason: 'explicit allDay property (no dateTime)' };
+        }
+        
+        // Log malformed events
+        console.warn('⚠️ Malformed event detected:', {
+          id: event.id,
+          summary: event.summary,
+          start: event.start,
+          end: event.end
+        });
+        
+        // Default to all-day for safety
+        return { isAllDay: true, reason: 'malformed event' };
+      };
+      
+      const { isAllDay, reason } = classifyEvent();
       const isRecurringInstance = event.id.includes('_') || !!event.recurringEventId;
       let startDate = event.start?.dateTime || event.start?.date || '';
       let endDate = event.end?.dateTime || event.end?.date || '';
       
-      // Fix timezone issue for all-day events
-      // Google Calendar sends dates in YYYY-MM-DD format which JavaScript interprets as UTC midnight
-      // This can cause the date to appear one day earlier in local timezone
-      if (isAllDay && event.start?.date && event.start.date.length === 10) {
-        // Parse as local date by adding local timezone offset
-        const localStart = new Date(event.start.date + 'T12:00:00');
-        const localEnd = event.end?.date ? new Date(event.end.date + 'T12:00:00') : localStart;
+      // ONLY log baseball games to reduce console spam
+      if (event.summary?.includes('Dodgers (5) @ Reds (2)')) {
+        console.log('🏈 DODGERS GAME DEBUG:');
+        console.log('  Title:', event.summary);
+        console.log('  Classification isAllDay:', isAllDay);
+        console.log('  Classification reason:', reason);
+        console.log('  Has dateTime:', !!(event.start?.dateTime && event.end?.dateTime));
+        console.log('  Start dateTime:', event.start?.dateTime);
+        console.log('  End dateTime:', event.end?.dateTime);
+        console.log('  Start date:', event.start?.date);
+        console.log('  End date:', event.end?.date);
+        console.log('  Original allDay flag:', event.allDay);
+      }
+      
+      // Safe date parsing with validation
+      const parseEventDate = (dateString: string, isAllDayEvent: boolean = false): Date => {
+        if (!dateString || dateString.trim() === '') {
+          console.error('Invalid date string:', dateString);
+          return new Date(); // Fallback to current time
+        }
         
-        startDate = localStart;
-        endDate = localEnd;
+        try {
+          if (isAllDayEvent) {
+            // For all-day events, create local midnight
+            const [year, month, day] = dateString.split('-').map(Number);
+            return new Date(year, month - 1, day);
+          } else {
+            // For timed events, parse with timezone awareness
+            const date = new Date(dateString);
+            
+            // Validate the parsed date
+            if (isNaN(date.getTime())) {
+              throw new Error(`Invalid date: ${dateString}`);
+            }
+            
+            return date;
+          }
+        } catch (error) {
+          console.error('Date parsing error:', error, dateString);
+          return new Date(); // Fallback to current time
+        }
+      };
+      
+      // Parse dates based on event type
+      if (isAllDay) {
+        if (event.start?.date) {
+          startDate = parseEventDate(event.start.date, true);
+          endDate = event.end?.date ? parseEventDate(event.end.date, true) : startDate;
+        } else {
+          console.error('All-day event missing date:', event);
+          return; // Skip this event
+        }
+      } else {
+        if (event.start?.dateTime) {
+          startDate = parseEventDate(event.start.dateTime, false);
+          endDate = event.end?.dateTime ? parseEventDate(event.end.dateTime, false) : startDate;
+          
+          // Validate timed event dates
+          if (startDate.getHours() === 0 && startDate.getMinutes() === 0 && 
+              endDate.getHours() === 0 && endDate.getMinutes() === 0) {
+            console.warn('⚠️ Timed event parsed as midnight:', {
+              title: event.summary,
+              originalStart: event.start.dateTime,
+              parsedStart: startDate.toISOString()
+            });
+          }
+        } else {
+          console.error('Timed event missing dateTime:', event);
+          return; // Skip this event
+        }
       }
       
       // Check if this is a true multi-day event vs recurring instance
@@ -114,7 +208,10 @@ export const useCalendarOperations = () => {
           location: event.location,
           attendees: event.attendees,
           calendarId: event.calendarId,
-          calendarName: event.calendarName
+          calendarName: event.calendarName,
+          // Add original start/end for debugging
+          originalStart: event.start,
+          originalEnd: event.end
         }
       };
       events.push(processedEvent);
@@ -147,11 +244,22 @@ export const useCalendarOperations = () => {
           });
         }
         
+        // Parse task due date as local date to avoid UTC timezone issues
+        let taskDate: Date;
+        if (typeof task.due === 'string' && task.due.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // For YYYY-MM-DD format, create date using local timezone
+          const [year, month, day] = task.due.split('-').map(Number);
+          taskDate = new Date(year, month - 1, day); // month is 0-indexed
+        } else {
+          // For other formats or Date objects
+          taskDate = new Date(task.due);
+        }
+        
         events.push({
           id: `task-${task.id}`,
           title: task.title,
-          start: new Date(task.due), // Convert to Date object
-          end: new Date(task.due),   // Add required end date
+          start: taskDate,
+          end: taskDate,
           allDay: true,
           backgroundColor: isCompleted ? '#F5F5F5' : '#FFF3E0',
           borderColor: isCompleted ? '#E0E0E0' : '#FFB74D',
@@ -185,11 +293,20 @@ export const useCalendarOperations = () => {
     // Debug final events
     console.log('🔍 Final events array:', events);
     console.log('🔍 Task events only:', events.filter(event => event.extendedProps?.type === 'task'));
-    console.log('🔍 Aug/Sep events:', events.filter(event => {
-      const eventDate = new Date(event.start);
-      const month = eventDate.getMonth() + 1;
-      return month === 8 || month === 9;
-    }));
+    console.log('🔍 Timed events (allDay=false):', events.filter(event => !event.allDay).map(e => ({
+      id: e.id,
+      title: e.title,
+      allDay: e.allDay,
+      start: e.start,
+      end: e.end,
+      originalStart: e.extendedProps?.originalStart
+    })));
+    console.log('🔍 All-day events (allDay=true):', events.filter(event => event.allDay).map(e => ({
+      id: e.id,
+      title: e.title,
+      allDay: e.allDay,
+      type: e.extendedProps?.type
+    })));
     
     return events;
   }, [calendarEvents, unifiedTasks]);
