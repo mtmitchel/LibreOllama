@@ -442,3 +442,50 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ===== Context Menu Prevention ===== */
+/* Prevent browser context menu on React Big Calendar elements */
+.rbc-calendar,
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view,
+.rbc-time-grid,
+.rbc-day-slot,
+.rbc-event,
+.rbc-event-content,
+.rbc-event-label,
+.rbc-header,
+.rbc-row,
+.rbc-date-cell,
+.rbc-time-slot,
+.rbc-timeslot-group,
+.rbc-day-bg,
+.rbc-off-range-bg,
+.rbc-off-range,
+.rbc-today,
+.rbc-current,
+.rbc-show-more,
+.rbc-month-row,
+.rbc-month-row + .rbc-month-row,
+.rbc-header + .rbc-header,
+.rbc-header + .rbc-header + .rbc-header,
+.rbc-header + .rbc-header + .rbc-header + .rbc-header,
+.rbc-header + .rbc-header + .rbc-header + .rbc-header + .rbc-header,
+.rbc-header + .rbc-header + .rbc-header + .rbc-header + .rbc-header + .rbc-header,
+.rbc-header + .rbc-header + .rbc-header + .rbc-header + .rbc-header + .rbc-header + .rbc-header {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow context menu in task sidebar */
+.calendar-task-sidebar,
+.calendar-task-sidebar *,
+.context-menu,
+.context-menu * {
+  -webkit-user-select: auto;
+  -moz-user-select: auto;
+  -ms-user-select: auto;
+  user-select: auto;
+}

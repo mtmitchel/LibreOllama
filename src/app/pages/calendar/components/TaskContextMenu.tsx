@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Edit2, Calendar, Copy, Flag, Trash2 } from 'lucide-react';
 import { GoogleTask } from '../../../../types/google';
 import { CalendarContextMenu } from '../types';
@@ -23,14 +23,45 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
   onDelete,
   onClose
 }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!contextMenu || !menuRef.current) return;
+
+    const menuRect = menuRef.current.getBoundingClientRect();
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let x = contextMenu.x;
+    let y = contextMenu.y;
+    
+    // Check if menu would go off the right edge
+    if (x + menuRect.width > windowWidth - 10) {
+      x = windowWidth - menuRect.width - 10;
+    }
+    
+    // Check if menu would go off the bottom edge
+    if (y + menuRect.height > windowHeight - 10) {
+      y = windowHeight - menuRect.height - 10;
+    }
+    
+    // Ensure menu doesn't go off the left or top
+    x = Math.max(10, x);
+    y = Math.max(10, y);
+    
+    setPosition({ x, y });
+  }, [contextMenu]);
+
   if (!contextMenu) return null;
 
   return (
     <div
+      ref={menuRef}
       className="context-menu fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-2"
       style={{
-        left: contextMenu.x,
-        top: contextMenu.y,
+        left: position.x,
+        top: position.y,
         minWidth: '180px'
       }}
     >
@@ -70,7 +101,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       <div className="border-t border-gray-100 my-1" />
       
       <div className="px-4 py-1 text-xs text-gray-500 font-medium">Priority</div>
-      {(['urgent', 'high', 'medium', 'low'] as const).map(priority => (
+      {(['urgent', 'high', 'low'] as const).map(priority => (
         <button
           key={priority}
           className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
@@ -79,8 +110,14 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
             onClose();
           }}
         >
-          <Flag size={14} style={{ color: priorityConfig[priority]?.textColor || '#6B6F76' }} />
-          {priorityConfig[priority]?.label || priority}
+          <Flag size={14} className={
+            priority === 'urgent' ? 'text-red-500' :
+            priority === 'high' ? 'text-orange-500' :
+            'text-blue-500'
+          } />
+          {priority === 'urgent' ? 'Urgent' :
+           priority === 'high' ? 'High' :
+           'Low'}
         </button>
       ))}
       

@@ -14,6 +14,9 @@ mod config;
 // Import services module
 mod services;
 
+// Import setup module
+mod setup;
+
 // Re-export commands for easy access
 use commands::tasks::all_task_data::*;
 use commands::tasks::metadata::*;
@@ -138,6 +141,11 @@ pub fn run() {
             // Initialize Gmail API service
             let gmail_api_service = GmailApiService::new(auth_service_state.inner().clone(), db_manager_arc.clone(), rate_limiter);
             app.manage(Arc::new(gmail_api_service));
+            
+            // Configure webview to disable context menus
+            if let Err(e) = setup::configure_webview(app) {
+                eprintln!("⚠️  [BACKEND-WARNING] Failed to configure webview: {}", e);
+            }
             
             Ok(())
         })

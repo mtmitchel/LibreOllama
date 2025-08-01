@@ -189,7 +189,7 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
   };
 
   return (
-    <div className="border-primary flex h-full w-80 shrink-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="border-primary flex h-full w-80 shrink-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm calendar-task-sidebar">
       <div style={{ padding: '24px', overflowY: 'auto', overflowX: 'hidden', height: '100%' }}>
         <div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
           {/* Custom header with dropdown */}
@@ -325,11 +325,14 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
             {/* Add task button */}
             <button
               onClick={handleAddTask}
-              className="w-full mb-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="w-full mb-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 border: '1px dashed #2563EB',
                 backgroundColor: 'transparent',
               }}
+              disabled={taskLists.length === 0 || (selectedTaskListId === 'all' && taskLists.length <= 1)}
+              title={taskLists.length === 0 ? 'No task lists available. Please sync from Tasks page first.' : 
+                     (selectedTaskListId === 'all' && taskLists.length <= 1) ? 'Please select a specific task list to add tasks.' : ''}
             >
               + Add task
             </button>
@@ -340,10 +343,26 @@ export const CalendarTaskSidebar: React.FC<CalendarTaskSidebarProps> = ({
                 <InlineTaskCreator
                   columnId={selectedTaskListId === 'all' ? taskLists[0]?.id || '' : selectedTaskListId}
                   onSubmit={async (data) => {
-                    const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
-                    if (!listId) return;
-                    await onTaskCreate(listId, data);
-                    onShowInlineCreator(false);
+                    try {
+                      console.log('Task creation debug:', {
+                        selectedTaskListId,
+                        taskLists: taskLists.map(t => ({ id: t.id, title: t.title, googleTaskListId: t.googleTaskListId })),
+                        firstTaskListId: taskLists[0]?.id,
+                        data
+                      });
+                      
+                      const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
+                      if (!listId || listId === 'all') {
+                        throw new Error('Please select a specific task list to add tasks');
+                      }
+                      
+                      await onTaskCreate(listId, data);
+                      onShowInlineCreator(false);
+                    } catch (error) {
+                      console.error('Failed to create task:', error);
+                      // The error will be displayed by the InlineTaskCreator component
+                      throw error;
+                    }
                   }}
                   onCancel={() => onShowInlineCreator(false)}
                 />

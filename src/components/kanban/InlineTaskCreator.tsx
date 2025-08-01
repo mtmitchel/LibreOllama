@@ -25,7 +25,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [dueDate, setDueDate] = useState<string>('');
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('low');
+  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [error, setError] = useState<string | null>(null);
   
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -88,11 +88,11 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
       await onSubmit({ 
         title: title.trim(),
         due: dueDate || undefined,
-        priority: priority || 'low',
+        priority: priority || 'normal',
       });
       setTitle('');
       setDueDate('');
-      setPriority('low');
+      setPriority('normal');
       setIsExpanded(false);
       setShowDatePicker(false);
       setShowPriorityMenu(false);
@@ -241,9 +241,11 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                       ? 'text-red-500' 
                       : priority === 'high' 
                         ? 'text-orange-500' 
-                        : priority === 'low'
-                          ? 'text-blue-500'
-                          : 'text-gray-400 hover:text-gray-600'
+                        : priority === 'normal'
+                          ? 'text-green-500'
+                          : priority === 'low'
+                            ? 'text-blue-500'
+                            : 'text-gray-400 hover:text-gray-600'
                   }`}
                   aria-label="Set priority"
                   onClick={() => {
@@ -259,6 +261,7 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                     {[
                       { value: 'urgent', label: 'Urgent', color: 'text-red-500' },
                       { value: 'high', label: 'High', color: 'text-orange-500' },
+                      { value: 'normal', label: 'Normal', color: 'text-green-500' },
                       { value: 'low', label: 'Low', color: 'text-blue-500' }
                     ].map(option => (
                       <button
@@ -276,6 +279,18 @@ export const InlineTaskCreator: React.FC<InlineTaskCreatorProps> = ({
                         <span className={option.color}>{option.label}</span>
                       </button>
                     ))}
+                    <div className="border-t border-gray-200 mt-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPriority('normal');
+                          setShowPriorityMenu(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 text-gray-500"
+                      >
+                        Clear
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -1,0 +1,563 @@
+/* React Big Calendar - Asana Style Design System */
+
+/* Import Asana design system */
+@import '../../../styles/asana-design-system.css';
+
+/* React Big Calendar Overrides to match FullCalendar exactly */
+.cal-asana-grid .rbc-calendar {
+  font-family: var(--asana-font-family);
+  color: var(--asana-text-primary);
+  background: transparent;
+}
+
+
+/* Hide default toolbar */
+.cal-asana-grid .rbc-toolbar {
+  display: none;
+}
+
+/* Disable all context menus in calendar */
+.cal-asana-grid {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+
+/* Month view header */
+.cal-asana-grid .rbc-header {
+  background-color: var(--asana-bg-secondary, #fafafa) !important;
+  border-color: var(--asana-border-subtle) !important;
+  padding: var(--asana-spacing-md) 0 !important;
+  font-weight: var(--asana-font-weight-semibold) !important;
+  font-size: var(--asana-font-size-base) !important;
+  color: var(--asana-text-primary) !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* Month view cells */
+.cal-asana-grid .rbc-month-view {
+  border: none !important;
+}
+
+.cal-asana-grid .rbc-day-bg {
+  transition: all var(--asana-transition-fast);
+  background: var(--asana-bg-primary);
+  border-left: 1px solid var(--asana-border-subtle) !important;
+  border-top: 1px solid var(--asana-border-subtle) !important;
+}
+
+.cal-asana-grid .rbc-day-bg:hover {
+  background: var(--asana-bg-hover);
+}
+
+.cal-asana-grid .rbc-today {
+  background-color: rgba(99, 102, 241, 0.05) !important;
+}
+
+.cal-asana-grid .rbc-off-range-bg {
+  background-color: var(--asana-bg-secondary, #fafafa) !important;
+  opacity: 0.7;
+}
+
+/* Day numbers */
+.cal-asana-grid .rbc-date-cell {
+  font-size: var(--asana-font-size-base) !important;
+  font-weight: var(--asana-font-weight-medium) !important;
+  color: var(--asana-text-primary) !important;
+  padding: var(--asana-spacing-md) !important;
+}
+
+.cal-asana-grid .rbc-now .rbc-date-cell,
+.cal-asana-grid .rbc-today .rbc-date-cell {
+  color: var(--asana-brand-coral) !important;
+  font-weight: var(--asana-font-weight-semibold) !important;
+  background: var(--asana-brand-coral) !important;
+  color: white !important;
+  border-radius: var(--asana-radius-full) !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--asana-spacing-xs);
+}
+
+/* Events - base styles */
+.cal-asana-grid .rbc-event {
+  background-color: var(--asana-brand-coral) !important;
+  border: none !important;
+  color: white !important;
+  font-size: var(--asana-font-size-sm) !important;
+  padding: 1px 3px !important;
+  border-radius: 3px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Task events */
+.cal-asana-grid .rbc-event.fc-event-task {
+  background-color: #FFF3E0 !important;
+  border-color: #FFB74D !important;
+  color: #E65100 !important;
+}
+
+/* Multi-day events */
+.cal-asana-grid .rbc-event.fc-multi-day-event,
+.cal-asana-grid .rbc-event.multi-day-event {
+  background-color: #d8d0ff !important;
+  border-color: #c7bbff !important;
+  color: #4a3f99 !important;
+  font-weight: 500 !important;
+}
+
+/* Event hover states */
+.cal-asana-grid .rbc-event:hover {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+/* Show more link */
+.cal-asana-grid .rbc-show-more {
+  color: var(--asana-brand-coral) !important;
+  font-weight: var(--asana-font-weight-medium) !important;
+  font-size: var(--asana-font-size-xs) !important;
+}
+
+/* Week/Day view adjustments */
+.cal-asana-grid .rbc-time-view {
+  border: none !important;
+  background: var(--asana-bg-primary) !important;
+}
+
+.cal-asana-grid .rbc-time-header {
+  border-bottom: 1px solid var(--asana-border-subtle) !important;
+}
+
+.cal-asana-grid .rbc-time-content {
+  border-top: 1px solid var(--asana-border-subtle) !important;
+}
+
+.cal-asana-grid .rbc-timeslot-group {
+  border-left: 1px solid var(--asana-border-subtle) !important;
+}
+
+.cal-asana-grid .rbc-time-slot {
+  border-top: 1px solid var(--asana-border-subtle) !important;
+}
+
+/* Time labels */
+.cal-asana-grid .rbc-label {
+  color: var(--asana-text-muted) !important;
+  font-size: var(--asana-font-size-xs) !important;
+  font-weight: var(--asana-font-weight-normal) !important;
+  padding: 0 var(--asana-spacing-md) !important;
+}
+
+/* Week/Day view events */
+.cal-asana-grid .rbc-time-view .rbc-event {
+  border: 1px solid var(--asana-border-default) !important;
+  border-radius: var(--asana-radius-md) !important;
+  background-color: var(--asana-bg-column) !important;
+  color: var(--asana-text-primary) !important;
+  font-size: var(--asana-font-size-base) !important;
+  padding: var(--asana-spacing-md) !important;
+  min-height: 32px !important;
+}
+
+.cal-asana-grid .rbc-time-view .rbc-event:hover {
+  background-color: var(--asana-bg-hover) !important;
+  box-shadow: var(--asana-shadow-card-hover);
+  transform: translateY(-1px);
+  border-color: var(--asana-border-hover) !important;
+}
+
+/* Current time indicator */
+.cal-asana-grid .rbc-current-time-indicator {
+  background-color: var(--asana-brand-coral) !important;
+  height: 1px !important;
+}
+
+/* Agenda view */
+.cal-asana-grid .rbc-agenda-view {
+  border: none !important;
+}
+
+.cal-asana-grid .rbc-agenda-table {
+  border: none !important;
+  font-size: var(--asana-font-size-base) !important;
+}
+
+.cal-asana-grid .rbc-agenda-time-cell {
+  font-size: var(--asana-font-size-sm) !important;
+  color: var(--asana-text-secondary) !important;
+  padding: var(--asana-spacing-md) var(--asana-spacing-lg) !important;
+}
+
+.cal-asana-grid .rbc-agenda-event-cell {
+  font-size: var(--asana-font-size-base) !important;
+  color: var(--asana-text-primary) !important;
+  padding: var(--asana-spacing-md) var(--asana-spacing-lg) !important;
+}
+
+/* Selection */
+.cal-asana-grid .rbc-slot-selecting {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Scrollbar styling */
+.cal-asana-grid ::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.cal-asana-grid ::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.cal-asana-grid ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-radius: var(--asana-radius-sm) !important;
+}
+
+.cal-asana-grid ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Typography consistency */
+.fc-event-title {
+  font-size: var(--asana-font-size-base) !important;
+  font-weight: var(--asana-font-weight-medium) !important;
+  line-height: var(--asana-line-height-tight) !important;
+  color: var(--asana-text-primary) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Popover styling for React Big Calendar */
+.rbc-overlay {
+  background-color: var(--asana-bg-primary) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: var(--asana-shadow-overlay) !important;
+  border-radius: var(--asana-radius-lg) !important;
+  z-index: 1000 !important;
+  overflow: hidden !important;
+  min-width: 220px !important;
+  margin-top: var(--asana-spacing-xs) !important;
+}
+
+.rbc-overlay-header {
+  background-color: var(--asana-bg-secondary, #f7f8fa) !important;
+  border-bottom: 1px solid var(--asana-border-subtle) !important;
+  padding: var(--asana-spacing-lg) var(--asana-spacing-2xl) !important;
+  font-weight: var(--asana-font-weight-semibold) !important;
+  font-size: var(--asana-font-size-base) !important;
+  color: var(--asana-text-primary) !important;
+}
+
+/* Additional styles from FullCalendar implementation */
+
+/* Base Typography - Consistent System */
+.asana-calendar-view {
+  font-family: var(--asana-font-family) !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Multi-day events - proper spanning style */
+.fc-event.fc-multi-day-event,
+.fc-event.multi-day-event {
+  background-color: #d8d0ff !important;
+  border-color: #c7bbff !important;
+  opacity: 0.9 !important;
+}
+
+.fc-event.fc-multi-day-event:hover,
+.fc-event.multi-day-event:hover {
+  background-color: #cfc5ff !important;
+  border-color: #bfb1ff !important;
+  opacity: 1 !important;
+}
+
+/* Background events (multi-day) */
+.fc-bg-event,
+.fc-event[data-display="background"] {
+  background-color: #d8d0ff !important;
+  opacity: 0.3 !important;
+  border: none !important;
+}
+
+/* Multi-day event segments styling - ensure continuous appearance */
+.fc-daygrid-event.fc-event-start.fc-multi-day-event {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.fc-daygrid-event.fc-event-end.fc-multi-day-event {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.fc-daygrid-event.fc-multi-day-event:not(.fc-event-start):not(.fc-event-end) {
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* CRITICAL: Ensure multi-day events use FullCalendar's native spanning */
+.fc-daygrid-block-event .fc-event-main {
+  padding: 1px 3px !important;
+}
+
+/* Multi-day event container must allow spanning */
+.fc-daygrid-day-events {
+  position: relative !important;
+  min-height: 2em !important;
+}
+
+/* Force proper z-index for multi-day events */
+.fc-daygrid-event-harness:has(.fc-multi-day-event) {
+  z-index: 5 !important;
+}
+
+/* Multi-day event text */
+.fc-multi-day-event .fc-event-title {
+  font-weight: 500 !important;
+}
+
+.fc-daygrid-event-harness {
+  margin-bottom: var(--space-1) !important;
+}
+
+/* Hide time by default in month view */
+.fc-daygrid-event .fc-event-time {
+  display: none !important;
+}
+
+.fc-daygrid-event:hover .fc-event-time {
+  display: inline !important;
+  font-size: var(--text-xs) !important;
+  color: var(--color-text-tertiary) !important;
+  margin-right: var(--space-1) !important;
+}
+
+/* Month event titles - bolder and clearer */
+.fc-daygrid-event .fc-event-title {
+  font-weight: 500 !important;
+  font-size: var(--text-base) !important;
+  color: var(--color-text-primary) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: block !important;
+}
+
+.fc-daygrid-event .fc-event-title-container {
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+
+/* Other month days */
+.fc-daygrid-day.fc-day-other {
+  background-color: #fafafa !important;
+  opacity: 0.7;
+}
+
+/* Popover - Premium Dropdown Component */
+.fc-popover {
+  background-color: var(--asana-bg-primary) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: var(--asana-shadow-overlay) !important;
+  border-radius: var(--asana-radius-lg) !important;
+  z-index: 1000 !important;
+  overflow: hidden !important;
+  min-width: 220px !important;
+  margin-top: var(--asana-spacing-xs) !important;
+  position: relative !important;
+}
+
+/* Arrow indicator for spatial connection */
+.fc-popover::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  transform: translateX(-50%) rotate(45deg);
+  z-index: -1;
+}
+
+.fc-popover-header {
+  background-color: var(--asana-bg-secondary, #f7f8fa) !important;
+  border-bottom: 1px solid var(--asana-border-subtle) !important;
+  padding: var(--asana-spacing-lg) var(--asana-spacing-2xl) !important;
+  font-weight: var(--asana-font-weight-semibold) !important;
+  font-size: var(--asana-font-size-base) !important;
+  color: var(--asana-text-primary) !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.fc-popover-title {
+  margin: 0 !important;
+  font-size: var(--asana-font-size-base) !important;
+  font-weight: var(--asana-font-weight-semibold) !important;
+  color: var(--asana-text-primary) !important;
+}
+
+.fc-popover-close {
+  background: none !important;
+  border: none !important;
+  padding: var(--asana-spacing-xs) !important;
+  cursor: pointer !important;
+  color: var(--asana-text-secondary) !important;
+  font-size: var(--asana-font-size-xl) !important;
+  line-height: 1 !important;
+  border-radius: var(--asana-radius-sm) !important;
+  transition: all var(--asana-transition-fast) !important;
+}
+
+.fc-popover-close:hover {
+  background-color: var(--asana-bg-hover) !important;
+}
+
+.fc-popover-body {
+  padding: 0 !important;
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Popover scrollbar */
+.fc-popover-body::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.fc-popover-body::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.fc-popover-body::-webkit-scrollbar-thumb {
+  background: #dadce0 !important;
+  border-radius: 3px !important;
+}
+
+.fc-popover-body::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6 !important;
+}
+
+/* Events in popover */
+.fc-popover .fc-event {
+  margin: 6px 12px !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.fc-popover .fc-event:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* More events link - Clean minimal style */
+.fc-more-link,
+.fc-daygrid-more-link {
+  color: var(--asana-brand-coral) !important;
+  font-weight: var(--asana-font-weight-semibold) !important;
+  font-size: var(--asana-font-size-xs) !important;
+  text-decoration: none !important;
+  padding: var(--asana-spacing-xs) var(--asana-spacing-sm) !important;
+  border-radius: var(--asana-radius-sm) !important;
+  transition: all var(--asana-transition-fast) !important;
+  display: inline-block !important;
+  margin: var(--asana-spacing-xs) !important;
+}
+
+.fc-more-link:hover,
+.fc-daygrid-more-link:hover {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  color: var(--asana-brand-coral) !important;
+}
+
+/* Week and Day view specific */
+.fc-timegrid-event {
+  border: 1px solid var(--asana-border-default) !important;
+  border-left: 1px solid var(--asana-border-default) !important;
+  border-radius: var(--asana-radius-md) !important;
+  background-color: var(--asana-bg-column) !important;
+  font-size: var(--asana-font-size-base) !important;
+  padding: var(--asana-spacing-md) !important;
+  min-height: 32px !important;
+  transition: all var(--asana-transition-fast);
+  box-shadow: var(--asana-shadow-card);
+  margin: 0 var(--asana-spacing-xs) !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.fc-timegrid-event:hover {
+  background-color: var(--asana-bg-hover) !important;
+  box-shadow: var(--asana-shadow-card-hover);
+  transform: translateY(-1px);
+  border-color: var(--asana-border-hover) !important;
+  cursor: pointer;
+  transition: all var(--asana-transition-fast);
+  z-index: 10 !important;
+}
+
+.fc-timegrid-event:active {
+  background-color: var(--asana-bg-active) !important;
+  transform: translateY(0) scale(1);
+  box-shadow: var(--asana-shadow-card);
+  transition: all var(--asana-transition-fast);
+}
+
+.fc-timegrid-event .fc-event-main {
+  padding: 0 !important;
+}
+
+/* Remove left borders from time grid events */
+.fc-timegrid-event::before,
+.fc-timegrid-event::after {
+  display: none !important;
+}
+
+/* Now indicator - subtle */
+.fc-timegrid-now-indicator-line {
+  border-color: var(--asana-brand-coral) !important;
+  border-width: 1px !important;
+}
+
+.fc-timegrid-now-indicator-arrow {
+  display: none !important;
+}
+
+/* Scrollbar - minimal */
+.fc-scroller::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-radius: var(--asana-radius-sm) !important;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3) !important;
+}

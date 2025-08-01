@@ -207,10 +207,25 @@ impl GoogleTasksService {
 
     pub async fn create_task(&self, account_id: &str, task_list_id: &str, input: CreateTaskInput) -> Result<GoogleTask> {
         let endpoint = format!("lists/{}/tasks", task_list_id);
+        
+        // Convert due date to RFC 3339 format if provided
+        let due_rfc3339 = if let Some(due) = input.due {
+            // If it's already in RFC 3339 format, use as-is
+            if due.contains('T') {
+                Some(due)
+            } else {
+                // Convert YYYY-MM-DD to RFC 3339 format
+                // Google Tasks expects the date in UTC timezone
+                Some(format!("{}T00:00:00.000Z", due))
+            }
+        } else {
+            None
+        };
+        
         let body = serde_json::json!({
             "title": input.title,
             "notes": input.notes,
-            "due": input.due,
+            "due": due_rfc3339,
             "status": input.status.unwrap_or_else(|| "needsAction".to_string())
         });
 
@@ -219,11 +234,26 @@ impl GoogleTasksService {
 
     pub async fn update_task(&self, account_id: &str, task_list_id: &str, task_id: &str, input: UpdateTaskInput) -> Result<GoogleTask> {
         let endpoint = format!("lists/{}/tasks/{}", task_list_id, task_id);
+        
+        // Convert due date to RFC 3339 format if provided
+        let due_rfc3339 = if let Some(due) = input.due {
+            // If it's already in RFC 3339 format, use as-is
+            if due.contains('T') {
+                Some(due)
+            } else {
+                // Convert YYYY-MM-DD to RFC 3339 format
+                // Google Tasks expects the date in UTC timezone
+                Some(format!("{}T00:00:00.000Z", due))
+            }
+        } else {
+            None
+        };
+        
         let body = serde_json::json!({
             "id": task_id,
             "title": input.title,
             "notes": input.notes,
-            "due": input.due,
+            "due": due_rfc3339,
             "status": input.status
         });
 

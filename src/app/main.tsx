@@ -14,6 +14,7 @@ if (typeof window !== 'undefined') {
     localStorage.removeItem(KANBAN_STORAGE_KEY);
     console.log('✅ [CLEANUP] localStorage cleared successfully');
   }
+  
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

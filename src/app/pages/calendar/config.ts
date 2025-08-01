@@ -41,20 +41,15 @@ export const priorityConfig = {
     textColor: '#E85D75',
     label: 'High'
   },
-  medium: { 
-    bgColor: '#FFF6E6',
-    textColor: '#E68900',
-    label: 'Medium'
+  normal: {
+    bgColor: '#F3F4F6',
+    textColor: '#6B6F76',
+    label: 'Normal'
   },
   low: {
     bgColor: '#E6F5FF',
     textColor: '#0052CC',
     label: 'Low'
-  },
-  normal: {
-    bgColor: '#F3F4F6',
-    textColor: '#6B6F76',
-    label: 'Normal'
   }
 };
 

@@ -24,6 +24,19 @@ export const useCalendarOperations = () => {
   const { tasks: unifiedTasks, columns, createTask, updateTask, deleteTask } = useUnifiedTaskStore();
   const activeAccount = useActiveGoogleAccount();
   
+  // Wrapper functions to adapt unified task store to the expected interface
+  const createGoogleTask = useCallback(async (data: any) => {
+    await createTask(data);
+  }, [createTask]);
+  
+  const updateGoogleTask = useCallback(async (listId: string, taskId: string, updates: any) => {
+    await updateTask(taskId, updates);
+  }, [updateTask]);
+  
+  const deleteGoogleTask = useCallback(async (listId: string, taskId: string) => {
+    await deleteTask(taskId);
+  }, [deleteTask]);
+  
   // Use the singleton Google Tasks service
 
   // Combine calendar events and tasks into a unified event list
@@ -215,6 +228,23 @@ export const useCalendarOperations = () => {
     await Promise.all(promises);
   }, [isCalendarAuthenticated, activeAccount, syncCalendar, syncAllTasks]);
 
+  // Placeholder methods for missing functionality
+  const handleQuickTask = useCallback(async (taskData: any) => {
+    console.log('Quick task not implemented yet', taskData);
+  }, []);
+
+  const uploadAttachment = useCallback(async (taskId: string, file: File) => {
+    console.log('Upload attachment not implemented yet', taskId, file);
+  }, []);
+
+  const removeAttachment = useCallback(async (taskId: string, attachmentId: string) => {
+    console.log('Remove attachment not implemented yet', taskId, attachmentId);
+  }, []);
+
+  // Debug task lists
+  console.log('🔍 Task lists (columns):', columns);
+  console.log('🔍 Active account:', activeAccount);
+
   return {
     // Data
     calendarEvents,
@@ -244,10 +274,15 @@ export const useCalendarOperations = () => {
     syncCalendar,
     
     // Task operations (unified)
-    createGoogleTask: createTask,
-    updateGoogleTask: updateTask,
-    deleteGoogleTask: deleteTask,
+    createGoogleTask,
+    updateGoogleTask,
+    deleteGoogleTask,
     syncAllTasks,
+    
+    // Additional operations
+    handleQuickTask,
+    uploadAttachment,
+    removeAttachment,
     
     // General operations
     refreshData

@@ -130,6 +130,23 @@ export default function CalendarAsanaStyle() {
     return () => clearHeaderProps();
   }, [clearHeaderProps]);
 
+  // Handle click outside to close context menu
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (contextMenu) {
+        const contextMenuElement = document.querySelector('.context-menu');
+        if (contextMenuElement && !contextMenuElement.contains(e.target as Node)) {
+          setContextMenu(null);
+        }
+      }
+    };
+
+    if (contextMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [contextMenu]);
+
   // Load calendar data when component mounts
   useEffect(() => {
     console.log('Calendar data loading effect:', { activeAccount, isAuthenticated, taskLists: taskLists.length, googleTasks: Object.keys(googleTasks).length });
@@ -360,9 +377,6 @@ export default function CalendarAsanaStyle() {
                   nextDayThreshold="00:00:00"  // Events ending at midnight belong to previous day
                   eventOrder="start,-duration,title"  // Order events properly
                   progressiveEventRendering={true}  // Better performance for many events
-                  eventDidMount={(info) => {
-                    // Placeholder for future event mount logic
-                  }}
                   editable={true}
                   selectable={true}
                   selectMirror={true}
@@ -412,8 +426,27 @@ export default function CalendarAsanaStyle() {
                       setShowEventModal(true);
                     }}
                     eventClick={(info) => {
-                      // Handle event click
-                      console.log('Event clicked:', info.event);
+                      // Check if it's a task event
+                      if (info.event.extendedProps?.type === 'task' && info.event.extendedProps?.taskData) {
+                        const task = info.event.extendedProps.taskData;
+                        setEditingTask(task);
+                        setShowTaskModal(true);
+                      } else {
+                        // Handle other event types
+                        console.log('Event clicked:', info.event);
+                      }
+                    }}
+                    eventDidMount={(info) => {
+                      // Add right-click handler when event is mounted
+                      info.el.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        if (info.event.extendedProps?.type === 'task' && info.event.extendedProps?.taskData) {
+                          const task = info.event.extendedProps.taskData;
+                          setContextMenu({ x: e.clientX, y: e.clientY, task, listId: '' });
+                        }
+                      });
                     }}
                     datesSet={(dateInfo) => {
                       setCurrentViewTitle(dateInfo.view.title);
@@ -449,21 +482,22 @@ export default function CalendarAsanaStyle() {
               setShowTaskModal(true);
             }}
             onTaskComplete={async (listId, taskId, completed) => {
-              const task = googleTasks[listId]?.find(t => t.id === taskId);
-              if (task) {
-                await updateGoogleTask(listId, taskId, { ...task, status: completed ? 'completed' : 'needsAction' });
+              const { updateTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
+              const unifiedTask = getTaskByGoogleId(taskId);
+              if (unifiedTask) {
+                await updateTask(unifiedTask.id, { status: completed ? 'completed' : 'needsAction' });
               }
             }}
             onTaskCreate={async (listId, data) => {
-              await createGoogleTask(listId, data);
+              await createGoogleTask({
+                ...data,
+                columnId: listId
+              });
               await syncAllTasks();
             }}
             onShowInlineCreator={setShowInlineCreator}
             onContextMenu={(e, task) => {
-              const listId = Object.keys(googleTasks).find(id => 
-                googleTasks[id].some(t => t.id === task.id)
-              ) || selectedTaskListId;
-              setContextMenu({ x: e.clientX, y: e.clientY, task, listId });
+              setContextMenu({ x: e.clientX, y: e.clientY, task, listId: '' });
             }}
           />
         )}
@@ -559,12 +593,11 @@ export default function CalendarAsanaStyle() {
           confirmLabel="Delete"
           onConfirm={async () => {
             try {
-              const taskListId = Object.keys(googleTasks).find(listId => 
-                googleTasks[listId].some(t => t.id === taskToDelete.id)
-              );
+              const { deleteTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
+              const unifiedTask = getTaskByGoogleId(taskToDelete.id);
               
-              if (taskListId) {
-                await deleteGoogleTask(taskListId, taskToDelete.id);
+              if (unifiedTask) {
+                await deleteTask(unifiedTask.id);
               }
               
               setShowDeleteTaskDialog(false);
@@ -592,12 +625,18 @@ export default function CalendarAsanaStyle() {
           console.log('Schedule task:', task);
         }}
         onDuplicate={async (task) => {
-          const listId = contextMenu?.listId || selectedTaskListId;
-          await createGoogleTask(listId, {
-            title: `${task.title} (Copy)`,
-            notes: task.notes,
-            due: task.due,
-          });
+          const { getTaskByGoogleId } = useUnifiedTaskStore.getState();
+          const unifiedTask = getTaskByGoogleId(task.id);
+          if (unifiedTask) {
+            await createGoogleTask({
+              columnId: unifiedTask.columnId,
+              title: `${task.title} (Copy)`,
+              notes: task.notes,
+              due: task.due,
+              priority: unifiedTask.priority,
+              labels: unifiedTask.labels,
+            });
+          }
         }}
         onUpdatePriority={(task, priority) => {
           const { updateTask, getTaskByGoogleId } = useUnifiedTaskStore.getState();
