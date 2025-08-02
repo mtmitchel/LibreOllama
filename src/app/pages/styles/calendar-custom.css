@@ -72,6 +72,20 @@
   --time-column-width: 64px;
 }
 
+/* Prevent horizontal overflow in day/week views */
+.calendar-week-grid,
+.calendar-day-grid {
+  overflow-x: hidden !important;
+  max-width: 100%;
+}
+
+/* Ensure event cards don't cause overflow on hover */
+.calendar-week-grid .calendar-event-card,
+.calendar-day-grid .calendar-event-card {
+  transform-origin: center center;
+  max-width: 100%;
+}
+
 /* Reserve space for scrollbar to prevent layout shift */
 .calendar-week-grid .overflow-y-auto {
   scrollbar-gutter: stable;

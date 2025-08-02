@@ -86,7 +86,7 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
         ${getEventColor()}
         ${getViewStyles()}
         cursor-pointer transition-all duration-200
-        hover:shadow-md hover:scale-[1.02] hover:z-20
+        hover:shadow-md hover:z-20
         relative overflow-hidden
         ${isCompleted ? 'opacity-70' : ''}
         shadow-sm

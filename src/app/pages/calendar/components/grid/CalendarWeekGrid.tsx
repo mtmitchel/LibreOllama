@@ -178,7 +178,7 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
   return (
     <div 
       ref={scrollContainerRef}
-      className="h-full overflow-auto relative"
+      className="h-full overflow-y-auto overflow-x-hidden relative calendar-week-grid"
       style={{
         display: 'grid',
         gridTemplateColumns: `64px repeat(${weekDates.length}, minmax(0, 1fr))`,
