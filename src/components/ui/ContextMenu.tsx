@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useRef, ReactNode, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { Card } from './index';
+import { useContextMenuStore } from '../../stores/contextMenuStore';
 
 interface ContextMenuItem {
   label?: string;
@@ -24,8 +25,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onOpen,
   onClose
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const menuId = useId();
+  const { activeMenuId, setActiveMenu, clearActiveMenu } = useContextMenuStore();
+  const isOpen = activeMenuId === menuId;
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isOpening, setIsOpening] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const isClickingButtonRef = useRef(false);
@@ -99,20 +104,50 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     const adjustedY = y + menuHeight > windowHeight ? y - menuHeight : y;
 
     setPosition({ x: adjustedX, y: adjustedY });
-    setIsOpen(true);
-    console.log('Context menu isOpen set to true');
-    onOpen?.();
+    
+    // If another menu is open, close it first with a slight delay for smooth transition
+    if (activeMenuId && activeMenuId !== menuId) {
+      setIsOpening(true);
+      clearActiveMenu();
+      setTimeout(() => {
+        setActiveMenu(menuId);
+        setIsOpening(false);
+        onOpen?.();
+      }, 50); // Small delay for smooth transition
+    } else {
+      setActiveMenu(menuId);
+      onOpen?.();
+    }
   };
 
   const handleClose = () => {
     console.log('Context menu closing');
-    setIsOpen(false);
+    if (activeMenuId === menuId) {
+      clearActiveMenu();
+    }
     onClose?.();
   };
 
   // Debug effect
   useEffect(() => {
     console.log('Context menu isOpen state changed to:', isOpen);
+  }, [isOpen]);
+  
+  // Manage visibility for smooth transitions
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+      // Small delay to trigger CSS transition
+      requestAnimationFrame(() => {
+        setIsOpening(false);
+      });
+    } else {
+      // Keep visible during close animation
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+      }, 150); // Match transition duration
+      return () => clearTimeout(timer);
+    }
   }, [isOpen]);
 
   const handleItemClick = (e: React.MouseEvent, item: ContextMenuItem) => {
@@ -135,14 +170,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       <div ref={triggerRef} onContextMenu={handleContextMenu}>
         {children}
       </div>
-      {isOpen && createPortal(
+      {isVisible && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[999999]"
+          className={`fixed z-[999999] transition-all duration-150 ease-out ${
+            !isOpen || isOpening ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+          }`}
           style={{ 
             left: `${position.x}px`, 
             top: `${position.y}px`,
-            pointerEvents: 'auto'
+            pointerEvents: 'auto',
+            transformOrigin: 'top left'
           }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}

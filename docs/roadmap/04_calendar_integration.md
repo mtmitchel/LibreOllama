@@ -53,8 +53,17 @@ The Calendar page provides comprehensive calendar functionality with Google Cale
 - **Error Handling:** Inconsistent error handling for API failures and network issues.
 - **Sync Reliability:** Potential synchronization issues between local state and Google services.
 - **Performance:** May have performance issues with large datasets or frequent updates.
-- **Edge Cases:** Limited handling of complex calendar scenarios (recurring events, timezone issues, etc.).
+- **Edge Cases:** Limited handling of complex calendar scenarios (recurring events, etc.).
 - **Undo Functionality:** No undo feature for accidentally marked tasks.
+
+### Recent Improvements (2025-01-27)
+
+- **Timezone Handling:** Fixed timezone-related date rollback issues where tasks would show one day behind after drag-and-drop
+- **Date Parsing:** Implemented `parseTaskDueDate` helper to correctly handle RFC3339 dates from Google Tasks API
+- **TimeBlock Preservation:** Fixed issue where editing task titles would lose time-block information
+- **Compact Task Edit Modal:** Added streamlined modal for quick task editing from calendar view
+- **Calendar Quick View Modal:** Implemented quick view popup for calendar events with edit/delete actions
+- **Date Consistency:** Simplified date handling to use YYYY-MM-DD format throughout the system, avoiding complex timezone conversions
 
 ## Future Work & Todos
 

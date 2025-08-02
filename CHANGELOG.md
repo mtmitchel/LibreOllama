@@ -5,7 +5,19 @@ All notable changes to the LibreOllama project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-01-26
+## [Unreleased] - 2025-01-27
+
+### 🔧 Recent Fixes
+
+#### Calendar Timezone & Date Handling Fixes ✅
+- **Fixed timezone-related date rollback issues** ✅
+  - Resolved tasks showing one day behind in sidebar after drag-and-drop to calendar
+  - Fixed Edit task modal displaying incorrect dates due to UTC conversion
+  - Simplified date handling to use YYYY-MM-DD format consistently throughout the system
+  - Removed complex timezone offset calculations that were causing date discrepancies
+  - Ensured timeBlock data is preserved when editing task titles
+  - Added parseTaskDueDate helper function to handle RFC3339 date formats correctly
+  - Location: `src/app/pages/calendar/` components
 
 ### ✅ Recently Completed
 
