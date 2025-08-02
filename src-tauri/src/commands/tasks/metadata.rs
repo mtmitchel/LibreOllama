@@ -16,18 +16,24 @@ pub async fn get_task_metadata(
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
     
         // Get base metadata
-        let metadata_query = "SELECT id, google_task_id, task_list_id, priority, created_at, updated_at FROM task_metadata WHERE google_task_id = ?1";
+        let metadata_query = "SELECT id, google_task_id, task_list_id, priority, time_block, created_at, updated_at FROM task_metadata WHERE google_task_id = ?1";
         let metadata: Option<TaskMetadata> = conn.query_row(
             metadata_query,
             &[&google_task_id],
             |row| {
+                let time_block_json: Option<String> = row.get(4)?;
+                let time_block = time_block_json.and_then(|json| {
+                    serde_json::from_str(&json).ok()
+                });
+                
                 Ok(TaskMetadata {
                     id: row.get(0)?,
                     google_task_id: row.get(1)?,
                     task_list_id: row.get(2)?,
                     priority: row.get(3)?,
-                    created_at: row.get(4)?,
-                    updated_at: row.get(5)?,
+                    time_block,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
                 })
             }
         ).optional()
@@ -105,12 +111,27 @@ pub async fn create_task_metadata(
         
         let tx = conn.transaction().map_err(|e| format!("Failed to start transaction: {}", e))?;
         
-        // Insert task metadata
+        // Insert task metadata (or update if it exists)
         let priority = data.priority.unwrap_or_else(|| "normal".to_string());
-        tx.execute(
-            "INSERT INTO task_metadata (google_task_id, task_list_id, priority) VALUES (?1, ?2, ?3)",
-            params![&data.google_task_id, &data.task_list_id, &priority],
-        ).map_err(|e| format!("Failed to insert task metadata: {}", e))?;
+        let time_block_json = data.time_block.as_ref().map(|tb| {
+            serde_json::to_string(tb).unwrap_or_else(|_| "null".to_string())
+        });
+        
+        // Try to insert, and if it fails due to unique constraint, update instead
+        match tx.execute(
+            "INSERT INTO task_metadata (google_task_id, task_list_id, priority, time_block) VALUES (?1, ?2, ?3, ?4)",
+            params![&data.google_task_id, &data.task_list_id, &priority, &time_block_json],
+        ) {
+            Ok(_) => {},
+            Err(e) if e.to_string().contains("UNIQUE constraint failed") => {
+                // Update existing metadata
+                tx.execute(
+                    "UPDATE task_metadata SET task_list_id = ?2, priority = ?3, time_block = ?4, updated_at = CURRENT_TIMESTAMP WHERE google_task_id = ?1",
+                    params![&data.google_task_id, &data.task_list_id, &priority, &time_block_json],
+                ).map_err(|e| format!("Failed to update existing task metadata: {}", e))?;
+            },
+            Err(e) => return Err(format!("Failed to insert task metadata: {}", e)),
+        }
         let metadata_id = tx.last_insert_rowid();
         
         // Insert labels if provided
@@ -187,6 +208,16 @@ pub async fn update_task_metadata(
                 "UPDATE task_metadata SET priority = ?1 WHERE id = ?2",
                 params![&priority, metadata_id],
             ).map_err(|e| format!("Failed to update priority: {}", e))?;
+        }
+        
+        // Update time_block if provided
+        if let Some(time_block) = updates.time_block {
+            let time_block_json = serde_json::to_string(&time_block)
+                .unwrap_or_else(|_| "null".to_string());
+            tx.execute(
+                "UPDATE task_metadata SET time_block = ?1 WHERE id = ?2",
+                params![&time_block_json, metadata_id],
+            ).map_err(|e| format!("Failed to update time_block: {}", e))?;
         }
         
         // Update labels if provided

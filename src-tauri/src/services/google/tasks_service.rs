@@ -214,9 +214,11 @@ impl GoogleTasksService {
             if due.contains('T') {
                 Some(due)
             } else {
-                // Convert YYYY-MM-DD to RFC 3339 format
-                // Google Tasks expects the date in UTC timezone
-                Some(format!("{}T00:00:00.000Z", due))
+                // For YYYY-MM-DD format, create RFC 3339 timestamp
+                // We use a time that ensures the date remains correct when Google
+                // returns it at midnight UTC. For users in negative UTC offsets
+                // (Americas), we need to use a later time.
+                Some(format!("{}T20:00:00.000Z", due))
             }
         } else {
             None
@@ -241,9 +243,11 @@ impl GoogleTasksService {
             if due.contains('T') {
                 Some(due)
             } else {
-                // Convert YYYY-MM-DD to RFC 3339 format
-                // Google Tasks expects the date in UTC timezone
-                Some(format!("{}T00:00:00.000Z", due))
+                // For YYYY-MM-DD format, create RFC 3339 timestamp
+                // We use a time that ensures the date remains correct when Google
+                // returns it at midnight UTC. For users in negative UTC offsets
+                // (Americas), we need to use a later time.
+                Some(format!("{}T20:00:00.000Z", due))
             }
         } else {
             None

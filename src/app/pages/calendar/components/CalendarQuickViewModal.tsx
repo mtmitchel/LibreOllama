@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, MapPin, Edit2, Trash2, CheckCircle2, Circle, Check } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Edit2, Trash2, CheckCircle2, Circle, Check, MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import { CalendarEvent } from '../types/calendar';
 
@@ -10,7 +10,7 @@ interface CalendarQuickViewModalProps {
   // For single event/task view
   event?: CalendarEvent | null;
   onEdit?: (event: CalendarEvent) => void;
-  onDelete?: (eventId: string) => void;
+  onDelete?: (event: CalendarEvent) => void;
   onToggleComplete?: (event: CalendarEvent) => void;
   // For "more" items view
   events?: CalendarEvent[];
@@ -32,7 +32,11 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const isTask = (e: CalendarEvent) => e.type === 'task' || e.extendedProps?.type === 'task';
+  const isTask = (e: CalendarEvent) => {
+    // Check if it's explicitly a task (including time-blocked tasks)
+    return e.type === 'task' || e.extendedProps?.type === 'task';
+  };
+  
   const isCompleted = (e: CalendarEvent) => e.isCompleted || e.extendedProps?.isCompleted;
 
   // Calculate modal position to keep it within viewport
@@ -95,27 +99,48 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
           <div className="p-4">
             {/* Header */}
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-start gap-2 flex-1">
+              <div className="flex items-start gap-2 flex-1 min-w-0">
                 {isTask(event) && (
                   <button
                     onClick={() => onToggleComplete?.(event)}
-                    className="mt-1 flex-shrink-0"
+                    className="mt-0.5 flex-shrink-0"
                   >
                     <div className={`w-[18px] h-[18px] rounded-full border-2 ${isCompleted(event) ? 'bg-green-600 border-green-600' : 'bg-white border-gray-400'} flex items-center justify-center`}>
                       <Check size={12} className={isCompleted(event) ? "text-white" : "text-gray-400"} />
                     </div>
                   </button>
                 )}
-                <h3 className={`font-semibold text-gray-900 ${isCompleted(event) ? 'line-through text-gray-500' : ''}`}>
+                <h3 className={`font-semibold text-gray-900 truncate pr-2 ${isCompleted(event) ? 'line-through text-gray-500' : ''}`}>
                   {event.title}
                 </h3>
               </div>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X size={16} />
-              </button>
+              
+              {/* Action buttons */}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <button
+                  onClick={() => onEdit?.(event)}
+                  className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
+                  title="Edit"
+                >
+                  <Edit2 size={16} />
+                </button>
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(event)}
+                    className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all ml-1"
+                  title="Close"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Event Details */}
@@ -150,25 +175,6 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
               )}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-              <button
-                onClick={() => onEdit?.(event)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <Edit2 size={14} />
-                Edit
-              </button>
-              {onDelete && (
-                <button
-                  onClick={() => onDelete(event.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
-              )}
-            </div>
           </div>
         )}
 
@@ -200,10 +206,10 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
                           {eventItems.map((e) => (
                             <div
                               key={e.id}
-                              className="p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors"
+                              className="p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors flex items-start justify-between"
                               onClick={() => onEventClick?.(e)}
                             >
-                              <div className="flex items-start gap-2">
+                              <div className="flex items-start gap-2 flex-1 min-w-0">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-900 truncate">
                                     {e.title}
@@ -212,6 +218,30 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
                                     {formatEventTime(e)} • {getCalendarName(e)}
                                   </p>
                                 </div>
+                              </div>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  onClick={(ev) => {
+                                    ev.stopPropagation();
+                                    onEdit?.(e);
+                                  }}
+                                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-all"
+                                  title="Edit"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                {onDelete && (
+                                  <button
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      onDelete(e);
+                                    }}
+                                    className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded transition-all"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -227,14 +257,14 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
                           {taskItems.map((e) => (
                             <div
                               key={e.id}
-                              className="p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors"
+                              className="p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors flex items-start justify-between"
                               onClick={() => onEventClick?.(e)}
                             >
-                              <div className="flex items-start gap-2">
+                              <div className="flex items-start gap-2 flex-1 min-w-0">
                                 <button
                                   onClick={(ev) => {
                                     ev.stopPropagation();
-                                    onComplete?.(e);
+                                    onToggleComplete?.(e);
                                   }}
                                   className="mt-0.5 flex-shrink-0"
                                 >
@@ -250,6 +280,30 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
                                     {formatEventTime(e)}
                                   </p>
                                 </div>
+                              </div>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  onClick={(ev) => {
+                                    ev.stopPropagation();
+                                    onEdit?.(e);
+                                  }}
+                                  className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-all"
+                                  title="Edit"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                {onDelete && (
+                                  <button
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      onDelete(e);
+                                    }}
+                                    className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded transition-all"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}

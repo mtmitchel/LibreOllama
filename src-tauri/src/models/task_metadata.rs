@@ -2,11 +2,18 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeBlock {
+    pub start_time: String,
+    pub end_time: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskMetadata {
     pub id: i64,
     pub google_task_id: String,
     pub task_list_id: String,
     pub priority: String,
+    pub time_block: Option<TimeBlock>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -36,6 +43,7 @@ pub struct CreateTaskMetadata {
     pub priority: Option<String>,
     pub labels: Option<Vec<String>>,
     pub subtasks: Option<Vec<CreateSubtask>>,
+    pub time_block: Option<TimeBlock>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +58,7 @@ pub struct UpdateTaskMetadata {
     pub priority: Option<String>,
     pub labels: Option<Vec<String>>,
     pub subtasks: Option<Vec<UpdateSubtask>>,
+    pub time_block: Option<TimeBlock>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

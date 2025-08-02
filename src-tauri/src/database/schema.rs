@@ -75,6 +75,20 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         run_migration_v10(conn)?;
         record_migration(conn, 10)?;
     }
+    
+    if current_version < 11 {
+        println!("Running migration v11 to create task metadata tables...");
+        run_migration_v11(conn)?;
+        record_migration(conn, 11)?;
+        println!("Migration v11 completed successfully");
+    }
+    
+    if current_version < 12 {
+        println!("Running migration v12 to fix task metadata schema...");
+        run_migration_v12(conn)?;
+        record_migration(conn, 12)?;
+        println!("Migration v12 completed successfully");
+    }
 
     Ok(())
 }
@@ -647,6 +661,216 @@ fn run_migration_v10(conn: &Connection) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_project_assets_project_id ON project_assets(project_id)",
         [],
     ).context("Failed to create project_assets project_id index")?;
+
+    Ok(())
+}
+
+/// Run migration v11 - Add task metadata tables and timeBlock support
+fn run_migration_v11(conn: &Connection) -> Result<()> {
+    // Create task_metadata table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS task_metadata (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            google_task_id TEXT NOT NULL UNIQUE,
+            task_list_id TEXT NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'normal',
+            time_block TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    ).context("Failed to create task_metadata table")?;
+
+    // Create labels table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            color TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    ).context("Failed to create labels table")?;
+
+    // Create task_labels junction table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS task_labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_metadata_id INTEGER NOT NULL,
+            label_id INTEGER NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (task_metadata_id) REFERENCES task_metadata(id) ON DELETE CASCADE,
+            FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE,
+            UNIQUE(task_metadata_id, label_id)
+        )",
+        [],
+    ).context("Failed to create task_labels table")?;
+
+    // Create subtasks table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS subtasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_metadata_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            completed BOOLEAN NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (task_metadata_id) REFERENCES task_metadata(id) ON DELETE CASCADE
+        )",
+        [],
+    ).context("Failed to create subtasks table")?;
+
+    // Create indexes for better performance
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_task_metadata_google_task_id ON task_metadata(google_task_id)",
+        [],
+    ).context("Failed to create task_metadata index")?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_task_labels_metadata_id ON task_labels(task_metadata_id)",
+        [],
+    ).context("Failed to create task_labels index")?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_subtasks_metadata_id ON subtasks(task_metadata_id)",
+        [],
+    ).context("Failed to create subtasks index")?;
+
+    Ok(())
+}
+
+/// Run migration v12 - Fix task metadata schema and ensure all related tables exist
+fn run_migration_v12(conn: &Connection) -> Result<()> {
+    // First ensure all the supporting tables exist
+    
+    // Create labels table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            color TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+        [],
+    ).context("Failed to create labels table")?;
+
+    // Create task_labels junction table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS task_labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_metadata_id INTEGER NOT NULL,
+            label_id INTEGER NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (task_metadata_id) REFERENCES task_metadata(id) ON DELETE CASCADE,
+            FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE,
+            UNIQUE(task_metadata_id, label_id)
+        )",
+        [],
+    ).context("Failed to create task_labels table")?;
+
+    // Create subtasks table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS subtasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_metadata_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            completed BOOLEAN NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (task_metadata_id) REFERENCES task_metadata(id) ON DELETE CASCADE
+        )",
+        [],
+    ).context("Failed to create subtasks table")?;
+    
+    // Now handle the task_metadata table migration
+    // Check if the old schema exists
+    let table_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='task_metadata'",
+            [],
+            |row| {
+                let count: i32 = row.get(0)?;
+                Ok(count > 0)
+            },
+        )
+        .unwrap_or(false);
+
+    if table_exists {
+        // Check if we have the old schema (with google_list_id)
+        let has_old_schema: bool = conn
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='task_metadata'",
+                [],
+                |row| {
+                    let sql: String = row.get(0)?;
+                    Ok(sql.contains("google_list_id"))
+                },
+            )
+            .unwrap_or(false);
+
+        if has_old_schema {
+            println!("Detected old task_metadata schema, migrating...");
+            
+            // Create a new table with the correct schema
+            conn.execute(
+                "CREATE TABLE task_metadata_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    google_task_id TEXT NOT NULL UNIQUE,
+                    task_list_id TEXT NOT NULL,
+                    priority TEXT NOT NULL DEFAULT 'normal',
+                    time_block TEXT,
+                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )",
+                [],
+            ).context("Failed to create new task_metadata table")?;
+
+            // Copy data from old table to new table
+            conn.execute(
+                "INSERT INTO task_metadata_new (id, google_task_id, task_list_id, priority, created_at, updated_at)
+                 SELECT id, google_task_id, google_list_id, COALESCE(priority, 'normal'), created_at, updated_at
+                 FROM task_metadata",
+                [],
+            ).context("Failed to copy data to new table")?;
+
+            // Drop the old table
+            conn.execute("DROP TABLE task_metadata", [])
+                .context("Failed to drop old task_metadata table")?;
+
+            // Rename the new table
+            conn.execute("ALTER TABLE task_metadata_new RENAME TO task_metadata", [])
+                .context("Failed to rename new table")?;
+
+            // Recreate indexes
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_task_metadata_google_task_id ON task_metadata(google_task_id)",
+                [],
+            ).context("Failed to create task_metadata index")?;
+            
+            println!("Successfully migrated task_metadata table to new schema with time_block support");
+        } else {
+            // Table exists with correct schema, just ensure time_block column exists
+            let has_time_block: bool = conn
+                .query_row(
+                    "SELECT sql FROM sqlite_master WHERE type='table' AND name='task_metadata'",
+                    [],
+                    |row| {
+                        let sql: String = row.get(0)?;
+                        Ok(sql.contains("time_block"))
+                    },
+                )
+                .unwrap_or(false);
+
+            if !has_time_block {
+                // Add time_block column if it doesn't exist
+                conn.execute(
+                    "ALTER TABLE task_metadata ADD COLUMN time_block TEXT",
+                    [],
+                ).context("Failed to add time_block column")?;
+                println!("Added time_block column to task_metadata table");
+            }
+        }
+    }
 
     Ok(())
 }

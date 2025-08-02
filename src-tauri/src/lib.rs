@@ -234,6 +234,9 @@ pub fn run() {
             commands::folders::create_folder,
             commands::folders::update_folder,
             commands::folders::delete_folder,
+            // System commands
+            commands::system::force_run_migrations,
+            commands::system::debug_check_timeblock_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

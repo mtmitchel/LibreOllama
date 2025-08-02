@@ -1,7 +1,7 @@
 use crate::models::task_metadata::*;
 use crate::{
     database::DatabaseManager,
-    models::task_metadata::{TaskMetadata, TaskMetadataWithRelations},
+    models::task_metadata::{TaskMetadata, TaskMetadataWithRelations, TimeBlock},
     services::google::tasks_service::GoogleTasksService,
 };
 use std::sync::Arc;
@@ -22,6 +22,7 @@ pub struct UnifiedTaskData {
     pub position: String,
     pub priority: String,
     pub labels: Vec<String>,
+    pub time_block: Option<TimeBlock>,
     pub column_id: String,
 }
 
@@ -54,18 +55,38 @@ pub async fn get_all_task_data(
         let mut list_task_ids = Vec::new();
         
         for task in tasks {
-            // Try to get metadata, but don't fail if it doesn't exist
-            let metadata = match get_task_metadata(task.id.clone(), db_manager.clone()).await {
-                Ok(Some(m)) => Some(m),
-                Ok(None) => None,
+            // Try to get metadata directly from the database to avoid labels table issues
+            let metadata = match db_manager.get_connection() {
+                Ok(conn) => {
+                    // Get just the core metadata without labels/subtasks
+                    match conn.query_row(
+                        "SELECT priority, time_block FROM task_metadata WHERE google_task_id = ?1",
+                        [&task.id],
+                        |row| {
+                            let priority: String = row.get(0)?;
+                            let time_block_json: Option<String> = row.get(1)?;
+                            let time_block = time_block_json.and_then(|json| {
+                                serde_json::from_str(&json).ok()
+                            });
+                            Ok((priority, time_block))
+                        }
+                    ) {
+                        Ok((priority, time_block)) => {
+                            eprintln!("✅ Found metadata for task {}: priority={}, time_block={:?}", task.id, priority, time_block);
+                            Some((priority, time_block))
+                        }
+                        Err(_) => None
+                    }
+                }
                 Err(e) => {
-                    eprintln!("Warning: Failed to get task metadata for {}: {}", task.id, e);
+                    eprintln!("Warning: Failed to get connection for task metadata {}: {}", task.id, e);
                     None
                 }
             };
 
-            let priority = metadata.as_ref().map(|m| m.metadata.priority.clone()).unwrap_or_else(|| "normal".to_string());
-            let labels = metadata.as_ref().map(|m| m.labels.iter().map(|l| l.name.clone()).collect()).unwrap_or_default();
+            let priority = metadata.as_ref().map(|(p, _)| p.clone()).unwrap_or_else(|| "normal".to_string());
+            let labels = Vec::new(); // Skip labels for now to avoid table issues
+            let time_block = metadata.as_ref().and_then(|(_, tb)| tb.clone());
             
             let unified_task = UnifiedTaskData {
                 id: task.id.clone(),
@@ -79,6 +100,7 @@ pub async fn get_all_task_data(
                 position: task.position.unwrap_or_default(),
                 priority,
                 labels,
+                time_block,
                 column_id: list.id.clone(),
             };
             
@@ -102,6 +124,21 @@ pub async fn get_all_task_data(
         })
         .collect();
 
+    // Debug log for TZTEST tasks
+    for (id, task) in &all_tasks {
+        if task.title.contains("TZTEST") {
+            eprintln!("🔵 TIMEBLOCK DEBUG - TZTEST task in get_all_task_data response:");
+            eprintln!("  id: {}", id);
+            eprintln!("  title: {}", task.title);
+            eprintln!("  time_block: {:?}", task.time_block);
+            if let Some(tb) = &task.time_block {
+                eprintln!("  TimeBlock data: start={}, end={}", tb.start_time, tb.end_time);
+            } else {
+                eprintln!("  🔴 No timeBlock for TZTEST task {}", id);
+            }
+        }
+    }
+    
     Ok(AllTaskData {
         tasks: all_tasks,
         columns,

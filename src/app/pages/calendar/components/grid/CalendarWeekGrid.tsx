@@ -364,22 +364,8 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
               const width = `${100 / columnInfo.totalColumns}%`;
               const left = `${(columnInfo.column * 100) / columnInfo.totalColumns}%`;
               
-              // Check extendedProperties first, then fall back to checking description metadata
-              let isTimeBlock = event.extendedProperties?.private?.isTimeBlock === 'true' || 
-                                 event.extendedProps?.private?.isTimeBlock === 'true';
-              
-              // If not found in extendedProperties, check description for metadata
-              if (!isTimeBlock && event.description) {
-                const metadataMatch = event.description.match(/---METADATA---\n(.+?)$/s);
-                if (metadataMatch) {
-                  try {
-                    const metadata = JSON.parse(metadataMatch[1]);
-                    isTimeBlock = metadata.isTimeBlock === true;
-                  } catch (e) {
-                    // Ignore JSON parse errors
-                  }
-                }
-              }
+              // Check if it's a time-blocked task
+              const isTimeBlock = event.extendedProps?.isTimeBlock === true;
               
               if (isTimeBlock && onEventResize) {
                 return (

@@ -93,6 +93,8 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
             due: input.due,
             columnId: input.columnId,
             googleTaskListId: googleTaskListId,
+            timeBlock: input.timeBlock,
+            syncState: 'pending_create',
           };
           
           set(state => {
@@ -129,9 +131,22 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
                 task_list_id: googleTaskListId,
                 title: input.title,
                 notes: input.notes,
-                due: input.due,
+                // Google Tasks only accepts YYYY-MM-DD format
+                // Convert any date format to YYYY-MM-DD in local timezone
+                due: input.due ? (() => {
+                  if (input.due.length === 10) return input.due; // Already YYYY-MM-DD
+                  const date = new Date(input.due);
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                })() : undefined,
                 priority: input.priority,
                 labels: input.labels,
+                time_block: input.timeBlock ? {
+                  start_time: input.timeBlock.startTime,
+                  end_time: input.timeBlock.endTime
+                } : undefined,
               }
             });
             
@@ -228,22 +243,81 @@ export const useUnifiedTaskStore = create<UnifiedTaskStore>()(
           
           try {
             // Update in Google Tasks via backend
-            await invoke('update_google_task', {
-              request: {
-                account_id: activeAccount.id,
-                task_list_id: task.googleTaskListId,
-                task_id: taskId,
-                title: updates.title,
-                notes: updates.notes,
-                due: updates.due,
-                status: updates.status,
-                priority: updates.priority,
-                labels: updates.labels,
+            // Only send fields that Google Tasks API understands
+            const googleUpdates: any = {
+              account_id: activeAccount.id,
+              task_list_id: task.googleTaskListId,
+              task_id: taskId,
+            };
+            
+            // Only include fields that have values and are supported by Google Tasks
+            if (updates.title !== undefined) googleUpdates.title = updates.title;
+            if (updates.notes !== undefined) googleUpdates.notes = updates.notes;
+            if (updates.due !== undefined) {
+              // Google Tasks only stores the date portion
+              // Always convert to YYYY-MM-DD format in user's local timezone
+              if (updates.due.length === 10) {
+                // Already in YYYY-MM-DD format
+                googleUpdates.due = updates.due;
+              } else {
+                // Parse the date and format as YYYY-MM-DD in local timezone
+                const dueDate = new Date(updates.due);
+                const year = dueDate.getFullYear();
+                const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+                const day = String(dueDate.getDate()).padStart(2, '0');
+                googleUpdates.due = `${year}-${month}-${day}`;
               }
+            }
+            if (updates.status !== undefined) googleUpdates.status = updates.status;
+            
+            // Add custom fields to request - they'll be stored in backend metadata
+            if (updates.priority !== undefined) googleUpdates.priority = updates.priority;
+            if (updates.labels !== undefined) googleUpdates.labels = updates.labels;
+            if (updates.timeBlock !== undefined) {
+              googleUpdates.time_block = {
+                start_time: updates.timeBlock.startTime,
+                end_time: updates.timeBlock.endTime
+              };
+            }
+            
+            logger.debug('[UnifiedStore] Sending to Google Tasks API:', googleUpdates);
+            
+            // Debug log the actual updates being sent
+            logger.info('🔵 TIMEBLOCK DEBUG - Updates being sent:', {
+              taskId,
+              hasTimeBlock: !!updates.timeBlock,
+              timeBlock: updates.timeBlock,
+              googleUpdates,
+              allUpdates: updates
+            });
+            
+            await invoke('update_google_task', {
+              request: googleUpdates
             });
             
             logger.debug('[UnifiedStore] Updated task in Google', { taskId, updates });
-          } catch (error) {
+          } catch (error: any) {
+            // Check if this is a database schema error
+            if (error.toString().includes('no such column') || error.toString().includes('task_metadata')) {
+              console.error('Database schema error detected. Running migrations...');
+              try {
+                // Try to run migrations
+                await invoke('force_run_migrations');
+                console.log('Migrations completed. Retrying task update...');
+                
+                // Retry the update
+                await invoke('update_google_task', {
+                  request: googleUpdates
+                });
+                
+                logger.debug('[UnifiedStore] Updated task in Google after migration', { taskId, updates });
+                return; // Success after retry
+              } catch (migrationError) {
+                console.error('Failed to run migrations:', migrationError);
+                // Continue with normal error handling
+              }
+            }
+            
             // Revert optimistic update on failure
             set(state => {
               const task = state.tasks[taskId];

@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, 
   ListChecks, Sidebar
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 import { useHeader } from '../contexts/HeaderContext';
 import { useGoogleCalendarStore } from '../../stores/googleCalendarStore';
@@ -35,7 +36,7 @@ export default function CalendarCustom() {
   const navigate = useNavigate();
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const activeAccount = useActiveGoogleAccount();
-  const { createTask } = useUnifiedTaskStore();
+  const { createTask, updateTask } = useUnifiedTaskStore();
   
   // State
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -165,16 +166,28 @@ export default function CalendarCustom() {
       const event = filteredEvents.find(e => e.id === eventId);
       if (!event) return;
       
-      // Update the event with new times
-      await updateCalendarEvent({
-        ...event,
-        start: event.allDay 
-          ? { date: format(newStart, 'yyyy-MM-dd') }
-          : { dateTime: newStart.toISOString() },
-        end: event.allDay
-          ? { date: format(newEnd, 'yyyy-MM-dd') }
-          : { dateTime: newEnd.toISOString() }
-      });
+      // Check if it's a time-blocked task
+      if (event.extendedProps?.isTimeBlock && event.extendedProps?.taskData) {
+        // Update the task's time block
+        const task = event.extendedProps.taskData;
+        await updateGoogleTask(task.googleTaskListId, task.id, {
+          timeBlock: {
+            startTime: newStart.toISOString(),
+            endTime: newEnd.toISOString()
+          }
+        });
+      } else {
+        // Regular calendar event
+        await updateCalendarEvent({
+          ...event,
+          start: event.allDay 
+            ? { date: format(newStart, 'yyyy-MM-dd') }
+            : { dateTime: newStart.toISOString() },
+          end: event.allDay
+            ? { date: format(newEnd, 'yyyy-MM-dd') }
+            : { dateTime: newEnd.toISOString() }
+        });
+      }
       
       // Refresh to show updated event
       await refreshData();
@@ -182,7 +195,7 @@ export default function CalendarCustom() {
       console.error('Failed to resize event:', error);
       alert('Failed to resize event. Please try again.');
     }
-  }, [filteredEvents, updateCalendarEvent, refreshData]);
+  }, [filteredEvents, updateCalendarEvent, updateGoogleTask, refreshData]);
   
   // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -226,70 +239,100 @@ export default function CalendarCustom() {
         endDateTime = new Date(dropTime);
         endDateTime.setHours(endDateTime.getHours() + 1); // Default 1 hour duration
       } else {
-        // Dropped on a day (all-day event or default time)
-        startDateTime = new Date(dropDate);
-        if (isAllDay) {
-          // Create all-day event
-          endDateTime = new Date(dropDate);
-          endDateTime.setDate(endDateTime.getDate() + 1);
-        } else {
-          // Create at default time (9 AM)
-          startDateTime.setHours(9, 0, 0, 0);
-          endDateTime = new Date(startDateTime);
-          endDateTime.setHours(10, 0, 0, 0);
-        }
+        // Dropped on a day - ensure we use local date to avoid timezone issues
+        // Parse the date components to create a date in local timezone
+        const year = dropDate.getFullYear();
+        const month = dropDate.getMonth();
+        const day = dropDate.getDate();
+        
+        // Create date in local timezone
+        startDateTime = new Date(year, month, day, 9, 0, 0, 0); // 9 AM local time
+        endDateTime = new Date(year, month, day, 10, 0, 0, 0);   // 10 AM local time
       }
       
       try {
-        // Create calendar event from task
-        // Store metadata in description as JSON for now until extendedProperties work
-        const metadata = {
-          sourceTaskId: task.id,
-          sourceTaskListId: task.googleTaskListId,
-          isTimeBlock: true,
-          isCompleted: task.status === 'completed',
-          taskStatus: task.status
-        };
+        // Create due date string in YYYY-MM-DD format
+        const year = startDateTime.getFullYear();
+        const month = String(startDateTime.getMonth() + 1).padStart(2, '0');
+        const day = String(startDateTime.getDate()).padStart(2, '0');
+        const dueDateString = `${year}-${month}-${day}`;
         
-        await createCalendarEvent({
-          id: '', // Empty ID for new events
-          summary: `[Task] ${task.title}`,
-          description: `${task.notes || ''}\n\n---METADATA---\n${JSON.stringify(metadata)}`,
-          start: isAllDay 
-            ? { date: format(startDateTime, 'yyyy-MM-dd') }
-            : { dateTime: startDateTime.toISOString() },
-          end: isAllDay
-            ? { date: format(endDateTime, 'yyyy-MM-dd') }
-            : { dateTime: endDateTime.toISOString() },
-          calendarId: 'primary', // Add calendar ID
-          extendedProperties: {
-            private: {
-              sourceTaskId: task.id,
-              sourceTaskListId: task.googleTaskListId,
-              isTimeBlock: 'true',
-              isCompleted: task.status === 'completed' ? 'true' : 'false',
-              taskStatus: task.status
-            }
+        console.log('🔴 TIMEZONE DEBUG - Updating task:', {
+          taskId: task.id,
+          title: task.title,
+          googleTaskListId: task.googleTaskListId,
+          dropDate: dropDate,
+          dropDateString: dropDate.toString(),
+          dropDateISO: dropDate.toISOString(),
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          dueDate: dueDateString,
+          localTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezoneOffset: new Date().getTimezoneOffset(),
+          dropTime: dropTime,
+          isAllDay: isAllDay,
+          timeBlock: {
+            startTime: startDateTime.toISOString(),
+            endTime: endDateTime.toISOString()
           }
         });
         
-        // Refresh calendar to show the new event
+        // First update the task's due date via the unified store
+        // This ensures custom fields like timeBlock are handled properly
+        await updateTask(task.id, {
+          title: task.title, // Must include title or Google will clear it
+          due: dueDateString,
+          timeBlock: {
+            startTime: startDateTime.toISOString(),
+            endTime: endDateTime.toISOString()
+          }
+        });
+        
+        // Debug - check if the task has timeBlock after update
+        const { tasks } = useUnifiedTaskStore.getState();
+        const updatedTask = tasks[task.id];
+        console.log('🔴 TIMEBLOCK DEBUG - Task after update:', {
+          taskId: updatedTask?.id,
+          hasTimeBlock: !!updatedTask?.timeBlock,
+          timeBlock: updatedTask?.timeBlock
+        });
+        
+        // Refresh to show the updated task
         await refreshData();
         
-      } catch (error) {
-        console.error('Failed to create time block from task:', error);
-        alert('Failed to create time block. Please try again.');
+        // Debug - check task after refresh
+        setTimeout(() => {
+          const { tasks } = useUnifiedTaskStore.getState();
+          const syncedTask = tasks[task.id];
+          console.log('🔴 TIMEBLOCK DEBUG - Task after sync:', {
+            taskId: syncedTask?.id,
+            hasTimeBlock: !!syncedTask?.timeBlock,
+            timeBlock: syncedTask?.timeBlock
+          });
+        }, 2000);
+        
+      } catch (error: any) {
+        console.error('Failed to add time block to task:', error);
+        
+        // Check if this is a database schema error
+        if (error.toString().includes('no such column') || error.toString().includes('task_metadata')) {
+          console.error('Database schema error detected - migrations may need to be run');
+          alert('Database schema update required. Please restart the application to apply updates.');
+        } else {
+          alert('Failed to add time block. Please try again.');
+        }
       }
     }
     
     setDraggedItem(null);
-  }, [draggedItem, createCalendarEvent, updateGoogleTask]);
+  }, [draggedItem, createCalendarEvent, updateTask, refreshData]);
   
   // Clear header props on unmount
   useEffect(() => {
     clearHeaderProps();
     return () => clearHeaderProps();
   }, [clearHeaderProps]);
+  
   
   // Load calendar data when component mounts
   useEffect(() => {
@@ -325,17 +368,19 @@ export default function CalendarCustom() {
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-full flex-col" style={{ backgroundColor: '#FAFBFC' }}>
         {/* Header */}
-        <CalendarHeader 
-          currentDate={currentDate}
-          currentViewTitle={format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMM d, yyyy')}
-          view={view === 'month' ? 'dayGridMonth' : view === 'week' ? 'timeGridWeek' : 'timeGridDay'}
-          showTasksSidebar={showTasksSidebar}
-          onNavigate={handleNavigate}
-          onDateSelect={setCurrentDate}
-          onViewChange={handleViewChange}
-          onToggleTasksSidebar={() => setShowTasksSidebar(!showTasksSidebar)}
-          onNewEvent={() => handleDateClick(new Date())}
-        />
+        <div>
+          <CalendarHeader 
+            currentDate={currentDate}
+            currentViewTitle={format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMM d, yyyy')}
+            view={view === 'month' ? 'dayGridMonth' : view === 'week' ? 'timeGridWeek' : 'timeGridDay'}
+            showTasksSidebar={showTasksSidebar}
+            onNavigate={handleNavigate}
+            onDateSelect={setCurrentDate}
+            onViewChange={handleViewChange}
+            onToggleTasksSidebar={() => setShowTasksSidebar(!showTasksSidebar)}
+            onNewEvent={() => handleDateClick(new Date())}
+          />
+        </div>
         
         {/* Main Content Area */}
         <div className="flex flex-1 gap-6 p-6 min-h-0 overflow-hidden">
@@ -492,7 +537,8 @@ export default function CalendarCustom() {
                   title: data.title,
                   notes: data.notes,
                   due: data.due,
-                  priority: data.priority
+                  priority: data.priority,
+                  timeBlock: data.timeBlock
                 });
                 
                 await refreshData();
@@ -508,10 +554,15 @@ export default function CalendarCustom() {
                 const listId = selectedTask.googleTaskListId;
                 if (!listId) return;
                 
-                await deleteGoogleTask(listId, selectedTask.id);
-                await refreshData();
+                // Close modal immediately for better UX
                 setShowTaskModal(false);
                 setSelectedTask(null);
+                
+                // Delete task in background
+                await deleteGoogleTask(listId, selectedTask.id);
+                
+                // Refresh data to update the view
+                await refreshData();
               } catch (error) {
                 console.error('Failed to delete task:', error);
                 alert('Failed to delete task. Please try again.');
@@ -549,15 +600,18 @@ export default function CalendarCustom() {
           onClose={() => setQuickViewModal({ isOpen: false, events: [] })}
           onEdit={(event) => {
             setQuickViewModal({ isOpen: false, events: [] });
+            
             if (event.type === 'task' && event.taskData) {
+              // Task (including time-blocked tasks)
               setSelectedTask(event.taskData);
               setShowTaskModal(true);
             } else {
+              // Regular calendar event
               setSelectedEvent(event);
               setShowEventModal(true);
             }
           }}
-          onComplete={async (event) => {
+          onToggleComplete={async (event) => {
             if (event.type === 'task' && event.taskData) {
               const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
               if (listId && event.taskData.id) {
@@ -582,6 +636,7 @@ export default function CalendarCustom() {
             }
             setQuickViewModal({ isOpen: false, events: [] });
           }}
+          onEventClick={handleEventClick}
         />
       </div>
     </DndContext>

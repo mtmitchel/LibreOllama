@@ -12,6 +12,7 @@ import { useCommandPalette } from '../core/hooks/useCommandPalette';
 import { useInitializeSettings } from '../stores/settingsStore';
 import { MailStoreProvider } from '../features/mail/components/MailStoreProvider';
 import { queryClient } from '../config/queryClient';
+import { invoke } from '@tauri-apps/api/core';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -65,6 +66,19 @@ export default function App() {
 
   useEffect(() => {
     initializeSettings();
+    
+    // Check and run database migrations on startup
+    const runMigrations = async () => {
+      try {
+        console.log('Checking database migrations...');
+        await invoke('force_run_migrations');
+        console.log('Database migrations completed');
+      } catch (error) {
+        console.error('Failed to run database migrations:', error);
+      }
+    };
+    
+    runMigrations();
   }, [initializeSettings]);
 
 

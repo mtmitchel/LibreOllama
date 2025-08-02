@@ -26,16 +26,18 @@ export const useCalendarOperations = () => {
   
   // Wrapper functions to adapt unified task store to the expected interface
   const createGoogleTask = useCallback(async (data: any) => {
-    // Map the parent (Google task list ID) to columnId
-    const column = columns.find(c => c.googleTaskListId === data.parent);
+    // Map the googleTaskListId (or parent for backward compatibility) to columnId
+    const googleTaskListId = data.googleTaskListId || data.parent;
+    const column = columns.find(c => c.googleTaskListId === googleTaskListId);
     if (!column) {
+      console.error('No column found for task list:', googleTaskListId, 'Available columns:', columns);
       throw new Error('No column found for the specified task list');
     }
     
     await createTask({
       ...data,
       columnId: column.id,
-      googleTaskListId: data.parent
+      googleTaskListId: googleTaskListId
     });
   }, [createTask, columns]);
   
@@ -215,28 +217,94 @@ export const useCalendarOperations = () => {
           // For YYYY-MM-DD format, create date using local timezone
           const [year, month, day] = task.due.split('-').map(Number);
           taskDate = new Date(year, month - 1, day); // month is 0-indexed
+          if (task.title.includes('TZTEST')) console.log('🔴 TIMEZONE DEBUG - Parsed YYYY-MM-DD:', {
+            title: task.title,
+            originalDue: task.due,
+            parsedDate: taskDate.toString(),
+            parsedISO: taskDate.toISOString()
+          });
+        } else if (typeof task.due === 'string' && task.due.includes('T00:00:00.000Z')) {
+          // Special handling for Google Tasks dates which always return midnight UTC
+          // Extract just the date part and create a local date
+          const datePart = task.due.split('T')[0];
+          const [year, month, day] = datePart.split('-').map(Number);
+          taskDate = new Date(year, month - 1, day); // Create in local timezone
+          if (task.title.includes('TZTEST')) console.log('🔴 TIMEZONE DEBUG - Parsed Google midnight UTC as local date:', {
+            title: task.title,
+            originalDue: task.due,
+            extractedDate: datePart,
+            parsedDate: taskDate.toString(),
+            parsedISO: taskDate.toISOString()
+          });
         } else {
           // For other formats or Date objects
           taskDate = new Date(task.due);
+          if (task.title.includes('TZTEST')) console.log('🔴 TIMEZONE DEBUG - Parsed ISO date:', {
+            title: task.title,
+            originalDue: task.due,
+            parsedDate: taskDate.toString(),
+            parsedISO: taskDate.toISOString()
+          });
         }
         
-        events.push({
-          id: `task-${task.id}`,
-          title: task.title,
-          start: taskDate,
-          end: taskDate,
-          allDay: true,
-          backgroundColor: isCompleted ? '#F5F5F5' : '#FFF3E0',
-          borderColor: isCompleted ? '#E0E0E0' : '#FFB74D',
-          textColor: isCompleted ? '#9E9E9E' : '#E65100',
-          extendedProps: {
-            type: 'task' as const,
+        // Check if task has a time block
+        if (task.timeBlock) {
+          console.log('🔵 TIMEBLOCK DEBUG - Task has timeBlock:', {
             taskId: task.id,
-            taskData: task,
-            listId: task.columnId,
-            isCompleted: isCompleted
+            title: task.title,
+            timeBlock: task.timeBlock,
+            startTime: task.timeBlock.startTime,
+            endTime: task.timeBlock.endTime
+          });
+          // Create a timed event for time-blocked tasks
+          const startTime = new Date(task.timeBlock.startTime);
+          const endTime = new Date(task.timeBlock.endTime);
+          
+          events.push({
+            id: `task-${task.id}`,
+            title: task.title,
+            start: startTime,
+            end: endTime,
+            allDay: false,
+            backgroundColor: isCompleted ? '#F5F5F5' : '#E3F2FD',
+            borderColor: isCompleted ? '#E0E0E0' : '#2196F3',
+            textColor: isCompleted ? '#9E9E9E' : '#1565C0',
+            extendedProps: {
+              type: 'task' as const,
+              taskId: task.id,
+              taskData: task,
+              listId: task.columnId,
+              isCompleted: isCompleted,
+              isTimeBlock: true
+            }
+          } as CalendarEvent);
+        } else {
+          // Regular all-day task
+          if (task.title.includes('TZTEST')) {
+            console.log('🔴 TIMEBLOCK DEBUG - Task has NO timeBlock:', {
+              taskId: task.id,
+              title: task.title,
+              fullTask: task
+            });
           }
-        } as CalendarEvent);
+          events.push({
+            id: `task-${task.id}`,
+            title: task.title,
+            start: taskDate,
+            end: taskDate,
+            allDay: true,
+            backgroundColor: isCompleted ? '#F5F5F5' : '#FFF3E0',
+            borderColor: isCompleted ? '#E0E0E0' : '#FFB74D',
+            textColor: isCompleted ? '#9E9E9E' : '#E65100',
+            extendedProps: {
+              type: 'task' as const,
+              taskId: task.id,
+              taskData: task,
+              listId: task.columnId,
+              isCompleted: isCompleted
+            }
+          } as CalendarEvent);
+        }
       }
     });
     

@@ -73,6 +73,10 @@ class RealtimeSync {
           position: string;
           priority?: string;
           labels?: string[];
+          time_block?: {
+            start_time: string;
+            end_time: string;
+          };
           column_id: string;
         }>, 
         columns: any[] 
@@ -87,6 +91,19 @@ class RealtimeSync {
         logger.debug('[RealtimeSync] Sample task from backend:', taskData[sampleTaskId]);
       }
       
+      // Log tasks with due dates to debug timezone issues
+      const tasksWithDueDates = Object.values(taskData).filter(t => t.due);
+      if (tasksWithDueDates.length > 0) {
+        const tzTestTasks = tasksWithDueDates.filter(t => t.title.includes('TZTEST'));
+        if (tzTestTasks.length > 0) {
+          logger.info('🔴 TIMEZONE DEBUG - Tasks from backend:', tzTestTasks.map(t => ({
+          title: t.title,
+          due: t.due,
+          dueType: typeof t.due
+        })));
+        }
+      }
+      
       // Check if any tasks have priority set
       const tasksWithPriority = Object.values(taskData).filter(t => t.priority && t.priority !== 'normal');
       logger.debug('[RealtimeSync] Tasks with priority:', tasksWithPriority.length);
@@ -98,6 +115,10 @@ class RealtimeSync {
         // Handle potential undefined or null values
         const priority = task.priority || 'normal';
         const labels = Array.isArray(task.labels) ? task.labels : [];
+        const timeBlock = task.time_block ? {
+          startTime: task.time_block.start_time,
+          endTime: task.time_block.end_time
+        } : undefined;
         
         tasks[id] = {
           id: task.id,
@@ -112,17 +133,29 @@ class RealtimeSync {
           labels: labels,
           priority: priority as 'low' | 'normal' | 'high' | 'urgent',
           columnId: task.column_id,
+          timeBlock: timeBlock,
           syncState: 'synced',
         };
         
         // Log tasks with metadata
-        if (labels.length > 0 || priority !== 'normal') {
+        if (labels.length > 0 || priority !== 'normal' || task.time_block) {
           logger.debug('[RealtimeSync] Task with metadata', {
             id: task.id,
             title: task.title,
             labels: labels,
             priority: priority,
+            timeBlock: task.time_block,
             rawTask: task // Log the raw task to see what we're getting
+          });
+        }
+        
+        // Debug log for TZTEST tasks
+        if (task.title.includes('TZTEST')) {
+          logger.info('🔵 TIMEBLOCK DEBUG - TZTEST task from backend:', {
+            id: task.id,
+            title: task.title,
+            time_block: task.time_block,
+            rawTask: task
           });
         }
       }

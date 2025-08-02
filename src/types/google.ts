@@ -76,6 +76,13 @@ export interface GoogleTask {
     description?: string;
     link: string;
   }>;
+  // Extended properties for our app
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  googleTaskListId?: string;
+  timeBlock?: {
+    startTime: string;
+    endTime: string;
+  };
 }
 
 interface SubTask {

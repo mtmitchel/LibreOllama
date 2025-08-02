@@ -38,6 +38,13 @@ export interface UnifiedTask {
     endDate?: string; // ISO date string
   };
   
+  // Time blocking properties
+  timeBlock?: {
+    startTime: string; // ISO datetime string
+    endTime: string;   // ISO datetime string
+    calendarEventId?: string; // If synced to calendar (future enhancement)
+  };
+  
   // UI & Sync State
   columnId: string;
   syncState: TaskSyncState;
@@ -84,6 +91,10 @@ export interface CreateTaskInput {
   notes?: string;
   due?: string;
   googleTaskListId?: string;
+  timeBlock?: {
+    startTime: string;
+    endTime: string;
+  };
 }
 
 // Helper type for updates
