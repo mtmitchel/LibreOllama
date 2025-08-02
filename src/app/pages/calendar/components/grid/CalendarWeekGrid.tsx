@@ -12,6 +12,7 @@ import {
   isMultiDayEvent,
   calculateMultiDayEventLayouts
 } from '../../utils/dateUtils';
+import { sortEventsWithTaskPriority } from '../../utils/eventSorting';
 import { CalendarEventCard } from '../CalendarEventCard';
 import { DroppableCalendarCell } from '../dnd/DroppableCalendarCell';
 import { ResizableEvent } from '../dnd/ResizableEvent';
@@ -104,6 +105,11 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
       }
     });
     
+    // Sort all-day events to prioritize tasks over sports games
+    singleDayMap.forEach((events, key) => {
+      singleDayMap.set(key, sortEventsWithTaskPriority(events));
+    });
+    
     // Group timed events by date
     const timedMap = new Map<string, CalendarEvent[]>();
     weekDates.forEach(date => {
@@ -117,6 +123,11 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
       if (dayEvents) {
         dayEvents.push(event);
       }
+    });
+    
+    // Sort timed events to prioritize tasks over sports games
+    timedMap.forEach((events, key) => {
+      timedMap.set(key, sortEventsWithTaskPriority(events));
     });
     
     

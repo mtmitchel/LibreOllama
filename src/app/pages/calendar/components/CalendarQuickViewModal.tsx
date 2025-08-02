@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Calendar, Clock, MapPin, Edit2, Trash2, CheckCircle2, Circle, Check, MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import { CalendarEvent } from '../types/calendar';
+import { sortEventsWithTaskPriority } from '../utils/eventSorting';
 
 interface CalendarQuickViewModalProps {
   isOpen: boolean;
@@ -193,8 +194,10 @@ export const CalendarQuickViewModal: React.FC<CalendarQuickViewModalProps> = ({
             <div className="space-y-3 max-h-[350px] overflow-y-auto">
               {/* Separate events and tasks */}
               {(() => {
-                const eventItems = events.filter(e => !isTask(e));
-                const taskItems = events.filter(e => isTask(e));
+                // Sort all events to prioritize tasks over sports games
+                const sortedEvents = sortEventsWithTaskPriority(events);
+                const eventItems = sortedEvents.filter(e => !isTask(e));
+                const taskItems = sortedEvents.filter(e => isTask(e));
                 
                 return (
                   <>

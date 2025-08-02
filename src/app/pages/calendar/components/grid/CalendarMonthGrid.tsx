@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { format, isSameMonth, isToday, startOfDay, isSameDay, endOfDay } from 'date-fns';
 import { CalendarEvent, MonthViewDay } from '../../types/calendar';
 import { getMonthGridDates, isMultiDayEvent, calculateMultiDayEventLayouts, MultiDayEventLayout } from '../../utils/dateUtils';
+import { sortEventsWithTaskPriority } from '../../utils/eventSorting';
 import { CalendarEventCard } from '../CalendarEventCard';
 import { DroppableCalendarCell } from '../dnd/DroppableCalendarCell';
 
@@ -49,6 +50,11 @@ export const CalendarMonthGrid: React.FC<CalendarMonthGridProps> = ({
       const key = format(event.start, 'yyyy-MM-dd');
       if (!singleDayMap.has(key)) singleDayMap.set(key, []);
       singleDayMap.get(key)!.push(event);
+    });
+    
+    // Sort events within each day to prioritize tasks over sports games
+    singleDayMap.forEach((events, key) => {
+      singleDayMap.set(key, sortEventsWithTaskPriority(events));
     });
     
     // Calculate multi-day layouts per week
