@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useTextSelection } from '../../core/hooks/useTextSelection';
-import { AIWritingToolsMenu, type AIAction } from './AIWritingToolsMenu';
+import { AIWritingToolsContextMenu, type AIAction } from './AIWritingToolsContextMenu';
 import { AIOutputModalPro } from './AIOutputModalPro';
 import { useChatStore } from '../../features/chat/stores/chatStore';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -39,6 +39,7 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   const navigate = useNavigate();
   const location = useLocation();
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState<{
     prompt: string;
@@ -65,12 +66,11 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
   
   const { selection, clearSelection, replaceSelection } = useTextSelection({
     onSelectionChange: useCallback((sel) => {
-      if (sel && !disabled && !isNotesPage) {
-        setShowMenu(true);
-      } else {
+      // Don't show menu on selection change, only on right-click
+      if (!sel) {
         setShowMenu(false);
       }
-    }, [disabled, isNotesPage])
+    }, [])
   });
 
   // Store references for AI actions
@@ -93,6 +93,25 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isNotesPage]);
+
+  // Handle right-click context menu
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      if (disabled || isNotesPage) return;
+      
+      const currentSelection = window.getSelection();
+      if (currentSelection && !currentSelection.isCollapsed) {
+        e.preventDefault();
+        
+        // Position menu at mouse cursor location
+        setMenuPosition({ top: e.clientY, left: e.clientX });
+        setShowMenu(true);
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => document.removeEventListener('contextmenu', handleContextMenu);
+  }, [disabled, isNotesPage]);
 
   const handleAIAction = useCallback(async (action: AIAction, text: string) => {
     
@@ -455,13 +474,15 @@ export function TextSelectionDetector({ children, disabled = false }: TextSelect
     <>
       {children}
       {showMenu && selection && (
-        <AIWritingToolsMenu
-          selection={selection}
+        <AIWritingToolsContextMenu
+          isOpen={showMenu}
           onClose={() => {
             setShowMenu(false);
             clearSelection();
           }}
-          onAction={handleAIAction}
+          position={menuPosition}
+          selectedText={selection.text}
+          onAIAction={handleAIAction}
         />
       )}
       <AIOutputModalPro

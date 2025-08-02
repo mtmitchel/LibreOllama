@@ -31,7 +31,7 @@ import {
   ThumbsDown
 } from 'lucide-react';
 import { cn } from '../../core/lib/utils';
-import type { AIAction } from './AIWritingToolsMenu';
+import type { AIAction } from './AIWritingToolsContextMenu';
 
 interface AIOutputModalProProps {
   isOpen: boolean;

@@ -12,7 +12,7 @@ import { AlignmentMenu } from './AlignmentMenu';
 import { AIOutputModalPro } from '../../../components/ai/AIOutputModalPro';
 import { LLMProviderManager } from '../../../services/llmProviders';
 import { useSettingsStore } from '../../../stores/settingsStore';
-import type { AIAction } from '../../../components/ai/AIWritingToolsMenu';
+import type { AIAction } from '../../../components/ai/AIWritingToolsContextMenu';
 
 // Handles file uploads by converting them to base64 data URLs.
 // This allows images/files to be embedded directly in the note content
