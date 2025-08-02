@@ -113,13 +113,24 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const formattedDue = formData.due 
-      ? `${formData.due}T00:00:00.000Z`
-      : undefined;
+    // Keep due date in YYYY-MM-DD format
+    // The unifiedTaskStore will handle the conversion
+    let formattedDue = formData.due || undefined;
+    
+    if (formattedDue) {
+      console.log('🔴 DATE FORMAT DEBUG:', {
+        input: formData.due,
+        formattedDue: formattedDue,
+        willDisplayAs: format(parseTaskDueDate(formData.due), 'yyyy-MM-dd')
+      });
+    }
     
     let timeBlock;
     if (formData.startTime && formData.endTime && formData.due) {
-      const baseDate = new Date(formData.due);
+      // Create base date in local timezone from YYYY-MM-DD
+      const [year, month, day] = formData.due.split('-').map(Number);
+      const baseDate = new Date(year, month - 1, day);
+      
       const [startHour, startMin] = formData.startTime.split(':').map(Number);
       const [endHour, endMin] = formData.endTime.split(':').map(Number);
       
@@ -133,15 +144,30 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString()
       };
+    } else if (task?.timeBlock && formData.startTime === '' && formData.endTime === '') {
+      // Preserve existing timeBlock if no new times were set
+      timeBlock = task.timeBlock;
     }
       
-    onSubmit({
+    const submitData = {
       title: formData.title,
       notes: formData.notes,
       due: formattedDue,
       priority: formData.priority,
       timeBlock,
+    };
+    
+    console.log('🔴 TASK UPDATE DEBUG - Submitting data:', {
+      taskId: task?.id,
+      originalDue: task?.due,
+      formDue: formData.due,
+      formattedDue: formattedDue,
+      originalTimeBlock: task?.timeBlock,
+      newTimeBlock: timeBlock,
+      fullSubmitData: submitData
     });
+    
+    onSubmit(submitData);
     onClose();
   };
 

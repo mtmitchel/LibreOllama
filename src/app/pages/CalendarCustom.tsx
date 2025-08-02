@@ -274,14 +274,15 @@ export default function CalendarCustom() {
           timeBlock: {
             startTime: startDateTime.toISOString(),
             endTime: endDateTime.toISOString()
-          }
+          },
+          willParseTo: new Date(`${dueDateString}T00:00:00.000Z`).toString()
         });
         
         // First update the task's due date via the unified store
         // This ensures custom fields like timeBlock are handled properly
         await updateTask(task.id, {
           title: task.title, // Must include title or Google will clear it
-          due: dueDateString,
+          due: dueDateString, // Send YYYY-MM-DD format directly
           timeBlock: {
             startTime: startDateTime.toISOString(),
             endTime: endDateTime.toISOString()
@@ -532,6 +533,18 @@ export default function CalendarCustom() {
                              (selectedTaskListId === 'all' ? taskLists[0]?.googleTaskListId : 
                               taskLists.find(list => list.id === selectedTaskListId)?.googleTaskListId);
                 if (!listId || !selectedTask) return;
+                
+                console.log('🔴 CALENDAR UPDATE DEBUG - Before update:', {
+                  taskId: selectedTask.id,
+                  listId: listId,
+                  updateData: {
+                    title: data.title,
+                    notes: data.notes,
+                    due: data.due,
+                    priority: data.priority,
+                    timeBlock: data.timeBlock
+                  }
+                });
                 
                 await updateGoogleTask(listId, selectedTask.id, {
                   title: data.title,
