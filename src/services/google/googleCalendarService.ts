@@ -29,12 +29,27 @@ class GoogleCalendarService {
     maxResults: number = 250
   ): Promise<ApiResponse<PaginatedResponse<GoogleCalendarEvent>>> {
     try {
+      console.log('[GoogleCalendarService] Fetching events with params:', {
+        accountId: account.id,
+        calendarId,
+        timeMin: timeMin || new Date().toISOString(),
+        timeMax,
+        maxResults,
+      });
+      
       const response = await apiInvoke('get_calendar_events', {
         accountId: account.id,
         calendarId,
         timeMin: timeMin || new Date().toISOString(),
         timeMax,
         maxResults,
+        // Request extendedProperties explicitly
+        fields: 'items(id,summary,description,start,end,extendedProperties,status,visibility,created,updated,etag),nextPageToken'
+      });
+
+      console.log('[GoogleCalendarService] Raw response sample:', {
+        itemCount: (response as any).items?.length,
+        firstItem: (response as any).items?.[0]
       });
 
       return {
@@ -55,11 +70,20 @@ class GoogleCalendarService {
     calendarId: string = 'primary'
   ): Promise<ApiResponse<GoogleCalendarEvent>> {
     try {
+      console.log('[GoogleCalendarService] Creating event with data:', {
+        accountId: account.id,
+        calendarId,
+        eventData,
+        extendedProperties: eventData.extendedProperties
+      });
+
       const response = await apiInvoke('create_calendar_event', {
         accountId: account.id,
         calendarId,
         eventData,
       });
+
+      console.log('[GoogleCalendarService] Created event response:', response);
 
       return {
         success: true,

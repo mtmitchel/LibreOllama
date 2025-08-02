@@ -20,9 +20,6 @@ import Mail from './pages/Mail';
 import { Projects } from './pages/Projects';
 import Notes from './pages/Notes';
 import CanvasPage from './pages/Canvas';
-import CalendarAsanaStyle from './pages/CalendarAsanaStyle';
-import CalendarExperiment from './pages/CalendarExperiment';
-import CalendarBigCalendarExperiment from './pages/CalendarBigCalendarExperiment';
 import CalendarCustom from './pages/CalendarCustom';
 import Tasks from './pages/TasksAsanaClean';
 // import TasksOld from './pages/TasksAsanaClean';
@@ -49,13 +46,8 @@ const AppContent: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => 
         <Route path="/projects" element={<Projects />} />
         <Route path="/notes" element={<Notes />} />
         <Route path="/canvas" element={<CanvasPage />} />
-        {/* DEPRECATED: FullCalendar implementations - DO NOT USE */}
-        <Route path="/calendar-old" element={<CalendarAsanaStyle />} /> {/* @deprecated Use /calendar */}
-        <Route path="/calendar-experiment" element={<CalendarExperiment />} /> {/* @deprecated Use /calendar */}
-        <Route path="/calendar-big" element={<CalendarBigCalendarExperiment />} /> {/* @deprecated Use /calendar */}
-        
-        {/* ACTIVE DEVELOPMENT: Custom Calendar - USE THIS */}
-        <Route path="/calendar" element={<CalendarCustom />} /> {/* ✅ Current custom calendar implementation */}
+        {/* Custom Calendar Implementation */}
+        <Route path="/calendar" element={<CalendarCustom />} />
         <Route path="/tasks" element={<Tasks />} />
         {/* <Route path="/tasks-redesigned" element={<TasksRedesigned />} />
         <Route path="/tasks-asana" element={<TasksAsanaStyle />} /> */}

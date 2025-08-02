@@ -43,6 +43,10 @@ export interface GoogleCalendarEvent {
   created?: string;
   updated?: string;
   etag?: string;
+  extendedProperties?: {
+    private?: Record<string, string>;
+    shared?: Record<string, string>;
+  };
 }
 
 export interface GoogleTaskList {

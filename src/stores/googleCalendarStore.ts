@@ -202,11 +202,18 @@ export const useGoogleCalendarStore = create<GoogleCalendarStore>()(
                 
                 if (response.success && response.data) {
                   // Add calendar info to each event
-                  const eventsWithCalendar = (response.data.items || []).map(event => ({
-                    ...event,
-                    calendarId: calendar.id,
-                    calendarName: calendar.summary || calendar.id
-                  }));
+                  const eventsWithCalendar = (response.data.items || []).map(event => {
+                    console.log('[GOOGLE-CALENDAR] Event from API:', {
+                      id: event.id,
+                      summary: event.summary,
+                      extendedProperties: event.extendedProperties
+                    });
+                    return {
+                      ...event,
+                      calendarId: calendar.id,
+                      calendarName: calendar.summary || calendar.id
+                    };
+                  });
                   allEvents.push(...eventsWithCalendar);
                 }
               } catch (err) {

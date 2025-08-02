@@ -13,6 +13,8 @@ import {
   calculateMultiDayEventLayouts
 } from '../../utils/dateUtils';
 import { CalendarEventCard } from '../CalendarEventCard';
+import { DroppableCalendarCell } from '../dnd/DroppableCalendarCell';
+import { ResizableEvent } from '../dnd/ResizableEvent';
 
 interface CalendarWeekGridProps {
   currentDate: Date;
@@ -21,6 +23,7 @@ interface CalendarWeekGridProps {
   onEventClick?: (event: CalendarEvent, e?: React.MouseEvent) => void;
   onDateClick?: (date: Date, time?: Date) => void;
   onEventDrop?: (event: CalendarEvent, date: Date, time?: Date) => void;
+  onEventResize?: (eventId: string, newStart: Date, newEnd: Date) => Promise<void>;
   workingHours?: { start: number; end: number };
 }
 
@@ -31,6 +34,7 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
   onEventClick,
   onDateClick,
   onEventDrop,
+  onEventResize,
   workingHours = { start: 0, end: 24 }
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -330,16 +334,28 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
               onDateClick?.(date, clickedTime);
             }}
           >
-            {/* Hour grid lines */}
-            {timeSlots
-              .filter((_, index) => index % 2 === 0)
-              .map((_, index) => (
-                <div
-                  key={index}
-                  className="absolute w-full border-t border-gray-100"
-                  style={{ top: `${index * HOUR_HEIGHT}px` }}
-                />
-              ))}
+            {/* Hour grid lines and drop zones */}
+            {timeSlots.map((slot, slotIndex) => {
+              const slotTime = new Date(date);
+              slotTime.setHours(slot.getHours(), slot.getMinutes(), 0, 0);
+              
+              return (
+                <DroppableCalendarCell
+                  key={`slot-${slotIndex}`}
+                  date={date}
+                  time={slotTime}
+                  className="absolute w-full"
+                  style={{ 
+                    top: `${slotIndex * (HOUR_HEIGHT / 2)}px`,
+                    height: `${HOUR_HEIGHT / 2}px`
+                  }}
+                >
+                  {slotIndex % 2 === 0 && (
+                    <div className="absolute top-0 w-full border-t border-gray-100" />
+                  )}
+                </DroppableCalendarCell>
+              );
+            })}
             
             {/* Events */}
             {dayEvents.map(event => {
@@ -347,6 +363,53 @@ export const CalendarWeekGrid: React.FC<CalendarWeekGridProps> = ({
               const columnInfo = dayPositions.get(event.id) || { column: 0, totalColumns: 1 };
               const width = `${100 / columnInfo.totalColumns}%`;
               const left = `${(columnInfo.column * 100) / columnInfo.totalColumns}%`;
+              
+              // Check extendedProperties first, then fall back to checking description metadata
+              let isTimeBlock = event.extendedProperties?.private?.isTimeBlock === 'true' || 
+                                 event.extendedProps?.private?.isTimeBlock === 'true';
+              
+              // If not found in extendedProperties, check description for metadata
+              if (!isTimeBlock && event.description) {
+                const metadataMatch = event.description.match(/---METADATA---\n(.+?)$/s);
+                if (metadataMatch) {
+                  try {
+                    const metadata = JSON.parse(metadataMatch[1]);
+                    isTimeBlock = metadata.isTimeBlock === true;
+                  } catch (e) {
+                    // Ignore JSON parse errors
+                  }
+                }
+              }
+              
+              if (isTimeBlock && onEventResize) {
+                return (
+                  <ResizableEvent
+                    key={event.id}
+                    event={event}
+                    onResize={onEventResize}
+                    style={{
+                      position: 'absolute',
+                      top: `${position.top}px`,
+                      height: `${position.height}px`,
+                      left,
+                      width,
+                      minHeight: 20,
+                      padding: '0 4px'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEventClick?.(event, e);
+                    }}
+                  >
+                    <CalendarEventCard
+                      event={event}
+                      view="week"
+                      showTime
+                      timeText={formatEventTimeRange(event.start, event.end)}
+                    />
+                  </ResizableEvent>
+                );
+              }
               
               return (
                 <div

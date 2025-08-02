@@ -24,13 +24,18 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
   timeText
 }) => {
   const isTask = event.type === 'task' || event.extendedProps?.type === 'task';
-  const isCompleted = event.isCompleted || event.extendedProps?.isCompleted || event.extendedProps?.completed;
+  const isTimeBlock = event.extendedProps?.private?.isTimeBlock === 'true';
+  const isCompleted = event.isCompleted || 
+                     event.extendedProps?.isCompleted || 
+                     event.extendedProps?.completed ||
+                     event.extendedProps?.private?.isCompleted === 'true' ||
+                     event.extendedProps?.private?.taskStatus === 'completed';
   
   // Color variations for visual hierarchy - Asana purple palette
   const getEventColor = () => {
-    if (isTask) {
+    if (isTask || isTimeBlock) {
       if (isCompleted) return 'bg-gray-100 text-gray-600';
-      return 'bg-emerald-100 text-emerald-800';
+      return isTimeBlock ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800';
     }
     
     // Multi-day events get deeper purple
@@ -91,7 +96,7 @@ export const CalendarEventCard: React.FC<CalendarEventCardProps> = ({
     >
       <div className={`flex items-center ${view === 'month' ? 'gap-1.5' : 'gap-2'}`}>
         {/* Task checkbox for task events */}
-        {isTask && (
+        {(isTask || isTimeBlock) && (
           <div className="flex-shrink-0">
             <div
               className={`

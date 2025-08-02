@@ -20,6 +20,7 @@ import { CalendarWeekGrid } from './calendar/components/grid/CalendarWeekGrid';
 import { CalendarQuickViewModal } from './calendar/components/CalendarQuickViewModal';
 import { AsanaEventModal } from './calendar/components/AsanaEventModal';
 import { AsanaTaskModal } from './calendar/components/AsanaTaskModal';
+import { CompactTaskEditModal } from './calendar/components/CompactTaskEditModal';
 
 // Import utilities and types
 import { CalendarView, CalendarEvent, DraggedItem } from './calendar/types/calendar';
@@ -34,6 +35,7 @@ export default function CalendarCustom() {
   const navigate = useNavigate();
   const { setHeaderProps, clearHeaderProps } = useHeader();
   const activeAccount = useActiveGoogleAccount();
+  const { createTask } = useUnifiedTaskStore();
   
   // State
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -158,6 +160,30 @@ export default function CalendarCustom() {
     });
   }, []);
   
+  const handleEventResize = useCallback(async (eventId: string, newStart: Date, newEnd: Date) => {
+    try {
+      const event = filteredEvents.find(e => e.id === eventId);
+      if (!event) return;
+      
+      // Update the event with new times
+      await updateCalendarEvent({
+        ...event,
+        start: event.allDay 
+          ? { date: format(newStart, 'yyyy-MM-dd') }
+          : { dateTime: newStart.toISOString() },
+        end: event.allDay
+          ? { date: format(newEnd, 'yyyy-MM-dd') }
+          : { dateTime: newEnd.toISOString() }
+      });
+      
+      // Refresh to show updated event
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to resize event:', error);
+      alert('Failed to resize event. Please try again.');
+    }
+  }, [filteredEvents, updateCalendarEvent, refreshData]);
+  
   // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
@@ -185,26 +211,74 @@ export default function CalendarCustom() {
     
     // Handle dropping task on calendar
     if (draggedItem.type === 'task' && over.data.current?.date) {
-      const task = draggedItem.data;
+      const task = draggedItem.data as any;
       const dropDate = over.data.current.date;
       const dropTime = over.data.current.time;
+      const isAllDay = over.data.current.allDay;
       
-      // Create calendar event from task
-      await createCalendarEvent({
-        summary: task.title,
-        description: task.notes,
-        start: dropTime ? { dateTime: dropTime.toISOString() } : { date: format(dropDate, 'yyyy-MM-dd') },
-        end: dropTime 
-          ? { dateTime: new Date(dropTime.getTime() + 60 * 60 * 1000).toISOString() }
-          : { date: format(dropDate, 'yyyy-MM-dd') },
-        calendarId: 'primary'
-      });
+      // Calculate start and end times for the time block
+      let startDateTime: Date;
+      let endDateTime: Date;
       
-      // Optionally update task with due date
-      if (task.id) {
-        await updateGoogleTask(task.columnId, task.id, {
-          due: dropDate.toISOString()
+      if (dropTime) {
+        // Dropped on a specific time slot
+        startDateTime = new Date(dropTime);
+        endDateTime = new Date(dropTime);
+        endDateTime.setHours(endDateTime.getHours() + 1); // Default 1 hour duration
+      } else {
+        // Dropped on a day (all-day event or default time)
+        startDateTime = new Date(dropDate);
+        if (isAllDay) {
+          // Create all-day event
+          endDateTime = new Date(dropDate);
+          endDateTime.setDate(endDateTime.getDate() + 1);
+        } else {
+          // Create at default time (9 AM)
+          startDateTime.setHours(9, 0, 0, 0);
+          endDateTime = new Date(startDateTime);
+          endDateTime.setHours(10, 0, 0, 0);
+        }
+      }
+      
+      try {
+        // Create calendar event from task
+        // Store metadata in description as JSON for now until extendedProperties work
+        const metadata = {
+          sourceTaskId: task.id,
+          sourceTaskListId: task.googleTaskListId,
+          isTimeBlock: true,
+          isCompleted: task.status === 'completed',
+          taskStatus: task.status
+        };
+        
+        await createCalendarEvent({
+          id: '', // Empty ID for new events
+          summary: `[Task] ${task.title}`,
+          description: `${task.notes || ''}\n\n---METADATA---\n${JSON.stringify(metadata)}`,
+          start: isAllDay 
+            ? { date: format(startDateTime, 'yyyy-MM-dd') }
+            : { dateTime: startDateTime.toISOString() },
+          end: isAllDay
+            ? { date: format(endDateTime, 'yyyy-MM-dd') }
+            : { dateTime: endDateTime.toISOString() },
+          calendarId: 'primary', // Add calendar ID
+          extendedProperties: {
+            private: {
+              sourceTaskId: task.id,
+              sourceTaskListId: task.googleTaskListId,
+              isTimeBlock: 'true',
+              isCompleted: task.status === 'completed' ? 'true' : 'false',
+              taskStatus: task.status
+            }
+          }
         });
+        
+        // Refresh calendar to show the new event
+        await refreshData();
+        
+      } catch (error) {
+        console.error('Failed to create time block from task:', error);
+        alert('Failed to create time block. Please try again.');
       }
     }
     
@@ -284,6 +358,7 @@ export default function CalendarCustom() {
                 events={filteredEvents}
                 onEventClick={handleEventClick}
                 onDateClick={handleDateClick}
+                onEventResize={handleEventResize}
               />
             )}
             
@@ -294,6 +369,7 @@ export default function CalendarCustom() {
                 events={filteredEvents}
                 onEventClick={handleEventClick}
                 onDateClick={handleDateClick}
+                onEventResize={handleEventResize}
               />
             )}
           </div>
@@ -310,13 +386,45 @@ export default function CalendarCustom() {
                 setShowTaskModal(true);
               }}
               onTaskComplete={async (listId, taskId, completed) => {
-                await updateGoogleTask(listId, taskId, {
-                  status: completed ? 'completed' : 'needsAction'
-                });
+                try {
+                  console.log('Completing task:', { listId, taskId, completed });
+                  await updateGoogleTask(listId, taskId, {
+                    status: completed ? 'completed' : 'needsAction'
+                  });
+                  await refreshData();
+                } catch (error) {
+                  console.error('Failed to complete task:', error);
+                  alert('Failed to update task status');
+                }
               }}
               onTaskCreate={createGoogleTask}
-              onContextMenu={(e, task) => {
-                // TODO: Implement context menu
+              onTaskDelete={async (listId, taskId) => {
+                try {
+                  await deleteGoogleTask(listId, taskId);
+                  await refreshData();
+                } catch (error) {
+                  console.error('Failed to delete task:', error);
+                  alert('Failed to delete task');
+                }
+              }}
+              onTaskDuplicate={async (task) => {
+                try {
+                  const duplicateData = {
+                    title: `${task.title} (copy)`,
+                    notes: task.notes,
+                    due: task.due,
+                    priority: task.priority,
+                    labels: task.labels,
+                    columnId: task.columnId,
+                    googleTaskListId: task.googleTaskListId
+                  };
+                  console.log('Duplicating task:', duplicateData);
+                  await createTask(duplicateData);
+                  await refreshData();
+                } catch (error) {
+                  console.error('Failed to duplicate task:', error);
+                  alert('Failed to duplicate task: ' + (error as any).message);
+                }
               }}
             />
           )}
@@ -364,9 +472,9 @@ export default function CalendarCustom() {
           calendars={calendars}
         />
         
-        {/* Task Modal */}
+        {/* Task Modal - Compact for editing */}
         {showTaskModal && (
-          <AsanaTaskModal
+          <CompactTaskEditModal
             isOpen={showTaskModal}
             task={selectedTask}
             onClose={() => {
@@ -375,31 +483,38 @@ export default function CalendarCustom() {
             }}
             onSubmit={async (data) => {
               try {
-                const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
-                if (!listId) return;
+                const listId = selectedTask?.googleTaskListId || 
+                             (selectedTaskListId === 'all' ? taskLists[0]?.googleTaskListId : 
+                              taskLists.find(list => list.id === selectedTaskListId)?.googleTaskListId);
+                if (!listId || !selectedTask) return;
                 
-                if (selectedTask) {
-                  await updateGoogleTask(listId, selectedTask.id, data);
-                } else {
-                  await createGoogleTask(data);
-                }
+                await updateGoogleTask(listId, selectedTask.id, {
+                  title: data.title,
+                  notes: data.notes,
+                  due: data.due,
+                  priority: data.priority
+                });
                 
+                await refreshData();
                 setShowTaskModal(false);
                 setSelectedTask(null);
               } catch (error) {
                 console.error('Failed to save task:', error);
+                alert('Failed to save task. Please try again.');
               }
             }}
             onDelete={selectedTask ? async () => {
               try {
-                const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
+                const listId = selectedTask.googleTaskListId;
                 if (!listId) return;
                 
                 await deleteGoogleTask(listId, selectedTask.id);
+                await refreshData();
                 setShowTaskModal(false);
                 setSelectedTask(null);
               } catch (error) {
                 console.error('Failed to delete task:', error);
+                alert('Failed to delete task. Please try again.');
               }
             } : undefined}
           />
@@ -408,8 +523,20 @@ export default function CalendarCustom() {
         {/* Drag Overlay */}
         <DragOverlay>
           {draggedItem && (
-            <div className="bg-white shadow-lg rounded-md p-2 opacity-80">
-              {draggedItem.type === 'task' ? draggedItem.data.title : draggedItem.data.title}
+            <div className="bg-white shadow-xl rounded-lg p-3 opacity-90 border border-gray-200 cursor-grabbing">
+              <div className="flex items-center gap-2">
+                {draggedItem.type === 'task' && (
+                  <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                )}
+                <span className="text-sm font-medium text-gray-900 max-w-[200px] truncate">
+                  {draggedItem.type === 'task' 
+                    ? (draggedItem.data as any).title 
+                    : (draggedItem.data as any).title}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Drop to create time block
+              </div>
             </div>
           )}
         </DragOverlay>

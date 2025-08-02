@@ -75,9 +75,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         const query = searchQuery.toLowerCase();
         const matchesTitle = task.title.toLowerCase().includes(query);
         const matchesNotes = task.notes?.toLowerCase().includes(query);
-        const matchesTags = task.labels?.some(label => 
-          label.toLowerCase().includes(query)
-        );
+        const matchesTags = task.labels?.some(label => {
+          const labelName = typeof label === 'string' ? label : label.name;
+          return labelName.toLowerCase().includes(query);
+        });
         if (!matchesTitle && !matchesNotes && !matchesTags) return false;
       }
 
@@ -423,16 +424,23 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                         {task.labels && task.labels.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {task.labels.slice(0, 3).map((label, index) => {
-                              // Assign colors based on label content for consistency
-                              const colors = ['red', 'blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray'];
-                              // Simple hash based on label text
-                              let hash = 0;
-                              for (let i = 0; i < label.length; i++) {
-                                hash = ((hash << 5) - hash) + label.charCodeAt(i);
-                                hash = hash & hash; // Convert to 32bit integer
-                              }
-                              const colorIndex = Math.abs(hash) % colors.length;
-                              const colorClass = `label-${colors[colorIndex]}`;
+                              // Handle both string labels and object labels
+                              const labelName = typeof label === 'string' ? label : label.name;
+                              const labelColor = typeof label === 'string' ? 
+                                // For string labels, compute color based on hash
+                                (() => {
+                                  const colors = ['red', 'blue', 'green', 'purple', 'orange', 'pink', 'teal', 'yellow', 'cyan', 'gray'];
+                                  let hash = 0;
+                                  for (let i = 0; i < labelName.length; i++) {
+                                    hash = ((hash << 5) - hash) + labelName.charCodeAt(i);
+                                    hash = hash & hash;
+                                  }
+                                  const colorIndex = Math.abs(hash) % colors.length;
+                                  return colors[colorIndex];
+                                })() : 
+                                label.color;
+                              
+                              const colorClass = `label-${labelColor}`;
                               
                               return (
                                 <span
@@ -440,7 +448,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                                   className={`label ${colorClass}`}
                                   style={{ fontSize: '11px', padding: '2px 8px' }}
                                 >
-                                  {label}
+                                  {labelName}
                                 </span>
                               );
                             })}

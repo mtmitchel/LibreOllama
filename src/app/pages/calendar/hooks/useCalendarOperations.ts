@@ -26,8 +26,18 @@ export const useCalendarOperations = () => {
   
   // Wrapper functions to adapt unified task store to the expected interface
   const createGoogleTask = useCallback(async (data: any) => {
-    await createTask(data);
-  }, [createTask]);
+    // Map the parent (Google task list ID) to columnId
+    const column = columns.find(c => c.googleTaskListId === data.parent);
+    if (!column) {
+      throw new Error('No column found for the specified task list');
+    }
+    
+    await createTask({
+      ...data,
+      columnId: column.id,
+      googleTaskListId: data.parent
+    });
+  }, [createTask, columns]);
   
   const updateGoogleTask = useCallback(async (listId: string, taskId: string, updates: any) => {
     await updateTask(taskId, updates);
@@ -164,7 +174,10 @@ export const useCalendarOperations = () => {
         textColor: isTrueMultiDay ? '#4a3f99' : '#FFFFFF',
         // Remove display property - let FullCalendar handle it naturally
         extendedProps: {
-          ...event,
+          // Preserve the private and shared properties from Google Calendar
+          private: event.extendedProperties?.private || {},
+          shared: event.extendedProperties?.shared || {},
+          // Add our custom properties
           type: isTrueMultiDay ? 'multiday' : (isRecurringInstance ? 'recurring_instance' : 'event') as const,
           isRecurring: isRecurringInstance,
           isTrueMultiDay,
