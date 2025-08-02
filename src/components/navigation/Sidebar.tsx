@@ -82,7 +82,6 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         background: 'var(--sidebar-bg)',
         borderRight: '1px solid var(--border-primary)',
         transition: 'var(--transition-all)',
-        backdropFilter: 'blur(10px)'
       }}
     >
       {/* Header */}

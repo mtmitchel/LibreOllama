@@ -15,7 +15,7 @@ export const TopBar = () => {
 
   return (
     <header 
-      className="flex items-center justify-between border-b border-primary bg-header px-6 py-3 backdrop-blur-sm"
+      className="flex items-center justify-between border-b border-primary bg-header px-6 py-3"
     >
       {/* Left section - Search or Page Title */}
       <div className="flex min-w-0 flex-1 items-center gap-4">

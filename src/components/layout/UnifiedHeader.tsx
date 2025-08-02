@@ -66,7 +66,7 @@ export function UnifiedHeader({
       case '/':
         // Dashboard - minimal header with actions
         return (
-          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 backdrop-blur-sm">
+          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm">
                 <CalendarIcon size={16} className="mr-2" />
@@ -87,7 +87,7 @@ export function UnifiedHeader({
       case '/calendar':
         // Calendar - date navigation and view controls
         return (
-          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 backdrop-blur-sm">
+          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm">Today</Button>
               <div className="flex items-center gap-1">
@@ -112,7 +112,7 @@ export function UnifiedHeader({
       case '/tasks':
         // Tasks - view toggle and filters
         return (
-          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 backdrop-blur-sm">
+          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex items-center gap-3">
               <div className="border-border-default flex items-center rounded-lg border bg-surface p-0.5">
                 <Button variant="ghost" size="sm" className="rounded-md">
@@ -139,7 +139,7 @@ export function UnifiedHeader({
       case '/notes':
         // Notes - search and quick actions
         return (
-          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 backdrop-blur-sm">
+          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex max-w-2xl flex-1 items-center gap-3">
               <input
                 type="text"
@@ -168,7 +168,7 @@ export function UnifiedHeader({
       case '/canvas':
         // Canvas - zoom controls and canvas selector
         return (
-          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 backdrop-blur-sm">
+          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex items-center gap-3">
               <select 
                 className="rounded-lg border bg-surface px-3 py-1.5 text-sm"
@@ -198,7 +198,7 @@ export function UnifiedHeader({
       case '/projects':
         // Projects - view and filters
         return (
-          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 backdrop-blur-sm">
+          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm">
                 All Projects
@@ -220,7 +220,7 @@ export function UnifiedHeader({
       case '/agents':
         // Agents - search and filter
         return (
-          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 backdrop-blur-sm">
+          <header className="border-border-default bg-surface/50 flex h-12 items-center justify-between border-b px-6 ">
             <div className="flex max-w-md flex-1 items-center gap-3">
               <input
                 type="text"
@@ -249,7 +249,7 @@ export function UnifiedHeader({
       case '/settings':
         // Settings - minimal header, just a subtle border
         return (
-          <header className="border-border-default bg-surface/50 h-12 border-b backdrop-blur-sm" />
+          <header className="border-border-default bg-surface/50 h-12 border-b " />
         );
 
       default:

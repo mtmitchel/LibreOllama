@@ -182,7 +182,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
 
   return (
     <div 
-      className={`fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] transition-opacity duration-200 ${isDeleting ? 'opacity-50' : 'opacity-100'}`}
+      className={`fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-[9999] transition-opacity duration-200 ${isDeleting ? 'opacity-50' : 'opacity-100'}`}
       onClick={onClose}
     >
       <div 

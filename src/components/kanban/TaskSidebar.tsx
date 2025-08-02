@@ -144,7 +144,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-all duration-300 ${
+        className={`fixed inset-0 z-40 bg-black/20 transition-all duration-300 ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         aria-hidden={!isOpen}
