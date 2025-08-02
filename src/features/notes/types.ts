@@ -8,7 +8,7 @@ export interface Note {
   id: string;
   title: string;
   folderId: string | null;
-  content: string; // HTML from Tiptap
+  content: string; // BlockNote JSON or HTML content
   metadata: NoteMetadata;
 }
 

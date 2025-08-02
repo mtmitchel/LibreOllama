@@ -13,6 +13,73 @@ import { AIOutputModalPro } from '../../../components/ai/AIOutputModalPro';
 import { LLMProviderManager } from '../../../services/llmProviders';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import type { AIAction } from '../../../components/ai/AIWritingToolsContextMenu';
+import { LinkPreviewModal } from './LinkPreviewModal';
+import Link from '@tiptap/extension-link';
+import { Plugin, PluginKey } from 'prosemirror-state';
+
+// Custom Link extension that removes target="_blank" and handles clicks
+const createCustomLinkExtension = (onLinkClick: (url: string) => void) => {
+  return Link.extend({
+    addOptions() {
+      return {
+        ...this.parent?.(),
+        openOnClick: false, // Disable TipTap's click handling
+        HTMLAttributes: {
+          // Remove target="_blank" entirely
+          target: null,
+          // Keep security attributes for external links
+          rel: 'noopener noreferrer',
+          class: 'bn-link',
+        },
+      };
+    },
+
+    addProseMirrorPlugins() {
+      const extension = this;
+      return [
+        new Plugin({
+          key: new PluginKey('customLinkHandler'),
+          props: {
+            handleDOMEvents: {
+              click: (view, event) => {
+                // Find the closest link element
+                let target = event.target as HTMLElement;
+                let linkElement: HTMLAnchorElement | null = null;
+                
+                // Walk up the DOM tree to find link
+                while (target && target !== view.dom) {
+                  if (target.tagName === 'A' && (target as HTMLAnchorElement).href) {
+                    linkElement = target as HTMLAnchorElement;
+                    break;
+                  }
+                  target = target.parentElement as HTMLElement;
+                }
+                
+                if (linkElement) {
+                  const href = linkElement.href;
+                  
+                  // Only intercept external HTTP/HTTPS links
+                  if (href.startsWith('http://') || href.startsWith('https://')) {
+                    // Prevent default browser behavior
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    // Call the custom modal handler
+                    onLinkClick(href);
+                    
+                    return true; // Event handled
+                  }
+                }
+                
+                return false; // Let other events proceed normally
+              },
+            },
+          },
+        }),
+      ];
+    },
+  });
+};
 
 // Handles file uploads by converting them to base64 data URLs.
 // This allows images/files to be embedded directly in the note content
@@ -148,6 +215,8 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ top: 0, left: 0 });
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showLinkPreview, setShowLinkPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   
   // Debug effect to track modal state
   useEffect(() => {
@@ -185,9 +254,24 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
     onChangeRef.current = onChange;
   });
 
-  // Creates the editor instance, now with a file upload handler.
+  // Handle link clicks
+  const handleLinkClick = useCallback((url: string) => {
+    setPreviewUrl(url);
+    setShowLinkPreview(true);
+  }, []);
+
+  // Creates the editor instance with custom Link extension
   const editor: BlockNoteEditorType | null = useCreateBlockNote({
     uploadFile: handleUpload,
+    _tiptapOptions: {
+      extensions: [
+        // Replace default Link with CustomLink that prevents new tabs
+        createCustomLinkExtension(handleLinkClick).configure({
+          autolink: true,
+          linkOnPaste: true,
+        }),
+      ],
+    },
   });
 
   // Effect for handling incoming content changes from props
@@ -694,6 +778,12 @@ const BlockNoteEditor: React.FC<BlockNoteEditorProps> = ({
                 handleAIAction(aiModalData.action);
               }
             }}
+          />
+          
+          <LinkPreviewModal
+            isOpen={showLinkPreview}
+            onClose={() => setShowLinkPreview(false)}
+            url={previewUrl}
           />
         </>
       )}
