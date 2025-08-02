@@ -10,6 +10,42 @@ import { InlineTaskCreator } from '../../../../components/kanban/InlineTaskCreat
 import { ContextMenu } from '../../../../components/ui';
 import type { GoogleTask } from '../../../../types/google';
 
+// Helper function to parse task due dates correctly
+// Google Tasks API returns dates in RFC3339 format (e.g., "2025-08-02T00:00:00.000Z")
+// When parsed with new Date(), UTC midnight shows as previous day in negative UTC offset timezones
+function parseTaskDueDate(dateString: string | undefined): Date {
+  if (!dateString) {
+    return new Date(); // Return current date as fallback
+  }
+  
+  // Check if it's an ISO/RFC3339 date string with time (e.g., "2025-08-02T00:00:00.000Z")
+  if (dateString.includes('T')) {
+    const date = new Date(dateString);
+    
+    // If the time is midnight UTC (00:00:00.000Z), treat it as a date-only value
+    // and create a local date to avoid timezone offset issues
+    if (dateString.includes('T00:00:00.000Z') || dateString.includes('T00:00:00Z')) {
+      const [datePart] = dateString.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    
+    // Otherwise, return the parsed date as-is
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  
+  // Check if it's a simple date format (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (dateRegex.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  
+  // Try to parse as regular date string
+  const parsed = new Date(dateString);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
 interface CalendarTaskSidebarEnhancedProps {
   taskLists: Array<{ id: string; title: string; googleTaskListId?: string }>;
   tasks: Record<string, GoogleTask>;
@@ -67,7 +103,9 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
           if (!a.due && !b.due) return 0;
           if (!a.due) return 1;
           if (!b.due) return -1;
-          return new Date(a.due).getTime() - new Date(b.due).getTime();
+          const aDate = parseTaskDueDate(a.due);
+          const bDate = parseTaskDueDate(b.due);
+          return aDate.getTime() - bDate.getTime();
         case 'title':
           return a.title.localeCompare(b.title);
         case 'priority':
@@ -105,7 +143,7 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
         // Tasks without due dates go to "all others"
         groups.allOthers.push(task);
       } else {
-        const dueDate = new Date(task.due);
+        const dueDate = parseTaskDueDate(task.due);
         dueDate.setHours(0, 0, 0, 0);
         
         if (dueDate < today) {
@@ -136,14 +174,20 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
     priority?: 'low' | 'normal' | 'high' | 'urgent';
     labels?: string[];
   }) => {
+    const targetListId = selectedListId === 'all' 
+      ? taskLists[0]?.googleTaskListId 
+      : taskLists.find(list => list.id === selectedListId)?.googleTaskListId;
+    
+    if (!targetListId) {
+      throw new Error('No task list available. Please create a task list first.');
+    }
+    
     await onTaskCreate({
       title: data.title,
       notes: data.notes,
       due: data.due,
       priority: data.priority,
-      googleTaskListId: selectedListId === 'all' 
-        ? taskLists[0]?.googleTaskListId 
-        : taskLists.find(list => list.id === selectedListId)?.googleTaskListId
+      googleTaskListId: targetListId
     });
   };
   
@@ -248,7 +292,7 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
                           {task.due && (
                             <div className="flex items-center gap-1 text-xs text-gray-500">
                               <Calendar size={12} />
-                              <span>{format(new Date(task.due), 'MMM d')}</span>
+                              <span>{format(parseTaskDueDate(task.due), 'MMM d')}</span>
                             </div>
                           )}
                           
@@ -488,7 +532,16 @@ export const CalendarTaskSidebarEnhanced: React.FC<CalendarTaskSidebarEnhancedPr
                             {task.due && (
                               <div className="flex items-center gap-1 text-xs text-gray-500">
                                 <Calendar size={12} />
-                                <span>{format(new Date(task.due), 'MMM d')}</span>
+                                <span>{(() => {
+                                  console.log('🔴 SIDEBAR DATE DEBUG:', {
+                                    taskId: task.id,
+                                    taskTitle: task.title,
+                                    rawDue: task.due,
+                                    parsedDate: parseTaskDueDate(task.due),
+                                    formatted: format(parseTaskDueDate(task.due), 'MMM d')
+                                  });
+                                  return format(parseTaskDueDate(task.due), 'MMM d');
+                                })()}</span>
                               </div>
                             )}
                             

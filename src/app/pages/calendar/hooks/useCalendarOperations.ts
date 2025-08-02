@@ -27,11 +27,17 @@ export const useCalendarOperations = () => {
   // Wrapper functions to adapt unified task store to the expected interface
   const createGoogleTask = useCallback(async (data: any) => {
     // Map the googleTaskListId (or parent for backward compatibility) to columnId
-    const googleTaskListId = data.googleTaskListId || data.parent;
+    let googleTaskListId = data.googleTaskListId || data.parent;
+    
+    // If no googleTaskListId provided, use the first available column
+    if (!googleTaskListId && columns.length > 0) {
+      googleTaskListId = columns[0].googleTaskListId;
+    }
+    
     const column = columns.find(c => c.googleTaskListId === googleTaskListId);
     if (!column) {
       console.error('No column found for task list:', googleTaskListId, 'Available columns:', columns);
-      throw new Error('No column found for the specified task list');
+      throw new Error('No task lists available. Please create a task list first.');
     }
     
     await createTask({
