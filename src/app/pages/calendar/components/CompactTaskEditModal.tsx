@@ -3,6 +3,42 @@ import { X, Calendar, Flag, Hash, Clock } from 'lucide-react';
 import { GoogleTask } from '../../../../types/google';
 import { format } from 'date-fns';
 
+// Helper function to parse task due dates correctly
+// Google Tasks API returns dates in RFC3339 format (e.g., "2025-08-02T00:00:00.000Z")
+// When parsed with new Date(), UTC midnight shows as previous day in negative UTC offset timezones
+function parseTaskDueDate(dateString: string | undefined): Date {
+  if (!dateString) {
+    return new Date();
+  }
+  
+  // Check if it's an ISO/RFC3339 date string with time (e.g., "2025-08-02T00:00:00.000Z")
+  if (dateString.includes('T')) {
+    const date = new Date(dateString);
+    
+    // If the time is midnight UTC (00:00:00.000Z), treat it as a date-only value
+    // and create a local date to avoid timezone offset issues
+    if (dateString.includes('T00:00:00.000Z') || dateString.includes('T00:00:00Z')) {
+      const [datePart] = dateString.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    
+    // Otherwise, return the parsed date as-is
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  
+  // Check if it's a simple date format (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (dateRegex.test(dateString)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  
+  // Try to parse as regular date string
+  const parsed = new Date(dateString);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
 interface CompactTaskEditModalProps {
   isOpen: boolean;
   task?: GoogleTask | null;
@@ -57,7 +93,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
       setFormData({
         title: task.title,
         notes: task.notes || '',
-        due: task.due ? task.due.split('T')[0] : '',
+        due: task.due ? format(parseTaskDueDate(task.due), 'yyyy-MM-dd') : '',
         priority: task.priority || 'normal',
         startTime,
         endTime,
@@ -131,7 +167,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">
-              Edit Task
+              Edit task
             </h2>
             <button
               type="button"
@@ -236,7 +272,7 @@ export const CompactTaskEditModal: React.FC<CompactTaskEditModalProps> = ({
                 {formData.due && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-600 rounded-md text-xs">
                     <Calendar size={12} />
-                    {format(new Date(formData.due), 'MMM d, yyyy')}
+                    {format(parseTaskDueDate(formData.due), 'MMM d, yyyy')}
                   </span>
                 )}
                 {formData.startTime && formData.endTime && (

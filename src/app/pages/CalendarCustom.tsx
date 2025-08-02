@@ -601,9 +601,10 @@ export default function CalendarCustom() {
           onEdit={(event) => {
             setQuickViewModal({ isOpen: false, events: [] });
             
-            if (event.type === 'task' && event.taskData) {
+            // Check if it's a task (including time-blocked tasks)
+            if ((event.type === 'task' || event.extendedProps?.type === 'task') && event.extendedProps?.taskData) {
               // Task (including time-blocked tasks)
-              setSelectedTask(event.taskData);
+              setSelectedTask(event.extendedProps.taskData);
               setShowTaskModal(true);
             } else {
               // Regular calendar event
@@ -612,23 +613,26 @@ export default function CalendarCustom() {
             }
           }}
           onToggleComplete={async (event) => {
-            if (event.type === 'task' && event.taskData) {
-              const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
-              if (listId && event.taskData.id) {
-                await updateGoogleTask(listId, event.taskData.id, {
-                  status: event.isCompleted ? 'needsAction' : 'completed'
+            const taskData = event.extendedProps?.taskData || event.taskData;
+            if ((event.type === 'task' || event.extendedProps?.type === 'task') && taskData) {
+              const listId = taskData.googleTaskListId || (selectedTaskListId === 'all' ? taskLists[0]?.googleTaskListId : selectedTaskListId);
+              if (listId && taskData.id) {
+                const isCompleted = event.extendedProps?.isCompleted || event.isCompleted;
+                await updateGoogleTask(listId, taskData.id, {
+                  status: isCompleted ? 'needsAction' : 'completed'
                 });
-                await syncAllTasks();
+                await refreshData();
               }
             }
             setQuickViewModal({ isOpen: false, events: [] });
           }}
           onDelete={async (event) => {
-            if (event.type === 'task' && event.taskData) {
-              const listId = selectedTaskListId === 'all' ? taskLists[0]?.id : selectedTaskListId;
-              if (listId && event.taskData.id) {
-                await deleteGoogleTask(listId, event.taskData.id);
-                await syncAllTasks();
+            const taskData = event.extendedProps?.taskData || event.taskData;
+            if ((event.type === 'task' || event.extendedProps?.type === 'task') && taskData) {
+              const listId = taskData.googleTaskListId || (selectedTaskListId === 'all' ? taskLists[0]?.googleTaskListId : selectedTaskListId);
+              if (listId && taskData.id) {
+                await deleteGoogleTask(listId, taskData.id);
+                await refreshData();
               }
             } else if (event.id) {
               await deleteCalendarEvent(event.id);
