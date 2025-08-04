@@ -375,11 +375,13 @@ export default function CalendarCustom() {
             currentViewTitle={format(currentDate, view === 'month' ? 'MMMM yyyy' : 'MMM d, yyyy')}
             view={view === 'month' ? 'dayGridMonth' : view === 'week' ? 'timeGridWeek' : 'timeGridDay'}
             showTasksSidebar={showTasksSidebar}
+            searchQuery={searchQuery}
             onNavigate={handleNavigate}
             onDateSelect={setCurrentDate}
             onViewChange={handleViewChange}
             onToggleTasksSidebar={() => setShowTasksSidebar(!showTasksSidebar)}
             onNewEvent={() => handleDateClick(new Date())}
+            onSearchChange={setSearchQuery}
           />
         </div>
         

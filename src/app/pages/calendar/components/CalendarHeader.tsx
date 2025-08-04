@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, ListChecks, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, ListChecks, Calendar, Search, X } from 'lucide-react';
 import { AsanaDatePicker } from './AsanaDatePicker';
 import { AsanaViewControls } from './AsanaViewControls';
-import { AsanaSearchBar } from './AsanaSearchBar';
+import { Button } from '../../../../components/ui';
 
 interface CalendarHeaderProps {
   currentDate: Date;
   currentViewTitle: string;
   view: string;
   showTasksSidebar: boolean;
+  searchQuery?: string;
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
   onDateSelect: (date: Date) => void;
   onViewChange: (view: string) => void;
   onToggleTasksSidebar: () => void;
   onNewEvent: () => void;
+  onSearchChange?: (query: string) => void;
 }
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
@@ -21,11 +23,13 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentViewTitle,
   view,
   showTasksSidebar,
+  searchQuery = '',
   onNavigate,
   onDateSelect,
   onViewChange,
   onToggleTasksSidebar,
   onNewEvent,
+  onSearchChange,
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -48,16 +52,21 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     <div className="flex items-center px-6 py-3" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8E8E9' }}>
       {/* Left side - Today, Navigation and Title */}
       <div className="flex items-center gap-4" style={{ flex: '1 1 0' }}>
-        <button
-          className="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => onNavigate('today')}
           style={{
             backgroundColor: '#796EFF',
-            color: 'white',
+            color: '#FFFFFF',
+            padding: '8px 16px',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: 500
           }}
-          onClick={() => onNavigate('today')}
         >
           Today
-        </button>
+        </Button>
         
         <div className="flex items-center gap-1">
           <button
@@ -96,12 +105,36 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       </div>
       
       {/* Center - Search */}
-      <div className="flex items-center justify-center" style={{ flex: '1 1 0' }}>
-        <AsanaSearchBar 
-          placeholder="Search calendar..." 
-          value=""
-          onChange={() => {}}
+      <div className="relative max-w-md flex-1 mx-6">
+        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+        <input
+          type="search"
+          placeholder="Search tasks..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange?.(e.target.value)}
+          className="pl-10 pr-4 py-2 rounded-xl outline-none transition-all w-full"
+          style={{ 
+            fontSize: '14px',
+            backgroundColor: '#F6F7F8',
+            border: '1px solid transparent'
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.backgroundColor = '#FFFFFF';
+            e.currentTarget.style.borderColor = '#D1D5DB';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.backgroundColor = '#F6F7F8';
+            e.currentTarget.style.borderColor = 'transparent';
+          }}
         />
+        {searchQuery && (
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 transition-colors"
+            onClick={() => onSearchChange?.('')}
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
       
       {/* Right side - View Controls and New Event */}
@@ -144,16 +177,25 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           <ListChecks size={18} />
         </button>
         
-        <button
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-md transition-colors"
+        <Button 
+          variant="primary" 
+          size="sm"
+          onClick={onNewEvent}
           style={{
             backgroundColor: '#796EFF',
+            color: '#FFFFFF',
+            padding: '8px 16px',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}
-          onClick={onNewEvent}
         >
-          <Plus size={18} />
+          <Plus size={16} />
           New event
-        </button>
+        </Button>
       </div>
     </div>
   );

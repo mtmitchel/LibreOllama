@@ -15,8 +15,6 @@ import { useUnifiedTaskStore } from '../../stores/unifiedTaskStore';
 import { useActiveGoogleAccount } from '../../stores/settingsStore';
 import { realtimeSync } from '../../services/realtimeSync';
 import type { UnifiedTask } from '../../stores/unifiedTaskStore.types';
-import '../../tests/persistence-test';
-import '../../tests/create-completed-task';
 
 type ViewMode = 'kanban' | 'list';
 
@@ -379,47 +377,6 @@ export default function TasksAsanaClean() {
             <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
-          
-          {/* Debug buttons - remove in production */}
-          {true && (
-            <>
-              <button
-                onClick={() => {
-                  const state = useUnifiedTaskStore.getState();
-                  console.log('🔍 Full state:', state);
-                  console.log('🔍 Show completed:', state.showCompleted);
-                  console.log('🔍 Total tasks:', Object.keys(state.tasks).length);
-                  console.log('🔍 Completed tasks:', Object.values(state.tasks).filter(t => t.status === 'completed').length);
-                }}
-                className="text-xs px-2 py-1 rounded"
-                style={{ backgroundColor: '#F6F7F8' }}
-              >
-                Debug State
-              </button>
-              <button
-                onClick={() => (window as any).testCreateTaskWithPriority()}
-                className="text-xs px-2 py-1 rounded"
-                style={{ backgroundColor: '#F6F7F8' }}
-              >
-                Test Priority
-              </button>
-              <button
-                onClick={() => (window as any).testCreateCompletedTask()}
-                className="text-xs px-2 py-1 rounded"
-                style={{ backgroundColor: '#F6F7F8' }}
-              >
-                Create Completed
-              </button>
-              <button
-                onClick={() => (window as any).testMarkFirstTaskCompleted()}
-                className="text-xs px-2 py-1 rounded"
-                style={{ backgroundColor: '#F6F7F8' }}
-              >
-                Mark First Complete
-              </button>
-            </>
-          )}
-          
           {/* Primary action button */}
           <Button 
             variant="primary" 
